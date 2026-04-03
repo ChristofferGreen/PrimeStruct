@@ -173,10 +173,6 @@
                                                const std::string &namespacePrefix,
                                                const std::vector<std::string> *definitionTemplateArgs,
                                                std::unordered_set<std::string> &visitingStructs);
-  bool validateVectorDiscardHelperElementType(const BindingInfo &binding,
-                                              const std::string &helperName,
-                                              const std::string &namespacePrefix,
-                                              const std::vector<std::string> *definitionTemplateArgs);
   bool validateVectorIndexedRemovalHelperElementType(const BindingInfo &binding,
                                                      const std::string &helperName,
                                                      const std::string &namespacePrefix,

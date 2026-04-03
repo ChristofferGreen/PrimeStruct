@@ -209,42 +209,26 @@ bool SemanticsValidator::isRelocationTrivialContainerElementType(const std::stri
   return true;
 }
 
-bool SemanticsValidator::validateVectorDiscardHelperElementType(const BindingInfo &binding,
-                                                                const std::string &helperName,
-                                                                const std::string &namespacePrefix,
-                                                                const std::vector<std::string> *definitionTemplateArgs) {
-  std::string experimentalElemType;
-  if (extractExperimentalVectorElementType(binding, experimentalElemType)) {
-    return true;
-  }
-  if (currentValidationContext_.definitionPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
-      namespacePrefix.rfind("/std/collections/experimental_vector", 0) == 0) {
-    return true;
-  }
-  if (binding.typeTemplateArg.empty()) {
-    return true;
-  }
-
-  std::unordered_set<std::string> visitingStructs;
-  if (isDropTrivialContainerElementType(binding.typeTemplateArg,
-                                        namespacePrefix,
-                                        definitionTemplateArgs,
-                                        visitingStructs)) {
-    return true;
-  }
-
-  error_ = helperName + " requires drop-trivial vector element type until container drop semantics are implemented: " +
-           binding.typeTemplateArg;
-  return false;
-}
-
 bool SemanticsValidator::validateVectorIndexedRemovalHelperElementType(
     const BindingInfo &binding,
     const std::string &helperName,
     const std::string &namespacePrefix,
     const std::vector<std::string> *definitionTemplateArgs) {
-  if (!validateVectorDiscardHelperElementType(binding, helperName, namespacePrefix, definitionTemplateArgs)) {
-    return false;
+  std::string experimentalElemType;
+  if (!extractExperimentalVectorElementType(binding, experimentalElemType) &&
+      currentValidationContext_.definitionPath.rfind("/std/collections/experimental_vector/", 0) != 0 &&
+      namespacePrefix.rfind("/std/collections/experimental_vector", 0) != 0 &&
+      !binding.typeTemplateArg.empty()) {
+    std::unordered_set<std::string> visitingStructs;
+    if (!isDropTrivialContainerElementType(binding.typeTemplateArg,
+                                           namespacePrefix,
+                                           definitionTemplateArgs,
+                                           visitingStructs)) {
+      error_ = helperName +
+               " requires drop-trivial vector element type until container drop semantics are implemented: " +
+               binding.typeTemplateArg;
+      return false;
+    }
   }
   return validateVectorRelocationHelperElementType(binding, helperName, namespacePrefix, definitionTemplateArgs);
 }
