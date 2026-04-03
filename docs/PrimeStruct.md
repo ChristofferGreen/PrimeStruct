@@ -27,6 +27,9 @@ At a glance:
 Pipeline operating rules:
 - Each stage halts on error and exposes `--dump-stage=<name>` so tooling/tests can capture the text/tree output just
   before failure.
+- The current dump surface is syntax-first: `pre_ast`, `ast`, `ast-semantic`, and `ir`. The planned semantic-product
+  boundary adds one more lowering-facing inspection surface between `ast-semantic` and `ir`, so future tooling can
+  inspect resolved semantic facts without forcing users to infer them from the canonicalized AST or from lowered IR.
 - `--collect-diagnostics` enables stable multi-error reporting for parse-stage failures, semantic build-map failures
   (duplicate-definition/import/invalid-transform/return-kind), semantic definition/execution pass failures across
   independent definitions/executions, and multiple intra-body call diagnostics inside a single definition/execution
@@ -163,6 +166,16 @@ Exit criteria for removing AST-dependent lowerer logic:
 - End-to-end C++/VM/native coverage exercises the semantic-product boundary rather than only snapshot helpers.
 - The remaining AST dependency is limited to syntax-faithful provenance data such as spans/debug mapping, with that
   boundary documented explicitly.
+
+Planned inspection-surface relationship:
+- `pre_ast`: post-import, post-text-transform source text
+- `ast`: parser-owned syntax tree before semantic canonicalization
+- `ast-semantic`: canonicalized AST after semantic rewrites/inference, still syntax-oriented
+- `semantic-product` (planned): lowering-facing resolved facts, types, targets, effects, and provenance handles
+- `ir`: canonical lowered IR after semantic-product consumption
+
+Until the semantic-product dump lands, `ast-semantic` remains the nearest public inspection surface for post-semantics
+state, but it should be treated as a syntax-faithful canonical tree rather than the long-term lowering contract.
 
 ### Language ethos (v1)
 - **Simplified and coherent C:** keep the core small, explicit, and close to how the machine behaves when it matters.

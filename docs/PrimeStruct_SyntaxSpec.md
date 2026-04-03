@@ -87,6 +87,12 @@ an auto-deducing shorthand that routes each transform name to its declared phase
 ambiguous names are errors. `--no-text-transforms`, `--no-semantic-transforms`, or `--no-transforms`
 disable transforms.
 
+Planned dump-stage evolution for the semantics/lowering boundary:
+- `ast-semantic` remains the current post-semantics public dump and is still AST-shaped.
+- A future semantic-product dump stage is expected to sit between `ast-semantic` and `ir`, exposing lowering-facing
+  resolved facts without requiring tooling to infer them from the canonicalized AST.
+- `ir` remains the first backend-facing dump after that future semantic-product boundary.
+
 Use `--emit=ir` to write serialized PSIR bytecode to the output path after semantic validation.
 
 ## 2. Lexical Structure
