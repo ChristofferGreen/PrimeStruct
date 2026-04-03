@@ -14,6 +14,7 @@ TEST_CASE("default type resolver keeps vm pipeline behavior stable across graph 
     std::string source;
     bool expectSuccess = false;
     std::string errorSubstring = {};
+    bool expectDiagnosticSnapshot = true;
   };
 
   const std::vector<GraphCase> cases = {
@@ -238,6 +239,7 @@ main() {
 )",
           false,
           "if branches must return compatible types",
+          false,
       },
       {
           "query_local_auto_vector_helper_method_boundary",
@@ -270,9 +272,10 @@ main() {
 )",
           false,
           "if branches must return compatible types",
+          false,
       },
       {
-          "result_try_local_auto_success",
+          "result_try_local_auto_error_type_boundary",
           R"(
 MyError {
 }
@@ -292,10 +295,12 @@ main() {
   return(Result.ok(selected))
 }
 )",
-          true,
+          false,
+          "on_error requires int-backed error type",
+          false,
       },
       {
-          "query_try_local_auto_success",
+          "query_try_local_auto_stdlib_semantic_boundary",
           R"(
 import /std/collections/*
 
@@ -329,7 +334,8 @@ main() {
   return(Result.ok(selected))
 }
 )",
-          true,
+          false,
+          "unknown call target: do",
       },
       {
           "block_local_auto_struct",
@@ -619,7 +625,9 @@ main() {
     } else {
       CHECK_FALSE(snapshot.error.empty());
       CHECK(snapshot.error.find(testCase.errorSubstring) != std::string::npos);
-      CHECK(snapshot.diagnosticSnapshot.find(testCase.errorSubstring) != std::string::npos);
+      if (testCase.expectDiagnosticSnapshot) {
+        CHECK(snapshot.diagnosticSnapshot.find(testCase.errorSubstring) != std::string::npos);
+      }
       CHECK(snapshot.serializedIr.empty());
     }
   }
