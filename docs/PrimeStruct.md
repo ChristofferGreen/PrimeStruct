@@ -2652,6 +2652,8 @@ which is now gone entirely,
 while validator-side fixed unavailable-method rejects now also route through one
 shared visibility-aware helper instead of recomputing the `/soa_vector/ref`
 visibility and pending/unavailable split inline,
+with the validator-side direct builtin `ref(...)` visibility split now also
+using that same shared helper instead of a hardcoded `/soa_vector/ref` probe,
 while validator-side visible same-path `/soa_vector/count|get|push|reserve`
 helper checks plus definition-return and collection-return same-path
 `/soa_vector/<field>` helper visibility now also route through that same

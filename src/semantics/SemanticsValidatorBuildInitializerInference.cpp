@@ -166,7 +166,7 @@ bool SemanticsValidator::isBuiltinSoaRefExpr(
     const Expr &candidate,
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals) const {
-  if (hasVisibleDefinitionPathForCurrentImports("/soa_vector/ref")) {
+  if (hasVisibleSoaHelperTargetForCurrentImports("ref")) {
     return false;
   }
   const auto helperName = builtinSoaAccessHelperName(candidate, params, locals);
@@ -350,9 +350,8 @@ bool SemanticsValidator::usesVisibleSamePathSoaHelper(
 
 std::string SemanticsValidator::soaUnavailableMethodDiagnosticForCurrentImports(
     std::string_view resolvedPath) const {
-  return soaUnavailableMethodDiagnostic(resolvedPath,
-                                        hasVisibleDefinitionPathForCurrentImports(
-                                            "/soa_vector/ref"));
+  return soaUnavailableMethodDiagnostic(
+      resolvedPath, hasVisibleSoaHelperTargetForCurrentImports("ref"));
 }
 
 bool SemanticsValidator::reportBuiltinSoaDirectPendingExprDiagnostic(
