@@ -9,6 +9,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Architecture / Type-resolution graph**
 **Group 12 - Semantics/lowering boundary**
+- ✓ Add the next structured diagnostic-sink implementation slice by sharing direct binding-statement shape/value publication. Completed: execution-body, block-argument, duplicate-name, binding-arity, and void-initializer failures in `src/semantics/SemanticsValidatorStatementBindings.cpp` now capture binding statement context and publish through the shared structured-diagnostic helper instead of only assigning `error_` and returning.
 - ✓ Add the next structured diagnostic-sink implementation slice by sharing direct pointer-helper builtin call-shape publication. Completed: named-argument, template-argument, block-argument, arity, invalid-`location(...)`, and invalid-`dereference(...)` failures in `src/semantics/SemanticsValidatorExprCallResolution.cpp` now capture expression context and publish through the shared structured-diagnostic helper instead of only assigning `error_` and returning.
 - ✓ Add the next structured diagnostic-sink implementation slice by sharing direct return-statement type/reference diagnostic publication. Completed: direct reference-return-shape failures, pointer/reference return-type mismatches, array return mismatches, and scalar return-kind mismatches in `src/semantics/SemanticsValidatorStatementReturns.cpp` now capture return-statement context and publish through the shared structured-diagnostic helper instead of only assigning `error_` and returning.
 

@@ -30,6 +30,10 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   }
 
   handled = true;
+  auto publishBindingDiagnostic = [&]() -> bool {
+    captureExprContext(stmt);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   const std::vector<std::string> *definitionTemplateArgs = nullptr;
   auto currentDefIt = defMap_.find(currentValidationContext_.definitionPath);
   if (currentDefIt != defMap_.end() && currentDefIt->second != nullptr) {
@@ -38,15 +42,15 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
 
   if (!allowBindings) {
     error_ = "binding not allowed in execution body";
-    return false;
+    return publishBindingDiagnostic();
   }
   if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
     error_ = "binding does not accept block arguments";
-    return false;
+    return publishBindingDiagnostic();
   }
   if (isParam(params, stmt.name) || locals.count(stmt.name) > 0) {
     error_ = "duplicate binding name: " + stmt.name;
-    return false;
+    return publishBindingDiagnostic();
   }
   for (const auto &transform : stmt.transforms) {
     if (transform.name != "soa_vector" || transform.templateArgs.size() != 1) {
@@ -108,7 +112,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
 
   if (stmt.args.size() != 1) {
     error_ = "binding requires exactly one argument";
-    return false;
+    return publishBindingDiagnostic();
   }
 
   const Expr &initializer = stmt.args.front();
@@ -211,7 +215,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   ReturnKind initKind = inferExprReturnKind(initializer, params, locals);
   if (initKind == ReturnKind::Void && !isStructConstructorValueExpr(initializer)) {
     error_ = "binding initializer requires a value";
-    return false;
+    return publishBindingDiagnostic();
   }
 
   auto isSoftwareNumericBindingCompatible = [](ReturnKind expectedKind, ReturnKind actualKind) -> bool {
