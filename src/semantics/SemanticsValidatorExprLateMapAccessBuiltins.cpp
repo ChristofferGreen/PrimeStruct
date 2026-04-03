@@ -17,6 +17,11 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     return true;
   }
 
+  auto publishLateMapAccessBuiltinDiagnostic = [&]() -> bool {
+    captureExprContext(expr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
+
   std::string builtinName;
   if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinName) &&
       expr.args.size() == 2 && !hasNamedArguments(expr.argNames)) {
@@ -52,7 +57,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
           !hasImportedDefinitionPath("/std/collections/map/tryAt") &&
           !hasDeclaredDefinitionPath("/tryAt")) {
         error_ = "unknown call target: /std/collections/map/tryAt";
-        return false;
+        return publishLateMapAccessBuiltinDiagnostic();
       }
       handledOut = true;
       return validateExpr(params, locals, rewrittenMapHelperCall);
@@ -97,7 +102,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         !hasImportedDefinitionPath("/contains") &&
         !hasDeclaredDefinitionPath("/contains")) {
       error_ = "unknown call target: /std/collections/map/contains";
-      return false;
+      return publishLateMapAccessBuiltinDiagnostic();
     }
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
@@ -114,14 +119,14 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         return false;
       }
       error_ = "contains requires map target";
-      return false;
+      return publishLateMapAccessBuiltinDiagnostic();
     }
     if (!mapKeyType.empty()) {
       if (normalizeBindingTypeName(mapKeyType) == "string") {
         if (!this->isStringExprForArgumentValidation(keyExpr,
                                                      *context.dispatchResolvers)) {
           error_ = "contains requires string map key";
-          return false;
+          return publishLateMapAccessBuiltinDiagnostic();
         }
       } else {
         ReturnKind keyKind =
@@ -129,13 +134,13 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         if (keyKind != ReturnKind::Unknown) {
           if (context.dispatchResolvers->resolveStringTarget(keyExpr)) {
             error_ = "contains requires map key type " + mapKeyType;
-            return false;
+            return publishLateMapAccessBuiltinDiagnostic();
           }
           ReturnKind candidateKind = inferExprReturnKind(keyExpr, params, locals);
           if (candidateKind != ReturnKind::Unknown &&
               candidateKind != keyKind) {
             error_ = "contains requires map key type " + mapKeyType;
-            return false;
+            return publishLateMapAccessBuiltinDiagnostic();
           }
         }
       }
@@ -173,7 +178,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         !hasImportedDefinitionPath("/std/collections/map/tryAt") &&
         !hasDeclaredDefinitionPath("/std/collections/map/tryAt")) {
       error_ = "unknown call target: /std/collections/map/tryAt";
-      return false;
+      return publishLateMapAccessBuiltinDiagnostic();
     }
     std::string mapKeyType;
     if (!resolveMapKeyTypeWithInference(receiverExpr, mapKeyType)) {
@@ -181,14 +186,14 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         return false;
       }
       error_ = "tryAt requires map target";
-      return false;
+      return publishLateMapAccessBuiltinDiagnostic();
     }
     if (!mapKeyType.empty()) {
       if (normalizeBindingTypeName(mapKeyType) == "string") {
         if (!this->isStringExprForArgumentValidation(keyExpr,
                                                      *context.dispatchResolvers)) {
           error_ = "tryAt requires string map key";
-          return false;
+          return publishLateMapAccessBuiltinDiagnostic();
         }
       } else {
         ReturnKind keyKind =
@@ -196,13 +201,13 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         if (keyKind != ReturnKind::Unknown) {
           if (context.dispatchResolvers->resolveStringTarget(keyExpr)) {
             error_ = "tryAt requires map key type " + mapKeyType;
-            return false;
+            return publishLateMapAccessBuiltinDiagnostic();
           }
           ReturnKind candidateKind = inferExprReturnKind(keyExpr, params, locals);
           if (candidateKind != ReturnKind::Unknown &&
               candidateKind != keyKind) {
             error_ = "tryAt requires map key type " + mapKeyType;
-            return false;
+            return publishLateMapAccessBuiltinDiagnostic();
           }
         }
       }
@@ -252,7 +257,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         !hasImportedDefinitionPath("/std/collections/map/" + builtinName) &&
         !hasDeclaredDefinitionPath("/std/collections/map/" + builtinName)) {
       error_ = "unknown call target: /std/collections/map/" + builtinName;
-      return false;
+      return publishLateMapAccessBuiltinDiagnostic();
     }
     std::string mapKeyType;
     if (resolveMapKeyTypeWithInference(receiverExpr, mapKeyType)) {
@@ -261,7 +266,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
           if (!this->isStringExprForArgumentValidation(keyExpr,
                                                        *context.dispatchResolvers)) {
             setMapKeyMismatch(mapKeyType);
-            return false;
+            return publishLateMapAccessBuiltinDiagnostic();
           }
         } else {
           ReturnKind keyKind =
@@ -269,12 +274,12 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
           if (keyKind != ReturnKind::Unknown) {
             if (context.dispatchResolvers->resolveStringTarget(keyExpr)) {
               setMapKeyMismatch(mapKeyType);
-              return false;
+              return publishLateMapAccessBuiltinDiagnostic();
             }
             ReturnKind indexKind = inferExprReturnKind(keyExpr, params, locals);
             if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
               setMapKeyMismatch(mapKeyType);
-              return false;
+              return publishLateMapAccessBuiltinDiagnostic();
             }
           }
         }
@@ -326,7 +331,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
           if (!this->isStringExprForArgumentValidation(keyExpr,
                                                        *context.dispatchResolvers)) {
             setMapKeyMismatch(mapKeyType);
-            return false;
+            return publishLateMapAccessBuiltinDiagnostic();
           }
         } else {
           ReturnKind keyKind =
@@ -334,12 +339,12 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
           if (keyKind != ReturnKind::Unknown) {
             if (context.dispatchResolvers->resolveStringTarget(keyExpr)) {
               setMapKeyMismatch(mapKeyType);
-              return false;
+              return publishLateMapAccessBuiltinDiagnostic();
             }
             ReturnKind indexKind = inferExprReturnKind(keyExpr, params, locals);
             if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
               setMapKeyMismatch(mapKeyType);
-              return false;
+              return publishLateMapAccessBuiltinDiagnostic();
             }
           }
         }

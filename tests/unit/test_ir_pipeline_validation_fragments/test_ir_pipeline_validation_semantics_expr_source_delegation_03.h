@@ -489,6 +489,14 @@
             "auto resolveMapKeyTypeWithInference =") !=
         std::string::npos);
   CHECK(semanticsExprLateMapAccessBuiltinsSource.find(
+            "auto publishLateMapAccessBuiltinDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprLateMapAccessBuiltinsSource.find("captureExprContext(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprLateMapAccessBuiltinsSource.find(
+            "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprLateMapAccessBuiltinsSource.find(
             "contains requires map target") !=
         std::string::npos);
   CHECK(semanticsExprLateMapAccessBuiltinsSource.find(
