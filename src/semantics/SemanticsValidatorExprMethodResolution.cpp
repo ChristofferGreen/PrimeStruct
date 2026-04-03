@@ -24,6 +24,10 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failMethodResolutionDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishMethodResolutionDiagnostic();
+  };
 
   const auto &resolveVectorTarget = dispatchResolvers.resolveVectorTarget;
   const auto &resolveMapTargetWithTypes = dispatchResolvers.resolveMapTarget;
@@ -78,16 +82,14 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     return resolveVectorTarget(expr.args.front(), elemType);
   };
   if (isExplicitVectorCompatibilityMethodWithTemplateArgs()) {
-    error_ = "unknown method: /vector/count";
-    return publishMethodResolutionDiagnostic();
+    return failMethodResolutionDiagnostic("unknown method: /vector/count");
   }
   if (resolved == "/std/collections/vector/count" &&
       !expr.templateArgs.empty() &&
       !expr.args.empty()) {
     std::string elemType;
     if (resolveVectorTarget(expr.args.front(), elemType)) {
-      error_ = "unknown method: /vector/count";
-      return publishMethodResolutionDiagnostic();
+      return failMethodResolutionDiagnostic("unknown method: /vector/count");
     }
   }
   if (resolved == "/std/collections/vector/count" &&
@@ -97,8 +99,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     std::string elemType;
     if (resolveVectorTarget(expr.args.front(), elemType) &&
         expr.args.size() != 1) {
-      error_ = "argument count mismatch for builtin count";
-      return publishMethodResolutionDiagnostic();
+      return failMethodResolutionDiagnostic("argument count mismatch for builtin count");
     }
   }
   if (expr.namespacePrefix.empty() &&
@@ -116,12 +117,10 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         !hasImportedDefinitionPath("/std/collections/vector/" + expr.name);
     if (isVectorReceiver && hasCanonicalOnlyVectorHelper) {
       if (expr.name == "count" && expr.args.size() != 1) {
-        error_ = "argument count mismatch for builtin count";
-        return publishMethodResolutionDiagnostic();
+        return failMethodResolutionDiagnostic("argument count mismatch for builtin count");
       }
       if (expr.name == "capacity" && expr.args.size() != 1) {
-        error_ = "argument count mismatch for builtin capacity";
-        return publishMethodResolutionDiagnostic();
+        return failMethodResolutionDiagnostic("argument count mismatch for builtin capacity");
       }
       if ((expr.name == "at" || expr.name == "at_unsafe") &&
           expr.args.size() == 2) {
@@ -129,8 +128,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         if (indexKind != ReturnKind::Int &&
             indexKind != ReturnKind::Int64 &&
             indexKind != ReturnKind::UInt64) {
-          error_ = expr.name + " requires integer index";
-          return publishMethodResolutionDiagnostic();
+          return failMethodResolutionDiagnostic(expr.name + " requires integer index");
         }
       }
     }
@@ -166,23 +164,20 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   const std::string removedMapMethodPath =
       this->mapNamespacedMethodCompatibilityPath(expr, params, locals, dispatchResolverAdapters);
   if (!removedMapMethodPath.empty()) {
-    error_ = "unknown method: " + removedMapMethodPath;
-    return publishMethodResolutionDiagnostic();
+    return failMethodResolutionDiagnostic("unknown method: " + removedMapMethodPath);
   }
   if (context.hasVectorHelperCallResolution) {
     resolvedMethod = false;
     return true;
   }
   if (expr.args.empty()) {
-    error_ = "method call missing receiver";
-    return publishMethodResolutionDiagnostic();
+    return failMethodResolutionDiagnostic("method call missing receiver");
   }
   if (expr.args.size() > 10 &&
       (expr.name == "write" || expr.name == "write_line") &&
       isFileReceiverExpr(expr.args.front())) {
-    error_ =
-        "stdlib File write/write_line currently support up to nine values; broader arities await [args<T>] runtime support";
-    return publishMethodResolutionDiagnostic();
+    return failMethodResolutionDiagnostic(
+        "stdlib File write/write_line currently support up to nine values; broader arities await [args<T>] runtime support");
   }
   usedMethodTarget = true;
   hasMethodReceiverIndex = true;
@@ -397,8 +392,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   if (const std::string missingSamePathHelper =
           explicitVectorCountCapacityMethodMissingSamePathHelper();
       !missingSamePathHelper.empty()) {
-    error_ = "unknown method: " + missingSamePathHelper;
-    return publishMethodResolutionDiagnostic();
+    return failMethodResolutionDiagnostic("unknown method: " + missingSamePathHelper);
   }
   auto bareVectorAccessMethodMissingSamePathHelper = [&]() -> std::string {
     if (!expr.isMethodCall || !expr.namespacePrefix.empty() || expr.args.empty()) {
@@ -419,8 +413,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   if (const std::string missingSamePathHelper =
           bareVectorAccessMethodMissingSamePathHelper();
       !missingSamePathHelper.empty()) {
-    error_ = "unknown method: " + missingSamePathHelper;
-    return publishMethodResolutionDiagnostic();
+    return failMethodResolutionDiagnostic("unknown method: " + missingSamePathHelper);
   }
   auto isStdlibFileWriteFacadeResolvedPath = [&](const std::string &path) {
     return path == "/File/write" || path == "/File/write_line" ||
@@ -428,9 +421,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   };
   if (!isBuiltinMethod && isStdlibFileWriteFacadeResolvedPath(resolved) &&
       expr.args.size() > 10) {
-    error_ =
-        "stdlib File write/write_line currently support up to nine values; broader arities await [args<T>] runtime support";
-    return publishMethodResolutionDiagnostic();
+    return failMethodResolutionDiagnostic(
+        "stdlib File write/write_line currently support up to nine values; broader arities await [args<T>] runtime support");
   }
   std::string builtinVectorReceiverCollection;
   if (isBuiltinMethod && resolved == "/vector/count" &&
@@ -447,8 +439,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         builtinVectorReceiverCollection == "vector"))) {
     std::string elemType;
     if (resolveVectorTarget(expr.args.front(), elemType)) {
-      error_ = "unknown method: /vector/count";
-      return publishMethodResolutionDiagnostic();
+      return failMethodResolutionDiagnostic("unknown method: /vector/count");
     }
   }
   if (isBuiltinMethod && resolved == "/vector/capacity" &&
@@ -465,8 +456,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         builtinVectorReceiverCollection == "vector"))) {
     std::string elemType;
     if (resolveVectorTarget(expr.args.front(), elemType)) {
-      error_ = "unknown method: /vector/capacity";
-      return publishMethodResolutionDiagnostic();
+      return failMethodResolutionDiagnostic("unknown method: /vector/capacity");
     }
   }
   if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() &&
@@ -477,11 +467,10 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       !hasImportedDefinitionPath(resolved) && !hasBlockArgs) {
     if (const std::string diagnostic = context.unavailableMethodDiagnostic(resolved);
         !diagnostic.empty()) {
-      error_ = diagnostic;
+      return failMethodResolutionDiagnostic(diagnostic);
     } else {
-      error_ = "unknown method: " + resolved;
+      return failMethodResolutionDiagnostic("unknown method: " + resolved);
     }
-    return publishMethodResolutionDiagnostic();
   }
   resolvedMethod = isBuiltinMethod;
   return true;

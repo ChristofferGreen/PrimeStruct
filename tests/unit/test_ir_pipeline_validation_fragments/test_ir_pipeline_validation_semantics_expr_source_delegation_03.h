@@ -571,10 +571,16 @@
   CHECK(semanticsExprMethodResolutionSource.find(
             "auto publishMethodResolutionDiagnostic = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "auto failMethodResolutionDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find("captureExprContext(expr);") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "method call missing receiver") !=
