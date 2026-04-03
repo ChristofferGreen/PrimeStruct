@@ -252,6 +252,11 @@
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprPredicates.h\"") == std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprValidation.h\"") == std::string::npos);
   CHECK(semanticsExprBlockSource.find("bool SemanticsValidator::validateBlockExpr") != std::string::npos);
+  CHECK(semanticsExprBlockSource.find("auto publishBlockDiagnostic = [&](const Expr &diagnosticExpr) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprBlockSource.find("captureExprContext(diagnosticExpr);") != std::string::npos);
+  CHECK(semanticsExprBlockSource.find("return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
   CHECK(semanticsExprBlockSource.find("block expression does not accept arguments") != std::string::npos);
   CHECK(semanticsExprBlockSource.find("block expression must end with an expression") != std::string::npos);
   CHECK(semanticsExprControlFlowSource.find("bool SemanticsValidator::validateIfExpr") != std::string::npos);

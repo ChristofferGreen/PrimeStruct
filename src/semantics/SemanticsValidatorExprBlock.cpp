@@ -7,13 +7,17 @@ namespace primec::semantics {
 bool SemanticsValidator::validateBlockExpr(const std::vector<ParameterInfo> &params,
                                            const std::unordered_map<std::string, BindingInfo> &locals,
                                            const Expr &expr) {
+  auto publishBlockDiagnostic = [&](const Expr &diagnosticExpr) -> bool {
+    captureExprContext(diagnosticExpr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   if (!expr.args.empty() || !expr.templateArgs.empty() || hasNamedArguments(expr.argNames)) {
     error_ = "block expression does not accept arguments";
-    return false;
+    return publishBlockDiagnostic(expr);
   }
   if (expr.bodyArguments.empty()) {
     error_ = "block expression requires a value";
-    return false;
+    return publishBlockDiagnostic(expr);
   }
 
   std::unordered_map<std::string, BindingInfo> blockLocals = locals;
@@ -29,7 +33,7 @@ bool SemanticsValidator::validateBlockExpr(const std::vector<ParameterInfo> &par
         ReturnKind kind = inferExprReturnKind(bodyExpr.args.front(), params, blockLocals);
         if (kind == ReturnKind::Void && !isStructConstructorValueExpr(bodyExpr.args.front())) {
           error_ = "block expression requires a value";
-          return false;
+          return publishBlockDiagnostic(bodyExpr);
         }
       }
       continue;
@@ -37,11 +41,11 @@ bool SemanticsValidator::validateBlockExpr(const std::vector<ParameterInfo> &par
     if (bodyExpr.isBinding) {
       if (isLast && !sawReturn) {
         error_ = "block expression must end with an expression";
-        return false;
+        return publishBlockDiagnostic(bodyExpr);
       }
       if (isParam(params, bodyExpr.name) || blockLocals.count(bodyExpr.name) > 0) {
         error_ = "duplicate binding name: " + bodyExpr.name;
-        return false;
+        return publishBlockDiagnostic(bodyExpr);
       }
       BindingInfo info;
       std::optional<std::string> restrictType;
@@ -56,7 +60,7 @@ bool SemanticsValidator::validateBlockExpr(const std::vector<ParameterInfo> &par
       } else {
         if (bodyExpr.args.size() != 1) {
           error_ = "binding requires exactly one argument";
-          return false;
+          return publishBlockDiagnostic(bodyExpr);
         }
         if (!validateExpr(params, blockLocals, bodyExpr.args.front())) {
           return false;
@@ -64,7 +68,7 @@ bool SemanticsValidator::validateBlockExpr(const std::vector<ParameterInfo> &par
         ReturnKind initKind = inferExprReturnKind(bodyExpr.args.front(), params, blockLocals);
         if (initKind == ReturnKind::Void && !isStructConstructorValueExpr(bodyExpr.args.front())) {
           error_ = "binding initializer requires a value";
-          return false;
+          return publishBlockDiagnostic(bodyExpr);
         }
         if (!hasExplicitBindingTypeTransform(bodyExpr)) {
           (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, blockLocals, info, &bodyExpr);
@@ -78,7 +82,7 @@ bool SemanticsValidator::validateBlockExpr(const std::vector<ParameterInfo> &par
                                     hasTemplate,
                                     bodyExpr.namespacePrefix)) {
           error_ = "restrict type does not match binding type";
-          return false;
+          return publishBlockDiagnostic(bodyExpr);
         }
       }
       if (info.typeName == "Reference" && !bodyExpr.args.empty()) {
@@ -112,7 +116,7 @@ bool SemanticsValidator::validateBlockExpr(const std::vector<ParameterInfo> &par
         };
         if (!isReferenceInitializer(init)) {
           error_ = "Reference bindings require location(...)";
-          return false;
+          return publishBlockDiagnostic(bodyExpr);
         }
       }
       blockLocals.emplace(bodyExpr.name, info);
@@ -122,7 +126,7 @@ bool SemanticsValidator::validateBlockExpr(const std::vector<ParameterInfo> &par
     if (isReturnCall(bodyExpr)) {
       if (bodyExpr.args.size() != 1) {
         error_ = "return requires a value in block expression";
-        return false;
+        return publishBlockDiagnostic(bodyExpr);
       }
       if (!validateExpr(params, blockLocals, bodyExpr.args.front())) {
         return false;
@@ -130,7 +134,7 @@ bool SemanticsValidator::validateBlockExpr(const std::vector<ParameterInfo> &par
       ReturnKind kind = inferExprReturnKind(bodyExpr.args.front(), params, blockLocals);
       if (kind == ReturnKind::Void && !isStructConstructorValueExpr(bodyExpr.args.front())) {
         error_ = "block expression requires a value";
-        return false;
+        return publishBlockDiagnostic(bodyExpr);
       }
       sawReturn = true;
       continue;
@@ -143,7 +147,7 @@ bool SemanticsValidator::validateBlockExpr(const std::vector<ParameterInfo> &par
       ReturnKind kind = inferExprReturnKind(bodyExpr, params, blockLocals);
       if (kind == ReturnKind::Void && !isStructConstructorValueExpr(bodyExpr)) {
         error_ = "block expression requires a value";
-        return false;
+        return publishBlockDiagnostic(bodyExpr);
       }
     }
   }
