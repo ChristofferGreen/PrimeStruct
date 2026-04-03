@@ -15,6 +15,10 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     const Expr &expr,
     bool &handledOut) {
   handledOut = false;
+  auto publishMutationBorrowDiagnostic = [&]() -> bool {
+    captureExprContext(expr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   auto isMutableBinding = [&](const std::string &name) -> bool {
     if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
       return paramBinding->isMutable;
@@ -455,37 +459,37 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     handledOut = true;
     if (hasNamedArguments(expr.argNames)) {
       error_ = "named arguments not supported for builtin calls";
-      return false;
+      return publishMutationBorrowDiagnostic();
     }
     if (expr.isMethodCall) {
       error_ = "move does not support method-call syntax";
-      return false;
+      return publishMutationBorrowDiagnostic();
     }
     if (!expr.templateArgs.empty()) {
       error_ = "move does not accept template arguments";
-      return false;
+      return publishMutationBorrowDiagnostic();
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       error_ = "move does not accept block arguments";
-      return false;
+      return publishMutationBorrowDiagnostic();
     }
     if (expr.args.size() != 1) {
       error_ = "move requires exactly one argument";
-      return false;
+      return publishMutationBorrowDiagnostic();
     }
     const Expr &target = expr.args.front();
     if (target.kind != Expr::Kind::Name) {
       error_ = "move requires a binding name";
-      return false;
+      return publishMutationBorrowDiagnostic();
     }
     const BindingInfo *binding = findNamedBinding(target.name);
     if (!binding) {
       error_ = "move requires a local binding or parameter: " + target.name;
-      return false;
+      return publishMutationBorrowDiagnostic();
     }
     if (binding->typeName == "Reference") {
       error_ = "move does not support Reference bindings: " + target.name;
-      return false;
+      return publishMutationBorrowDiagnostic();
     }
     if (hasActiveBorrowForBinding(target.name)) {
       formatBorrowedBindingError(target.name, target.name);
@@ -493,7 +497,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     }
     if (currentValidationContext_.movedBindings.count(target.name) > 0) {
       error_ = "use-after-move: " + target.name;
-      return false;
+      return publishMutationBorrowDiagnostic();
     }
     currentValidationContext_.movedBindings.insert(target.name);
     return true;

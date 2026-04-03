@@ -618,6 +618,9 @@
             "auto hasActiveBorrowForBinding =\n"
             "      [&](const std::string &name,") !=
         std::string::npos);
+  CHECK(semanticsExprMutationBorrowsSource.find(
+            "auto publishMutationBorrowDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
   CHECK(semanticsExprMutationBorrowsSource.find("if (isSimpleCallName(expr, \"move\")) {") !=
         std::string::npos);
   CHECK(semanticsExprMutationBorrowsSource.find("if (isAssignCall(expr)) {") !=
