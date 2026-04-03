@@ -128,12 +128,12 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       const Expr &returnExpr = stmt.args.front();
       if (returnExpr.kind != Expr::Kind::Name) {
         error_ = "reference return requires direct parameter reference";
-        return false;
+        return publishReturnDiagnostic();
       }
       const BindingInfo *paramBinding = findParamBinding(params, returnExpr.name);
       if (paramBinding == nullptr || paramBinding->typeName != "Reference") {
         error_ = "reference return requires direct parameter reference";
-        return false;
+        return publishReturnDiagnostic();
       }
       auto normalizeReferenceTarget = [&](const std::string &target) -> std::string {
         std::string trimmed = target;
@@ -151,7 +151,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       if (normalizeReferenceTarget(paramBinding->typeTemplateArg) !=
           normalizeReferenceTarget(*expectedReferenceTarget)) {
         error_ = "reference return type mismatch";
-        return false;
+        return publishReturnDiagnostic();
       }
     }
     bool validatedPointerLikeReturn = false;
@@ -168,7 +168,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
                              declaredReturnBinding.typeTemplateArg,
                              namespacePrefix)) {
           error_ = "return type mismatch: expected " + declaredReturnBinding.typeName;
-          return false;
+          return publishReturnDiagnostic();
         }
         validatedPointerLikeReturn = true;
       }
@@ -254,15 +254,15 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
               expectedType.erase(0, 1);
             }
             error_ = returnTypeMismatchDiagnostic(structIt->second, actualStruct, expectedType);
-            return false;
+            return publishReturnDiagnostic();
           }
         } else if (exprKind != ReturnKind::Array) {
           error_ = "return type mismatch: expected array";
-          return false;
+          return publishReturnDiagnostic();
         }
       } else if (exprKind != ReturnKind::Unknown && exprKind != returnKind) {
         error_ = "return type mismatch: expected " + typeNameForReturnKind(returnKind);
-        return false;
+        return publishReturnDiagnostic();
       }
     }
   }
