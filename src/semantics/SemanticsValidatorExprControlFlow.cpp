@@ -45,17 +45,21 @@ bool SemanticsValidator::isStructConstructorValueExpr(const Expr &expr) {
 bool SemanticsValidator::validateIfExpr(const std::vector<ParameterInfo> &params,
                                         const std::unordered_map<std::string, BindingInfo> &locals,
                                         const Expr &expr) {
+  auto publishIfDiagnostic = [&](const Expr &diagnosticExpr) -> bool {
+    captureExprContext(diagnosticExpr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   if (hasNamedArguments(expr.argNames)) {
     error_ = "named arguments not supported for builtin calls";
-    return false;
+    return publishIfDiagnostic(expr);
   }
   if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
     error_ = "if does not accept trailing block arguments";
-    return false;
+    return publishIfDiagnostic(expr);
   }
   if (expr.args.size() != 3) {
     error_ = "if requires condition, then, else";
-    return false;
+    return publishIfDiagnostic(expr);
   }
 
   const Expr &cond = expr.args[0];
@@ -67,7 +71,7 @@ bool SemanticsValidator::validateIfExpr(const std::vector<ParameterInfo> &params
   ReturnKind condKind = inferExprReturnKind(cond, params, locals);
   if (condKind != ReturnKind::Bool) {
     error_ = "if condition requires bool";
-    return false;
+    return publishIfDiagnostic(cond);
   }
 
   auto validateBranchValueKind = [&](const Expr &branch, const char *label, ReturnKind &kindOut, bool &stringOut) -> bool {
@@ -75,11 +79,11 @@ bool SemanticsValidator::validateIfExpr(const std::vector<ParameterInfo> &params
     stringOut = false;
     if (!isIfBlockEnvelope(branch)) {
       error_ = "if branches require block envelopes";
-      return false;
+      return publishIfDiagnostic(branch);
     }
     if (branch.bodyArguments.empty()) {
       error_ = std::string(label) + " block must produce a value";
-      return false;
+      return publishIfDiagnostic(branch);
     }
 
     std::unordered_map<std::string, BindingInfo> branchLocals = locals;
@@ -98,7 +102,7 @@ bool SemanticsValidator::validateIfExpr(const std::vector<ParameterInfo> &params
       if (bodyExpr.isBinding) {
         if (isParam(params, bodyExpr.name) || branchLocals.count(bodyExpr.name) > 0) {
           error_ = "duplicate binding name: " + bodyExpr.name;
-          return false;
+          return publishIfDiagnostic(bodyExpr);
         }
         BindingInfo info;
         std::optional<std::string> restrictType;
@@ -113,7 +117,7 @@ bool SemanticsValidator::validateIfExpr(const std::vector<ParameterInfo> &params
         } else {
           if (bodyExpr.args.size() != 1) {
             error_ = "binding requires exactly one argument";
-            return false;
+            return publishIfDiagnostic(bodyExpr);
           }
           if (!validateExpr(params, branchLocals, bodyExpr.args.front())) {
             return false;
@@ -121,7 +125,7 @@ bool SemanticsValidator::validateIfExpr(const std::vector<ParameterInfo> &params
           ReturnKind initKind = inferExprReturnKind(bodyExpr.args.front(), params, branchLocals);
           if (initKind == ReturnKind::Void && !isStructConstructorValueExpr(bodyExpr.args.front())) {
             error_ = "binding initializer requires a value";
-            return false;
+            return publishIfDiagnostic(bodyExpr);
           }
           if (!hasExplicitBindingTypeTransform(bodyExpr)) {
             (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, branchLocals, info, &bodyExpr);
@@ -135,7 +139,7 @@ bool SemanticsValidator::validateIfExpr(const std::vector<ParameterInfo> &params
                                       hasTemplate,
                                       bodyExpr.namespacePrefix)) {
             error_ = "restrict type does not match binding type";
-            return false;
+            return publishIfDiagnostic(bodyExpr);
           }
         }
         if (info.typeName == "Reference" && !bodyExpr.args.empty()) {
@@ -169,7 +173,7 @@ bool SemanticsValidator::validateIfExpr(const std::vector<ParameterInfo> &params
           };
           if (!isReferenceInitializer(init)) {
             error_ = "Reference bindings require location(...)";
-            return false;
+            return publishIfDiagnostic(bodyExpr);
           }
         }
         branchLocals.emplace(bodyExpr.name, info);
@@ -179,7 +183,7 @@ bool SemanticsValidator::validateIfExpr(const std::vector<ParameterInfo> &params
       if (isReturnCall(bodyExpr)) {
         if (bodyExpr.args.size() != 1) {
           error_ = std::string("return requires a value in ") + label + " block";
-          return false;
+          return publishIfDiagnostic(bodyExpr);
         }
         if (!validateExpr(params, branchLocals, bodyExpr.args.front())) {
           return false;
@@ -199,7 +203,7 @@ bool SemanticsValidator::validateIfExpr(const std::vector<ParameterInfo> &params
 
     if (!valueExpr) {
       error_ = std::string(label) + " block must end with an expression";
-      return false;
+      return publishIfDiagnostic(branch);
     }
     kindOut = inferExprReturnKind(*valueExpr, params, branchLocals);
     stringOut = (kindOut == ReturnKind::String);
@@ -208,7 +212,7 @@ bool SemanticsValidator::validateIfExpr(const std::vector<ParameterInfo> &params
         kindOut = ReturnKind::Unknown;
       } else {
         error_ = "if branches must produce a value";
-        return false;
+        return publishIfDiagnostic(*valueExpr);
       }
     }
     return true;
@@ -226,13 +230,13 @@ bool SemanticsValidator::validateIfExpr(const std::vector<ParameterInfo> &params
   }
   if (thenIsString != elseIsString) {
     error_ = "if branches must return compatible types";
-    return false;
+    return publishIfDiagnostic(expr);
   }
 
   ReturnKind combined = inferExprReturnKind(expr, params, locals);
   if (thenKind != ReturnKind::Unknown && elseKind != ReturnKind::Unknown && combined == ReturnKind::Unknown) {
     error_ = "if branches must return compatible types";
-    return false;
+    return publishIfDiagnostic(expr);
   }
   return true;
 }

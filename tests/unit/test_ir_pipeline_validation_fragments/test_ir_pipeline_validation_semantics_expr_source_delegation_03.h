@@ -260,9 +260,18 @@
   CHECK(semanticsExprBlockSource.find("block expression does not accept arguments") != std::string::npos);
   CHECK(semanticsExprBlockSource.find("block expression must end with an expression") != std::string::npos);
   CHECK(semanticsExprControlFlowSource.find("bool SemanticsValidator::validateIfExpr") != std::string::npos);
+  CHECK(semanticsExprControlFlowSource.find(
+            "auto publishIfDiagnostic = [&](const Expr &diagnosticExpr) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprControlFlowSource.find("captureExprContext(diagnosticExpr);") != std::string::npos);
+  CHECK(semanticsExprControlFlowSource.find("return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
   CHECK(semanticsExprControlFlowSource.find("bool SemanticsValidator::isStructConstructorValueExpr") !=
         std::string::npos);
   CHECK(semanticsExprControlFlowSource.find("if branches require block envelopes") != std::string::npos);
+  CHECK(semanticsExprControlFlowSource.find("if condition requires bool") != std::string::npos);
+  CHECK(semanticsExprControlFlowSource.find("if branches must return compatible types") !=
+        std::string::npos);
   CHECK(semanticsExprLambdaSource.find("bool SemanticsValidator::validateLambdaExpr") != std::string::npos);
   CHECK(semanticsExprLambdaSource.find("auto publishLambdaDiagnostic = [&](const Expr &diagnosticExpr) -> bool {") !=
         std::string::npos);
