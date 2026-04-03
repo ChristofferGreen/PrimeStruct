@@ -51,34 +51,38 @@ bool SemanticsValidator::validateExprEarlyPointerBuiltin(
   }
 
   handledOut = true;
+  auto publishExprDiagnostic = [&]() -> bool {
+    captureExprContext(expr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   if (hasNamedArguments(expr.argNames)) {
     error_ = "named arguments not supported for builtin calls";
-    return false;
+    return publishExprDiagnostic();
   }
   if (!expr.templateArgs.empty()) {
     error_ = "pointer helpers do not accept template arguments";
-    return false;
+    return publishExprDiagnostic();
   }
   if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
     error_ = "pointer helpers do not accept block arguments";
-    return false;
+    return publishExprDiagnostic();
   }
   if (expr.args.size() != 1) {
     error_ = "argument count mismatch for builtin " + earlyPointerBuiltin;
-    return false;
+    return publishExprDiagnostic();
   }
   if (earlyPointerBuiltin == "location") {
     const Expr &target = expr.args.front();
     if (!isAcceptedLocationTarget(target, isAcceptedLocationTarget)) {
       error_ = "location requires a local binding";
-      return false;
+      return publishExprDiagnostic();
     }
   }
   if (earlyPointerBuiltin == "dereference" &&
       !isPointerLikeExpr(expr.args.front(), params, locals) &&
       !dispatchBootstrap.isDeclaredPointerLikeCall(expr.args.front())) {
     error_ = "dereference requires a pointer or reference";
-    return false;
+    return publishExprDiagnostic();
   }
   return validateExpr(params, locals, expr.args.front());
 }
