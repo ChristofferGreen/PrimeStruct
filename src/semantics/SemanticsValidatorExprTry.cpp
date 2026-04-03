@@ -8,6 +8,10 @@ bool SemanticsValidator::validateExprTryBuiltin(
     const Expr &expr,
     const ExprTryBuiltinContext &context,
     bool &handledOut) {
+  auto publishTryDiagnostic = [&]() -> bool {
+    captureExprContext(expr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   handledOut = false;
 
   if (expr.isMethodCall || !isSimpleCallName(expr, "try")) {
@@ -17,19 +21,19 @@ bool SemanticsValidator::validateExprTryBuiltin(
   handledOut = true;
   if (hasNamedArguments(expr.argNames)) {
     error_ = "named arguments not supported for builtin calls";
-    return false;
+    return publishTryDiagnostic();
   }
   if (!expr.templateArgs.empty()) {
     error_ = "try does not accept template arguments";
-    return false;
+    return publishTryDiagnostic();
   }
   if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
     error_ = "try does not accept block arguments";
-    return false;
+    return publishTryDiagnostic();
   }
   if (expr.args.size() != 1) {
     error_ = "try requires exactly one argument";
-    return false;
+    return publishTryDiagnostic();
   }
   if (expr.args.front().kind == Expr::Kind::Call) {
     const Expr &tryTargetExpr = expr.args.front();
@@ -39,7 +43,7 @@ bool SemanticsValidator::validateExprTryBuiltin(
             : std::string{};
     if (!removedMapCompatibilityPath.empty()) {
       error_ = "unknown call target: " + removedMapCompatibilityPath;
-      return false;
+      return publishTryDiagnostic();
     }
     const std::string tryTargetPath = resolveCalleePath(tryTargetExpr);
     bool isBareMapTryAtFallback = false;
@@ -68,7 +72,7 @@ bool SemanticsValidator::validateExprTryBuiltin(
           !tryTargetExpr.args.empty() &&
           context.isIndexedArgsPackMapReceiverTarget(tryTargetExpr.args.front()))) {
       error_ = "unknown call target: /std/collections/map/tryAt";
-      return false;
+      return publishTryDiagnostic();
     }
   }
 
@@ -85,18 +89,18 @@ bool SemanticsValidator::validateExprTryBuiltin(
       currentValidationContext_.resultType->isResult;
   if (!currentValidationContext_.onError.has_value()) {
     error_ = "missing on_error for ? usage";
-    return false;
+    return publishTryDiagnostic();
   }
   if (!returnsResult && enclosingReturnKind != ReturnKind::Int) {
     error_ = "try requires Result or int return type";
-    return false;
+    return publishTryDiagnostic();
   }
   if (returnsResult &&
       !errorTypesMatch(currentValidationContext_.resultType->errorType,
                        currentValidationContext_.onError->errorType,
                        expr.namespacePrefix)) {
     error_ = "on_error error type mismatch";
-    return false;
+    return publishTryDiagnostic();
   }
   if (!validateExpr(params, locals, expr.args.front())) {
     return false;
@@ -105,13 +109,13 @@ bool SemanticsValidator::validateExprTryBuiltin(
   if (!resolveResultTypeForExpr(expr.args.front(), params, locals, argResult) ||
       !argResult.isResult) {
     error_ = "try requires Result argument";
-    return false;
+    return publishTryDiagnostic();
   }
   if (currentValidationContext_.onError.has_value() &&
       !errorTypesMatch(argResult.errorType, currentValidationContext_.onError->errorType,
                        expr.namespacePrefix)) {
     error_ = "try error type mismatch";
-    return false;
+    return publishTryDiagnostic();
   }
 
   return true;

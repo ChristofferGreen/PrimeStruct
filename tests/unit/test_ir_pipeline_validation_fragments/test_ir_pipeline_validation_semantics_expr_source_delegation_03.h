@@ -465,6 +465,12 @@
         std::string::npos);
   CHECK(semanticsExprTrySource.find("bool SemanticsValidator::validateExprTryBuiltin") !=
         std::string::npos);
+  CHECK(semanticsExprTrySource.find("auto publishTryDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprTrySource.find("captureExprContext(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprTrySource.find("return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
   CHECK(semanticsExprTrySource.find("try requires exactly one argument") !=
         std::string::npos);
   CHECK(semanticsExprPointerLikeSource.find("std::string SemanticsValidator::normalizeCollectionMethodName") !=
