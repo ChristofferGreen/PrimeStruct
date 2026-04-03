@@ -850,7 +850,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(inferDefinitionSource.find("isBuiltinSoaFieldViewExpr(") != std::string::npos);
   CHECK(inferDefinitionSource.find("isBuiltinSoaRefExpr(") != std::string::npos);
   CHECK(inferDefinitionSource.find(
-            "hasVisibleDefinitionPathForCurrentImports(helperPath)") !=
+            "hasVisibleSoaHelperTargetForCurrentImports(helperName)") !=
         std::string::npos);
   CHECK(inferDefinitionSource.find(
             "!hasDeclaredDefinitionPath(helperPath) && !hasImportedDefinitionPath(helperPath)") ==

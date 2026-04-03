@@ -238,8 +238,7 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
     return false;
   }
 
-  const std::string helperPath = "/soa_vector/" + normalizedName;
-  if (hasVisibleDefinitionPathForCurrentImports(helperPath)) {
+  if (hasVisibleSoaHelperTargetForCurrentImports(normalizedName)) {
     return false;
   }
 

@@ -53,7 +53,7 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
       return false;
     }
     const std::string helperPath = "/soa_vector/" + helperName;
-    if (!hasVisibleDefinitionPathForCurrentImports(helperPath)) {
+    if (!hasVisibleSoaHelperTargetForCurrentImports(helperName)) {
       return false;
     }
     BindingInfo receiverBinding;
