@@ -27,17 +27,11 @@ bool inferBindingTypeForMonomorph(const Expr &initializer,
   return inferBlockBodyBindingTypeForMonomorph(initializer, params, locals, allowMathBare, ctx, infoOut);
 }
 
-bool hasVisibleDefinitionPathForMonomorph(const Context &ctx,
-                                          std::string_view path) {
-  const std::string ownedPath(path);
-  return ctx.sourceDefs.count(ownedPath) > 0 ||
-         ctx.helperOverloads.count(ownedPath) > 0;
-}
-
 bool hasVisibleSoaHelperTargetForMonomorph(const Context &ctx,
                                            std::string_view helperName) {
-  return hasVisibleDefinitionPathForMonomorph(
-      ctx, "/soa_vector/" + std::string(helperName));
+  const std::string ownedPath = "/soa_vector/" + std::string(helperName);
+  return ctx.sourceDefs.count(ownedPath) > 0 ||
+         ctx.helperOverloads.count(ownedPath) > 0;
 }
 
 bool inferImplicitTemplateArgs(const Definition &def,

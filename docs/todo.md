@@ -44,7 +44,8 @@ Ownership/drop status note: completed guard and container-error-contract checkpo
   uses that same shared helper instead of a hardcoded `/soa_vector/ref` probe,
   while monomorph-side old-surface `/soa_vector/ref` and `/soa_vector/<field>`
   visibility now also routes through one shared helper-target probe instead of
-  direct path checks, and monomorph-side fixed method pending rejects now call
+  direct path checks or a monomorph-local visible-path wrapper, and
+  monomorph-side fixed method pending rejects now call
   the shared pending helper directly instead of a monomorph-local wrapper,
   while the remaining preferred same-path-versus-canonical SoA target chooser
   now uses its shared helper directly instead of a generic visible-path wrapper,
