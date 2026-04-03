@@ -221,7 +221,8 @@ bool SemanticsValidator::validateVectorIndexedRemovalHelperElementType(
     return failUncontextualizedDiagnostic(std::move(message));
   };
   std::string experimentalElemType;
-  if (!extractExperimentalVectorElementType(binding, experimentalElemType) &&
+  const bool requiresDropTrivial = helperName != "remove_swap";
+  if (requiresDropTrivial && !extractExperimentalVectorElementType(binding, experimentalElemType) &&
       currentValidationState_.context.definitionPath.rfind("/std/collections/experimental_vector/", 0) != 0 &&
       namespacePrefix.rfind("/std/collections/experimental_vector", 0) != 0 &&
       !binding.typeTemplateArg.empty()) {

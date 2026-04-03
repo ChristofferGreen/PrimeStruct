@@ -526,6 +526,115 @@ TEST_CASE("ir lowerer flow helpers emit vector removed-slot destruction sequence
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer flow helpers wire remove_swap through removed-slot destruction") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "remove_swap";
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+  stmt.args.push_back(receiverExpr);
+  stmt.argNames.resize(1);
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intValue = "0";
+  stmt.args.push_back(indexExpr);
+  stmt.argNames.resize(2);
+
+  primec::ir_lowerer::LocalMap localsIn;
+  primec::ir_lowerer::LocalInfo valuesInfo;
+  valuesInfo.index = 3;
+  valuesInfo.isMutable = true;
+  valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  valuesInfo.valueKind = ValueKind::Int32;
+  valuesInfo.structTypeName = "/thing";
+  localsIn.emplace("values", valuesInfo);
+
+  primec::Definition destroyHelper;
+  destroyHelper.fullPath = "/thing/DestroyStack";
+
+  std::vector<primec::IrInstruction> instructions;
+  int32_t nextTemp = 10;
+  primec::Expr capturedDestroyExpr;
+  primec::ir_lowerer::LocalMap capturedDestroyLocals;
+  const primec::Definition *capturedDestroyCallee = nullptr;
+  std::string error;
+
+  const auto result = primec::ir_lowerer::tryEmitVectorStatementHelper(
+      stmt,
+      localsIn,
+      instructions,
+      [&]() { return nextTemp++; },
+      [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        if (&expr == &indexExpr) {
+          return ValueKind::Int32;
+        }
+        return ValueKind::Unknown;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        if (expr.kind == primec::Expr::Kind::Name && expr.name == "values") {
+          instructions.push_back({primec::IrOpcode::LoadLocal, 3});
+          return true;
+        }
+        if (expr.kind == primec::Expr::Kind::Literal) {
+          instructions.push_back({primec::IrOpcode::PushI32, 0});
+          return true;
+        }
+        return false;
+      },
+      [&](const std::string &structPath) -> const primec::Definition * {
+        if (structPath == "/thing") {
+          return &destroyHelper;
+        }
+        return nullptr;
+      },
+      [&](const primec::Expr &expr,
+          const primec::Definition &callee,
+          const primec::ir_lowerer::LocalMap &callLocals,
+          bool requireValue) {
+        capturedDestroyExpr = expr;
+        capturedDestroyLocals = callLocals;
+        capturedDestroyCallee = &callee;
+        CHECK_FALSE(requireValue);
+        return true;
+      },
+      [](const primec::Expr &) { return false; },
+      []() {},
+      []() {},
+      []() {},
+      []() {},
+      []() {},
+      error);
+
+  CHECK(result == primec::ir_lowerer::VectorStatementHelperEmitResult::Emitted);
+  CHECK(error.empty());
+  REQUIRE(capturedDestroyCallee == &destroyHelper);
+  CHECK(capturedDestroyExpr.kind == primec::Expr::Kind::Call);
+  CHECK(capturedDestroyExpr.isMethodCall);
+  CHECK(capturedDestroyExpr.name == "DestroyStack");
+  REQUIRE(capturedDestroyExpr.args.size() == 1u);
+  CHECK(capturedDestroyExpr.args.front().kind == primec::Expr::Kind::Name);
+  const std::string receiverName = capturedDestroyExpr.args.front().name;
+  REQUIRE(capturedDestroyLocals.count(receiverName) == 1u);
+  CHECK(capturedDestroyLocals.at(receiverName).kind == primec::ir_lowerer::LocalInfo::Kind::Reference);
+  CHECK(capturedDestroyLocals.at(receiverName).index == 18);
+  CHECK(capturedDestroyLocals.at(receiverName).structTypeName == "/thing");
+
+  const auto destroyPtrStoreIt = std::find_if(
+      instructions.begin(), instructions.end(), [](const primec::IrInstruction &inst) {
+        return inst.op == primec::IrOpcode::StoreLocal && inst.imm == 18u;
+      });
+  REQUIRE(destroyPtrStoreIt != instructions.end());
+  CHECK(std::find_if(instructions.begin(), instructions.end(), [](const primec::IrInstruction &inst) {
+          return inst.op == primec::IrOpcode::JumpIfZero;
+        }) != instructions.end());
+}
+
 TEST_CASE("ir lowerer flow helpers emit compare-to-zero sequences") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
   std::vector<primec::IrInstruction> instructions;

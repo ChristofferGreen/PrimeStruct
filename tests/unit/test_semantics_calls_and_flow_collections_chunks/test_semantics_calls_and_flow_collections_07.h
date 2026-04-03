@@ -459,7 +459,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("remove_swap rejects non-drop-trivial vector element types") {
+TEST_CASE("remove_swap rejects non-relocation-trivial vector element types even after removed-slot destruction") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -481,7 +481,8 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find(
-            "remove_swap requires drop-trivial vector element type until container drop semantics are implemented: "
+            "remove_swap requires relocation-trivial vector element type until container move/reallocation semantics "
+            "are implemented: "
             "Owned") != std::string::npos);
 }
 

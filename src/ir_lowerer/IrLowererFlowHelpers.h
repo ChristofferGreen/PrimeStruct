@@ -177,6 +177,8 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<const Definition *(const std::string &)> &resolveDestroyHelperForStruct,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
     const std::function<bool(const Expr &)> &isUserDefinedVectorHelperCall,
     const std::function<void()> &emitVectorCapacityExceeded,
     const std::function<void()> &emitVectorPopOnEmpty,

@@ -1,5 +1,6 @@
 #include "IrLowererFlowHelpers.h"
 
+#include "IrLowererCallHelpers.h"
 #include "IrLowererFlowVectorResolutionInternal.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
@@ -51,6 +52,8 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<const Definition *(const std::string &)> &resolveDestroyHelperForStruct,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
     const std::function<bool(const Expr &)> &isUserDefinedVectorHelperCall,
     const std::function<void()> &emitVectorCapacityExceeded,
     const std::function<void()> &emitVectorPopOnEmpty,
@@ -446,11 +449,35 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(lastIndexLocal)});
 
   if (vectorHelper == "remove_swap") {
+    const auto targetInfo = resolveArrayVectorAccessTargetInfo(target, localsIn);
+    const std::string removedStructPath = targetInfo.structTypeName;
+    const Definition *destroyHelper = removedStructPath.empty()
+                                          ? nullptr
+                                          : resolveDestroyHelperForStruct(removedStructPath);
     const int32_t dataPtrLocal = allocTempLocal();
     emitLoadVectorDataPtr(dataPtrLocal);
     const int32_t destPtrLocal = allocTempLocal();
     const int32_t srcPtrLocal = allocTempLocal();
     const int32_t tempValueLocal = allocTempLocal();
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(lastIndexLocal)});
+    instructions.push_back({cmpLtOp, 0});
+    const size_t jumpSkipSwapCopy = instructions.size();
+    instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+    if (!emitVectorDestroySlot(instructions,
+                               dataPtrLocal,
+                               indexLocal,
+                               indexKind,
+                               removedStructPath,
+                               destroyHelper,
+                               localsIn,
+                               allocTempLocal,
+                               emitInlineDefinitionCall,
+                               error)) {
+      return VectorStatementHelperEmitResult::Error;
+    }
 
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataPtrLocal)});
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
@@ -474,6 +501,27 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValueLocal)});
     instructions.push_back({IrOpcode::StoreIndirect, 0});
     instructions.push_back({IrOpcode::Pop, 0});
+    const size_t jumpAfterRemoveSwapDestroy = instructions.size();
+    instructions.push_back({IrOpcode::Jump, 0});
+
+    const size_t destroyOnlyIndex = instructions.size();
+    instructions[jumpSkipSwapCopy].imm = static_cast<int32_t>(destroyOnlyIndex);
+
+    if (!emitVectorDestroySlot(instructions,
+                               dataPtrLocal,
+                               indexLocal,
+                               indexKind,
+                               removedStructPath,
+                               destroyHelper,
+                               localsIn,
+                               allocTempLocal,
+                               emitInlineDefinitionCall,
+                               error)) {
+      return VectorStatementHelperEmitResult::Error;
+    }
+
+    const size_t afterRemoveSwapDestroyIndex = instructions.size();
+    instructions[jumpAfterRemoveSwapDestroy].imm = static_cast<int32_t>(afterRemoveSwapDestroyIndex);
 
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
     instructions.push_back({IrOpcode::PushI32, 1});
@@ -568,6 +616,8 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
       inferExprKind,
       [](const Expr &, const LocalMap &) { return std::string(); },
       emitExpr,
+      [](const std::string &) -> const Definition * { return nullptr; },
+      [](const Expr &, const Definition &, const LocalMap &, bool) { return false; },
       isUserDefinedVectorHelperCall,
       emitVectorCapacityExceeded,
       emitVectorPopOnEmpty,

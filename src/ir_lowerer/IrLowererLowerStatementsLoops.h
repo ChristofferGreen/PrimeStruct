@@ -335,6 +335,20 @@
             return inferStructExprPath(valueExpr, valueLocals);
           },
           [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
+          [&](const std::string &structPath) -> const Definition * {
+            auto destroyIt = defMap.find(structPath + "/DestroyStack");
+            if (destroyIt != defMap.end()) {
+              return destroyIt->second;
+            }
+            destroyIt = defMap.find(structPath + "/Destroy");
+            if (destroyIt != defMap.end()) {
+              return destroyIt->second;
+            }
+            return nullptr;
+          },
+          [&](const Expr &callExpr, const Definition &callee, const LocalMap &callLocals, bool requireValue) {
+            return emitInlineDefinitionCall(callExpr, callee, callLocals, requireValue);
+          },
           [&](const Expr &candidate) {
             if (candidate.isMethodCall && !isArrayCountCall(candidate, localsIn) &&
                 !isStringCountCall(candidate, localsIn) && !isVectorCapacityCall(candidate, localsIn)) {

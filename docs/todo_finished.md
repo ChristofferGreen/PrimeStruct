@@ -10,6 +10,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Architecture / Type-resolution graph**
 **Group 4 - Ownership and lifetime substrate**
 - ✓ Add the reusable lowered lifecycle-aware destroy-at-pointer helper for fixed-capacity slot storage and build the shared builtin `vector` removed-slot destruction primitive on top of it, so indexed-removal lowering now has one reusable `Destroy*`-from-slot-pointer path ready for `remove_swap` / `remove_at` wiring.
+- ✓ Wire builtin `vector` `remove_swap` onto the shared removed-slot destruction primitive and lift its separate drop-trivial guard. Completed: fixed-capacity builtin `remove_swap` now destroys the removed slot before decrementing count, while the remaining survivor-swap raw-copy path still keeps the relocation-trivial guard in place until the survivor-motion primitive lands.
 
 **Group 12 - Semantics/lowering boundary**
 - ✓ Split the remaining first semantic-product builder call-target item into explicit direct-call, receiver/method-call, and helper-routing slices, so the live queue now matches the documented resolution families instead of hiding them in one broad target/publication bullet.

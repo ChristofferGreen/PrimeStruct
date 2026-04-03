@@ -2876,14 +2876,14 @@ bad_use_after_take() {
     `Pointer<T>`, `Reference<T>`, arrays of drop-trivial elements, and concrete structs that do not define `Destroy*`
     helpers and whose fields are also drop-trivial. Builtin `vector`/`map`/`soa_vector` elements and structs with
     `Destroy` hooks are rejected for builtin `pop`/`clear`.
-  - Current indexed-removal contract: builtin `vector` `remove_at` and `remove_swap` are only defined for element types
-    that are both drop-trivial and relocation-trivial on the fixed-capacity builtin runtime path. The remaining
-    runtime gaps are: wiring the new shared removed-slot destruction primitive into builtin `remove_swap` / `remove_at`
-    so their drop-trivial guards can lift for ownership-sensitive elements, plus separate survivor-motion primitives for
-    relocation-sensitive elements. The lowerer now has a reusable lifecycle-aware destroy-at-pointer helper plus the
-    shared vector destroy-at-slot primitive, but `remove_swap` still needs that primitive wired into the removed-slot
-    path and `remove_at` still needs the same wiring before either helper can lift its drop-trivial guard; after that,
-    `remove_swap` still needs a real survivor swap path and `remove_at` still needs real survivor compaction. Canonical
+  - Current indexed-removal contract: builtin `vector` `remove_swap` is only defined for relocation-trivial element
+    types on the fixed-capacity builtin runtime path, and builtin `vector` `remove_at` is still defined only for
+    element types that are both drop-trivial and relocation-trivial there. The lowerer now has a reusable
+    lifecycle-aware destroy-at-pointer helper plus the shared vector destroy-at-slot primitive, and builtin
+    `remove_swap` now invokes that removed-slot destruction path before decrementing count. The remaining runtime gaps
+    are: wiring the same removed-slot destruction primitive into builtin `remove_at` so its drop-trivial guard can
+    lift, plus separate survivor-motion primitives for relocation-sensitive elements. After that, `remove_swap` still
+    needs a real survivor swap path and `remove_at` still needs real survivor compaction. Canonical
     `/std/collections/vector/*` indexed-removal helpers on explicit experimental `Vector<T>` bindings are exempt from
     that builtin restriction because they route onto the experimental `.prime` implementation instead. There is no
     corresponding builtin `soa_vector` indexed-removal surface yet.
