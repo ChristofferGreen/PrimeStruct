@@ -13,6 +13,10 @@ bool SemanticsValidator::validateExprLateFallbackBuiltins(
     bool resolvedMethod,
     const ExprLateFallbackBuiltinContext &context,
     bool &handledOut) {
+  auto publishLateFallbackBuiltinDiagnostic = [&]() -> bool {
+    captureExprContext(expr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   handledOut = false;
   if (context.dispatchResolvers == nullptr) {
     return true;
@@ -106,7 +110,7 @@ bool SemanticsValidator::validateExprLateFallbackBuiltins(
           error_ =
               builtinName + " requires array, vector, map, or string target";
         }
-        return false;
+        return publishLateFallbackBuiltinDiagnostic();
       }
     }
   }

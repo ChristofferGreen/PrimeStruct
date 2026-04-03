@@ -386,6 +386,14 @@
             "bool SemanticsValidator::validateExprLateFallbackBuiltins") !=
         std::string::npos);
   CHECK(semanticsExprLateFallbackBuiltinsSource.find(
+            "auto publishLateFallbackBuiltinDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprLateFallbackBuiltinsSource.find("captureExprContext(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprLateFallbackBuiltinsSource.find(
+            "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprLateFallbackBuiltinsSource.find(
             "validateExprLateCollectionAccessFallbacks(") !=
         std::string::npos);
   CHECK(semanticsExprLateFallbackBuiltinsSource.find(
