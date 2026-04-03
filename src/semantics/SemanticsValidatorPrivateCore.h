@@ -106,6 +106,8 @@
                                  std::string *fieldNameOut = nullptr) const;
   bool hasVisibleDefinitionPathForCurrentImports(
       std::string_view path) const;
+  bool hasVisibleSoaHelperTargetForCurrentImports(
+      std::string_view helperName) const;
   std::string preferredVisibleDefinitionPathForCurrentImports(
       std::string_view samePath,
       std::string_view canonicalPath) const;

@@ -676,6 +676,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "bool SemanticsValidator::hasVisibleDefinitionPathForCurrentImports(") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
+            "bool SemanticsValidator::hasVisibleSoaHelperTargetForCurrentImports(") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
             "std::string SemanticsValidator::preferredVisibleDefinitionPathForCurrentImports(") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
@@ -778,7 +781,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "(*dispatchResolvers).resolveSoaVectorTarget(expr.args.front(),") !=
         std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find(
-            "hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/count\")") !=
+            "hasVisibleSoaHelperTargetForCurrentImports(\"count\")") !=
         std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find("auto hasVisibleSamePathSoaCountHelper =") ==
         std::string::npos);
@@ -806,7 +809,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(inferMethodResolutionSource.find("auto preferredSoaCountMethodTarget =") ==
         std::string::npos);
-  CHECK(inferMethodResolutionSource.find("hasVisibleDefinitionPathForCurrentImports(") !=
+  CHECK(inferMethodResolutionSource.find("hasVisibleSoaHelperTargetForCurrentImports(") !=
         std::string::npos);
   CHECK(inferMethodResolutionSource.find("auto extractBorrowedBinding =") ==
         std::string::npos);
@@ -827,7 +830,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find("auto preferredSoaCountMethodTarget =") ==
         std::string::npos);
-  CHECK(exprMethodTargetResolutionSource.find("hasVisibleDefinitionPathForCurrentImports(") !=
+  CHECK(exprMethodTargetResolutionSource.find("hasVisibleSoaHelperTargetForCurrentImports(") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find("auto extractBorrowedBinding =") ==
         std::string::npos);

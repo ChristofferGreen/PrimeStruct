@@ -307,6 +307,12 @@ bool SemanticsValidator::hasVisibleDefinitionPathForCurrentImports(
          hasDeclaredDefinitionPath(ownedPath);
 }
 
+bool SemanticsValidator::hasVisibleSoaHelperTargetForCurrentImports(
+    std::string_view helperName) const {
+  return hasVisibleDefinitionPathForCurrentImports(
+      "/soa_vector/" + std::string(helperName));
+}
+
 std::string SemanticsValidator::preferredVisibleDefinitionPathForCurrentImports(
     std::string_view samePath,
     std::string_view canonicalPath) const {

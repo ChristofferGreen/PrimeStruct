@@ -275,7 +275,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
             resolveDirectSoaReceiver,
             elemType)) {
       if (resolved == "/soa_vector/" + helperName &&
-          hasVisibleDefinitionPathForCurrentImports("/soa_vector/" + helperName)) {
+          hasVisibleSoaHelperTargetForCurrentImports(helperName)) {
         handledOut = false;
         return true;
       }

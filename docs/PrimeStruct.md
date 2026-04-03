@@ -2668,8 +2668,9 @@ while collection-return visible same-path `/soa_vector/get|ref` helper
 detection plus preferred same-path-versus-canonical `soa_vector`
 helper target selection in method-target, infer-time, vector-helper
 mutator routing, plus builtin `get/ref` call-shape detection in direct
-validation and collection-return inference, now all route through shared
-validator helpers,
+validation and collection-return inference, plus direct same-path
+`/soa_vector/<helper>` visibility checks in count/builtin/method/vector
+routing, now all route through shared validator helpers,
 while monomorph-side visible `/soa_vector/ref` fallback detection now also
 uses that same shared definition-visibility helper directly instead of a
 dedicated ref-specific wrapper or local visibility cache,
