@@ -42,6 +42,11 @@
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "const bool allowStdNamespacedVectorUserReceiverProbe =") !=
         std::string::npos);
+  CHECK(semanticsExprSource.find("auto publishCollectionDispatchDiagnostic = [&]() -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "auto publishCollectionDispatchDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
   CHECK(semanticsExprSource.find("if (!expr.isMethodCall && setupOut.isStdNamespacedVectorCountCall &&") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
