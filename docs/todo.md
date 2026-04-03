@@ -65,7 +65,7 @@ Lowering cutover:
 - ○ Switch lowerer effect/capability and struct-layout setup to consume semantic-product metadata instead of re-reading AST/transforms for those facts.
 
 Coverage and migration cleanup:
-- ○ Add a narrow semantic-product unit/golden suite that asserts exported lowering facts directly instead of only through snapshot helpers.
+- ○ Implement the narrow semantic-product unit/golden suite now that its fact coverage and scope are documented.
 - ○ Add end-to-end compile-pipeline conformance cases that exercise the semantic-product boundary through C++/VM/native lowering paths.
 - ○ Migrate tests and public testing helpers from `primec/testing/SemanticsValidationHelpers.h` snapshot surfaces onto the semantic-product inspection surface where they are asserting lowering-facing facts.
 - ○ Delete redundant testing-only semantic snapshot plumbing once equivalent semantic-product dumps and conformance coverage exist, leaving one canonical inspection surface for lowering-facing semantic facts.

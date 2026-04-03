@@ -251,6 +251,21 @@ Planned semantic-product dump contract:
 - Once this dump exists, lowering-facing tests should prefer it over `ast-semantic` whenever they are asserting
   resolved targets, inferred types, effects, or helper-routing facts.
 
+Planned semantic-product unit/golden suite:
+- Keep one narrow golden corpus focused on exported lowering facts rather than full pipeline behavior.
+- Prefer small representative programs that pin one fact family at a time:
+  - resolved call/helper targets
+  - binding/result type facts
+  - effect/capability summaries
+  - struct/layout metadata
+  - provenance handles back to AST-owned ids/spans
+- Golden output should be deterministic and compact enough that failures identify semantic-product drift directly,
+  without requiring AST-snapshot interpretation.
+- This suite should validate the semantic-product formatter/inspection surface itself; end-to-end C++/VM/native
+  conformance stays in separate compile-pipeline coverage.
+- Existing snapshot-helper tests that are really asserting lowering-facing facts should migrate here once the semantic
+  product is available, so there is one canonical golden surface for those facts.
+
 ### Language ethos (v1)
 - **Simplified and coherent C:** keep the core small, explicit, and close to how the machine behaves when it matters.
 - **Sane subset of C++:** keep value types, structs, and explicit control flow, but avoid implicit conversions,
