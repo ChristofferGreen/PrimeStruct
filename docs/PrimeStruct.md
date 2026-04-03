@@ -192,6 +192,20 @@ Temporary migration adapter contract:
   - Coverage proves parity for the semantic-product path across C++/VM/native before deleting the raw-`Program`
     fallback.
 
+Compile-pipeline publication contract:
+- `Semantics::validate` should produce a semantic product as its canonical post-semantics success result, not only a
+  mutated AST.
+- `CompilePipelineOutput` should publish that semantic product on successful semantic validation so later dump, backend,
+  and runtime entrypoints do not need private validator access to recover it.
+- The published semantic product should remain paired with the raw AST rather than replacing it outright; syntax-facing
+  consumers still need the AST for spans, source reproduction, and surface-shaped dumps.
+- Failure paths should continue to report diagnostics against AST-backed provenance, but success paths should treat the
+  semantic product as the authoritative lowering-facing artifact.
+- Dump-stage handling should be able to read either the syntax-facing canonical AST dump or the future semantic-product
+  dump from the same compile-pipeline success result without re-running semantics.
+- Backend/runtime entrypoints should consume the semantic product from compile-pipeline output once available rather
+  than rebuilding semantic facts ad hoc from the raw `Program`.
+
 Exit criteria for removing AST-dependent lowerer logic:
 - `Semantics::validate` or `CompilePipelineOutput` publishes the semantic product as the canonical post-semantics
   success artifact.

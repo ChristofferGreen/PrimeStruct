@@ -54,7 +54,7 @@ Semantic product creation:
 Pipeline plumbing:
 - ○ Thread the semantic product through CLI/runtime plumbing (`primec`, `primevm`, dump-stage handling, and failure/report paths) so the new semantics boundary is carried end-to-end outside the core compile/lower APIs.
 - ○ Implement the temporary migration adapter now that its cutover/removal contract is documented.
-- ○ Cut over `CompilePipelineOutput` and `Semantics::validate` so the compile pipeline publishes the semantic product as its post-semantics success artifact instead of only a mutated raw `Program`.
+- ○ Implement semantic-product publication through `CompilePipelineOutput` and `Semantics::validate` now that the success-artifact contract is documented.
 - ○ Implement the deterministic semantic-product dump/formatter plus golden coverage now that its inspection contract is documented.
 - ○ Implement ownership-split tests for source spans, debug/source-map provenance, and syntax-faithful data using the documented test matrix.
 
