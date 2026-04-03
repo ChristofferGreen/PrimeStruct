@@ -356,6 +356,17 @@
   CHECK(semanticsExprCollectionAccessValidationSource.find(
             "unknown call target: /std/collections/map/") !=
         std::string::npos);
+  CHECK(semanticsExprDirectCollectionFallbacksSource.find(
+            "bool SemanticsValidator::validateExprDirectCollectionFallbacks") !=
+        std::string::npos);
+  CHECK(semanticsExprDirectCollectionFallbacksSource.find(
+            "auto publishDirectCollectionFallbackDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprDirectCollectionFallbacksSource.find("captureExprContext(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprDirectCollectionFallbacksSource.find(
+            "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
   CHECK(semanticsExprCollectionLiteralsSource.find(
             "bool SemanticsValidator::validateExprCollectionLiteralBuiltins") !=
         std::string::npos);

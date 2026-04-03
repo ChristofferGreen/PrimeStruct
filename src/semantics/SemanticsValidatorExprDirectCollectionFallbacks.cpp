@@ -9,6 +9,10 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
     const std::string &resolved,
     const ExprDirectCollectionFallbackContext &context,
     std::optional<Expr> &rewrittenExprOut) {
+  auto publishDirectCollectionFallbackDiagnostic = [&]() -> bool {
+    captureExprContext(expr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   rewrittenExprOut.reset();
   if (context.dispatchResolvers == nullptr) {
     return true;
@@ -28,7 +32,7 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
         dispatchResolvers.resolveExperimentalVectorTarget(
             expr.args.front(), elemType)) {
       error_ = "unknown call target: /std/collections/vector/count";
-      return false;
+      return publishDirectCollectionFallbackDiagnostic();
     }
   }
 
