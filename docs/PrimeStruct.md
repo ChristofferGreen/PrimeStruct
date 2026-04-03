@@ -149,6 +149,23 @@ Ownership split by responsibility:
   - any lowering consumer that needs both “what this means” and “where it came from” must read meaning from the
     semantic product and provenance from the AST-backed ids/spans, not from mutated AST semantics fields.
 
+Planned ownership-split test matrix:
+- Source-span parity:
+  semantic-product entries that represent lowered calls, bindings, and control-flow facts should still reference the
+  same AST-owned spans used by diagnostics and syntax-facing dumps.
+- Debug/source-map parity:
+  lowering and VM/debug entrypoints should be able to recover syntax-faithful provenance from semantic-product
+  ids/handles without reading semantic facts back out of the raw AST.
+- Syntax-reproduction boundary:
+  `ast` and `ast-semantic` remain the syntax-shaped inspection surfaces, while the future semantic-product dump should
+  expose only lowering-facing facts plus provenance handles.
+- Ownership isolation:
+  semantic-product facts should remain valid even if AST-side semantic caches are removed or reorganized, as long as
+  the stable AST ids/spans they reference still exist.
+- Deterministic ordering:
+  semantic-product ownership/provenance tests should be able to use golden files without incidental ordering noise
+  from modules, definitions, bindings, or diagnostics.
+
 Migration stages:
 1. Define the semantic-product type and its ownership contract.
 2. Materialize the first lowering-required facts into that product while keeping the existing AST-based lowerer path
