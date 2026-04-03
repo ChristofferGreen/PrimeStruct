@@ -3364,6 +3364,20 @@ read-only path.
     vector copy. The remaining implementation work is to thread that contract through the
     existing experimental wrapper helper/indexing substrate, not to add more builtin-only
     fallback diagnostics.
+  - **Standalone mutating field-view contract:** the remaining standalone mutating write slice
+    should replace the current pending-only `assign(value.field(), next)` /
+    `assign(field(value), next)` contract with the same writable column-view substrate that
+    already powers indexed writes. The intended contract is: when the receiver is a mutable
+    experimental wrapper view or a mutable borrowed wrapper view, standalone method-form and
+    call-form field-view writes should lower through `soaVectorRef<T>(..., i).field`-style
+    writable projections rather than through temporary values; the supported receiver families
+    should match the rest of the wrapper surface (direct locals, borrowed locals, borrowed
+    helper-return receivers, method-like struct-helper-return receivers, and inline
+    `location(...)`-wrapped variants); and the resulting write behavior should preserve the
+    same invalidation rules as other borrowed SoA views instead of silently materializing an
+    owning vector copy or reintroducing builtin-only mutation branches. The remaining
+    implementation work is to thread those standalone method/call writes onto the existing
+    experimental writable-field substrate, not to keep the old pending diagnostic in place.
   - **Experimental SoA storage substrate:** the completed fixed-width reusable `.prime` storage layer now exists at
     `/std/collections/experimental_soa_storage/*` with single-column `SoaColumn<T>` helpers
     (`soaColumnNew<T>()`, `soaColumnCount<T>()`, `soaColumnCapacity<T>()`, `soaColumnReserve<T>()`,

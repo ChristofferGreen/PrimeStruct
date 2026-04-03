@@ -1098,6 +1098,14 @@ field-view values inherit the same invalidation contract as `ref(...)`, stay bor
 than materializing owning vectors, and may later distinguish read-only versus mutable
 borrowed receivers on top of the current `soaVectorGet(...)` / `soaVectorRef(...)`
 substrate.
+The remaining standalone mutating write step is that `assign(value.field(), next)` and
+`assign(field(value), next)` should stop on the pending diagnostic only until those
+receivers can lower through the existing writable wrapper substrate instead of mutating a
+temporary. That future surface is intended to cover the same mutable receiver families as
+the rest of the wrapper path: direct wrapper locals, mutable borrowed locals, borrowed
+helper returns, method-like helper returns, and inline `location(...)`-wrapped variants.
+Those writes should preserve the same invalidation rules as other borrowed SoA views and
+should not reintroduce builtin-only mutation branches outside the experimental helper path.
 Non-empty literals still emit the deterministic unsupported diagnostic
 `native backend does not support non-empty soa_vector literals`.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the
