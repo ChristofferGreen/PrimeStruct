@@ -14,6 +14,10 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
     const ExprLateCallCompatibilityContext &context,
     bool &handledOut) {
   handledOut = false;
+  auto publishLateCallCompatibilityDiagnostic = [&]() -> bool {
+    captureExprContext(expr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
 
   if (!allowMathBareName(expr.name) && expr.name.find('/') == std::string::npos) {
     std::string builtinName;
@@ -24,7 +28,7 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
         getBuiltinMathName(expr, builtinName, true)) {
       error_ = "math builtin requires import /std/math/* or /std/math/<name>: " +
                expr.name;
-      return false;
+      return publishLateCallCompatibilityDiagnostic();
     }
   }
 
@@ -40,15 +44,15 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
       handledOut = true;
       if (hasNamedArguments(expr.argNames)) {
         error_ = "named arguments not supported for lambda calls";
-        return false;
+        return publishLateCallCompatibilityDiagnostic();
       }
       if (!expr.templateArgs.empty()) {
         error_ = "lambda calls do not accept template arguments";
-        return false;
+        return publishLateCallCompatibilityDiagnostic();
       }
       if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
         error_ = "lambda calls do not accept block arguments";
-        return false;
+        return publishLateCallCompatibilityDiagnostic();
       }
       for (const auto &arg : expr.args) {
         if (!validateExpr(params, locals, arg)) {
@@ -95,17 +99,17 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
                                                       mapKeyType,
                                                       mapValueType)) {
         error_ = "unknown call target: /std/collections/vector/count";
-        return false;
+        return publishLateCallCompatibilityDiagnostic();
       }
       error_ = "count requires vector target";
-      return false;
+      return publishLateCallCompatibilityDiagnostic();
     }
     if (!hasDeclaredDefinitionPath("/vector/count") &&
         !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
         !hasImportedDefinitionPath("/std/collections/vector/count") &&
         (resolvesVector || resolvesExperimentalVector)) {
       error_ = "unknown call target: /std/collections/vector/count";
-      return false;
+      return publishLateCallCompatibilityDiagnostic();
     }
     if (resolved == "/std/collections/vector/count" &&
         hasImportedDefinitionPath("/std/collections/vector/count") &&
@@ -142,17 +146,17 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
                                                       mapKeyType,
                                                       mapValueType)) {
         error_ = "unknown call target: /std/collections/vector/capacity";
-        return false;
+        return publishLateCallCompatibilityDiagnostic();
       }
       error_ = "capacity requires vector target";
-      return false;
+      return publishLateCallCompatibilityDiagnostic();
     }
     if (!hasDeclaredDefinitionPath("/vector/capacity") &&
         !hasDeclaredDefinitionPath("/std/collections/vector/capacity") &&
         !hasImportedDefinitionPath("/std/collections/vector/capacity") &&
         (resolvesVector || resolvesExperimentalVector)) {
       error_ = "unknown call target: /std/collections/vector/capacity";
-      return false;
+      return publishLateCallCompatibilityDiagnostic();
     }
     if (resolved == "/std/collections/vector/capacity" &&
         hasImportedDefinitionPath("/std/collections/vector/capacity")) {

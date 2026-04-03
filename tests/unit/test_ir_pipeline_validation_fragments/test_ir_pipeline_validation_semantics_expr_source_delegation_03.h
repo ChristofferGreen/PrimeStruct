@@ -479,6 +479,15 @@
             "bool SemanticsValidator::validateExprLateCallCompatibility") !=
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "auto publishLateCallCompatibilityDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "captureExprContext(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
             "math builtin requires import /std/math/* or /std/math/<name>: ") !=
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
