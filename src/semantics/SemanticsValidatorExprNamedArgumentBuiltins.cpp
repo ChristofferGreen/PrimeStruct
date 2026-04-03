@@ -31,6 +31,10 @@ bool SemanticsValidator::validateExprNamedArguments(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failNamedArgumentDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishNamedArgumentDiagnostic();
+  };
   if (hasNamedArguments(expr.argNames)) {
     auto resolveVectorMutatorName = [&](const std::string &name,
                                         std::string &helperOut) -> bool {
@@ -68,8 +72,7 @@ bool SemanticsValidator::validateExprNamedArguments(
         (resolvedMethod || !context.hasVectorHelperCallResolution) &&
         !hasDeclaredDefinitionPath(resolved) &&
         !hasImportedDefinitionPath(resolved)) {
-      error_ = vectorHelperName + " is only supported as a statement";
-      return publishNamedArgumentDiagnostic();
+      return failNamedArgumentDiagnostic(vectorHelperName + " is only supported as a statement");
     }
   }
 
@@ -94,6 +97,10 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failNamedArgumentDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishNamedArgumentDiagnostic();
+  };
   const bool allowsNamedArgsPackBuiltinLabels =
       (context.isNamedArgsPackMethodAccessCall != nullptr &&
        context.isNamedArgsPackMethodAccessCall(expr)) ||
@@ -103,11 +110,9 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
       !allowsNamedArgsPackBuiltinLabels) {
     std::string vectorHelperName;
     if (getVectorStatementHelperName(expr, vectorHelperName)) {
-      error_ = vectorHelperName + " is only supported as a statement";
-      return publishNamedArgumentDiagnostic();
+      return failNamedArgumentDiagnostic(vectorHelperName + " is only supported as a statement");
     }
-    error_ = "named arguments not supported for builtin calls";
-    return publishNamedArgumentDiagnostic();
+    return failNamedArgumentDiagnostic("named arguments not supported for builtin calls");
   }
   if (!hasNamedArguments(expr.argNames) || allowsNamedArgsPackBuiltinLabels) {
     return true;
@@ -299,8 +304,7 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
   std::string vectorHelperName;
   if (isLegacyVectorHelperBuiltin &&
       resolveLegacyVectorHelperName(vectorHelperName)) {
-    error_ = vectorHelperName + " is only supported as a statement";
-    return publishNamedArgumentDiagnostic();
+    return failNamedArgumentDiagnostic(vectorHelperName + " is only supported as a statement");
   }
 
   bool isBuiltin = false;
@@ -331,8 +335,7 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
   }
 
   if (isBuiltin) {
-    error_ = "named arguments not supported for builtin calls";
-    return publishNamedArgumentDiagnostic();
+    return failNamedArgumentDiagnostic("named arguments not supported for builtin calls");
   }
   return true;
 }

@@ -470,10 +470,16 @@
   CHECK(semanticsExprCollectionLiteralsSource.find(
             "auto publishCollectionLiteralDiagnostic = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprCollectionLiteralsSource.find(
+            "auto failCollectionLiteralDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsExprCollectionLiteralsSource.find("captureExprContext(expr);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionLiteralsSource.find(
             "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionLiteralsSource.find(
+            "error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionLiteralsSource.find("validateBuiltinMapKeyType(expr.templateArgs.front(), nullptr, error_)") !=
         std::string::npos);
@@ -692,10 +698,16 @@
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
             "auto publishNamedArgumentDiagnostic = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
+            "auto failNamedArgumentDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find("captureExprContext(expr);") !=
         std::string::npos);
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
             "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
+            "error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find("getBuiltinGpuName(expr, builtinName)") !=
         std::string::npos);
@@ -703,9 +715,14 @@
         std::string::npos);
   CHECK(semanticsExprTrySource.find("auto publishTryDiagnostic = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprTrySource.find(
+            "auto failTryDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsExprTrySource.find("captureExprContext(expr);") !=
         std::string::npos);
   CHECK(semanticsExprTrySource.find("return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprTrySource.find("error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprTrySource.find("try requires exactly one argument") !=
         std::string::npos);

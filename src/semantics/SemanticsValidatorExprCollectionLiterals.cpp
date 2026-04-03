@@ -16,6 +16,10 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failCollectionLiteralDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishCollectionLiteralDiagnostic();
+  };
   handledOut = false;
   std::string builtinName;
   if (!getBuiltinCollectionName(expr, builtinName)) {
@@ -46,54 +50,47 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
       makeBuiltinCollectionDispatchResolvers(params, locals,
                                             builtinCollectionDispatchResolverAdapters);
   if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-    error_ = builtinName + " literal does not accept block arguments";
-    return publishCollectionLiteralDiagnostic();
+    return failCollectionLiteralDiagnostic(builtinName + " literal does not accept block arguments");
   }
   if (builtinName == "soa_vector") {
     if (expr.templateArgs.size() != 1) {
-      error_ = "soa_vector literal requires exactly one template argument";
-      return publishCollectionLiteralDiagnostic();
+      return failCollectionLiteralDiagnostic(
+          "soa_vector literal requires exactly one template argument");
     }
     if (!isSoaVectorStructElementType(expr.templateArgs.front(),
                                       expr.namespacePrefix, structNames_,
                                       importAliases_)) {
-      error_ = "soa_vector literal requires struct element type";
-      return publishCollectionLiteralDiagnostic();
+      return failCollectionLiteralDiagnostic("soa_vector literal requires struct element type");
     }
     if (!validateSoaVectorElementFieldEnvelopes(expr.templateArgs.front(),
                                                 expr.namespacePrefix)) {
       return false;
     }
     if (!expr.args.empty() && currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
-      error_ = "soa_vector literal requires heap_alloc effect";
-      return publishCollectionLiteralDiagnostic();
+      return failCollectionLiteralDiagnostic("soa_vector literal requires heap_alloc effect");
     }
   }
   if (builtinName == "vector" && !expr.args.empty()) {
     if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
-      error_ = "vector literal requires heap_alloc effect";
-      return publishCollectionLiteralDiagnostic();
+      return failCollectionLiteralDiagnostic("vector literal requires heap_alloc effect");
     }
   }
   if (builtinName == "array" || builtinName == "vector" ||
       builtinName == "soa_vector") {
     if (expr.templateArgs.size() != 1) {
       if (builtinName == "array" && expr.templateArgs.size() > 1) {
-        error_ =
-            "array<T, N> is unsupported; use array<T> (runtime-count array)";
-        return publishCollectionLiteralDiagnostic();
+        return failCollectionLiteralDiagnostic(
+            "array<T, N> is unsupported; use array<T> (runtime-count array)");
       }
-      error_ = builtinName + " literal requires exactly one template argument";
-      return publishCollectionLiteralDiagnostic();
+      return failCollectionLiteralDiagnostic(
+          builtinName + " literal requires exactly one template argument");
     }
   } else {
     if (expr.templateArgs.size() != 2) {
-      error_ = "map literal requires exactly two template arguments";
-      return publishCollectionLiteralDiagnostic();
+      return failCollectionLiteralDiagnostic("map literal requires exactly two template arguments");
     }
     if (expr.args.size() % 2 != 0) {
-      error_ = "map literal requires an even number of arguments";
-      return publishCollectionLiteralDiagnostic();
+      return failCollectionLiteralDiagnostic("map literal requires an even number of arguments");
     }
   }
   for (const auto &arg : expr.args) {
@@ -134,11 +131,10 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
       std::unordered_set<std::string> visitingStructs;
       if (!isRelocationTrivialContainerElementType(
               elemType, definitionNamespacePrefix, definitionTemplateArgs, visitingStructs)) {
-        error_ =
+        return failCollectionLiteralDiagnostic(
             "vector literal requires relocation-trivial vector element type until container move/reallocation "
             "semantics are implemented: " +
-            elemType;
-        return publishCollectionLiteralDiagnostic();
+            elemType);
       }
     }
     for (const auto &arg : expr.args) {
@@ -162,20 +158,18 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
       std::unordered_set<std::string> visitingStructs;
       if (!isRelocationTrivialContainerElementType(
               keyType, definitionNamespacePrefix, definitionTemplateArgs, visitingStructs)) {
-        error_ =
+        return failCollectionLiteralDiagnostic(
             "map literal requires relocation-trivial map key type until container move/reallocation semantics are "
             "implemented: " +
-            keyType;
-        return publishCollectionLiteralDiagnostic();
+            keyType);
       }
       visitingStructs.clear();
       if (!isRelocationTrivialContainerElementType(
               valueType, definitionNamespacePrefix, definitionTemplateArgs, visitingStructs)) {
-        error_ =
+        return failCollectionLiteralDiagnostic(
             "map literal requires relocation-trivial map value type until container move/reallocation semantics are "
             "implemented: " +
-            valueType;
-        return publishCollectionLiteralDiagnostic();
+            valueType);
       }
     }
     for (size_t i = 0; i + 1 < expr.args.size(); i += 2) {

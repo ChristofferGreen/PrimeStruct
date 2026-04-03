@@ -12,6 +12,10 @@ bool SemanticsValidator::validateExprTryBuiltin(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failTryDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishTryDiagnostic();
+  };
   handledOut = false;
 
   if (expr.isMethodCall || !isSimpleCallName(expr, "try")) {
@@ -20,20 +24,16 @@ bool SemanticsValidator::validateExprTryBuiltin(
 
   handledOut = true;
   if (hasNamedArguments(expr.argNames)) {
-    error_ = "named arguments not supported for builtin calls";
-    return publishTryDiagnostic();
+    return failTryDiagnostic("named arguments not supported for builtin calls");
   }
   if (!expr.templateArgs.empty()) {
-    error_ = "try does not accept template arguments";
-    return publishTryDiagnostic();
+    return failTryDiagnostic("try does not accept template arguments");
   }
   if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-    error_ = "try does not accept block arguments";
-    return publishTryDiagnostic();
+    return failTryDiagnostic("try does not accept block arguments");
   }
   if (expr.args.size() != 1) {
-    error_ = "try requires exactly one argument";
-    return publishTryDiagnostic();
+    return failTryDiagnostic("try requires exactly one argument");
   }
   if (expr.args.front().kind == Expr::Kind::Call) {
     const Expr &tryTargetExpr = expr.args.front();
@@ -42,8 +42,7 @@ bool SemanticsValidator::validateExprTryBuiltin(
             ? context.getDirectMapHelperCompatibilityPath(tryTargetExpr)
             : std::string{};
     if (!removedMapCompatibilityPath.empty()) {
-      error_ = "unknown call target: " + removedMapCompatibilityPath;
-      return publishTryDiagnostic();
+      return failTryDiagnostic("unknown call target: " + removedMapCompatibilityPath);
     }
     const std::string tryTargetPath = resolveCalleePath(tryTargetExpr);
     bool isBareMapTryAtFallback = false;
@@ -71,8 +70,7 @@ bool SemanticsValidator::validateExprTryBuiltin(
         !(context.isIndexedArgsPackMapReceiverTarget != nullptr &&
           !tryTargetExpr.args.empty() &&
           context.isIndexedArgsPackMapReceiverTarget(tryTargetExpr.args.front()))) {
-      error_ = "unknown call target: /std/collections/map/tryAt";
-      return publishTryDiagnostic();
+      return failTryDiagnostic("unknown call target: /std/collections/map/tryAt");
     }
   }
 
@@ -88,19 +86,16 @@ bool SemanticsValidator::validateExprTryBuiltin(
       currentValidationContext_.resultType.has_value() &&
       currentValidationContext_.resultType->isResult;
   if (!currentValidationContext_.onError.has_value()) {
-    error_ = "missing on_error for ? usage";
-    return publishTryDiagnostic();
+    return failTryDiagnostic("missing on_error for ? usage");
   }
   if (!returnsResult && enclosingReturnKind != ReturnKind::Int) {
-    error_ = "try requires Result or int return type";
-    return publishTryDiagnostic();
+    return failTryDiagnostic("try requires Result or int return type");
   }
   if (returnsResult &&
       !errorTypesMatch(currentValidationContext_.resultType->errorType,
                        currentValidationContext_.onError->errorType,
                        expr.namespacePrefix)) {
-    error_ = "on_error error type mismatch";
-    return publishTryDiagnostic();
+    return failTryDiagnostic("on_error error type mismatch");
   }
   if (!validateExpr(params, locals, expr.args.front())) {
     return false;
@@ -108,14 +103,12 @@ bool SemanticsValidator::validateExprTryBuiltin(
   ResultTypeInfo argResult;
   if (!resolveResultTypeForExpr(expr.args.front(), params, locals, argResult) ||
       !argResult.isResult) {
-    error_ = "try requires Result argument";
-    return publishTryDiagnostic();
+    return failTryDiagnostic("try requires Result argument");
   }
   if (currentValidationContext_.onError.has_value() &&
       !errorTypesMatch(argResult.errorType, currentValidationContext_.onError->errorType,
                        expr.namespacePrefix)) {
-    error_ = "try error type mismatch";
-    return publishTryDiagnostic();
+    return failTryDiagnostic("try error type mismatch");
   }
 
   return true;
