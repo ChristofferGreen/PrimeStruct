@@ -2396,8 +2396,8 @@ bad_use_after_take() {
     helper path and run through that same bridged substrate on native instead of trapping. These compiler-owned
     `soa_vector` paths are
     not the intended end-state and are now tracked as separate cleanup follow-ups for the remaining semantics
-    method/builtin fallbacks, IR-lowerer special cases, emitter/backend special cases, and runtime/diagnostic
-    mentions while the generic SoA substrate and stdlib `.prime` implementation finish replacing them.
+    method/builtin fallbacks, IR-lowerer special cases, and emitter/backend special cases while the generic
+    SoA substrate and stdlib `.prime` implementation finish replacing them.
   - **Compile-time schema substrate status:** the minimum field-schema introspection needed for a `.prime`
     `soa_vector<T>` implementation already exists through compile-time reflection metadata queries:
     `meta.field_count<T>()`, `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, and
@@ -2650,13 +2650,10 @@ IR-lowerer, and semantic-dump coverage lock both direct-canonical and imported-h
 `to_aos` forms to the canonical `/std/collections/soa_vector/to_aos` path, and imported plus
 no-import root raw-builtin bare/direct/method/slash-method `to_aos` now also lock to the canonical
 `/std/collections/soa_vector/to_aos__...` helper path through lowering plus C++/VM execution.
-The remaining runtime-code cleanup is therefore reduced to the raw-builtin native conversion
-follow-up plus the direct pending-diagnostic
-field-view path, while the remaining diagnostic/test cleanup is reduced to field-view
-follow-ups only. The runtime-code conversion cleanup on direct-canonical and imported-helper
-paths is complete, and the
-current successful field-view indexing surface is already locked by compile-run, dump, and
-source-level coverage rather than backend-local routing contracts. The wrapper now also exposes `soaVectorRef<T>()`
+Runtime-code helper/conversion/field-view cleanup and the matching diagnostic/test special-case cleanup are therefore
+complete; the remaining live SoA work is richer field-view behavior, not more runtime-side routing removal. The current
+successful field-view indexing surface is already locked by compile-run, dump, and source-level coverage rather than
+backend-local routing contracts. The wrapper now also exposes `soaVectorRef<T>()`
 plus `values.ref(i)` on top of the current single-column borrowed-slot substrate, and those
 borrowed-return paths now run successfully across the current backends without depending on the
 conversion helper surface. The pending `soa_vector` field-view and borrowed-view diagnostics now also route through shared

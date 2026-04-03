@@ -905,7 +905,8 @@ C++/VM/native execution on that bridged conversion path. The remaining raw-built
 conversion-specific compiler-owned code is now reduced to invalid-target/user-shadow fallback
 handling instead of a native runtime trap. The diagnostic harness now also locks both direct-canonical and
 imported-helper experimental-wrapper `to_aos` forms to that same canonical helper path at
-`ast-semantic`, so the remaining diagnostic/test cleanup is now field-view only.
+`ast-semantic`, so helper-call/conversion diagnostic cleanup is complete and the remaining SoA work is now richer
+field-view behavior rather than more runtime/diagnostic special-case removal.
 The current pending `soa_vector field views are not implemented yet: <field>` and
 `soa_vector borrowed views are not implemented yet: ref` diagnostics now come from shared
 semantics helpers rather than duplicated validator, mutation-borrow, and monomorph string
