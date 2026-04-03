@@ -208,6 +208,70 @@ main() {
           "unknown call target: /array/count",
       },
       {
+          "query_local_auto_vector_helper_call_boundary",
+          R"(
+/vector/count([vector<i32>] values) {
+  return(17i32)
+}
+
+[return<vector<i32>> effects(heap_alloc)]
+valuesA() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(values)
+}
+
+[return<vector<i32>> effects(heap_alloc)]
+valuesB() {
+  [vector<i32>] values{vector<i32>(3i32, 4i32)}
+  return(values)
+}
+
+[return<i32> effects(heap_alloc)]
+main() {
+  [auto] values{
+    if(true,
+      then(){ return(valuesA()) },
+      else(){ return(valuesB()) })
+  }
+  return(/vector/count(values))
+}
+)",
+          false,
+          "if branches must return compatible types",
+      },
+      {
+          "query_local_auto_vector_helper_method_boundary",
+          R"(
+/vector/count([vector<i32>] values) {
+  return(17i32)
+}
+
+[return<vector<i32>> effects(heap_alloc)]
+valuesA() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(values)
+}
+
+[return<vector<i32>> effects(heap_alloc)]
+valuesB() {
+  [vector<i32>] values{vector<i32>(3i32, 4i32)}
+  return(values)
+}
+
+[return<i32> effects(heap_alloc)]
+main() {
+  [auto] values{
+    if(true,
+      then(){ return(valuesA()) },
+      else(){ return(valuesB()) })
+  }
+  return(values./vector/count())
+}
+)",
+          false,
+          "if branches must return compatible types",
+      },
+      {
           "result_try_local_auto_success",
           R"(
 MyError {
