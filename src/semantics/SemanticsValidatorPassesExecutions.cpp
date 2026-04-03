@@ -5,6 +5,13 @@
 
 namespace primec::semantics {
 
+bool SemanticsValidator::publishPassesExecutionsDiagnostic() {
+  if (currentExecutionContext_ != nullptr) {
+    captureExecutionContext(*currentExecutionContext_);
+  }
+  return publishCurrentStructuredDiagnosticNow();
+}
+
 bool SemanticsValidator::validateExecutions() {
   std::vector<SemanticDiagnosticRecord> collectedRecords;
   const bool collectDiagnostics = shouldCollectStructuredDiagnostics();
@@ -16,63 +23,63 @@ bool SemanticsValidator::validateExecutions() {
     for (const auto &transform : exec.transforms) {
       if (transform.name == "return") {
         error_ = "return transform not allowed on executions: " + exec.fullPath;
-        return false;
+        return publishPassesExecutionsDiagnostic();
       }
       if (transform.name == "mut") {
         error_ = "mut transform is not allowed on executions: " + exec.fullPath;
-        return false;
+        return publishPassesExecutionsDiagnostic();
       }
       if (transform.name == "unsafe") {
         error_ = "unsafe transform is not allowed on executions: " + exec.fullPath;
-        return false;
+        return publishPassesExecutionsDiagnostic();
       }
       if (transform.name == "no_padding" || transform.name == "platform_independent_padding") {
         error_ = "layout transforms are not supported on executions: " + exec.fullPath;
-        return false;
+        return publishPassesExecutionsDiagnostic();
       }
       if (isBindingQualifierName(transform.name)) {
         error_ = "binding visibility/static transforms are only valid on bindings: " + exec.fullPath;
-        return false;
+        return publishPassesExecutionsDiagnostic();
       }
       if (transform.name == "copy") {
         error_ = "copy transform is not allowed on executions: " + exec.fullPath;
-        return false;
+        return publishPassesExecutionsDiagnostic();
       }
       if (transform.name == "restrict") {
         error_ = "restrict transform is not allowed on executions: " + exec.fullPath;
-        return false;
+        return publishPassesExecutionsDiagnostic();
       }
       if (transform.name == "stack" || transform.name == "heap" || transform.name == "buffer") {
         error_ = "placement transforms are not supported: " + exec.fullPath;
-        return false;
+        return publishPassesExecutionsDiagnostic();
       }
       if (transform.name == "effects") {
         if (sawEffects) {
           error_ = "duplicate effects transform on " + exec.fullPath;
-          return false;
+          return publishPassesExecutionsDiagnostic();
         }
         sawEffects = true;
         if (!validateEffectsTransform(transform, exec.fullPath, error_)) {
-          return false;
+          return publishPassesExecutionsDiagnostic();
         }
       } else if (transform.name == "capabilities") {
         if (sawCapabilities) {
           error_ = "duplicate capabilities transform on " + exec.fullPath;
-          return false;
+          return publishPassesExecutionsDiagnostic();
         }
         sawCapabilities = true;
         if (!validateCapabilitiesTransform(transform, exec.fullPath, error_)) {
-          return false;
+          return publishPassesExecutionsDiagnostic();
         }
       } else if (transform.name == "align_bytes" || transform.name == "align_kbytes") {
         error_ = "alignment transforms are not supported on executions: " + exec.fullPath;
-        return false;
+        return publishPassesExecutionsDiagnostic();
       } else if (isReflectionTransformName(transform.name)) {
         error_ = "reflection transforms are only valid on struct definitions: " + exec.fullPath;
-        return false;
+        return publishPassesExecutionsDiagnostic();
       } else if (isStructTransformName(transform.name)) {
         error_ = "struct transforms are not allowed on executions: " + exec.fullPath;
-        return false;
+        return publishPassesExecutionsDiagnostic();
       }
     }
     if (!validateCapabilitiesSubset(exec.transforms, exec.fullPath)) {
@@ -89,22 +96,22 @@ bool SemanticsValidator::validateExecutions() {
     auto it = defMap_.find(resolvedPath);
     if (it == defMap_.end()) {
       error_ = "unknown execution target: " + resolvedPath;
-      return false;
+      return publishPassesExecutionsDiagnostic();
     }
     const std::unordered_set<std::string> targetEffects =
         resolveEffects(it->second->transforms, it->second->fullPath == entryPath_);
     for (const auto &effect : currentValidationContext_.activeEffects) {
       if (targetEffects.count(effect) == 0) {
         error_ = "execution effects must be a subset of enclosing effects on " + resolvedPath + ": " + effect;
-        return false;
+        return publishPassesExecutionsDiagnostic();
       }
     }
     if (!validateNamedArguments(exec.arguments, exec.argumentNames, resolvedPath, error_)) {
-      return false;
+      return publishPassesExecutionsDiagnostic();
     }
     const auto &execParams = paramsByDef_[resolvedPath];
     if (!validateNamedArgumentsAgainstParams(execParams, exec.argumentNames, error_)) {
-      return false;
+      return publishPassesExecutionsDiagnostic();
     }
     Expr execCall;
     execCall.kind = Expr::Kind::Call;

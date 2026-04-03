@@ -211,5 +211,6 @@
   void clearStructuredDiagnosticContext();
   void moveCurrentStructuredDiagnosticTo(std::vector<SemanticDiagnosticRecord> &out);
   bool publishPassesEffectsDiagnostic(const Expr *expr = nullptr);
+  bool publishPassesExecutionsDiagnostic();
   bool publishCurrentStructuredDiagnosticNow();
   bool finalizeCollectedStructuredDiagnostics(std::vector<SemanticDiagnosticRecord> &records);
