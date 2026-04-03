@@ -61,6 +61,10 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     captureExprContext(stmt);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failStatementDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishStatementDiagnostic();
+  };
   const std::vector<std::string> *definitionTemplateArgs = nullptr;
   auto currentDefIt = defMap_.find(currentValidationContext_.definitionPath);
   if (currentDefIt != defMap_.end() && currentDefIt->second != nullptr) {
@@ -88,22 +92,18 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       (isSimpleCallName(stmt, "init") || isSimpleCallName(stmt, "drop"))) {
     const std::string name = stmt.name;
     if (hasNamedArguments(stmt.argNames)) {
-      error_ = "named arguments not supported for builtin calls";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic("named arguments not supported for builtin calls");
     }
     if (!stmt.templateArgs.empty()) {
-      error_ = name + " does not accept template arguments";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic(name + " does not accept template arguments");
     }
     if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
-      error_ = name + " does not accept block arguments";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic(name + " does not accept block arguments");
     }
     const size_t expectedArgs = (name == "init") ? 2 : 1;
     if (stmt.args.size() != expectedArgs) {
-      error_ = name + " requires exactly " + std::to_string(expectedArgs) + " argument" +
-               (expectedArgs == 1 ? "" : "s");
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic(name + " requires exactly " + std::to_string(expectedArgs) + " argument" +
+                                    (expectedArgs == 1 ? "" : "s"));
     }
     const Expr &storageArg = stmt.args.front();
     if (!validateExpr(params, locals, storageArg)) {
@@ -115,8 +115,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       return false;
     }
     if (!resolved || storageBinding.typeName != "uninitialized" || storageBinding.typeTemplateArg.empty()) {
-      error_ = name + " requires uninitialized<T> storage";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic(name + " requires uninitialized<T> storage");
     }
     if (name == "init") {
       if (!validateExpr(params, locals, stmt.args[1])) {
@@ -124,8 +123,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       }
       ReturnKind valueKind = inferExprReturnKind(stmt.args[1], params, locals);
       if (valueKind == ReturnKind::Void) {
-        error_ = "init requires a value";
-        return publishStatementDiagnostic();
+        return failStatementDiagnostic("init requires a value");
       }
       auto trimType = [](const std::string &text) -> std::string {
         size_t start = 0;
@@ -269,34 +267,29 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         if (!typesMatch(expectedType, actualType)) {
           const std::string expectedStruct = resolveStructTypePath(expectedType, namespacePrefix, structNames_);
           const std::string actualStruct = resolveStructTypePath(actualType, namespacePrefix, structNames_);
-          error_ = initValueTypeMismatchDiagnostic(expectedStruct, actualStruct);
-          return false;
+          return failStatementDiagnostic(initValueTypeMismatchDiagnostic(expectedStruct, actualStruct));
         }
         return true;
       }
       ReturnKind expectedKind = returnKindForTypeName(expectedType);
       if (expectedKind == ReturnKind::Array) {
         if (valueKind != ReturnKind::Unknown && valueKind != ReturnKind::Array) {
-          error_ = "init value type mismatch";
-          return false;
+          return failStatementDiagnostic("init value type mismatch");
         }
       } else if (expectedKind != ReturnKind::Unknown) {
         if (valueKind != ReturnKind::Unknown && valueKind != expectedKind) {
-          error_ = "init value type mismatch";
-          return false;
+          return failStatementDiagnostic("init value type mismatch");
         }
       } else {
         std::string expectedStruct = resolveStructTypePath(expectedType, namespacePrefix, structNames_);
         if (!expectedStruct.empty()) {
           if (valueKind != ReturnKind::Unknown && valueKind != ReturnKind::Array) {
-            error_ = "init value type mismatch";
-            return false;
+            return failStatementDiagnostic("init value type mismatch");
           }
           if (valueKind == ReturnKind::Array) {
             std::string actualStruct = inferStructReturnPath(stmt.args[1], params, locals);
             if (!actualStruct.empty() && actualStruct != expectedStruct) {
-              error_ = initValueTypeMismatchDiagnostic(expectedStruct, actualStruct);
-              return false;
+              return failStatementDiagnostic(initValueTypeMismatchDiagnostic(expectedStruct, actualStruct));
             }
           }
         }
@@ -318,35 +311,29 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         (name != "take") || (!stmt.args.empty() && isUninitializedStorage(stmt.args.front()));
     if (treatAsUninitializedHelper) {
       if (hasNamedArguments(stmt.argNames)) {
-        error_ = "named arguments not supported for builtin calls";
-        return false;
+        return failStatementDiagnostic("named arguments not supported for builtin calls");
       }
       if (!stmt.templateArgs.empty()) {
-        error_ = name + " does not accept template arguments";
-        return false;
+        return failStatementDiagnostic(name + " does not accept template arguments");
       }
       if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
-        error_ = name + " does not accept block arguments";
-        return false;
+        return failStatementDiagnostic(name + " does not accept block arguments");
       }
       if (stmt.args.size() != 1) {
-        error_ = name + " requires exactly 1 argument";
-        return false;
+        return failStatementDiagnostic(name + " requires exactly 1 argument");
       }
       if (!validateExpr(params, locals, stmt.args.front())) {
         return false;
       }
       if (!isUninitializedStorage(stmt.args.front())) {
-        error_ = name + " requires uninitialized<T> storage";
-        return false;
+        return failStatementDiagnostic(name + " requires uninitialized<T> storage");
       }
       return true;
     }
   }
   if (stmt.kind != Expr::Kind::Call) {
     if (!allowBindings) {
-      error_ = "execution body arguments must be calls";
-      return false;
+      return failStatementDiagnostic("execution body arguments must be calls");
     }
     return validateExpr(params, locals, stmt);
   }
@@ -371,13 +358,11 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     return true;
   }
   if (isBuiltinBlockCall(stmt) && !stmt.hasBodyArguments) {
-    error_ = "block requires block arguments";
-    return publishStatementDiagnostic();
+    return failStatementDiagnostic("block requires block arguments");
   }
   if (isBuiltinBlockCall(stmt) && stmt.hasBodyArguments) {
     if (hasNamedArguments(stmt.argNames) || !stmt.args.empty() || !stmt.templateArgs.empty()) {
-      error_ = "block does not accept arguments";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic("block does not accept arguments");
     }
     std::optional<OnErrorHandler> blockOnError;
     if (!parseOnErrorTransform(stmt.transforms, stmt.namespacePrefix, "block", blockOnError)) {
@@ -415,21 +400,17 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
   PrintBuiltin printBuiltin;
   if (getPrintBuiltin(stmt, printBuiltin)) {
     if (hasNamedArguments(stmt.argNames)) {
-      error_ = "named arguments not supported for builtin calls";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic("named arguments not supported for builtin calls");
     }
     if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
-      error_ = printBuiltin.name + " does not accept block arguments";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic(printBuiltin.name + " does not accept block arguments");
     }
     if (stmt.args.size() != 1) {
-      error_ = printBuiltin.name + " requires exactly one argument";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic(printBuiltin.name + " requires exactly one argument");
     }
     const std::string effectName = (printBuiltin.target == PrintTarget::Err) ? "io_err" : "io_out";
     if (currentValidationContext_.activeEffects.count(effectName) == 0) {
-      error_ = printBuiltin.name + " requires " + effectName + " effect";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic(printBuiltin.name + " requires " + effectName + " effect");
     }
     {
       EntryArgStringScope entryArgScope(*this, true);
@@ -438,8 +419,8 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       }
     }
     if (!isPrintableStatementExpr(stmt.args.front(), params, locals)) {
-      error_ = printBuiltin.name + " requires an integer/bool or string literal/binding argument";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic(printBuiltin.name +
+                                    " requires an integer/bool or string literal/binding argument");
     }
     return true;
   }

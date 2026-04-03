@@ -139,6 +139,10 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     captureExprContext(stmt);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failStatementDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishStatementDiagnostic();
+  };
   auto publishExistingStatementDiagnostic = [&]() -> bool {
     if (error_.empty()) {
       return false;
@@ -332,20 +336,16 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       (hasDeclaredDefinitionPath(oldExplicitSoaPath) || hasImportedDefinitionPath(oldExplicitSoaPath));
   if (!oldExplicitSoaPath.empty() && !hasVisibleOldExplicitSoaHelper) {
     if (hasNamedArguments(stmt.argNames)) {
-      error_ = "named arguments not supported for builtin calls";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic("named arguments not supported for builtin calls");
     }
     if (!stmt.templateArgs.empty()) {
-      error_ = vectorHelper + " does not accept template arguments";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic(vectorHelper + " does not accept template arguments");
     }
     if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
-      error_ = vectorHelper + " does not accept block arguments";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic(vectorHelper + " does not accept block arguments");
     }
     if (stmt.args.size() != 2) {
-      error_ = vectorHelper + " requires exactly two arguments";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic(vectorHelper + " requires exactly two arguments");
     }
     if (!validateVectorStatementHelperReceiver(params, locals, stmt.args.front(), vectorHelper)) {
       return false;
@@ -355,17 +355,15 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       return validateExpr(params, locals, stmt, enclosingStatements, statementIndex);
     }
     if (receiverBinding.typeName != "soa_vector") {
-      error_ = std::string(stmt.isMethodCall ? "unknown method: " : "unknown call target: ") +
-               oldExplicitSoaCanonicalPath;
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic(std::string(stmt.isMethodCall ? "unknown method: " : "unknown call target: ") +
+                                     oldExplicitSoaCanonicalPath);
     }
     if (!validateVectorStatementHelperTarget(
             params, locals, stmt.args.front(), vectorHelper.c_str(), receiverBinding)) {
       return false;
     }
     if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
-      error_ = vectorHelper + " requires heap_alloc effect";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic(vectorHelper + " requires heap_alloc effect");
     }
     if (!validateExpr(params, locals, stmt.args[1])) {
       return false;
@@ -375,8 +373,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
         return false;
       }
     } else if (!isVectorStatementIntegerExpr(params, locals, stmt.args[1])) {
-      error_ = "reserve requires integer capacity";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic("reserve requires integer capacity");
     }
     return validateVectorRelocationHelperElementType(
         receiverBinding, vectorHelper, namespacePrefix, definitionTemplateArgs);
@@ -384,33 +381,28 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   if (!explicitCanonicalStdVectorMutatorCallPath.empty() &&
       !hasDeclaredDefinitionPath(explicitCanonicalStdVectorMutatorCallPath) &&
       !hasImportedDefinitionPath(explicitCanonicalStdVectorMutatorCallPath)) {
-    error_ = "unknown call target: " + explicitCanonicalStdVectorMutatorCallPath;
-    return publishStatementDiagnostic();
+    return failStatementDiagnostic("unknown call target: " + explicitCanonicalStdVectorMutatorCallPath);
   }
   if (!explicitAliasVectorMutatorCallPath.empty() &&
       !hasDeclaredDefinitionPath(explicitAliasVectorMutatorCallPath) &&
       !hasImportedDefinitionPath(explicitAliasVectorMutatorCallPath)) {
-    error_ = "unknown call target: " + explicitAliasVectorMutatorCallPath;
-    return publishStatementDiagnostic();
+    return failStatementDiagnostic("unknown call target: " + explicitAliasVectorMutatorCallPath);
   }
   if (!explicitCanonicalStdVectorMutatorMethodPath.empty() &&
       !hasDeclaredDefinitionPath(explicitCanonicalStdVectorMutatorMethodPath) &&
       !hasImportedDefinitionPath(explicitCanonicalStdVectorMutatorMethodPath)) {
-    error_ = "unknown method: " + explicitCanonicalStdVectorMutatorMethodPath;
-    return publishStatementDiagnostic();
+    return failStatementDiagnostic("unknown method: " + explicitCanonicalStdVectorMutatorMethodPath);
   }
   if (!explicitAliasVectorMutatorMethodPath.empty() &&
       !hasDeclaredDefinitionPath(explicitAliasVectorMutatorMethodPath) &&
       !hasImportedDefinitionPath(explicitAliasVectorMutatorMethodPath)) {
-    error_ = "unknown method: " + explicitAliasVectorMutatorMethodPath;
-    return publishStatementDiagnostic();
+    return failStatementDiagnostic("unknown method: " + explicitAliasVectorMutatorMethodPath);
   }
   if (!bareBuiltinVectorMutatorPreferredPath.empty() &&
       !hasDeclaredDefinitionPath(bareBuiltinVectorMutatorPreferredPath) &&
       !hasImportedDefinitionPath(bareBuiltinVectorMutatorPreferredPath)) {
-    error_ = std::string(stmt.isMethodCall ? "unknown method: " : "unknown call target: ") +
-             bareBuiltinVectorMutatorPreferredPath;
-    return publishStatementDiagnostic();
+    return failStatementDiagnostic(std::string(stmt.isMethodCall ? "unknown method: " : "unknown call target: ") +
+                                   bareBuiltinVectorMutatorPreferredPath);
   }
   bool hasResolvedReceiverIndex = false;
   size_t resolvedReceiverIndex = 0;
@@ -618,8 +610,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   if (isCanonicalStdVectorMutatorMethodCall &&
       !hasDeclaredDefinitionPath(vectorHelperResolved) &&
       !hasImportedDefinitionPath(vectorHelperResolved)) {
-    error_ = "unknown method: " + vectorHelperResolved;
-    return publishStatementDiagnostic();
+    return failStatementDiagnostic("unknown method: " + vectorHelperResolved);
   }
   if (!isBareCanonicalIndexedRemovalExperimentalVectorBridgeCall &&
       !shouldUseCanonicalBuiltinCompatibilityFallback &&
@@ -679,8 +670,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   if (isStdNamespacedCanonicalBuiltinHelperCall &&
       !shouldAllowStdNamespacedVectorHelperCompatibilityFallback &&
       !shouldUseCanonicalBuiltinCompatibilityFallback) {
-    error_ = "unknown call target: " + vectorHelperResolved;
-    return publishStatementDiagnostic();
+    return failStatementDiagnostic("unknown call target: " + vectorHelperResolved);
   }
   auto validateBuiltinNamedReceiverShape = [&](const std::string &helperName) -> bool {
     if (!hasNamedArguments(stmt.argNames) || stmt.args.empty()) {
@@ -750,22 +740,18 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     if (shouldUseCanonicalBuiltinCompatibilityFallback) {
       // Imported canonical vector mutators still lower through builtin vector ops on builtin vector receivers.
     } else {
-      error_ = "named arguments not supported for builtin calls";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic("named arguments not supported for builtin calls");
     }
   }
   if (!stmt.templateArgs.empty()) {
-    error_ = vectorHelper + " does not accept template arguments";
-    return publishStatementDiagnostic();
+    return failStatementDiagnostic(vectorHelper + " does not accept template arguments");
   }
   if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
-    error_ = vectorHelper + " does not accept block arguments";
-    return publishStatementDiagnostic();
+    return failStatementDiagnostic(vectorHelper + " does not accept block arguments");
   }
   if (vectorHelper == "push") {
     if (stmt.args.size() != 2) {
-      error_ = "push requires exactly two arguments";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic("push requires exactly two arguments");
     }
     const size_t receiverIndex = shouldUseCanonicalBuiltinCompatibilityFallback
                                      ? canonicalBuiltinCompatibilityReceiverIndex
@@ -774,8 +760,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
                                   ? findCanonicalBuiltinCompatibilityOperandIndex("value")
                                   : 1;
     if (receiverIndex >= stmt.args.size() || valueIndex >= stmt.args.size()) {
-      error_ = "push requires exactly two arguments";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic("push requires exactly two arguments");
     }
     if (!validateVectorStatementHelperReceiver(params, locals, stmt.args[receiverIndex], "push")) {
       return false;
@@ -785,8 +770,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       return publishExistingStatementDiagnostic();
     }
     if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
-      error_ = "push requires heap_alloc effect";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic("push requires heap_alloc effect");
     }
     if (!validateExpr(params, locals, stmt.args[valueIndex])) {
       return false;
@@ -801,8 +785,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   }
   if (vectorHelper == "reserve") {
     if (stmt.args.size() != 2) {
-      error_ = "reserve requires exactly two arguments";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic("reserve requires exactly two arguments");
     }
     const size_t receiverIndex = shouldUseCanonicalBuiltinCompatibilityFallback
                                      ? canonicalBuiltinCompatibilityReceiverIndex
@@ -811,8 +794,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
                                      ? findCanonicalBuiltinCompatibilityOperandIndex("capacity")
                                      : 1;
     if (receiverIndex >= stmt.args.size() || capacityIndex >= stmt.args.size()) {
-      error_ = "reserve requires exactly two arguments";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic("reserve requires exactly two arguments");
     }
     if (!validateVectorStatementHelperReceiver(params, locals, stmt.args[receiverIndex], "reserve")) {
       return false;
@@ -822,15 +804,13 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       return publishExistingStatementDiagnostic();
     }
     if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
-      error_ = "reserve requires heap_alloc effect";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic("reserve requires heap_alloc effect");
     }
     if (!validateExpr(params, locals, stmt.args[capacityIndex])) {
       return false;
     }
     if (!isVectorStatementIntegerExpr(params, locals, stmt.args[capacityIndex])) {
-      error_ = "reserve requires integer capacity";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic("reserve requires integer capacity");
     }
     if (!validateVectorRelocationHelperElementType(binding, "reserve", namespacePrefix, definitionTemplateArgs)) {
       return publishExistingStatementDiagnostic();
@@ -839,8 +819,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   }
   if (vectorHelper == "remove_at" || vectorHelper == "remove_swap") {
     if (stmt.args.size() != 2) {
-      error_ = vectorHelper + " requires exactly two arguments";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic(vectorHelper + " requires exactly two arguments");
     }
     const size_t receiverIndex = shouldUseCanonicalBuiltinCompatibilityFallback
                                      ? canonicalBuiltinCompatibilityReceiverIndex
@@ -849,8 +828,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
                                      ? findCanonicalBuiltinCompatibilityOperandIndex("index")
                                      : 1;
     if (receiverIndex >= stmt.args.size() || indexArgIndex >= stmt.args.size()) {
-      error_ = vectorHelper + " requires exactly two arguments";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic(vectorHelper + " requires exactly two arguments");
     }
     if (!validateVectorStatementHelperReceiver(params, locals, stmt.args[receiverIndex], vectorHelper)) {
       return false;
@@ -864,8 +842,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       return false;
     }
     if (!isVectorStatementIntegerExpr(params, locals, stmt.args[indexArgIndex])) {
-      error_ = vectorHelper + " requires integer index";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic(vectorHelper + " requires integer index");
     }
     if (!validateVectorIndexedRemovalHelperElementType(binding, vectorHelper, namespacePrefix, definitionTemplateArgs)) {
       return publishExistingStatementDiagnostic();
@@ -874,15 +851,13 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   }
   if (vectorHelper == "pop" || vectorHelper == "clear") {
     if (stmt.args.size() != 1) {
-      error_ = vectorHelper + " requires exactly one argument";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic(vectorHelper + " requires exactly one argument");
     }
     const size_t receiverIndex = shouldUseCanonicalBuiltinCompatibilityFallback
                                      ? canonicalBuiltinCompatibilityReceiverIndex
                                      : 0;
     if (receiverIndex >= stmt.args.size()) {
-      error_ = vectorHelper + " requires exactly one argument";
-      return publishStatementDiagnostic();
+      return failStatementDiagnostic(vectorHelper + " requires exactly one argument");
     }
     if (!validateVectorStatementHelperReceiver(params, locals, stmt.args[receiverIndex], vectorHelper)) {
       return false;

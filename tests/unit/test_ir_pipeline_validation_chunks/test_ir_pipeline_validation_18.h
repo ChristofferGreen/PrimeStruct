@@ -684,9 +684,12 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("auto publishBindingDiagnostic = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find("auto failBindingDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("captureExprContext(stmt);") != std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("return publishCurrentStructuredDiagnosticNow();") !=
         std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find("error_ = std::move(message);") != std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("duplicate binding name: ") != std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("binding initializer requires a value") != std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("entry argument strings require string bindings") !=
@@ -698,11 +701,14 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsStatementBuiltinsSource.find("if (isSimpleCallName(stmt, \"dispatch\")) {") !=
         std::string::npos);
+  CHECK(semanticsStatementBuiltinsSource.find("auto failStatementDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsStatementBuiltinsSource.find("if (isSimpleCallName(stmt, \"buffer_store\")) {") !=
         std::string::npos);
   CHECK(semanticsStatementBuiltinsSource.find("PathSpaceBuiltin pathSpaceBuiltin;") != std::string::npos);
   CHECK(semanticsStatementBuiltinsSource.find("auto resolveBufferElemType = [&](const Expr &arg, std::string &elemType) -> bool {") !=
         std::string::npos);
+  CHECK(semanticsStatementBuiltinsSource.find("error_ = std::move(message);") != std::string::npos);
   CHECK(semanticsStatementBodyArgumentsSource.find(
             "bool SemanticsValidator::validateStatementBodyArguments(") !=
         std::string::npos);
@@ -750,11 +756,14 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find("auto publishStatementDiagnostic = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find("auto failStatementDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find("auto publishExistingStatementDiagnostic = [&]() -> bool {") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find("captureExprContext(stmt);") != std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find("return publishCurrentStructuredDiagnosticNow();") !=
         std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find("error_ = std::move(message);") != std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find("std::string vectorHelper;") != std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find("if (vectorHelper == \"push\") {") != std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find("validateVectorRelocationHelperElementType(binding, \"push\"") !=
@@ -779,6 +788,9 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsStatementReturnsSource.find("captureExprContext(stmt);") !=
         std::string::npos);
+  CHECK(semanticsStatementSource.find("auto failStatementDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsStatementSource.find("error_ = std::move(message);") != std::string::npos);
   CHECK(semanticsStatementReturnsSource.find(
             "return publishCurrentStructuredDiagnosticNow();") !=
         std::string::npos);
