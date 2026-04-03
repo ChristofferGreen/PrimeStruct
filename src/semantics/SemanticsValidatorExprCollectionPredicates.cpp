@@ -258,11 +258,15 @@ bool SemanticsValidator::validateCollectionElementType(
     captureExprContext(arg);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failCollectionPredicateDiagnostic =
+      [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishCollectionPredicateDiagnostic();
+  };
   const std::string normalizedType = normalizeBindingTypeName(typeName);
   if (normalizedType == "string") {
     if (!isStringExprForArgumentValidation(arg, dispatchResolvers)) {
-      error_ = errorPrefix + typeName;
-      return publishCollectionPredicateDiagnostic();
+      return failCollectionPredicateDiagnostic(errorPrefix + typeName);
     }
     return true;
   }
@@ -271,13 +275,11 @@ bool SemanticsValidator::validateCollectionElementType(
     return true;
   }
   if (isStringExprForArgumentValidation(arg, dispatchResolvers)) {
-    error_ = errorPrefix + typeName;
-    return publishCollectionPredicateDiagnostic();
+    return failCollectionPredicateDiagnostic(errorPrefix + typeName);
   }
   ReturnKind argKind = inferExprReturnKind(arg, params, locals);
   if (argKind != ReturnKind::Unknown && argKind != expectedKind) {
-    error_ = errorPrefix + typeName;
-    return publishCollectionPredicateDiagnostic();
+    return failCollectionPredicateDiagnostic(errorPrefix + typeName);
   }
   return true;
 }

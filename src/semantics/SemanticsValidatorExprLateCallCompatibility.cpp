@@ -18,17 +18,22 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failLateCallCompatibilityDiagnostic =
+      [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishLateCallCompatibilityDiagnostic();
+  };
 
   if (!allowMathBareName(expr.name) && expr.name.find('/') == std::string::npos) {
     std::string builtinName;
-    if (getBuiltinClampName(expr, builtinName, true) ||
-        getBuiltinMinMaxName(expr, builtinName, true) ||
-        getBuiltinAbsSignName(expr, builtinName, true) ||
-        getBuiltinSaturateName(expr, builtinName, true) ||
-        getBuiltinMathName(expr, builtinName, true)) {
-      error_ = "math builtin requires import /std/math/* or /std/math/<name>: " +
-               expr.name;
-      return publishLateCallCompatibilityDiagnostic();
+      if (getBuiltinClampName(expr, builtinName, true) ||
+          getBuiltinMinMaxName(expr, builtinName, true) ||
+          getBuiltinAbsSignName(expr, builtinName, true) ||
+          getBuiltinSaturateName(expr, builtinName, true) ||
+          getBuiltinMathName(expr, builtinName, true)) {
+      return failLateCallCompatibilityDiagnostic(
+          "math builtin requires import /std/math/* or /std/math/<name>: " +
+          expr.name);
     }
   }
 
@@ -43,16 +48,16 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
     if (callableBinding != nullptr && callableBinding->typeName == "lambda") {
       handledOut = true;
       if (hasNamedArguments(expr.argNames)) {
-        error_ = "named arguments not supported for lambda calls";
-        return publishLateCallCompatibilityDiagnostic();
+        return failLateCallCompatibilityDiagnostic(
+            "named arguments not supported for lambda calls");
       }
       if (!expr.templateArgs.empty()) {
-        error_ = "lambda calls do not accept template arguments";
-        return publishLateCallCompatibilityDiagnostic();
+        return failLateCallCompatibilityDiagnostic(
+            "lambda calls do not accept template arguments");
       }
       if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-        error_ = "lambda calls do not accept block arguments";
-        return publishLateCallCompatibilityDiagnostic();
+        return failLateCallCompatibilityDiagnostic(
+            "lambda calls do not accept block arguments");
       }
       for (const auto &arg : expr.args) {
         if (!validateExpr(params, locals, arg)) {
@@ -98,18 +103,18 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
           context.dispatchResolvers->resolveMapTarget(expr.args.front(),
                                                       mapKeyType,
                                                       mapValueType)) {
-        error_ = "unknown call target: /std/collections/vector/count";
-        return publishLateCallCompatibilityDiagnostic();
+        return failLateCallCompatibilityDiagnostic(
+            "unknown call target: /std/collections/vector/count");
       }
-      error_ = "count requires vector target";
-      return publishLateCallCompatibilityDiagnostic();
+      return failLateCallCompatibilityDiagnostic(
+          "count requires vector target");
     }
     if (!hasDeclaredDefinitionPath("/vector/count") &&
         !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
         !hasImportedDefinitionPath("/std/collections/vector/count") &&
         (resolvesVector || resolvesExperimentalVector)) {
-      error_ = "unknown call target: /std/collections/vector/count";
-      return publishLateCallCompatibilityDiagnostic();
+      return failLateCallCompatibilityDiagnostic(
+          "unknown call target: /std/collections/vector/count");
     }
     if (resolved == "/std/collections/vector/count" &&
         hasImportedDefinitionPath("/std/collections/vector/count") &&
@@ -145,18 +150,18 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
       if (context.dispatchResolvers->resolveMapTarget(expr.args.front(),
                                                       mapKeyType,
                                                       mapValueType)) {
-        error_ = "unknown call target: /std/collections/vector/capacity";
-        return publishLateCallCompatibilityDiagnostic();
+        return failLateCallCompatibilityDiagnostic(
+            "unknown call target: /std/collections/vector/capacity");
       }
-      error_ = "capacity requires vector target";
-      return publishLateCallCompatibilityDiagnostic();
+      return failLateCallCompatibilityDiagnostic(
+          "capacity requires vector target");
     }
     if (!hasDeclaredDefinitionPath("/vector/capacity") &&
         !hasDeclaredDefinitionPath("/std/collections/vector/capacity") &&
         !hasImportedDefinitionPath("/std/collections/vector/capacity") &&
         (resolvesVector || resolvesExperimentalVector)) {
-      error_ = "unknown call target: /std/collections/vector/capacity";
-      return publishLateCallCompatibilityDiagnostic();
+      return failLateCallCompatibilityDiagnostic(
+          "unknown call target: /std/collections/vector/capacity");
     }
     if (resolved == "/std/collections/vector/capacity" &&
         hasImportedDefinitionPath("/std/collections/vector/capacity")) {

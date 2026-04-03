@@ -98,6 +98,10 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failCollectionAccessDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishCollectionAccessDiagnostic();
+  };
 
   auto returnKindForBinding = [](const BindingInfo &binding) -> ReturnKind {
     if (binding.typeName == "Reference") {
@@ -208,16 +212,16 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
 
   auto validateMethodMapAccessBuiltin = [&](const std::string &helperName) -> bool {
     if (!expr.templateArgs.empty()) {
-      error_ = helperName + " does not accept template arguments";
-      return publishCollectionAccessDiagnostic();
+      return failCollectionAccessDiagnostic(helperName +
+                                            " does not accept template arguments");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = helperName + " does not accept block arguments";
-      return publishCollectionAccessDiagnostic();
+      return failCollectionAccessDiagnostic(helperName +
+                                            " does not accept block arguments");
     }
     if (expr.args.size() != 2) {
-      error_ = "argument count mismatch for builtin " + helperName;
-      return publishCollectionAccessDiagnostic();
+      return failCollectionAccessDiagnostic("argument count mismatch for builtin " +
+                                            helperName);
     }
     std::string mapKeyType;
     if (!(context.resolveMapKeyType != nullptr &&
@@ -225,8 +229,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
       }
-      error_ = helperName + " requires map target";
-      return publishCollectionAccessDiagnostic();
+      return failCollectionAccessDiagnostic(helperName + " requires map target");
     }
     if (!validateMapKeyExpr(helperName, expr.args.front(), expr.args[1], mapKeyType)) {
       return publishCollectionAccessDiagnostic();
@@ -278,8 +281,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
           context.resolveExperimentalVectorValueTarget != nullptr &&
           context.resolveExperimentalVectorValueTarget(expr.args[receiverIndex], elemType);
       if (!isBuiltinVectorReceiver && !isExperimentalVectorReceiver) {
-        error_ = "argument type mismatch for /std/collections/vector/" + builtinName;
-        return publishCollectionAccessDiagnostic();
+        return failCollectionAccessDiagnostic(
+            "argument type mismatch for /std/collections/vector/" + builtinName);
       }
     }
   }
@@ -290,23 +293,20 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     std::string removedVectorAccessBuiltinName;
     if (getRemovedVectorAccessBuiltinName(expr, removedVectorAccessBuiltinName)) {
       if (hasNamedArguments(expr.argNames)) {
-        error_ = "named arguments not supported for builtin calls";
-        return publishCollectionAccessDiagnostic();
+        return failCollectionAccessDiagnostic(
+            "named arguments not supported for builtin calls");
       }
       if (!expr.templateArgs.empty()) {
-        error_ = removedVectorAccessBuiltinName +
-                 " does not accept template arguments";
-        return publishCollectionAccessDiagnostic();
+        return failCollectionAccessDiagnostic(
+            removedVectorAccessBuiltinName + " does not accept template arguments");
       }
       if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-        error_ =
-            removedVectorAccessBuiltinName + " does not accept block arguments";
-        return publishCollectionAccessDiagnostic();
+        return failCollectionAccessDiagnostic(
+            removedVectorAccessBuiltinName + " does not accept block arguments");
       }
       if (expr.args.size() != 2) {
-        error_ = "argument count mismatch for builtin " +
-                 removedVectorAccessBuiltinName;
-        return publishCollectionAccessDiagnostic();
+        return failCollectionAccessDiagnostic(
+            "argument count mismatch for builtin " + removedVectorAccessBuiltinName);
       }
     }
   }
@@ -333,20 +333,20 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
           context.isNamedArgsPackMethodAccessCall(expr)) &&
         !(context.isNamedArgsPackWrappedFileBuiltinAccessCall != nullptr &&
           context.isNamedArgsPackWrappedFileBuiltinAccessCall(expr))) {
-      error_ = "named arguments not supported for builtin calls";
-      return publishCollectionAccessDiagnostic();
+      return failCollectionAccessDiagnostic(
+          "named arguments not supported for builtin calls");
     }
     if (!expr.templateArgs.empty()) {
-      error_ = builtinName + " does not accept template arguments";
-      return publishCollectionAccessDiagnostic();
+      return failCollectionAccessDiagnostic(builtinName +
+                                            " does not accept template arguments");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = builtinName + " does not accept block arguments";
-      return publishCollectionAccessDiagnostic();
+      return failCollectionAccessDiagnostic(builtinName +
+                                            " does not accept block arguments");
     }
     if (expr.args.size() != 2) {
-      error_ = "argument count mismatch for builtin " + builtinName;
-      return publishCollectionAccessDiagnostic();
+      return failCollectionAccessDiagnostic("argument count mismatch for builtin " +
+                                            builtinName);
     }
     std::string experimentalMapKeyType;
     std::string experimentalMapValueType;
@@ -359,8 +359,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
              expr.args[1], experimentalMapKeyType,
              experimentalMapValueType)))) {
       handledOut = true;
-      error_ = "unknown call target: /std/collections/map/" + builtinName;
-      return publishCollectionAccessDiagnostic();
+      return failCollectionAccessDiagnostic(
+          "unknown call target: /std/collections/map/" + builtinName);
     }
     auto isExperimentalMapTypeReceiver = [&](const Expr &candidate) {
       std::string receiverTypeText;
@@ -371,8 +371,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
         (isExperimentalMapTypeReceiver(expr.args.front()) ||
          isExperimentalMapTypeReceiver(expr.args[1]))) {
       handledOut = true;
-      error_ = "unknown call target: /std/collections/map/" + builtinName;
-      return publishCollectionAccessDiagnostic();
+      return failCollectionAccessDiagnostic(
+          "unknown call target: /std/collections/map/" + builtinName);
     }
     if (!expr.isMethodCall &&
         context.isMapLikeBareAccessReceiverTarget != nullptr &&
@@ -510,8 +510,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
         !hasDeclaredDefinitionPath("/vector/" + builtinName) &&
         !hasDeclaredDefinitionPath("/std/collections/vector/" + builtinName) &&
         !hasImportedDefinitionPath("/std/collections/vector/" + builtinName)) {
-      error_ = "unknown call target: /std/collections/vector/" + builtinName;
-      return publishCollectionAccessDiagnostic();
+      return failCollectionAccessDiagnostic(
+          "unknown call target: /std/collections/vector/" + builtinName);
     }
     if (!isArrayOrString && !isMap && !isExperimentalMap) {
       if (!validateExpr(params, locals, expr.args.front())) {
@@ -525,8 +525,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
           !isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&
           context.isNonCollectionStructAccessTarget != nullptr &&
           context.isNonCollectionStructAccessTarget(methodResolved)) {
-        error_ = "unknown method: " + methodResolved;
-        return publishCollectionAccessDiagnostic();
+        return failCollectionAccessDiagnostic("unknown method: " + methodResolved);
       }
       if (expr.args.front().kind == Expr::Kind::Call || expr.args.front().kind == Expr::Kind::Name) {
         std::string receiverStructPath;
@@ -553,13 +552,12 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
         }
         if (!receiverStructPath.empty() && context.isNonCollectionStructAccessTarget != nullptr &&
             context.isNonCollectionStructAccessTarget(receiverStructPath + "/" + builtinName)) {
-          error_ = "unknown method: " + receiverStructPath + "/" + builtinName;
-          return publishCollectionAccessDiagnostic();
+          return failCollectionAccessDiagnostic(
+              "unknown method: " + receiverStructPath + "/" + builtinName);
         }
       }
-      error_ = builtinName +
-               " requires array, vector, map, or string target";
-      return publishCollectionAccessDiagnostic();
+      return failCollectionAccessDiagnostic(
+          builtinName + " requires array, vector, map, or string target");
     }
     if ((isMap || isExperimentalMap) &&
         !context.shouldBuiltinValidateBareMapAccessCall &&
@@ -568,13 +566,13 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
         !hasDeclaredDefinitionPath("/map/" + builtinName) &&
         !hasImportedDefinitionPath("/std/collections/map/" + builtinName) &&
         !hasDeclaredDefinitionPath("/std/collections/map/" + builtinName)) {
-      error_ = "unknown call target: /std/collections/map/" + builtinName;
-      return publishCollectionAccessDiagnostic();
+      return failCollectionAccessDiagnostic(
+          "unknown call target: /std/collections/map/" + builtinName);
     }
     if (!isMap && !isExperimentalMap) {
       if (!isIntegerExpr(expr.args[indexArgIndex])) {
-        error_ = builtinName + " requires integer index [collection]";
-        return publishCollectionAccessDiagnostic();
+        return failCollectionAccessDiagnostic(
+            builtinName + " requires integer index [collection]");
       }
     } else if (!validateMapKeyExpr(builtinName, receiverExpr, expr.args[indexArgIndex], mapKeyType)) {
       return publishCollectionAccessDiagnostic();

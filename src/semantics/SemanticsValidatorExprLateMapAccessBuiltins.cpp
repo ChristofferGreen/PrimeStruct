@@ -21,6 +21,10 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failLateMapAccessBuiltinDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishLateMapAccessBuiltinDiagnostic();
+  };
 
   std::string builtinName;
   if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinName) &&
@@ -56,8 +60,8 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
       if (rewrittenMapHelperCall.name == "/std/collections/map/tryAt" &&
           !hasImportedDefinitionPath("/std/collections/map/tryAt") &&
           !hasDeclaredDefinitionPath("/tryAt")) {
-        error_ = "unknown call target: /std/collections/map/tryAt";
-        return publishLateMapAccessBuiltinDiagnostic();
+        return failLateMapAccessBuiltinDiagnostic(
+            "unknown call target: /std/collections/map/tryAt");
       }
       handledOut = true;
       return validateExpr(params, locals, rewrittenMapHelperCall);
@@ -101,8 +105,8 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         !hasDeclaredDefinitionPath("/std/collections/map/contains") &&
         !hasImportedDefinitionPath("/contains") &&
         !hasDeclaredDefinitionPath("/contains")) {
-      error_ = "unknown call target: /std/collections/map/contains";
-      return publishLateMapAccessBuiltinDiagnostic();
+      return failLateMapAccessBuiltinDiagnostic(
+          "unknown call target: /std/collections/map/contains");
     }
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
@@ -118,29 +122,28 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
       if (!validateExpr(params, locals, receiverExpr)) {
         return false;
       }
-      error_ = "contains requires map target";
-      return publishLateMapAccessBuiltinDiagnostic();
+      return failLateMapAccessBuiltinDiagnostic("contains requires map target");
     }
     if (!mapKeyType.empty()) {
       if (normalizeBindingTypeName(mapKeyType) == "string") {
         if (!this->isStringExprForArgumentValidation(keyExpr,
                                                      *context.dispatchResolvers)) {
-          error_ = "contains requires string map key";
-          return publishLateMapAccessBuiltinDiagnostic();
+          return failLateMapAccessBuiltinDiagnostic(
+              "contains requires string map key");
         }
       } else {
         ReturnKind keyKind =
             returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
         if (keyKind != ReturnKind::Unknown) {
           if (context.dispatchResolvers->resolveStringTarget(keyExpr)) {
-            error_ = "contains requires map key type " + mapKeyType;
-            return publishLateMapAccessBuiltinDiagnostic();
+            return failLateMapAccessBuiltinDiagnostic(
+                "contains requires map key type " + mapKeyType);
           }
           ReturnKind candidateKind = inferExprReturnKind(keyExpr, params, locals);
           if (candidateKind != ReturnKind::Unknown &&
               candidateKind != keyKind) {
-            error_ = "contains requires map key type " + mapKeyType;
-            return publishLateMapAccessBuiltinDiagnostic();
+            return failLateMapAccessBuiltinDiagnostic(
+                "contains requires map key type " + mapKeyType);
           }
         }
       }
@@ -177,37 +180,36 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     if (!expr.isMethodCall && resolved == "/std/collections/map/tryAt" &&
         !hasImportedDefinitionPath("/std/collections/map/tryAt") &&
         !hasDeclaredDefinitionPath("/std/collections/map/tryAt")) {
-      error_ = "unknown call target: /std/collections/map/tryAt";
-      return publishLateMapAccessBuiltinDiagnostic();
+      return failLateMapAccessBuiltinDiagnostic(
+          "unknown call target: /std/collections/map/tryAt");
     }
     std::string mapKeyType;
     if (!resolveMapKeyTypeWithInference(receiverExpr, mapKeyType)) {
       if (!validateExpr(params, locals, receiverExpr)) {
         return false;
       }
-      error_ = "tryAt requires map target";
-      return publishLateMapAccessBuiltinDiagnostic();
+      return failLateMapAccessBuiltinDiagnostic("tryAt requires map target");
     }
     if (!mapKeyType.empty()) {
       if (normalizeBindingTypeName(mapKeyType) == "string") {
         if (!this->isStringExprForArgumentValidation(keyExpr,
                                                      *context.dispatchResolvers)) {
-          error_ = "tryAt requires string map key";
-          return publishLateMapAccessBuiltinDiagnostic();
+          return failLateMapAccessBuiltinDiagnostic(
+              "tryAt requires string map key");
         }
       } else {
         ReturnKind keyKind =
             returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
         if (keyKind != ReturnKind::Unknown) {
           if (context.dispatchResolvers->resolveStringTarget(keyExpr)) {
-            error_ = "tryAt requires map key type " + mapKeyType;
-            return publishLateMapAccessBuiltinDiagnostic();
+            return failLateMapAccessBuiltinDiagnostic(
+                "tryAt requires map key type " + mapKeyType);
           }
           ReturnKind candidateKind = inferExprReturnKind(keyExpr, params, locals);
           if (candidateKind != ReturnKind::Unknown &&
               candidateKind != keyKind) {
-            error_ = "tryAt requires map key type " + mapKeyType;
-            return publishLateMapAccessBuiltinDiagnostic();
+            return failLateMapAccessBuiltinDiagnostic(
+                "tryAt requires map key type " + mapKeyType);
           }
         }
       }
@@ -256,8 +258,8 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     if (expr.name.rfind("/std/collections/map/", 0) == 0 &&
         !hasImportedDefinitionPath("/std/collections/map/" + builtinName) &&
         !hasDeclaredDefinitionPath("/std/collections/map/" + builtinName)) {
-      error_ = "unknown call target: /std/collections/map/" + builtinName;
-      return publishLateMapAccessBuiltinDiagnostic();
+      return failLateMapAccessBuiltinDiagnostic(
+          "unknown call target: /std/collections/map/" + builtinName);
     }
     std::string mapKeyType;
     if (resolveMapKeyTypeWithInference(receiverExpr, mapKeyType)) {

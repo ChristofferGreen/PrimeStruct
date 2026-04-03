@@ -13,6 +13,11 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failDirectCollectionFallbackDiagnostic =
+      [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishDirectCollectionFallbackDiagnostic();
+  };
   rewrittenExprOut.reset();
   if (context.dispatchResolvers == nullptr) {
     return true;
@@ -31,8 +36,8 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
         resolveArrayTarget(expr.args.front(), elemType) ||
         dispatchResolvers.resolveExperimentalVectorTarget(
             expr.args.front(), elemType)) {
-      error_ = "unknown call target: /std/collections/vector/count";
-      return publishDirectCollectionFallbackDiagnostic();
+      return failDirectCollectionFallbackDiagnostic(
+          "unknown call target: /std/collections/vector/count");
     }
   }
 

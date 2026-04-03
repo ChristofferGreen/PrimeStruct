@@ -49,6 +49,10 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failPreDispatchDirectCallDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishPreDispatchDirectCallDiagnostic();
+  };
   if (context.dispatchBootstrap == nullptr) {
     return true;
   }
@@ -106,8 +110,8 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
       this->explicitCanonicalExperimentalMapBorrowedHelperPath(
           expr, dispatchBootstrap.dispatchResolvers,
           borrowedCanonicalExperimentalMapHelperPath)) {
-    error_ = "unknown call target: " + borrowedCanonicalExperimentalMapHelperPath;
-    return publishPreDispatchDirectCallDiagnostic();
+    return failPreDispatchDirectCallDiagnostic(
+        "unknown call target: " + borrowedCanonicalExperimentalMapHelperPath);
   }
 
   if (!expr.isMethodCall &&
@@ -135,8 +139,8 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
           dispatchBootstrap.dispatchResolvers.resolveMapTarget(
               receiverExpr, keyType, valueType);
       if (isBuiltinMapTarget && !isExperimentalMapTarget) {
-        error_ = "unknown call target: " + resolvedOut;
-        return publishPreDispatchDirectCallDiagnostic();
+        return failPreDispatchDirectCallDiagnostic("unknown call target: " +
+                                                   resolvedOut);
       }
     }
   }
@@ -248,8 +252,8 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
                expr.args[1], receiverTypeText, borrowedHelperProbe))) ||
          isExperimentalMapReceiverExpr(expr.args.front()) ||
          isExperimentalMapReceiverExpr(expr.args[1]))) {
-      error_ = "unknown call target: /std/collections/map/" + builtinAccessName;
-      return publishPreDispatchDirectCallDiagnostic();
+      return failPreDispatchDirectCallDiagnostic(
+          "unknown call target: /std/collections/map/" + builtinAccessName);
     }
   }
 
