@@ -130,6 +130,22 @@ Ownership and lifetime rules:
 - Once the boundary is complete, lowering-facing decisions must come from the semantic product even when equivalent
   information is still visible on the mutated AST.
 
+Ownership split by responsibility:
+- Raw AST owns:
+  - token text, parser tree shape, and original source-order structure
+  - exact source spans used for parser-facing diagnostics and surface dumps
+  - syntax-faithful forms that may be normalized away before lowering
+- Semantic product owns:
+  - canonical resolved paths after helper-shadow and import resolution
+  - final binding/type/effect facts consumed by lowering
+  - semantic node ids used to join lowering facts back to syntax provenance
+  - deterministic per-definition metadata exported to IR preparation and later backends
+- Shared boundary rule:
+  - source spans, debug/source-map data, and user-facing syntax reproduction remain AST-owned, but the semantic product
+    carries stable references to that provenance so lowering/debuggers never need to re-infer semantics from syntax.
+  - any lowering consumer that needs both “what this means” and “where it came from” must read meaning from the
+    semantic product and provenance from the AST-backed ids/spans, not from mutated AST semantics fields.
+
 Migration stages:
 1. Define the semantic-product type and its ownership contract.
 2. Materialize the first lowering-required facts into that product while keeping the existing AST-based lowerer path

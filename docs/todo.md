@@ -56,7 +56,7 @@ Pipeline plumbing:
 - ○ Add a temporary migration adapter that can derive lowerer input from either raw `Program` or the semantic product during the cutover, with explicit removal criteria once all lowering entrypoints use the new boundary.
 - ○ Cut over `CompilePipelineOutput` and `Semantics::validate` so the compile pipeline publishes the semantic product as its post-semantics success artifact instead of only a mutated raw `Program`.
 - ○ Add a deterministic semantic-product dump/formatter plus golden coverage so the new boundary is inspectable in the same way as AST/IR stages.
-- ○ Document and test the ownership split between raw AST and semantic product, especially for source spans, debug/source-map provenance, and other syntax-faithful data that lowering/debuggers still need.
+- ○ Add tests for the ownership split between raw AST and semantic product, especially around source spans, debug/source-map provenance, and other syntax-faithful data that lowering/debuggers still need.
 
 Lowering cutover:
 - ○ Cut over `IrLowerer::lower` and `prepareIrModule` so IR preparation consumes the semantic product directly, then retire the raw-`Program` lowering path once the temporary adapter is removed.
