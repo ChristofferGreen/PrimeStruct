@@ -988,10 +988,13 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "auto usesVisibleSamePathSoaAccessHelper =") ==
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
-            "const std::string samePath = \"/soa_vector/\" + *soaAccessHelper;") !=
+            "usesSamePathSoaHelperTargetForCurrentImports(*soaAccessHelper)") !=
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
-            "hasVisibleDefinitionPathForCurrentImports(samePath)") !=
+            "const std::string samePath = \"/soa_vector/\" + *soaAccessHelper;") ==
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "hasVisibleDefinitionPathForCurrentImports(samePath)") ==
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
             "const bool oldSurfaceCallShape =") !=
