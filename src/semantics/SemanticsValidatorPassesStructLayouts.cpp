@@ -7,6 +7,13 @@
 
 namespace primec::semantics {
 
+bool SemanticsValidator::publishPassesStructLayoutsDiagnostic() {
+  if (currentDefinitionContext_ != nullptr) {
+    captureDefinitionContext(*currentDefinitionContext_);
+  }
+  return publishCurrentStructuredDiagnosticNow();
+}
+
 bool SemanticsValidator::validateStructLayouts() {
   struct LayoutInfo {
     uint32_t sizeBytes = 0;
@@ -58,10 +65,10 @@ bool SemanticsValidator::validateStructLayouts() {
       }
       if (hasAlignment) {
         error_ = "duplicate " + transform.name + " transform on " + context;
-        return false;
+        return publishPassesStructLayoutsDiagnostic();
       }
       if (!validateAlignTransform(transform, context, error_)) {
-        return false;
+        return publishPassesStructLayoutsDiagnostic();
       }
       auto parsePositiveInt = [](const std::string &text, int &valueOut) -> bool {
         std::string digits = text;
@@ -91,7 +98,7 @@ bool SemanticsValidator::validateStructLayouts() {
       int value = 0;
       if (!parsePositiveInt(transform.arguments[0], value)) {
         error_ = transform.name + " requires a positive integer argument";
-        return false;
+        return publishPassesStructLayoutsDiagnostic();
       }
       uint64_t bytes = static_cast<uint64_t>(value);
       if (transform.name == "align_kbytes") {
@@ -99,7 +106,7 @@ bool SemanticsValidator::validateStructLayouts() {
       }
       if (bytes > std::numeric_limits<uint32_t>::max()) {
         error_ = transform.name + " alignment too large on " + context;
-        return false;
+        return publishPassesStructLayoutsDiagnostic();
       }
       alignmentOut = static_cast<uint32_t>(bytes);
       hasAlignment = true;
@@ -156,6 +163,7 @@ bool SemanticsValidator::validateStructLayouts() {
   std::function<bool(const BindingInfo &, const std::string &, LayoutInfo &)> typeLayoutForBinding;
 
   computeStructLayout = [&](const Definition &def, LayoutInfo &out) -> bool {
+    DefinitionContextScope definitionScope(*this, def);
     auto isStaticField = [&](const Expr &stmt) -> bool {
       for (const auto &transform : stmt.transforms) {
         if (transform.name == "static") {
@@ -171,7 +179,7 @@ bool SemanticsValidator::validateStructLayouts() {
     }
     if (!layoutStack.insert(def.fullPath).second) {
       error_ = "recursive struct layout not supported: " + def.fullPath;
-      return false;
+      return publishPassesStructLayoutsDiagnostic();
     }
     bool requireNoPadding = false;
     bool requirePlatformPadding = false;
@@ -199,7 +207,7 @@ bool SemanticsValidator::validateStructLayouts() {
       }
       BindingInfo binding;
       if (!resolveStructFieldBinding(def, stmt, binding)) {
-        return false;
+        return publishPassesStructLayoutsDiagnostic();
       }
       LayoutInfo fieldLayout;
       if (!typeLayoutForBinding(binding, def.namespacePrefix, fieldLayout)) {
@@ -214,7 +222,7 @@ bool SemanticsValidator::validateStructLayouts() {
       if (hasFieldAlign && explicitFieldAlign < fieldLayout.alignmentBytes) {
         error_ = "alignment requirement on " + fieldContext + " is smaller than required alignment of " +
                  std::to_string(fieldLayout.alignmentBytes);
-        return false;
+        return publishPassesStructLayoutsDiagnostic();
       }
       uint32_t fieldAlign = hasFieldAlign ? std::max(explicitFieldAlign, fieldLayout.alignmentBytes)
                                           : fieldLayout.alignmentBytes;
@@ -222,11 +230,11 @@ bool SemanticsValidator::validateStructLayouts() {
       uint32_t alignedOffset = alignTo(*activeOffset, fieldAlign);
       if (requireNoPadding && alignedOffset != *activeOffset) {
         error_ = "no_padding disallows alignment padding on " + fieldContext;
-        return false;
+        return publishPassesStructLayoutsDiagnostic();
       }
       if (requirePlatformPadding && alignedOffset != *activeOffset && !hasFieldAlign) {
         error_ = "platform_independent_padding requires explicit alignment on " + fieldContext;
-        return false;
+        return publishPassesStructLayoutsDiagnostic();
       }
       *activeOffset = alignedOffset + fieldLayout.sizeBytes;
       if (!fieldIsStatic) {
@@ -236,17 +244,17 @@ bool SemanticsValidator::validateStructLayouts() {
     if (hasStructAlign && explicitStructAlign < structAlign) {
       error_ = "alignment requirement on struct " + def.fullPath + " is smaller than required alignment of " +
                std::to_string(structAlign);
-      return false;
+      return publishPassesStructLayoutsDiagnostic();
     }
     structAlign = hasStructAlign ? std::max(structAlign, explicitStructAlign) : structAlign;
     uint32_t totalSize = alignTo(offset, structAlign);
     if (requireNoPadding && totalSize != offset) {
       error_ = "no_padding disallows trailing padding on struct " + def.fullPath;
-      return false;
+      return publishPassesStructLayoutsDiagnostic();
     }
     if (requirePlatformPadding && totalSize != offset && !hasStructAlign) {
       error_ = "platform_independent_padding requires explicit struct alignment on " + def.fullPath;
-      return false;
+      return publishPassesStructLayoutsDiagnostic();
     }
     LayoutInfo layout{totalSize, structAlign};
     layoutCache.emplace(def.fullPath, layout);
@@ -286,13 +294,13 @@ bool SemanticsValidator::validateStructLayouts() {
     if (normalized == "Result") {
       if (binding.typeTemplateArg.empty()) {
         error_ = "Result requires one or two template arguments";
-        return false;
+        return publishPassesStructLayoutsDiagnostic();
       }
       std::vector<std::string> args;
       if (!splitTopLevelTemplateArgs(binding.typeTemplateArg, args) ||
           (args.size() != 1 && args.size() != 2)) {
         error_ = "Result requires one or two template arguments";
-        return false;
+        return publishPassesStructLayoutsDiagnostic();
       }
       layoutOut = (args.size() == 1) ? LayoutInfo{4u, 4u} : LayoutInfo{8u, 8u};
       return true;
@@ -300,7 +308,7 @@ bool SemanticsValidator::validateStructLayouts() {
     if (normalized == "uninitialized") {
       if (binding.typeTemplateArg.empty()) {
         error_ = "uninitialized requires exactly one template argument";
-        return false;
+        return publishPassesStructLayoutsDiagnostic();
       }
       std::string base;
       std::string arg;
@@ -308,7 +316,7 @@ bool SemanticsValidator::validateStructLayouts() {
       if (splitTemplateTypeName(binding.typeTemplateArg, base, arg)) {
         if (base == "uninitialized") {
           error_ = "nested uninitialized storage is not supported";
-          return false;
+          return publishPassesStructLayoutsDiagnostic();
         }
         inner.typeName = base;
         inner.typeTemplateArg = arg;
@@ -321,7 +329,7 @@ bool SemanticsValidator::validateStructLayouts() {
     auto defIt = defMap_.find(structPath);
     if (defIt == defMap_.end()) {
       error_ = "unknown struct type for layout: " + binding.typeName;
-      return false;
+      return publishPassesStructLayoutsDiagnostic();
     }
     LayoutInfo nested;
     if (!computeStructLayout(*defIt->second, nested)) {
