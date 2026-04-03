@@ -535,6 +535,14 @@
   CHECK(semanticsExprResultFileSource.find(
             "bool SemanticsValidator::validateExprResultFileBuiltins") !=
         std::string::npos);
+  CHECK(semanticsExprResultFileSource.find(
+            "auto publishResultFileDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprResultFileSource.find("captureExprContext(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprResultFileSource.find(
+            "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
   CHECK(semanticsExprResultFileSource.find("Result.map2 requires exactly three arguments") !=
         std::string::npos);
   CHECK(semanticsExprFieldResolutionSource.find("bool SemanticsValidator::isTypeNamespaceFieldReceiver") !=
