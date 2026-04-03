@@ -48,7 +48,6 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
 Boundary note: this group is now split into semantic-product creation, pipeline plumbing, lowering cutover, and cleanup so it can be worked incrementally instead of as one flat migration queue.
 
 Semantic product creation:
-- ○ Define a first-class `SemanticProgram` or `ResolvedModule` boundary type that captures all lowering-required semantic facts and document its ownership/lifetime contract.
 - ○ Add a first semantic-product builder slice that materializes resolved call targets, binding types, effects/capabilities, and struct metadata from `SemanticsValidator`.
 - ○ Add a second semantic-product builder slice that moves graph-backed local `auto`, query, `try(...)`, and `on_error` metadata out of test-only snapshot plumbing and into the semantic product.
 

@@ -32,6 +32,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Architecture / Type-resolution graph**
 **Group 12 - Semantics/lowering boundary**
+- ✓ Define a first-class `SemanticProgram` or `ResolvedModule` boundary type that captures all lowering-required semantic facts and document its ownership/lifetime contract. Completed: `docs/PrimeStruct.md` now defines the planned `SemanticProgram` / `ResolvedModule` split, the lowering-facing facts owned by the semantic product, the syntax-faithful data that remains owned by the raw AST, and the immutability/provenance rules that govern the boundary during migration.
 - ✓ Add a staged migration note in `docs/PrimeStruct.md` for the semantics-to-lowering boundary, including exit criteria for removing AST-dependent lowerer logic. Completed: `docs/PrimeStruct.md` now documents the planned semantic-product boundary, its staged cutover path, and the explicit exit criteria for deleting AST-dependent lowerer re-derivations.
 
 **Todo Cleanup (April 2, 2026)**

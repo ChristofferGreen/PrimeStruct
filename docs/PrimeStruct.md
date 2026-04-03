@@ -102,6 +102,34 @@ Planned boundary shape:
 - IR preparation consumes that semantic product directly instead of re-reading helper aliases, binding kinds, or
   receiver metadata from the AST.
 
+Proposed semantic-product contract:
+- `SemanticProgram` is the whole-program post-semantics artifact published by the compile pipeline.
+- `SemanticProgram` contains one `ResolvedModule` per parsed module or imported source unit, in deterministic import
+  order.
+- Each `ResolvedModule` owns lowering-facing facts only:
+  - resolved definition signatures and canonical full paths
+  - resolved call targets and helper-vs-canonical path choices
+  - binding/type facts for parameters, locals, temporaries, and return values
+  - effect/capability facts needed by IR preparation
+  - struct/enum/layout metadata needed by lowering and backend setup
+  - graph-backed local `auto`, query, `try(...)`, and `on_error` inference facts
+  - stable semantic node ids and syntax-faithful provenance handles for diagnostics/debug mapping
+- The raw AST remains the owner of syntax-oriented structure:
+  - original statement/expression tree shape
+  - parser-oriented sugar before semantic interpretation
+  - token/source-span ownership and surface dump formatting
+
+Ownership and lifetime rules:
+- The semantic product is immutable after `Semantics::validate` succeeds.
+- The semantic product owns copied lowering facts; it must not depend on mutable AST-side caches or validator-global
+  scratch state.
+- Semantic nodes may reference syntax provenance only through stable ids/spans, not raw pointers into temporary
+  validator state.
+- During migration, the AST may still outlive the semantic product so debug/source-map consumers can read syntax-faithful
+  provenance, but lowering must treat that as read-only provenance data rather than a source of semantic truth.
+- Once the boundary is complete, lowering-facing decisions must come from the semantic product even when equivalent
+  information is still visible on the mutated AST.
+
 Migration stages:
 1. Define the semantic-product type and its ownership contract.
 2. Materialize the first lowering-required facts into that product while keeping the existing AST-based lowerer path
