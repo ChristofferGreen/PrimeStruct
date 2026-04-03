@@ -673,6 +673,14 @@
             "bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins") !=
         std::string::npos);
   CHECK(semanticsExprScalarPointerMemorySource.find(
+            "auto publishScalarPointerMemoryDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprScalarPointerMemorySource.find("captureExprContext(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprScalarPointerMemorySource.find(
+            "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprScalarPointerMemorySource.find(
             "convert requires numeric or bool operand") !=
         std::string::npos);
   CHECK(semanticsExprScalarPointerMemorySource.find(
