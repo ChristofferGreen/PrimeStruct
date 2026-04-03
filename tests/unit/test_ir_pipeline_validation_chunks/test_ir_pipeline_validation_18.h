@@ -684,3 +684,38 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
   CHECK(semanticsStatementReturnsSource.find("bool SemanticsValidator::blockAlwaysReturns") !=
         std::string::npos);
 }
+
+TEST_CASE("semantics validator build lifecycle publication stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path buildLifecyclePath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorBuildLifecycle.cpp";
+  REQUIRE(std::filesystem::exists(buildLifecyclePath));
+
+  const std::string buildLifecycleSource = readText(buildLifecyclePath);
+  CHECK(buildLifecycleSource.find(
+            "bool SemanticsValidator::validateLifecycleHelperDefinitions()") !=
+        std::string::npos);
+  CHECK(buildLifecycleSource.find(
+            "auto publishLifecycleDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(buildLifecycleSource.find("captureDefinitionContext(def);") !=
+        std::string::npos);
+  CHECK(buildLifecycleSource.find("return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(buildLifecycleSource.find(
+            "lifecycle helper must be nested inside a struct: ") !=
+        std::string::npos);
+  CHECK(buildLifecycleSource.find("return publishLifecycleDiagnostic();") !=
+        std::string::npos);
+}

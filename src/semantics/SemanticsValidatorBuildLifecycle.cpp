@@ -67,6 +67,10 @@ bool SemanticsValidator::validateLifecycleHelperDefinitions() {
 
   for (const auto &def : program_.definitions) {
     DefinitionContextScope definitionScope(*this, def);
+    auto publishLifecycleDiagnostic = [&]() -> bool {
+      captureDefinitionContext(def);
+      return publishCurrentStructuredDiagnosticNow();
+    };
     std::string parentPath;
     std::string placement;
     if (!isLifecycleHelper(def.fullPath, parentPath, placement)) {
@@ -74,16 +78,16 @@ bool SemanticsValidator::validateLifecycleHelperDefinitions() {
     }
     if (parentPath.empty() || structNames_.count(parentPath) == 0) {
       error_ = "lifecycle helper must be nested inside a struct: " + def.fullPath;
-      return false;
+      return publishLifecycleDiagnostic();
     }
     if (isCopyHelperName(def.fullPath)) {
       if (def.parameters.size() != 1) {
         error_ = "Copy/Move helpers require exactly one parameter: " + def.fullPath;
-        return false;
+        return publishLifecycleDiagnostic();
       }
     } else if (!def.parameters.empty()) {
       error_ = "lifecycle helpers do not accept parameters: " + def.fullPath;
-      return false;
+      return publishLifecycleDiagnostic();
     }
   }
 
