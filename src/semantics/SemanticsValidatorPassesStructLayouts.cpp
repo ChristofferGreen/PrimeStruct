@@ -7,13 +7,6 @@
 
 namespace primec::semantics {
 
-bool SemanticsValidator::publishPassesStructLayoutsDiagnostic() {
-  if (currentDefinitionContext_ != nullptr) {
-    captureDefinitionContext(*currentDefinitionContext_);
-  }
-  return publishCurrentStructuredDiagnosticNow();
-}
-
 bool SemanticsValidator::validateStructLayouts() {
   auto failPassesStructLayoutsDiagnostic = [&](std::string message) -> bool {
     if (currentDefinitionContext_ != nullptr) {
@@ -73,7 +66,7 @@ bool SemanticsValidator::validateStructLayouts() {
         return failPassesStructLayoutsDiagnostic("duplicate " + transform.name + " transform on " + context);
       }
       if (!validateAlignTransform(transform, context, error_)) {
-        return publishPassesStructLayoutsDiagnostic();
+        return failPassesStructLayoutsDiagnostic(error_);
       }
       auto parsePositiveInt = [](const std::string &text, int &valueOut) -> bool {
         std::string digits = text;
@@ -209,7 +202,7 @@ bool SemanticsValidator::validateStructLayouts() {
       }
       BindingInfo binding;
       if (!resolveStructFieldBinding(def, stmt, binding)) {
-        return publishPassesStructLayoutsDiagnostic();
+        return failPassesStructLayoutsDiagnostic(error_);
       }
       LayoutInfo fieldLayout;
       if (!typeLayoutForBinding(binding, def.namespacePrefix, fieldLayout)) {

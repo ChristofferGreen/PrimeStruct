@@ -210,8 +210,7 @@ bool SemanticsValidator::parseTransformArgumentExpr(const std::string &text,
                                                     const std::string &namespacePrefix,
                                                     Expr &out) {
   auto failParseTransformArgumentExpr = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return false;
+    return failUncontextualizedDiagnostic(std::move(message));
   };
   Lexer lexer(text);
   Parser parser(lexer.tokenize());

@@ -12,17 +12,6 @@ void expandEffectImplications(std::unordered_set<std::string> &effects) {
 
 } // namespace
 
-bool SemanticsValidator::publishPassesEffectsDiagnostic(const Expr *expr) {
-  if (expr != nullptr) {
-    captureExprContext(*expr);
-  } else if (currentExecutionContext_ != nullptr) {
-    captureExecutionContext(*currentExecutionContext_);
-  } else if (currentDefinitionContext_ != nullptr) {
-    captureDefinitionContext(*currentDefinitionContext_);
-  }
-  return publishCurrentStructuredDiagnosticNow();
-}
-
 std::unordered_set<std::string> SemanticsValidator::resolveEffects(const std::vector<Transform> &transforms,
                                                                    bool isEntry) const {
   bool sawEffects = false;
@@ -96,7 +85,7 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
       }
       sawEffects = true;
       if (!validateEffectsTransform(transform, context, error_)) {
-        return publishPassesEffectsDiagnostic(&expr);
+        return failExprDiagnostic(expr, error_);
       }
       effectsOut.clear();
       for (const auto &arg : transform.arguments) {
@@ -109,7 +98,7 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
       }
       sawCapabilities = true;
       if (!validateCapabilitiesTransform(transform, context, error_)) {
-        return publishPassesEffectsDiagnostic(&expr);
+        return failExprDiagnostic(expr, error_);
       }
       capabilities.clear();
       for (const auto &arg : transform.arguments) {

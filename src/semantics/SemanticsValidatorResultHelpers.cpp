@@ -910,8 +910,10 @@ bool SemanticsValidator::parseOnErrorTransform(const std::vector<Transform> &tra
                                                std::optional<OnErrorHandler> &out) {
   out.reset();
   auto failOnErrorTransformDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return false;
+    if (currentDefinitionContext_ != nullptr) {
+      return failDefinitionDiagnostic(*currentDefinitionContext_, std::move(message));
+    }
+    return failUncontextualizedDiagnostic(std::move(message));
   };
   for (const auto &transform : transforms) {
     if (transform.name != "on_error") {

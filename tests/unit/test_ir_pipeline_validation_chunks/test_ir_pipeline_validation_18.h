@@ -587,13 +587,13 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsPassesEffectsSource.find("bool SemanticsValidator::validateCapabilitiesSubset(") !=
         std::string::npos);
-  CHECK(semanticsPassesEffectsSource.find("bool SemanticsValidator::publishPassesEffectsDiagnostic(") !=
-        std::string::npos);
   CHECK(semanticsPassesEffectsSource.find("auto failPassesEffectsDiagnostic = [&](std::string message)") !=
         std::string::npos);
   CHECK(semanticsPassesEffectsSource.find("bool SemanticsValidator::resolveExecutionEffects(") !=
         std::string::npos);
   CHECK(semanticsPassesEffectsSource.find("return failExprDiagnostic(expr, std::move(message));") !=
+        std::string::npos);
+  CHECK(semanticsPassesEffectsSource.find("return failExprDiagnostic(expr, error_);") !=
         std::string::npos);
   CHECK(semanticsPassesEffectsSource.find(
             "return failExecutionDiagnostic(*currentExecutionContext_, std::move(message));") !=
@@ -635,13 +635,12 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
             "return failDefinitionDiagnostic(*def, std::move(message));") !=
         std::string::npos);
   CHECK(semanticsPassesStructLayoutsSource.find(
-            "bool SemanticsValidator::publishPassesStructLayoutsDiagnostic()") !=
-        std::string::npos);
-  CHECK(semanticsPassesStructLayoutsSource.find(
             "auto failPassesStructLayoutsDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
   CHECK(semanticsPassesStructLayoutsSource.find(
             "return failDefinitionDiagnostic(*currentDefinitionContext_, std::move(message));") !=
+        std::string::npos);
+  CHECK(semanticsPassesStructLayoutsSource.find("return failPassesStructLayoutsDiagnostic(error_);") !=
         std::string::npos);
   CHECK(semanticsTraitsSource.find(
             "auto failTraitDiagnostic = [&](const Definition &defContext,") !=
