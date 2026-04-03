@@ -14,12 +14,16 @@ bool SemanticsValidator::validateExprPostAccessPrechecks(
     size_t statementIndex,
     bool &handledOut) {
   handledOut = false;
+  auto publishPostAccessPrecheckDiagnostic = [&]() -> bool {
+    captureExprContext(expr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
 
   if (usedMethodTarget && !resolvedMethod) {
     auto defIt = defMap_.find(resolved);
     if (defIt != defMap_.end() && isStaticHelperDefinition(*defIt->second)) {
       error_ = "static helper does not accept method-call syntax: " + resolved;
-      return false;
+      return publishPostAccessPrecheckDiagnostic();
     }
   }
 
@@ -34,23 +38,23 @@ bool SemanticsValidator::validateExprPostAccessPrechecks(
     handledOut = true;
     if (hasNamedArguments(expr.argNames)) {
       error_ = "named arguments not supported for builtin calls";
-      return false;
+      return publishPostAccessPrecheckDiagnostic();
     }
     if (!expr.templateArgs.empty()) {
       error_ = "gpu builtins do not accept template arguments";
-      return false;
+      return publishPostAccessPrecheckDiagnostic();
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       error_ = "gpu builtins do not accept block arguments";
-      return false;
+      return publishPostAccessPrecheckDiagnostic();
     }
     if (!expr.args.empty()) {
       error_ = "gpu builtins do not accept arguments";
-      return false;
+      return publishPostAccessPrecheckDiagnostic();
     }
     if (!currentValidationContext_.definitionIsCompute) {
       error_ = "gpu builtins require a compute definition";
-      return false;
+      return publishPostAccessPrecheckDiagnostic();
     }
     return true;
   }
@@ -59,7 +63,7 @@ bool SemanticsValidator::validateExprPostAccessPrechecks(
   if (getPathSpaceBuiltin(expr, pathSpaceBuiltin) &&
       defMap_.find(resolved) == defMap_.end()) {
     error_ = pathSpaceBuiltin.name + " is statement-only";
-    return false;
+    return publishPostAccessPrecheckDiagnostic();
   }
 
   if (!resolvedMethod && resolved == "/file_error/why" &&
@@ -81,7 +85,7 @@ bool SemanticsValidator::validateExprPostAccessPrechecks(
     error_ = isStdlibBufferLoadWrapperCall
                  ? "buffer_load requires a compute definition"
                  : "buffer_store requires a compute definition";
-    return false;
+    return publishPostAccessPrecheckDiagnostic();
   }
 
   return true;
