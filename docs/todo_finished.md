@@ -5,6 +5,12 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Cleanup (April 3, 2026)**
+
+**Types & Semantics**
+**Group 8 - SoA de-builtinization**
+- ✓ Delete the remaining root builtin `count` fallback handling in semantics once equivalent stdlib-owned helper routing and helper-shadow parity exist for the old `soa_vector<T>` surface. Completed: root bare/method/old-explicit builtin `count` forms already rewrite to `/std/collections/soa_vector/count`, helper-return and vector-target same-path `/soa_vector/count` shadow cases already validate through the shared canonical/shadow path, and focused semantics plus dump coverage already lock that boundary, so this is no longer a live semantics slice.
+
 **Todo Cleanup (April 2, 2026)**
 
 **Types & Semantics**
