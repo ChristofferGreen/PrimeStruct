@@ -2880,8 +2880,9 @@ bad_use_after_take() {
     that are both drop-trivial and relocation-trivial on the fixed-capacity builtin runtime path. The remaining
     runtime gaps are: one shared removed-slot destruction primitive for ownership-sensitive elements, plus separate
     survivor-motion primitives for relocation-sensitive elements. `remove_swap` and `remove_at` both still need that
-    shared destroy-at-slot path before their drop-trivial guards can lift; after that, `remove_swap` still needs a
-    real survivor swap path and `remove_at` still needs real survivor compaction. Canonical
+    shared destroy-at-slot path before their drop-trivial guards can lift, and the current lowerer still needs one
+    reusable lifecycle-aware destroy-at-pointer helper before that shared vector primitive can exist; after that,
+    `remove_swap` still needs a real survivor swap path and `remove_at` still needs real survivor compaction. Canonical
     `/std/collections/vector/*` indexed-removal helpers on explicit experimental `Vector<T>` bindings are exempt from
     that builtin restriction because they route onto the experimental `.prime` implementation instead. There is no
     corresponding builtin `soa_vector` indexed-removal surface yet.
