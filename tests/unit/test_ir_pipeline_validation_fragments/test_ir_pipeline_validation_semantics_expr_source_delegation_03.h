@@ -264,6 +264,11 @@
         std::string::npos);
   CHECK(semanticsExprControlFlowSource.find("if branches require block envelopes") != std::string::npos);
   CHECK(semanticsExprLambdaSource.find("bool SemanticsValidator::validateLambdaExpr") != std::string::npos);
+  CHECK(semanticsExprLambdaSource.find("auto publishLambdaDiagnostic = [&](const Expr &diagnosticExpr) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprLambdaSource.find("captureExprContext(diagnosticExpr);") != std::string::npos);
+  CHECK(semanticsExprLambdaSource.find("return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
   CHECK(semanticsExprLambdaSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") !=
         std::string::npos);
   CHECK(semanticsExprLambdaSource.find("duplicate lambda capture") != std::string::npos);
