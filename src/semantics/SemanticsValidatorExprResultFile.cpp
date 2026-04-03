@@ -333,25 +333,25 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
   if (resolvedMethod && resolved.rfind("/file/", 0) == 0) {
     if (hasNamedArguments(expr.argNames)) {
       error_ = "named arguments not supported for builtin calls";
-      return false;
+      return publishResultFileDiagnostic();
     }
     if (!expr.templateArgs.empty()) {
       error_ = "file methods do not accept template arguments";
-      return false;
+      return publishResultFileDiagnostic();
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       error_ = "file methods do not accept block arguments";
-      return false;
+      return publishResultFileDiagnostic();
     }
     if (expr.args.empty()) {
       error_ = "file method missing receiver";
-      return false;
+      return publishResultFileDiagnostic();
     }
     const bool requiresRead = expr.name == "read_byte" || expr.name == "close";
     const char *requiredEffect = requiresRead ? "file_read" : "file_write";
     if (currentValidationContext_.activeEffects.count(requiredEffect) == 0) {
       error_ = std::string("file operations require ") + requiredEffect + " effect";
-      return false;
+      return publishResultFileDiagnostic();
     }
 
     const Expr &receiverExpr = expr.args.front();
@@ -359,15 +359,15 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
         context.isNamedArgsPackWrappedFileBuiltinAccessCall(receiverExpr)) {
       if (!receiverExpr.templateArgs.empty()) {
         error_ = "at does not accept template arguments";
-        return false;
+        return publishResultFileDiagnostic();
       }
       if (receiverExpr.hasBodyArguments || !receiverExpr.bodyArguments.empty()) {
         error_ = "at does not accept block arguments";
-        return false;
+        return publishResultFileDiagnostic();
       }
       if (!isIntegerExpr(receiverExpr.args[1])) {
         error_ = "at requires integer index";
-        return false;
+        return publishResultFileDiagnostic();
       }
       if (!validateExpr(params, locals, receiverExpr.args[0]) ||
           !validateExpr(params, locals, receiverExpr.args[1])) {
@@ -456,7 +456,7 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
         }
         if (!isFilePrintableExpr(expr.args[i])) {
           error_ = "file write requires integer/bool or string arguments";
-          return false;
+          return publishResultFileDiagnostic();
         }
       }
       return true;
@@ -465,14 +465,14 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
       handledOut = true;
       if (expr.args.size() != 2) {
         error_ = "write_byte requires exactly one argument";
-        return false;
+        return publishResultFileDiagnostic();
       }
       if (!validateExpr(params, locals, expr.args[1])) {
         return false;
       }
       if (!isIntegerOrBoolExpr(expr.args[1])) {
         error_ = "write_byte requires integer argument";
-        return false;
+        return publishResultFileDiagnostic();
       }
       return true;
     }
@@ -480,14 +480,14 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
       handledOut = true;
       if (expr.args.size() != 2) {
         error_ = "read_byte requires exactly one argument";
-        return false;
+        return publishResultFileDiagnostic();
       }
       if (!validateExpr(params, locals, expr.args[1])) {
         return false;
       }
       if (expr.args[1].kind != Expr::Kind::Name || !isMutableBinding(expr.args[1].name)) {
         error_ = "read_byte requires mutable integer binding";
-        return false;
+        return publishResultFileDiagnostic();
       }
       ReturnKind kind = ReturnKind::Unknown;
       if (const BindingInfo *paramBinding = findParamBinding(params, expr.args[1].name)) {
@@ -500,7 +500,7 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
       }
       if (kind != ReturnKind::Int && kind != ReturnKind::Int64 && kind != ReturnKind::UInt64) {
         error_ = "read_byte requires mutable integer binding";
-        return false;
+        return publishResultFileDiagnostic();
       }
       return true;
     }
@@ -508,7 +508,7 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
       handledOut = true;
       if (expr.args.size() != 2) {
         error_ = "write_bytes requires exactly one argument";
-        return false;
+        return publishResultFileDiagnostic();
       }
       if (!validateExpr(params, locals, expr.args[1])) {
         return false;
@@ -531,7 +531,7 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
       }
       if (!ok) {
         error_ = "write_bytes requires array argument";
-        return false;
+        return publishResultFileDiagnostic();
       }
       return true;
     }
@@ -539,7 +539,7 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
       handledOut = true;
       if (expr.args.size() != 1) {
         error_ = expr.name + " does not accept arguments";
-        return false;
+        return publishResultFileDiagnostic();
       }
       return true;
     }

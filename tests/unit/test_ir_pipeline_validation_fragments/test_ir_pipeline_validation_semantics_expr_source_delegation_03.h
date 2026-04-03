@@ -551,6 +551,12 @@
   CHECK(semanticsExprResultFileSource.find(
             "return publishCurrentStructuredDiagnosticNow();") !=
         std::string::npos);
+  CHECK(semanticsExprResultFileSource.find(
+            "file methods do not accept template arguments") !=
+        std::string::npos);
+  CHECK(semanticsExprResultFileSource.find(
+            "write_bytes requires array argument") !=
+        std::string::npos);
   CHECK(semanticsExprResultFileSource.find("Result.map2 requires exactly three arguments") !=
         std::string::npos);
   CHECK(semanticsExprFieldResolutionSource.find("bool SemanticsValidator::isTypeNamespaceFieldReceiver") !=
