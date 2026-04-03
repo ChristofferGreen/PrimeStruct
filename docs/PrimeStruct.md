@@ -453,6 +453,30 @@ Planned lowerer type/binding handoff:
   - lowering tests that currently need AST-semantic snapshots for binding/type facts can move to the semantic-product
     dump or conformance surface instead
 
+Planned lowerer effect/struct-layout handoff:
+- After the lowerer consumes semantic-product entry targets and binding metadata, effect/capability setup and
+  struct-layout setup should consume published semantic-product facts instead of re-reading AST annotations,
+  transform-produced helper state, or struct-shape details directly from canonicalized syntax.
+- The semantic product should publish, for every lowered callable and layout-sensitive type:
+  - resolved effect/capability summaries exactly as validated by semantics
+  - struct/layout metadata needed for IR storage, offsets, and aggregate lowering
+  - canonical collection/layout classifications that currently have to be rediscovered from AST spellings
+  - enough provenance to report layout-sensitive diagnostics and backend errors against the original source-owned spans
+- Lowerer effect/capability setup should treat that metadata as authoritative for:
+  - call-effect masks and capability gating
+  - execution metadata required by backend validation and runtime/debug surfaces
+  - any helper-family effect distinctions that currently depend on AST re-inspection
+- Lowerer struct-layout setup should treat that metadata as authoritative for:
+  - field ordering, offsets, and size/alignment facts used during IR storage planning
+  - aggregate classification for structs, collections, and wrapper-owned runtime shapes
+  - backend-facing layout facts that should no longer depend on AST transform order
+- Temporary adapter code may still translate semantic-product layout/effect facts into existing lowerer inputs during
+  migration, but the target state is that lowering no longer recomputes those facts from AST/transforms.
+- Completion criteria:
+  - lowerer effect/capability setup no longer reads AST state to rebuild validated effect metadata
+  - lowerer struct-layout setup no longer reclassifies layout-sensitive types from AST spellings or transform output
+  - C++/VM/native lowering all consume the same published effect/layout facts through one semantic-product path
+
 Planned inspection-surface relationship:
 - `pre_ast`: post-import, post-text-transform source text
 - `ast`: parser-owned syntax tree before semantic canonicalization
