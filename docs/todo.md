@@ -58,7 +58,7 @@ Pipeline plumbing:
 - ○ Implement ownership-split tests for source spans, debug/source-map provenance, and syntax-faithful data using the documented test matrix.
 
 Lowering cutover:
-- ○ Cut over `IrLowerer::lower` and `prepareIrModule` so IR preparation consumes the semantic product directly, then retire the raw-`Program` lowering path once the temporary adapter is removed.
+- ○ Implement the `prepareIrModule` / `IrLowerer::lower` entrypoint cutover now that the handoff contract is documented, so IR preparation consumes the semantic product directly and the raw-`Program` lowering path can be retired once the temporary adapter is removed.
 - ○ Implement the `IrLowerer` entry-setup cutover now that the handoff contract is documented, consuming resolved call targets from the semantic product instead of re-deriving them from AST state.
 - ○ Implement the lowerer type/binding setup cutover now that the handoff contract is documented, consuming semantic-product binding metadata instead of repeating helper/type inference logic.
 - ○ Implement the lowerer effect/capability and struct-layout setup cutover now that the handoff contract is documented, consuming semantic-product metadata instead of re-reading AST/transforms for those facts.

@@ -417,6 +417,26 @@ Exit criteria for removing AST-dependent lowerer logic:
 - The remaining AST dependency is limited to syntax-faithful provenance data such as spans/debug mapping, with that
   boundary documented explicitly.
 
+Planned lowerer entrypoint cutover:
+- `prepareIrModule` and `IrLowerer::lower` should treat the semantic product as the canonical lowering input rather
+  than a secondary artifact attached to a raw `Program`.
+- The top-level cutover should establish one production entry contract:
+  - semantic success publishes a semantic product plus AST-backed provenance
+  - IR preparation consumes the semantic product directly
+  - any remaining raw-`Program` compatibility path is temporary adapter code only
+- The entrypoint boundary should make ownership explicit:
+  - lowering-facing meaning comes from the semantic product
+  - syntax-faithful provenance, spans, and source reproduction remain AST-owned
+  - no new lowerer entrypoint may silently fall back to AST-side semantic re-derivation once the semantic product is
+    available
+- The adapter may temporarily translate legacy callers onto the new entry contract, but it should not become a
+  long-term second lowering API.
+- Completion criteria:
+  - production entrypoints pass semantic-product data into `prepareIrModule` and `IrLowerer::lower`
+  - the raw-`Program` lowering path is removed or isolated behind a clearly temporary adapter only
+  - backend-facing tests can exercise the lowerer boundary without depending on AST-owned semantic caches
+  - future lowerer setup work can assume semantic-product input instead of mixed AST/semantic entry state
+
 Planned lowerer entry-setup handoff:
 - `IrLowerer` entry setup should consume resolved call targets from the semantic product instead of re-deriving callee
   paths, helper-family choices, or canonical-versus-same-path decisions from AST state.
