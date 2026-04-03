@@ -213,6 +213,7 @@
   bool publishPassesEffectsDiagnostic(const Expr *expr = nullptr);
   bool publishPassesDefinitionsDiagnostic(const Expr *expr = nullptr);
   bool publishPassesExecutionsDiagnostic();
+  bool publishPassesOmittedInitializersDiagnostic(const Expr *expr = nullptr);
   bool publishPassesStructLayoutsDiagnostic();
   bool publishCurrentStructuredDiagnosticNow();
   bool finalizeCollectedStructuredDiagnostics(std::vector<SemanticDiagnosticRecord> &records);

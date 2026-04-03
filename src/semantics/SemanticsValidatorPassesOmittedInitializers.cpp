@@ -7,25 +7,34 @@
 
 namespace primec::semantics {
 
+bool SemanticsValidator::publishPassesOmittedInitializersDiagnostic(const Expr *expr) {
+  if (expr != nullptr) {
+    captureExprContext(*expr);
+  } else if (currentDefinitionContext_ != nullptr) {
+    captureDefinitionContext(*currentDefinitionContext_);
+  }
+  return publishCurrentStructuredDiagnosticNow();
+}
+
 bool SemanticsValidator::validateOmittedBindingInitializer(const Expr &binding,
                                                            const BindingInfo &info,
                                                            const std::string &namespacePrefix) {
   if (!hasExplicitBindingTypeTransform(binding)) {
     error_ = "omitted initializer requires explicit struct type: " + binding.name;
-    return false;
+    return publishPassesOmittedInitializersDiagnostic(&binding);
   }
   const std::string normalizedType = normalizeBindingTypeName(info.typeName);
   if (normalizedType == "vector" || normalizedType == "soa_vector") {
     std::vector<std::string> args;
     if (!splitTopLevelTemplateArgs(info.typeTemplateArg, args) || args.size() != 1) {
       error_ = normalizedType + " requires exactly one template argument";
-      return false;
+      return publishPassesOmittedInitializersDiagnostic(&binding);
     }
     return true;
   }
   if (!info.typeTemplateArg.empty()) {
     error_ = "omitted initializer requires struct type: " + info.typeName;
-    return false;
+    return publishPassesOmittedInitializersDiagnostic(&binding);
   }
   std::string structPath = resolveStructTypePath(info.typeName, namespacePrefix, structNames_);
   if (structPath.empty()) {
@@ -36,15 +45,15 @@ bool SemanticsValidator::validateOmittedBindingInitializer(const Expr &binding,
   }
   if (structPath.empty()) {
     error_ = "omitted initializer requires struct type: " + info.typeName;
-    return false;
+    return publishPassesOmittedInitializersDiagnostic(&binding);
   }
   if (!hasStructZeroArgConstructor(structPath)) {
     error_ = "omitted initializer requires zero-arg constructor: " + structPath;
-    return false;
+    return publishPassesOmittedInitializersDiagnostic(&binding);
   }
   if (!isOutsideEffectFreeStructConstructor(structPath)) {
     error_ = "omitted initializer requires effect-free zero-arg constructor: " + structPath;
-    return false;
+    return publishPassesOmittedInitializersDiagnostic(&binding);
   }
   return true;
 }
