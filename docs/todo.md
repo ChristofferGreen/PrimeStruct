@@ -33,8 +33,8 @@ Ownership/drop status note: completed guard and container-error-contract checkpo
 **Group 11 - Near-term graph queue**
 Blocked by Group 13 rollout constraints until the remaining collection-helper/runtime predecessor items are finished and the return-kind pilot path is stable enough to resume broader graph work.
 - ○ Expand positive end-to-end graph conformance coverage for backend dispatch on C++/VM/native once the still-open query-shaped canonical helper/method resolution path moves past the current compile-pipeline `if branches must return compatible types` boundary.
-- ○ Land graph-backed query invalidation rules and coverage for local-binding, control-flow, and initializer-shape edits so cached query/binding/result metadata has one explicit contract for intra-definition churn.
-- ○ Land graph-backed query invalidation rules and coverage for definition-signature, import-alias, and receiver-type edits before more inference consumers depend on the cache.
+- ○ Implement graph-backed query invalidation rules and coverage for local-binding, control-flow, and initializer-shape edits now that the intra-definition invalidation contract is documented.
+- ○ Implement graph-backed query invalidation rules and coverage for definition-signature, import-alias, and receiver-type edits now that the cross-definition invalidation contract is documented.
 - ○ Migrate the next remaining non-template inference islands onto graph-backed query/binding state instead of leaving mixed ad hoc inference paths around the stabilized return/query/local pilot.
 - ○ Implement the graph/CT-eval interaction contract now that the boundary is documented, so compile-time evaluation either consumes shared dependency state directly or goes through one explicit tested adapter.
 - ○ Migrate explicit and implicit template inference dependencies onto the graph-backed path once the non-template inference islands and invalidation rules are pinned, so template solving stops being a deferred side-system.

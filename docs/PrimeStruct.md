@@ -126,6 +126,32 @@ Planned CT-eval boundary on the graph path:
 - Template-inference migration and optional parallel solve remain blocked on this boundary being explicit, because both
   features would otherwise multiply hidden solver state across compile-time and runtime-oriented semantics paths.
 
+Planned graph invalidation contract:
+- Graph invalidation must be explicit per edit family rather than inferred from incidental cache misses.
+- The invalidation model should distinguish at least these edit classes:
+  - intra-definition churn: local-binding changes, control-flow shape changes, initializer-shape changes
+  - cross-definition churn: definition-signature changes, import-alias changes, receiver-type changes
+- Each edit class must declare:
+  - which graph nodes are invalidated immediately
+  - which downstream queries are revisited lazily on demand
+  - which previously emitted diagnostics must be discarded and recomputed
+  - whether the edit can stay definition-local or must propagate across import/definition boundaries
+- Intra-definition invalidation should be the cheapest path:
+  - local-binding, control-flow, and initializer-shape edits should not force unrelated definition or module rebuilds
+  - cached query/binding/result metadata outside the edited definition should remain reusable when dependency edges do
+    not cross into that definition
+- Cross-definition invalidation must preserve deterministic propagation order:
+  - definition-signature edits should revisit dependent call sites and result/binding consumers in one stable order
+  - import-alias edits should invalidate canonical-path resolution and helper-shadow decisions derived from that alias
+  - receiver-type edits should invalidate helper-family selection, method-target resolution, and dependent binding/result
+    facts that were derived from that receiver
+- Coverage should pin both correctness and scope:
+  - positive cases prove dependent facts refresh after each edit family
+  - negative cases prove unrelated definitions or modules are not spuriously invalidated
+  - dump or counter-based checks should make invalidation fan-out observable enough to detect scope regressions
+- Template inference, CT-eval expansion, and optional parallel solve remain blocked on this contract being explicit,
+  because they would otherwise consume graph state whose invalidation boundaries are undefined.
+
 ### Planned semantics-to-lowering boundary
 PrimeStruct is migrating toward an explicit post-semantics product that sits between the syntax-faithful AST and IR
 lowering. The goal is to stop re-deriving lowering facts from mutated AST state and instead hand IR preparation one
