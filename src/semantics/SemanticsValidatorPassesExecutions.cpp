@@ -149,9 +149,7 @@ bool SemanticsValidator::validateExecutions() {
       std::vector<SemanticDiagnosticRecord> intraExecutionRecords;
       collectExecutionIntraBodyCallDiagnostics(exec, intraExecutionRecords);
       if (!intraExecutionRecords.empty()) {
-        if (error_.empty()) {
-          error_ = intraExecutionRecords.front().message;
-        }
+        rememberFirstCollectedDiagnosticMessage(intraExecutionRecords.front().message);
         collectedRecords.insert(collectedRecords.end(),
                                 std::make_move_iterator(intraExecutionRecords.begin()),
                                 std::make_move_iterator(intraExecutionRecords.end()));

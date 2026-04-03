@@ -170,9 +170,7 @@ bool SemanticsValidator::validateDefinitions() {
       std::vector<SemanticDiagnosticRecord> intraDefinitionRecords;
       collectDefinitionIntraBodyCallDiagnostics(def, intraDefinitionRecords);
       if (!intraDefinitionRecords.empty()) {
-        if (error_.empty()) {
-          error_ = intraDefinitionRecords.front().message;
-        }
+        rememberFirstCollectedDiagnosticMessage(intraDefinitionRecords.front().message);
         collectedRecords.insert(collectedRecords.end(),
                                 std::make_move_iterator(intraDefinitionRecords.begin()),
                                 std::make_move_iterator(intraDefinitionRecords.end()));

@@ -63,6 +63,10 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
     error_ = std::move(message);
     return publishReturnDiagnostic();
   };
+  auto rewriteAutoReturnDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return false;
+  };
   if (hasNamedArguments(stmt.argNames)) {
     return failReturnDiagnostic("named arguments not supported for builtin calls");
   }
@@ -96,7 +100,8 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
     if (!validateExpr(params, locals, stmt.args.front())) {
       if (declaresAutoReturn() &&
           (error_ == "unknown method: /map/at" || error_ == "unknown method: /map/at_unsafe")) {
-        error_ = "unable to infer return type on " + currentValidationContext_.definitionPath;
+        return rewriteAutoReturnDiagnostic("unable to infer return type on " +
+                                           currentValidationContext_.definitionPath);
       }
       return false;
     }

@@ -149,9 +149,7 @@ bool SemanticsValidator::buildDefinitionReturnKinds(const std::unordered_set<std
       related.span.endColumn = def.sourceColumn;
       related.label = "definition: " + def.fullPath;
       record.relatedSpans.push_back(std::move(related));
-      if (error_.empty()) {
-        error_ = message;
-      }
+      rememberFirstCollectedDiagnosticMessage(message);
       returnKindDiagnosticRecords.push_back(std::move(record));
       return true;
     };

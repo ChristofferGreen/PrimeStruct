@@ -221,19 +221,25 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     error_ = std::move(message);
     return publishMethodTargetResolutionDiagnostic();
   };
+  auto rememberMethodTargetTraceFailure = [&](std::string message) {
+    if (error_.empty()) {
+      error_ = std::move(message);
+    }
+  };
   auto stampFileErrorResultFailure = [&](std::string_view site,
                                          std::string_view typeName = {},
                                          std::string_view resolvedType = {}) {
     if (!traceFileErrorResult || !error_.empty()) {
       return;
     }
-    error_ = "resolveMethodTarget " + std::string(site) +
-             " receiver.kind=" + exprKindName(receiver.kind) +
-             " receiver.name=" + receiver.name +
-             " receiver.namespace=" + receiver.namespacePrefix +
-             " call.namespace=" + callNamespacePrefix +
-             " typeName=" + std::string(typeName) +
-             " resolvedType=" + std::string(resolvedType);
+    rememberMethodTargetTraceFailure(
+        "resolveMethodTarget " + std::string(site) +
+        " receiver.kind=" + exprKindName(receiver.kind) +
+        " receiver.name=" + receiver.name +
+        " receiver.namespace=" + receiver.namespacePrefix +
+        " call.namespace=" + callNamespacePrefix +
+        " typeName=" + std::string(typeName) +
+        " resolvedType=" + std::string(resolvedType));
   };
   auto preferredFileErrorHelperTarget = [&](std::string_view helperName) -> std::string {
     if (helperName == "why") {

@@ -479,6 +479,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferGraphSource.find(
             "auto failInferGraphDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
+  CHECK(semanticsInferGraphSource.find(
+            "auto failInferGraphCycleDiagnostic =") !=
+        std::string::npos);
 }
 
 TEST_CASE("semantics validator passes source delegation stays stable") {
@@ -594,6 +597,9 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
   CHECK(semanticsPassesDefinitionsSource.find(
             "return publishPassesDefinitionsDiagnostic(&stmt);") !=
         std::string::npos);
+  CHECK(semanticsPassesDefinitionsSource.find(
+            "rememberFirstCollectedDiagnosticMessage(intraDefinitionRecords.front().message);") !=
+        std::string::npos);
   CHECK(semanticsPassesOmittedInitializersSource.find(
             "bool SemanticsValidator::publishPassesOmittedInitializersDiagnostic(") !=
         std::string::npos);
@@ -633,6 +639,9 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
             "auto failPassesExecutionsDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
   CHECK(semanticsPassesExecutionsSource.find("return publishPassesExecutionsDiagnostic();") !=
+        std::string::npos);
+  CHECK(semanticsPassesExecutionsSource.find(
+            "rememberFirstCollectedDiagnosticMessage(intraExecutionRecords.front().message);") !=
         std::string::npos);
   CHECK(semanticsPassesDiagnosticsSource.find("void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(") !=
         std::string::npos);
@@ -935,6 +944,9 @@ TEST_CASE("semantics validator build transform publication stays stable") {
             "auto addTransformDiagnostic = [&](const std::string &message) -> bool {") !=
         std::string::npos);
   CHECK(buildTransformsSource.find(
+            "rememberFirstCollectedDiagnosticMessage(message);") !=
+        std::string::npos);
+  CHECK(buildTransformsSource.find(
             "pod definitions cannot be tagged as handle or gpu_lane: ") !=
         std::string::npos);
   CHECK(buildTransformsSource.find(
@@ -981,6 +993,9 @@ TEST_CASE("semantics validator build return-kind publication stays stable") {
   CHECK(buildReturnKindsSource.find(
             "auto addReturnKindDiagnostic = [&](const std::string &message) -> bool {") !=
         std::string::npos);
+  CHECK(buildReturnKindsSource.find(
+            "rememberFirstCollectedDiagnosticMessage(message);") !=
+        std::string::npos);
   CHECK(buildReturnKindsSource.find("captureDefinitionContext(def);") !=
         std::string::npos);
   CHECK(buildReturnKindsSource.find("return publishCurrentStructuredDiagnosticNow();") !=
@@ -1023,6 +1038,8 @@ TEST_CASE("semantics validator build import publication stays stable") {
             "auto addImportDiagnostic = [&](const std::string &message, const Definition *relatedDef = nullptr) {") !=
         std::string::npos);
   CHECK(buildImportsSource.find("return failImportDiagnostic(message, relatedDef);") !=
+        std::string::npos);
+  CHECK(buildImportsSource.find("rememberFirstCollectedDiagnosticMessage(message);") !=
         std::string::npos);
 }
 

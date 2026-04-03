@@ -36,9 +36,7 @@ bool SemanticsValidator::buildImportAliases() {
       related.label = "definition: " + relatedDef->fullPath;
       record.relatedSpans.push_back(std::move(related));
     }
-    if (error_.empty()) {
-      error_ = message;
-    }
+    rememberFirstCollectedDiagnosticMessage(message);
     importDiagnosticRecords.push_back(std::move(record));
     return false;
   };

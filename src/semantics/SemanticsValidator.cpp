@@ -96,12 +96,13 @@ bool SemanticsValidator::run() {
     try {
       const bool ok = fn();
       if (!ok && error_.empty()) {
-        error_ = std::string(stageName) + " failed without diagnostic";
+        return failUncontextualizedDiagnostic(std::string(stageName) +
+                                             " failed without diagnostic");
       }
       return ok;
     } catch (...) {
-      error_ = std::string("semantic validator exception in ") + stageName;
-      return false;
+      return failUncontextualizedDiagnostic(
+          std::string("semantic validator exception in ") + stageName);
     }
   };
   if (collectDiagnostics_ &&
@@ -208,12 +209,16 @@ bool SemanticsValidator::isEntryArgStringBinding(const std::unordered_map<std::s
 bool SemanticsValidator::parseTransformArgumentExpr(const std::string &text,
                                                     const std::string &namespacePrefix,
                                                     Expr &out) {
+  auto failParseTransformArgumentExpr = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return false;
+  };
   Lexer lexer(text);
   Parser parser(lexer.tokenize());
   std::string parseError;
   if (!parser.parseExpression(out, namespacePrefix, parseError)) {
-    error_ = parseError.empty() ? "invalid transform argument expression" : parseError;
-    return false;
+    return failParseTransformArgumentExpr(
+        parseError.empty() ? "invalid transform argument expression" : parseError);
   }
   return true;
 }

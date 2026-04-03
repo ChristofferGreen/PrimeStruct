@@ -73,7 +73,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
   bool handledBindingStatement = false;
   if (!validateBindingStatement(params, locals, stmt, allowBindings, namespacePrefix, handledBindingStatement)) {
     if (error_.empty()) {
-      error_ = "validateBindingStatement failed";
+      return failStatementDiagnostic("validateBindingStatement failed");
     }
     return false;
   }

@@ -46,9 +46,7 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
     related.span.endColumn = def.sourceColumn;
     related.label = "definition: " + def.fullPath;
     record.relatedSpans.push_back(std::move(related));
-    if (error_.empty()) {
-      error_ = message;
-    }
+    rememberFirstCollectedDiagnosticMessage(message);
     transformDiagnosticRecords->push_back(std::move(record));
     definitionTransformError = true;
     return false;

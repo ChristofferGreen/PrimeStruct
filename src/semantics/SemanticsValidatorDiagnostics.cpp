@@ -143,8 +143,8 @@ bool SemanticsValidator::collectDuplicateDefinitionDiagnostics() {
     diagnosticSink_.setRecords(std::move(records));
   }
 
-  error_ = "duplicate definition: " + duplicateGroups.front().path;
-  return false;
+  return failUncontextualizedDiagnostic("duplicate definition: " +
+                                        duplicateGroups.front().path);
 }
 
 bool SemanticsValidator::shouldCollectStructuredDiagnostics() const {
@@ -167,6 +167,18 @@ void SemanticsValidator::moveCurrentStructuredDiagnosticTo(std::vector<SemanticD
   clearStructuredDiagnosticContext();
 }
 
+void SemanticsValidator::rememberFirstCollectedDiagnosticMessage(
+    const std::string &message) {
+  if (error_.empty()) {
+    error_ = message;
+  }
+}
+
+bool SemanticsValidator::failUncontextualizedDiagnostic(std::string message) {
+  error_ = std::move(message);
+  return publishCurrentStructuredDiagnosticNow();
+}
+
 bool SemanticsValidator::publishCurrentStructuredDiagnosticNow() {
   if (!shouldCollectStructuredDiagnostics() || error_.empty()) {
     return false;
@@ -181,7 +193,7 @@ bool SemanticsValidator::finalizeCollectedStructuredDiagnostics(
     return true;
   }
   diagnosticSink_.setRecords(std::move(records));
-  error_ = diagnosticInfo_->records.front().message;
+  rememberFirstCollectedDiagnosticMessage(diagnosticInfo_->records.front().message);
   return false;
 }
 

@@ -87,6 +87,36 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
     sortDefinitionsForDeterministicDiagnostics(definitions);
     return definitions;
   };
+  auto failInferGraphCycleDiagnostic =
+      [&](const std::vector<const Definition *> &unresolvedDefinitions) -> bool {
+    error_ = formatReturnInferenceCycleDiagnostic(unresolvedDefinitions);
+    if (collectDiagnostics_ && diagnosticInfo_ != nullptr) {
+      DiagnosticSinkRecord record;
+      record.message = error_;
+      const Definition *primary = unresolvedDefinitions.front();
+      if (primary->sourceLine > 0 && primary->sourceColumn > 0) {
+        record.primarySpan.line = primary->sourceLine;
+        record.primarySpan.column = primary->sourceColumn;
+        record.primarySpan.endLine = primary->sourceLine;
+        record.primarySpan.endColumn = primary->sourceColumn;
+        record.hasPrimarySpan = true;
+      }
+      for (const Definition *definition : unresolvedDefinitions) {
+        if (definition->sourceLine <= 0 || definition->sourceColumn <= 0) {
+          continue;
+        }
+        DiagnosticRelatedSpan span;
+        span.span.line = definition->sourceLine;
+        span.span.column = definition->sourceColumn;
+        span.span.endLine = definition->sourceLine;
+        span.span.endColumn = definition->sourceColumn;
+        span.label = "cycle member: " + definition->fullPath;
+        record.relatedSpans.push_back(std::move(span));
+      }
+      diagnosticSink_.setRecords({std::move(record)});
+    }
+    return false;
+  };
 
   for (auto componentIt = dag.topologicalComponentIds.rbegin();
        componentIt != dag.topologicalComponentIds.rend();
@@ -117,33 +147,7 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
     }
 
     if (componentHasCycle) {
-      error_ = formatReturnInferenceCycleDiagnostic(unresolvedDefinitions);
-      if (collectDiagnostics_ && diagnosticInfo_ != nullptr) {
-        DiagnosticSinkRecord record;
-        record.message = error_;
-        const Definition *primary = unresolvedDefinitions.front();
-        if (primary->sourceLine > 0 && primary->sourceColumn > 0) {
-          record.primarySpan.line = primary->sourceLine;
-          record.primarySpan.column = primary->sourceColumn;
-          record.primarySpan.endLine = primary->sourceLine;
-          record.primarySpan.endColumn = primary->sourceColumn;
-          record.hasPrimarySpan = true;
-        }
-        for (const Definition *definition : unresolvedDefinitions) {
-          if (definition->sourceLine <= 0 || definition->sourceColumn <= 0) {
-            continue;
-          }
-          DiagnosticRelatedSpan span;
-          span.span.line = definition->sourceLine;
-          span.span.column = definition->sourceColumn;
-          span.span.endLine = definition->sourceLine;
-          span.span.endColumn = definition->sourceColumn;
-          span.label = "cycle member: " + definition->fullPath;
-          record.relatedSpans.push_back(std::move(span));
-        }
-        diagnosticSink_.setRecords({std::move(record)});
-      }
-      return false;
+      return failInferGraphCycleDiagnostic(unresolvedDefinitions);
     }
 
     for (const Definition *definition : unresolvedDefinitions) {
