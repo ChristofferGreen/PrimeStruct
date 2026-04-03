@@ -322,7 +322,10 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
             ? builtinSoaAccessHelperName(candidate, params, locals)
             : std::nullopt;
     if (soaAccessHelper.has_value() && *soaAccessHelper == "get" &&
-        !usesVisibleSamePathSoaHelper(candidate, resolvedCandidate, "get")) {
+        !(hasVisibleSoaHelperTargetForCurrentImports("get") &&
+          (isSimpleCallName(candidate, "get") ||
+           (candidate.isMethodCall && candidate.name == "get") ||
+           resolvedCandidate == "/soa_vector/get"))) {
       std::string elemType;
       if (builtinCollectionDispatchResolvers.resolveSoaVectorTarget(candidate.args.front(), elemType)) {
         currentTypeTextOut = normalizeBindingTypeName(elemType);
@@ -330,7 +333,10 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       }
     }
     if (soaAccessHelper.has_value() && *soaAccessHelper == "ref" &&
-        !usesVisibleSamePathSoaHelper(candidate, resolvedCandidate, "ref")) {
+        !(hasVisibleSoaHelperTargetForCurrentImports("ref") &&
+          (isSimpleCallName(candidate, "ref") ||
+           (candidate.isMethodCall && candidate.name == "ref") ||
+           resolvedCandidate == "/soa_vector/ref"))) {
       std::string elemType;
       if (builtinCollectionDispatchResolvers.resolveSoaVectorTarget(candidate.args.front(), elemType)) {
         currentTypeTextOut = normalizeBindingTypeName(elemType);

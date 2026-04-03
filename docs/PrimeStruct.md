@@ -2676,7 +2676,8 @@ while the remaining validator-side fixed unavailable-method rejects now call
 `soaUnavailableMethodDiagnostic(...)` directly instead of a validator-local
 wrapper around that shared helper path,
 while collection-return visible same-path `/soa_vector/get|ref` helper
-detection plus preferred same-path-versus-canonical `soa_vector`
+detection now uses the shared visibility helper directly, while preferred
+same-path-versus-canonical `soa_vector`
 helper target selection in method-target, infer-time, vector-helper
 mutator routing, plus builtin `get/ref` call-shape detection in direct
 validation and collection-return inference, plus direct same-path

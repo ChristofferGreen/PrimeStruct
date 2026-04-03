@@ -979,7 +979,8 @@ selection in method-target, infer-time, and vector-helper mutator
 routing, return-inference paths, and builtin SoA access/count helper
 fallback validation,
 while collection-return visible same-path `/soa_vector/get|ref` helper
-detection plus preferred same-path-versus-canonical `soa_vector`
+detection now uses the shared visibility helper directly, while preferred
+same-path-versus-canonical `soa_vector`
 helper target selection in method-target, infer-time, vector-helper
 mutator routing, plus builtin `get/ref` call-shape detection in direct
 validation and collection-return inference, plus direct same-path

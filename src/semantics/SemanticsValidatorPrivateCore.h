@@ -110,9 +110,6 @@
       std::string_view helperName) const;
   std::string preferredSoaHelperTargetForCurrentImports(
       std::string_view helperName) const;
-  bool usesVisibleSamePathSoaHelper(const Expr &expr,
-                                    std::string_view resolvedPath,
-                                    std::string_view helperName) const;
   bool reportBuiltinSoaDirectPendingExprDiagnostic(
       const Expr &expr,
       const std::vector<ParameterInfo> &params,
