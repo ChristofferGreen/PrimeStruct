@@ -752,9 +752,10 @@ available during semantic validation.
 Current ownership contract:
 - `pop` / `clear` require drop-trivial element types.
 - Builtin `vector` `remove_at` / `remove_swap` require element types that are both
-  drop-trivial and relocation-trivial while non-trivial removed-element destruction and
-  survivor compaction semantics are still undefined on the fixed-capacity builtin vector
-  runtime path. There is no corresponding builtin `soa_vector` indexed-removal surface yet.
+  drop-trivial and relocation-trivial on the fixed-capacity builtin vector runtime path.
+  The remaining runtime gaps are separate: explicit destruction of the removed element for
+  ownership-sensitive types, and survivor compaction/swap for relocation-sensitive types.
+  There is no corresponding builtin `soa_vector` indexed-removal surface yet.
 - `push` / `reserve` require relocation-trivial element types.
 
 Implementation status note: VM/native currently still implement vectors as fixed-capacity locals; full dynamic
