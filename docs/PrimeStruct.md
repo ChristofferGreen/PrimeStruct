@@ -226,6 +226,25 @@ Planned template-inference migration contract:
 - Broader omitted-envelope and local-`auto` expansion should remain sequenced after these migrations prove stable, so
   new local inference surfaces do not outrun the template-dependency contract that consumes them.
 
+Planned omitted-envelope and local-`auto` expansion contract:
+- Broader omitted-envelope and local-`auto` inference should expand only after the next non-template and template
+  migrations prove stable on the graph path.
+- Expansion should proceed in thin surfaces rather than by reopening “all local inference” at once.
+- Each expansion slice should define:
+  - which omitted-envelope or local-`auto` forms are newly graph-backed
+  - which existing pilot surfaces stay unchanged
+  - which diagnostics and canonical helper/call-target choices must remain stable
+- Priority should stay on surfaces that directly reuse already-published graph facts, such as:
+  - initializer-driven local `auto` propagation
+  - omitted-envelope bindings that already sit beside stabilized local/query/`try(...)` metadata
+  - control-flow-local inference shapes that currently reconstruct facts already present in graph state
+- Expansion is not complete until:
+  - the new surface consumes the same published graph-backed facts as the existing pilot
+  - helper-routing and canonical-path decisions remain deterministic
+  - unchanged unresolved/contradictory diagnostics are pinned in coverage
+- This work remains downstream of template migration because widening local/omitted inference before template
+  dependencies are graph-backed would create new pilot-only islands around template-dependent call routing.
+
 ### Planned semantics-to-lowering boundary
 PrimeStruct is migrating toward an explicit post-semantics product that sits between the syntax-faithful AST and IR
 lowering. The goal is to stop re-deriving lowering facts from mutated AST state and instead hand IR preparation one
