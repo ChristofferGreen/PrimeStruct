@@ -20,6 +20,76 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
+TEST_CASE("vm query-local auto vector helper boundary stays in lowering") {
+  const std::string directSource = R"(
+/vector/count([vector<i32>] values) {
+  return(17i32)
+}
+
+[return<vector<i32>> effects(heap_alloc)]
+valuesA() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(values)
+}
+
+[return<vector<i32>> effects(heap_alloc)]
+valuesB() {
+  [vector<i32>] values{vector<i32>(3i32, 4i32)}
+  return(values)
+}
+
+[return<i32> effects(heap_alloc)]
+main() {
+  [auto] values{
+    if(true,
+      then(){ return(valuesA()) },
+      else(){ return(valuesB()) })
+  }
+  return(/vector/count(values))
+}
+)";
+  const std::string directSrcPath = writeTemp("vm_graph_query_vector_helper_call.prime", directSource);
+  const std::string directErrPath =
+      (testScratchPath("") / "vm_graph_query_vector_helper_call_err.txt").string();
+  const std::string directCmd = "./primec --emit=vm " + directSrcPath + " --entry /main 2> " + directErrPath;
+  CHECK(runCommand(directCmd) == 2);
+  CHECK(readFile(directErrPath).find("if branches must return compatible types") != std::string::npos);
+
+  const std::string methodSource = R"(
+/vector/count([vector<i32>] values) {
+  return(17i32)
+}
+
+[return<vector<i32>> effects(heap_alloc)]
+valuesA() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(values)
+}
+
+[return<vector<i32>> effects(heap_alloc)]
+valuesB() {
+  [vector<i32>] values{vector<i32>(3i32, 4i32)}
+  return(values)
+}
+
+[return<i32> effects(heap_alloc)]
+main() {
+  [auto] values{
+    if(true,
+      then(){ return(valuesA()) },
+      else(){ return(valuesB()) })
+  }
+  return(values./vector/count())
+}
+)";
+  const std::string methodSrcPath = writeTemp("vm_graph_query_vector_helper_method.prime", methodSource);
+  const std::string methodErrPath =
+      (testScratchPath("") / "vm_graph_query_vector_helper_method_err.txt").string();
+  const std::string methodCmd = "./primec --emit=vm " + methodSrcPath + " --entry /main 2> " + methodErrPath;
+  CHECK(runCommand(methodCmd) == 2);
+  CHECK(readFile(methodErrPath).find("if branches must return compatible types") != std::string::npos);
+}
+
 TEST_CASE("runs vm experimental soa_vector stdlib helpers") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

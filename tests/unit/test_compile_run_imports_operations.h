@@ -23,6 +23,76 @@ main() {
   CHECK(runCommand(exePath) == 22);
 }
 
+TEST_CASE("query-local auto vector helper boundary stays in C++ emitter") {
+  const std::string directSource = R"(
+/vector/count([vector<i32>] values) {
+  return(17i32)
+}
+
+[return<vector<i32>> effects(heap_alloc)]
+valuesA() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(values)
+}
+
+[return<vector<i32>> effects(heap_alloc)]
+valuesB() {
+  [vector<i32>] values{vector<i32>(3i32, 4i32)}
+  return(values)
+}
+
+[return<i32> effects(heap_alloc)]
+main() {
+  [auto] values{
+    if(true,
+      then(){ return(valuesA()) },
+      else(){ return(valuesB()) })
+  }
+  return(/vector/count(values))
+}
+)";
+  const std::string directSrcPath = writeTemp("compile_graph_query_vector_helper_call_exe.prime", directSource);
+  const std::string directErrPath =
+      (testScratchPath("") / "compile_graph_query_vector_helper_call_exe_err.txt").string();
+  const std::string directCmd = "./primec --emit=exe " + directSrcPath + " --entry /main 2> " + directErrPath;
+  CHECK(runCommand(directCmd) == 2);
+  CHECK(readFile(directErrPath).find("if branches must return compatible types") != std::string::npos);
+
+  const std::string methodSource = R"(
+/vector/count([vector<i32>] values) {
+  return(17i32)
+}
+
+[return<vector<i32>> effects(heap_alloc)]
+valuesA() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(values)
+}
+
+[return<vector<i32>> effects(heap_alloc)]
+valuesB() {
+  [vector<i32>] values{vector<i32>(3i32, 4i32)}
+  return(values)
+}
+
+[return<i32> effects(heap_alloc)]
+main() {
+  [auto] values{
+    if(true,
+      then(){ return(valuesA()) },
+      else(){ return(valuesB()) })
+  }
+  return(values./vector/count())
+}
+)";
+  const std::string methodSrcPath = writeTemp("compile_graph_query_vector_helper_method_exe.prime", methodSource);
+  const std::string methodErrPath =
+      (testScratchPath("") / "compile_graph_query_vector_helper_method_exe_err.txt").string();
+  const std::string methodCmd = "./primec --emit=exe " + methodSrcPath + " --entry /main 2> " + methodErrPath;
+  CHECK(runCommand(methodCmd) == 2);
+  CHECK(readFile(methodErrPath).find("if branches must return compatible types") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs experimental soa_vector stdlib helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
