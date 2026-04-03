@@ -57,6 +57,10 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
                                            const std::vector<Expr> *enclosingStatements,
                                            size_t statementIndex) {
   ExprContextScope statementScope(*this, stmt);
+  auto publishStatementDiagnostic = [&]() -> bool {
+    captureExprContext(stmt);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   const std::vector<std::string> *definitionTemplateArgs = nullptr;
   auto currentDefIt = defMap_.find(currentValidationContext_.definitionPath);
   if (currentDefIt != defMap_.end() && currentDefIt->second != nullptr) {
@@ -85,21 +89,21 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     const std::string name = stmt.name;
     if (hasNamedArguments(stmt.argNames)) {
       error_ = "named arguments not supported for builtin calls";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (!stmt.templateArgs.empty()) {
       error_ = name + " does not accept template arguments";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
       error_ = name + " does not accept block arguments";
-      return false;
+      return publishStatementDiagnostic();
     }
     const size_t expectedArgs = (name == "init") ? 2 : 1;
     if (stmt.args.size() != expectedArgs) {
       error_ = name + " requires exactly " + std::to_string(expectedArgs) + " argument" +
                (expectedArgs == 1 ? "" : "s");
-      return false;
+      return publishStatementDiagnostic();
     }
     const Expr &storageArg = stmt.args.front();
     if (!validateExpr(params, locals, storageArg)) {
@@ -112,7 +116,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     if (!resolved || storageBinding.typeName != "uninitialized" || storageBinding.typeTemplateArg.empty()) {
       error_ = name + " requires uninitialized<T> storage";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (name == "init") {
       if (!validateExpr(params, locals, stmt.args[1])) {
@@ -121,7 +125,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       ReturnKind valueKind = inferExprReturnKind(stmt.args[1], params, locals);
       if (valueKind == ReturnKind::Void) {
         error_ = "init requires a value";
-        return false;
+        return publishStatementDiagnostic();
       }
       auto trimType = [](const std::string &text) -> std::string {
         size_t start = 0;
