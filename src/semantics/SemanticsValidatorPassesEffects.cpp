@@ -12,6 +12,17 @@ void expandEffectImplications(std::unordered_set<std::string> &effects) {
 
 } // namespace
 
+bool SemanticsValidator::publishPassesEffectsDiagnostic(const Expr *expr) {
+  if (expr != nullptr) {
+    captureExprContext(*expr);
+  } else if (currentExecutionContext_ != nullptr) {
+    captureExecutionContext(*currentExecutionContext_);
+  } else if (currentDefinitionContext_ != nullptr) {
+    captureDefinitionContext(*currentDefinitionContext_);
+  }
+  return publishCurrentStructuredDiagnosticNow();
+}
+
 std::unordered_set<std::string> SemanticsValidator::resolveEffects(const std::vector<Transform> &transforms,
                                                                    bool isEntry) const {
   bool sawEffects = false;
@@ -52,7 +63,7 @@ bool SemanticsValidator::validateCapabilitiesSubset(const std::vector<Transform>
   for (const auto &capability : capabilities) {
     if (currentValidationContext_.activeEffects.count(capability) == 0) {
       error_ = "capability requires matching effect on " + context + ": " + capability;
-      return false;
+      return publishPassesEffectsDiagnostic();
     }
   }
   return true;
@@ -71,11 +82,11 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
     if (transform.name == "effects") {
       if (sawEffects) {
         error_ = "duplicate effects transform on " + context;
-        return false;
+        return publishPassesEffectsDiagnostic(&expr);
       }
       sawEffects = true;
       if (!validateEffectsTransform(transform, context, error_)) {
-        return false;
+        return publishPassesEffectsDiagnostic(&expr);
       }
       effectsOut.clear();
       for (const auto &arg : transform.arguments) {
@@ -85,11 +96,11 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
     } else if (transform.name == "capabilities") {
       if (sawCapabilities) {
         error_ = "duplicate capabilities transform on " + context;
-        return false;
+        return publishPassesEffectsDiagnostic(&expr);
       }
       sawCapabilities = true;
       if (!validateCapabilitiesTransform(transform, context, error_)) {
-        return false;
+        return publishPassesEffectsDiagnostic(&expr);
       }
       capabilities.clear();
       for (const auto &arg : transform.arguments) {
@@ -97,47 +108,47 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
       }
     } else if (transform.name == "return") {
       error_ = "return transform not allowed on executions: " + context;
-      return false;
+      return publishPassesEffectsDiagnostic(&expr);
     } else if (transform.name == "on_error") {
       error_ = "on_error transform is not allowed on executions: " + context;
-      return false;
+      return publishPassesEffectsDiagnostic(&expr);
     } else if (transform.name == "mut") {
       error_ = "mut transform is not allowed on executions: " + context;
-      return false;
+      return publishPassesEffectsDiagnostic(&expr);
     } else if (transform.name == "unsafe") {
       error_ = "unsafe transform is not allowed on executions: " + context;
-      return false;
+      return publishPassesEffectsDiagnostic(&expr);
     } else if (transform.name == "copy") {
       error_ = "copy transform is not allowed on executions: " + context;
-      return false;
+      return publishPassesEffectsDiagnostic(&expr);
     } else if (transform.name == "restrict") {
       error_ = "restrict transform is not allowed on executions: " + context;
-      return false;
+      return publishPassesEffectsDiagnostic(&expr);
     } else if (transform.name == "stack" || transform.name == "heap" || transform.name == "buffer") {
       error_ = "placement transforms are not supported: " + context;
-      return false;
+      return publishPassesEffectsDiagnostic(&expr);
     } else if (transform.name == "align_bytes" || transform.name == "align_kbytes") {
       error_ = "alignment transforms are not supported on executions: " + context;
-      return false;
+      return publishPassesEffectsDiagnostic(&expr);
     } else if (transform.name == "no_padding" || transform.name == "platform_independent_padding") {
       error_ = "layout transforms are not supported on executions: " + context;
-      return false;
+      return publishPassesEffectsDiagnostic(&expr);
     } else if (isBindingQualifierName(transform.name)) {
       error_ = "binding visibility/static transforms are only valid on bindings: " + context;
-      return false;
+      return publishPassesEffectsDiagnostic(&expr);
     } else if (isReflectionTransformName(transform.name)) {
       error_ = "reflection transforms are only valid on struct definitions: " + context;
-      return false;
+      return publishPassesEffectsDiagnostic(&expr);
     } else if (isStructTransformName(transform.name)) {
       error_ = "struct transforms are not allowed on executions: " + context;
-      return false;
+      return publishPassesEffectsDiagnostic(&expr);
     }
   }
   if (sawEffects) {
     for (const auto &effect : effectsOut) {
       if (currentValidationContext_.activeEffects.count(effect) == 0) {
         error_ = "execution effects must be a subset of enclosing effects on " + context + ": " + effect;
-        return false;
+        return publishPassesEffectsDiagnostic(&expr);
       }
     }
   }
@@ -145,7 +156,7 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
     for (const auto &capability : capabilities) {
       if (effectsOut.count(capability) == 0) {
         error_ = "capability requires matching effect on " + context + ": " + capability;
-        return false;
+        return publishPassesEffectsDiagnostic(&expr);
       }
     }
   }

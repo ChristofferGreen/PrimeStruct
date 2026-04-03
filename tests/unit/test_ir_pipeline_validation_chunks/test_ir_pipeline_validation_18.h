@@ -523,7 +523,13 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsPassesEffectsSource.find("bool SemanticsValidator::validateCapabilitiesSubset(") !=
         std::string::npos);
+  CHECK(semanticsPassesEffectsSource.find("bool SemanticsValidator::publishPassesEffectsDiagnostic(") !=
+        std::string::npos);
   CHECK(semanticsPassesEffectsSource.find("bool SemanticsValidator::resolveExecutionEffects(") !=
+        std::string::npos);
+  CHECK(semanticsPassesEffectsSource.find("return publishPassesEffectsDiagnostic(&expr);") !=
+        std::string::npos);
+  CHECK(semanticsPassesEffectsSource.find("return publishPassesEffectsDiagnostic();") !=
         std::string::npos);
   CHECK(semanticsPassesDiagnosticsSource.find("void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(") !=
         std::string::npos);
