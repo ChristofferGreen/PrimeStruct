@@ -179,6 +179,28 @@ Planned optional parallel-solve contract:
 - Parallel coverage should prove both parity and scheduling-independence by exercising the same corpus under repeated
   runs and different worker counts without changing semantic-product output or diagnostic order.
 
+Planned non-template inference migration contract:
+- Remaining non-template inference islands should migrate onto graph-backed query/binding state in thin slices rather
+  than by one broad rewrite.
+- Each migration slice should identify:
+  - the current ad hoc inference island being removed
+  - the graph-backed facts that replace it
+  - the exact fallback/compatibility behavior that must remain unchanged during the cutover
+- Preferred migration order:
+  - direct local/binding inference islands that still bypass graph-backed local/query facts
+  - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph
+  - compile-time or helper-routing inference paths that still depend on local ad hoc caches
+- A migrated slice is only complete when:
+  - the old ad hoc inference branch is deleted or reduced to one explicit compatibility adapter
+  - compile-pipeline parity still holds on the existing return/query/local pilot surfaces
+  - the new path consumes published graph-backed facts instead of recomputing equivalent local state
+- Migration coverage should pin both positive and negative boundaries:
+  - successful inference on the intended graph-backed path
+  - unchanged diagnostics for unresolved or contradictory inference sites
+  - unchanged helper-family and canonical-path choices where inference affects call routing
+- Explicit and implicit template inference migration stays blocked on this work, because template solving should not be
+  layered on top of unresolved non-template inference islands that still own their own caches or ordering rules.
+
 ### Planned semantics-to-lowering boundary
 PrimeStruct is migrating toward an explicit post-semantics product that sits between the syntax-faithful AST and IR
 lowering. The goal is to stop re-deriving lowering facts from mutated AST state and instead hand IR preparation one
