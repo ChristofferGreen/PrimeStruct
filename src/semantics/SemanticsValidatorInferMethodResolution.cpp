@@ -174,7 +174,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if (normalizedMethodName == "ref" &&
         (collectionTypePath == "/soa_vector" ||
          (collectionTypePath == "/vector" &&
-          preferredSoaHelperTargetForCurrentImports("ref") == "/soa_vector/ref"))) {
+          usesSamePathSoaHelperTargetForCurrentImports("ref")))) {
       resolvedOut = preferredSoaHelperTargetForCurrentImports("ref");
       return true;
     }
@@ -533,7 +533,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     if (normalizedMethodName == "ref" &&
         resolveVectorTarget(receiver, elemType) &&
-        preferredSoaHelperTargetForCurrentImports("ref") == "/soa_vector/ref") {
+        usesSamePathSoaHelperTargetForCurrentImports("ref")) {
       resolvedOut = preferredSoaHelperTargetForCurrentImports("ref");
       return true;
     }

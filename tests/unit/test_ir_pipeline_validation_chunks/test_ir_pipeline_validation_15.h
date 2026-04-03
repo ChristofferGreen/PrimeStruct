@@ -911,6 +911,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "            methodResolved,\n"
             "            usesSamePathSoaHelperTargetForCurrentImports(\"ref\"))") !=
         std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "usesSamePathSoaHelperTargetForCurrentImports(\"ref\")") !=
+        std::string::npos);
+  CHECK(inferMethodResolutionSource.find(
+            "usesSamePathSoaHelperTargetForCurrentImports(\"ref\")") !=
+        std::string::npos);
   CHECK(inferDefinitionSource.find("isBuiltinSoaFieldViewExpr(") != std::string::npos);
   CHECK(inferDefinitionSource.find("isBuiltinSoaRefExpr(") == std::string::npos);
   CHECK(inferDefinitionSource.find("builtinSoaAccessHelperName(") !=
