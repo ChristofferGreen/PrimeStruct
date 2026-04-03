@@ -66,7 +66,7 @@ Lowering cutover:
 Coverage and migration cleanup:
 - ○ Implement the narrow semantic-product unit/golden suite now that its fact coverage and scope are documented.
 - ○ Add end-to-end compile-pipeline conformance cases that exercise the semantic-product boundary through C++/VM/native lowering paths.
-- ○ Migrate tests and public testing helpers from `primec/testing/SemanticsValidationHelpers.h` snapshot surfaces onto the semantic-product inspection surface where they are asserting lowering-facing facts.
+- ○ Migrate tests and public testing helpers from `primec/testing/SemanticsValidationHelpers.h` now that their boundary/migration contract is documented, moving lowering-facing assertions onto the semantic-product inspection surface.
 - ○ Delete redundant testing-only semantic snapshot plumbing now that its migration/removal contract is documented, leaving one canonical lowering-facing inspection surface once equivalent semantic-product dumps and conformance coverage exist.
 - ○ Delete lowerer-side stdlib/helper alias fallback paths now that their semantic-product removal contract is documented, once equivalent canonical resolution is provided by the semantic product.
 - ○ Implement the structured diagnostic sink now that its single-threaded first-error contract is documented, replacing `SemanticsValidator`'s shared mutable `error_` flow without changing current failure policy.

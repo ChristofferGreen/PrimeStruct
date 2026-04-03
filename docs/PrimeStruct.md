@@ -579,6 +579,24 @@ Planned testing-only snapshot removal contract:
   - any remaining AST/testing helpers are explicitly limited to syntax/provenance assertions and do not duplicate
     lowering-facing semantic facts
 
+Planned testing-helper migration contract:
+- Public testing helpers should be split by ownership boundary rather than by current implementation history.
+- `primec/testing/SemanticsValidationHelpers.h` and related helpers should migrate in this order:
+  - move lowering-facing assertions onto semantic-product dump helpers or pipeline-facing conformance helpers
+  - retain AST-facing helpers only for syntax-owned, provenance-owned, parser-facing, or canonicalization-facing checks
+  - delete or narrow helper entrypoints whose only purpose was exposing lowering facts before the semantic product
+    existed
+- The replacement helper surface should make the distinction explicit:
+  - semantic-product helpers for resolved targets, inferred types, helper routing, effect/layout facts, and graph-backed
+    inference facts
+  - AST/syntax helpers for spans, syntax-faithful dumps, parser/transform assertions, and source reproduction
+- Migration should prefer moving existing tests rather than creating duplicate assertion paths that keep both helper
+  surfaces alive for the same lowering-facing fact.
+- Completion criteria:
+  - lowering-facing tests no longer need public snapshot helpers from `primec/testing/SemanticsValidationHelpers.h`
+  - any remaining public testing helpers in that surface are clearly syntax/provenance scoped
+  - helper consumers can tell from the API which facts are semantic-product-owned versus AST-owned
+
 Planned diagnostic ordering contract for semantic-product identities:
 - Diagnostics that survive semantic validation should be attachable to stable semantic-product node identities or
   deterministic sort keys before any later parallel validation work begins.
