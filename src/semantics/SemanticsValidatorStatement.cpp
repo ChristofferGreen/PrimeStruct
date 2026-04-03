@@ -372,12 +372,12 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
   }
   if (isBuiltinBlockCall(stmt) && !stmt.hasBodyArguments) {
     error_ = "block requires block arguments";
-    return false;
+    return publishStatementDiagnostic();
   }
   if (isBuiltinBlockCall(stmt) && stmt.hasBodyArguments) {
     if (hasNamedArguments(stmt.argNames) || !stmt.args.empty() || !stmt.templateArgs.empty()) {
       error_ = "block does not accept arguments";
-      return false;
+      return publishStatementDiagnostic();
     }
     std::optional<OnErrorHandler> blockOnError;
     if (!parseOnErrorTransform(stmt.transforms, stmt.namespacePrefix, "block", blockOnError)) {
@@ -416,20 +416,20 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
   if (getPrintBuiltin(stmt, printBuiltin)) {
     if (hasNamedArguments(stmt.argNames)) {
       error_ = "named arguments not supported for builtin calls";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
       error_ = printBuiltin.name + " does not accept block arguments";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (stmt.args.size() != 1) {
       error_ = printBuiltin.name + " requires exactly one argument";
-      return false;
+      return publishStatementDiagnostic();
     }
     const std::string effectName = (printBuiltin.target == PrintTarget::Err) ? "io_err" : "io_out";
     if (currentValidationContext_.activeEffects.count(effectName) == 0) {
       error_ = printBuiltin.name + " requires " + effectName + " effect";
-      return false;
+      return publishStatementDiagnostic();
     }
     {
       EntryArgStringScope entryArgScope(*this, true);
@@ -439,7 +439,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     if (!isPrintableStatementExpr(stmt.args.front(), params, locals)) {
       error_ = printBuiltin.name + " requires an integer/bool or string literal/binding argument";
-      return false;
+      return publishStatementDiagnostic();
     }
     return true;
   }
