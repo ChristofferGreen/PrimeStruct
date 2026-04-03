@@ -10,8 +10,7 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
     return publishCurrentStructuredDiagnosticNow();
   };
   auto failStructFieldDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishStructFieldDiagnostic();
+    return failExprDiagnostic(fieldStmt, std::move(message));
   };
   std::optional<std::string> restrictType;
   std::string parseError;
@@ -104,13 +103,8 @@ bool SemanticsValidator::validateSoaVectorElementFieldEnvelopes(const std::strin
       if (!fieldStmt.isBinding || hasStaticTransform(fieldStmt)) {
         continue;
       }
-      auto publishSoaFieldEnvelopeDiagnostic = [&]() -> bool {
-        captureExprContext(fieldStmt);
-        return publishCurrentStructuredDiagnosticNow();
-      };
       auto failSoaFieldEnvelopeDiagnostic = [&](std::string message) -> bool {
-        error_ = std::move(message);
-        return publishSoaFieldEnvelopeDiagnostic();
+        return failExprDiagnostic(fieldStmt, std::move(message));
       };
       BindingInfo fieldBinding;
       if (!resolveStructFieldBinding(structDef, fieldStmt, fieldBinding)) {

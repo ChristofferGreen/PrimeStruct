@@ -96,10 +96,6 @@ bool SemanticsValidator::buildParameters() {
 
   for (const auto &def : program_.definitions) {
     DefinitionContextScope definitionScope(*this, def);
-    auto publishBuildParameterDefinitionDiagnostic = [&]() -> bool {
-      captureDefinitionContext(def);
-      return publishCurrentStructuredDiagnosticNow();
-    };
     ValidationContext definitionValidationContext;
     definitionValidationContext.definitionPath = def.fullPath;
     for (const auto &transform : def.transforms) {
@@ -219,8 +215,7 @@ bool SemanticsValidator::buildParameters() {
         return publishCurrentStructuredDiagnosticNow();
       };
       auto failParameterDiagnostic = [&](std::string message) -> bool {
-        error_ = std::move(message);
-        return publishParameterDiagnostic();
+        return failExprDiagnostic(param, std::move(message));
       };
       if (!param.isBinding) {
         return failParameterDiagnostic("parameters must use binding syntax: " +
@@ -317,8 +312,7 @@ bool SemanticsValidator::buildParameters() {
     const bool isStaticHelper = isStructHelper && !isLifecycle && hasStaticTransform(def);
     bool sawMut = false;
     auto failBuildParameterDefinitionDiagnostic = [&](std::string message) -> bool {
-      error_ = std::move(message);
-      return publishBuildParameterDefinitionDiagnostic();
+      return failDefinitionDiagnostic(def, std::move(message));
     };
     for (const auto &transform : def.transforms) {
       if (transform.name != "mut") {

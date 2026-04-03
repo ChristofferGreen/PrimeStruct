@@ -51,13 +51,8 @@ bool SemanticsValidator::validateExprEarlyPointerBuiltin(
   }
 
   handledOut = true;
-  auto publishExprDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failExprCallResolution = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishExprDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
   if (hasNamedArguments(expr.argNames)) {
     return failExprCallResolution("named arguments not supported for builtin calls");

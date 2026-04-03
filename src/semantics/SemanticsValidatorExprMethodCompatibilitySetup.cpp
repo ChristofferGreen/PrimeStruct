@@ -15,13 +15,8 @@ bool SemanticsValidator::prepareExprMethodCompatibilitySetup(
     std::string &resolved,
     ExprMethodCompatibilitySetup &setupOut) {
   setupOut = {};
-  auto publishMethodCompatibilityDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failMethodCompatibilityDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishMethodCompatibilityDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
   if (hasVectorHelperCallResolution) {
     resolved = vectorHelperCallResolvedPath;

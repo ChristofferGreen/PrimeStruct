@@ -13,13 +13,8 @@ bool SemanticsValidator::validateExprLateFallbackBuiltins(
     bool resolvedMethod,
     const ExprLateFallbackBuiltinContext &context,
     bool &handledOut) {
-  auto publishLateFallbackBuiltinDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failLateFallbackBuiltinDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishLateFallbackBuiltinDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
   handledOut = false;
   if (context.dispatchResolvers == nullptr) {

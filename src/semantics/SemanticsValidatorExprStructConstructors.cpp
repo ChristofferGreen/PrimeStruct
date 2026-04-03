@@ -21,13 +21,8 @@ bool SemanticsValidator::validateExprResolvedStructConstructorCall(
       context.zeroArgDiagnostic == nullptr) {
     return true;
   }
-  auto publishStructConstructorDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failStructConstructorDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishStructConstructorDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
 
   if (!context.zeroArgDiagnostic->empty()) {
@@ -80,7 +75,8 @@ bool SemanticsValidator::validateExprResolvedStructConstructorCall(
       return failStructConstructorDiagnostic("argument count mismatch for " +
                                             *context.diagnosticResolved);
     }
-    return publishStructConstructorDiagnostic();
+    captureExprContext(expr);
+    return publishCurrentStructuredDiagnosticNow();
   }
 
   std::vector<const Expr *> orderedArgs;

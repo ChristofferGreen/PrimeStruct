@@ -12,13 +12,8 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
     const std::unordered_map<std::string, BindingInfo> &locals,
     const Expr &expr,
     bool &handledOut) {
-  auto publishCollectionLiteralDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failCollectionLiteralDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishCollectionLiteralDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
   handledOut = false;
   std::string builtinName;

@@ -50,13 +50,8 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
                                                       size_t statementIndex,
                                                       bool &handled) {
   handled = false;
-  auto publishStatementDiagnostic = [&]() -> bool {
-    captureExprContext(stmt);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failStatementDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishStatementDiagnostic();
+    return failExprDiagnostic(stmt, std::move(message));
   };
 
   if (isMatchCall(stmt)) {

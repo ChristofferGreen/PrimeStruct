@@ -45,14 +45,9 @@ bool SemanticsValidator::isStructConstructorValueExpr(const Expr &expr) {
 bool SemanticsValidator::validateIfExpr(const std::vector<ParameterInfo> &params,
                                         const std::unordered_map<std::string, BindingInfo> &locals,
                                         const Expr &expr) {
-  auto publishIfDiagnostic = [&](const Expr &diagnosticExpr) -> bool {
-    captureExprContext(diagnosticExpr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failIfDiagnostic = [&](const Expr &diagnosticExpr,
                               std::string message) -> bool {
-    error_ = std::move(message);
-    return publishIfDiagnostic(diagnosticExpr);
+    return failExprDiagnostic(diagnosticExpr, std::move(message));
   };
   if (hasNamedArguments(expr.argNames)) {
     return failIfDiagnostic(expr, "named arguments not supported for builtin calls");

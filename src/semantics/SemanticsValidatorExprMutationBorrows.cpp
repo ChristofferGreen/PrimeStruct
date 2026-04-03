@@ -15,13 +15,8 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     const Expr &expr,
     bool &handledOut) {
   handledOut = false;
-  auto publishMutationBorrowDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failMutationBorrowDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishMutationBorrowDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
   auto failBorrowedBindingDiagnostic =
       [&](const std::string &borrowRoot, const std::string &sinkName) -> bool {

@@ -41,6 +41,28 @@ void SemanticsValidator::captureExecutionContext(const Execution &exec) {
   captureRelatedSpan(exec.sourceLine, exec.sourceColumn, "execution: " + exec.fullPath);
 }
 
+bool SemanticsValidator::failExprDiagnostic(const Expr &expr,
+                                            std::string message) {
+  captureExprContext(expr);
+  error_ = std::move(message);
+  return publishCurrentStructuredDiagnosticNow();
+}
+
+bool SemanticsValidator::failDefinitionDiagnostic(
+    const Definition &def,
+    std::string message) {
+  captureDefinitionContext(def);
+  error_ = std::move(message);
+  return publishCurrentStructuredDiagnosticNow();
+}
+
+bool SemanticsValidator::failExecutionDiagnostic(const Execution &exec,
+                                                 std::string message) {
+  captureExecutionContext(exec);
+  error_ = std::move(message);
+  return publishCurrentStructuredDiagnosticNow();
+}
+
 bool SemanticsValidator::collectDuplicateDefinitionDiagnostics() {
   std::unordered_map<std::string, std::vector<const Definition *>> definitionsByPath;
   definitionsByPath.reserve(program_.definitions.size());

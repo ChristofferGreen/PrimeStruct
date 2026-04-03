@@ -206,6 +206,9 @@
   void captureExprContext(const Expr &expr);
   void captureDefinitionContext(const Definition &def);
   void captureExecutionContext(const Execution &exec);
+  bool failExprDiagnostic(const Expr &expr, std::string message);
+  bool failDefinitionDiagnostic(const Definition &def, std::string message);
+  bool failExecutionDiagnostic(const Execution &exec, std::string message);
   bool collectDuplicateDefinitionDiagnostics();
   bool shouldCollectStructuredDiagnostics() const;
   void clearStructuredDiagnosticContext();

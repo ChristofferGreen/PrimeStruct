@@ -20,13 +20,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     return true;
   }
 
-  auto publishMethodResolutionDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failMethodResolutionDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishMethodResolutionDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
 
   const auto &resolveVectorTarget = dispatchResolvers.resolveVectorTarget;
@@ -294,7 +289,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       return false;
     }
   } else if (rejectBuiltinStringCountShadowOnMapAccessReceiver(resolved)) {
-    return publishMethodResolutionDiagnostic();
+    captureExprContext(expr);
+    return publishCurrentStructuredDiagnosticNow();
   } else if (hasBlockArgs) {
     const std::string pointerLikeType =
         inferPointerLikeCallReturnType(expr.args.front(), params, locals);

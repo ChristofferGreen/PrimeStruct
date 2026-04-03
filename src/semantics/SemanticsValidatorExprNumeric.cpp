@@ -14,13 +14,8 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
                                                     const Expr &expr,
                                                     bool &handled) {
   handled = false;
-  auto publishNumericDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failNumericDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishNumericDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
 
   auto numericInfoForKind = [](ReturnKind kind) -> NumericInfo {

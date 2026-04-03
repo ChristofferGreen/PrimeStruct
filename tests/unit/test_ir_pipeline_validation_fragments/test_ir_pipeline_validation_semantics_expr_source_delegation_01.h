@@ -296,18 +296,10 @@
             "error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "auto publishMethodTargetResolutionDiagnostic = [&]() -> bool {") !=
-        std::string::npos);
-  CHECK(semanticsExprMethodTargetResolutionSource.find(
             "auto failMethodTargetResolutionDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
-  CHECK(semanticsExprMethodTargetResolutionSource.find("captureExprContext(receiver);") !=
-        std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "return publishCurrentStructuredDiagnosticNow();") !=
-        std::string::npos);
-  CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "error_ = std::move(message);") !=
+            "return failExprDiagnostic(receiver, std::move(message));") !=
         std::string::npos);
   CHECK(semanticsExprMethodCompatibilitySetupSource.find(
             "return soaUnavailableMethodDiagnostic(\n"

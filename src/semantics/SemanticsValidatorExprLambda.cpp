@@ -11,14 +11,9 @@ bool SemanticsValidator::validateLambdaExpr(const std::vector<ParameterInfo> &pa
                                             const Expr &expr,
                                             const std::vector<Expr> *enclosingStatements,
                                             size_t statementIndex) {
-  auto publishLambdaDiagnostic = [&](const Expr &diagnosticExpr) -> bool {
-    captureExprContext(diagnosticExpr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failLambdaDiagnostic = [&](const Expr &diagnosticExpr,
                                   std::string message) -> bool {
-    error_ = std::move(message);
-    return publishLambdaDiagnostic(diagnosticExpr);
+    return failExprDiagnostic(diagnosticExpr, std::move(message));
   };
   auto addCapturedBinding = [&](std::unordered_map<std::string, BindingInfo> &lambdaLocals,
                                 const std::string &name) -> bool {

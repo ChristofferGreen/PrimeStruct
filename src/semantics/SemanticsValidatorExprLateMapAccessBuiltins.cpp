@@ -17,13 +17,8 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     return true;
   }
 
-  auto publishLateMapAccessBuiltinDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failLateMapAccessBuiltinDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishLateMapAccessBuiltinDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
   auto failLateMapAccessKeyMismatch = [&](const std::string &helperName,
                                           const std::string &mapKeyType) {

@@ -55,13 +55,8 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
                                                  bool allowReturn,
                                                  bool *sawReturn,
                                                  const std::string &namespacePrefix) {
-  auto publishReturnDiagnostic = [&]() -> bool {
-    captureExprContext(stmt);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failReturnDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishReturnDiagnostic();
+    return failExprDiagnostic(stmt, std::move(message));
   };
   auto rewriteAutoReturnDiagnostic = [&](std::string message) -> bool {
     error_ = std::move(message);

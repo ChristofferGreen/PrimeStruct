@@ -12,13 +12,8 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
     bool resolvedMethod,
     const ExprResultFileBuiltinContext &context,
     bool &handledOut) {
-  auto publishResultFileDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failResultFileDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishResultFileDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
   handledOut = false;
   auto isMutableBinding = [&](const std::string &name) -> bool {

@@ -34,13 +34,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
     size_t &methodReceiverIndex) {
   handledOut = false;
 
-  auto publishCollectionAccessTargetDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failCollectionAccessTargetDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishCollectionAccessTargetDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
 
   std::string accessHelperName;

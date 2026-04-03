@@ -10,8 +10,7 @@ bool SemanticsValidator::validateExprFieldAccess(const std::vector<ParameterInfo
     return publishCurrentStructuredDiagnosticNow();
   };
   auto failFieldAccessDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishFieldAccessDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
   if (expr.args.size() != 1) {
     return failFieldAccessDiagnostic("field access requires a receiver");
@@ -298,14 +297,9 @@ bool SemanticsValidator::resolveStructFieldBinding(const std::vector<ParameterIn
                                                    const Expr &receiver,
                                                    const std::string &fieldName,
                                                    BindingInfo &bindingOut) {
-  auto publishFieldResolutionDiagnostic = [&](const Expr &diagnosticExpr) -> bool {
-    captureExprContext(diagnosticExpr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failFieldResolutionDiagnostic = [&](const Expr &diagnosticExpr,
                                            std::string message) -> bool {
-    error_ = std::move(message);
-    return publishFieldResolutionDiagnostic(diagnosticExpr);
+    return failExprDiagnostic(diagnosticExpr, std::move(message));
   };
   auto bindingTypeText = [](const BindingInfo &binding) -> std::string {
     if (binding.typeTemplateArg.empty()) {

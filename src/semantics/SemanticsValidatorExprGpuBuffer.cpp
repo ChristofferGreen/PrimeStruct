@@ -36,13 +36,8 @@ bool SemanticsValidator::validateExprGpuBufferBuiltins(
     const std::unordered_map<std::string, BindingInfo> &locals,
     const Expr &expr,
     bool &handledOut) {
-  auto publishGpuBufferDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failGpuBufferDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishGpuBufferDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
   handledOut = false;
 

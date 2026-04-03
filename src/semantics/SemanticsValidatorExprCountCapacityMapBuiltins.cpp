@@ -24,13 +24,8 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
   }
   auto it = defMap_.find(resolved);
 
-  auto publishCountCapacityMapBuiltinDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failCountCapacityMapBuiltin = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishCountCapacityMapBuiltinDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
 
   const bool isDirectVectorCountWrapperCall =
@@ -398,7 +393,8 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
           if ((*dispatchResolvers).resolveStringTarget != nullptr &&
               (*dispatchResolvers).resolveStringTarget(keyExpr)) {
             setCanonicalMapKeyMismatch(receiverExpr, helperName, mapKeyType);
-            return publishCountCapacityMapBuiltinDiagnostic();
+            captureExprContext(expr);
+            return publishCurrentStructuredDiagnosticNow();
           }
           ReturnKind candidateKind =
               inferExprReturnKind(keyExpr, params, locals);

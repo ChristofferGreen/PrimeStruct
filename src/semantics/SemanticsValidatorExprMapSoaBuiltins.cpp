@@ -16,13 +16,8 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     bool &handledOut) {
   handledOut = false;
   const bool resolvedMissing = defMap_.find(resolved) == defMap_.end();
-  auto publishMapSoaBuiltinDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failMapSoaBuiltinDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishMapSoaBuiltinDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
   auto returnKindForBinding = [](const BindingInfo &binding) -> ReturnKind {
     if (binding.typeName == "Reference") {

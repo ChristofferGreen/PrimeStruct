@@ -622,13 +622,7 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
             "return publishPassesStructLayoutsDiagnostic();") !=
         std::string::npos);
   CHECK(semanticsTraitsSource.find(
-            "auto publishTraitDiagnostic = [&](const Definition *defContext = nullptr) -> bool {") !=
-        std::string::npos);
-  CHECK(semanticsTraitsSource.find(
             "auto failTraitDiagnostic = [&](const Definition &defContext,") !=
-        std::string::npos);
-  CHECK(semanticsTraitsSource.find(
-            "return publishTraitDiagnostic(&defContext);") !=
         std::string::npos);
   CHECK(semanticsPassesExecutionsPath.string().find("SemanticsValidatorPassesExecutions.cpp") !=
         std::string::npos);
@@ -790,18 +784,10 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
   CHECK(semanticsStatementControlFlowSource.find("bool SemanticsValidator::validateControlFlowStatement(") !=
         std::string::npos);
   CHECK(semanticsStatementControlFlowSource.find(
-            "auto publishStatementDiagnostic = [&]() -> bool {") !=
-        std::string::npos);
-  CHECK(semanticsStatementControlFlowSource.find(
             "auto failStatementDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
-  CHECK(semanticsStatementControlFlowSource.find("captureExprContext(stmt);") !=
-        std::string::npos);
   CHECK(semanticsStatementControlFlowSource.find(
-            "return publishCurrentStructuredDiagnosticNow();") !=
-        std::string::npos);
-  CHECK(semanticsStatementControlFlowSource.find(
-            "error_ = std::move(message);") !=
+            "return failExprDiagnostic(stmt, std::move(message));") !=
         std::string::npos);
   CHECK(semanticsStatementControlFlowSource.find("if (isMatchCall(stmt)) {") != std::string::npos);
   CHECK(semanticsStatementControlFlowSource.find("if (isIfCall(stmt)) {") != std::string::npos);

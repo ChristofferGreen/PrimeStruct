@@ -67,13 +67,8 @@ bool SemanticsValidator::validateLifecycleHelperDefinitions() {
 
   for (const auto &def : program_.definitions) {
     DefinitionContextScope definitionScope(*this, def);
-    auto publishLifecycleDiagnostic = [&]() -> bool {
-      captureDefinitionContext(def);
-      return publishCurrentStructuredDiagnosticNow();
-    };
     auto failLifecycleDiagnostic = [&](std::string message) -> bool {
-      error_ = std::move(message);
-      return publishLifecycleDiagnostic();
+      return failDefinitionDiagnostic(def, std::move(message));
     };
     std::string parentPath;
     std::string placement;

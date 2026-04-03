@@ -94,13 +94,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
   handledOut = false;
   const bool resolvedMissing = defMap_.find(resolved) == defMap_.end();
 
-  auto publishCollectionAccessDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failCollectionAccessDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishCollectionAccessDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
   auto failCollectionAccessMapKeyMismatch = [&](const std::string &helperName,
                                                 const std::string &mapKeyType) {

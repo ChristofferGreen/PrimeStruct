@@ -14,14 +14,9 @@ bool SemanticsValidator::validateExprBodyArguments(
     const BuiltinCollectionDispatchResolverAdapters &builtinCollectionDispatchResolverAdapters,
     const std::vector<Expr> *enclosingStatements,
     size_t statementIndex) {
-  auto publishExprBodyArgumentDiagnostic = [&](const Expr &diagnosticExpr) -> bool {
-    captureExprContext(diagnosticExpr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failExprBodyArgumentDiagnostic = [&](const Expr &diagnosticExpr,
                                             std::string message) -> bool {
-    error_ = std::move(message);
-    return publishExprBodyArgumentDiagnostic(diagnosticExpr);
+    return failExprDiagnostic(diagnosticExpr, std::move(message));
   };
   if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||
       isBuiltinBlockCall(expr)) {

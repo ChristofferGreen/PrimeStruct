@@ -42,13 +42,8 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
     }
     return returnKindForTypeName(binding.typeName);
   };
-  auto publishScalarPointerMemoryDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failScalarPointerMemoryBuiltin = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishScalarPointerMemoryDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
   auto isIntegerExpr = [&](const Expr &arg) -> bool {
     ReturnKind kind = inferExprReturnKind(arg, params, locals);

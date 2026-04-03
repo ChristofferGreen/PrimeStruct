@@ -27,13 +27,8 @@ bool SemanticsValidator::validateExprNamedArguments(
     const std::string &resolved,
     bool resolvedMethod,
     const ExprNamedArgumentBuiltinContext &context) {
-  auto publishNamedArgumentDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failNamedArgumentDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishNamedArgumentDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
   if (hasNamedArguments(expr.argNames)) {
     auto resolveVectorMutatorName = [&](const std::string &name,
@@ -93,13 +88,8 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
     const std::string &resolved,
     bool resolvedMethod,
     const ExprNamedArgumentBuiltinContext &context) {
-  auto publishNamedArgumentDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failNamedArgumentDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishNamedArgumentDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
   const bool allowsNamedArgsPackBuiltinLabels =
       (context.isNamedArgsPackMethodAccessCall != nullptr &&

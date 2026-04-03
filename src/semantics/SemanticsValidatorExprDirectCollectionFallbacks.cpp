@@ -9,14 +9,9 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
     const std::string &resolved,
     const ExprDirectCollectionFallbackContext &context,
     std::optional<Expr> &rewrittenExprOut) {
-  auto publishDirectCollectionFallbackDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failDirectCollectionFallbackDiagnostic =
       [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishDirectCollectionFallbackDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
   rewrittenExprOut.reset();
   if (context.dispatchResolvers == nullptr) {

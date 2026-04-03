@@ -19,13 +19,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     size_t &methodReceiverIndex) {
   handledOut = false;
   rewrittenExprOut.reset();
-  auto publishCollectionCountCapacityDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failCollectionCountCapacityDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishCollectionCountCapacityDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
   auto hasResolvableDefinitionPath = [&](const std::string &path) {
     return hasDeclaredDefinitionPath(path) || hasImportedDefinitionPath(path);

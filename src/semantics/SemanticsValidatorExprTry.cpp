@@ -8,13 +8,8 @@ bool SemanticsValidator::validateExprTryBuiltin(
     const Expr &expr,
     const ExprTryBuiltinContext &context,
     bool &handledOut) {
-  auto publishTryDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failTryDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishTryDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
   handledOut = false;
 

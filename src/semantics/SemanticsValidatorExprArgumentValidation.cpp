@@ -75,13 +75,8 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
   const auto &params = *context.params;
   const auto &locals = *context.locals;
   const auto &dispatchResolvers = *context.dispatchResolvers;
-  auto publishArgumentValidationDiagnostic = [&](const Expr &diagnosticExpr) -> bool {
-    captureExprContext(diagnosticExpr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failArgumentValidation = [&](const Expr &diagnosticExpr, std::string message) -> bool {
-    error_ = std::move(message);
-    return publishArgumentValidationDiagnostic(diagnosticExpr);
+    return failExprDiagnostic(diagnosticExpr, std::move(message));
   };
   auto inferCollectionBindingType = [&](const Expr &candidate,
                                         std::string &baseOut,
@@ -729,13 +724,8 @@ bool SemanticsValidator::validateSpreadArgumentTypeAgainstParam(
   const std::string &diagnosticResolved = *context.diagnosticResolved;
   const auto &params = *context.params;
   const auto &locals = *context.locals;
-  auto publishSpreadArgumentValidationDiagnostic = [&](const Expr &diagnosticExpr) -> bool {
-    captureExprContext(diagnosticExpr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failSpreadArgumentValidation = [&](const Expr &diagnosticExpr, std::string message) -> bool {
-    error_ = std::move(message);
-    return publishSpreadArgumentValidationDiagnostic(diagnosticExpr);
+    return failExprDiagnostic(diagnosticExpr, std::move(message));
   };
 
   std::string actualElementTypeText;

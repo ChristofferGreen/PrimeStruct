@@ -58,16 +58,9 @@ bool typeKeysMatch(const TypeKey &left, const TypeKey &right) {
 } // namespace
 
 bool SemanticsValidator::validateTraitConstraints() {
-  auto publishTraitDiagnostic = [&](const Definition *defContext = nullptr) -> bool {
-    if (defContext != nullptr) {
-      captureDefinitionContext(*defContext);
-    }
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failTraitDiagnostic = [&](const Definition &defContext,
                                  std::string message) -> bool {
-    error_ = std::move(message);
-    return publishTraitDiagnostic(&defContext);
+    return failDefinitionDiagnostic(defContext, std::move(message));
   };
   auto resolveStructPath = [&](const std::string &typeName, const std::string &namespacePrefix) -> std::string {
     if (typeName.empty()) {

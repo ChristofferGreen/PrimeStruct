@@ -207,13 +207,8 @@ bool SemanticsValidator::reportReferenceAssignmentEscape(
     const std::unordered_map<std::string, BindingInfo> &locals,
     const std::string &sinkName,
     const Expr &rhsExpr) {
-  auto publishReferenceEscapeDiagnostic = [&]() -> bool {
-    captureExprContext(rhsExpr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failReferenceEscapeDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishReferenceEscapeDiagnostic();
+    return failExprDiagnostic(rhsExpr, std::move(message));
   };
   std::string sourceRoot;
   if (!resolveEscapingReferenceRoot(params, locals, rhsExpr, sourceRoot)) {

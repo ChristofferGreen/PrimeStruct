@@ -213,13 +213,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
        receiver.name.find("FileError") != std::string::npos ||
        receiver.namespacePrefix.find("FileError") != std::string::npos ||
        callNamespacePrefix.find("FileError") != std::string::npos);
-  auto publishMethodTargetResolutionDiagnostic = [&]() -> bool {
-    captureExprContext(receiver);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failMethodTargetResolutionDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishMethodTargetResolutionDiagnostic();
+    return failExprDiagnostic(receiver, std::move(message));
   };
   auto rememberMethodTargetTraceFailure = [&](std::string message) {
     if (error_.empty()) {

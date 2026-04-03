@@ -14,14 +14,9 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
     const ExprLateCallCompatibilityContext &context,
     bool &handledOut) {
   handledOut = false;
-  auto publishLateCallCompatibilityDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failLateCallCompatibilityDiagnostic =
       [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishLateCallCompatibilityDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
 
   if (!allowMathBareName(expr.name) && expr.name.find('/') == std::string::npos) {
