@@ -8,6 +8,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 3, 2026, continued)**
 
 - ✓ Split the remaining oversized Group 11 and Group 12 graph/semantic-product umbrella items in `docs/todo.md` into explicit compile-pipeline/backend, invalidation, inference, CT-eval, template, widening, perf, parallel-solve, plumbing, adapter, lowerer-cutover, and backend-conformance slices, so the live queue now tracks concrete implementable seams instead of broad multi-surface bullets.
+- ✓ Split the remaining Group 12 semantic-product plumbing, adapter, lowerer-cutover, helper-migration, snapshot-removal, alias-fallback, and backend-consumer coverage umbrellas into per-surface slices, so the live queue now tracks explicit CLI/runtime/report, fact-family adapter, lowerer metadata, helper cleanup, and per-backend conformance seams instead of broad migration buckets.
 
 **Architecture / Type-resolution graph**
 **Group 4 - Ownership and lifetime substrate**

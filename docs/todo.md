@@ -159,12 +159,28 @@ Semantic product creation:
 
 Pipeline plumbing:
 - ◐ Implement the CLI/runtime plumbing cutover for the semantic product now that the end-to-end handoff contract is documented. Progress: this plumbing cut is now split into explicit CLI, runtime/backend, and failure/report seams instead of one umbrella handoff item.
-  - ○ Thread the semantic product through `primec` CLI and dump-stage entrypoints.
-  - ○ Thread the semantic product through runtime/backend consumer entrypoints (`primevm`, backend dispatch, and related handoff glue).
-  - ○ Thread the semantic product through failure/report plumbing without creating parallel semantic state.
+  - ◐ Thread the semantic product through `primec` CLI and dump-stage entrypoints. Progress: this CLI surface is now split into parse/validate success handling, dump-stage selection, and CLI-facing reporting seams so the user-facing handoff can land incrementally.
+    - ○ Thread semantic-product success results through `primec` compile/emit entrypoints.
+    - ○ Thread semantic-product success results through `primec` dump-stage selection and emission entrypoints.
+    - ○ Thread semantic-product-aware reporting through `primec` user-facing CLI diagnostics/help text where needed.
+  - ◐ Thread the semantic product through runtime/backend consumer entrypoints (`primevm`, backend dispatch, and related handoff glue). Progress: this consumer surface is now split into `primevm`, backend registry/dispatch, and shared runtime/backend handoff seams.
+    - ○ Thread semantic-product success results through `primevm` entrypoints.
+    - ○ Thread semantic-product success results through backend registry/dispatch glue.
+    - ○ Thread semantic-product success results through shared runtime/backend handoff glue used by both CLI consumers.
+  - ◐ Thread the semantic product through failure/report plumbing without creating parallel semantic state. Progress: this reporting surface is now split into pipeline failure objects, dump/report surfaces, and user-visible diagnostic ordering/reporting seams.
+    - ○ Thread semantic-product-aware failure objects through compile-pipeline result plumbing.
+    - ○ Thread semantic-product-aware dump/report plumbing without duplicating semantic state.
+    - ○ Thread semantic-product-aware user-visible diagnostic ordering/reporting through the remaining CLI/runtime consumers.
 - ◐ Implement the temporary migration adapter now that its cutover/removal contract is documented. Progress: the remaining adapter work is now split into lowering-facing fact families instead of one umbrella shim item.
-  - ○ Implement the migration adapter for lowering-facing resolved target, binding, effect, and layout facts.
-  - ○ Implement the migration adapter for graph-backed query/local-`auto`/`try(...)`/`on_error` facts that are still read from legacy validator state.
+  - ◐ Implement the migration adapter for lowering-facing resolved target, binding, effect, and layout facts. Progress: this lowering-facing adapter is now split into direct target, binding/type, and effect/layout seams instead of one broad fact-family bucket.
+    - ○ Implement the migration adapter for resolved direct-call, receiver-call, and helper-routing target facts.
+    - ○ Implement the migration adapter for lowering-facing binding/result type facts.
+    - ○ Implement the migration adapter for lowering-facing effect/capability and layout facts.
+  - ◐ Implement the migration adapter for graph-backed query/local-`auto`/`try(...)`/`on_error` facts that are still read from legacy validator state. Progress: this graph-facing adapter is now split into per-fact-family seams so the remaining legacy reads can be retired incrementally.
+    - ○ Implement the migration adapter for graph-backed local-`auto` facts.
+    - ○ Implement the migration adapter for graph-backed query facts.
+    - ○ Implement the migration adapter for graph-backed `try(...)` facts.
+    - ○ Implement the migration adapter for graph-backed `on_error` facts.
 - ◐ Implement semantic-product publication through `CompilePipelineOutput` and `Semantics::validate` now that the success-artifact contract is documented. Progress: this publication cut is now split into explicit producer and pipeline-surface slices instead of one mixed handoff item.
   - ○ Make `Semantics::validate` produce the semantic product as its canonical successful post-semantics result.
   - ○ Publish that semantic product on successful compile-pipeline results through `CompilePipelineOutput`.
@@ -178,18 +194,36 @@ Pipeline plumbing:
   - ○ Add deterministic ordering tests for semantic-product ownership/provenance surfaces.
 
 Lowering cutover:
-- ○ Implement the `prepareIrModule` / `IrLowerer::lower` entrypoint cutover now that the handoff contract is documented, so IR preparation consumes the semantic product directly and the raw-`Program` lowering path can be retired once the temporary adapter is removed.
+- ◐ Implement the `prepareIrModule` / `IrLowerer::lower` entrypoint cutover now that the handoff contract is documented. Progress: this entrypoint cutover is now split into IR preparation, lowerer entry, and raw-`Program` retirement seams instead of one umbrella handoff bullet.
+  - ○ Make `prepareIrModule` consume the semantic product directly instead of re-reading lowering facts from raw `Program` state.
+  - ○ Make `IrLowerer::lower` consume the semantic product directly at its main lowering entrypoint.
+  - ○ Retire the raw-`Program` lowering entry path once the temporary adapter is no longer needed.
 - ◐ Implement the `IrLowerer` entry-setup cutover now that the handoff contract is documented. Progress: the lowering entry setup is now split into explicit direct-call target, receiver-call target, and helper-routing slices instead of one umbrella target handoff item.
   - ○ Consume semantic-product direct-call targets in lowerer entry setup instead of re-deriving canonical callees from AST state.
   - ○ Consume semantic-product receiver/method-call targets in lowerer entry setup instead of re-deriving them from AST state.
   - ○ Consume semantic-product helper-routing choices in lowerer entry setup instead of re-deriving helper-vs-canonical paths from AST state.
 - ◐ Implement the lowerer type/binding setup cutover now that the handoff contract is documented. Progress: the lowerer binding cutover is now split into parameters/locals, temporaries/returns, and helper-owned binding metadata instead of one umbrella type handoff item.
-  - ○ Consume semantic-product parameter and local binding metadata in lowerer setup.
-  - ○ Consume semantic-product temporary and return binding metadata in lowerer setup.
-  - ○ Consume semantic-product helper-owned binding/type metadata in lowerer setup.
+  - ◐ Consume semantic-product parameter and local binding metadata in lowerer setup. Progress: this binding family is now split into parameter, local, and lowered entry-argument seams instead of one broad parameter/local bucket.
+    - ○ Consume semantic-product parameter binding metadata in lowerer setup.
+    - ○ Consume semantic-product local binding metadata in lowerer setup.
+    - ○ Consume semantic-product lowered entry-argument binding metadata in lowerer setup.
+  - ◐ Consume semantic-product temporary and return binding metadata in lowerer setup. Progress: this binding family is now split into temporaries, implicit helper temporaries, and returns instead of one broad temporary/return bucket.
+    - ○ Consume semantic-product temporary binding metadata in lowerer setup.
+    - ○ Consume semantic-product implicit helper-temporary metadata in lowerer setup.
+    - ○ Consume semantic-product return binding/result metadata in lowerer setup.
+  - ◐ Consume semantic-product helper-owned binding/type metadata in lowerer setup. Progress: this helper-owned family is now split into helper parameters, helper results, and helper-local synthetic metadata instead of one broad helper-owned bucket.
+    - ○ Consume semantic-product helper parameter/type metadata in lowerer setup.
+    - ○ Consume semantic-product helper result/type metadata in lowerer setup.
+    - ○ Consume semantic-product helper-local synthetic binding/type metadata in lowerer setup.
 - ◐ Implement the lowerer effect/capability and struct-layout setup cutover now that the handoff contract is documented. Progress: the remaining lowerer metadata handoff is now split into effect/capability facts and struct/layout facts instead of one umbrella setup item.
-  - ○ Consume semantic-product effect/capability summaries in lowerer setup.
-  - ○ Consume semantic-product struct/enum/layout metadata in lowerer setup.
+  - ◐ Consume semantic-product effect/capability summaries in lowerer setup. Progress: this metadata family is now split into effect summaries, capability summaries, and execution-boundary metadata instead of one broad effect/capability bucket.
+    - ○ Consume semantic-product effect summaries in lowerer setup.
+    - ○ Consume semantic-product capability summaries in lowerer setup.
+    - ○ Consume semantic-product execution-boundary metadata that still re-derives effect/capability facts from AST state.
+  - ◐ Consume semantic-product struct/enum/layout metadata in lowerer setup. Progress: this metadata family is now split into struct layout, enum metadata, and helper-owned layout classification seams instead of one broad layout bucket.
+    - ○ Consume semantic-product struct/layout metadata in lowerer setup.
+    - ○ Consume semantic-product enum metadata in lowerer setup.
+    - ○ Consume semantic-product helper-owned layout/classification metadata in lowerer setup.
 
 Coverage and migration cleanup:
 - ◐ Implement the narrow semantic-product unit/golden suite now that its fact coverage and scope are documented. Progress: the documented fact families are now split into explicit suite slices so the semantic-product inspection surface can be pinned incrementally.
@@ -202,13 +236,34 @@ Coverage and migration cleanup:
   - ○ Add end-to-end semantic-product boundary conformance for the VM lowering path.
   - ○ Add end-to-end semantic-product boundary conformance for the native lowering path.
 - ◐ Migrate tests and public testing helpers from `primec/testing/SemanticsValidationHelpers.h` now that their boundary/migration contract is documented, moving lowering-facing assertions onto the semantic-product inspection surface. Progress: this migration is now split into explicit helper-surface and assertion-migration slices instead of one broad cleanup item.
-  - ○ Move lowering-facing assertions onto semantic-product dump helpers or pipeline-facing conformance helpers.
-  - ○ Narrow `primec/testing/SemanticsValidationHelpers.h` to syntax-owned and provenance-owned assertions only.
-  - ○ Delete redundant lowering-facing public testing helper entrypoints once the semantic-product replacements exist.
+  - ◐ Move lowering-facing assertions onto semantic-product dump helpers or pipeline-facing conformance helpers. Progress: this assertion migration is now split into dump-based, pipeline-based, and backend-facing assertion seams instead of one broad assertion bucket.
+    - ○ Move lowering-facing dump assertions onto semantic-product dump helpers.
+    - ○ Move lowering-facing compile-pipeline assertions onto semantic-product pipeline conformance helpers.
+    - ○ Move lowering-facing backend-facing assertions onto semantic-product-aware backend conformance helpers.
+  - ◐ Narrow `primec/testing/SemanticsValidationHelpers.h` to syntax-owned and provenance-owned assertions only. Progress: this narrowing work is now split into syntax-owned, provenance-owned, and transitional compatibility seams instead of one broad header-cleanup item.
+    - ○ Keep only syntax-owned assertions in `primec/testing/SemanticsValidationHelpers.h`.
+    - ○ Keep only provenance-owned assertions in `primec/testing/SemanticsValidationHelpers.h`.
+    - ○ Delete transitional compatibility assertions from `primec/testing/SemanticsValidationHelpers.h` once replacements exist.
+  - ◐ Delete redundant lowering-facing public testing helper entrypoints once the semantic-product replacements exist. Progress: this removal work is now split into dump-helper, pipeline-helper, and backend-helper entrypoint cleanup seams instead of one broad deletion item.
+    - ○ Delete redundant lowering-facing dump helper entrypoints.
+    - ○ Delete redundant lowering-facing pipeline helper entrypoints.
+    - ○ Delete redundant lowering-facing backend helper entrypoints.
 - ◐ Delete redundant testing-only semantic snapshot plumbing now that its migration/removal contract is documented, leaving one canonical lowering-facing inspection surface once equivalent semantic-product dumps and conformance coverage exist. Progress: this removal is now split into explicit snapshot-transport and compatibility-helper cleanup slices instead of one broad deletion item.
-  - ○ Delete redundant testing-only semantic snapshot transport/plumbing once no lowering-facing test depends on it.
-  - ○ Delete compatibility helpers that only existed to expose lowering facts before the semantic product surface existed.
-- ○ Delete lowerer-side stdlib/helper alias fallback paths now that their semantic-product removal contract is documented, once equivalent canonical resolution is provided by the semantic product.
+  - ◐ Delete redundant testing-only semantic snapshot transport/plumbing once no lowering-facing test depends on it. Progress: this transport cleanup is now split into snapshot capture, snapshot serialization, and snapshot fixture seams instead of one broad transport bucket.
+    - ○ Delete redundant testing-only semantic snapshot capture plumbing.
+    - ○ Delete redundant testing-only semantic snapshot serialization/plumbing.
+    - ○ Delete redundant testing-only semantic snapshot fixture/loader plumbing.
+  - ◐ Delete compatibility helpers that only existed to expose lowering facts before the semantic product surface existed. Progress: this compatibility cleanup is now split into dump-facing, pipeline-facing, and backend-facing helper seams instead of one broad helper bucket.
+    - ○ Delete dump-facing compatibility helpers that only exposed lowering facts before the semantic-product dump existed.
+    - ○ Delete pipeline-facing compatibility helpers that only exposed lowering facts before semantic-product pipeline conformance existed.
+    - ○ Delete backend-facing compatibility helpers that only exposed lowering facts before semantic-product backend conformance existed.
+- ◐ Delete lowerer-side stdlib/helper alias fallback paths now that their semantic-product removal contract is documented, once equivalent canonical resolution is provided by the semantic product. Progress: this alias-fallback cleanup is now split into direct-call, receiver-call, and collection bridge fallback seams instead of one umbrella removal item.
+  - ○ Delete lowerer-side direct-call stdlib/helper alias fallback paths once semantic-product direct-call targets exist.
+  - ○ Delete lowerer-side receiver/method-call stdlib/helper alias fallback paths once semantic-product receiver-call targets exist.
+  - ○ Delete lowerer-side collection/builtin bridge alias fallback paths once semantic-product helper-routing facts exist.
 - ◐ Implement pipeline-facing tests that exercise the semantic-product inspection surface and its relation to existing AST/IR dumps once that stage exists, now that the test matrix is documented. Progress: the documented conformance matrix is now split into explicit inspection-order and backend-consumer slices instead of one broad pipeline test item.
   - ○ Add pipeline-facing tests that pin inspection-surface order and consistency across `ast-semantic`, semantic-product dump, and `ir`.
-  - ○ Add pipeline-facing tests that pin lowering consumption of semantic-product facts across C++/VM/native.
+  - ◐ Add pipeline-facing tests that pin lowering consumption of semantic-product facts across C++/VM/native. Progress: this backend-consumer coverage is now split into per-backend lowering consumers instead of one broad backend bucket.
+    - ○ Add pipeline-facing tests that pin lowering consumption of semantic-product facts on the C++ backend.
+    - ○ Add pipeline-facing tests that pin lowering consumption of semantic-product facts on the VM backend.
+    - ○ Add pipeline-facing tests that pin lowering consumption of semantic-product facts on the native backend.
