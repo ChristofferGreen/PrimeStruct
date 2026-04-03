@@ -75,6 +75,14 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
   const auto &params = *context.params;
   const auto &locals = *context.locals;
   const auto &dispatchResolvers = *context.dispatchResolvers;
+  auto publishArgumentValidationDiagnostic = [&](const Expr &diagnosticExpr) -> bool {
+    captureExprContext(diagnosticExpr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
+  auto failArgumentValidation = [&](const Expr &diagnosticExpr, std::string message) -> bool {
+    error_ = std::move(message);
+    return publishArgumentValidationDiagnostic(diagnosticExpr);
+  };
   auto inferCollectionBindingType = [&](const Expr &candidate,
                                         std::string &baseOut,
                                         std::vector<std::string> &argsOut) -> bool {
@@ -155,8 +163,9 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
     if (normalizedExpectedKeyType == "string") {
       if (!isStringExprForArgumentValidation(callExpr.args[0],
                                              dispatchResolvers)) {
-        error_ =
-            "argument type mismatch for " + diagnosticResolved + " parameter key";
+        (void)failArgumentValidation(
+            callExpr.args[0],
+            "argument type mismatch for " + diagnosticResolved + " parameter key");
         return true;
       }
       return false;
@@ -169,8 +178,9 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
     }
 
     if (isStringExprForArgumentValidation(callExpr.args[0], dispatchResolvers)) {
-      error_ =
-          "argument type mismatch for " + diagnosticResolved + " parameter key";
+      (void)failArgumentValidation(
+          callExpr.args[0],
+          "argument type mismatch for " + diagnosticResolved + " parameter key");
       return true;
     }
 
@@ -178,8 +188,9 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
         inferExprReturnKind(callExpr.args[0], params, locals);
     if (actualKeyKind != ReturnKind::Unknown &&
         actualKeyKind != expectedKeyKind) {
-      error_ =
-          "argument type mismatch for " + diagnosticResolved + " parameter key";
+      (void)failArgumentValidation(
+          callExpr.args[0],
+          "argument type mismatch for " + diagnosticResolved + " parameter key");
       return true;
     }
 
@@ -191,16 +202,18 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
   }
   if (normalizeBindingTypeName(expectedTypeName) == "string") {
     if (!isStringExprForArgumentValidation(arg, dispatchResolvers)) {
-      error_ = "argument type mismatch for " + diagnosticResolved +
-               " parameter " + param.name + ": expected string";
-      return false;
+      return failArgumentValidation(
+          arg,
+          "argument type mismatch for " + diagnosticResolved +
+              " parameter " + param.name + ": expected string");
     }
     return true;
   }
   if (isStringExprForArgumentValidation(arg, dispatchResolvers)) {
-    error_ = "argument type mismatch for " + diagnosticResolved +
-             " parameter " + param.name + ": expected " + expectedTypeText;
-    return false;
+    return failArgumentValidation(
+        arg,
+        "argument type mismatch for " + diagnosticResolved +
+            " parameter " + param.name + ": expected " + expectedTypeText);
   }
 
   std::string expectedBase;
@@ -217,21 +230,24 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
               normalizeBindingTypeName(actualElemType)) {
             return true;
           }
-          error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                   ": expected " + expectedTypeText + " got array<" + actualElemType + ">";
-          return false;
+          return failArgumentValidation(
+              arg,
+              "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                  ": expected " + expectedTypeText + " got array<" + actualElemType + ">");
         }
         if (dispatchResolvers.resolveVectorTarget != nullptr &&
             dispatchResolvers.resolveVectorTarget(arg, actualElemType)) {
-          error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                   ": expected " + expectedTypeText + " got vector<" + actualElemType + ">";
-          return false;
+          return failArgumentValidation(
+              arg,
+              "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                  ": expected " + expectedTypeText + " got vector<" + actualElemType + ">");
         }
         if (dispatchResolvers.resolveSoaVectorTarget != nullptr &&
             dispatchResolvers.resolveSoaVectorTarget(arg, actualElemType)) {
-          error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                   ": expected " + expectedTypeText + " got soa_vector<" + actualElemType + ">";
-          return false;
+          return failArgumentValidation(
+              arg,
+              "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                  ": expected " + expectedTypeText + " got soa_vector<" + actualElemType + ">");
         }
       } else if (normalizedExpectedBase == "vector" && expectedTemplateArgs.size() == 1) {
         std::string actualElemType;
@@ -241,21 +257,24 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
               normalizeBindingTypeName(actualElemType)) {
             return true;
           }
-          error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                   ": expected " + expectedTypeText + " got vector<" + actualElemType + ">";
-          return false;
+          return failArgumentValidation(
+              arg,
+              "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                  ": expected " + expectedTypeText + " got vector<" + actualElemType + ">");
         }
         if (dispatchResolvers.resolveSoaVectorTarget != nullptr &&
             dispatchResolvers.resolveSoaVectorTarget(arg, actualElemType)) {
-          error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                   ": expected " + expectedTypeText + " got soa_vector<" + actualElemType + ">";
-          return false;
+          return failArgumentValidation(
+              arg,
+              "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                  ": expected " + expectedTypeText + " got soa_vector<" + actualElemType + ">");
         }
         if (dispatchResolvers.resolveArrayTarget != nullptr &&
             dispatchResolvers.resolveArrayTarget(arg, actualElemType)) {
-          error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                   ": expected " + expectedTypeText + " got array<" + actualElemType + ">";
-          return false;
+          return failArgumentValidation(
+              arg,
+              "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                  ": expected " + expectedTypeText + " got array<" + actualElemType + ">");
         }
         std::string inferredBase;
         std::vector<std::string> inferredArgs;
@@ -270,19 +289,22 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
             if (normalizedExpectedArg == normalizedInferredArg) {
               return true;
             }
-            error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                     ": expected " + expectedTypeText + " got vector<" + inferredArgs.front() + ">";
-            return false;
+            return failArgumentValidation(
+                arg,
+                "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                    ": expected " + expectedTypeText + " got vector<" + inferredArgs.front() + ">");
           }
           if (normalizedInferredBase == "soa_vector") {
-            error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                     ": expected " + expectedTypeText + " got soa_vector<" + inferredArgs.front() + ">";
-            return false;
+            return failArgumentValidation(
+                arg,
+                "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                    ": expected " + expectedTypeText + " got soa_vector<" + inferredArgs.front() + ">");
           }
           if (normalizedInferredBase == "array") {
-            error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                     ": expected " + expectedTypeText + " got array<" + inferredArgs.front() + ">";
-            return false;
+            return failArgumentValidation(
+                arg,
+                "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                    ": expected " + expectedTypeText + " got array<" + inferredArgs.front() + ">");
           }
         } else if (inferCollectionBindingType(arg, inferredBase, inferredArgs)) {
           std::string inferredStructPath = inferredBase;
@@ -296,9 +318,10 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
                 normalizeBindingTypeName(actualElemType)) {
               return true;
             }
-            error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                     ": expected " + expectedTypeText + " got vector<" + actualElemType + ">";
-            return false;
+            return failArgumentValidation(
+                arg,
+                "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                    ": expected " + expectedTypeText + " got vector<" + actualElemType + ">");
           }
         }
       } else if ((normalizedExpectedBase == "Vector" ||
@@ -311,21 +334,24 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
                   normalizeBindingTypeName(actualElemType)) {
             return true;
           }
-          error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                   ": expected " + expectedTypeText + " got vector<" + actualElemType + ">";
-          return false;
+          return failArgumentValidation(
+              arg,
+              "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                  ": expected " + expectedTypeText + " got vector<" + actualElemType + ">");
         }
         if (dispatchResolvers.resolveSoaVectorTarget != nullptr &&
             dispatchResolvers.resolveSoaVectorTarget(arg, actualElemType)) {
-          error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                   ": expected " + expectedTypeText + " got soa_vector<" + actualElemType + ">";
-          return false;
+          return failArgumentValidation(
+              arg,
+              "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                  ": expected " + expectedTypeText + " got soa_vector<" + actualElemType + ">");
         }
         if (dispatchResolvers.resolveArrayTarget != nullptr &&
             dispatchResolvers.resolveArrayTarget(arg, actualElemType)) {
-          error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                   ": expected " + expectedTypeText + " got array<" + actualElemType + ">";
-          return false;
+          return failArgumentValidation(
+              arg,
+              "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                  ": expected " + expectedTypeText + " got array<" + actualElemType + ">");
         }
       } else if (normalizedExpectedBase == "soa_vector" &&
                  expectedTemplateArgs.size() == 1) {
@@ -336,21 +362,24 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
               normalizeBindingTypeName(actualElemType)) {
             return true;
           }
-          error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                   ": expected " + expectedTypeText + " got soa_vector<" + actualElemType + ">";
-          return false;
+          return failArgumentValidation(
+              arg,
+              "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                  ": expected " + expectedTypeText + " got soa_vector<" + actualElemType + ">");
         }
         if (dispatchResolvers.resolveVectorTarget != nullptr &&
             dispatchResolvers.resolveVectorTarget(arg, actualElemType)) {
-          error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                   ": expected " + expectedTypeText + " got vector<" + actualElemType + ">";
-          return false;
+          return failArgumentValidation(
+              arg,
+              "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                  ": expected " + expectedTypeText + " got vector<" + actualElemType + ">");
         }
         if (dispatchResolvers.resolveArrayTarget != nullptr &&
             dispatchResolvers.resolveArrayTarget(arg, actualElemType)) {
-          error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                   ": expected " + expectedTypeText + " got array<" + actualElemType + ">";
-          return false;
+          return failArgumentValidation(
+              arg,
+              "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                  ": expected " + expectedTypeText + " got array<" + actualElemType + ">");
         }
       } else if ((normalizedExpectedBase == "map" ||
                   normalizedExpectedBase == "std/collections/map") &&
@@ -363,10 +392,11 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
                  normalizeBindingTypeName(actualKeyType) ||
              normalizeBindingTypeName(expectedTemplateArgs[1]) !=
                  normalizeBindingTypeName(actualValueType))) {
-          error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                   ": expected " + expectedTypeText + " got map<" + actualKeyType + ", " +
-                   actualValueType + ">";
-          return false;
+          return failArgumentValidation(
+              arg,
+              "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                  ": expected " + expectedTypeText + " got map<" + actualKeyType + ", " +
+                  actualValueType + ">");
         }
         if (maybePreferExplicitCanonicalMapKeyDiagnostic(expectedTemplateArgs)) {
           return false;
@@ -384,10 +414,11 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
                   normalizeBindingTypeName(actualValueType)) {
             return true;
           }
-          error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                   ": expected " + expectedTypeText + " got map<" + actualKeyType + ", " +
-                   actualValueType + ">";
-          return false;
+          return failArgumentValidation(
+              arg,
+              "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                  ": expected " + expectedTypeText + " got map<" + actualKeyType + ", " +
+                  actualValueType + ">");
         }
 
         std::string inferredBase;
@@ -404,10 +435,11 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
                     normalizeBindingTypeName(inferredArgs[1])) {
               return true;
             }
-            error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                     ": expected " + expectedTypeText + " got map<" + inferredArgs[0] + ", " +
-                     inferredArgs[1] + ">";
-            return false;
+            return failArgumentValidation(
+                arg,
+                "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                    ": expected " + expectedTypeText + " got map<" + inferredArgs[0] + ", " +
+                    inferredArgs[1] + ">");
           }
         }
       }
@@ -432,24 +464,27 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
                   normalizeBindingTypeName(expectedTemplateArgs.front())) {
                 return true;
               }
-              error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                       ": expected " + expectedTypeText + " got vector<" + actualElemType + ">";
-              return false;
+              return failArgumentValidation(
+                  arg,
+                  "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                      ": expected " + expectedTypeText + " got vector<" + actualElemType + ">");
             }
           }
-          error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                   ": expected " + expectedTypeText + " got " +
-                   normalizeBindingTypeName(actualTypeText);
-          return false;
+          return failArgumentValidation(
+              arg,
+              "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                  ": expected " + expectedTypeText + " got " +
+                  normalizeBindingTypeName(actualTypeText));
         }
         actualBase = normalizeBindingTypeName(actualBase);
         if (isCollectionLikeTemplateBase(actualBase) &&
             normalizeBindingTypeName(actualTypeText) !=
                 normalizeBindingTypeName(expectedTypeText)) {
-          error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                   ": expected " + expectedTypeText + " got " +
-                   normalizeBindingTypeName(actualTypeText);
-          return false;
+          return failArgumentValidation(
+              arg,
+              "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+                  ": expected " + expectedTypeText + " got " +
+                  normalizeBindingTypeName(actualTypeText));
         }
       }
     }
@@ -464,21 +499,24 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
           normalizeBindingTypeName(actualElemType)) {
         return true;
       }
-      error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-               ": expected " + expectedTypeText + " got vector<" + actualElemType + ">";
-      return false;
+      return failArgumentValidation(
+          arg,
+          "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+              ": expected " + expectedTypeText + " got vector<" + actualElemType + ">");
     }
     if (dispatchResolvers.resolveSoaVectorTarget != nullptr &&
         dispatchResolvers.resolveSoaVectorTarget(arg, actualElemType)) {
-      error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-               ": expected " + expectedTypeText + " got soa_vector<" + actualElemType + ">";
-      return false;
+      return failArgumentValidation(
+          arg,
+          "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+              ": expected " + expectedTypeText + " got soa_vector<" + actualElemType + ">");
     }
     if (dispatchResolvers.resolveArrayTarget != nullptr &&
         dispatchResolvers.resolveArrayTarget(arg, actualElemType)) {
-      error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-               ": expected " + expectedTypeText + " got array<" + actualElemType + ">";
-      return false;
+      return failArgumentValidation(
+          arg,
+          "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+              ": expected " + expectedTypeText + " got array<" + actualElemType + ">");
     }
   }
 
@@ -493,10 +531,11 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
       return true;
     }
     if (actualKind != ReturnKind::Unknown && actualKind != expectedKind) {
-      error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-               ": expected " + typeNameForReturnKind(expectedKind) + " got " +
-               typeNameForReturnKind(actualKind);
-      return false;
+      return failArgumentValidation(
+          arg,
+          "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+              ": expected " + typeNameForReturnKind(expectedKind) + " got " +
+              typeNameForReturnKind(actualKind));
     }
     return true;
   }
@@ -631,9 +670,10 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
         isCompatibleExperimentalSoaVectorReceiver) {
       return true;
     }
-    error_ = argumentStructMismatchDiagnostic(
-        diagnosticResolved, param.name, expectedStructPath, actualStructPath);
-    return false;
+    return failArgumentValidation(
+        arg,
+        argumentStructMismatchDiagnostic(
+            diagnosticResolved, param.name, expectedStructPath, actualStructPath));
   }
   if (actualStructPath.empty()) {
     if (isCompatibleExperimentalMapReceiver || isCompatibleCanonicalVectorReceiver ||
@@ -669,10 +709,11 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
     }
     const ReturnKind actualKind = inferExprReturnKind(arg, params, locals);
     if (actualKind != ReturnKind::Unknown) {
-      error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-               ": expected " + expectedStructPath + " got " +
-               typeNameForReturnKind(actualKind);
-      return false;
+      return failArgumentValidation(
+          arg,
+          "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+              ": expected " + expectedStructPath + " got " +
+              typeNameForReturnKind(actualKind));
     }
   }
   return true;
@@ -688,11 +729,18 @@ bool SemanticsValidator::validateSpreadArgumentTypeAgainstParam(
   const std::string &diagnosticResolved = *context.diagnosticResolved;
   const auto &params = *context.params;
   const auto &locals = *context.locals;
+  auto publishSpreadArgumentValidationDiagnostic = [&](const Expr &diagnosticExpr) -> bool {
+    captureExprContext(diagnosticExpr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
+  auto failSpreadArgumentValidation = [&](const Expr &diagnosticExpr, std::string message) -> bool {
+    error_ = std::move(message);
+    return publishSpreadArgumentValidationDiagnostic(diagnosticExpr);
+  };
 
   std::string actualElementTypeText;
   if (!resolveArgsPackElementTypeForExpr(arg, params, locals, actualElementTypeText)) {
-    error_ = "spread argument requires args<T> value";
-    return false;
+    return failSpreadArgumentValidation(arg, "spread argument requires args<T> value");
   }
   const ReturnKind expectedKind = returnKindForTypeName(expectedTypeName);
   if (expectedKind != ReturnKind::Unknown) {
@@ -701,10 +749,11 @@ bool SemanticsValidator::validateSpreadArgumentTypeAgainstParam(
         isSoftwareNumericParamCompatible(expectedKind, actualKind)) {
       return true;
     }
-    error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-             ": expected " + typeNameForReturnKind(expectedKind) + " got " +
-             typeNameForReturnKind(actualKind);
-    return false;
+    return failSpreadArgumentValidation(
+        arg,
+        "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+            ": expected " + typeNameForReturnKind(expectedKind) + " got " +
+            typeNameForReturnKind(actualKind));
   }
 
   const std::string expectedStructPath =
@@ -713,25 +762,28 @@ bool SemanticsValidator::validateSpreadArgumentTypeAgainstParam(
     const std::string actualStructPath =
         resolveStructTypePath(actualElementTypeText, arg.namespacePrefix, structNames_);
     if (!actualStructPath.empty() && actualStructPath != expectedStructPath) {
-      error_ = argumentStructMismatchDiagnostic(
-          diagnosticResolved, param.name, expectedStructPath, actualStructPath);
-      return false;
+      return failSpreadArgumentValidation(
+          arg,
+          argumentStructMismatchDiagnostic(
+              diagnosticResolved, param.name, expectedStructPath, actualStructPath));
     }
     if (actualStructPath.empty() &&
         normalizeBindingTypeName(actualElementTypeText) != expectedStructPath) {
-      error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-               ": expected " + expectedStructPath + " got " +
-               normalizeBindingTypeName(actualElementTypeText);
-      return false;
+      return failSpreadArgumentValidation(
+          arg,
+          "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+              ": expected " + expectedStructPath + " got " +
+              normalizeBindingTypeName(actualElementTypeText));
     }
     return true;
   }
   if (normalizeBindingTypeName(actualElementTypeText) !=
       normalizeBindingTypeName(expectedTypeText)) {
-    error_ = "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-             ": expected " + expectedTypeText + " got " +
-             normalizeBindingTypeName(actualElementTypeText);
-    return false;
+    return failSpreadArgumentValidation(
+        arg,
+        "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+            ": expected " + expectedTypeText + " got " +
+            normalizeBindingTypeName(actualElementTypeText));
   }
   return true;
 }

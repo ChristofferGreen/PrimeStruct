@@ -342,6 +342,16 @@
             "bool SemanticsValidator::validateArgumentTypeAgainstParam") !=
         std::string::npos);
   CHECK(semanticsExprArgumentValidationSource.find(
+            "auto publishArgumentValidationDiagnostic = [&](const Expr &diagnosticExpr) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprArgumentValidationSource.find(
+            "auto publishSpreadArgumentValidationDiagnostic = [&](const Expr &diagnosticExpr) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprArgumentValidationSource.find("captureExprContext(diagnosticExpr);") !=
+        std::string::npos);
+  CHECK(semanticsExprArgumentValidationSource.find("return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprArgumentValidationSource.find(
             "bool SemanticsValidator::validateSpreadArgumentTypeAgainstParam") !=
         std::string::npos);
   CHECK(semanticsExprArgumentValidationSource.find(
