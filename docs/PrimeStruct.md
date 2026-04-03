@@ -431,6 +431,28 @@ Planned lowerer entry-setup handoff:
   - helper-shadow and canonical-path behavior matches current semantics without lowerer-side re-resolution
   - the old AST-derived entry target path is removed or reduced to a temporary adapter boundary only
 
+Planned lowerer type/binding handoff:
+- After entry setup is cut over, lowering should consume binding metadata from the semantic product instead of
+  re-running helper-family checks, fallback type inference, or binding-shape recovery against the AST.
+- The semantic product should publish, per lowered binding/expression site:
+  - resolved binding/result types after semantic canonicalization
+  - whether the site is value, reference, pointer, omitted-envelope, or query-backed
+  - the resolved helper-family choice when old-surface versus canonical helper routing matters for lowering
+  - enough provenance to map lowered temporaries and storage decisions back to source-owned spans and stable semantic
+    identities
+- Lowerer type setup should treat that metadata as authoritative for:
+  - local storage layout and temp allocation decisions
+  - expression result typing used by `prepareIrModule` and statement lowering
+  - helper-specific binding behavior that currently depends on repeated AST pattern checks
+- AST-backed semantic caches may still be consulted temporarily through the migration adapter, but the cutover target is
+  that type/binding setup becomes a pure semantic-product consumer rather than a second inference pass.
+- Completion criteria:
+  - lowerer binding/type setup no longer re-derives helper routing or binding classification from AST structure
+  - direct, helper-shadowed, and canonical helper paths produce the same lowered type/binding behavior when driven only
+    from semantic-product metadata
+  - lowering tests that currently need AST-semantic snapshots for binding/type facts can move to the semantic-product
+    dump or conformance surface instead
+
 Planned inspection-surface relationship:
 - `pre_ast`: post-import, post-text-transform source text
 - `ast`: parser-owned syntax tree before semantic canonicalization
