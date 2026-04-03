@@ -592,6 +592,14 @@
             "bool SemanticsValidator::validateExprResolvedCallArguments") !=
         std::string::npos);
   CHECK(semanticsExprResolvedCallArgumentsSource.find(
+            "auto publishResolvedCallArgumentDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprResolvedCallArgumentsSource.find("captureExprContext(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprResolvedCallArgumentsSource.find(
+            "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprResolvedCallArgumentsSource.find(
             "const std::vector<Expr> *orderedCallArgs = &expr.args;") !=
         std::string::npos);
   CHECK(semanticsExprResolvedCallArgumentsSource.find(

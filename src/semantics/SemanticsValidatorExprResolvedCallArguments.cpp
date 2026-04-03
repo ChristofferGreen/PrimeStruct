@@ -39,6 +39,10 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
       context.diagnosticResolved == nullptr) {
     return true;
   }
+  auto publishResolvedCallArgumentDiagnostic = [&]() -> bool {
+    captureExprContext(expr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
 
   Expr reorderedCallExpr;
   Expr trimmedTypeNamespaceCallExpr;
@@ -76,7 +80,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     if (error_.find("argument count mismatch") != std::string::npos) {
       error_ = "argument count mismatch for " + *context.diagnosticResolved;
     }
-    return false;
+    return publishResolvedCallArgumentDiagnostic();
   }
 
   std::vector<const Expr *> orderedArgs;
@@ -91,7 +95,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     } else {
       error_ = orderError;
     }
-    return false;
+    return publishResolvedCallArgumentDiagnostic();
   }
 
   for (const auto *arg : orderedArgs) {
@@ -194,7 +198,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
         error_ = "argument type mismatch for " + *context.diagnosticResolved +
                  " parameter " + param.name + ": expected " + expectedTypeText +
                  " got " + actualVectorSurface + "<" + actualElemType + ">";
-        return false;
+        return publishResolvedCallArgumentDiagnostic();
       }
     }
     if (!this->validateArgumentTypeAgainstParam(
@@ -268,7 +272,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
         continue;
       }
       error_ = "unsafe reference escapes across safe boundary to " + resolved;
-      return false;
+      return publishResolvedCallArgumentDiagnostic();
     }
   }
 
@@ -308,7 +312,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
           "map literal requires relocation-trivial map key type until container move/reallocation semantics are "
           "implemented: " +
           keyType;
-      return false;
+      return publishResolvedCallArgumentDiagnostic();
     }
     visitingStructs.clear();
     if (!valueType.empty() &&
@@ -320,7 +324,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
           "map literal requires relocation-trivial map value type until container move/reallocation semantics are "
           "implemented: " +
           valueType;
-      return false;
+      return publishResolvedCallArgumentDiagnostic();
     }
   }
 
