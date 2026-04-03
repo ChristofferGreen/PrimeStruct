@@ -760,3 +760,48 @@ TEST_CASE("semantics validator build struct-field publication stays stable") {
   CHECK(buildStructFieldsSource.find("return publishStructFieldDiagnostic();") !=
         std::string::npos);
 }
+
+TEST_CASE("semantics validator build parameter publication stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path buildParametersPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorBuildParameters.cpp";
+  REQUIRE(std::filesystem::exists(buildParametersPath));
+
+  const std::string buildParametersSource = readText(buildParametersPath);
+  CHECK(buildParametersSource.find("bool SemanticsValidator::buildParameters()") !=
+        std::string::npos);
+  CHECK(buildParametersSource.find(
+            "auto publishBuildParameterDefinitionDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(buildParametersSource.find(
+            "auto publishParameterDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(buildParametersSource.find("captureDefinitionContext(def);") !=
+        std::string::npos);
+  CHECK(buildParametersSource.find("captureExprContext(param);") !=
+        std::string::npos);
+  CHECK(buildParametersSource.find("return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(buildParametersSource.find(
+            "parameter default must be a literal or pure expression: ") !=
+        std::string::npos);
+  CHECK(buildParametersSource.find(
+            "Copy/Move helpers require [Reference<Self>] parameter: ") !=
+        std::string::npos);
+  CHECK(buildParametersSource.find("return publishParameterDiagnostic();") !=
+        std::string::npos);
+  CHECK(buildParametersSource.find(
+            "return publishBuildParameterDefinitionDiagnostic();") !=
+        std::string::npos);
+}

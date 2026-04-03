@@ -96,6 +96,10 @@ bool SemanticsValidator::buildParameters() {
 
   for (const auto &def : program_.definitions) {
     DefinitionContextScope definitionScope(*this, def);
+    auto publishBuildParameterDefinitionDiagnostic = [&]() -> bool {
+      captureDefinitionContext(def);
+      return publishCurrentStructuredDiagnosticNow();
+    };
     ValidationContext definitionValidationContext;
     definitionValidationContext.definitionPath = def.fullPath;
     for (const auto &transform : def.transforms) {
@@ -210,30 +214,34 @@ bool SemanticsValidator::buildParameters() {
       return true;
     };
     for (const auto &param : def.parameters) {
+      auto publishParameterDiagnostic = [&]() -> bool {
+        captureExprContext(param);
+        return publishCurrentStructuredDiagnosticNow();
+      };
       if (!param.isBinding) {
         error_ = "parameters must use binding syntax: " + def.fullPath;
-        return false;
+        return publishParameterDiagnostic();
       }
       if (param.hasBodyArguments || !param.bodyArguments.empty()) {
         error_ = "parameter does not accept block arguments: " + param.name;
-        return false;
+        return publishParameterDiagnostic();
       }
       if (!seen.insert(param.name).second) {
         error_ = "duplicate parameter: " + param.name;
-        return false;
+        return publishParameterDiagnostic();
       }
       BindingInfo binding;
       std::optional<std::string> restrictType;
       if (!parseBindingInfo(param, def.namespacePrefix, structNames_, importAliases_, binding, restrictType, error_)) {
-        return false;
+        return publishParameterDiagnostic();
       }
       if (binding.typeName == "uninitialized") {
         error_ = "uninitialized storage is not allowed on parameters: " + param.name;
-        return false;
+        return publishParameterDiagnostic();
       }
       if (param.args.size() > 1) {
         error_ = "parameter defaults accept at most one argument: " + param.name;
-        return false;
+        return publishParameterDiagnostic();
       }
       if (param.args.size() == 1 &&
           !isDefaultExprAllowed(param.args.front(), defaultResolvesToDefinition) &&
@@ -243,7 +251,7 @@ bool SemanticsValidator::buildParameters() {
         } else {
           error_ = "parameter default must be a literal or pure expression: " + param.name;
         }
-        return false;
+        return publishParameterDiagnostic();
       }
       if (!hasExplicitBindingTypeTransform(param) && param.args.size() == 1) {
         BindingInfo inferredBinding;
@@ -254,7 +262,7 @@ bool SemanticsValidator::buildParameters() {
         }
       }
       if (!validateBuiltinMapKeyType(binding, &def.templateArgs, error_)) {
-        return false;
+        return publishParameterDiagnostic();
       }
       std::string argsPackElementType;
       if (getArgsPackElementType(binding, argsPackElementType)) {
@@ -265,7 +273,7 @@ bool SemanticsValidator::buildParameters() {
           if ((normalizedElementBase == "Pointer" || normalizedElementBase == "Reference") &&
               normalizeBindingTypeName(elementArg) == "string") {
             error_ = "variadic args<T> does not support string pointers or references";
-            return false;
+            return publishParameterDiagnostic();
           }
         }
       }
@@ -283,7 +291,7 @@ bool SemanticsValidator::buildParameters() {
                                     hasTemplate,
                                     def.namespacePrefix)) {
           error_ = "restrict type does not match binding type";
-          return false;
+          return publishParameterDiagnostic();
         }
       }
       params.push_back(std::move(info));
@@ -307,44 +315,44 @@ bool SemanticsValidator::buildParameters() {
       }
       if (sawMut) {
         error_ = "duplicate mut transform on " + def.fullPath;
-        return false;
+        return publishBuildParameterDefinitionDiagnostic();
       }
       sawMut = true;
       if (!transform.templateArgs.empty()) {
         error_ = "mut transform does not accept template arguments on " + def.fullPath;
-        return false;
+        return publishBuildParameterDefinitionDiagnostic();
       }
       if (!transform.arguments.empty()) {
         error_ = "mut transform does not accept arguments on " + def.fullPath;
-        return false;
+        return publishBuildParameterDefinitionDiagnostic();
       }
     }
     if (sawMut && !isStructHelper) {
       error_ = "mut transform is only supported on struct helpers: " + def.fullPath;
-      return false;
+      return publishBuildParameterDefinitionDiagnostic();
     }
     if (sawMut && isStaticHelper) {
       error_ = "mut transform is not allowed on static helpers: " + def.fullPath;
-      return false;
+      return publishBuildParameterDefinitionDiagnostic();
     }
 
     if (isLifecycle) {
       if (isCopyHelperName(def.fullPath)) {
         if (params.size() != 1) {
           error_ = "Copy/Move helpers require exactly one parameter: " + def.fullPath;
-          return false;
+          return publishBuildParameterDefinitionDiagnostic();
         }
         const auto &copyParam = params.front();
         if (copyParam.binding.typeName != "Reference" || copyParam.binding.typeTemplateArg != parentPath) {
           error_ = "Copy/Move helpers require [Reference<Self>] parameter: " + def.fullPath;
-          return false;
+          return publishBuildParameterDefinitionDiagnostic();
         }
       }
     }
     if (isStructHelper && !isStaticHelper) {
       if (!seen.insert("this").second) {
         error_ = "duplicate parameter: this";
-        return false;
+        return publishBuildParameterDefinitionDiagnostic();
       }
       ParameterInfo info;
       info.name = "this";
