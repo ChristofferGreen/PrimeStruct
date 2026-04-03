@@ -9,10 +9,10 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     const std::unordered_map<std::string, BindingInfo> &activeLocals,
     DefinitionReturnInferenceState &state) {
   auto failInferDefinitionDiagnostic = [&](std::string message) -> bool {
-    if (error_.empty()) {
-      error_ = std::move(message);
+    if (!error_.empty()) {
+      return false;
     }
-    return false;
+    return failDefinitionDiagnostic(def, std::move(message));
   };
   auto bindingTypeText = [](const BindingInfo &binding) {
     if (binding.typeTemplateArg.empty()) {
@@ -214,8 +214,7 @@ bool SemanticsValidator::inferDefinitionStatementReturns(
     std::unordered_map<std::string, BindingInfo> &activeLocals,
     DefinitionReturnInferenceState &state) {
   auto failInferDefinitionStatementDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return false;
+    return failExprDiagnostic(stmt, std::move(message));
   };
   if (stmt.isBinding) {
     BindingInfo info;
@@ -293,10 +292,10 @@ bool SemanticsValidator::inferDefinitionStatementReturns(
 
 bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
   auto failInferDefinitionDiagnostic = [&](std::string message) -> bool {
-    if (error_.empty()) {
-      error_ = std::move(message);
+    if (!error_.empty()) {
+      return false;
     }
-    return false;
+    return failDefinitionDiagnostic(def, std::move(message));
   };
   auto kindIt = returnKinds_.find(def.fullPath);
   if (kindIt == returnKinds_.end()) {

@@ -69,13 +69,10 @@
             "auto publishPostAccessPrecheckDiagnostic = [&]() -> bool {") ==
         std::string::npos);
   CHECK(semanticsExprPostAccessPrechecksSource.find(
-            "auto publishPostAccessPrecheckDiagnostic = [&]() -> bool {") !=
-        std::string::npos);
-  CHECK(semanticsExprPostAccessPrechecksSource.find(
             "auto failPostAccessPrecheckDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
   CHECK(semanticsExprPostAccessPrechecksSource.find(
-            "error_ = std::move(message);") !=
+            "return failExprDiagnostic(expr, std::move(message));") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("if (!expr.isMethodCall && setupOut.isStdNamespacedVectorCountCall &&") ==
         std::string::npos);
@@ -908,10 +905,10 @@
   CHECK(semanticsExprFieldResolutionSource.find("bool SemanticsValidator::validateExprFieldAccess") !=
         std::string::npos);
   CHECK(semanticsExprFieldResolutionSource.find(
-            "auto publishFieldAccessDiagnostic = [&]() -> bool {") !=
+            "auto failFieldAccessDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
   CHECK(semanticsExprFieldResolutionSource.find(
-            "auto failFieldAccessDiagnostic = [&](std::string message) -> bool {") !=
+            "return failExprDiagnostic(expr, error_);") !=
         std::string::npos);
   CHECK(semanticsExprFieldResolutionSource.find(
             "bool SemanticsValidator::resolveStructFieldBinding(const std::vector<ParameterInfo> &params,") !=

@@ -210,10 +210,6 @@ bool SemanticsValidator::buildParameters() {
       return true;
     };
     for (const auto &param : def.parameters) {
-      auto publishParameterDiagnostic = [&]() -> bool {
-        captureExprContext(param);
-        return publishCurrentStructuredDiagnosticNow();
-      };
       auto failParameterDiagnostic = [&](std::string message) -> bool {
         return failExprDiagnostic(param, std::move(message));
       };
@@ -231,7 +227,7 @@ bool SemanticsValidator::buildParameters() {
       BindingInfo binding;
       std::optional<std::string> restrictType;
       if (!parseBindingInfo(param, def.namespacePrefix, structNames_, importAliases_, binding, restrictType, error_)) {
-        return publishParameterDiagnostic();
+        return failExprDiagnostic(param, error_);
       }
       if (binding.typeName == "uninitialized") {
         return failParameterDiagnostic(
@@ -264,7 +260,7 @@ bool SemanticsValidator::buildParameters() {
         }
       }
       if (!validateBuiltinMapKeyType(binding, &def.templateArgs, error_)) {
-        return publishParameterDiagnostic();
+        return failExprDiagnostic(param, error_);
       }
       std::string argsPackElementType;
       if (getArgsPackElementType(binding, argsPackElementType)) {

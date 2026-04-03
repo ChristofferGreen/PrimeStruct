@@ -59,8 +59,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
     return failExprDiagnostic(stmt, std::move(message));
   };
   auto rewriteAutoReturnDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return false;
+    return failExprDiagnostic(stmt, std::move(message));
   };
   if (hasNamedArguments(stmt.argNames)) {
     return failReturnDiagnostic("named arguments not supported for builtin calls");

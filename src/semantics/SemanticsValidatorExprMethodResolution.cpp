@@ -289,8 +289,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       return false;
     }
   } else if (rejectBuiltinStringCountShadowOnMapAccessReceiver(resolved)) {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
+    return failMethodResolutionDiagnostic(error_);
   } else if (hasBlockArgs) {
     const std::string pointerLikeType =
         inferPointerLikeCallReturnType(expr.args.front(), params, locals);

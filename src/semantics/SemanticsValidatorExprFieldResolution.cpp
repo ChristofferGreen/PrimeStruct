@@ -5,10 +5,6 @@ namespace primec::semantics {
 bool SemanticsValidator::validateExprFieldAccess(const std::vector<ParameterInfo> &params,
                                                  const std::unordered_map<std::string, BindingInfo> &locals,
                                                  const Expr &expr) {
-  auto publishFieldAccessDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failFieldAccessDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(expr, std::move(message));
   };
@@ -40,7 +36,7 @@ bool SemanticsValidator::validateExprFieldAccess(const std::vector<ParameterInfo
         return failFieldAccessDiagnostic("unknown field: " + expr.name);
       }
     }
-    return publishFieldAccessDiagnostic();
+    return failExprDiagnostic(expr, error_);
   }
   return true;
 }

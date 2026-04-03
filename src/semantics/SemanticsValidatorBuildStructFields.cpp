@@ -5,10 +5,6 @@ namespace primec::semantics {
 bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
                                                    const Expr &fieldStmt,
                                                    BindingInfo &bindingOut) {
-  auto publishStructFieldDiagnostic = [&]() -> bool {
-    captureExprContext(fieldStmt);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failStructFieldDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(fieldStmt, std::move(message));
   };
@@ -20,13 +16,13 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
   }
   if (hasExplicitBindingTypeTransform(fieldStmt)) {
     if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {
-      return publishStructFieldDiagnostic();
+      return failExprDiagnostic(fieldStmt, error_);
     }
     return true;
   }
   if (lookupGraphLocalAutoBinding(structDef.fullPath, fieldStmt, bindingOut)) {
     if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {
-      return publishStructFieldDiagnostic();
+      return failExprDiagnostic(fieldStmt, error_);
     }
     return true;
   }
@@ -43,7 +39,7 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
     if (!(inferred.typeName == "array" && inferred.typeTemplateArg.empty())) {
       bindingOut = std::move(inferred);
       if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {
-        return publishStructFieldDiagnostic();
+        return failExprDiagnostic(fieldStmt, error_);
       }
       return true;
     }
@@ -54,7 +50,7 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
       bindingOut.typeName = std::move(structPath);
       bindingOut.typeTemplateArg.clear();
       if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {
-        return publishStructFieldDiagnostic();
+        return failExprDiagnostic(fieldStmt, error_);
       }
       return true;
     }

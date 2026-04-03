@@ -7,7 +7,11 @@
 namespace primec::semantics {
 
 bool SemanticsValidator::buildDefinitionMaps() {
-  auto failBuildDefinitionMapDiagnostic = [&](std::string message) -> bool {
+  auto failBuildDefinitionMapDiagnostic = [&](std::string message,
+                                              const Definition *def = nullptr) -> bool {
+    if (def != nullptr) {
+      return failDefinitionDiagnostic(*def, std::move(message));
+    }
     return failUncontextualizedDiagnostic(std::move(message));
   };
   defaultEffectSet_.clear();
@@ -134,16 +138,16 @@ bool SemanticsValidator::buildDefinitionMaps() {
   for (const auto &def : program_.definitions) {
     DefinitionContextScope definitionScope(*this, def);
     if (defMap_.count(def.fullPath) > 0) {
-      captureDefinitionContext(def);
       return failBuildDefinitionMapDiagnostic("duplicate definition: " +
-                                              def.fullPath);
+                                              def.fullPath,
+                                              &def);
     }
     if (def.fullPath.find('/', 1) == std::string::npos) {
       const std::string rootName = def.fullPath.substr(1);
       if ((mathImportAll_ || mathImports_.count(rootName) > 0) && isMathBuiltinName(rootName)) {
-        captureDefinitionContext(def);
         return failBuildDefinitionMapDiagnostic(
-            "import creates name conflict: " + rootName);
+            "import creates name conflict: " + rootName,
+            &def);
       }
     }
     const bool isStructHelper = isStructHelperDefinition(def);

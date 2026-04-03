@@ -14,13 +14,8 @@ bool SemanticsValidator::validateExprPostAccessPrechecks(
     size_t statementIndex,
     bool &handledOut) {
   handledOut = false;
-  auto publishPostAccessPrecheckDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failPostAccessPrecheckDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishPostAccessPrecheckDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
 
   if (usedMethodTarget && !resolvedMethod) {

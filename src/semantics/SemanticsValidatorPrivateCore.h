@@ -216,8 +216,6 @@
   void rememberFirstCollectedDiagnosticMessage(const std::string &message);
   bool publishPassesEffectsDiagnostic(const Expr *expr = nullptr);
   bool publishPassesDefinitionsDiagnostic(const Expr *expr = nullptr);
-  bool publishPassesExecutionsDiagnostic();
-  bool publishPassesOmittedInitializersDiagnostic(const Expr *expr = nullptr);
   bool publishPassesStructLayoutsDiagnostic();
   bool failUncontextualizedDiagnostic(std::string message);
   bool publishCurrentStructuredDiagnosticNow();

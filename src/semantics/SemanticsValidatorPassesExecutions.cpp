@@ -5,20 +5,12 @@
 
 namespace primec::semantics {
 
-bool SemanticsValidator::publishPassesExecutionsDiagnostic() {
-  if (currentExecutionContext_ != nullptr) {
-    captureExecutionContext(*currentExecutionContext_);
-  }
-  return publishCurrentStructuredDiagnosticNow();
-}
-
 bool SemanticsValidator::validateExecutions() {
   std::vector<SemanticDiagnosticRecord> collectedRecords;
   const bool collectDiagnostics = shouldCollectStructuredDiagnostics();
   auto validateExecution = [&](const Execution &exec) -> bool {
     auto failPassesExecutionsDiagnostic = [&](std::string message) -> bool {
-      error_ = std::move(message);
-      return publishPassesExecutionsDiagnostic();
+      return failExecutionDiagnostic(exec, std::move(message));
     };
     ExecutionContextScope executionScope(*this, exec);
     ValidationContextScope validationContextScope(*this, buildExecutionValidationContext(exec));
@@ -56,7 +48,7 @@ bool SemanticsValidator::validateExecutions() {
         }
         sawEffects = true;
         if (!validateEffectsTransform(transform, exec.fullPath, error_)) {
-          return publishPassesExecutionsDiagnostic();
+          return failExecutionDiagnostic(exec, error_);
         }
       } else if (transform.name == "capabilities") {
         if (sawCapabilities) {
@@ -64,7 +56,7 @@ bool SemanticsValidator::validateExecutions() {
         }
         sawCapabilities = true;
         if (!validateCapabilitiesTransform(transform, exec.fullPath, error_)) {
-          return publishPassesExecutionsDiagnostic();
+          return failExecutionDiagnostic(exec, error_);
         }
       } else if (transform.name == "align_bytes" || transform.name == "align_kbytes") {
         return failPassesExecutionsDiagnostic("alignment transforms are not supported on executions: " + exec.fullPath);
@@ -99,11 +91,11 @@ bool SemanticsValidator::validateExecutions() {
       }
     }
     if (!validateNamedArguments(exec.arguments, exec.argumentNames, resolvedPath, error_)) {
-      return publishPassesExecutionsDiagnostic();
+      return failExecutionDiagnostic(exec, error_);
     }
     const auto &execParams = paramsByDef_[resolvedPath];
     if (!validateNamedArgumentsAgainstParams(execParams, exec.argumentNames, error_)) {
-      return publishPassesExecutionsDiagnostic();
+      return failExecutionDiagnostic(exec, error_);
     }
     Expr execCall;
     execCall.kind = Expr::Kind::Call;

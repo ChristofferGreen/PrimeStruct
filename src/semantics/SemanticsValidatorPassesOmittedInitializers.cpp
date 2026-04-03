@@ -7,22 +7,18 @@
 
 namespace primec::semantics {
 
-bool SemanticsValidator::publishPassesOmittedInitializersDiagnostic(const Expr *expr) {
-  if (expr != nullptr) {
-    captureExprContext(*expr);
-  } else if (currentDefinitionContext_ != nullptr) {
-    captureDefinitionContext(*currentDefinitionContext_);
-  }
-  return publishCurrentStructuredDiagnosticNow();
-}
-
 bool SemanticsValidator::validateOmittedBindingInitializer(const Expr &binding,
                                                            const BindingInfo &info,
                                                            const std::string &namespacePrefix) {
   auto failPassesOmittedInitializersDiagnostic =
       [&](const Expr *expr, std::string message) -> bool {
-    error_ = std::move(message);
-    return publishPassesOmittedInitializersDiagnostic(expr);
+    if (expr != nullptr) {
+      return failExprDiagnostic(*expr, std::move(message));
+    }
+    if (currentDefinitionContext_ != nullptr) {
+      return failDefinitionDiagnostic(*currentDefinitionContext_, std::move(message));
+    }
+    return failUncontextualizedDiagnostic(std::move(message));
   };
   if (!hasExplicitBindingTypeTransform(binding)) {
     return failPassesOmittedInitializersDiagnostic(

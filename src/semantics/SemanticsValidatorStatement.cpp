@@ -57,13 +57,8 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
                                            const std::vector<Expr> *enclosingStatements,
                                            size_t statementIndex) {
   ExprContextScope statementScope(*this, stmt);
-  auto publishStatementDiagnostic = [&]() -> bool {
-    captureExprContext(stmt);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failStatementDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishStatementDiagnostic();
+    return failExprDiagnostic(stmt, std::move(message));
   };
   const std::vector<std::string> *definitionTemplateArgs = nullptr;
   auto currentDefIt = defMap_.find(currentValidationContext_.definitionPath);

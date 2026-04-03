@@ -393,8 +393,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
           if ((*dispatchResolvers).resolveStringTarget != nullptr &&
               (*dispatchResolvers).resolveStringTarget(keyExpr)) {
             setCanonicalMapKeyMismatch(receiverExpr, helperName, mapKeyType);
-            captureExprContext(expr);
-            return publishCurrentStructuredDiagnosticNow();
+            return failExprDiagnostic(expr, error_);
           }
           ReturnKind candidateKind =
               inferExprReturnKind(keyExpr, params, locals);
