@@ -827,14 +827,19 @@ TEST_CASE("semantics validator build lifecycle publication stays stable") {
   CHECK(buildLifecycleSource.find(
             "auto publishLifecycleDiagnostic = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(buildLifecycleSource.find(
+            "auto failLifecycleDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(buildLifecycleSource.find("captureDefinitionContext(def);") !=
         std::string::npos);
   CHECK(buildLifecycleSource.find("return publishCurrentStructuredDiagnosticNow();") !=
         std::string::npos);
+  CHECK(buildLifecycleSource.find("error_ = std::move(message);") !=
+        std::string::npos);
   CHECK(buildLifecycleSource.find(
             "lifecycle helper must be nested inside a struct: ") !=
         std::string::npos);
-  CHECK(buildLifecycleSource.find("return publishLifecycleDiagnostic();") !=
+  CHECK(buildLifecycleSource.find("return failLifecycleDiagnostic(") !=
         std::string::npos);
 }
 
@@ -940,11 +945,19 @@ TEST_CASE("semantics validator build struct-field publication stays stable") {
             "auto publishStructFieldDiagnostic = [&]() -> bool {") !=
         std::string::npos);
   CHECK(buildStructFieldsSource.find(
+            "auto failStructFieldDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
+  CHECK(buildStructFieldsSource.find(
             "auto publishSoaFieldEnvelopeDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(buildStructFieldsSource.find(
+            "auto failSoaFieldEnvelopeDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
   CHECK(buildStructFieldsSource.find("captureExprContext(fieldStmt);") !=
         std::string::npos);
   CHECK(buildStructFieldsSource.find("return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(buildStructFieldsSource.find("error_ = std::move(message);") !=
         std::string::npos);
   CHECK(buildStructFieldsSource.find(
             "omitted struct field envelope requires exactly one initializer: ") !=
@@ -952,7 +965,9 @@ TEST_CASE("semantics validator build struct-field publication stays stable") {
   CHECK(buildStructFieldsSource.find(
             "soa_vector field envelope is unsupported on ") !=
         std::string::npos);
-  CHECK(buildStructFieldsSource.find("return publishStructFieldDiagnostic();") !=
+  CHECK(buildStructFieldsSource.find("return failStructFieldDiagnostic(") !=
+        std::string::npos);
+  CHECK(buildStructFieldsSource.find("return failSoaFieldEnvelopeDiagnostic(") !=
         std::string::npos);
 }
 
@@ -982,11 +997,19 @@ TEST_CASE("semantics validator build parameter publication stays stable") {
   CHECK(buildParametersSource.find(
             "auto publishParameterDiagnostic = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(buildParametersSource.find(
+            "auto failParameterDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
+  CHECK(buildParametersSource.find(
+            "auto failBuildParameterDefinitionDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(buildParametersSource.find("captureDefinitionContext(def);") !=
         std::string::npos);
   CHECK(buildParametersSource.find("captureExprContext(param);") !=
         std::string::npos);
   CHECK(buildParametersSource.find("return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(buildParametersSource.find("error_ = std::move(message);") !=
         std::string::npos);
   CHECK(buildParametersSource.find(
             "parameter default must be a literal or pure expression: ") !=
@@ -994,9 +1017,9 @@ TEST_CASE("semantics validator build parameter publication stays stable") {
   CHECK(buildParametersSource.find(
             "Copy/Move helpers require [Reference<Self>] parameter: ") !=
         std::string::npos);
-  CHECK(buildParametersSource.find("return publishParameterDiagnostic();") !=
+  CHECK(buildParametersSource.find("return failParameterDiagnostic(") !=
         std::string::npos);
   CHECK(buildParametersSource.find(
-            "return publishBuildParameterDefinitionDiagnostic();") !=
+            "return failBuildParameterDefinitionDiagnostic(") !=
         std::string::npos);
 }

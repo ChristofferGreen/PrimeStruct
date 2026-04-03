@@ -9,12 +9,15 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
     captureExprContext(fieldStmt);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failStructFieldDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishStructFieldDiagnostic();
+  };
   std::optional<std::string> restrictType;
   std::string parseError;
   if (!parseBindingInfo(fieldStmt, structDef.namespacePrefix, structNames_, importAliases_, bindingOut, restrictType,
                         parseError)) {
-    error_ = parseError;
-    return publishStructFieldDiagnostic();
+    return failStructFieldDiagnostic(std::move(parseError));
   }
   if (hasExplicitBindingTypeTransform(fieldStmt)) {
     if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {
@@ -30,8 +33,9 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
   }
   const std::string fieldPath = structDef.fullPath + "/" + fieldStmt.name;
   if (fieldStmt.args.size() != 1) {
-    error_ = "omitted struct field envelope requires exactly one initializer: " + fieldPath;
-    return publishStructFieldDiagnostic();
+    return failStructFieldDiagnostic(
+        "omitted struct field envelope requires exactly one initializer: " +
+        fieldPath);
   }
   const std::vector<ParameterInfo> noParams;
   const std::unordered_map<std::string, BindingInfo> noLocals;
@@ -56,8 +60,8 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
       return true;
     }
   }
-  error_ = "unresolved or ambiguous omitted struct field envelope: " + fieldPath;
-  return publishStructFieldDiagnostic();
+  return failStructFieldDiagnostic(
+      "unresolved or ambiguous omitted struct field envelope: " + fieldPath);
 }
 
 bool SemanticsValidator::validateSoaVectorElementFieldEnvelopes(const std::string &typeArg,
@@ -104,6 +108,10 @@ bool SemanticsValidator::validateSoaVectorElementFieldEnvelopes(const std::strin
         captureExprContext(fieldStmt);
         return publishCurrentStructuredDiagnosticNow();
       };
+      auto failSoaFieldEnvelopeDiagnostic = [&](std::string message) -> bool {
+        error_ = std::move(message);
+        return publishSoaFieldEnvelopeDiagnostic();
+      };
       BindingInfo fieldBinding;
       if (!resolveStructFieldBinding(structDef, fieldStmt, fieldBinding)) {
         activeStructs.erase(structDef.fullPath);
@@ -117,9 +125,10 @@ bool SemanticsValidator::validateSoaVectorElementFieldEnvelopes(const std::strin
         if (!fieldBinding.typeTemplateArg.empty()) {
           fieldType += "<" + fieldBinding.typeTemplateArg + ">";
         }
-        error_ = "soa_vector field envelope is unsupported on " + fieldPath + ": " + fieldType;
         activeStructs.erase(structDef.fullPath);
-        return publishSoaFieldEnvelopeDiagnostic();
+        return failSoaFieldEnvelopeDiagnostic(
+            "soa_vector field envelope is unsupported on " + fieldPath +
+            ": " + fieldType);
       }
       if (fieldBinding.typeTemplateArg.empty() && !isPrimitiveBindingTypeName(normalizedFieldType)) {
         const std::string nestedStructPath = resolveStructPath(fieldBinding.typeName, structDef.namespacePrefix);

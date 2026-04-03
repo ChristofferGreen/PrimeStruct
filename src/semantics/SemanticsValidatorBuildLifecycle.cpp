@@ -71,23 +71,28 @@ bool SemanticsValidator::validateLifecycleHelperDefinitions() {
       captureDefinitionContext(def);
       return publishCurrentStructuredDiagnosticNow();
     };
+    auto failLifecycleDiagnostic = [&](std::string message) -> bool {
+      error_ = std::move(message);
+      return publishLifecycleDiagnostic();
+    };
     std::string parentPath;
     std::string placement;
     if (!isLifecycleHelper(def.fullPath, parentPath, placement)) {
       continue;
     }
     if (parentPath.empty() || structNames_.count(parentPath) == 0) {
-      error_ = "lifecycle helper must be nested inside a struct: " + def.fullPath;
-      return publishLifecycleDiagnostic();
+      return failLifecycleDiagnostic(
+          "lifecycle helper must be nested inside a struct: " + def.fullPath);
     }
     if (isCopyHelperName(def.fullPath)) {
       if (def.parameters.size() != 1) {
-        error_ = "Copy/Move helpers require exactly one parameter: " + def.fullPath;
-        return publishLifecycleDiagnostic();
+        return failLifecycleDiagnostic(
+            "Copy/Move helpers require exactly one parameter: " +
+            def.fullPath);
       }
     } else if (!def.parameters.empty()) {
-      error_ = "lifecycle helpers do not accept parameters: " + def.fullPath;
-      return publishLifecycleDiagnostic();
+      return failLifecycleDiagnostic(
+          "lifecycle helpers do not accept parameters: " + def.fullPath);
     }
   }
 
