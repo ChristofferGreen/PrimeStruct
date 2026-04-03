@@ -19,6 +19,17 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failMutationBorrowDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishMutationBorrowDiagnostic();
+  };
+  auto failBorrowedBindingDiagnostic =
+      [&](const std::string &borrowRoot, const std::string &sinkName) -> bool {
+        const std::string sink = sinkName.empty() ? borrowRoot : sinkName;
+        return failMutationBorrowDiagnostic("borrowed binding: " + borrowRoot +
+                                            " (root: " + borrowRoot +
+                                            ", sink: " + sink + ")");
+      };
   auto isMutableBinding = [&](const std::string &name) -> bool {
     if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
       return paramBinding->isMutable;
@@ -127,12 +138,6 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     }
     return false;
   };
-  auto formatBorrowedBindingError =
-      [&](const std::string &borrowRoot, const std::string &sinkName) {
-        const std::string sink = sinkName.empty() ? borrowRoot : sinkName;
-        error_ = "borrowed binding: " + borrowRoot + " (root: " +
-                 borrowRoot + ", sink: " + sink + ")";
-      };
   auto findNamedBinding = [&](const std::string &name) -> const BindingInfo * {
     if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
       return paramBinding;
@@ -458,46 +463,42 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
   if (isSimpleCallName(expr, "move")) {
     handledOut = true;
     if (hasNamedArguments(expr.argNames)) {
-      error_ = "named arguments not supported for builtin calls";
-      return publishMutationBorrowDiagnostic();
+      return failMutationBorrowDiagnostic(
+          "named arguments not supported for builtin calls");
     }
     if (expr.isMethodCall) {
-      error_ = "move does not support method-call syntax";
-      return publishMutationBorrowDiagnostic();
+      return failMutationBorrowDiagnostic(
+          "move does not support method-call syntax");
     }
     if (!expr.templateArgs.empty()) {
-      error_ = "move does not accept template arguments";
-      return publishMutationBorrowDiagnostic();
+      return failMutationBorrowDiagnostic(
+          "move does not accept template arguments");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = "move does not accept block arguments";
-      return publishMutationBorrowDiagnostic();
+      return failMutationBorrowDiagnostic(
+          "move does not accept block arguments");
     }
     if (expr.args.size() != 1) {
-      error_ = "move requires exactly one argument";
-      return publishMutationBorrowDiagnostic();
+      return failMutationBorrowDiagnostic("move requires exactly one argument");
     }
     const Expr &target = expr.args.front();
     if (target.kind != Expr::Kind::Name) {
-      error_ = "move requires a binding name";
-      return publishMutationBorrowDiagnostic();
+      return failMutationBorrowDiagnostic("move requires a binding name");
     }
     const BindingInfo *binding = findNamedBinding(target.name);
     if (!binding) {
-      error_ = "move requires a local binding or parameter: " + target.name;
-      return publishMutationBorrowDiagnostic();
+      return failMutationBorrowDiagnostic(
+          "move requires a local binding or parameter: " + target.name);
     }
     if (binding->typeName == "Reference") {
-      error_ = "move does not support Reference bindings: " + target.name;
-      return publishMutationBorrowDiagnostic();
+      return failMutationBorrowDiagnostic(
+          "move does not support Reference bindings: " + target.name);
     }
     if (hasActiveBorrowForBinding(target.name)) {
-      formatBorrowedBindingError(target.name, target.name);
-      return false;
+      return failBorrowedBindingDiagnostic(target.name, target.name);
     }
     if (currentValidationContext_.movedBindings.count(target.name) > 0) {
-      error_ = "use-after-move: " + target.name;
-      return publishMutationBorrowDiagnostic();
+      return failMutationBorrowDiagnostic("use-after-move: " + target.name);
     }
     currentValidationContext_.movedBindings.insert(target.name);
     return true;
@@ -506,8 +507,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
   if (isAssignCall(expr)) {
     handledOut = true;
     if (expr.args.size() != 2) {
-      error_ = "assign requires exactly two arguments";
-      return false;
+      return failMutationBorrowDiagnostic("assign requires exactly two arguments");
     }
     const Expr &target = expr.args.front();
     std::string standaloneSoaFieldViewName;
@@ -573,14 +573,14 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     auto validateMutableFieldAccessTarget = [&](const Expr &fieldTarget) -> bool {
       if (fieldTarget.kind != Expr::Kind::Call || !fieldTarget.isFieldAccess ||
           fieldTarget.args.size() != 1) {
-        error_ = "assign target must be a mutable binding";
-        return false;
+        return failMutationBorrowDiagnostic(
+            "assign target must be a mutable binding");
       }
       if (auto pendingPath =
               builtinSoaDirectPendingHelperPath(fieldTarget, params, locals);
           pendingPath.has_value()) {
-        error_ = soaDirectPendingUnavailableMethodDiagnostic(*pendingPath);
-        return false;
+        return failMutationBorrowDiagnostic(
+            soaDirectPendingUnavailableMethodDiagnostic(*pendingPath));
       }
       if (!validateExpr(params, locals, fieldTarget)) {
         return false;
@@ -590,7 +590,8 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       if (!this->resolveStructFieldBinding(params, locals, fieldReceiver,
                                            fieldTarget.name, fieldBinding)) {
         if (error_.empty()) {
-          error_ = "assign target must be a mutable binding";
+          return failMutationBorrowDiagnostic(
+              "assign target must be a mutable binding");
         }
         return false;
       }
@@ -615,31 +616,29 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
           isLifecycleHelperPath(currentValidationContext_.definitionPath);
       if (!fieldBinding.isMutable && !allowLifecycleFieldWrite &&
           !allowMutableReceiverFieldWrite && !allowMutableBorrowedFieldWrite) {
-        error_ = "assign target must be a mutable binding";
-        return false;
+        return failMutationBorrowDiagnostic(
+            "assign target must be a mutable binding");
       }
       if (!mutableBorrowRootName.empty() &&
           hasActiveBorrowForBinding(mutableBorrowRootName, ignoreBorrowName)) {
         const std::string borrowSink =
             !ignoreBorrowName.empty() ? ignoreBorrowName : mutableBorrowRootName;
-        formatBorrowedBindingError(mutableBorrowRootName, borrowSink);
-        return false;
+        return failBorrowedBindingDiagnostic(mutableBorrowRootName, borrowSink);
       }
       if (fieldReceiver.kind == Expr::Kind::Name &&
           hasActiveBorrowForBinding(fieldReceiver.name)) {
-        formatBorrowedBindingError(fieldReceiver.name, fieldReceiver.name);
-        return false;
+        return failBorrowedBindingDiagnostic(fieldReceiver.name,
+                                            fieldReceiver.name);
       }
       return true;
     };
     if (target.kind == Expr::Kind::Name) {
       if (!isMutableBinding(target.name)) {
-        error_ = "assign target must be a mutable binding: " + target.name;
-        return false;
+        return failMutationBorrowDiagnostic(
+            "assign target must be a mutable binding: " + target.name);
       }
       if (hasActiveBorrowForBinding(target.name)) {
-        formatBorrowedBindingError(target.name, target.name);
-        return false;
+        return failBorrowedBindingDiagnostic(target.name, target.name);
       }
     } else if (target.kind == Expr::Kind::Call && target.isFieldAccess) {
       if (!validateMutableFieldAccessTarget(target)) {
@@ -651,19 +650,18 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
           target.args.size() == 2) {
         const Expr &collectionTarget = target.args.front();
         if (!isVectorOrArrayIndexedTarget(collectionTarget)) {
-          error_ = "assign target must be a mutable binding";
-          return false;
+          return failMutationBorrowDiagnostic(
+              "assign target must be a mutable binding");
         }
         if (collectionTarget.kind == Expr::Kind::Name) {
           if (!isMutableBinding(collectionTarget.name)) {
-            error_ = "assign target must be a mutable binding: " +
-                     collectionTarget.name;
-            return false;
+            return failMutationBorrowDiagnostic(
+                "assign target must be a mutable binding: " +
+                collectionTarget.name);
           }
           if (hasActiveBorrowForBinding(collectionTarget.name)) {
-            formatBorrowedBindingError(collectionTarget.name,
-                                       collectionTarget.name);
-            return false;
+            return failBorrowedBindingDiagnostic(collectionTarget.name,
+                                                collectionTarget.name);
           }
         } else if (collectionTarget.kind == Expr::Kind::Call &&
                    collectionTarget.isFieldAccess) {
@@ -671,8 +669,8 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
             return false;
           }
         } else {
-          error_ = "assign target must be a mutable binding";
-          return false;
+          return failMutationBorrowDiagnostic(
+              "assign target must be a mutable binding");
         }
         if (!validateExpr(params, locals, target)) {
           return false;
@@ -681,14 +679,14 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
         std::string pointerName;
         if (!getBuiltinPointerName(target, pointerName) ||
             pointerName != "dereference" || target.args.size() != 1) {
-          error_ = "assign target must be a mutable binding";
-          return false;
+          return failMutationBorrowDiagnostic(
+              "assign target must be a mutable binding");
         }
         const Expr &pointerExpr = target.args.front();
         if (pointerExpr.kind == Expr::Kind::Name &&
             !isMutableBinding(pointerExpr.name)) {
-          error_ = "assign target must be a mutable binding";
-          return false;
+          return failMutationBorrowDiagnostic(
+              "assign target must be a mutable binding");
         }
         std::string pointerBorrowRoot;
         std::string ignoreBorrowName;
@@ -696,25 +694,23 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
                                              ignoreBorrowName)) {
           if (pointerExpr.kind == Expr::Kind::Name &&
               !isMutableBinding(pointerExpr.name)) {
-            error_ = "assign target must be a mutable binding";
-            return false;
+            return failMutationBorrowDiagnostic(
+                "assign target must be a mutable binding");
           }
           std::string locationRootName;
           if (resolveLocationRootBindingName(pointerExpr, locationRootName) &&
               !isMutableBinding(locationRootName)) {
-            error_ =
-                "assign target must be a mutable binding: " + locationRootName;
-            return false;
+            return failMutationBorrowDiagnostic(
+                "assign target must be a mutable binding: " + locationRootName);
           }
-          error_ = "assign target must be a mutable pointer binding";
-          return false;
+          return failMutationBorrowDiagnostic(
+              "assign target must be a mutable pointer binding");
         }
         if (!pointerBorrowRoot.empty() &&
             hasActiveBorrowForBinding(pointerBorrowRoot, ignoreBorrowName)) {
           const std::string borrowSink =
               !ignoreBorrowName.empty() ? ignoreBorrowName : pointerBorrowRoot;
-          formatBorrowedBindingError(pointerBorrowRoot, borrowSink);
-          return false;
+          return failBorrowedBindingDiagnostic(pointerBorrowRoot, borrowSink);
         }
         std::string escapeSink;
         bool hasEscapeSink = false;
@@ -756,8 +752,8 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
         }
       }
     } else {
-      error_ = "assign target must be a mutable binding";
-      return false;
+      return failMutationBorrowDiagnostic(
+          "assign target must be a mutable binding");
     }
     if (targetIsName) {
       std::string escapeSink;
@@ -787,26 +783,24 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
   if (getBuiltinMutationName(expr, mutateName)) {
     handledOut = true;
     if (expr.args.size() != 1) {
-      error_ = mutateName + " requires exactly one argument";
-      return publishMutationBorrowDiagnostic();
+      return failMutationBorrowDiagnostic(mutateName +
+                                          " requires exactly one argument");
     }
     const Expr &target = expr.args.front();
     if (target.kind == Expr::Kind::Name) {
       if (!isMutableBinding(target.name)) {
-        error_ = mutateName + " target must be a mutable binding: " +
-                 target.name;
-        return publishMutationBorrowDiagnostic();
+        return failMutationBorrowDiagnostic(
+            mutateName + " target must be a mutable binding: " + target.name);
       }
       if (hasActiveBorrowForBinding(target.name)) {
-        formatBorrowedBindingError(target.name, target.name);
-        return false;
+        return failBorrowedBindingDiagnostic(target.name, target.name);
       }
     } else if (target.kind == Expr::Kind::Call) {
       std::string pointerName;
       if (!getBuiltinPointerName(target, pointerName) ||
           pointerName != "dereference" || target.args.size() != 1) {
-        error_ = mutateName + " target must be a mutable binding";
-        return false;
+        return failMutationBorrowDiagnostic(mutateName +
+                                            " target must be a mutable binding");
       }
       const Expr &pointerExpr = target.args.front();
       std::string pointerBorrowRoot;
@@ -815,36 +809,35 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
                                            ignoreBorrowName)) {
         if (pointerExpr.kind == Expr::Kind::Name &&
             !isMutableBinding(pointerExpr.name)) {
-          error_ = mutateName + " target must be a mutable binding";
-          return publishMutationBorrowDiagnostic();
+          return failMutationBorrowDiagnostic(
+              mutateName + " target must be a mutable binding");
         }
         std::string locationRootName;
         if (resolveLocationRootBindingName(pointerExpr, locationRootName) &&
             !isMutableBinding(locationRootName)) {
-          error_ = mutateName + " target must be a mutable binding: " +
-                   locationRootName;
-          return publishMutationBorrowDiagnostic();
+          return failMutationBorrowDiagnostic(
+              mutateName + " target must be a mutable binding: " +
+              locationRootName);
         }
-        error_ = mutateName + " target must be a mutable pointer binding";
-        return publishMutationBorrowDiagnostic();
+        return failMutationBorrowDiagnostic(
+            mutateName + " target must be a mutable pointer binding");
       }
       if (!pointerBorrowRoot.empty() &&
           hasActiveBorrowForBinding(pointerBorrowRoot, ignoreBorrowName)) {
         const std::string borrowSink =
             !ignoreBorrowName.empty() ? ignoreBorrowName : pointerBorrowRoot;
-        formatBorrowedBindingError(pointerBorrowRoot, borrowSink);
-        return false;
+        return failBorrowedBindingDiagnostic(pointerBorrowRoot, borrowSink);
       }
       if (!validateExpr(params, locals, pointerExpr)) {
         return false;
       }
     } else {
-      error_ = mutateName + " target must be a mutable binding";
-      return publishMutationBorrowDiagnostic();
+      return failMutationBorrowDiagnostic(mutateName +
+                                          " target must be a mutable binding");
     }
     if (!isNumericExpr(params, locals, target)) {
-      error_ = mutateName + " requires numeric operand";
-      return publishMutationBorrowDiagnostic();
+      return failMutationBorrowDiagnostic(mutateName +
+                                          " requires numeric operand");
     }
     return true;
   }

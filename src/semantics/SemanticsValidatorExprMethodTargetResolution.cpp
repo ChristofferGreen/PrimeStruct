@@ -306,18 +306,19 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           break;
         }
       }
-      error_ = "preferredFileErrorHelperTarget empty for " + normalizedMethodName +
-               " receiver=" + receiver.name +
-               " has:/std/file/FileError/result=" +
-               (hasDefinitionFamilyPath("/std/file/FileError/result") ? "yes" : "no") +
-               " def:/std/file/FileError/result__ov1=" +
-               (defMap_.count(overload1) > 0 ? "yes" : "no") +
-               " params:/std/file/FileError/result__ov1=" +
-               (paramsByDef_.count(overload1) > 0 ? "yes" : "no") +
-               " programMatch=" + programMatch +
-               " paramsMatch=" + paramsMatch +
-               " has:/std/file/FileError/status=" +
-               (hasDefinitionFamilyPath("/std/file/FileError/status") ? "yes" : "no");
+      return failMethodTargetResolutionDiagnostic(
+          "preferredFileErrorHelperTarget empty for " + normalizedMethodName +
+          " receiver=" + receiver.name +
+          " has:/std/file/FileError/result=" +
+          (hasDefinitionFamilyPath("/std/file/FileError/result") ? "yes" : "no") +
+          " def:/std/file/FileError/result__ov1=" +
+          (defMap_.count(overload1) > 0 ? "yes" : "no") +
+          " params:/std/file/FileError/result__ov1=" +
+          (paramsByDef_.count(overload1) > 0 ? "yes" : "no") +
+          " programMatch=" + programMatch + " paramsMatch=" + paramsMatch +
+          " has:/std/file/FileError/status=" +
+          (hasDefinitionFamilyPath("/std/file/FileError/status") ? "yes"
+                                                                 : "no"));
     }
     return !resolvedOut.empty();
   }

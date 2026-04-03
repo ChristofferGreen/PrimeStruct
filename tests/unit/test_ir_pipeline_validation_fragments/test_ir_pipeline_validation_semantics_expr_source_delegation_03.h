@@ -777,6 +777,9 @@
   CHECK(semanticsExprResolvedCallArgumentsSource.find(
             "unsafe reference escapes across safe boundary to ") !=
         std::string::npos);
+  CHECK(semanticsExprResolvedCallArgumentsSource.find(
+            "error_ = \"unsafe reference escapes across safe boundary to \" + resolved;") ==
+        std::string::npos);
   CHECK(semanticsExprMutationBorrowsSource.find(
             "bool SemanticsValidator::validateExprMutationBorrowBuiltins") !=
         std::string::npos);
@@ -786,6 +789,12 @@
         std::string::npos);
   CHECK(semanticsExprMutationBorrowsSource.find(
             "auto publishMutationBorrowDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprMutationBorrowsSource.find(
+            "auto failMutationBorrowDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprMutationBorrowsSource.find(
+            "auto failBorrowedBindingDiagnostic =") !=
         std::string::npos);
   CHECK(semanticsExprMutationBorrowsSource.find("if (isSimpleCallName(expr, \"move\")) {") !=
         std::string::npos);
@@ -811,6 +820,9 @@
         std::string::npos);
   CHECK(semanticsExprMutationBorrowsSource.find(
             "soaFieldViewPendingDiagnostic(fieldTarget.name)") ==
+        std::string::npos);
+  CHECK(semanticsExprMutationBorrowsSource.find(
+            "formatBorrowedBindingError(") ==
         std::string::npos);
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
             "bool SemanticsValidator::validateExprNamedArgumentBuiltins") !=

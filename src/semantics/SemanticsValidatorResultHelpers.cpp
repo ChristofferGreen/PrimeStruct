@@ -909,17 +909,21 @@ bool SemanticsValidator::parseOnErrorTransform(const std::vector<Transform> &tra
                                                const std::string &context,
                                                std::optional<OnErrorHandler> &out) {
   out.reset();
+  auto failOnErrorTransformDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return false;
+  };
   for (const auto &transform : transforms) {
     if (transform.name != "on_error") {
       continue;
     }
     if (out.has_value()) {
-      error_ = "duplicate on_error transform on " + context;
-      return false;
+      return failOnErrorTransformDiagnostic("duplicate on_error transform on " +
+                                            context);
     }
     if (transform.templateArgs.size() != 2) {
-      error_ = "on_error requires exactly two template arguments on " + context;
-      return false;
+      return failOnErrorTransformDiagnostic(
+          "on_error requires exactly two template arguments on " + context);
     }
     OnErrorHandler handler;
     handler.errorType = transform.templateArgs.front();
@@ -929,25 +933,27 @@ bool SemanticsValidator::parseOnErrorTransform(const std::vector<Transform> &tra
     handlerExpr.namespacePrefix = namespacePrefix;
     handler.handlerPath = resolveCalleePath(handlerExpr);
     if (defMap_.count(handler.handlerPath) == 0) {
-      error_ = "unknown on_error handler: " + handler.handlerPath;
-      return false;
+      return failOnErrorTransformDiagnostic("unknown on_error handler: " +
+                                            handler.handlerPath);
     }
     auto paramIt = paramsByDef_.find(handler.handlerPath);
     if (paramIt == paramsByDef_.end() || paramIt->second.empty()) {
-      error_ = "on_error handler requires an error parameter: " + handler.handlerPath;
-      return false;
+      return failOnErrorTransformDiagnostic(
+          "on_error handler requires an error parameter: " +
+          handler.handlerPath);
     }
     const BindingInfo &paramBinding = paramIt->second.front().binding;
     if (!errorTypesMatch(handler.errorType, paramBinding.typeName, namespacePrefix)) {
-      error_ = "on_error handler error type mismatch: " + handler.handlerPath;
-      return false;
+      return failOnErrorTransformDiagnostic(
+          "on_error handler error type mismatch: " + handler.handlerPath);
     }
     handler.boundArgs.reserve(transform.arguments.size());
     for (const auto &argText : transform.arguments) {
       Expr argExpr;
       if (!parseTransformArgumentExpr(argText, namespacePrefix, argExpr)) {
         if (error_.empty()) {
-          error_ = "invalid on_error argument on " + context;
+          return failOnErrorTransformDiagnostic("invalid on_error argument on " +
+                                                context);
         }
         return false;
       }

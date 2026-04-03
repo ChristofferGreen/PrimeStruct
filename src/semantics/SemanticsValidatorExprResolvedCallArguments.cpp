@@ -255,8 +255,8 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
           if (!arg || !isUnsafeReferenceExpr(params, locals, *arg)) {
             continue;
           }
-          error_ = "unsafe reference escapes across safe boundary to " + resolved;
-          return false;
+          return failResolvedCallArgumentDiagnostic(
+              "unsafe reference escapes across safe boundary to " + resolved);
         }
         continue;
       }
@@ -276,8 +276,8 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
       if (!isUnsafeReferenceExpr(params, locals, *arg)) {
         continue;
       }
-      error_ = "unsafe reference escapes across safe boundary to " + resolved;
-      return publishResolvedCallArgumentDiagnostic();
+      return failResolvedCallArgumentDiagnostic(
+          "unsafe reference escapes across safe boundary to " + resolved);
     }
   }
 
