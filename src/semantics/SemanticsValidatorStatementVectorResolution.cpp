@@ -429,7 +429,8 @@ bool SemanticsValidator::validateVectorStatementHelperReceiver(
   if (defMap_.find(resolvedMethod) == defMap_.end() &&
       isNonCollectionStructVectorHelperTarget(resolvedMethod)) {
     error_ = "unknown method: " + resolvedMethod;
-    return false;
+    captureExprContext(receiver);
+    return publishCurrentStructuredDiagnosticNow();
   }
   return true;
 }

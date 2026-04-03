@@ -670,6 +670,10 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsStatementVectorResolutionSource.find("bool SemanticsValidator::resolveVectorStatementHelperTargetPath(") !=
         std::string::npos);
+  CHECK(semanticsStatementVectorResolutionSource.find("captureExprContext(receiver);") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorResolutionSource.find("return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
   CHECK(semanticsStatementReturnsSource.find("bool SemanticsValidator::statementAlwaysReturns") !=
         std::string::npos);
   CHECK(semanticsStatementReturnsSource.find("bool SemanticsValidator::blockAlwaysReturns") !=
