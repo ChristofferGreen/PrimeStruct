@@ -302,6 +302,24 @@ Ownership split by responsibility:
   - any lowering consumer that needs both “what this means” and “where it came from” must read meaning from the
     semantic product and provenance from the AST-backed ids/spans, not from mutated AST semantics fields.
 
+Planned first semantic-product builder slice:
+- The first builder slice should materialize only the lowering-facing facts already treated as stable by the current
+  semantics pipeline:
+  - resolved call targets and helper-vs-canonical path choices
+  - final binding/result type facts for parameters, locals, temporaries, and returns
+  - effect/capability summaries needed by IR preparation
+  - struct/enum/layout metadata already computed during semantic validation
+- This first slice should not yet absorb the graph-backed local/query/`try(...)`/`on_error` snapshot-style metadata;
+  that remains a second builder slice so the initial publication surface stays narrow.
+- The first slice should prefer direct transfer from existing validator-owned facts rather than re-deriving lowering
+  facts from the AST a second time.
+- Completion criteria:
+  - one semantic-product builder path can materialize the above facts for successful semantic validation
+  - those facts are deterministic and sufficient for later lowering cutover work to start consuming call targets,
+    binding types, effects/capabilities, and struct metadata from the semantic product
+  - existing graph-backed inference/testing-only metadata remains outside this first slice until the second builder
+    stage is ready
+
 Planned ownership-split test matrix:
 - Source-span parity:
   semantic-product entries that represent lowered calls, bindings, and control-flow facts should still reference the
