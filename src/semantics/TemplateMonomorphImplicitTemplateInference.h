@@ -153,11 +153,6 @@ bool inferImplicitTemplateArgs(const Definition &def,
     if (normalizedName.empty()) {
       return {};
     }
-    auto hasVisibleSoaHelperTarget = [&](std::string_view helperName) {
-      const std::string ownedPath = "/soa_vector/" + std::string(helperName);
-      return ctx.sourceDefs.count(ownedPath) > 0 ||
-             ctx.helperOverloads.count(ownedPath) > 0;
-    };
     auto resolvesBuiltinSoaReceiver = [&](const Expr &receiverExpr) {
       auto matchesTypeText = [&](std::string typeText) {
         typeText = normalizeBindingTypeName(typeText);
@@ -198,7 +193,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
     if (candidate.isMethodCall) {
       if (const auto pending = soaPendingUnavailableMethodDiagnostic(
               resolvedPath,
-              hasVisibleSoaHelperTarget("ref"))) {
+              ctx.sourceDefs.count("/soa_vector/ref") > 0 ||
+                  ctx.helperOverloads.count("/soa_vector/ref") > 0)) {
         return *pending;
       }
     }
@@ -209,7 +205,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
         normalizedName == "soa_vector/ref" || resolvedPath == "/soa_vector/ref";
     if (normalizedName == "ref" || isCanonicalBuiltinSoaRefCall ||
         isOldSurfaceBuiltinSoaRefCall) {
-      if (hasVisibleSoaHelperTarget("ref")) {
+      if (ctx.sourceDefs.count("/soa_vector/ref") > 0 ||
+          ctx.helperOverloads.count("/soa_vector/ref") > 0) {
         return {};
       }
       if (isCanonicalBuiltinSoaRefCall &&
@@ -236,7 +233,9 @@ bool inferImplicitTemplateArgs(const Definition &def,
         normalizedName == "contains") {
       return {};
     }
-    if (hasVisibleSoaHelperTarget(normalizedName)) {
+    const std::string ownedPath = "/soa_vector/" + normalizedName;
+    if (ctx.sourceDefs.count(ownedPath) > 0 ||
+        ctx.helperOverloads.count(ownedPath) > 0) {
       return {};
     }
     return soaDirectPendingUnavailableMethodDiagnostic(
