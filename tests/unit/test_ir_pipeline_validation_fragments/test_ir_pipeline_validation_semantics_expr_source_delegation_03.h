@@ -406,10 +406,16 @@
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "auto publishCountCapacityMapBuiltinDiagnostic = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "auto failCountCapacityMapBuiltin = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find("captureExprContext(expr);") !=
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "count requires map target") != std::string::npos);
