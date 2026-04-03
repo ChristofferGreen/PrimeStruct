@@ -201,6 +201,31 @@ Planned non-template inference migration contract:
 - Explicit and implicit template inference migration stays blocked on this work, because template solving should not be
   layered on top of unresolved non-template inference islands that still own their own caches or ordering rules.
 
+Planned template-inference migration contract:
+- Explicit and implicit template inference should move onto the graph-backed path only after non-template inference
+  islands and graph invalidation rules are stable.
+- Template migration should not introduce a separate graph-independent solver cache for template arguments; the graph
+  remains the owner of dependency ordering and revisit rules.
+- Each migration slice should identify:
+  - which template-inference surface is moving (explicit template specialization checks, implicit template argument
+    inference, or template-dependent helper-family/call-target selection)
+  - which graph-backed facts now drive that surface
+  - which legacy diagnostics and precedence rules must remain unchanged during the cutover
+- Preferred migration order:
+  - template-dependent consumers that already sit adjacent to the stabilized return/query/local pilot
+  - helper-family and canonical-path decisions that depend on template argument resolution
+  - broader cross-definition template solving once invalidation and CT-eval boundaries are already pinned
+- A migrated template slice is only complete when:
+  - template argument resolution is driven by published graph-backed facts instead of deferred side-state
+  - implicit and explicit template diagnostics stay deterministic and keep current precedence/ambiguity behavior
+  - helper-shadow, canonical-path, and overload-selection choices remain stable for the affected surface
+- Coverage should pin:
+  - successful explicit and implicit template resolution on the graph-backed path
+  - unchanged diagnostics for unresolved, ambiguous, or contradictory template constraints
+  - parity for helper-routing and call-target choices when template inference determines which callee is selected
+- Broader omitted-envelope and local-`auto` expansion should remain sequenced after these migrations prove stable, so
+  new local inference surfaces do not outrun the template-dependency contract that consumes them.
+
 ### Planned semantics-to-lowering boundary
 PrimeStruct is migrating toward an explicit post-semantics product that sits between the syntax-faithful AST and IR
 lowering. The goal is to stop re-deriving lowering facts from mutated AST state and instead hand IR preparation one

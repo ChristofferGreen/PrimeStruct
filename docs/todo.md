@@ -37,7 +37,7 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
 - ○ Implement graph-backed query invalidation rules and coverage for definition-signature, import-alias, and receiver-type edits now that the cross-definition invalidation contract is documented.
 - ○ Implement the next non-template inference-island migrations now that the graph-backed cutover contract is documented, so mixed ad hoc inference paths stop surrounding the stabilized return/query/local pilot.
 - ○ Implement the graph/CT-eval interaction contract now that the boundary is documented, so compile-time evaluation either consumes shared dependency state directly or goes through one explicit tested adapter.
-- ○ Migrate explicit and implicit template inference dependencies onto the graph-backed path once the non-template inference islands and invalidation rules are pinned, so template solving stops being a deferred side-system.
+- ○ Implement the graph-backed explicit/implicit template-inference migrations now that the cutover contract is documented, once the non-template inference islands and invalidation rules are pinned.
 - ○ Broaden omitted-envelope and local-auto inference beyond the current first-step slices only after the next inference-island migrations prove stable on the graph path.
 - ○ Implement graph performance guardrails and sustained perf coverage now that the regression-budget contract is documented, before optional parallel solve work broadens the graph surface further.
 - ○ Prototype optional parallel solve now that its execution and merge contract is documented, once the single-threaded graph path, invalidation rules, CT-eval boundary, and performance guardrails are stable.
