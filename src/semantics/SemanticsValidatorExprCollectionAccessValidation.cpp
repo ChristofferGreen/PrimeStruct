@@ -279,7 +279,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
           context.resolveExperimentalVectorValueTarget(expr.args[receiverIndex], elemType);
       if (!isBuiltinVectorReceiver && !isExperimentalVectorReceiver) {
         error_ = "argument type mismatch for /std/collections/vector/" + builtinName;
-        return false;
+        return publishCollectionAccessDiagnostic();
       }
     }
   }

@@ -422,6 +422,9 @@
   CHECK(semanticsExprCollectionAccessValidationSource.find(
             "unknown call target: /std/collections/map/") !=
         std::string::npos);
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
+            "argument type mismatch for /std/collections/vector/") !=
+        std::string::npos);
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
             "bool SemanticsValidator::validateExprDirectCollectionFallbacks") !=
         std::string::npos);
