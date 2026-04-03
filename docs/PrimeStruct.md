@@ -541,6 +541,25 @@ Planned pipeline-facing semantic-product conformance matrix:
   - `primec/testing/SemanticsValidationHelpers.h` snapshot assertions for lowering-facing facts are reduced to syntax-
     owned cases only.
 
+Planned testing-only snapshot removal contract:
+- The repository should converge on one canonical lowering-facing inspection surface: the published semantic product and
+  its deterministic dump, backed by compile-pipeline conformance.
+- Testing-only semantic snapshot plumbing may remain temporarily while semantic-product builder slices, dumps, and
+  backend conformance are incomplete, but it should be treated as transitional compatibility scaffolding rather than a
+  second permanent inspection API.
+- Snapshot-only helpers should be removed in this order:
+  - migrate lowering-facing fact assertions onto the semantic-product dump or pipeline-facing conformance matrix
+  - leave AST/testing helpers only where the asserted fact is intentionally syntax-owned or provenance-owned
+  - delete redundant snapshot transport/plumbing once no lowering-facing test depends on it
+- `primec/testing/SemanticsValidationHelpers.h` and related helper surfaces should survive only for syntax-owned or
+  provenance-owned assertions that are intentionally not part of the semantic product.
+- Completion criteria:
+  - lowering-facing tests no longer require testing-only semantic snapshot transport
+  - one semantic-product inspection surface remains canonical for targets, inferred types, helper routing, layout
+    facts, and graph-backed inference facts
+  - any remaining AST/testing helpers are explicitly limited to syntax/provenance assertions and do not duplicate
+    lowering-facing semantic facts
+
 Planned diagnostic ordering contract for semantic-product identities:
 - Diagnostics that survive semantic validation should be attachable to stable semantic-product node identities or
   deterministic sort keys before any later parallel validation work begins.

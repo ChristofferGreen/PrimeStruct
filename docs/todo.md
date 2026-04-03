@@ -67,7 +67,7 @@ Coverage and migration cleanup:
 - ○ Implement the narrow semantic-product unit/golden suite now that its fact coverage and scope are documented.
 - ○ Add end-to-end compile-pipeline conformance cases that exercise the semantic-product boundary through C++/VM/native lowering paths.
 - ○ Migrate tests and public testing helpers from `primec/testing/SemanticsValidationHelpers.h` snapshot surfaces onto the semantic-product inspection surface where they are asserting lowering-facing facts.
-- ○ Delete redundant testing-only semantic snapshot plumbing once equivalent semantic-product dumps and conformance coverage exist, leaving one canonical inspection surface for lowering-facing semantic facts.
+- ○ Delete redundant testing-only semantic snapshot plumbing now that its migration/removal contract is documented, leaving one canonical lowering-facing inspection surface once equivalent semantic-product dumps and conformance coverage exist.
 - ○ Delete lowerer-side stdlib/helper alias fallback paths once equivalent canonical resolution is provided by the semantic product.
 - ○ Implement the structured diagnostic sink now that its single-threaded first-error contract is documented, replacing `SemanticsValidator`'s shared mutable `error_` flow without changing current failure policy.
 - ○ Implement stable semantic-product node identities or sort keys for diagnostics now that the merge-order contract is documented, so later parallel validation can publish deterministic diagnostic order.
