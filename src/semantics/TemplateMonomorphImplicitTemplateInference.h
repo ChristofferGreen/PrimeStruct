@@ -217,7 +217,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
       if (isCanonicalBuiltinSoaRefCall &&
           !candidate.args.empty() &&
           candidate.args.front().kind == Expr::Kind::Call) {
-        return soaDirectBorrowedViewPendingDiagnostic();
+        return soaDirectPendingUnavailableMethodDiagnostic("/soa_vector/ref");
       }
       const bool isExplicitSoaRefCall =
           (!candidate.isMethodCall && normalizedPrefix == "soa_vector" &&
@@ -229,7 +229,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
           isExplicitSoaRefCall ||
           isBuiltinSoaRefMethod ||
           (!candidate.isMethodCall && isSimpleCallName(candidate, "ref"))) {
-        return soaDirectBorrowedViewPendingDiagnostic();
+        return soaDirectPendingUnavailableMethodDiagnostic("/soa_vector/ref");
       }
       return {};
     }
@@ -241,7 +241,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
     if (hasVisibleSoaHelperTargetForMonomorph(ctx, normalizedName)) {
       return {};
     }
-    return soaDirectFieldViewPendingDiagnostic(normalizedName);
+    return soaDirectPendingUnavailableMethodDiagnostic(
+        soaFieldViewHelperPath(normalizedName));
   };
   const bool hasLeadingReceiverParam = [&]() {
     if (callParams.empty()) {

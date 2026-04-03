@@ -668,9 +668,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(builtinPathHelpersSource.find("std::string soaBorrowedViewPendingDiagnostic()") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
-            "std::string soaDirectFieldViewPendingDiagnostic(std::string_view fieldName)") !=
+            "std::string soaDirectFieldViewPendingDiagnostic(std::string_view fieldName)") ==
         std::string::npos);
-  CHECK(builtinPathHelpersSource.find("std::string soaDirectBorrowedViewPendingDiagnostic()") !=
+  CHECK(builtinPathHelpersSource.find("std::string soaDirectBorrowedViewPendingDiagnostic()") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
             "bool SemanticsValidator::hasVisibleDefinitionPathForCurrentImports(") !=
@@ -711,10 +711,17 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(buildInitializerInferenceSource.find("splitSoaFieldViewHelperPath(resolved, fieldNameOut)") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "soaDirectFieldViewPendingDiagnostic(fieldName)") !=
+            "soaDirectFieldViewPendingDiagnostic(fieldName)") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "soaDirectBorrowedViewPendingDiagnostic()") !=
+            "soaDirectBorrowedViewPendingDiagnostic()") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "soaDirectPendingUnavailableMethodDiagnostic(\n"
+            "        soaFieldViewHelperPath(fieldName))") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "soaDirectPendingUnavailableMethodDiagnostic(\"/soa_vector/ref\")") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find("soaFieldViewOrUnknownMethodDiagnostic(") ==
         std::string::npos);
@@ -734,9 +741,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(semanticsHelpersSource.find("std::string soaBorrowedViewPendingDiagnostic()") ==
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
-            "std::string soaDirectFieldViewPendingDiagnostic(std::string_view fieldName);") !=
+            "std::string soaDirectFieldViewPendingDiagnostic(std::string_view fieldName);") ==
         std::string::npos);
-  CHECK(semanticsHelpersSource.find("std::string soaDirectBorrowedViewPendingDiagnostic();") !=
+  CHECK(semanticsHelpersSource.find("std::string soaDirectBorrowedViewPendingDiagnostic();") ==
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
             "std::string soaDirectPendingUnavailableMethodDiagnostic(") !=

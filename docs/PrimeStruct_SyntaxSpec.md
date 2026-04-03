@@ -997,6 +997,8 @@ visibility now also routes through one shared helper-target probe instead of
 direct path checks or a monomorph-local visible-path wrapper, while
 monomorph-side fixed method pending rejects now call
 the shared pending helper directly instead of a monomorph-local wrapper, while
+direct builtin field-view/ref pending reporters now also call that same shared
+direct pending helper directly instead of thin field/ref aliases, while
 monomorph-side visible same-path
 `/soa_vector/<field>` helper checks now also route through that same shared
 definition-visibility helper instead of probing `sourceDefs` and

@@ -472,15 +472,6 @@ std::optional<std::string> soaPendingUnavailableMethodDiagnostic(
   return std::nullopt;
 }
 
-std::string soaDirectFieldViewPendingDiagnostic(std::string_view fieldName) {
-  return soaDirectPendingUnavailableMethodDiagnostic(
-      soaFieldViewHelperPath(fieldName));
-}
-
-std::string soaDirectBorrowedViewPendingDiagnostic() {
-  return soaDirectPendingUnavailableMethodDiagnostic("/soa_vector/ref");
-}
-
 std::string soaDirectPendingUnavailableMethodDiagnostic(
     std::string_view resolvedPath) {
   return *soaPendingUnavailableMethodDiagnostic(resolvedPath, false);
