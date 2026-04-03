@@ -510,7 +510,8 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
           !hasDefinitionPath(logicalMethodResolved) &&
           !resolveMapTarget(expr.args.front(), builtinMapKeyType, builtinMapValueType)) {
         error_ = soaUnavailableMethodDiagnostic(
-            methodResolved, hasVisibleSoaHelperTargetForCurrentImports("ref"));
+            methodResolved,
+            hasVisibleDefinitionPathForCurrentImports("/soa_vector/ref"));
         return finish(ReturnKind::Unknown);
       }
       ReturnKind builtinMethodKind = ReturnKind::Unknown;
@@ -525,7 +526,8 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
       if (!hasDefinitionPath(methodResolved) &&
           !hasImportedDefinitionPath(methodResolved)) {
         error_ = soaUnavailableMethodDiagnostic(
-            methodResolved, hasVisibleSoaHelperTargetForCurrentImports("ref"));
+            methodResolved,
+            hasVisibleDefinitionPathForCurrentImports("/soa_vector/ref"));
         return finish(ReturnKind::Unknown);
       }
       context.resolved = methodResolved;

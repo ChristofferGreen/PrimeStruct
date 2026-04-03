@@ -166,7 +166,7 @@ bool SemanticsValidator::isBuiltinSoaRefExpr(
     const Expr &candidate,
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals) const {
-  if (hasVisibleSoaHelperTargetForCurrentImports("ref")) {
+  if (hasVisibleDefinitionPathForCurrentImports("/soa_vector/ref")) {
     return false;
   }
   const auto helperName = builtinSoaAccessHelperName(candidate, params, locals);
@@ -238,7 +238,8 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
     return false;
   }
 
-  if (hasVisibleSoaHelperTargetForCurrentImports(normalizedName)) {
+  if (hasVisibleDefinitionPathForCurrentImports(
+          "/soa_vector/" + std::string(normalizedName))) {
     return false;
   }
 
@@ -304,12 +305,6 @@ bool SemanticsValidator::hasVisibleDefinitionPathForCurrentImports(
   const std::string ownedPath(path);
   return hasImportedDefinitionPath(ownedPath) ||
          hasDeclaredDefinitionPath(ownedPath);
-}
-
-bool SemanticsValidator::hasVisibleSoaHelperTargetForCurrentImports(
-    std::string_view helperName) const {
-  return hasVisibleDefinitionPathForCurrentImports(
-      "/soa_vector/" + std::string(helperName));
 }
 
 std::string SemanticsValidator::preferredSoaHelperTargetForCurrentImports(

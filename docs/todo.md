@@ -36,8 +36,9 @@ Ownership/drop status note: completed guard and container-error-contract checkpo
   mutator routing, plus builtin `get/ref` call-shape detection in direct
   validation and collection-return inference, plus direct same-path
   `/soa_vector/<helper>` visibility checks in count/builtin/method/vector
-  routing, direct pending field-view detection, and return-inference
-  helper-shadow probes now all route through shared validator helpers, the
+  routing now call the shared definition-visibility helper directly, and
+  direct pending field-view detection plus return-inference helper-shadow
+  probes now route through shared validator helpers, the
   remaining vector-target `count` method/infer same-path visibility probes now
   also use that shared helper instead of a direct `/soa_vector/count` check,
   and the validator-side direct `ref(...)` builtin visibility split now also

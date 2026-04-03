@@ -139,7 +139,8 @@ bool SemanticsValidator::prepareExprMethodCompatibilitySetup(
              "Device.create_pipeline([vertex_type] type, ...)";
     }
     return soaUnavailableMethodDiagnostic(
-        resolvedPath, this->hasVisibleSoaHelperTargetForCurrentImports("ref"));
+        resolvedPath,
+        this->hasVisibleDefinitionPathForCurrentImports("/soa_vector/ref"));
   };
   return true;
 }

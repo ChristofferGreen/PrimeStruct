@@ -993,8 +993,9 @@ while monomorph-side visible `/soa_vector/ref` fallback detection now also
 uses that same shared definition-visibility helper directly instead of a
 dedicated ref-specific wrapper or local visibility cache, while
 monomorph-side old-surface `/soa_vector/ref` and `/soa_vector/<field>`
-visibility now also routes through one shared helper-target probe instead of
-direct path checks or a monomorph-local visible-path wrapper, while
+visibility now also calls the shared definition-visibility helper directly
+instead of a helper-target probe, direct path checks, or a monomorph-local
+visible-path wrapper, while
 monomorph-side fixed method pending rejects now call
 the shared pending helper directly instead of a monomorph-local wrapper, while
 direct builtin field-view/ref pending reporters now also call that same shared

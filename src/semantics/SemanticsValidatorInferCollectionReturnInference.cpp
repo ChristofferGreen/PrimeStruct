@@ -322,7 +322,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
             ? builtinSoaAccessHelperName(candidate, params, locals)
             : std::nullopt;
     if (soaAccessHelper.has_value() && *soaAccessHelper == "get" &&
-        !(hasVisibleSoaHelperTargetForCurrentImports("get") &&
+        !(hasVisibleDefinitionPathForCurrentImports("/soa_vector/get") &&
           (isSimpleCallName(candidate, "get") ||
            (candidate.isMethodCall && candidate.name == "get") ||
            resolvedCandidate == "/soa_vector/get"))) {
@@ -333,7 +333,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       }
     }
     if (soaAccessHelper.has_value() && *soaAccessHelper == "ref" &&
-        !(hasVisibleSoaHelperTargetForCurrentImports("ref") &&
+        !(hasVisibleDefinitionPathForCurrentImports("/soa_vector/ref") &&
           (isSimpleCallName(candidate, "ref") ||
            (candidate.isMethodCall && candidate.name == "ref") ||
            resolvedCandidate == "/soa_vector/ref"))) {

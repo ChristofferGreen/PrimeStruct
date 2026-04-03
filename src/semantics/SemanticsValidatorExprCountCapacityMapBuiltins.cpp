@@ -233,7 +233,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       if (!(*dispatchResolvers).resolveSoaVectorTarget(expr.args.front(),
                                                        elemType)) {
         if (logicalResolvedMethod == "/soa_vector/count" &&
-            hasVisibleSoaHelperTargetForCurrentImports("count")) {
+            hasVisibleDefinitionPathForCurrentImports("/soa_vector/count")) {
           handledOut = false;
           return true;
         }

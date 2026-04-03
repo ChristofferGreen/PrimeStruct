@@ -78,7 +78,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         return true;
       }
       if (collectionTypePath == "/vector" &&
-          hasVisibleSoaHelperTargetForCurrentImports("count")) {
+          hasVisibleDefinitionPathForCurrentImports("/soa_vector/count")) {
         resolvedOut = preferredSoaHelperTargetForCurrentImports("count");
         return true;
       }
@@ -167,22 +167,22 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if (normalizedMethodName == "get" &&
         (collectionTypePath == "/soa_vector" ||
          (collectionTypePath == "/vector" &&
-          hasVisibleSoaHelperTargetForCurrentImports("get")))) {
+          hasVisibleDefinitionPathForCurrentImports("/soa_vector/get")))) {
       resolvedOut = preferredSoaHelperTargetForCurrentImports("get");
       return true;
     }
     if (normalizedMethodName == "ref" &&
         (collectionTypePath == "/soa_vector" ||
          (collectionTypePath == "/vector" &&
-          hasVisibleSoaHelperTargetForCurrentImports("ref")))) {
+          hasVisibleDefinitionPathForCurrentImports("/soa_vector/ref")))) {
       resolvedOut = preferredSoaHelperTargetForCurrentImports("ref");
       return true;
     }
     if ((normalizedMethodName == "push" || normalizedMethodName == "reserve") &&
         (collectionTypePath == "/soa_vector" ||
          (collectionTypePath == "/vector" &&
-          hasVisibleSoaHelperTargetForCurrentImports(
-              normalizedMethodName)))) {
+          hasVisibleDefinitionPathForCurrentImports(
+              "/soa_vector/" + normalizedMethodName)))) {
       resolvedOut = preferredSoaHelperTargetForCurrentImports(normalizedMethodName);
       return true;
     }
@@ -452,7 +452,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         return true;
       }
       if (resolveVectorTarget(receiver, elemType) &&
-          hasVisibleSoaHelperTargetForCurrentImports("count")) {
+          hasVisibleDefinitionPathForCurrentImports("/soa_vector/count")) {
         resolvedOut = preferredSoaHelperTargetForCurrentImports("count");
         return true;
       }
@@ -522,7 +522,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     if (normalizedMethodName == "get" &&
         resolveVectorTarget(receiver, elemType) &&
-        hasVisibleSoaHelperTargetForCurrentImports("get")) {
+        hasVisibleDefinitionPathForCurrentImports("/soa_vector/get")) {
       resolvedOut = preferredSoaHelperTargetForCurrentImports("get");
       return true;
     }
@@ -533,7 +533,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     if (normalizedMethodName == "ref" &&
         resolveVectorTarget(receiver, elemType) &&
-        hasVisibleSoaHelperTargetForCurrentImports("ref")) {
+        hasVisibleDefinitionPathForCurrentImports("/soa_vector/ref")) {
       resolvedOut = preferredSoaHelperTargetForCurrentImports("ref");
       return true;
     }
