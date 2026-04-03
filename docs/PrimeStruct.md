@@ -152,6 +152,33 @@ Planned graph invalidation contract:
 - Template inference, CT-eval expansion, and optional parallel solve remain blocked on this contract being explicit,
   because they would otherwise consume graph state whose invalidation boundaries are undefined.
 
+Planned optional parallel-solve contract:
+- Parallel solve is an optimization of the established single-threaded graph resolver, not a second semantic model.
+- The single-threaded path remains the source of truth for:
+  - node creation order
+  - SCC membership
+  - condensation-DAG ordering
+  - diagnostic ordering
+  - final published semantic-product facts
+- Any parallel execution must preserve the same visible results as the single-threaded path for a fixed canonical
+  program, including identical diagnostics, dump order, and lowering-facing facts.
+- Parallelism should be introduced only at dependency-safe boundaries such as independent SCCs or other explicitly
+  documented work partitions; it must not speculate across unresolved cycles or hidden side channels.
+- Per-task execution must use isolated local state for temporary solver work. Shared caches or published semantic facts
+  may only be merged back through one deterministic commit order.
+- Merge rules must be explicit:
+  - if two parallel tasks publish non-overlapping facts, merge order must still be deterministic
+  - if tasks would publish conflicting facts, that conflict must resolve through the same deterministic contradiction
+    path as the single-threaded solver rather than “last writer wins”
+  - diagnostics emitted during parallel work must be buffered and ordered by stable node/sort keys before publication
+- Entry criteria before prototyping:
+  - single-threaded performance guardrails are stable
+  - graph invalidation rules are explicit and tested
+  - CT-eval interaction is explicit and tested
+  - semantic-product node identities or sort keys exist for deterministic diagnostic/fact merges
+- Parallel coverage should prove both parity and scheduling-independence by exercising the same corpus under repeated
+  runs and different worker counts without changing semantic-product output or diagnostic order.
+
 ### Planned semantics-to-lowering boundary
 PrimeStruct is migrating toward an explicit post-semantics product that sits between the syntax-faithful AST and IR
 lowering. The goal is to stop re-deriving lowering facts from mutated AST state and instead hand IR preparation one
