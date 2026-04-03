@@ -285,6 +285,14 @@
   CHECK(semanticsExprMethodCompatibilitySetupSource.find(
             "return publishCurrentStructuredDiagnosticNow();") !=
         std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "auto publishMethodTargetResolutionDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find("captureExprContext(receiver);") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
   CHECK(semanticsExprMethodCompatibilitySetupSource.find(
             "return soaUnavailableMethodDiagnostic(\n"
             "        resolvedPath,\n"
