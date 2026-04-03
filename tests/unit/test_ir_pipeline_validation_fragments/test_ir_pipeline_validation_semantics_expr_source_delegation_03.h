@@ -724,10 +724,16 @@
   CHECK(semanticsExprGpuBufferSource.find(
             "auto publishGpuBufferDiagnostic = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprGpuBufferSource.find(
+            "auto failGpuBufferDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsExprGpuBufferSource.find("captureExprContext(expr);") !=
         std::string::npos);
   CHECK(semanticsExprGpuBufferSource.find(
             "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprGpuBufferSource.find(
+            "error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprGpuBufferSource.find(
             "dispatch requires kernel and three dimension arguments") !=

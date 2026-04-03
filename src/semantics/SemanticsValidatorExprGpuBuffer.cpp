@@ -40,6 +40,10 @@ bool SemanticsValidator::validateExprGpuBufferBuiltins(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failGpuBufferDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishGpuBufferDiagnostic();
+  };
   handledOut = false;
 
   auto resolveArrayElemType = [&](const Expr &arg, std::string &elemType) -> bool {
@@ -212,35 +216,28 @@ bool SemanticsValidator::validateExprGpuBufferBuiltins(
   if (isSimpleCallName(expr, "dispatch")) {
     handledOut = true;
     if (currentValidationContext_.definitionIsCompute) {
-      error_ = "dispatch is not allowed in compute definitions";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("dispatch is not allowed in compute definitions");
     }
     if (currentValidationContext_.activeEffects.count("gpu_dispatch") == 0) {
-      error_ = "dispatch requires gpu_dispatch effect";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("dispatch requires gpu_dispatch effect");
     }
     if (!expr.templateArgs.empty()) {
-      error_ = "dispatch does not accept template arguments";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("dispatch does not accept template arguments");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = "dispatch does not accept block arguments";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("dispatch does not accept block arguments");
     }
     if (expr.args.size() < 4) {
-      error_ = "dispatch requires kernel and three dimension arguments";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("dispatch requires kernel and three dimension arguments");
     }
     if (expr.args.front().kind != Expr::Kind::Name) {
-      error_ = "dispatch requires kernel name as first argument";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("dispatch requires kernel name as first argument");
     }
     const Expr &kernelExpr = expr.args.front();
     const std::string kernelPath = resolveCalleePath(kernelExpr);
     auto defIt = defMap_.find(kernelPath);
     if (defIt == defMap_.end()) {
-      error_ = "unknown kernel: " + kernelPath;
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("unknown kernel: " + kernelPath);
     }
     bool isCompute = false;
     for (const auto &transform : defIt->second->transforms) {
@@ -250,8 +247,7 @@ bool SemanticsValidator::validateExprGpuBufferBuiltins(
       }
     }
     if (!isCompute) {
-      error_ = "dispatch requires compute definition: " + kernelPath;
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("dispatch requires compute definition: " + kernelPath);
     }
     for (size_t i = 1; i <= 3; ++i) {
       if (!validateExpr(params, locals, expr.args[i])) {
@@ -259,8 +255,7 @@ bool SemanticsValidator::validateExprGpuBufferBuiltins(
       }
       ReturnKind dimKind = inferExprReturnKind(expr.args[i], params, locals);
       if (!isIntegerReturnKind(dimKind)) {
-        error_ = "dispatch dimensions require integer expressions";
-        return publishGpuBufferDiagnostic();
+        return failGpuBufferDiagnostic("dispatch dimensions require integer expressions");
       }
     }
     const auto &kernelParams = paramsByDef_[kernelPath];
@@ -271,8 +266,7 @@ bool SemanticsValidator::validateExprGpuBufferBuiltins(
         (hasTrailingArgsPack ? trailingArgsPackIndex : kernelParams.size()) + 4;
     if ((!hasTrailingArgsPack && expr.args.size() != minDispatchArgs) ||
         (hasTrailingArgsPack && expr.args.size() < minDispatchArgs)) {
-      error_ = "dispatch argument count mismatch for " + kernelPath;
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("dispatch argument count mismatch for " + kernelPath);
     }
     for (size_t i = 4; i < expr.args.size(); ++i) {
       if (!validateExpr(params, locals, expr.args[i])) {
@@ -284,111 +278,90 @@ bool SemanticsValidator::validateExprGpuBufferBuiltins(
   if (isSimpleCallName(expr, "buffer")) {
     handledOut = true;
     if (currentValidationContext_.definitionIsCompute) {
-      error_ = "buffer is not allowed in compute definitions";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("buffer is not allowed in compute definitions");
     }
     if (currentValidationContext_.activeEffects.count("gpu_dispatch") == 0) {
-      error_ = "buffer requires gpu_dispatch effect";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("buffer requires gpu_dispatch effect");
     }
     if (expr.templateArgs.size() != 1) {
-      error_ = "buffer requires exactly one template argument";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("buffer requires exactly one template argument");
     }
     if (expr.args.size() != 1) {
-      error_ = "buffer requires exactly one argument";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("buffer requires exactly one argument");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = "buffer does not accept block arguments";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("buffer does not accept block arguments");
     }
     if (!validateExpr(params, locals, expr.args.front())) {
       return false;
     }
     ReturnKind countKind = inferExprReturnKind(expr.args.front(), params, locals);
     if (!isIntegerReturnKind(countKind)) {
-      error_ = "buffer size requires integer expression";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("buffer size requires integer expression");
     }
     ReturnKind elemKind = returnKindForTypeName(expr.templateArgs.front());
     if (!isNumericOrBoolReturnKind(elemKind)) {
-      error_ = "buffer requires numeric/bool element type";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("buffer requires numeric/bool element type");
     }
     return true;
   }
   if (isSimpleCallName(expr, "upload")) {
     handledOut = true;
     if (currentValidationContext_.definitionIsCompute) {
-      error_ = "upload is not allowed in compute definitions";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("upload is not allowed in compute definitions");
     }
     if (currentValidationContext_.activeEffects.count("gpu_dispatch") == 0) {
-      error_ = "upload requires gpu_dispatch effect";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("upload requires gpu_dispatch effect");
     }
     if (!expr.templateArgs.empty()) {
-      error_ = "upload does not accept template arguments";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("upload does not accept template arguments");
     }
     if (expr.args.size() != 1) {
-      error_ = "upload requires exactly one argument";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("upload requires exactly one argument");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = "upload does not accept block arguments";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("upload does not accept block arguments");
     }
     if (!validateExpr(params, locals, expr.args.front())) {
       return false;
     }
     std::string elemType;
     if (!resolveArrayElemType(expr.args.front(), elemType)) {
-      error_ = "upload requires array input";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("upload requires array input");
     }
     ReturnKind elemKind = returnKindForTypeName(elemType);
     if (!isNumericOrBoolReturnKind(elemKind)) {
-      error_ = "upload requires numeric/bool element type";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("upload requires numeric/bool element type");
     }
     return true;
   }
   if (isSimpleCallName(expr, "readback")) {
     handledOut = true;
     if (currentValidationContext_.definitionIsCompute) {
-      error_ = "readback is not allowed in compute definitions";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("readback is not allowed in compute definitions");
     }
     if (currentValidationContext_.activeEffects.count("gpu_dispatch") == 0) {
-      error_ = "readback requires gpu_dispatch effect";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("readback requires gpu_dispatch effect");
     }
     if (!expr.templateArgs.empty()) {
-      error_ = "readback does not accept template arguments";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("readback does not accept template arguments");
     }
     if (expr.args.size() != 1) {
-      error_ = "readback requires exactly one argument";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("readback requires exactly one argument");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = "readback does not accept block arguments";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("readback does not accept block arguments");
     }
     if (!validateExpr(params, locals, expr.args.front())) {
       return false;
     }
     std::string elemType;
     if (!resolveBufferElemType(expr.args.front(), elemType)) {
-      error_ = "readback requires Buffer input";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("readback requires Buffer input");
     }
     ReturnKind elemKind = returnKindForTypeName(elemType);
     if (!isNumericOrBoolReturnKind(elemKind)) {
-      error_ = "readback requires numeric/bool element type";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("readback requires numeric/bool element type");
     }
     return true;
   }
@@ -396,20 +369,16 @@ bool SemanticsValidator::validateExprGpuBufferBuiltins(
     handledOut = true;
     if (!currentValidationContext_.definitionIsCompute &&
         !isStdlibBufferLoadWrapperDefinitionPath(currentValidationContext_.definitionPath)) {
-      error_ = "buffer_load requires a compute definition";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("buffer_load requires a compute definition");
     }
     if (!expr.templateArgs.empty()) {
-      error_ = "buffer_load does not accept template arguments";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("buffer_load does not accept template arguments");
     }
     if (expr.args.size() != 2) {
-      error_ = "buffer_load requires buffer and index arguments";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("buffer_load requires buffer and index arguments");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = "buffer_load does not accept block arguments";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("buffer_load does not accept block arguments");
     }
     if (!validateExpr(params, locals, expr.args[0]) ||
         !validateExpr(params, locals, expr.args[1])) {
@@ -417,18 +386,15 @@ bool SemanticsValidator::validateExprGpuBufferBuiltins(
     }
     std::string elemType;
     if (!resolveBufferElemType(expr.args[0], elemType)) {
-      error_ = "buffer_load requires Buffer input";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("buffer_load requires Buffer input");
     }
     ReturnKind elemKind = returnKindForTypeName(elemType);
     if (!isNumericOrBoolReturnKind(elemKind)) {
-      error_ = "buffer_load requires numeric/bool element type";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("buffer_load requires numeric/bool element type");
     }
     ReturnKind indexKind = inferExprReturnKind(expr.args[1], params, locals);
     if (!isIntegerReturnKind(indexKind)) {
-      error_ = "buffer_load requires integer index";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("buffer_load requires integer index");
     }
     return true;
   }
@@ -436,20 +402,16 @@ bool SemanticsValidator::validateExprGpuBufferBuiltins(
     handledOut = true;
     if (!currentValidationContext_.definitionIsCompute &&
         !isStdlibBufferStoreWrapperDefinitionPath(currentValidationContext_.definitionPath)) {
-      error_ = "buffer_store requires a compute definition";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("buffer_store requires a compute definition");
     }
     if (!expr.templateArgs.empty()) {
-      error_ = "buffer_store does not accept template arguments";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("buffer_store does not accept template arguments");
     }
     if (expr.args.size() != 3) {
-      error_ = "buffer_store requires buffer, index, and value arguments";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("buffer_store requires buffer, index, and value arguments");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = "buffer_store does not accept block arguments";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("buffer_store does not accept block arguments");
     }
     if (!validateExpr(params, locals, expr.args[0]) ||
         !validateExpr(params, locals, expr.args[1]) ||
@@ -458,23 +420,19 @@ bool SemanticsValidator::validateExprGpuBufferBuiltins(
     }
     std::string elemType;
     if (!resolveBufferElemType(expr.args[0], elemType)) {
-      error_ = "buffer_store requires Buffer input";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("buffer_store requires Buffer input");
     }
     ReturnKind elemKind = returnKindForTypeName(elemType);
     if (!isNumericOrBoolReturnKind(elemKind)) {
-      error_ = "buffer_store requires numeric/bool element type";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("buffer_store requires numeric/bool element type");
     }
     ReturnKind indexKind = inferExprReturnKind(expr.args[1], params, locals);
     if (!isIntegerReturnKind(indexKind)) {
-      error_ = "buffer_store requires integer index";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("buffer_store requires integer index");
     }
     ReturnKind valueKind = inferExprReturnKind(expr.args[2], params, locals);
     if (valueKind != ReturnKind::Unknown && valueKind != elemKind) {
-      error_ = "buffer_store value type mismatch";
-      return publishGpuBufferDiagnostic();
+      return failGpuBufferDiagnostic("buffer_store value type mismatch");
     }
     return true;
   }
