@@ -197,10 +197,15 @@
   bool isSyntheticBlockValueBinding(const Expr &expr) const;
   const Expr *getEnvelopeValueExpr(const Expr &expr, bool allowAnyName) const;
   struct ValidationContext;
+  struct ValidationState;
   bool makeDefinitionValidationContext(const Definition &def, ValidationContext &out);
   ValidationContext makeExecutionValidationContext(const Execution &exec) const;
   ValidationContext buildDefinitionValidationContext(const Definition &def) const;
   ValidationContext buildExecutionValidationContext(const Execution &exec) const;
+  bool makeDefinitionValidationState(const Definition &def, ValidationState &out);
+  ValidationState makeExecutionValidationState(const Execution &exec) const;
+  ValidationState buildDefinitionValidationState(const Definition &def) const;
+  ValidationState buildExecutionValidationState(const Execution &exec) const;
   void capturePrimarySpanIfUnset(int line, int column);
   void captureRelatedSpan(int line, int column, const std::string &label);
   void captureExprContext(const Expr &expr);

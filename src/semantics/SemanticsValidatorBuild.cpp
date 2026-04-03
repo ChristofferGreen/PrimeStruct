@@ -29,7 +29,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
   graphLocalAutoTryValues_.clear();
   publicDefinitions_.clear();
   paramsByDef_.clear();
-  currentValidationContext_ = {};
+  currentValidationState_ = {};
 
   for (const auto &effect : defaultEffects_) {
     if (!isEffectName(effect)) {

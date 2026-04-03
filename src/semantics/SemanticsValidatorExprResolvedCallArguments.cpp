@@ -229,7 +229,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     }
   }
 
-  if (currentValidationContext_.definitionIsUnsafe && !calleeIsUnsafe) {
+  if (currentValidationState_.context.definitionIsUnsafe && !calleeIsUnsafe) {
     for (size_t i = 0; i < calleeParams.size(); ++i) {
       const ParameterInfo &param = calleeParams[i];
       if (i == packedParamIndex) {

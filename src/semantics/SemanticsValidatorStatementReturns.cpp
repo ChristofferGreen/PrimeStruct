@@ -79,7 +79,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       return failReturnDiagnostic("return requires exactly one argument");
     }
     auto declaresAutoReturn = [&]() {
-      auto defIt = defMap_.find(currentValidationContext_.definitionPath);
+      auto defIt = defMap_.find(currentValidationState_.context.definitionPath);
       if (defIt == defMap_.end() || defIt->second == nullptr) {
         return false;
       }
@@ -95,12 +95,12 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       if (declaresAutoReturn() &&
           (error_ == "unknown method: /map/at" || error_ == "unknown method: /map/at_unsafe")) {
         return rewriteAutoReturnDiagnostic("unable to infer return type on " +
-                                           currentValidationContext_.definitionPath);
+                                           currentValidationState_.context.definitionPath);
       }
       return false;
     }
     auto declaredReferenceReturnTarget = [&]() -> std::optional<std::string> {
-      auto defIt = defMap_.find(currentValidationContext_.definitionPath);
+      auto defIt = defMap_.find(currentValidationState_.context.definitionPath);
       if (defIt == defMap_.end() || defIt->second == nullptr) {
         return std::nullopt;
       }
@@ -150,7 +150,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       }
     }
     bool validatedPointerLikeReturn = false;
-    auto currentDefIt = defMap_.find(currentValidationContext_.definitionPath);
+    auto currentDefIt = defMap_.find(currentValidationState_.context.definitionPath);
     if (currentDefIt != defMap_.end() && currentDefIt->second != nullptr) {
       BindingInfo declaredReturnBinding;
       if (inferDefinitionReturnBinding(*currentDefIt->second, declaredReturnBinding) &&
@@ -170,7 +170,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
     if (!validatedPointerLikeReturn && returnKind != ReturnKind::Unknown) {
       ReturnKind exprKind = inferExprReturnKind(stmt.args.front(), params, locals);
       if (returnKind == ReturnKind::Array) {
-        auto structIt = returnStructs_.find(currentValidationContext_.definitionPath);
+        auto structIt = returnStructs_.find(currentValidationState_.context.definitionPath);
         if (structIt != returnStructs_.end()) {
           auto normalizeCollectionStructPath = [&](const std::string &typePath) -> std::string {
             std::string normalizedTypePath = normalizeBindingTypeName(typePath);

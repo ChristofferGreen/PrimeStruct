@@ -47,7 +47,7 @@ bool SemanticsValidator::validateExprPostAccessPrechecks(
     if (!expr.args.empty()) {
       return failPostAccessPrecheckDiagnostic("gpu builtins do not accept arguments");
     }
-    if (!currentValidationContext_.definitionIsCompute) {
+    if (!currentValidationState_.context.definitionIsCompute) {
       return failPostAccessPrecheckDiagnostic("gpu builtins require a compute definition");
     }
     return true;
@@ -70,7 +70,7 @@ bool SemanticsValidator::validateExprPostAccessPrechecks(
   const bool isStdlibBufferStoreWrapperCall =
       resolved.rfind("/std/gfx/Buffer/store", 0) == 0 ||
       resolved.rfind("/std/gfx/experimental/Buffer/store", 0) == 0;
-  if (!currentValidationContext_.definitionIsCompute &&
+  if (!currentValidationState_.context.definitionIsCompute &&
       (defMap_.find(resolved) != defMap_.end() ||
        hasDeclaredDefinitionPath(resolved) ||
        hasImportedDefinitionPath(resolved)) &&

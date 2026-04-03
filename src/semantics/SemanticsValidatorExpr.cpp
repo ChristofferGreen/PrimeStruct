@@ -63,7 +63,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
   }
   if (expr.kind == Expr::Kind::Name) {
     if (isParam(params, expr.name) || locals.count(expr.name) > 0) {
-      if (currentValidationContext_.movedBindings.count(expr.name) > 0) {
+      if (currentValidationState_.movedBindings.count(expr.name) > 0) {
         return failExprRootDiagnostic("use-after-move: " + expr.name);
       }
       return true;

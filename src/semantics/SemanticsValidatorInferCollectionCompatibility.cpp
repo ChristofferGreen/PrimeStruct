@@ -193,14 +193,14 @@ std::string SemanticsValidator::specializedExperimentalVectorHelperTarget(
     return out;
   };
   const std::string currentNamespacePrefix = [&]() -> std::string {
-    if (currentValidationContext_.definitionPath.empty()) {
+    if (currentValidationState_.context.definitionPath.empty()) {
       return {};
     }
-    const size_t slash = currentValidationContext_.definitionPath.find_last_of('/');
+    const size_t slash = currentValidationState_.context.definitionPath.find_last_of('/');
     if (slash == std::string::npos || slash == 0) {
       return {};
     }
-    return currentValidationContext_.definitionPath.substr(0, slash);
+    return currentValidationState_.context.definitionPath.substr(0, slash);
   }();
   std::function<std::string(const std::string &)> canonicalizeTypeText =
       [&](const std::string &typeText) -> std::string {
@@ -323,7 +323,7 @@ bool SemanticsValidator::shouldBuiltinValidateCurrentMapWrapperHelper(std::strin
     return false;
   }
   for (size_t i = 0; i < descriptor->wrapperDefinitionNeedlesCount; ++i) {
-    if (currentValidationContext_.definitionPath.find(std::string(descriptor->wrapperDefinitionNeedles[i])) !=
+    if (currentValidationState_.context.definitionPath.find(std::string(descriptor->wrapperDefinitionNeedles[i])) !=
         std::string::npos) {
       return true;
     }

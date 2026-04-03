@@ -55,7 +55,7 @@ bool SemanticsValidator::validateExprBodyArguments(
   }
   OnErrorScope onErrorScope(*this, std::nullopt);
   BorrowEndScope borrowScope(*this,
-                             currentValidationContext_.endedReferenceBorrows);
+                             currentValidationState_.endedReferenceBorrows);
   for (size_t bodyIndex = 0; bodyIndex < expr.bodyArguments.size();
        ++bodyIndex) {
     const Expr &bodyExpr = expr.bodyArguments[bodyIndex];

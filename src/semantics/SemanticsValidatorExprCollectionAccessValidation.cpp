@@ -492,9 +492,9 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     }
     handledOut = true;
     const bool isStdlibVectorAccessWrapperDefinition =
-        currentValidationContext_.definitionPath.rfind("/std/collections/", 0) == 0 ||
-        currentValidationContext_.definitionPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
-        currentValidationContext_.definitionPath.rfind("/std/image/", 0) == 0;
+        currentValidationState_.context.definitionPath.rfind("/std/collections/", 0) == 0 ||
+        currentValidationState_.context.definitionPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
+        currentValidationState_.context.definitionPath.rfind("/std/image/", 0) == 0;
     if (!expr.isMethodCall &&
         (isDirectVectorReceiver || isDirectExperimentalVectorReceiver) &&
         !isStdlibVectorAccessWrapperDefinition &&

@@ -108,7 +108,7 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
     }
     const bool requiresWrite = mode == "Write" || mode == "Append";
     const char *requiredEffect = requiresWrite ? "file_write" : "file_read";
-    if (currentValidationContext_.activeEffects.count(requiredEffect) == 0) {
+    if (currentValidationState_.context.activeEffects.count(requiredEffect) == 0) {
       return failResultFileDiagnostic(std::string("File requires ") + requiredEffect + " effect");
     }
     if (!validateExpr(params, locals, expr.args.front())) {
@@ -302,7 +302,7 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
     }
     const bool requiresRead = expr.name == "read_byte" || expr.name == "close";
     const char *requiredEffect = requiresRead ? "file_read" : "file_write";
-    if (currentValidationContext_.activeEffects.count(requiredEffect) == 0) {
+    if (currentValidationState_.context.activeEffects.count(requiredEffect) == 0) {
       return failResultFileDiagnostic(std::string("file operations require ") + requiredEffect +
                                       " effect");
     }

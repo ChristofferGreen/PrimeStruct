@@ -205,22 +205,22 @@ private:
     SemanticsValidator &validator;
     std::unordered_set<std::string> previous;
     EffectScope(SemanticsValidator &validatorIn, std::unordered_set<std::string> nextIn)
-        : validator(validatorIn), previous(std::move(validatorIn.currentValidationContext_.activeEffects)) {
-      validator.currentValidationContext_.activeEffects = std::move(nextIn);
+        : validator(validatorIn), previous(std::move(validatorIn.currentValidationState_.context.activeEffects)) {
+      validator.currentValidationState_.context.activeEffects = std::move(nextIn);
     }
     ~EffectScope() {
-      validator.currentValidationContext_.activeEffects = std::move(previous);
+      validator.currentValidationState_.context.activeEffects = std::move(previous);
     }
   };
-  struct ValidationContextScope {
+  struct ValidationStateScope {
     SemanticsValidator &validator;
-    ValidationContext previous;
-    ValidationContextScope(SemanticsValidator &validatorIn, ValidationContext context)
-        : validator(validatorIn), previous(validatorIn.currentValidationContext_) {
-      validator.currentValidationContext_ = std::move(context);
+    ValidationState previous;
+    ValidationStateScope(SemanticsValidator &validatorIn, ValidationState state)
+        : validator(validatorIn), previous(std::move(validatorIn.currentValidationState_)) {
+      validator.currentValidationState_ = std::move(state);
     }
-    ~ValidationContextScope() {
-      validator.currentValidationContext_ = std::move(previous);
+    ~ValidationStateScope() {
+      validator.currentValidationState_ = std::move(previous);
     }
   };
   struct EntryArgStringScope {
@@ -238,33 +238,33 @@ private:
     SemanticsValidator &validator;
     std::optional<OnErrorHandler> previous;
     OnErrorScope(SemanticsValidator &validatorIn, std::optional<OnErrorHandler> nextIn)
-        : validator(validatorIn), previous(std::move(validatorIn.currentValidationContext_.onError)) {
-      validator.currentValidationContext_.onError = std::move(nextIn);
+        : validator(validatorIn), previous(std::move(validatorIn.currentValidationState_.context.onError)) {
+      validator.currentValidationState_.context.onError = std::move(nextIn);
     }
     ~OnErrorScope() {
-      validator.currentValidationContext_.onError = std::move(previous);
+      validator.currentValidationState_.context.onError = std::move(previous);
     }
   };
   struct MovedScope {
     SemanticsValidator &validator;
     std::unordered_set<std::string> previous;
     MovedScope(SemanticsValidator &validatorIn, std::unordered_set<std::string> nextIn)
-        : validator(validatorIn), previous(std::move(validatorIn.currentValidationContext_.movedBindings)) {
-      validator.currentValidationContext_.movedBindings = std::move(nextIn);
+        : validator(validatorIn), previous(std::move(validatorIn.currentValidationState_.movedBindings)) {
+      validator.currentValidationState_.movedBindings = std::move(nextIn);
     }
     ~MovedScope() {
-      validator.currentValidationContext_.movedBindings = std::move(previous);
+      validator.currentValidationState_.movedBindings = std::move(previous);
     }
   };
   struct BorrowEndScope {
     SemanticsValidator &validator;
     std::unordered_set<std::string> previous;
     BorrowEndScope(SemanticsValidator &validatorIn, std::unordered_set<std::string> nextIn)
-        : validator(validatorIn), previous(std::move(validatorIn.currentValidationContext_.endedReferenceBorrows)) {
-      validator.currentValidationContext_.endedReferenceBorrows = std::move(nextIn);
+        : validator(validatorIn), previous(std::move(validatorIn.currentValidationState_.endedReferenceBorrows)) {
+      validator.currentValidationState_.endedReferenceBorrows = std::move(nextIn);
     }
     ~BorrowEndScope() {
-      validator.currentValidationContext_.endedReferenceBorrows = std::move(previous);
+      validator.currentValidationState_.endedReferenceBorrows = std::move(previous);
     }
   };
   struct ExprContextScope {
@@ -340,7 +340,7 @@ private:
   std::unordered_set<std::string> structNames_;
   std::unordered_set<std::string> publicDefinitions_;
   std::unordered_map<std::string, std::vector<ParameterInfo>> paramsByDef_;
-  ValidationContext currentValidationContext_;
+  ValidationState currentValidationState_;
   std::unordered_set<std::string> inferenceStack_;
   std::unordered_set<std::string> returnBindingInferenceStack_;
   std::unordered_set<std::string> queryTypeInferenceDefinitionStack_;

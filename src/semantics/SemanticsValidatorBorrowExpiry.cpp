@@ -218,10 +218,10 @@ void SemanticsValidator::expireReferenceBorrowsForRemainder(const std::vector<Pa
     const std::string referenceRoot = referenceRootForBinding(bindingName, binding);
     if (statementsUseNameFrom(statements, nextIndex, bindingName) ||
         pointerAliasUsesReferenceRoot(referenceRoot)) {
-      currentValidationContext_.endedReferenceBorrows.erase(bindingName);
+      currentValidationState_.endedReferenceBorrows.erase(bindingName);
       return;
     }
-    currentValidationContext_.endedReferenceBorrows.insert(bindingName);
+    currentValidationState_.endedReferenceBorrows.insert(bindingName);
   };
   for (const auto &param : params) {
     updateName(param.name, param.binding);

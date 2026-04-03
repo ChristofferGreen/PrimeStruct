@@ -222,7 +222,7 @@ bool SemanticsValidator::validateVectorIndexedRemovalHelperElementType(
   };
   std::string experimentalElemType;
   if (!extractExperimentalVectorElementType(binding, experimentalElemType) &&
-      currentValidationContext_.definitionPath.rfind("/std/collections/experimental_vector/", 0) != 0 &&
+      currentValidationState_.context.definitionPath.rfind("/std/collections/experimental_vector/", 0) != 0 &&
       namespacePrefix.rfind("/std/collections/experimental_vector", 0) != 0 &&
       !binding.typeTemplateArg.empty()) {
     std::unordered_set<std::string> visitingStructs;
@@ -254,7 +254,7 @@ bool SemanticsValidator::validateVectorRelocationHelperElementType(
   if (extractExperimentalVectorElementType(binding, experimentalElemType)) {
     return true;
   }
-  if (currentValidationContext_.definitionPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
+  if (currentValidationState_.context.definitionPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
       namespacePrefix.rfind("/std/collections/experimental_vector", 0) == 0) {
     return true;
   }

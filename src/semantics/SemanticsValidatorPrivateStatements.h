@@ -101,13 +101,16 @@
   };
   struct ValidationContext {
     std::unordered_set<std::string> activeEffects;
-    std::unordered_set<std::string> movedBindings;
-    std::unordered_set<std::string> endedReferenceBorrows;
     std::string definitionPath;
     bool definitionIsCompute = false;
     bool definitionIsUnsafe = false;
     std::optional<ResultTypeInfo> resultType;
     std::optional<OnErrorHandler> onError;
+  };
+  struct ValidationState {
+    ValidationContext context;
+    std::unordered_set<std::string> movedBindings;
+    std::unordered_set<std::string> endedReferenceBorrows;
   };
 
   bool parseTransformArgumentExpr(const std::string &text, const std::string &namespacePrefix, Expr &out);

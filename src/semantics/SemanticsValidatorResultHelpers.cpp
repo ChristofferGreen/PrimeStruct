@@ -99,14 +99,14 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
       return false;
     }
     std::string errorType = preferredErrorType;
-    if (errorType.empty() && currentValidationContext_.resultType.has_value() &&
-        currentValidationContext_.resultType->isResult &&
-        !currentValidationContext_.resultType->errorType.empty()) {
-      errorType = currentValidationContext_.resultType->errorType;
+    if (errorType.empty() && currentValidationState_.context.resultType.has_value() &&
+        currentValidationState_.context.resultType->isResult &&
+        !currentValidationState_.context.resultType->errorType.empty()) {
+      errorType = currentValidationState_.context.resultType->errorType;
     }
-    if (errorType.empty() && currentValidationContext_.onError.has_value() &&
-        !currentValidationContext_.onError->errorType.empty()) {
-      errorType = currentValidationContext_.onError->errorType;
+    if (errorType.empty() && currentValidationState_.context.onError.has_value() &&
+        !currentValidationState_.context.onError->errorType.empty()) {
+      errorType = currentValidationState_.context.onError->errorType;
     }
     if (errorType.empty()) {
       errorType = "_";

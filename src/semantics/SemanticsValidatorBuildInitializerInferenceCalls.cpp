@@ -158,8 +158,8 @@ bool SemanticsValidator::inferBuiltinCollectionValueBinding(const Expr &expr,
        resolvedCallPath == "/std/collections/vector/capacity");
   const bool isMapContainsLike =
       !expr.isMethodCall && isSimpleCallName(expr, "contains") && expr.args.size() == 2 &&
-      (currentValidationContext_.definitionPath == "/std/collections/mapContains" ||
-       currentValidationContext_.definitionPath == "/std/collections/mapTryAt");
+      (currentValidationState_.context.definitionPath == "/std/collections/mapContains" ||
+       currentValidationState_.context.definitionPath == "/std/collections/mapTryAt");
   if (isMapContainsLike) {
     BindingInfo collectionBinding;
     if (!inferCollectionBindingFromExpr(expr.args.front(), params, locals, bindingOut)) {

@@ -92,7 +92,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
   auto hasActiveBorrowForBinding =
       [&](const std::string &name,
           const std::string &ignoreBorrowName = std::string()) -> bool {
-    if (currentValidationContext_.definitionIsUnsafe) {
+    if (currentValidationState_.context.definitionIsUnsafe) {
       return false;
     }
     auto referenceRootForBinding =
@@ -114,7 +114,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       if (!ignoreBorrowName.empty() && borrowName == ignoreBorrowName) {
         return false;
       }
-      if (currentValidationContext_.endedReferenceBorrows.count(borrowName) >
+      if (currentValidationState_.endedReferenceBorrows.count(borrowName) >
           0) {
         return false;
       }
@@ -492,10 +492,10 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     if (hasActiveBorrowForBinding(target.name)) {
       return failBorrowedBindingDiagnostic(target.name, target.name);
     }
-    if (currentValidationContext_.movedBindings.count(target.name) > 0) {
+    if (currentValidationState_.movedBindings.count(target.name) > 0) {
       return failMutationBorrowDiagnostic("use-after-move: " + target.name);
     }
-    currentValidationContext_.movedBindings.insert(target.name);
+    currentValidationState_.movedBindings.insert(target.name);
     return true;
   }
 
@@ -608,7 +608,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       }
       const bool allowLifecycleFieldWrite =
           !fieldBinding.isMutable && isNamedFieldTarget(fieldTarget, "this") &&
-          isLifecycleHelperPath(currentValidationContext_.definitionPath);
+          isLifecycleHelperPath(currentValidationState_.context.definitionPath);
       if (!fieldBinding.isMutable && !allowLifecycleFieldWrite &&
           !allowMutableReceiverFieldWrite && !allowMutableBorrowedFieldWrite) {
         return failMutationBorrowDiagnostic(
@@ -730,7 +730,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
             escapeSink = pointerBorrowRoot;
           }
         }
-        if (currentValidationContext_.definitionIsUnsafe) {
+        if (currentValidationState_.context.definitionIsUnsafe) {
           if (isUnsafeReferenceExpr(params, locals, expr.args[1]) &&
               hasEscapeSink &&
               reportReferenceAssignmentEscape(params, locals, escapeSink,
@@ -753,7 +753,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     if (targetIsName) {
       std::string escapeSink;
       if (resolveReferenceEscapeSink(params, locals, target.name, escapeSink)) {
-        if (currentValidationContext_.definitionIsUnsafe) {
+        if (currentValidationState_.context.definitionIsUnsafe) {
           if (isUnsafeReferenceExpr(params, locals, expr.args[1]) &&
               reportReferenceAssignmentEscape(params, locals, escapeSink,
                                               expr.args[1])) {
@@ -769,7 +769,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       return false;
     }
     if (targetIsName) {
-      currentValidationContext_.movedBindings.erase(target.name);
+      currentValidationState_.movedBindings.erase(target.name);
     }
     return true;
   }

@@ -20,7 +20,7 @@ bool SemanticsValidator::validateLambdaExpr(const std::vector<ParameterInfo> &pa
     if (lambdaLocals.count(name) > 0) {
       return failLambdaDiagnostic(expr, "duplicate lambda capture: " + name);
     }
-    if (currentValidationContext_.movedBindings.count(name) > 0) {
+    if (currentValidationState_.movedBindings.count(name) > 0) {
       return failLambdaDiagnostic(expr, "use-after-move: " + name);
     }
     if (const BindingInfo *paramBinding = findParamBinding(params, name)) {

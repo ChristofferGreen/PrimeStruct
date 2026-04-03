@@ -292,7 +292,7 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
       if (!validateMemoryTargetType(expr.templateArgs.front())) {
         return false;
       }
-      if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
+      if (currentValidationState_.context.activeEffects.count("heap_alloc") == 0) {
         return failScalarPointerMemoryBuiltin("alloc requires heap_alloc effect");
       }
       if (!validateExpr(params, locals, expr.args.front())) {
@@ -374,7 +374,7 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
     if (!isPointerExpr(expr.args.front(), params, locals)) {
       return failScalarPointerMemoryBuiltin(builtinName + " requires pointer target");
     }
-    if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
+    if (currentValidationState_.context.activeEffects.count("heap_alloc") == 0) {
       return failScalarPointerMemoryBuiltin(builtinName + " requires heap_alloc effect");
     }
     if (builtinName == "realloc") {

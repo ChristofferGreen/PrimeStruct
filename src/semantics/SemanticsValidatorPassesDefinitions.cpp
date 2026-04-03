@@ -31,7 +31,7 @@ bool SemanticsValidator::validateDefinitions() {
       return failUncontextualizedDiagnostic(std::move(message));
     };
     DefinitionContextScope definitionScope(*this, def);
-    ValidationContextScope validationContextScope(*this, buildDefinitionValidationContext(def));
+    ValidationStateScope validationContextScope(*this, buildDefinitionValidationState(def));
     auto isStructDefinition = [&](const Definition &candidate) {
       for (const auto &transform : candidate.transforms) {
         if (isStructTransformName(transform.name)) {
@@ -76,20 +76,20 @@ bool SemanticsValidator::validateDefinitions() {
           nullptr,
           "lifecycle helpers must return void: " + def.fullPath);
     }
-    const std::optional<OnErrorHandler> &onErrorHandler = currentValidationContext_.onError;
+    const std::optional<OnErrorHandler> &onErrorHandler = currentValidationState_.context.onError;
     if (onErrorHandler.has_value() &&
-        (!currentValidationContext_.resultType.has_value() ||
-         !currentValidationContext_.resultType->isResult) &&
+        (!currentValidationState_.context.resultType.has_value() ||
+         !currentValidationState_.context.resultType->isResult) &&
         kind != ReturnKind::Int) {
       return failPassesDefinitionsDiagnostic(
           nullptr,
           "on_error requires Result or int return type on " + def.fullPath);
     }
     if (onErrorHandler.has_value() &&
-        currentValidationContext_.resultType.has_value() &&
-        currentValidationContext_.resultType->isResult &&
+        currentValidationState_.context.resultType.has_value() &&
+        currentValidationState_.context.resultType->isResult &&
         !errorTypesMatch(onErrorHandler->errorType,
-                         currentValidationContext_.resultType->errorType,
+                         currentValidationState_.context.resultType->errorType,
                          def.namespacePrefix)) {
       return failPassesDefinitionsDiagnostic(
           nullptr,
@@ -97,7 +97,7 @@ bool SemanticsValidator::validateDefinitions() {
     }
     if (onErrorHandler.has_value()) {
       OnErrorScope onErrorScope(*this, std::nullopt);
-      for (const auto &arg : currentValidationContext_.onError->boundArgs) {
+      for (const auto &arg : currentValidationState_.context.onError->boundArgs) {
         if (!validateExpr(defParams, locals, arg)) {
           if (error_.empty()) {
             return failPassesDefinitionsDiagnostic(
@@ -171,7 +171,7 @@ bool SemanticsValidator::validateDefinitions() {
   for (const auto &def : program_.definitions) {
     clearStructuredDiagnosticContext();
     if (collectDiagnostics) {
-      ValidationContextScope validationContextScope(*this, buildDefinitionValidationContext(def));
+      ValidationStateScope validationContextScope(*this, buildDefinitionValidationState(def));
       std::vector<SemanticDiagnosticRecord> intraDefinitionRecords;
       collectDefinitionIntraBodyCallDiagnostics(def, intraDefinitionRecords);
       if (!intraDefinitionRecords.empty()) {

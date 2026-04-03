@@ -61,12 +61,12 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
                                                 expr.namespacePrefix)) {
       return false;
     }
-    if (!expr.args.empty() && currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
+    if (!expr.args.empty() && currentValidationState_.context.activeEffects.count("heap_alloc") == 0) {
       return failCollectionLiteralDiagnostic("soa_vector literal requires heap_alloc effect");
     }
   }
   if (builtinName == "vector" && !expr.args.empty()) {
-    if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
+    if (currentValidationState_.context.activeEffects.count("heap_alloc") == 0) {
       return failCollectionLiteralDiagnostic("vector literal requires heap_alloc effect");
     }
   }
@@ -98,8 +98,8 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
     definitionTemplateArgsOut = nullptr;
     namespacePrefixOut = expr.namespacePrefix;
     const Definition *currentDef = nullptr;
-    if (!currentValidationContext_.definitionPath.empty()) {
-      auto currentDefIt = defMap_.find(currentValidationContext_.definitionPath);
+    if (!currentValidationState_.context.definitionPath.empty()) {
+      auto currentDefIt = defMap_.find(currentValidationState_.context.definitionPath);
       if (currentDefIt != defMap_.end()) {
         currentDef = currentDefIt->second;
       }
@@ -119,7 +119,7 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
     std::string definitionNamespacePrefix;
     resolveOwnershipContext(definitionNamespacePrefix, definitionTemplateArgs);
     const bool isExperimentalVectorContext =
-        currentValidationContext_.definitionPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
+        currentValidationState_.context.definitionPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
         definitionNamespacePrefix.rfind("/std/collections/experimental_vector", 0) == 0;
     if (builtinName == "vector" && !expr.args.empty() &&
         !isExperimentalVectorContext) {

@@ -61,7 +61,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     return failExprDiagnostic(stmt, std::move(message));
   };
   const std::vector<std::string> *definitionTemplateArgs = nullptr;
-  auto currentDefIt = defMap_.find(currentValidationContext_.definitionPath);
+  auto currentDefIt = defMap_.find(currentValidationState_.context.definitionPath);
   if (currentDefIt != defMap_.end() && currentDefIt->second != nullptr) {
     definitionTemplateArgs = &currentDefIt->second->templateArgs;
   }
@@ -373,7 +373,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     std::unordered_map<std::string, BindingInfo> blockLocals = locals;
     OnErrorScope onErrorScope(*this, blockOnError);
-    BorrowEndScope borrowScope(*this, currentValidationContext_.endedReferenceBorrows);
+    BorrowEndScope borrowScope(*this, currentValidationState_.endedReferenceBorrows);
     for (size_t bodyIndex = 0; bodyIndex < stmt.bodyArguments.size(); ++bodyIndex) {
       const Expr &bodyExpr = stmt.bodyArguments[bodyIndex];
       if (!validateStatement(params,
@@ -404,7 +404,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       return failStatementDiagnostic(printBuiltin.name + " requires exactly one argument");
     }
     const std::string effectName = (printBuiltin.target == PrintTarget::Err) ? "io_err" : "io_out";
-    if (currentValidationContext_.activeEffects.count(effectName) == 0) {
+    if (currentValidationState_.context.activeEffects.count(effectName) == 0) {
       return failStatementDiagnostic(printBuiltin.name + " requires " + effectName + " effect");
     }
     {

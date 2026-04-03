@@ -361,7 +361,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
             params, locals, stmt.args.front(), vectorHelper.c_str(), receiverBinding)) {
       return false;
     }
-    if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
+    if (currentValidationState_.context.activeEffects.count("heap_alloc") == 0) {
       return failStatementDiagnostic(vectorHelper + " requires heap_alloc effect");
     }
     if (!validateExpr(params, locals, stmt.args[1])) {
@@ -768,7 +768,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     if (!validateVectorStatementHelperTarget(params, locals, stmt.args[receiverIndex], "push", binding)) {
       return publishExistingStatementDiagnostic();
     }
-    if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
+    if (currentValidationState_.context.activeEffects.count("heap_alloc") == 0) {
       return failStatementDiagnostic("push requires heap_alloc effect");
     }
     if (!validateExpr(params, locals, stmt.args[valueIndex])) {
@@ -802,7 +802,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     if (!validateVectorStatementHelperTarget(params, locals, stmt.args[receiverIndex], "reserve", binding)) {
       return publishExistingStatementDiagnostic();
     }
-    if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
+    if (currentValidationState_.context.activeEffects.count("heap_alloc") == 0) {
       return failStatementDiagnostic("reserve requires heap_alloc effect");
     }
     if (!validateExpr(params, locals, stmt.args[capacityIndex])) {

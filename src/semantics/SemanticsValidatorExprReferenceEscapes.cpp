@@ -218,7 +218,7 @@ bool SemanticsValidator::reportReferenceAssignmentEscape(
     sourceRoot = "<unknown>";
   }
   const std::string sink = sinkName.empty() ? "<unknown>" : sinkName;
-  if (currentValidationContext_.definitionIsUnsafe &&
+  if (currentValidationState_.context.definitionIsUnsafe &&
       isUnsafeReferenceExpr(params, locals, rhsExpr)) {
     failReferenceEscapeDiagnostic("unsafe reference escapes via assignment to " + sink +
                                   " (root: " + sourceRoot + ", sink: " + sink + ")");

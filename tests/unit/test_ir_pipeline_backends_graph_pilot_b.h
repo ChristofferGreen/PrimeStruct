@@ -67,7 +67,7 @@
         std::string::npos);
   CHECK(validatorBuild.find("bool SemanticsValidator::lookupGraphLocalAutoBinding(const Expr &bindingExpr, BindingInfo &bindingOut) const {") !=
         std::string::npos);
-  CHECK(validatorCollections.find("ValidationContextScope validationContextScope(*this, buildDefinitionValidationContext(def));") !=
+  CHECK(validatorCollections.find("ValidationStateScope validationContextScope(*this, buildDefinitionValidationState(def));") !=
         std::string::npos);
   CHECK(validatorCollections.find("bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,") !=
         std::string::npos);

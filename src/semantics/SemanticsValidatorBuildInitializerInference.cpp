@@ -34,7 +34,7 @@ bool SemanticsValidator::graphBindingIsUsable(const BindingInfo &binding) const 
     return true;
   }
   std::string scopeNamespace;
-  const auto scopeIt = defMap_.find(currentValidationContext_.definitionPath);
+  const auto scopeIt = defMap_.find(currentValidationState_.context.definitionPath);
   if (scopeIt != defMap_.end() && scopeIt->second != nullptr) {
     scopeNamespace = scopeIt->second->namespacePrefix;
   }
@@ -280,10 +280,10 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
   }
 
   std::string currentNamespace;
-  if (!currentValidationContext_.definitionPath.empty()) {
-    const size_t slash = currentValidationContext_.definitionPath.find_last_of('/');
+  if (!currentValidationState_.context.definitionPath.empty()) {
+    const size_t slash = currentValidationState_.context.definitionPath.find_last_of('/');
     if (slash != std::string::npos && slash > 0) {
-      currentNamespace = currentValidationContext_.definitionPath.substr(0, slash);
+      currentNamespace = currentValidationState_.context.definitionPath.substr(0, slash);
     }
   }
   const std::string lookupNamespace =
@@ -672,14 +672,14 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
       return false;
     }
     auto inferCurrentErrorType = [&]() -> std::string {
-      if (currentValidationContext_.resultType.has_value() &&
-          currentValidationContext_.resultType->isResult &&
-          !currentValidationContext_.resultType->errorType.empty()) {
-        return currentValidationContext_.resultType->errorType;
+      if (currentValidationState_.context.resultType.has_value() &&
+          currentValidationState_.context.resultType->isResult &&
+          !currentValidationState_.context.resultType->errorType.empty()) {
+        return currentValidationState_.context.resultType->errorType;
       }
-      if (currentValidationContext_.onError.has_value() &&
-          !currentValidationContext_.onError->errorType.empty()) {
-        return currentValidationContext_.onError->errorType;
+      if (currentValidationState_.context.onError.has_value() &&
+          !currentValidationState_.context.onError->errorType.empty()) {
+        return currentValidationState_.context.onError->errorType;
       }
       return "_";
     };

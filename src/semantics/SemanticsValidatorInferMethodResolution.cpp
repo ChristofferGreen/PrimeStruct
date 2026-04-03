@@ -211,10 +211,10 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     const std::string normalizedElemType = normalizeBindingTypeName(elemType);
     std::string currentNamespace;
-    if (!currentValidationContext_.definitionPath.empty()) {
-      const size_t slash = currentValidationContext_.definitionPath.find_last_of('/');
+    if (!currentValidationState_.context.definitionPath.empty()) {
+      const size_t slash = currentValidationState_.context.definitionPath.find_last_of('/');
       if (slash != std::string::npos && slash > 0) {
-        currentNamespace = currentValidationContext_.definitionPath.substr(0, slash);
+        currentNamespace = currentValidationState_.context.definitionPath.substr(0, slash);
       }
     }
     const std::string lookupNamespace =

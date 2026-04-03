@@ -1,4 +1,4 @@
-TEST_CASE("semantics validator rebuilds base validation contexts behind a single current context") {
+TEST_CASE("semantics validator rebuilds base contexts behind explicit validation state") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path headerPath = cwd / "src" / "semantics" / "SemanticsValidator.h";
   std::filesystem::path sourcePath = cwd / "src" / "semantics" / "SemanticsValidator.cpp";
@@ -25,7 +25,8 @@ TEST_CASE("semantics validator rebuilds base validation contexts behind a single
         std::string::npos);
   CHECK(header.find("std::unordered_map<std::string, ValidationContext> executionValidationContexts_") ==
         std::string::npos);
-  CHECK(header.find("ValidationContext currentValidationContext_") != std::string::npos);
+  CHECK(header.find("struct ValidationState {") != std::string::npos);
+  CHECK(header.find("ValidationState currentValidationState_") != std::string::npos);
   CHECK(header.find("std::unordered_set<std::string> activeEffects_;") == std::string::npos);
   CHECK(header.find("std::unordered_set<std::string> movedBindings_;") == std::string::npos);
   CHECK(header.find("std::unordered_set<std::string> endedReferenceBorrows_;") == std::string::npos);
@@ -35,6 +36,10 @@ TEST_CASE("semantics validator rebuilds base validation contexts behind a single
   CHECK(build.find("executionValidationContexts_.try_emplace(exec.fullPath, makeExecutionValidationContext(exec));") ==
         std::string::npos);
   CHECK(build.find("if (!makeDefinitionValidationContext(def, context)) {") != std::string::npos);
+  CHECK(validationContext.find("bool SemanticsValidator::makeDefinitionValidationState(const Definition &def, ValidationState &out) {") !=
+        std::string::npos);
+  CHECK(validationContext.find("ValidationState state;") != std::string::npos);
+  CHECK(validationContext.find("return makeExecutionValidationState(exec);") != std::string::npos);
   CHECK(validationContext.find("if (!const_cast<SemanticsValidator *>(this)->makeDefinitionValidationContext(def, context)) {") !=
         std::string::npos);
   CHECK(validationContext.find("return makeExecutionValidationContext(exec);") != std::string::npos);

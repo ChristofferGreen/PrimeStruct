@@ -147,7 +147,7 @@ bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, Bin
     }
   } returnBindingInferenceGuard{returnBindingInferenceStack_, def.fullPath};
 
-  ValidationContextScope validationContextScope(*this, buildDefinitionValidationContext(def));
+  ValidationStateScope validationContextScope(*this, buildDefinitionValidationState(def));
 
   std::vector<ParameterInfo> defParams;
   defParams.reserve(def.parameters.size());

@@ -59,7 +59,7 @@ bool SemanticsValidator::validateCapabilitiesSubset(const std::vector<Transform>
     return true;
   }
   for (const auto &capability : capabilities) {
-    if (currentValidationContext_.activeEffects.count(capability) == 0) {
+    if (currentValidationState_.context.activeEffects.count(capability) == 0) {
       return failPassesEffectsDiagnostic("capability requires matching effect on " + context + ": " + capability);
     }
   }
@@ -70,7 +70,7 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
   auto failPassesEffectsDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(expr, std::move(message));
   };
-  effectsOut = currentValidationContext_.activeEffects;
+  effectsOut = currentValidationState_.context.activeEffects;
   bool sawEffects = false;
   bool sawCapabilities = false;
   std::unordered_set<std::string> capabilities;
@@ -132,7 +132,7 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
   }
   if (sawEffects) {
     for (const auto &effect : effectsOut) {
-      if (currentValidationContext_.activeEffects.count(effect) == 0) {
+      if (currentValidationState_.context.activeEffects.count(effect) == 0) {
         return failPassesEffectsDiagnostic("execution effects must be a subset of enclosing effects on " + context +
                                            ": " + effect);
       }

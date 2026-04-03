@@ -52,4 +52,30 @@ SemanticsValidator::buildExecutionValidationContext(const Execution &exec) const
   return makeExecutionValidationContext(exec);
 }
 
+bool SemanticsValidator::makeDefinitionValidationState(const Definition &def, ValidationState &out) {
+  out = {};
+  return makeDefinitionValidationContext(def, out.context);
+}
+
+SemanticsValidator::ValidationState
+SemanticsValidator::makeExecutionValidationState(const Execution &exec) const {
+  ValidationState state;
+  state.context = makeExecutionValidationContext(exec);
+  return state;
+}
+
+SemanticsValidator::ValidationState
+SemanticsValidator::buildDefinitionValidationState(const Definition &def) const {
+  ValidationState state;
+  if (!const_cast<SemanticsValidator *>(this)->makeDefinitionValidationState(def, state)) {
+    return {};
+  }
+  return state;
+}
+
+SemanticsValidator::ValidationState
+SemanticsValidator::buildExecutionValidationState(const Execution &exec) const {
+  return makeExecutionValidationState(exec);
+}
+
 } // namespace primec::semantics

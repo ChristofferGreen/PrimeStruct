@@ -122,7 +122,7 @@ bool SemanticsValidator::lookupGraphLocalAutoBinding(const std::string &scopePat
 }
 
 bool SemanticsValidator::lookupGraphLocalAutoBinding(const Expr &bindingExpr, BindingInfo &bindingOut) const {
-  return lookupGraphLocalAutoBinding(currentValidationContext_.definitionPath, bindingExpr, bindingOut);
+  return lookupGraphLocalAutoBinding(currentValidationState_.context.definitionPath, bindingExpr, bindingOut);
 }
 
 }  // namespace primec::semantics

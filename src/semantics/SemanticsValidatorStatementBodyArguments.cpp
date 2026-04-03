@@ -361,7 +361,7 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
     }
   }
 
-  BorrowEndScope borrowScope(*this, currentValidationContext_.endedReferenceBorrows);
+  BorrowEndScope borrowScope(*this, currentValidationState_.endedReferenceBorrows);
   for (size_t bodyIndex = 0; bodyIndex < stmt.bodyArguments.size(); ++bodyIndex) {
     const Expr &bodyExpr = stmt.bodyArguments[bodyIndex];
     if (!validateStatement(params,

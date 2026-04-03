@@ -141,12 +141,12 @@ bool SemanticsValidator::allowMathBareName(const std::string &name) const {
   if (name.empty() || name.find('/') != std::string::npos) {
     return false;
   }
-  if (!currentValidationContext_.definitionPath.empty()) {
-    if (currentValidationContext_.definitionPath == "/std/math" ||
-        currentValidationContext_.definitionPath.rfind("/std/math/", 0) == 0) {
+  if (!currentValidationState_.context.definitionPath.empty()) {
+    if (currentValidationState_.context.definitionPath == "/std/math" ||
+        currentValidationState_.context.definitionPath.rfind("/std/math/", 0) == 0) {
       return true;
     }
-    if (currentValidationContext_.definitionPath.rfind("/std/", 0) == 0) {
+    if (currentValidationState_.context.definitionPath.rfind("/std/", 0) == 0) {
       for (const auto &importPath : program_.imports) {
         if (importPath == "/std/math/*") {
           return true;
@@ -168,7 +168,7 @@ bool SemanticsValidator::hasAnyMathImport() const {
 }
 
 bool SemanticsValidator::isEntryArgsName(const std::string &name) const {
-  if (currentValidationContext_.definitionPath != entryPath_) {
+  if (currentValidationState_.context.definitionPath != entryPath_) {
     return false;
   }
   if (entryArgsName_.empty()) {
@@ -178,7 +178,7 @@ bool SemanticsValidator::isEntryArgsName(const std::string &name) const {
 }
 
 bool SemanticsValidator::isEntryArgsAccess(const Expr &expr) const {
-  if (currentValidationContext_.definitionPath != entryPath_ || entryArgsName_.empty()) {
+  if (currentValidationState_.context.definitionPath != entryPath_ || entryArgsName_.empty()) {
     return false;
   }
   if (expr.kind != Expr::Kind::Call) {
@@ -196,7 +196,7 @@ bool SemanticsValidator::isEntryArgsAccess(const Expr &expr) const {
 
 bool SemanticsValidator::isEntryArgStringBinding(const std::unordered_map<std::string, BindingInfo> &locals,
                                                  const Expr &expr) const {
-  if (currentValidationContext_.definitionPath != entryPath_) {
+  if (currentValidationState_.context.definitionPath != entryPath_) {
     return false;
   }
   if (expr.kind != Expr::Kind::Name) {

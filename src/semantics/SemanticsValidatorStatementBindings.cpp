@@ -34,7 +34,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     return failExprDiagnostic(stmt, std::move(message));
   };
   const std::vector<std::string> *definitionTemplateArgs = nullptr;
-  auto currentDefIt = defMap_.find(currentValidationContext_.definitionPath);
+  auto currentDefIt = defMap_.find(currentValidationState_.context.definitionPath);
   if (currentDefIt != defMap_.end() && currentDefIt->second != nullptr) {
     definitionTemplateArgs = &currentDefIt->second->templateArgs;
   }
@@ -75,7 +75,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   }
 
   if (stmt.args.empty()) {
-    if (structNames_.count(currentValidationContext_.definitionPath) > 0) {
+    if (structNames_.count(currentValidationState_.context.definitionPath) > 0) {
       if (restrictType.has_value()) {
         const bool hasTemplate = !info.typeTemplateArg.empty();
         if (!restrictMatchesBinding(*restrictType, info.typeName, info.typeTemplateArg, hasTemplate, namespacePrefix)) {
@@ -544,22 +544,22 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         init.args.size() == 1 && init.args.front().kind == Expr::Kind::Name;
     std::string safeTargetType;
     const bool initIsPointerLike = resolvePointerTargetType(init, safeTargetType);
-    if (!initIsLocation && !initIsPointerLike && !currentValidationContext_.definitionIsUnsafe) {
+    if (!initIsLocation && !initIsPointerLike && !currentValidationState_.context.definitionIsUnsafe) {
       return failBindingDiagnostic("Reference bindings require location(...)");
     }
-    if (initIsLocation || (!currentValidationContext_.definitionIsUnsafe && initIsPointerLike)) {
+    if (initIsLocation || (!currentValidationState_.context.definitionIsUnsafe && initIsPointerLike)) {
       if (!initIsPointerLike || !errorTypesMatch(safeTargetType, info.typeTemplateArg, namespacePrefix)) {
         return failBindingDiagnostic("Reference binding type mismatch");
       }
     }
-    if (!initIsLocation && !currentValidationContext_.definitionIsUnsafe) {
+    if (!initIsLocation && !currentValidationState_.context.definitionIsUnsafe) {
       if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
         return false;
       }
       locals.emplace(stmt.name, info);
       return true;
     }
-    if (!initIsLocation && currentValidationContext_.definitionIsUnsafe) {
+    if (!initIsLocation && currentValidationState_.context.definitionIsUnsafe) {
       std::string pointerTargetType;
       if (!resolvePointerTargetType(init, pointerTargetType)) {
         return failBindingDiagnostic("unsafe Reference bindings require pointer-like initializer");
@@ -608,7 +608,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     bool sawMutableBorrow = false;
     bool sawImmutableBorrow = false;
     auto observeBorrow = [&](const std::string &bindingName, const BindingInfo &binding) {
-      if (currentValidationContext_.endedReferenceBorrows.count(bindingName) > 0) {
+      if (currentValidationState_.endedReferenceBorrows.count(bindingName) > 0) {
         return;
       }
       const std::string root = referenceRootForBorrowBinding(bindingName, binding);
@@ -628,12 +628,12 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       observeBorrow(entry.first, entry.second);
     }
     const bool conflict = info.isMutable ? (sawMutableBorrow || sawImmutableBorrow) : sawMutableBorrow;
-    if (conflict && !currentValidationContext_.definitionIsUnsafe) {
+    if (conflict && !currentValidationState_.context.definitionIsUnsafe) {
       return failBindingDiagnostic("borrow conflict: " + borrowRoot + " (root: " + borrowRoot +
                                    ", sink: " + stmt.name + ")");
     }
     info.referenceRoot = std::move(borrowRoot);
-    info.isUnsafeReference = currentValidationContext_.definitionIsUnsafe;
+    info.isUnsafeReference = currentValidationState_.context.definitionIsUnsafe;
   }
 
   if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {

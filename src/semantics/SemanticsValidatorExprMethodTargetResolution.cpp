@@ -480,7 +480,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
 
   auto definitionPathContains = [&](std::string_view needle) {
-    return currentValidationContext_.definitionPath.find(std::string(needle)) != std::string::npos;
+    return currentValidationState_.context.definitionPath.find(std::string(needle)) != std::string::npos;
   };
   auto preferredFileMethodTarget = [&](std::string_view helperName) {
     const std::string builtinPath = "/file/" + std::string(helperName);
@@ -488,7 +488,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return builtinPath;
     }
     const std::string stdlibPath = "/File/" + std::string(helperName);
-    if (currentValidationContext_.definitionPath.rfind(stdlibPath, 0) == 0) {
+    if (currentValidationState_.context.definitionPath.rfind(stdlibPath, 0) == 0) {
       return builtinPath;
     }
     if (hasDefinitionFamilyPath(stdlibPath)) {
@@ -2029,10 +2029,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           receiver, params, locals, resolveDirectReceiver, elemType)) {
     const std::string normalizedElemType = normalizeBindingTypeName(elemType);
     std::string currentNamespace;
-    if (!currentValidationContext_.definitionPath.empty()) {
-      const size_t slash = currentValidationContext_.definitionPath.find_last_of('/');
+    if (!currentValidationState_.context.definitionPath.empty()) {
+      const size_t slash = currentValidationState_.context.definitionPath.find_last_of('/');
       if (slash != std::string::npos && slash > 0) {
-        currentNamespace = currentValidationContext_.definitionPath.substr(0, slash);
+        currentNamespace = currentValidationState_.context.definitionPath.substr(0, slash);
       }
     }
     const std::string lookupNamespace =

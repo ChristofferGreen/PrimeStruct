@@ -124,11 +124,11 @@ bool SemanticsValidator::inferTrySnapshotData(const Definition &def,
   if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {
     out.contextReturnKind = returnKindIt->second;
   }
-  const auto context = buildDefinitionValidationContext(def);
-  if (context.onError.has_value()) {
-    out.onErrorHandlerPath = context.onError->handlerPath;
-    out.onErrorErrorType = context.onError->errorType;
-    out.onErrorBoundArgCount = context.onError->boundArgs.size();
+  const auto state = buildDefinitionValidationState(def);
+  if (state.context.onError.has_value()) {
+    out.onErrorHandlerPath = state.context.onError->handlerPath;
+    out.onErrorErrorType = state.context.onError->errorType;
+    out.onErrorBoundArgCount = state.context.onError->boundArgs.size();
   }
   return true;
 }
@@ -236,7 +236,7 @@ void SemanticsValidator::forEachLocalAwareSnapshotCall(
 
   for (const auto &def : program_.definitions) {
     DefinitionContextScope definitionScope(*this, def);
-    ValidationContextScope validationContextScope(*this, buildDefinitionValidationContext(def));
+    ValidationStateScope validationContextScope(*this, buildDefinitionValidationState(def));
     const auto paramsIt = paramsByDef_.find(def.fullPath);
     if (paramsIt == paramsByDef_.end()) {
       continue;

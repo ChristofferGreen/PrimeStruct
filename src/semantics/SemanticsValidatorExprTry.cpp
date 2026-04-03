@@ -70,25 +70,25 @@ bool SemanticsValidator::validateExprTryBuiltin(
   }
 
   ReturnKind enclosingReturnKind = ReturnKind::Unknown;
-  if (!currentValidationContext_.definitionPath.empty()) {
-    auto enclosingReturnIt = returnKinds_.find(currentValidationContext_.definitionPath);
+  if (!currentValidationState_.context.definitionPath.empty()) {
+    auto enclosingReturnIt = returnKinds_.find(currentValidationState_.context.definitionPath);
     if (enclosingReturnIt != returnKinds_.end()) {
       enclosingReturnKind = enclosingReturnIt->second;
     }
   }
 
   const bool returnsResult =
-      currentValidationContext_.resultType.has_value() &&
-      currentValidationContext_.resultType->isResult;
-  if (!currentValidationContext_.onError.has_value()) {
+      currentValidationState_.context.resultType.has_value() &&
+      currentValidationState_.context.resultType->isResult;
+  if (!currentValidationState_.context.onError.has_value()) {
     return failTryDiagnostic("missing on_error for ? usage");
   }
   if (!returnsResult && enclosingReturnKind != ReturnKind::Int) {
     return failTryDiagnostic("try requires Result or int return type");
   }
   if (returnsResult &&
-      !errorTypesMatch(currentValidationContext_.resultType->errorType,
-                       currentValidationContext_.onError->errorType,
+      !errorTypesMatch(currentValidationState_.context.resultType->errorType,
+                       currentValidationState_.context.onError->errorType,
                        expr.namespacePrefix)) {
     return failTryDiagnostic("on_error error type mismatch");
   }
@@ -100,8 +100,8 @@ bool SemanticsValidator::validateExprTryBuiltin(
       !argResult.isResult) {
     return failTryDiagnostic("try requires Result argument");
   }
-  if (currentValidationContext_.onError.has_value() &&
-      !errorTypesMatch(argResult.errorType, currentValidationContext_.onError->errorType,
+  if (currentValidationState_.context.onError.has_value() &&
+      !errorTypesMatch(argResult.errorType, currentValidationState_.context.onError->errorType,
                        expr.namespacePrefix)) {
     return failTryDiagnostic("try error type mismatch");
   }

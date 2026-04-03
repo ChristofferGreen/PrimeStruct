@@ -180,10 +180,10 @@ bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
 
   if (isSimpleCallName(stmt, "dispatch")) {
     handled = true;
-    if (currentValidationContext_.definitionIsCompute) {
+    if (currentValidationState_.context.definitionIsCompute) {
       return failStatementDiagnostic("dispatch is not allowed in compute definitions");
     }
-    if (currentValidationContext_.activeEffects.count("gpu_dispatch") == 0) {
+    if (currentValidationState_.context.activeEffects.count("gpu_dispatch") == 0) {
       return failStatementDiagnostic("dispatch requires gpu_dispatch effect");
     }
     if (hasNamedArguments(stmt.argNames)) {
@@ -244,8 +244,8 @@ bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
 
   if (isSimpleCallName(stmt, "buffer_store")) {
     handled = true;
-    if (!currentValidationContext_.definitionIsCompute &&
-        !isStdlibBufferStoreWrapperDefinitionPath(currentValidationContext_.definitionPath)) {
+    if (!currentValidationState_.context.definitionIsCompute &&
+        !isStdlibBufferStoreWrapperDefinitionPath(currentValidationState_.context.definitionPath)) {
       return failStatementDiagnostic("buffer_store requires a compute definition");
     }
     if (hasNamedArguments(stmt.argNames)) {
@@ -300,7 +300,7 @@ bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
                                     std::to_string(pathSpaceBuiltin.argumentCount) + " argument" +
                                     (pathSpaceBuiltin.argumentCount == 1 ? "" : "s"));
     }
-    if (currentValidationContext_.activeEffects.count(pathSpaceBuiltin.requiredEffect) == 0) {
+    if (currentValidationState_.context.activeEffects.count(pathSpaceBuiltin.requiredEffect) == 0) {
       return failStatementDiagnostic(pathSpaceBuiltin.name + " requires " + pathSpaceBuiltin.requiredEffect +
                                     " effect");
     }

@@ -465,7 +465,7 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
 
   for (const auto &def : program_.definitions) {
     DefinitionContextScope definitionScope(*this, def);
-    ValidationContextScope validationContextScope(*this, buildDefinitionValidationContext(def));
+    ValidationStateScope validationContextScope(*this, buildDefinitionValidationState(def));
     const auto paramsIt = paramsByDef_.find(def.fullPath);
     if (paramsIt == paramsByDef_.end()) {
       continue;

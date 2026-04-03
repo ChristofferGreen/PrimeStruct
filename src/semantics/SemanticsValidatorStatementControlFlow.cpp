@@ -111,7 +111,7 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
       std::vector<Expr> livenessStatements = branch.bodyArguments;
       livenessStatements.insert(livenessStatements.end(), postMergeStatements.begin(), postMergeStatements.end());
       OnErrorScope onErrorScope(*this, std::nullopt);
-      BorrowEndScope borrowScope(*this, currentValidationContext_.endedReferenceBorrows);
+      BorrowEndScope borrowScope(*this, currentValidationState_.endedReferenceBorrows);
       for (size_t bodyIndex = 0; bodyIndex < branch.bodyArguments.size(); ++bodyIndex) {
         const Expr &bodyExpr = branch.bodyArguments[bodyIndex];
         if (!validateStatement(params,
@@ -153,7 +153,7 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
       livenessStatements.insert(livenessStatements.end(), body.bodyArguments.begin(), body.bodyArguments.end());
     }
     OnErrorScope onErrorScope(*this, std::nullopt);
-    BorrowEndScope borrowScope(*this, currentValidationContext_.endedReferenceBorrows);
+    BorrowEndScope borrowScope(*this, currentValidationState_.endedReferenceBorrows);
     for (size_t bodyIndex = 0; bodyIndex < body.bodyArguments.size(); ++bodyIndex) {
       const Expr &bodyExpr = body.bodyArguments[bodyIndex];
       if (!validateStatement(params,

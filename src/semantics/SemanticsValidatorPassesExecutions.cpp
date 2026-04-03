@@ -13,7 +13,7 @@ bool SemanticsValidator::validateExecutions() {
       return failExecutionDiagnostic(exec, std::move(message));
     };
     ExecutionContextScope executionScope(*this, exec);
-    ValidationContextScope validationContextScope(*this, buildExecutionValidationContext(exec));
+    ValidationStateScope validationContextScope(*this, buildExecutionValidationState(exec));
     bool sawEffects = false;
     bool sawCapabilities = false;
     for (const auto &transform : exec.transforms) {
@@ -84,7 +84,7 @@ bool SemanticsValidator::validateExecutions() {
     }
     const std::unordered_set<std::string> targetEffects =
         resolveEffects(it->second->transforms, it->second->fullPath == entryPath_);
-    for (const auto &effect : currentValidationContext_.activeEffects) {
+    for (const auto &effect : currentValidationState_.context.activeEffects) {
       if (targetEffects.count(effect) == 0) {
         return failPassesExecutionsDiagnostic("execution effects must be a subset of enclosing effects on " +
                                               resolvedPath + ": " + effect);
@@ -137,7 +137,7 @@ bool SemanticsValidator::validateExecutions() {
   for (const auto &exec : program_.executions) {
     clearStructuredDiagnosticContext();
     if (collectDiagnostics) {
-      ValidationContextScope validationContextScope(*this, buildExecutionValidationContext(exec));
+      ValidationStateScope validationContextScope(*this, buildExecutionValidationState(exec));
       std::vector<SemanticDiagnosticRecord> intraExecutionRecords;
       collectExecutionIntraBodyCallDiagnostics(exec, intraExecutionRecords);
       if (!intraExecutionRecords.empty()) {
