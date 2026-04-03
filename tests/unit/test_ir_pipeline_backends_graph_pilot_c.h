@@ -112,9 +112,11 @@
         std::string::npos);
   CHECK(validatorExpr.find("const std::string canonicalMapMethodTarget =") !=
         std::string::npos);
-  CHECK(validatorExprMain.find("error_ = \"unknown call target: \" + formatUnknownCallTarget(expr);") ==
+  CHECK(validatorExprMain.find("return failLateUnknownTargetDiagnostic(\"unknown call target: \" +") ==
         std::string::npos);
-  CHECK(validatorExpr.find("error_ = \"unknown call target: \" + formatUnknownCallTarget(expr);") !=
+  CHECK(validatorExpr.find("auto failLateUnknownTargetDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("return failLateUnknownTargetDiagnostic(\"unknown call target: \" +") !=
         std::string::npos);
   CHECK(validatorExpr.find("if (resolveMapTargetWithTypes(target, keyType, valueType) ||") !=
         std::string::npos);
@@ -313,4 +315,3 @@
   CHECK(primecMain.find("[--type-resolver legacy|graph]") == std::string::npos);
   CHECK(primevmMain.find("[--type-resolver legacy|graph]") == std::string::npos);
 }
-

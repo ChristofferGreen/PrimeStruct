@@ -131,8 +131,13 @@
   CHECK(semanticsExprMethodResolutionSource.find(
             "this->mapNamespacedMethodCompatibilityPath(expr, params, locals, dispatchResolverAdapters)") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("error_ = \"method call missing receiver\";") == std::string::npos);
-  CHECK(semanticsExprMethodResolutionSource.find("error_ = \"method call missing receiver\";") !=
+  CHECK(semanticsExprSource.find("failMethodResolutionDiagnostic(\"method call missing receiver\")") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "auto failMethodResolutionDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "failMethodResolutionDiagnostic(\"method call missing receiver\")") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("auto resolveInferredMapMethodFallback = [&]() -> bool {") ==
         std::string::npos);

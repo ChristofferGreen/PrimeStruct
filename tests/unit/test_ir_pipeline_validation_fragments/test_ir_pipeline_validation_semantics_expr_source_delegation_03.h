@@ -283,10 +283,13 @@
             "const std::string canonicalMapMethodTarget =") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
-            "error_ = \"unknown call target: \" + formatUnknownCallTarget(expr);") ==
+            "return failLateUnknownTargetDiagnostic(\"unknown call target: \" +") ==
         std::string::npos);
   CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
-            "error_ = \"unknown call target: \" + formatUnknownCallTarget(expr);") !=
+            "auto failLateUnknownTargetDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
+            "return failLateUnknownTargetDiagnostic(\"unknown call target: \" +") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") == std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprPredicates.h\"") == std::string::npos);

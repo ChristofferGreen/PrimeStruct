@@ -260,8 +260,12 @@
         std::string::npos);
   CHECK(validatorExpr.find("mapNamespacedMethodCompatibilityPath(expr, params, locals, dispatchResolverAdapters)") !=
         std::string::npos);
-  CHECK(validatorExprMain.find("error_ = \"method call missing receiver\";") == std::string::npos);
-  CHECK(validatorExpr.find("error_ = \"method call missing receiver\";") != std::string::npos);
+  CHECK(validatorExprMain.find("failMethodResolutionDiagnostic(\"method call missing receiver\")") ==
+        std::string::npos);
+  CHECK(validatorExpr.find("auto failMethodResolutionDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
+  CHECK(validatorExpr.find("failMethodResolutionDiagnostic(\"method call missing receiver\")") !=
+        std::string::npos);
   CHECK(validatorExprMain.find("auto resolveInferredMapMethodFallback = [&]() -> bool {") ==
         std::string::npos);
   CHECK(validatorExpr.find("auto resolveInferredMapMethodFallback = [&]() -> bool {") !=
