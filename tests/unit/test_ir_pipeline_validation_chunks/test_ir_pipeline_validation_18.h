@@ -720,6 +720,47 @@ TEST_CASE("semantics validator build lifecycle publication stays stable") {
         std::string::npos);
 }
 
+TEST_CASE("semantics validator build transform publication stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path buildTransformsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorBuildTransforms.cpp";
+  REQUIRE(std::filesystem::exists(buildTransformsPath));
+
+  const std::string buildTransformsSource = readText(buildTransformsPath);
+  CHECK(buildTransformsSource.find(
+            "bool SemanticsValidator::validateDefinitionBuildTransforms(") !=
+        std::string::npos);
+  CHECK(buildTransformsSource.find(
+            "auto addTransformDiagnostic = [&](const std::string &message) -> bool {") !=
+        std::string::npos);
+  CHECK(buildTransformsSource.find(
+            "pod definitions cannot be tagged as handle or gpu_lane: ") !=
+        std::string::npos);
+  CHECK(buildTransformsSource.find(
+            "struct definitions cannot declare return types: ") !=
+        std::string::npos);
+  CHECK(buildTransformsSource.find(
+            "fields cannot be tagged as handle and gpu_lane: ") !=
+        std::string::npos);
+  CHECK(buildTransformsSource.find(
+            "return addTransformDiagnostic(\"struct definitions may only contain field bindings: \" + def.fullPath);") !=
+        std::string::npos);
+  CHECK(buildTransformsSource.find(
+            "return addTransformDiagnostic(\"fields cannot be tagged as handle and gpu_lane: \" + def.fullPath);") !=
+        std::string::npos);
+}
+
 TEST_CASE("semantics validator build struct-field publication stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

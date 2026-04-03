@@ -419,12 +419,10 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
     }
   }
   if (hasPod && (hasHandle || hasGpuLane)) {
-    error_ = "pod definitions cannot be tagged as handle or gpu_lane: " + def.fullPath;
-    return false;
+    return addTransformDiagnostic("pod definitions cannot be tagged as handle or gpu_lane: " + def.fullPath);
   }
   if (hasHandle && hasGpuLane) {
-    error_ = "handle definitions cannot be tagged as gpu_lane: " + def.fullPath;
-    return false;
+    return addTransformDiagnostic("handle definitions cannot be tagged as gpu_lane: " + def.fullPath);
   }
   bool isFieldOnlyStruct = false;
   if (!isStruct && !hasReturnTransform && def.parameters.empty() && !def.hasReturnStatement && !def.returnExpr.has_value()) {
@@ -454,25 +452,20 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
   if (isStruct) {
     explicitStructs.insert(def.fullPath);
     if (hasReturnTransform) {
-      error_ = "struct definitions cannot declare return types: " + def.fullPath;
-      return false;
+      return addTransformDiagnostic("struct definitions cannot declare return types: " + def.fullPath);
     }
     if (def.hasReturnStatement) {
-      error_ = "struct definitions cannot contain return statements: " + def.fullPath;
-      return false;
+      return addTransformDiagnostic("struct definitions cannot contain return statements: " + def.fullPath);
     }
     if (def.returnExpr.has_value()) {
-      error_ = "struct definitions cannot return a value: " + def.fullPath;
-      return false;
+      return addTransformDiagnostic("struct definitions cannot return a value: " + def.fullPath);
     }
     if (!def.parameters.empty()) {
-      error_ = "struct definitions cannot declare parameters: " + def.fullPath;
-      return false;
+      return addTransformDiagnostic("struct definitions cannot declare parameters: " + def.fullPath);
     }
     for (const auto &stmt : def.statements) {
       if (!stmt.isBinding) {
-        error_ = "struct definitions may only contain field bindings: " + def.fullPath;
-        return false;
+        return addTransformDiagnostic("struct definitions may only contain field bindings: " + def.fullPath);
       }
     }
   }
@@ -494,20 +487,16 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
         }
       }
       if (hasPod && (fieldHasHandle || fieldHasGpuLane)) {
-        error_ = "pod definitions cannot contain handle or gpu_lane fields: " + def.fullPath;
-        return false;
+        return addTransformDiagnostic("pod definitions cannot contain handle or gpu_lane fields: " + def.fullPath);
       }
       if (fieldHasPod && fieldHasHandle) {
-        error_ = "fields cannot be tagged as pod and handle: " + def.fullPath;
-        return false;
+        return addTransformDiagnostic("fields cannot be tagged as pod and handle: " + def.fullPath);
       }
       if (fieldHasPod && fieldHasGpuLane) {
-        error_ = "fields cannot be tagged as pod and gpu_lane: " + def.fullPath;
-        return false;
+        return addTransformDiagnostic("fields cannot be tagged as pod and gpu_lane: " + def.fullPath);
       }
       if (fieldHasHandle && fieldHasGpuLane) {
-        error_ = "fields cannot be tagged as handle and gpu_lane: " + def.fullPath;
-        return false;
+        return addTransformDiagnostic("fields cannot be tagged as handle and gpu_lane: " + def.fullPath);
       }
     }
   }
