@@ -818,6 +818,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(inferMethodResolutionSource.find("auto preferredSoaCountMethodTarget =") ==
         std::string::npos);
+  CHECK(inferMethodResolutionSource.find(
+            "hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/count\")") ==
+        std::string::npos);
   CHECK(inferMethodResolutionSource.find("hasVisibleSoaHelperTargetForCurrentImports(") !=
         std::string::npos);
   CHECK(inferMethodResolutionSource.find("auto extractBorrowedBinding =") ==
@@ -838,6 +841,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "preferredSoaHelperTargetForCurrentImports(") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find("auto preferredSoaCountMethodTarget =") ==
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/count\")") ==
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find("hasVisibleSoaHelperTargetForCurrentImports(") !=
         std::string::npos);

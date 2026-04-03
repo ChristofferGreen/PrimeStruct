@@ -1580,7 +1580,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         return setCollectionMethodTarget("/array/count");
       }
       if (collectionTypePath == "/vector" &&
-          hasVisibleDefinitionPathForCurrentImports("/soa_vector/count")) {
+          hasVisibleSoaHelperTargetForCurrentImports("count")) {
         return setCollectionMethodTarget(
             preferredSoaHelperTargetForCurrentImports("count"));
       }

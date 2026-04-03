@@ -2664,6 +2664,9 @@ versus canonical target selection in method-target, infer-time, and
 vector-helper mutator routing, return-inference paths, and builtin SoA
 access/count helper fallback
 validation,
+with the remaining vector-target `count` method/infer same-path visibility
+probes now also using that shared helper instead of a direct
+`/soa_vector/count` check,
 while collection-return visible same-path `/soa_vector/get|ref` helper
 detection plus preferred same-path-versus-canonical `soa_vector`
 helper target selection in method-target, infer-time, vector-helper

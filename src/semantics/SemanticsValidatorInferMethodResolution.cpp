@@ -78,7 +78,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         return true;
       }
       if (collectionTypePath == "/vector" &&
-          hasVisibleDefinitionPathForCurrentImports("/soa_vector/count")) {
+          hasVisibleSoaHelperTargetForCurrentImports("count")) {
         resolvedOut = preferredSoaHelperTargetForCurrentImports("count");
         return true;
       }
