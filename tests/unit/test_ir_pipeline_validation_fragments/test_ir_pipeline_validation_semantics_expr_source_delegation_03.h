@@ -752,10 +752,16 @@
   CHECK(semanticsExprScalarPointerMemorySource.find(
             "auto publishScalarPointerMemoryDiagnostic = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprScalarPointerMemorySource.find(
+            "auto failScalarPointerMemoryBuiltin = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsExprScalarPointerMemorySource.find("captureExprContext(expr);") !=
         std::string::npos);
   CHECK(semanticsExprScalarPointerMemorySource.find(
             "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprScalarPointerMemorySource.find(
+            "error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprScalarPointerMemorySource.find(
             "convert requires numeric or bool operand") !=

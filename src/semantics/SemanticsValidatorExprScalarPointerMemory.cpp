@@ -46,6 +46,10 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failScalarPointerMemoryBuiltin = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishScalarPointerMemoryDiagnostic();
+  };
   auto isIntegerExpr = [&](const Expr &arg) -> bool {
     ReturnKind kind = inferExprReturnKind(arg, params, locals);
     if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64) {
@@ -144,8 +148,7 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
     std::string targetArg;
     if (splitTemplateTypeName(targetType, targetBase, targetArg) &&
         normalizeBindingTypeName(targetBase) == "array") {
-      error_ = "unsupported pointer target type: " + targetType;
-      return publishScalarPointerMemoryDiagnostic();
+      return failScalarPointerMemoryBuiltin("unsupported pointer target type: " + targetType);
     }
     Expr bindingExpr;
     bindingExpr.kind = Expr::Kind::Call;
@@ -161,8 +164,7 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
     if (!parseBindingInfo(bindingExpr, expr.namespacePrefix, structNames_,
                           importAliases_, bindingInfo, restrictType,
                           parseError)) {
-      error_ = parseError;
-      return publishScalarPointerMemoryDiagnostic();
+      return failScalarPointerMemoryBuiltin(std::move(parseError));
     }
     return true;
   };
@@ -211,26 +213,22 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
   if (getBuiltinConvertName(expr, builtinName)) {
     handledOut = true;
     if (expr.templateArgs.size() != 1) {
-      error_ = "convert requires exactly one template argument";
-      return publishScalarPointerMemoryDiagnostic();
+      return failScalarPointerMemoryBuiltin("convert requires exactly one template argument");
     }
     const std::string &typeName = expr.templateArgs[0];
     if (typeName != "int" && typeName != "i32" && typeName != "i64" &&
         typeName != "u64" && typeName != "bool" && typeName != "float" &&
         typeName != "f32" && typeName != "f64") {
-      error_ = "unsupported convert target type: " + typeName;
-      return publishScalarPointerMemoryDiagnostic();
+      return failScalarPointerMemoryBuiltin("unsupported convert target type: " + typeName);
     }
     if (expr.args.size() != 1) {
-      error_ = "argument count mismatch for builtin " + builtinName;
-      return publishScalarPointerMemoryDiagnostic();
+      return failScalarPointerMemoryBuiltin("argument count mismatch for builtin " + builtinName);
     }
     if (!validateExpr(params, locals, expr.args.front())) {
       return false;
     }
     if (!isConvertibleExpr(expr.args.front())) {
-      error_ = "convert requires numeric or bool operand";
-      return publishScalarPointerMemoryDiagnostic();
+      return failScalarPointerMemoryBuiltin("convert requires numeric or bool operand");
     }
     return true;
   }
@@ -238,41 +236,34 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
   PrintBuiltin printBuiltin;
   if (getPrintBuiltin(expr, printBuiltin)) {
     handledOut = true;
-    error_ = printBuiltin.name + " is only supported as a statement";
-    return publishScalarPointerMemoryDiagnostic();
+    return failScalarPointerMemoryBuiltin(printBuiltin.name + " is only supported as a statement");
   }
 
   if (getBuiltinPointerName(expr, builtinName)) {
     handledOut = true;
     if (hasNamedArguments(expr.argNames)) {
-      error_ = "named arguments not supported for builtin calls";
-      return publishScalarPointerMemoryDiagnostic();
+      return failScalarPointerMemoryBuiltin("named arguments not supported for builtin calls");
     }
     if (!expr.templateArgs.empty()) {
-      error_ = "pointer helpers do not accept template arguments";
-      return publishScalarPointerMemoryDiagnostic();
+      return failScalarPointerMemoryBuiltin("pointer helpers do not accept template arguments");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = "pointer helpers do not accept block arguments";
-      return publishScalarPointerMemoryDiagnostic();
+      return failScalarPointerMemoryBuiltin("pointer helpers do not accept block arguments");
     }
     if (expr.args.size() != 1) {
-      error_ = "argument count mismatch for builtin " + builtinName;
-      return publishScalarPointerMemoryDiagnostic();
+      return failScalarPointerMemoryBuiltin("argument count mismatch for builtin " + builtinName);
     }
     if (builtinName == "location") {
       const Expr &target = expr.args.front();
       if (target.kind != Expr::Kind::Name || isEntryArgsName(target.name) ||
           (locals.count(target.name) == 0 && !isParam(params, target.name))) {
-        error_ = "location requires a local binding";
-        return publishScalarPointerMemoryDiagnostic();
+        return failScalarPointerMemoryBuiltin("location requires a local binding");
       }
     }
     if (builtinName == "dereference" &&
         !isPointerLikeExpr(expr.args.front(), params, locals) &&
         !isDeclaredPointerLikeCall(expr.args.front())) {
-      error_ = "dereference requires a pointer or reference";
-      return publishScalarPointerMemoryDiagnostic();
+      return failScalarPointerMemoryBuiltin("dereference requires a pointer or reference");
     }
     if (!validateExpr(params, locals, expr.args.front())) {
       return false;
@@ -291,53 +282,44 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
     }
     handledOut = true;
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = builtinName + " does not accept block arguments";
-      return publishScalarPointerMemoryDiagnostic();
+      return failScalarPointerMemoryBuiltin(builtinName + " does not accept block arguments");
     }
     if (hasNamedArguments(expr.argNames)) {
-      error_ = builtinName + " does not accept named arguments";
-      return publishScalarPointerMemoryDiagnostic();
+      return failScalarPointerMemoryBuiltin(builtinName + " does not accept named arguments");
     }
     if (builtinName == "alloc") {
       if (expr.templateArgs.size() != 1) {
-        error_ = "alloc requires exactly one template argument";
-        return publishScalarPointerMemoryDiagnostic();
+        return failScalarPointerMemoryBuiltin("alloc requires exactly one template argument");
       }
       if (expr.args.size() != 1) {
-        error_ = "argument count mismatch for builtin alloc";
-        return publishScalarPointerMemoryDiagnostic();
+        return failScalarPointerMemoryBuiltin("argument count mismatch for builtin alloc");
       }
       if (!validateMemoryTargetType(expr.templateArgs.front())) {
         return false;
       }
       if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
-        error_ = "alloc requires heap_alloc effect";
-        return publishScalarPointerMemoryDiagnostic();
+        return failScalarPointerMemoryBuiltin("alloc requires heap_alloc effect");
       }
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
       }
       if (!isIntegerExpr(expr.args.front())) {
-        error_ = "alloc requires integer element count";
-        return publishScalarPointerMemoryDiagnostic();
+        return failScalarPointerMemoryBuiltin("alloc requires integer element count");
       }
       return true;
     }
     if (builtinName == "at") {
       if (!expr.templateArgs.empty()) {
-        error_ = "at does not accept template arguments";
-        return publishScalarPointerMemoryDiagnostic();
+        return failScalarPointerMemoryBuiltin("at does not accept template arguments");
       }
       if (expr.args.size() != 3) {
-        error_ = "argument count mismatch for builtin at";
-        return publishScalarPointerMemoryDiagnostic();
+        return failScalarPointerMemoryBuiltin("argument count mismatch for builtin at");
       }
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
       }
       if (!isPointerExpr(expr.args.front(), params, locals)) {
-        error_ = "at requires pointer target";
-        return publishScalarPointerMemoryDiagnostic();
+        return failScalarPointerMemoryBuiltin("at requires pointer target");
       }
       if (!validateExpr(params, locals, expr.args[1])) {
         return false;
@@ -345,8 +327,7 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
       ReturnKind indexKind = normalizeMemoryIndexKind(
           inferExprReturnKind(expr.args[1], params, locals));
       if (!isSupportedMemoryIndexKind(indexKind)) {
-        error_ = "at requires integer index";
-        return publishScalarPointerMemoryDiagnostic();
+        return failScalarPointerMemoryBuiltin("at requires integer index");
       }
       if (!validateExpr(params, locals, expr.args[2])) {
         return false;
@@ -354,30 +335,26 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
       ReturnKind countKind = normalizeMemoryIndexKind(
           inferExprReturnKind(expr.args[2], params, locals));
       if (!isSupportedMemoryIndexKind(countKind)) {
-        error_ = "at requires integer element count";
-        return publishScalarPointerMemoryDiagnostic();
+        return failScalarPointerMemoryBuiltin("at requires integer element count");
       }
       if (countKind != indexKind) {
-        error_ = "at requires matching integer index and element count kinds";
-        return publishScalarPointerMemoryDiagnostic();
+        return failScalarPointerMemoryBuiltin(
+            "at requires matching integer index and element count kinds");
       }
       return true;
     }
     if (builtinName == "at_unsafe") {
       if (!expr.templateArgs.empty()) {
-        error_ = "at_unsafe does not accept template arguments";
-        return publishScalarPointerMemoryDiagnostic();
+        return failScalarPointerMemoryBuiltin("at_unsafe does not accept template arguments");
       }
       if (expr.args.size() != 2) {
-        error_ = "argument count mismatch for builtin at_unsafe";
-        return publishScalarPointerMemoryDiagnostic();
+        return failScalarPointerMemoryBuiltin("argument count mismatch for builtin at_unsafe");
       }
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
       }
       if (!isPointerExpr(expr.args.front(), params, locals)) {
-        error_ = "at_unsafe requires pointer target";
-        return publishScalarPointerMemoryDiagnostic();
+        return failScalarPointerMemoryBuiltin("at_unsafe requires pointer target");
       }
       if (!validateExpr(params, locals, expr.args[1])) {
         return false;
@@ -385,38 +362,32 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
       ReturnKind indexKind = normalizeMemoryIndexKind(
           inferExprReturnKind(expr.args[1], params, locals));
       if (!isSupportedMemoryIndexKind(indexKind)) {
-        error_ = "at_unsafe requires integer index";
-        return publishScalarPointerMemoryDiagnostic();
+        return failScalarPointerMemoryBuiltin("at_unsafe requires integer index");
       }
       return true;
     }
     if (!expr.templateArgs.empty()) {
-      error_ = builtinName + " does not accept template arguments";
-      return publishScalarPointerMemoryDiagnostic();
+      return failScalarPointerMemoryBuiltin(builtinName + " does not accept template arguments");
     }
     const size_t expectedArgs = builtinName == "free" ? 1 : 2;
     if (expr.args.size() != expectedArgs) {
-      error_ = "argument count mismatch for builtin " + builtinName;
-      return publishScalarPointerMemoryDiagnostic();
+      return failScalarPointerMemoryBuiltin("argument count mismatch for builtin " + builtinName);
     }
     if (!validateExpr(params, locals, expr.args.front())) {
       return false;
     }
     if (!isPointerExpr(expr.args.front(), params, locals)) {
-      error_ = builtinName + " requires pointer target";
-      return publishScalarPointerMemoryDiagnostic();
+      return failScalarPointerMemoryBuiltin(builtinName + " requires pointer target");
     }
     if (currentValidationContext_.activeEffects.count("heap_alloc") == 0) {
-      error_ = builtinName + " requires heap_alloc effect";
-      return publishScalarPointerMemoryDiagnostic();
+      return failScalarPointerMemoryBuiltin(builtinName + " requires heap_alloc effect");
     }
     if (builtinName == "realloc") {
       if (!validateExpr(params, locals, expr.args[1])) {
         return false;
       }
       if (!isIntegerExpr(expr.args[1])) {
-        error_ = "realloc requires integer element count";
-        return publishScalarPointerMemoryDiagnostic();
+        return failScalarPointerMemoryBuiltin("realloc requires integer element count");
       }
     }
     return true;
