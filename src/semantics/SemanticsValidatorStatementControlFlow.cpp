@@ -50,6 +50,10 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
                                                       size_t statementIndex,
                                                       bool &handled) {
   handled = false;
+  auto publishStatementDiagnostic = [&]() -> bool {
+    captureExprContext(stmt);
+    return publishCurrentStructuredDiagnosticNow();
+  };
 
   if (isMatchCall(stmt)) {
     handled = true;
@@ -73,15 +77,15 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
     handled = true;
     if (hasNamedArguments(stmt.argNames)) {
       error_ = "named arguments not supported for builtin calls";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
       error_ = "if does not accept trailing block arguments";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (stmt.args.size() != 3) {
       error_ = "if requires condition, then, else";
-      return false;
+      return publishStatementDiagnostic();
     }
     const Expr &cond = stmt.args[0];
     const Expr &thenArg = stmt.args[1];
@@ -92,7 +96,7 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
     ReturnKind condKind = inferExprReturnKind(cond, params, locals);
     if (condKind != ReturnKind::Bool) {
       error_ = "if condition requires bool";
-      return false;
+      return publishStatementDiagnostic();
     }
     std::vector<Expr> postMergeStatements;
     if (enclosingStatements != nullptr) {
@@ -107,7 +111,7 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
     auto validateBranch = [&](const Expr &branch) -> bool {
       if (!isIfBlockEnvelope(branch)) {
         error_ = "if branches require block envelopes";
-        return false;
+        return publishStatementDiagnostic();
       }
       std::unordered_map<std::string, BindingInfo> branchLocals = locals;
       std::vector<Expr> livenessStatements = branch.bodyArguments;
@@ -184,19 +188,19 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
     handled = true;
     if (hasNamedArguments(stmt.argNames)) {
       error_ = "named arguments not supported for builtin calls";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (!stmt.templateArgs.empty()) {
       error_ = "loop does not accept template arguments";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
       error_ = "loop does not accept trailing block arguments";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (stmt.args.size() != 2) {
       error_ = "loop requires count and body";
-      return false;
+      return publishStatementDiagnostic();
     }
     const Expr &count = stmt.args[0];
     if (!validateExpr(params, locals, count)) {
@@ -205,11 +209,11 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
     ReturnKind countKind = inferExprReturnKind(count, params, locals);
     if (countKind != ReturnKind::Int && countKind != ReturnKind::Int64 && countKind != ReturnKind::UInt64) {
       error_ = "loop count requires integer";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (runSemanticsValidatorStatementIsNegativeIntegerLiteralStep(count)) {
       error_ = "loop count must be non-negative";
-      return false;
+      return publishStatementDiagnostic();
     }
     const bool includeNextIterationBody = canIterateMoreThanOnce(count, false);
     return validateLoopBody(stmt.args[1], locals, {}, includeNextIterationBody);
@@ -219,19 +223,19 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
     handled = true;
     if (hasNamedArguments(stmt.argNames)) {
       error_ = "named arguments not supported for builtin calls";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (!stmt.templateArgs.empty()) {
       error_ = "while does not accept template arguments";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
       error_ = "while does not accept trailing block arguments";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (stmt.args.size() != 2) {
       error_ = "while requires condition and body";
-      return false;
+      return publishStatementDiagnostic();
     }
     const Expr &cond = stmt.args[0];
     if (!validateExpr(params, locals, cond)) {
@@ -240,7 +244,7 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
     ReturnKind condKind = inferExprReturnKind(cond, params, locals);
     if (condKind != ReturnKind::Bool) {
       error_ = "while condition requires bool";
-      return false;
+      return publishStatementDiagnostic();
     }
     std::vector<Expr> boundaryStatements;
     const bool conditionAlwaysFalse = isBoolLiteralFalse(cond);
@@ -254,19 +258,19 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
     handled = true;
     if (hasNamedArguments(stmt.argNames)) {
       error_ = "named arguments not supported for builtin calls";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (!stmt.templateArgs.empty()) {
       error_ = "for does not accept template arguments";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
       error_ = "for does not accept trailing block arguments";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (stmt.args.size() != 4) {
       error_ = "for requires init, condition, step, and body";
-      return false;
+      return publishStatementDiagnostic();
     }
     std::unordered_map<std::string, BindingInfo> loopLocals = locals;
     if (!validateStatement(
@@ -284,7 +288,7 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
                                                    : returnKindForStatementControlFlowBinding(it->second);
       if (condKind != ReturnKind::Bool) {
         error_ = "for condition requires bool";
-        return false;
+        return publishStatementDiagnostic();
       }
     } else {
       if (!validateExpr(params, loopLocals, cond)) {
@@ -293,7 +297,7 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
       ReturnKind condKind = inferExprReturnKind(cond, params, loopLocals);
       if (condKind != ReturnKind::Bool) {
         error_ = "for condition requires bool";
-        return false;
+        return publishStatementDiagnostic();
       }
     }
     if (!validateStatement(
@@ -313,19 +317,19 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
     handled = true;
     if (!stmt.hasBodyArguments) {
       error_ = "repeat requires block arguments";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (hasNamedArguments(stmt.argNames)) {
       error_ = "named arguments not supported for builtin calls";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (!stmt.templateArgs.empty()) {
       error_ = "repeat does not accept template arguments";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (stmt.args.size() != 1) {
       error_ = "repeat requires exactly one argument";
-      return false;
+      return publishStatementDiagnostic();
     }
     const Expr &count = stmt.args.front();
     if (!validateExpr(params, locals, count)) {
@@ -335,7 +339,7 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
     if (countKind != ReturnKind::Int && countKind != ReturnKind::Int64 && countKind != ReturnKind::UInt64 &&
         countKind != ReturnKind::Bool) {
       error_ = "repeat count requires integer or bool";
-      return false;
+      return publishStatementDiagnostic();
     }
     const bool includeNextIterationBody = canIterateMoreThanOnce(count, true);
     Expr repeatBody;
