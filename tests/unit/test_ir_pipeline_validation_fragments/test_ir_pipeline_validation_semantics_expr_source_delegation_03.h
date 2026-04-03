@@ -47,6 +47,12 @@
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "auto publishCollectionDispatchDiagnostic = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "auto failCollectionDispatchDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "error_ = std::move(message);") !=
+        std::string::npos);
   CHECK(semanticsExprSource.find(
             "auto publishCollectionCountCapacityDiagnostic = [&]() -> bool {") ==
         std::string::npos);
@@ -519,10 +525,16 @@
   CHECK(semanticsExprLateFallbackBuiltinsSource.find(
             "auto publishLateFallbackBuiltinDiagnostic = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprLateFallbackBuiltinsSource.find(
+            "auto failLateFallbackBuiltinDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsExprLateFallbackBuiltinsSource.find("captureExprContext(expr);") !=
         std::string::npos);
   CHECK(semanticsExprLateFallbackBuiltinsSource.find(
             "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprLateFallbackBuiltinsSource.find(
+            "error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprLateFallbackBuiltinsSource.find(
             "validateExprLateCollectionAccessFallbacks(") !=
@@ -641,10 +653,16 @@
   CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
             "auto publishLateUnknownTargetDiagnostic = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
+            "auto failLateUnknownTargetDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsExprLateUnknownTargetFallbacksSource.find("captureExprContext(expr);") !=
         std::string::npos);
   CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
             "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
+            "error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
             "const std::string aliasMapMethodTarget = \"/map/\" + expr.name;") !=
@@ -655,10 +673,16 @@
   CHECK(semanticsExprStructConstructorsSource.find(
             "auto publishStructConstructorDiagnostic = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprStructConstructorsSource.find(
+            "auto failStructConstructorDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsExprStructConstructorsSource.find("captureExprContext(expr);") !=
         std::string::npos);
   CHECK(semanticsExprStructConstructorsSource.find(
             "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprStructConstructorsSource.find(
+            "error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprStructConstructorsSource.find(
             "fieldParams.reserve(context.resolvedDefinition->statements.size());") !=
@@ -681,10 +705,16 @@
   CHECK(semanticsExprResolvedCallArgumentsSource.find(
             "auto publishResolvedCallArgumentDiagnostic = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprResolvedCallArgumentsSource.find(
+            "auto failResolvedCallArgumentDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsExprResolvedCallArgumentsSource.find("captureExprContext(expr);") !=
         std::string::npos);
   CHECK(semanticsExprResolvedCallArgumentsSource.find(
             "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprResolvedCallArgumentsSource.find(
+            "error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprResolvedCallArgumentsSource.find(
             "const std::vector<Expr> *orderedCallArgs = &expr.args;") !=

@@ -19,6 +19,10 @@ bool SemanticsValidator::prepareExprMethodCompatibilitySetup(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failMethodCompatibilityDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishMethodCompatibilityDiagnostic();
+  };
   if (hasVectorHelperCallResolution) {
     resolved = vectorHelperCallResolvedPath;
     setupOut.usedMethodTarget = true;
@@ -31,44 +35,42 @@ bool SemanticsValidator::prepareExprMethodCompatibilitySetup(
   if (!methodReflectionTarget.empty()) {
     if (methodReflectionTarget == "meta.object" ||
         methodReflectionTarget == "meta.table") {
-      error_ = "runtime reflection objects/tables are unsupported: " +
-               methodReflectionTarget;
+      return failMethodCompatibilityDiagnostic(
+          "runtime reflection objects/tables are unsupported: " +
+          methodReflectionTarget);
     } else if (isReflectionMetadataQueryName(expr.name)) {
-      error_ =
+      return failMethodCompatibilityDiagnostic(
           "reflection metadata queries are compile-time only and not yet "
           "implemented: " +
-          methodReflectionTarget;
+          methodReflectionTarget);
     } else {
-      error_ =
-          "unsupported reflection metadata query: " + methodReflectionTarget;
+      return failMethodCompatibilityDiagnostic(
+          "unsupported reflection metadata query: " + methodReflectionTarget);
     }
-    return publishMethodCompatibilityDiagnostic();
   }
   if (defMap_.count(resolved) == 0) {
     if (isReflectionMetadataQueryPath(resolved)) {
-      error_ =
+      return failMethodCompatibilityDiagnostic(
           "reflection metadata queries are compile-time only and not yet "
           "implemented: " +
-          resolved;
-      return publishMethodCompatibilityDiagnostic();
+          resolved);
     }
     if (isRuntimeReflectionPath(resolved)) {
-      error_ = "runtime reflection objects/tables are unsupported: " + resolved;
-      return publishMethodCompatibilityDiagnostic();
+      return failMethodCompatibilityDiagnostic(
+          "runtime reflection objects/tables are unsupported: " + resolved);
     }
     if (resolved.rfind("/meta/", 0) == 0) {
       const std::string queryName = resolved.substr(6);
       if (!queryName.empty() && queryName.find('/') == std::string::npos) {
-        error_ = "unsupported reflection metadata query: " + resolved;
-        return publishMethodCompatibilityDiagnostic();
+        return failMethodCompatibilityDiagnostic(
+            "unsupported reflection metadata query: " + resolved);
       }
     }
   }
   if (!expr.isMethodCall &&
       isArrayNamespacedVectorCountCompatibilityCall(
           expr, dispatchBootstrap.dispatchResolvers)) {
-    error_ = "unknown call target: /array/count";
-    return publishMethodCompatibilityDiagnostic();
+    return failMethodCompatibilityDiagnostic("unknown call target: /array/count");
   }
   if (!expr.isMethodCall &&
       isArrayNamespacedVectorAccessCompatibilityCall(
@@ -80,21 +82,21 @@ bool SemanticsValidator::prepareExprMethodCompatibilitySetup(
         compatibilityPath.insert(compatibilityPath.begin(), '/');
       }
     }
-    error_ = "unknown call target: " + compatibilityPath;
-    return publishMethodCompatibilityDiagnostic();
+    return failMethodCompatibilityDiagnostic("unknown call target: " +
+                                             compatibilityPath);
   }
   if (!expr.isMethodCall) {
     const std::string removedVectorCompatibilityPath =
         getDirectVectorHelperCompatibilityPath(expr);
     if (!removedVectorCompatibilityPath.empty()) {
-      error_ = "unknown call target: " + removedVectorCompatibilityPath;
-      return publishMethodCompatibilityDiagnostic();
+      return failMethodCompatibilityDiagnostic("unknown call target: " +
+                                               removedVectorCompatibilityPath);
     }
     const std::string removedMapCompatibilityPath = directMapHelperCompatibilityPath(
         expr, params, locals, dispatchBootstrap.dispatchResolverAdapters);
     if (!removedMapCompatibilityPath.empty()) {
-      error_ = "unknown call target: " + removedMapCompatibilityPath;
-      return publishMethodCompatibilityDiagnostic();
+      return failMethodCompatibilityDiagnostic("unknown call target: " +
+                                               removedMapCompatibilityPath);
     }
   }
 

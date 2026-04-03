@@ -25,10 +25,13 @@ bool SemanticsValidator::validateExprResolvedStructConstructorCall(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failStructConstructorDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishStructConstructorDiagnostic();
+  };
 
   if (!context.zeroArgDiagnostic->empty()) {
-    error_ = *context.zeroArgDiagnostic;
-    return publishStructConstructorDiagnostic();
+    return failStructConstructorDiagnostic(*context.zeroArgDiagnostic);
   }
 
   std::vector<ParameterInfo> fieldParams;
@@ -45,8 +48,8 @@ bool SemanticsValidator::validateExprResolvedStructConstructorCall(
   bool hasMissingDefaults = false;
   for (const auto &stmt : context.resolvedDefinition->statements) {
     if (!stmt.isBinding) {
-      error_ = "struct definitions may only contain field bindings: " + resolved;
-      return publishStructConstructorDiagnostic();
+      return failStructConstructorDiagnostic(
+          "struct definitions may only contain field bindings: " + resolved);
     }
     if (isStaticField(stmt)) {
       continue;
@@ -74,7 +77,8 @@ bool SemanticsValidator::validateExprResolvedStructConstructorCall(
 
   if (!validateNamedArgumentsAgainstParams(fieldParams, expr.argNames, error_)) {
     if (error_.find("argument count mismatch") != std::string::npos) {
-      error_ = "argument count mismatch for " + *context.diagnosticResolved;
+      return failStructConstructorDiagnostic("argument count mismatch for " +
+                                            *context.diagnosticResolved);
     }
     return publishStructConstructorDiagnostic();
   }
@@ -84,11 +88,11 @@ bool SemanticsValidator::validateExprResolvedStructConstructorCall(
   if (!buildOrderedArguments(fieldParams, expr.args, expr.argNames, orderedArgs,
                              orderError)) {
     if (orderError.find("argument count mismatch") != std::string::npos) {
-      error_ = "argument count mismatch for " + *context.diagnosticResolved;
+      return failStructConstructorDiagnostic("argument count mismatch for " +
+                                            *context.diagnosticResolved);
     } else {
-      error_ = orderError;
+      return failStructConstructorDiagnostic(orderError);
     }
-    return publishStructConstructorDiagnostic();
   }
 
   std::unordered_set<const Expr *> explicitArgs;

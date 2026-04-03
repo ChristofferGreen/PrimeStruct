@@ -284,10 +284,16 @@
   CHECK(semanticsExprMethodCompatibilitySetupSource.find(
             "auto publishMethodCompatibilityDiagnostic = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprMethodCompatibilitySetupSource.find(
+            "auto failMethodCompatibilityDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsExprMethodCompatibilitySetupSource.find("captureExprContext(expr);") !=
         std::string::npos);
   CHECK(semanticsExprMethodCompatibilitySetupSource.find(
             "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodCompatibilitySetupSource.find(
+            "error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "auto publishMethodTargetResolutionDiagnostic = [&]() -> bool {") !=

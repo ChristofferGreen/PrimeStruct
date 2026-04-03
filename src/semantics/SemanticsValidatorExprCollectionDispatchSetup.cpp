@@ -15,6 +15,10 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failCollectionDispatchDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishCollectionDispatchDiagnostic();
+  };
 
   std::string accessHelperName;
   std::string namespacedCollection;
@@ -160,14 +164,14 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
   if (!expr.isMethodCall && setupOut.isStdNamespacedVectorCountCall &&
       !hasVisibleCanonicalVectorHelperPath("/std/collections/vector/count") &&
       !allowStdNamespacedVectorUserReceiverProbe) {
-    error_ = "unknown call target: /std/collections/vector/count";
-    return publishCollectionDispatchDiagnostic();
+    return failCollectionDispatchDiagnostic(
+        "unknown call target: /std/collections/vector/count");
   }
   if (!expr.isMethodCall && setupOut.isStdNamespacedVectorCapacityCall &&
       !hasVisibleCanonicalVectorHelperPath("/std/collections/vector/capacity") &&
       !allowStdNamespacedVectorUserReceiverProbe) {
-    error_ = "unknown call target: /std/collections/vector/capacity";
-    return publishCollectionDispatchDiagnostic();
+    return failCollectionDispatchDiagnostic(
+        "unknown call target: /std/collections/vector/capacity");
   }
   if (setupOut.prefersCanonicalVectorCountAliasDefinition) {
     resolved = "/std/collections/vector/count";
@@ -184,8 +188,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
             expr.name,
             dispatchResolvers,
             shadowedReceiverPath)) {
-      error_ = "unknown method: " + shadowedReceiverPath;
-      return publishCollectionDispatchDiagnostic();
+      return failCollectionDispatchDiagnostic("unknown method: " + shadowedReceiverPath);
     }
   }
 

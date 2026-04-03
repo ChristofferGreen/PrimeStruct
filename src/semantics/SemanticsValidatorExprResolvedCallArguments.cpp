@@ -43,6 +43,10 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failResolvedCallArgumentDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishResolvedCallArgumentDiagnostic();
+  };
 
   Expr reorderedCallExpr;
   Expr trimmedTypeNamespaceCallExpr;
@@ -78,7 +82,8 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
   if (!validateNamedArgumentsAgainstParams(calleeParams, *orderedCallArgNames,
                                            error_)) {
     if (error_.find("argument count mismatch") != std::string::npos) {
-      error_ = "argument count mismatch for " + *context.diagnosticResolved;
+      return failResolvedCallArgumentDiagnostic("argument count mismatch for " +
+                                                *context.diagnosticResolved);
     }
     return publishResolvedCallArgumentDiagnostic();
   }
@@ -91,11 +96,11 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
                              orderedArgs, packedArgs, packedParamIndex,
                              orderError)) {
     if (orderError.find("argument count mismatch") != std::string::npos) {
-      error_ = "argument count mismatch for " + *context.diagnosticResolved;
+      return failResolvedCallArgumentDiagnostic("argument count mismatch for " +
+                                                *context.diagnosticResolved);
     } else {
-      error_ = orderError;
+      return failResolvedCallArgumentDiagnostic(orderError);
     }
-    return publishResolvedCallArgumentDiagnostic();
   }
 
   for (const auto *arg : orderedArgs) {
@@ -195,10 +200,10 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
           (actualVectorSurface != "vector" ||
            normalizeBindingTypeName(expectedExperimentalVectorElemType) !=
                normalizeBindingTypeName(actualElemType))) {
-        error_ = "argument type mismatch for " + *context.diagnosticResolved +
-                 " parameter " + param.name + ": expected " + expectedTypeText +
-                 " got " + actualVectorSurface + "<" + actualElemType + ">";
-        return publishResolvedCallArgumentDiagnostic();
+        return failResolvedCallArgumentDiagnostic(
+            "argument type mismatch for " + *context.diagnosticResolved +
+            " parameter " + param.name + ": expected " + expectedTypeText +
+            " got " + actualVectorSurface + "<" + actualElemType + ">");
       }
     }
     if (!this->validateArgumentTypeAgainstParam(
@@ -308,11 +313,10 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
                                                  context.resolvedDefinition->namespacePrefix,
                                                  definitionTemplateArgs,
                                                  visitingStructs)) {
-      error_ =
+      return failResolvedCallArgumentDiagnostic(
           "map literal requires relocation-trivial map key type until container move/reallocation semantics are "
           "implemented: " +
-          keyType;
-      return publishResolvedCallArgumentDiagnostic();
+          keyType);
     }
     visitingStructs.clear();
     if (!valueType.empty() &&
@@ -320,11 +324,10 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
                                                  context.resolvedDefinition->namespacePrefix,
                                                  definitionTemplateArgs,
                                                  visitingStructs)) {
-      error_ =
+      return failResolvedCallArgumentDiagnostic(
           "map literal requires relocation-trivial map value type until container move/reallocation semantics are "
           "implemented: " +
-          valueType;
-      return publishResolvedCallArgumentDiagnostic();
+          valueType);
     }
   }
 

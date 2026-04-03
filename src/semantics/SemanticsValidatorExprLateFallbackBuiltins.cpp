@@ -17,6 +17,10 @@ bool SemanticsValidator::validateExprLateFallbackBuiltins(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failLateFallbackBuiltinDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishLateFallbackBuiltinDiagnostic();
+  };
   handledOut = false;
   if (context.dispatchResolvers == nullptr) {
     return true;
@@ -105,12 +109,12 @@ bool SemanticsValidator::validateExprLateFallbackBuiltins(
                                 receiverExpr, builtinName, methodResolved,
                                 isBuiltinMethod) &&
             !methodResolved.empty()) {
-          error_ = "unknown method: " + methodResolved;
+          return failLateFallbackBuiltinDiagnostic("unknown method: " +
+                                                   methodResolved);
         } else {
-          error_ =
-              builtinName + " requires array, vector, map, or string target";
+          return failLateFallbackBuiltinDiagnostic(
+              builtinName + " requires array, vector, map, or string target");
         }
-        return publishLateFallbackBuiltinDiagnostic();
       }
     }
   }

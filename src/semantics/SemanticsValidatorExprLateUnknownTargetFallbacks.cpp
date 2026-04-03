@@ -14,6 +14,10 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failLateUnknownTargetDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishLateUnknownTargetDiagnostic();
+  };
   handledOut = false;
   if (context.resolveMapTarget != nullptr && expr.isMethodCall &&
       (expr.name == "count" || expr.name == "contains" ||
@@ -86,14 +90,13 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
   };
   if (isBroaderStdlibFileWriteFacadeCall()) {
     handledOut = true;
-    error_ =
-        "stdlib File write/write_line currently support up to nine values; broader arities await [args<T>] runtime support";
-    return publishLateUnknownTargetDiagnostic();
+    return failLateUnknownTargetDiagnostic(
+        "stdlib File write/write_line currently support up to nine values; broader arities await [args<T>] runtime support");
   }
 
   handledOut = true;
-  error_ = "unknown call target: " + formatUnknownCallTarget(expr);
-  return publishLateUnknownTargetDiagnostic();
+  return failLateUnknownTargetDiagnostic("unknown call target: " +
+                                         formatUnknownCallTarget(expr));
 }
 
 } // namespace primec::semantics
