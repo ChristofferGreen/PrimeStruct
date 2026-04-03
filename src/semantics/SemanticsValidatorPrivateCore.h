@@ -109,6 +109,8 @@
       std::string_view path) const;
   std::string preferredSoaHelperTargetForCurrentImports(
       std::string_view helperName) const;
+  bool usesSamePathSoaHelperTargetForCurrentImports(
+      std::string_view helperName) const;
   bool graphBindingIsUsable(const BindingInfo &binding) const;
   bool shouldBypassGraphBindingLookup(const Expr &candidate) const;
   bool hasDirectExperimentalVectorImport() const;

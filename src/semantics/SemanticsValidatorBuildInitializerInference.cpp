@@ -300,8 +300,7 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
   const auto soaAccessHelper =
       builtinSoaAccessHelperName(candidate, params, locals);
   if (soaAccessHelper.has_value() && *soaAccessHelper == "ref" &&
-      preferredSoaHelperTargetForCurrentImports("ref") !=
-          "/soa_vector/ref") {
+      !usesSamePathSoaHelperTargetForCurrentImports("ref")) {
     return std::string("/soa_vector/ref");
   }
   return std::nullopt;
@@ -323,6 +322,14 @@ std::string SemanticsValidator::preferredSoaHelperTargetForCurrentImports(
     return samePath;
   }
   return "/std/collections/soa_vector/" + helper;
+}
+
+bool SemanticsValidator::usesSamePathSoaHelperTargetForCurrentImports(
+    std::string_view helperName) const {
+  const std::string helper(helperName);
+  const std::string samePath =
+      helper == "to_aos" ? "/to_aos" : "/soa_vector/" + helper;
+  return preferredSoaHelperTargetForCurrentImports(helperName) == samePath;
 }
 
 bool SemanticsValidator::hasDirectExperimentalVectorImport() const {

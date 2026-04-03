@@ -992,7 +992,8 @@ with the remaining vector-target and builtin count/get/ref same-path
 probes now also using shared target helpers instead of direct
 `/soa_vector/count|get|ref` checks,
 with the validator-side direct builtin `ref(...)` visibility split now also
-using that same shared helper instead of a hardcoded `/soa_vector/ref` probe,
+using that same shared helper-target predicate instead of a hardcoded
+`/soa_vector/ref` probe,
 while monomorph-side visible `/soa_vector/ref` fallback detection now also
 uses that same shared definition-visibility helper directly instead of a
 dedicated ref-specific wrapper or local visibility cache, while
@@ -1002,6 +1003,9 @@ inside monomorph implicit-template fallback instead of a local helper-target
 probe or a monomorph-local visible-path wrapper, while
 monomorph-side fixed method pending rejects now call
 the shared pending helper directly instead of a monomorph-local wrapper, while
+the remaining validator-side fixed unavailable-method rejects now call
+`soaUnavailableMethodDiagnostic(...)` directly with that same shared `ref`
+helper-target predicate instead of open-coded preferred-target comparisons, while
 direct builtin field-view/ref pending reporters now also route through one
 shared expr-to-path helper and the validator-local direct pending reporter
 wrapper plus the thin `isBuiltinSoaRefExpr(...)` wrapper are gone, while

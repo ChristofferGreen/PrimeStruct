@@ -2653,7 +2653,8 @@ while validator-side fixed unavailable-method rejects now also route through one
 shared visibility-aware helper instead of recomputing the `/soa_vector/ref`
 visibility and pending/unavailable split inline,
 with the validator-side direct builtin `ref(...)` visibility split now also
-using that same shared helper instead of a hardcoded `/soa_vector/ref` probe,
+using that same shared helper-target predicate instead of a hardcoded
+`/soa_vector/ref` probe,
 while validator-side visible same-path `/soa_vector/count|get|push|reserve`
 helper checks plus definition-return and collection-return same-path
 `/soa_vector/<field>` helper visibility now also route through that same
@@ -2673,8 +2674,8 @@ while the remaining preferred same-path-versus-canonical SoA target chooser now
 also uses that shared helper directly instead of a generic visible-path
 wrapper,
 while the remaining validator-side fixed unavailable-method rejects now call
-`soaUnavailableMethodDiagnostic(...)` directly instead of a validator-local
-wrapper around that shared helper path,
+`soaUnavailableMethodDiagnostic(...)` directly with that same shared `ref`
+helper-target predicate instead of open-coded preferred-target comparisons,
 while collection-return visible same-path `/soa_vector/get|ref` helper
 detection now uses one shared helper-name path instead of split `get` / `ref`
 branches, while preferred

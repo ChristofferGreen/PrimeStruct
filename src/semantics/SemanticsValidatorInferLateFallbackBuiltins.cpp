@@ -502,8 +502,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
           !methodResolved.empty()) {
         error_ = soaUnavailableMethodDiagnostic(
             methodResolved,
-            preferredSoaHelperTargetForCurrentImports("ref") ==
-                "/soa_vector/ref");
+            usesSamePathSoaHelperTargetForCurrentImports("ref"));
       }
       return finish(ReturnKind::Unknown);
     }
