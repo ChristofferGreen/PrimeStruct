@@ -295,7 +295,12 @@
             "auto publishIfDiagnostic = [&](const Expr &diagnosticExpr) -> bool {") !=
         std::string::npos);
   CHECK(semanticsExprControlFlowSource.find("captureExprContext(diagnosticExpr);") != std::string::npos);
+  CHECK(semanticsExprControlFlowSource.find(
+            "auto failIfDiagnostic = [&](const Expr &diagnosticExpr,") !=
+        std::string::npos);
   CHECK(semanticsExprControlFlowSource.find("return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprControlFlowSource.find("error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprControlFlowSource.find("bool SemanticsValidator::isStructConstructorValueExpr") !=
         std::string::npos);
@@ -308,9 +313,14 @@
   CHECK(semanticsExprBodyArgumentsSource.find(
             "auto publishExprBodyArgumentDiagnostic = [&](const Expr &diagnosticExpr) -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprBodyArgumentsSource.find(
+            "auto failExprBodyArgumentDiagnostic = [&](const Expr &diagnosticExpr,") !=
+        std::string::npos);
   CHECK(semanticsExprBodyArgumentsSource.find("captureExprContext(diagnosticExpr);") !=
         std::string::npos);
   CHECK(semanticsExprBodyArgumentsSource.find("return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprBodyArgumentsSource.find("error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprBodyArgumentsSource.find("block arguments require a definition target") !=
         std::string::npos);
@@ -805,7 +815,12 @@
             "auto publishMapSoaBuiltinDiagnostic = [&]() -> bool {") !=
         std::string::npos);
   CHECK(semanticsExprMapSoaBuiltinsSource.find(
+            "auto failMapSoaBuiltinDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprMapSoaBuiltinsSource.find(
             "context.bareMapHelperOperandIndices != nullptr") !=
+        std::string::npos);
+  CHECK(semanticsExprMapSoaBuiltinsSource.find("error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprMapSoaBuiltinsSource.find(
             "to_soa requires vector target") !=

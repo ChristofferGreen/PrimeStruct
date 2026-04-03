@@ -20,6 +20,10 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failMapSoaBuiltinDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishMapSoaBuiltinDiagnostic();
+  };
   auto returnKindForBinding = [](const BindingInfo &binding) -> ReturnKind {
     if (binding.typeName == "Reference") {
       std::string base;
@@ -86,8 +90,8 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
         expr.templateArgs.size() != 1 ||
         normalizeBindingTypeName(expr.templateArgs.front()) !=
             normalizeBindingTypeName(elemType)) {
-      error_ = helperName + " does not accept template arguments";
-      return publishMapSoaBuiltinDiagnostic();
+      return failMapSoaBuiltinDiagnostic(helperName +
+                                        " does not accept template arguments");
     }
     return true;
   };
@@ -98,8 +102,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     }
     if (normalizeBindingTypeName(mapKeyType) == "string") {
       if (!isStringExpr(keyExpr)) {
-        error_ = "contains requires string map key";
-        return publishMapSoaBuiltinDiagnostic();
+        return failMapSoaBuiltinDiagnostic("contains requires string map key");
       }
       return true;
     }
@@ -110,29 +113,29 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     }
     if (context.resolveStringTarget != nullptr &&
         context.resolveStringTarget(keyExpr)) {
-      error_ = "contains requires map key type " + mapKeyType;
-      return publishMapSoaBuiltinDiagnostic();
+      return failMapSoaBuiltinDiagnostic("contains requires map key type " +
+                                        mapKeyType);
     }
     ReturnKind candidateKind = inferExprReturnKind(keyExpr, params, locals);
     if (candidateKind != ReturnKind::Unknown && candidateKind != keyKind) {
-      error_ = "contains requires map key type " + mapKeyType;
-      return publishMapSoaBuiltinDiagnostic();
+      return failMapSoaBuiltinDiagnostic("contains requires map key type " +
+                                        mapKeyType);
     }
     return true;
   };
 
   auto validateContainsBuiltin = [&](const std::string &helperName) -> bool {
     if (!expr.templateArgs.empty()) {
-      error_ = helperName + " does not accept template arguments";
-      return publishMapSoaBuiltinDiagnostic();
+      return failMapSoaBuiltinDiagnostic(helperName +
+                                        " does not accept template arguments");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = helperName + " does not accept block arguments";
-      return publishMapSoaBuiltinDiagnostic();
+      return failMapSoaBuiltinDiagnostic(helperName +
+                                        " does not accept block arguments");
     }
     if (expr.args.size() != 2) {
-      error_ = "argument count mismatch for builtin " + helperName;
-      return publishMapSoaBuiltinDiagnostic();
+      return failMapSoaBuiltinDiagnostic("argument count mismatch for builtin " +
+                                        helperName);
     }
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
@@ -149,8 +152,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       if (!validateExpr(params, locals, receiverExpr)) {
         return false;
       }
-      error_ = helperName + " requires map target";
-      return publishMapSoaBuiltinDiagnostic();
+      return failMapSoaBuiltinDiagnostic(helperName + " requires map target");
     }
     if (!validateMapContainsKeyExpr(keyExpr, mapKeyType)) {
       return false;
@@ -169,8 +171,8 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
         !hasDeclaredDefinitionPath("/std/collections/map/contains") &&
         !hasImportedDefinitionPath("/contains") &&
         !hasDeclaredDefinitionPath("/contains")) {
-      error_ = "unknown call target: /std/collections/map/contains";
-      return publishMapSoaBuiltinDiagnostic();
+      return failMapSoaBuiltinDiagnostic(
+          "unknown call target: /std/collections/map/contains");
     }
     return validateContainsBuiltin("contains");
   }
@@ -196,22 +198,22 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
           context.isNamedArgsPackMethodAccessCall(expr)) &&
         !(context.isNamedArgsPackWrappedFileBuiltinAccessCall != nullptr &&
           context.isNamedArgsPackWrappedFileBuiltinAccessCall(expr))) {
-      error_ = "named arguments not supported for builtin calls";
-      return publishMapSoaBuiltinDiagnostic();
+      return failMapSoaBuiltinDiagnostic(
+          "named arguments not supported for builtin calls");
     }
     const std::string helperName =
         (isSimpleCallName(expr, "to_soa") || resolved == "/to_soa") ? "to_soa" : "to_aos";
     if (!expr.templateArgs.empty()) {
-      error_ = helperName + " does not accept template arguments";
-      return publishMapSoaBuiltinDiagnostic();
+      return failMapSoaBuiltinDiagnostic(helperName +
+                                        " does not accept template arguments");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = helperName + " does not accept block arguments";
-      return publishMapSoaBuiltinDiagnostic();
+      return failMapSoaBuiltinDiagnostic(helperName +
+                                        " does not accept block arguments");
     }
     if (expr.args.size() != 1) {
-      error_ = "argument count mismatch for builtin " + helperName;
-      return publishMapSoaBuiltinDiagnostic();
+      return failMapSoaBuiltinDiagnostic("argument count mismatch for builtin " +
+                                        helperName);
     }
     std::string elemType;
     const bool targetValid =
@@ -226,12 +228,13 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
                   elemType);
     if (!targetValid) {
       if (helperName == "to_aos" && isCanonicalSoaToAosResolved) {
-        error_ = "argument type mismatch for /std/collections/soa_vector/to_aos parameter values";
+        return failMapSoaBuiltinDiagnostic(
+            "argument type mismatch for /std/collections/soa_vector/to_aos parameter values");
       } else {
-        error_ = helperName == "to_soa" ? "to_soa requires vector target"
-                                        : "to_aos requires soa_vector target";
+        return failMapSoaBuiltinDiagnostic(
+            helperName == "to_soa" ? "to_soa requires vector target"
+                                   : "to_aos requires soa_vector target");
       }
-      return publishMapSoaBuiltinDiagnostic();
     }
     if (!validateExpr(params, locals, expr.args.front())) {
       return false;
@@ -251,17 +254,17 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
           context.isNamedArgsPackMethodAccessCall(expr)) &&
         !(context.isNamedArgsPackWrappedFileBuiltinAccessCall != nullptr &&
           context.isNamedArgsPackWrappedFileBuiltinAccessCall(expr))) {
-      error_ = "named arguments not supported for builtin calls";
-      return publishMapSoaBuiltinDiagnostic();
+      return failMapSoaBuiltinDiagnostic(
+          "named arguments not supported for builtin calls");
     }
     const std::string &helperName = *soaAccessHelperName;
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = helperName + " does not accept block arguments";
-      return publishMapSoaBuiltinDiagnostic();
+      return failMapSoaBuiltinDiagnostic(helperName +
+                                        " does not accept block arguments");
     }
     if (expr.args.size() != 2) {
-      error_ = "argument count mismatch for builtin " + helperName;
-      return publishMapSoaBuiltinDiagnostic();
+      return failMapSoaBuiltinDiagnostic("argument count mismatch for builtin " +
+                                        helperName);
     }
     std::string elemType;
     if (!this->resolveSoaVectorOrExperimentalBorrowedReceiver(
@@ -276,15 +279,15 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
         handledOut = false;
         return true;
       }
-      error_ = helperName + " requires soa_vector target";
-      return publishMapSoaBuiltinDiagnostic();
+      return failMapSoaBuiltinDiagnostic(helperName +
+                                        " requires soa_vector target");
     }
     if (!validateSoaHelperReturnTemplateArgs(expr.args.front(), elemType, helperName)) {
       return false;
     }
     if (!isIntegerExpr(expr.args[1])) {
-      error_ = helperName + " requires integer index";
-      return publishMapSoaBuiltinDiagnostic();
+      return failMapSoaBuiltinDiagnostic(helperName +
+                                        " requires integer index");
     }
     for (const auto &arg : expr.args) {
       if (!validateExpr(params, locals, arg)) {
@@ -301,19 +304,19 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
           context.isNamedArgsPackMethodAccessCall(expr)) &&
         !(context.isNamedArgsPackWrappedFileBuiltinAccessCall != nullptr &&
           context.isNamedArgsPackWrappedFileBuiltinAccessCall(expr))) {
-      error_ = "named arguments not supported for builtin calls";
-      return publishMapSoaBuiltinDiagnostic();
+      return failMapSoaBuiltinDiagnostic(
+          "named arguments not supported for builtin calls");
     }
     if (!expr.templateArgs.empty()) {
-      error_ = expr.name + " does not accept template arguments";
-      return publishMapSoaBuiltinDiagnostic();
+      return failMapSoaBuiltinDiagnostic(expr.name +
+                                        " does not accept template arguments");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = expr.name + " does not accept block arguments";
-      return publishMapSoaBuiltinDiagnostic();
+      return failMapSoaBuiltinDiagnostic(expr.name +
+                                        " does not accept block arguments");
     }
-    error_ = soaDirectPendingUnavailableMethodDiagnostic(resolved);
-    return publishMapSoaBuiltinDiagnostic();
+    return failMapSoaBuiltinDiagnostic(
+        soaDirectPendingUnavailableMethodDiagnostic(resolved));
   }
 
   return true;
