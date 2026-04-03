@@ -526,13 +526,16 @@
             "bool SemanticsValidator::reportReferenceAssignmentEscape(") !=
         std::string::npos);
   CHECK(semanticsExprReferenceEscapesSource.find(
-            "auto publishReferenceEscapeDiagnostic = [&]() -> bool {") !=
+            "auto publishReferenceEscapeDiagnostic = [&]() {") !=
         std::string::npos);
   CHECK(semanticsExprReferenceEscapesSource.find(
             "captureExprContext(rhsExpr);") !=
         std::string::npos);
   CHECK(semanticsExprReferenceEscapesSource.find(
-            "return publishCurrentStructuredDiagnosticNow();") !=
+            "publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprReferenceEscapesSource.find(
+            "return true;") !=
         std::string::npos);
   CHECK(semanticsExprReferenceEscapesSource.find(
             "unsafe reference escapes via assignment to ") !=

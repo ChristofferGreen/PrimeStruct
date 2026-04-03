@@ -754,10 +754,10 @@ TEST_CASE("semantics validator build transform publication stays stable") {
             "fields cannot be tagged as handle and gpu_lane: ") !=
         std::string::npos);
   CHECK(buildTransformsSource.find(
-            "return addTransformDiagnostic(\"struct definitions may only contain field bindings: \" + def.fullPath);") !=
+            "if (addTransformDiagnostic(\"struct definitions may only contain field bindings: \" + def.fullPath)) {") !=
         std::string::npos);
   CHECK(buildTransformsSource.find(
-            "return addTransformDiagnostic(\"fields cannot be tagged as handle and gpu_lane: \" + def.fullPath);") !=
+            "if (addTransformDiagnostic(\"fields cannot be tagged as handle and gpu_lane: \" + def.fullPath)) {") !=
         std::string::npos);
 }
 
