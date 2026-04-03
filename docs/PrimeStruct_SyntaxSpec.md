@@ -753,11 +753,11 @@ Current ownership contract:
 - `pop` / `clear` require drop-trivial element types.
 - Builtin `vector` `remove_at` / `remove_swap` require element types that are both
   drop-trivial and relocation-trivial on the fixed-capacity builtin vector runtime path.
-  Both helpers still share one missing removed-slot destruction primitive on that builtin path;
+  The lowerer now has one shared removed-slot destruction primitive for that builtin path, but
+  builtin `remove_swap` / `remove_at` still need to wire that destroy-at-slot path into their
+  fixed-capacity runtime lowering before the current drop-trivial guard can lift.
   `remove_swap` then additionally needs survivor-swap motion, and `remove_at` additionally needs
-  survivor-compaction motion before the current guards can fully lift.
-  The remaining runtime gaps are separate: explicit destruction of the removed element for
-  ownership-sensitive types, and survivor compaction/swap for relocation-sensitive types.
+  survivor-compaction motion before the current relocation-trivial guards can fully lift.
   There is no corresponding builtin `soa_vector` indexed-removal surface yet.
 - `push` / `reserve` require relocation-trivial element types.
 

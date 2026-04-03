@@ -30,6 +30,50 @@ void emitAllFileScopeCleanup(std::vector<IrInstruction> &instructions,
   }
 }
 
+bool emitDestroyHelperFromPtr(
+    int32_t valuePtrLocal,
+    const std::string &structPath,
+    const Definition *destroyHelper,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    std::string &error) {
+  if (destroyHelper == nullptr) {
+    return true;
+  }
+  if (structPath.empty()) {
+    error = "internal error: destroy helper requires concrete struct path";
+    return false;
+  }
+
+  LocalMap destroyLocals = localsIn;
+  std::string receiverName = "__primec_destroy_slot";
+  while (destroyLocals.count(receiverName) > 0) {
+    receiverName += "_";
+  }
+
+  LocalInfo receiverInfo;
+  receiverInfo.index = valuePtrLocal;
+  receiverInfo.kind = LocalInfo::Kind::Reference;
+  receiverInfo.isMutable = true;
+  receiverInfo.structTypeName = structPath;
+  destroyLocals.emplace(receiverName, receiverInfo);
+
+  Expr receiverExpr;
+  receiverExpr.kind = Expr::Kind::Name;
+  receiverExpr.name = receiverName;
+
+  Expr destroyCallExpr;
+  destroyCallExpr.kind = Expr::Kind::Call;
+  destroyCallExpr.isMethodCall = true;
+  const size_t slash = destroyHelper->fullPath.find_last_of('/');
+  destroyCallExpr.name = slash == std::string::npos ? destroyHelper->fullPath
+                                                    : destroyHelper->fullPath.substr(slash + 1);
+  destroyCallExpr.args.push_back(receiverExpr);
+  destroyCallExpr.argNames.resize(1);
+
+  return emitInlineDefinitionCall(destroyCallExpr, *destroyHelper, destroyLocals, false);
+}
+
 bool emitStructCopyFromPtrs(std::vector<IrInstruction> &instructions,
                             int32_t destPtrLocal,
                             int32_t srcPtrLocal,

@@ -8,6 +8,9 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 3, 2026, continued)**
 
 **Architecture / Type-resolution graph**
+**Group 4 - Ownership and lifetime substrate**
+- ✓ Add the reusable lowered lifecycle-aware destroy-at-pointer helper for fixed-capacity slot storage and build the shared builtin `vector` removed-slot destruction primitive on top of it, so indexed-removal lowering now has one reusable `Destroy*`-from-slot-pointer path ready for `remove_swap` / `remove_at` wiring.
+
 **Group 12 - Semantics/lowering boundary**
 - ✓ Split the remaining first semantic-product builder call-target item into explicit direct-call, receiver/method-call, and helper-routing slices, so the live queue now matches the documented resolution families instead of hiding them in one broad target/publication bullet.
 - ✓ Split the remaining broad Group 12 semantic-product builder, publication, dump, provenance-test, and migration-cleanup items into explicit fact-family and handoff slices, so the live queue now matches the documented semantic-product contracts instead of hiding multiple independent implementation seams inside umbrella bullets.
