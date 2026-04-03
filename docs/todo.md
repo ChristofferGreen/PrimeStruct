@@ -33,6 +33,7 @@ Ownership/drop status note: completed guard and container-error-contract checkpo
 **Group 11 - Near-term graph queue**
 Blocked by Group 13 rollout constraints until the remaining collection-helper/runtime predecessor items are finished and the return-kind pilot path is stable enough to resume broader graph work.
 - ○ Expand end-to-end graph conformance coverage for backend dispatch, deleted-path diagnostics, and canonical helper/method resolution on C++/VM/native so graph-solved metadata is exercised beyond the snapshot harness.
+- ○ Expand end-to-end graph conformance coverage for backend dispatch and canonical helper/method resolution on C++/VM/native so graph-solved metadata is exercised beyond the current compile-pipeline deleted-path parity cases.
 - ○ Land graph-backed query invalidation rules and coverage for local-binding, control-flow, and initializer-shape edits so cached query/binding/result metadata has one explicit contract for intra-definition churn.
 - ○ Land graph-backed query invalidation rules and coverage for definition-signature, import-alias, and receiver-type edits before more inference consumers depend on the cache.
 - ○ Migrate the next remaining non-template inference islands onto graph-backed query/binding state instead of leaving mixed ad hoc inference paths around the stabilized return/query/local pilot.

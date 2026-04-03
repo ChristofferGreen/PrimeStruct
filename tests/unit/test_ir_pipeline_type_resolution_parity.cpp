@@ -114,6 +114,58 @@ main() {
           true,
       },
       {
+          "query_local_auto_deleted_array_method",
+          R"(
+[return<array<i32>>]
+valuesA() {
+  return(array<i32>(1i32, 2i32))
+}
+
+[return<array<i32>>]
+valuesB() {
+  return(array<i32>(3i32, 4i32))
+}
+
+[return<i32>]
+main() {
+  [auto] values{
+    if(true,
+      then(){ return(valuesA()) },
+      else(){ return(valuesB()) })
+  }
+  return(values./array/count())
+}
+)",
+          false,
+          "unknown method: /array/count",
+      },
+      {
+          "query_local_auto_deleted_array_call",
+          R"(
+[return<array<i32>>]
+valuesA() {
+  return(array<i32>(1i32, 2i32))
+}
+
+[return<array<i32>>]
+valuesB() {
+  return(array<i32>(3i32, 4i32))
+}
+
+[return<i32>]
+main() {
+  [auto] values{
+    if(true,
+      then(){ return(valuesA()) },
+      else(){ return(valuesB()) })
+  }
+  return(/array/count(values))
+}
+)",
+          false,
+          "unknown call target: /array/count",
+      },
+      {
           "result_try_local_auto_success",
           R"(
 MyError {
