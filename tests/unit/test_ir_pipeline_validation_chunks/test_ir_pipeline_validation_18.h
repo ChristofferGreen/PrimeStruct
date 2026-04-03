@@ -651,6 +651,11 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find("std::string SemanticsValidator::preferVectorStdlibHelperPath(") !=
         std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find("auto publishStatementDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find("captureExprContext(stmt);") != std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find("return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find("std::string vectorHelper;") != std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find("if (vectorHelper == \"push\") {") != std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find("validateVectorRelocationHelperElementType(binding, \"push\"") !=
