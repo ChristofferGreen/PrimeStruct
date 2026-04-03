@@ -385,7 +385,9 @@ int main(int argc, char **argv) {
                    "[--collect-diagnostics] "
                    "[--default-effects <list>] [--ir-inline] "
                    "[--dump-stage pre_ast|ast|ast-semantic|type-graph|ir] "
-                   "[-- <program args...>]\n";
+                   "[-- <program args...>]\n"
+                   "Dump-stage note: current lowering-facing dumps stop at ast-semantic and ir; "
+                   "a planned semantic-product stage will sit between them once the boundary cutover lands.\n";
     }
     return 2;
   }
