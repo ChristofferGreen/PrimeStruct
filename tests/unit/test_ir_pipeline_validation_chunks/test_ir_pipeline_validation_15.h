@@ -775,6 +775,15 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "this->resolveDirectSoaVectorOrExperimentalBorrowedReceiver(\n"
             "        target, params, locals, context.resolveSoaVectorTarget, elemTypeOut)") !=
         std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find("auto resolveDirectSoaReceiver =") ==
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "this->resolveSoaVectorOrExperimentalBorrowedReceiver(\n"
+            "                  expr.args.front(),\n"
+            "                  params,\n"
+            "                  locals,\n"
+            "                  context.resolveSoaVectorTarget,\n"
+            "                  elemType)") != std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("resolveSoaVectorOrExperimentalBorrowedTarget") ==
         std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find(

@@ -73,14 +73,6 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     }
     return inferExprReturnKind(arg, params, locals) == ReturnKind::String;
   };
-  auto resolveDirectSoaReceiver = [&](const Expr &target,
-                                      std::string &elemTypeOut) -> bool {
-    if (context.resolveSoaVectorTarget == nullptr) {
-      return false;
-    }
-    return this->resolveDirectSoaVectorOrExperimentalBorrowedReceiver(
-        target, params, locals, context.resolveSoaVectorTarget, elemTypeOut);
-  };
   auto validateSoaHelperReturnTemplateArgs =
       [&](const Expr &receiverExpr, const std::string &elemType, const std::string &helperName) {
     if (expr.templateArgs.empty()) {
@@ -226,7 +218,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
                   expr.args.front(),
                   params,
                   locals,
-                  resolveDirectSoaReceiver,
+                  context.resolveSoaVectorTarget,
                   elemType);
     if (!targetValid) {
       if (helperName == "to_aos" && isCanonicalSoaToAosResolved) {
@@ -272,7 +264,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
             expr.args.front(),
             params,
             locals,
-            resolveDirectSoaReceiver,
+            context.resolveSoaVectorTarget,
             elemType)) {
       if (resolved == "/soa_vector/" + helperName &&
           hasVisibleSoaHelperTargetForCurrentImports(helperName)) {

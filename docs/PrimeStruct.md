@@ -2690,6 +2690,8 @@ method-target/infer borrowed experimental receiver handling now also share one
 borrowed experimental receiver probe end-to-end instead of keeping duplicated
 inline lambdas, wrapper lambdas, direct receiver adapters, or
 local borrowed-target wrappers,
+while direct SoA builtin validation now also calls that shared borrowed
+receiver probe directly instead of a local direct-receiver adapter,
 and the post-`validateExpr(...)` binding/return/call-argument plus return-inference reprobes are
 gone too. The current successful read-only `value.field()[i]` path likewise no longer depends on
 lowerer/emitter/backend-local `field_view` or `soaVectorGet|soaVectorRef` routing branches, since
