@@ -34,11 +34,16 @@ bool hasVisibleDefinitionPathForMonomorph(const Context &ctx,
          ctx.helperOverloads.count(ownedPath) > 0;
 }
 
+bool hasVisibleSoaHelperTargetForMonomorph(const Context &ctx,
+                                           std::string_view helperName) {
+  return hasVisibleDefinitionPathForMonomorph(
+      ctx, "/soa_vector/" + std::string(helperName));
+}
+
 std::optional<std::string> soaPendingUnavailableMethodDiagnosticForMonomorph(
     const Context &ctx, std::string_view resolvedPath) {
   return soaPendingUnavailableMethodDiagnostic(
-      resolvedPath,
-      hasVisibleDefinitionPathForMonomorph(ctx, "/soa_vector/ref"));
+      resolvedPath, hasVisibleSoaHelperTargetForMonomorph(ctx, "ref"));
 }
 
 bool inferImplicitTemplateArgs(const Definition &def,
@@ -218,7 +223,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
         normalizedName == "soa_vector/ref" || resolvedPath == "/soa_vector/ref";
     if (normalizedName == "ref" || isCanonicalBuiltinSoaRefCall ||
         isOldSurfaceBuiltinSoaRefCall) {
-      if (hasVisibleDefinitionPathForMonomorph(ctx, "/soa_vector/ref")) {
+      if (hasVisibleSoaHelperTargetForMonomorph(ctx, "ref")) {
         return {};
       }
       if (isCanonicalBuiltinSoaRefCall &&
@@ -245,8 +250,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
         normalizedName == "contains") {
       return {};
     }
-    const std::string helperPath = "/soa_vector/" + normalizedName;
-    if (hasVisibleDefinitionPathForMonomorph(ctx, helperPath)) {
+    if (hasVisibleSoaHelperTargetForMonomorph(ctx, normalizedName)) {
       return {};
     }
     return soaDirectFieldViewPendingDiagnostic(normalizedName);

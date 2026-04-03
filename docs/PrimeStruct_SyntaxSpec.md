@@ -992,6 +992,9 @@ using that same shared helper instead of a hardcoded `/soa_vector/ref` probe,
 while monomorph-side visible `/soa_vector/ref` fallback detection now also
 uses that same shared definition-visibility helper directly instead of a
 dedicated ref-specific wrapper or local visibility cache, while
+monomorph-side old-surface `/soa_vector/ref` and `/soa_vector/<field>`
+visibility now also routes through one shared helper-target probe instead of
+direct path checks, while
 monomorph-side visible same-path
 `/soa_vector/<field>` helper checks now also route through that same shared
 definition-visibility helper instead of probing `sourceDefs` and

@@ -42,6 +42,9 @@ Ownership/drop status note: completed guard and container-error-contract checkpo
   also use that shared helper instead of a direct `/soa_vector/count` check,
   and the validator-side direct `ref(...)` builtin visibility split now also
   uses that same shared helper instead of a hardcoded `/soa_vector/ref` probe,
+  while monomorph-side old-surface `/soa_vector/ref` and `/soa_vector/<field>`
+  visibility now also routes through one shared helper-target probe instead of
+  direct path checks,
   while the remaining preferred same-path-versus-canonical SoA target chooser
   now uses its shared helper directly instead of a generic visible-path wrapper,
   and the remaining validator-side fixed unavailable-method rejects now call the
