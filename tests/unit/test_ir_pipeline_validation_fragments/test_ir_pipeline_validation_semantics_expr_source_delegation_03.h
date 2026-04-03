@@ -374,6 +374,15 @@
             "bool SemanticsValidator::validateExprCollectionAccessFallbacks") !=
         std::string::npos);
   CHECK(semanticsExprCollectionAccessValidationSource.find(
+            "auto publishCollectionAccessDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
+            "captureExprContext(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
+            "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
             "requires array, vector, map, or string target") !=
         std::string::npos);
   CHECK(semanticsExprCollectionAccessValidationSource.find(
