@@ -318,6 +318,10 @@
         std::string::npos);
   CHECK(validatorInfer.find("auto failInferGraphDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
+  CHECK(validatorInfer.find("rememberFirstCollectedDiagnosticMessage(message);") !=
+        std::string::npos);
+  CHECK(validatorInfer.find("return failUncontextualizedDiagnostic(std::move(message));") !=
+        std::string::npos);
   CHECK(validatorInfer.find("cycle member: ") != std::string::npos);
   CHECK(validatorInfer.find("allowRecursiveReturnInference_ = false;") != std::string::npos);
   CHECK(validatorInfer.find("ensureDefinitionReturnKindReady(*defIt->second)") != std::string::npos);

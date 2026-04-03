@@ -494,6 +494,12 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferGraphSource.find(
             "auto failInferGraphCycleDiagnostic =") !=
         std::string::npos);
+  CHECK(semanticsInferGraphSource.find(
+            "rememberFirstCollectedDiagnosticMessage(message);") !=
+        std::string::npos);
+  CHECK(semanticsInferGraphSource.find(
+            "return failUncontextualizedDiagnostic(std::move(message));") !=
+        std::string::npos);
 }
 
 TEST_CASE("semantics validator passes source delegation stays stable") {

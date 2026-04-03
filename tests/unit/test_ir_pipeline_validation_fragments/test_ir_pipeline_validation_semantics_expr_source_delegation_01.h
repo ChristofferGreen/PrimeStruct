@@ -301,6 +301,12 @@
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "return failExprDiagnostic(receiver, std::move(message));") !=
         std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "std::optional<std::string> rememberedMethodTargetTraceFailure;") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "rememberedMethodTargetTraceFailure = std::move(message);") !=
+        std::string::npos);
   CHECK(semanticsExprMethodCompatibilitySetupSource.find(
             "return soaUnavailableMethodDiagnostic(\n"
             "        resolvedPath,\n"

@@ -89,10 +89,11 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
   };
   auto failInferGraphCycleDiagnostic =
       [&](const std::vector<const Definition *> &unresolvedDefinitions) -> bool {
-    error_ = formatReturnInferenceCycleDiagnostic(unresolvedDefinitions);
+    const std::string message =
+        formatReturnInferenceCycleDiagnostic(unresolvedDefinitions);
     if (collectDiagnostics_ && diagnosticInfo_ != nullptr) {
       DiagnosticSinkRecord record;
-      record.message = error_;
+      record.message = message;
       const Definition *primary = unresolvedDefinitions.front();
       if (primary->sourceLine > 0 && primary->sourceColumn > 0) {
         record.primarySpan.line = primary->sourceLine;
@@ -114,8 +115,10 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
         record.relatedSpans.push_back(std::move(span));
       }
       diagnosticSink_.setRecords({std::move(record)});
+      rememberFirstCollectedDiagnosticMessage(message);
+      return false;
     }
-    return false;
+    return failUncontextualizedDiagnostic(message);
   };
 
   for (auto componentIt = dag.topologicalComponentIds.rbegin();
@@ -485,8 +488,7 @@ bool SemanticsValidator::inferDefinitionReturnKindGraphStep(const Definition &de
                                                            bool &changed) {
   changed = false;
   auto failInferGraphDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return false;
+    return failUncontextualizedDiagnostic(std::move(message));
   };
   auto kindIt = returnKinds_.find(def.fullPath);
   if (kindIt == returnKinds_.end()) {
