@@ -298,7 +298,9 @@ Owned() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Owned> mut] values{vector<Owned>(Owned(), Owned(9i32))}
+  [vector<Owned> mut] values{vector<Owned>()}
+  push(values, Owned())
+  push(values, Owned(9i32))
   remove_at(values, 0i32)
   return(plus(count(values), at(values, 0i32).value))
 }
@@ -329,7 +331,9 @@ Wrapper() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Wrapper> mut] values{vector<Wrapper>(Wrapper(Mover(1i32)), Wrapper(Mover(7i32)))}
+  [vector<Wrapper> mut] values{vector<Wrapper>()}
+  push(values, Wrapper(Mover(1i32)))
+  push(values, Wrapper(Mover(7i32)))
   remove_at(values, 0i32)
   return(plus(count(values), at_unsafe(values, 0i32).value.value))
 }
@@ -469,7 +473,9 @@ Owned() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Owned> mut] values{vector<Owned>(Owned(), Owned(9i32))}
+  [vector<Owned> mut] values{vector<Owned>()}
+  push(values, Owned())
+  push(values, Owned(9i32))
   remove_swap(values, 0i32)
   return(plus(count(values), at(values, 0i32).value))
 }
@@ -500,7 +506,9 @@ Wrapper() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Wrapper> mut] values{vector<Wrapper>(Wrapper(Mover(1i32)), Wrapper(Mover(7i32)))}
+  [vector<Wrapper> mut] values{vector<Wrapper>()}
+  push(values, Wrapper(Mover(1i32)))
+  push(values, Wrapper(Mover(7i32)))
   remove_swap(values, 0i32)
   return(plus(count(values), at_unsafe(values, 0i32).value.value))
 }

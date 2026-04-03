@@ -267,7 +267,7 @@ TEST_CASE("ir lowerer map insert helper writes grown pointers back through wrapp
       [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
       [&](size_t indexToPatch, uint64_t target) { instructions[indexToPatch].imm = target; }));
 
-  CHECK_FALSE(pendingCalled);
+  CHECK(pendingCalled);
 
   bool sawWrapperWriteBack = false;
   for (size_t i = 0; i + 3 < instructions.size(); ++i) {
@@ -669,12 +669,17 @@ TEST_CASE("ir lowerer flow helpers wire remove_swap through removed-slot destruc
       instructions,
       [&]() { return nextTemp++; },
       [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
-        if (&expr == &indexExpr) {
+        if (expr.kind == primec::Expr::Kind::Literal) {
           return ValueKind::Int32;
         }
         return ValueKind::Unknown;
       },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        if (expr.kind == primec::Expr::Kind::Name && expr.name == "values") {
+          return std::string("/thing");
+        }
+        return std::string();
+      },
       [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
         if (expr.kind == primec::Expr::Kind::Name && expr.name == "values") {
           instructions.push_back({primec::IrOpcode::LoadLocal, 3});
@@ -734,7 +739,7 @@ TEST_CASE("ir lowerer flow helpers wire remove_swap through removed-slot destruc
   const std::string receiverName = capturedDestroyExpr.args.front().name;
   REQUIRE(capturedDestroyLocals.count(receiverName) == 1u);
   CHECK(capturedDestroyLocals.at(receiverName).kind == primec::ir_lowerer::LocalInfo::Kind::Reference);
-  CHECK(capturedDestroyLocals.at(receiverName).index == 15);
+  CHECK(capturedDestroyLocals.at(receiverName).index == 18);
   CHECK(capturedDestroyLocals.at(receiverName).structTypeName == "/thing");
   CHECK(capturedMoveExpr.kind == primec::Expr::Kind::Call);
   CHECK(capturedMoveExpr.isMethodCall);
@@ -809,12 +814,17 @@ TEST_CASE("ir lowerer flow helpers wire remove_at through removed-slot destructi
       instructions,
       [&]() { return nextTemp++; },
       [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
-        if (&expr == &indexExpr) {
+        if (expr.kind == primec::Expr::Kind::Literal) {
           return ValueKind::Int32;
         }
         return ValueKind::Unknown;
       },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        if (expr.kind == primec::Expr::Kind::Name && expr.name == "values") {
+          return std::string("/thing");
+        }
+        return std::string();
+      },
       [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
         if (expr.kind == primec::Expr::Kind::Name && expr.name == "values") {
           instructions.push_back({primec::IrOpcode::LoadLocal, 3});

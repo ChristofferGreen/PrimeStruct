@@ -177,7 +177,9 @@ inline std::string makeVectorIndexedRemovalOwnershipConformanceSource(const std:
     source += "}\n\n";
     source += "[effects(heap_alloc), return<int>]\n";
     source += "main() {\n";
-    source += "  [vector<Owned> mut] values{vector<Owned>(Owned(), Owned(9i32))}\n";
+    source += "  [vector<Owned> mut] values{vector<Owned>()}\n";
+    source += "  push(values, Owned())\n";
+    source += "  push(values, Owned(9i32))\n";
     source += "  remove_at(values, 0i32)\n";
     source += "  return(plus(count(values), at(values, 0i32).value))\n";
     source += "}\n";
@@ -198,7 +200,9 @@ inline std::string makeVectorIndexedRemovalOwnershipConformanceSource(const std:
   source += "}\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  [vector<Wrapper> mut] values{vector<Wrapper>(Wrapper(Mover(1i32)), Wrapper(Mover(7i32)))}\n";
+  source += "  [vector<Wrapper> mut] values{vector<Wrapper>()}\n";
+  source += "  push(values, Wrapper(Mover(1i32)))\n";
+  source += "  push(values, Wrapper(Mover(7i32)))\n";
   source += "  remove_swap(values, 0i32)\n";
   source += "  return(plus(count(values), at_unsafe(values, 0i32).value.value))\n";
   source += "}\n";
