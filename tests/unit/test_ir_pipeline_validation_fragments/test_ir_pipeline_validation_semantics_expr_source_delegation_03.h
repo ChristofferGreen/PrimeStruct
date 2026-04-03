@@ -325,6 +325,18 @@
   CHECK(semanticsExprLambdaSource.find("duplicate lambda capture") != std::string::npos);
   CHECK(semanticsExprNumericSource.find("bool SemanticsValidator::validateNumericBuiltinExpr") != std::string::npos);
   CHECK(semanticsExprNumericSource.find("multiply requires scalar scaling") != std::string::npos);
+  CHECK(semanticsExprCallResolutionSource.find(
+            "bool SemanticsValidator::validateExprEarlyPointerBuiltin") !=
+        std::string::npos);
+  CHECK(semanticsExprCallResolutionSource.find(
+            "auto failExprCallResolution = [&](std::string message) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprCallResolutionSource.find("captureExprContext(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprCallResolutionSource.find("return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprCallResolutionSource.find("location requires a local binding") !=
+        std::string::npos);
   CHECK(semanticsExprNumericPredicatesSource.find("implicit matrix/quaternion family conversion requires explicit helper") !=
         std::string::npos);
   CHECK(semanticsExprArgumentValidationSource.find("std::string SemanticsValidator::expectedBindingTypeText") !=

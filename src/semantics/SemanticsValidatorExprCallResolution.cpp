@@ -55,34 +55,32 @@ bool SemanticsValidator::validateExprEarlyPointerBuiltin(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
-  if (hasNamedArguments(expr.argNames)) {
-    error_ = "named arguments not supported for builtin calls";
+  auto failExprCallResolution = [&](std::string message) -> bool {
+    error_ = std::move(message);
     return publishExprDiagnostic();
+  };
+  if (hasNamedArguments(expr.argNames)) {
+    return failExprCallResolution("named arguments not supported for builtin calls");
   }
   if (!expr.templateArgs.empty()) {
-    error_ = "pointer helpers do not accept template arguments";
-    return publishExprDiagnostic();
+    return failExprCallResolution("pointer helpers do not accept template arguments");
   }
   if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-    error_ = "pointer helpers do not accept block arguments";
-    return publishExprDiagnostic();
+    return failExprCallResolution("pointer helpers do not accept block arguments");
   }
   if (expr.args.size() != 1) {
-    error_ = "argument count mismatch for builtin " + earlyPointerBuiltin;
-    return publishExprDiagnostic();
+    return failExprCallResolution("argument count mismatch for builtin " + earlyPointerBuiltin);
   }
   if (earlyPointerBuiltin == "location") {
     const Expr &target = expr.args.front();
     if (!isAcceptedLocationTarget(target, isAcceptedLocationTarget)) {
-      error_ = "location requires a local binding";
-      return publishExprDiagnostic();
+      return failExprCallResolution("location requires a local binding");
     }
   }
   if (earlyPointerBuiltin == "dereference" &&
       !isPointerLikeExpr(expr.args.front(), params, locals) &&
       !dispatchBootstrap.isDeclaredPointerLikeCall(expr.args.front())) {
-    error_ = "dereference requires a pointer or reference";
-    return publishExprDiagnostic();
+    return failExprCallResolution("dereference requires a pointer or reference");
   }
   return validateExpr(params, locals, expr.args.front());
 }

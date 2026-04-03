@@ -33,6 +33,8 @@
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprLambda.cpp";
   const std::filesystem::path semanticsExprNumericPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprNumeric.cpp";
+  const std::filesystem::path semanticsExprCallResolutionPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprCallResolution.cpp";
   const std::filesystem::path semanticsExprNumericPredicatesPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprNumericPredicates.cpp";
   const std::filesystem::path semanticsExprFieldResolutionPath =
@@ -119,6 +121,7 @@
   REQUIRE(std::filesystem::exists(semanticsExprControlFlowPath));
   REQUIRE(std::filesystem::exists(semanticsExprLambdaPath));
   REQUIRE(std::filesystem::exists(semanticsExprNumericPath));
+  REQUIRE(std::filesystem::exists(semanticsExprCallResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprNumericPredicatesPath));
   REQUIRE(std::filesystem::exists(semanticsExprFieldResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprArgumentValidationPath));
@@ -169,6 +172,7 @@
   const std::string semanticsExprControlFlowSource = readText(semanticsExprControlFlowPath);
   const std::string semanticsExprLambdaSource = readText(semanticsExprLambdaPath);
   const std::string semanticsExprNumericSource = readText(semanticsExprNumericPath);
+  const std::string semanticsExprCallResolutionSource = readText(semanticsExprCallResolutionPath);
   const std::string semanticsExprNumericPredicatesSource = readText(semanticsExprNumericPredicatesPath);
   const std::string semanticsExprFieldResolutionSource = readText(semanticsExprFieldResolutionPath);
   const std::string semanticsExprArgumentValidationSource = readText(semanticsExprArgumentValidationPath);
