@@ -32,8 +32,6 @@ Ownership/drop status note: completed guard and container-error-contract checkpo
 **Architecture / Type-resolution graph**
 **Group 11 - Near-term graph queue**
 Blocked by Group 13 rollout constraints until the remaining collection-helper/runtime predecessor items are finished and the return-kind pilot path is stable enough to resume broader graph work.
-- ◐ Expand end-to-end graph conformance coverage for local `auto`, query, and `try(...)` consumers on the single graph-resolver path so the current snapshot-heavy checks are backed by real compile-pipeline scenarios. Progress: release-mode compile-pipeline parity now includes a successful `Result<int, Error>` + local-`auto` + `try(...)` path on the graph resolver in addition to the existing snapshot suite; the remaining work is broader graph-facing consumer coverage beyond that first success case.
-  - ○ Broaden graph conformance beyond the first successful local `auto` + `try(...)` parity case so more query/result consumer shapes are covered through compile-pipeline scenarios instead of only snapshots.
 - ○ Expand end-to-end graph conformance coverage for backend dispatch, deleted-path diagnostics, and canonical helper/method resolution on C++/VM/native so graph-solved metadata is exercised beyond the snapshot harness.
 - ○ Land graph-backed query invalidation rules and coverage for local-binding, control-flow, and initializer-shape edits so cached query/binding/result metadata has one explicit contract for intra-definition churn.
 - ○ Land graph-backed query invalidation rules and coverage for definition-signature, import-alias, and receiver-type edits before more inference consumers depend on the cache.

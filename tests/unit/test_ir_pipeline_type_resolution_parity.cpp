@@ -99,6 +99,21 @@ main() {
           false,
       },
       {
+          "query_local_auto_scalar_success",
+          R"(
+[return<int>]
+main() {
+  [auto] value{
+    if(true,
+      then(){ return(4i32) },
+      else(){ return(7i32) })
+  }
+  return(value)
+}
+)",
+          true,
+      },
+      {
           "result_try_local_auto_success",
           R"(
 MyError {
@@ -116,6 +131,43 @@ lookup() {
 [return<Result<int, MyError>> on_error<MyError, /unexpectedError>]
 main() {
   [auto] selected{try(lookup())}
+  return(Result.ok(selected))
+}
+)",
+          true,
+      },
+      {
+          "query_try_local_auto_success",
+          R"(
+import /std/collections/*
+
+unexpectedStatusError([ContainerError] err) {
+  [Result<ContainerError>] status{err.code}
+}
+
+[return<Result<int, ContainerError>>]
+lookupA() {
+  return(Result.ok(4i32))
+}
+
+[return<Result<int, ContainerError>>]
+lookupB() {
+  return(Result.ok(7i32))
+}
+
+[return<Result<int, ContainerError>>]
+wrapStatus() {
+  [auto] status{
+    if(true,
+      then(){ return(lookupA()) },
+      else(){ return(lookupB()) })
+  }
+  return(status)
+}
+
+[return<Result<int, ContainerError>> on_error<ContainerError, /unexpectedStatusError>]
+main() {
+  [auto] selected{try(wrapStatus())}
   return(Result.ok(selected))
 }
 )",
