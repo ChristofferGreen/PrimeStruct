@@ -375,6 +375,10 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
                                                      bool &hasResolutionOut,
                                                      std::string &resolvedPathOut,
                                                      size_t &receiverIndexOut) {
+  auto publishVectorHelperDiagnostic = [&]() -> bool {
+    captureExprContext(expr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   hasResolutionOut = false;
   resolvedPathOut.clear();
   receiverIndexOut = 0;
@@ -503,14 +507,14 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   const std::string removedVectorCompatibilityPath = getDirectVectorHelperCompatibilityPath(expr);
   if (!removedVectorCompatibilityPath.empty()) {
     error_ = "unknown call target: " + removedVectorCompatibilityPath;
-    return false;
+    return publishVectorHelperDiagnostic();
   }
   if (isStdNamespacedVectorCanonicalHelperCall && !hasVisibleStdNamespacedVectorCanonicalHelper &&
       !hasVisibleDefinitionPath(resolved) &&
       !hasVisibleStdNamespacedVectorCompatibilityHelper &&
       !allowStdNamespacedUserReceiverProbe) {
     error_ = "unknown call target: " + resolved;
-    return false;
+    return publishVectorHelperDiagnostic();
   }
   if (isExplicitStdNamespacedVectorCompatibilityMethod) {
     return true;
@@ -530,7 +534,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
         !hasCompatibleDeclaredHelper &&
         !allowStdNamespacedUserReceiverProbe) {
       error_ = "unknown call target: " + resolved;
-      return false;
+      return publishVectorHelperDiagnostic();
     }
   }
 
@@ -606,7 +610,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   if (defMap_.find(resolved) == defMap_.end()) {
     if (!isStdNamespacedVectorCanonicalHelperCall) {
       error_ = vectorHelper + " is only supported as a statement";
-      return false;
+      return publishVectorHelperDiagnostic();
     }
     return true;
   }

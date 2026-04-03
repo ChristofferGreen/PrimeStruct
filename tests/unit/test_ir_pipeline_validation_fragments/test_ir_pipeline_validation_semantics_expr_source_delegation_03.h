@@ -787,6 +787,11 @@
   CHECK(semanticsExprVectorHelpersSource.find("bool SemanticsValidator::resolveExprVectorHelperCall") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
+            "auto publishVectorHelperDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find("captureExprContext(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
             "usesSamePathSoaHelperTargetForCurrentImports(helperName)") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
