@@ -121,6 +121,34 @@ bool SemanticsValidator::buildDefinitionReturnKinds(const std::unordered_set<std
   const bool collectReturnKindDiagnostics = shouldCollectStructuredDiagnostics();
   for (const auto &def : program_.definitions) {
     DefinitionContextScope definitionScope(*this, def);
+    auto addReturnKindDiagnostic = [&](const std::string &message) -> bool {
+      if (!collectReturnKindDiagnostics) {
+        error_ = message;
+        captureDefinitionContext(def);
+        return publishCurrentStructuredDiagnosticNow();
+      }
+      SemanticDiagnosticRecord record;
+      record.message = message;
+      if (def.sourceLine > 0 && def.sourceColumn > 0) {
+        record.primarySpan.line = def.sourceLine;
+        record.primarySpan.column = def.sourceColumn;
+        record.primarySpan.endLine = def.sourceLine;
+        record.primarySpan.endColumn = def.sourceColumn;
+        record.hasPrimarySpan = true;
+      }
+      SemanticDiagnosticRelatedSpan related;
+      related.span.line = def.sourceLine;
+      related.span.column = def.sourceColumn;
+      related.span.endLine = def.sourceLine;
+      related.span.endColumn = def.sourceColumn;
+      related.label = "definition: " + def.fullPath;
+      record.relatedSpans.push_back(std::move(related));
+      if (error_.empty()) {
+        error_ = message;
+      }
+      returnKindDiagnosticRecords.push_back(std::move(record));
+      return true;
+    };
     ReturnKind kind = ReturnKind::Void;
     if (explicitStructs.count(def.fullPath) > 0) {
       kind = ReturnKind::Array;
@@ -152,30 +180,9 @@ bool SemanticsValidator::buildDefinitionReturnKinds(const std::unordered_set<std
         kind = getReturnKind(def, structNames_, importAliases_, returnKindError);
       }
       if (!returnKindError.empty()) {
-        if (!collectReturnKindDiagnostics) {
-          error_ = returnKindError;
+        if (!addReturnKindDiagnostic(returnKindError)) {
           return false;
         }
-        SemanticDiagnosticRecord record;
-        record.message = returnKindError;
-        if (def.sourceLine > 0 && def.sourceColumn > 0) {
-          record.primarySpan.line = def.sourceLine;
-          record.primarySpan.column = def.sourceColumn;
-          record.primarySpan.endLine = def.sourceLine;
-          record.primarySpan.endColumn = def.sourceColumn;
-          record.hasPrimarySpan = true;
-        }
-        SemanticDiagnosticRelatedSpan related;
-        related.span.line = def.sourceLine;
-        related.span.column = def.sourceColumn;
-        related.span.endLine = def.sourceLine;
-        related.span.endColumn = def.sourceColumn;
-        related.label = "definition: " + def.fullPath;
-        record.relatedSpans.push_back(std::move(related));
-        if (error_.empty()) {
-          error_ = returnKindError;
-        }
-        returnKindDiagnosticRecords.push_back(std::move(record));
         continue;
       }
     }

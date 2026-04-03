@@ -761,6 +761,42 @@ TEST_CASE("semantics validator build transform publication stays stable") {
         std::string::npos);
 }
 
+TEST_CASE("semantics validator build return-kind publication stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path buildReturnKindsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorBuildReturnKinds.cpp";
+  REQUIRE(std::filesystem::exists(buildReturnKindsPath));
+
+  const std::string buildReturnKindsSource = readText(buildReturnKindsPath);
+  CHECK(buildReturnKindsSource.find(
+            "bool SemanticsValidator::buildDefinitionReturnKinds(") !=
+        std::string::npos);
+  CHECK(buildReturnKindsSource.find(
+            "auto addReturnKindDiagnostic = [&](const std::string &message) -> bool {") !=
+        std::string::npos);
+  CHECK(buildReturnKindsSource.find("captureDefinitionContext(def);") !=
+        std::string::npos);
+  CHECK(buildReturnKindsSource.find("return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(buildReturnKindsSource.find(
+            "soa_vector return type requires struct element type on ") !=
+        std::string::npos);
+  CHECK(buildReturnKindsSource.find(
+            "if (!addReturnKindDiagnostic(returnKindError)) {") !=
+        std::string::npos);
+}
+
 TEST_CASE("semantics validator build struct-field publication stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
