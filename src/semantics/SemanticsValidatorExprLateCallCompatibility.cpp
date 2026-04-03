@@ -142,8 +142,8 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
       }
       if (context.dispatchResolvers->resolveArrayTarget(expr.args.front(),
                                                        elemType)) {
-        error_ = "unknown call target: /std/collections/vector/capacity";
-        return false;
+        return failLateCallCompatibilityDiagnostic(
+            "unknown call target: /std/collections/vector/capacity");
       }
       std::string mapKeyType;
       std::string mapValueType;

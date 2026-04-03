@@ -656,16 +656,19 @@
             "bool SemanticsValidator::reportReferenceAssignmentEscape(") !=
         std::string::npos);
   CHECK(semanticsExprReferenceEscapesSource.find(
-            "auto publishReferenceEscapeDiagnostic = [&]() {") !=
+            "auto publishReferenceEscapeDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprReferenceEscapesSource.find(
+            "auto failReferenceEscapeDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
   CHECK(semanticsExprReferenceEscapesSource.find(
             "captureExprContext(rhsExpr);") !=
         std::string::npos);
   CHECK(semanticsExprReferenceEscapesSource.find(
-            "publishCurrentStructuredDiagnosticNow();") !=
+            "return publishCurrentStructuredDiagnosticNow();") !=
         std::string::npos);
   CHECK(semanticsExprReferenceEscapesSource.find(
-            "return true;") !=
+            "return failReferenceEscapeDiagnostic(") !=
         std::string::npos);
   CHECK(semanticsExprReferenceEscapesSource.find(
             "unsafe reference escapes via assignment to ") !=
@@ -683,6 +686,9 @@
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "error_ = std::move(message);") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "argument type mismatch for /string/count parameter values: expected string") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "method call missing receiver") !=
@@ -1004,6 +1010,9 @@
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "auto publishVectorHelperDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "auto failVectorHelperDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find("captureExprContext(expr);") !=
         std::string::npos);

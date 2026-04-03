@@ -158,8 +158,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         normalizeBindingTypeName(mapValueType) == "string") {
       return false;
     }
-    error_ = "argument type mismatch for /string/count parameter values: expected string";
-    return true;
+    return failMethodResolutionDiagnostic("argument type mismatch for /string/count parameter values: expected string");
   };
   const std::string removedMapMethodPath =
       this->mapNamespacedMethodCompatibilityPath(expr, params, locals, dispatchResolverAdapters);

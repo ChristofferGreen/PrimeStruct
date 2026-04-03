@@ -784,13 +784,28 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsStatementVectorResolutionSource.find("bool SemanticsValidator::validateVectorStatementElementType(") !=
         std::string::npos);
+  CHECK(semanticsStatementVectorResolutionSource.find(
+            "auto failVectorElementDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsStatementVectorResolutionSource.find("bool SemanticsValidator::validateVectorStatementHelperTarget(") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorResolutionSource.find(
+            "auto failVectorTargetDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
   CHECK(semanticsStatementVectorResolutionSource.find("bool SemanticsValidator::resolveVectorStatementHelperTargetPath(") !=
         std::string::npos);
+  CHECK(semanticsStatementVectorResolutionSource.find(
+            "auto failVectorReceiverDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsStatementVectorResolutionSource.find("captureExprContext(receiver);") !=
         std::string::npos);
+  CHECK(semanticsStatementVectorResolutionSource.find("captureExprContext(arg);") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorResolutionSource.find("captureExprContext(target);") !=
+        std::string::npos);
   CHECK(semanticsStatementVectorResolutionSource.find("return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorResolutionSource.find("error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsStatementReturnsSource.find(
             "auto publishReturnDiagnostic = [&]() -> bool {") !=

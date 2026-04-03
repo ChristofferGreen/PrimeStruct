@@ -207,9 +207,13 @@ bool SemanticsValidator::reportReferenceAssignmentEscape(
     const std::unordered_map<std::string, BindingInfo> &locals,
     const std::string &sinkName,
     const Expr &rhsExpr) {
-  auto publishReferenceEscapeDiagnostic = [&]() {
+  auto publishReferenceEscapeDiagnostic = [&]() -> bool {
     captureExprContext(rhsExpr);
-    publishCurrentStructuredDiagnosticNow();
+    return publishCurrentStructuredDiagnosticNow();
+  };
+  auto failReferenceEscapeDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishReferenceEscapeDiagnostic();
   };
   std::string sourceRoot;
   if (!resolveEscapingReferenceRoot(params, locals, rhsExpr, sourceRoot)) {
@@ -221,14 +225,11 @@ bool SemanticsValidator::reportReferenceAssignmentEscape(
   const std::string sink = sinkName.empty() ? "<unknown>" : sinkName;
   if (currentValidationContext_.definitionIsUnsafe &&
       isUnsafeReferenceExpr(params, locals, rhsExpr)) {
-    error_ = "unsafe reference escapes via assignment to " + sink +
-             " (root: " + sourceRoot + ", sink: " + sink + ")";
-  } else {
-    error_ = "reference escapes via assignment to " + sink +
-             " (root: " + sourceRoot + ", sink: " + sink + ")";
+    return failReferenceEscapeDiagnostic("unsafe reference escapes via assignment to " + sink +
+                                         " (root: " + sourceRoot + ", sink: " + sink + ")");
   }
-  publishReferenceEscapeDiagnostic();
-  return true;
+  return failReferenceEscapeDiagnostic("reference escapes via assignment to " + sink +
+                                       " (root: " + sourceRoot + ", sink: " + sink + ")");
 }
 
 bool SemanticsValidator::resolveReferenceEscapeSink(

@@ -379,6 +379,10 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failVectorHelperDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishVectorHelperDiagnostic();
+  };
   hasResolutionOut = false;
   resolvedPathOut.clear();
   receiverIndexOut = 0;
@@ -506,15 +510,13 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       hasNamedArguments(expr.argNames);
   const std::string removedVectorCompatibilityPath = getDirectVectorHelperCompatibilityPath(expr);
   if (!removedVectorCompatibilityPath.empty()) {
-    error_ = "unknown call target: " + removedVectorCompatibilityPath;
-    return publishVectorHelperDiagnostic();
+    return failVectorHelperDiagnostic("unknown call target: " + removedVectorCompatibilityPath);
   }
   if (isStdNamespacedVectorCanonicalHelperCall && !hasVisibleStdNamespacedVectorCanonicalHelper &&
       !hasVisibleDefinitionPath(resolved) &&
       !hasVisibleStdNamespacedVectorCompatibilityHelper &&
       !allowStdNamespacedUserReceiverProbe) {
-    error_ = "unknown call target: " + resolved;
-    return publishVectorHelperDiagnostic();
+    return failVectorHelperDiagnostic("unknown call target: " + resolved);
   }
   if (isExplicitStdNamespacedVectorCompatibilityMethod) {
     return true;
@@ -533,8 +535,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     if (!builtinCompatibleReceiver &&
         !hasCompatibleDeclaredHelper &&
         !allowStdNamespacedUserReceiverProbe) {
-      error_ = "unknown call target: " + resolved;
-      return publishVectorHelperDiagnostic();
+      return failVectorHelperDiagnostic("unknown call target: " + resolved);
     }
   }
 
@@ -609,8 +610,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
 
   if (defMap_.find(resolved) == defMap_.end()) {
     if (!isStdNamespacedVectorCanonicalHelperCall) {
-      error_ = vectorHelper + " is only supported as a statement";
-      return publishVectorHelperDiagnostic();
+      return failVectorHelperDiagnostic(vectorHelper + " is only supported as a statement");
     }
     return true;
   }

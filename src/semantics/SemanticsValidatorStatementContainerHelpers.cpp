@@ -214,6 +214,10 @@ bool SemanticsValidator::validateVectorIndexedRemovalHelperElementType(
     const std::string &helperName,
     const std::string &namespacePrefix,
     const std::vector<std::string> *definitionTemplateArgs) {
+  auto failContainerHelperDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return false;
+  };
   std::string experimentalElemType;
   if (!extractExperimentalVectorElementType(binding, experimentalElemType) &&
       currentValidationContext_.definitionPath.rfind("/std/collections/experimental_vector/", 0) != 0 &&
@@ -224,10 +228,10 @@ bool SemanticsValidator::validateVectorIndexedRemovalHelperElementType(
                                            namespacePrefix,
                                            definitionTemplateArgs,
                                            visitingStructs)) {
-      error_ = helperName +
-               " requires drop-trivial vector element type until container drop semantics are implemented: " +
-               binding.typeTemplateArg;
-      return false;
+      return failContainerHelperDiagnostic(
+          helperName +
+          " requires drop-trivial vector element type until container drop semantics are implemented: " +
+          binding.typeTemplateArg);
     }
   }
   return validateVectorRelocationHelperElementType(binding, helperName, namespacePrefix, definitionTemplateArgs);
@@ -238,6 +242,10 @@ bool SemanticsValidator::validateVectorRelocationHelperElementType(
     const std::string &helperName,
     const std::string &namespacePrefix,
     const std::vector<std::string> *definitionTemplateArgs) {
+  auto failContainerHelperDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return false;
+  };
   std::string experimentalElemType;
   if (extractExperimentalVectorElementType(binding, experimentalElemType)) {
     return true;
@@ -258,11 +266,11 @@ bool SemanticsValidator::validateVectorRelocationHelperElementType(
     return true;
   }
 
-  error_ = helperName +
-           " requires relocation-trivial vector element type until container move/reallocation semantics are "
-           "implemented: " +
-           binding.typeTemplateArg;
-  return false;
+  return failContainerHelperDiagnostic(
+      helperName +
+      " requires relocation-trivial vector element type until container move/reallocation semantics are "
+      "implemented: " +
+      binding.typeTemplateArg);
 }
 
 } // namespace primec::semantics

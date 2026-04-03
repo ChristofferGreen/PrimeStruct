@@ -187,9 +187,13 @@ bool SemanticsValidator::validateVectorStatementElementType(
     const std::unordered_map<std::string, BindingInfo> &locals,
     const Expr &arg,
     const std::string &typeName) {
+  auto failVectorElementDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    captureExprContext(arg);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   if (typeName.empty()) {
-    error_ = "push requires vector element type";
-    return false;
+    return failVectorElementDiagnostic("push requires vector element type");
   }
   const std::string normalizedType = normalizeBindingTypeName(typeName);
   auto isStringValueExpr = [&](const Expr &candidate) {
@@ -207,8 +211,7 @@ bool SemanticsValidator::validateVectorStatementElementType(
   };
   if (normalizedType == "string") {
     if (!isStringValueExpr(arg)) {
-      error_ = "push requires element type " + typeName;
-      return false;
+      return failVectorElementDiagnostic("push requires element type " + typeName);
     }
     return true;
   }
@@ -217,13 +220,11 @@ bool SemanticsValidator::validateVectorStatementElementType(
     return true;
   }
   if (isStringValueExpr(arg)) {
-    error_ = "push requires element type " + typeName;
-    return false;
+    return failVectorElementDiagnostic("push requires element type " + typeName);
   }
   ReturnKind argKind = inferExprReturnKind(arg, params, locals);
   if (argKind != ReturnKind::Unknown && argKind != expectedKind) {
-    error_ = "push requires element type " + typeName;
-    return false;
+    return failVectorElementDiagnostic("push requires element type " + typeName);
   }
   return true;
 }
@@ -234,23 +235,25 @@ bool SemanticsValidator::validateVectorStatementHelperTarget(
     const Expr &target,
     const char *helperName,
     BindingInfo &bindingOut) {
+  auto failVectorTargetDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    captureExprContext(target);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   const std::string helper = helperName == nullptr ? "" : std::string(helperName);
   const bool allowSoaVectorTarget = helper == "push" || helper == "reserve";
   if (!resolveVectorStatementBinding(params, locals, target, bindingOut)) {
-    error_ = std::string(helperName) + " requires vector binding";
-    return false;
+    return failVectorTargetDiagnostic(std::string(helperName) + " requires vector binding");
   }
   std::string experimentalElemType;
   const bool isExperimentalVectorTarget = extractExperimentalVectorElementType(bindingOut, experimentalElemType);
   if (bindingOut.typeName != "vector" &&
       !(allowSoaVectorTarget && bindingOut.typeName == "soa_vector") &&
       !isExperimentalVectorTarget) {
-    error_ = std::string(helperName) + " requires vector binding";
-    return false;
+    return failVectorTargetDiagnostic(std::string(helperName) + " requires vector binding");
   }
   if (!bindingOut.isMutable) {
-    error_ = std::string(helperName) + " requires mutable vector binding";
-    return false;
+    return failVectorTargetDiagnostic(std::string(helperName) + " requires mutable vector binding");
   }
   return true;
 }
@@ -419,6 +422,11 @@ bool SemanticsValidator::validateVectorStatementHelperReceiver(
     const std::unordered_map<std::string, BindingInfo> &locals,
     const Expr &receiver,
     const std::string &helperName) {
+  auto failVectorReceiverDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    captureExprContext(receiver);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   if (!validateExpr(params, locals, receiver)) {
     return false;
   }
@@ -428,9 +436,7 @@ bool SemanticsValidator::validateVectorStatementHelperReceiver(
   }
   if (defMap_.find(resolvedMethod) == defMap_.end() &&
       isNonCollectionStructVectorHelperTarget(resolvedMethod)) {
-    error_ = "unknown method: " + resolvedMethod;
-    captureExprContext(receiver);
-    return publishCurrentStructuredDiagnosticNow();
+    return failVectorReceiverDiagnostic("unknown method: " + resolvedMethod);
   }
   return true;
 }
