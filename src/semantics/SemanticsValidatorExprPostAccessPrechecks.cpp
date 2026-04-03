@@ -18,12 +18,16 @@ bool SemanticsValidator::validateExprPostAccessPrechecks(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failPostAccessPrecheckDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishPostAccessPrecheckDiagnostic();
+  };
 
   if (usedMethodTarget && !resolvedMethod) {
     auto defIt = defMap_.find(resolved);
     if (defIt != defMap_.end() && isStaticHelperDefinition(*defIt->second)) {
-      error_ = "static helper does not accept method-call syntax: " + resolved;
-      return publishPostAccessPrecheckDiagnostic();
+      return failPostAccessPrecheckDiagnostic("static helper does not accept method-call syntax: " +
+                                              resolved);
     }
   }
 
@@ -37,24 +41,19 @@ bool SemanticsValidator::validateExprPostAccessPrechecks(
   if (getBuiltinGpuName(expr, gpuBuiltin)) {
     handledOut = true;
     if (hasNamedArguments(expr.argNames)) {
-      error_ = "named arguments not supported for builtin calls";
-      return publishPostAccessPrecheckDiagnostic();
+      return failPostAccessPrecheckDiagnostic("named arguments not supported for builtin calls");
     }
     if (!expr.templateArgs.empty()) {
-      error_ = "gpu builtins do not accept template arguments";
-      return publishPostAccessPrecheckDiagnostic();
+      return failPostAccessPrecheckDiagnostic("gpu builtins do not accept template arguments");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = "gpu builtins do not accept block arguments";
-      return publishPostAccessPrecheckDiagnostic();
+      return failPostAccessPrecheckDiagnostic("gpu builtins do not accept block arguments");
     }
     if (!expr.args.empty()) {
-      error_ = "gpu builtins do not accept arguments";
-      return publishPostAccessPrecheckDiagnostic();
+      return failPostAccessPrecheckDiagnostic("gpu builtins do not accept arguments");
     }
     if (!currentValidationContext_.definitionIsCompute) {
-      error_ = "gpu builtins require a compute definition";
-      return publishPostAccessPrecheckDiagnostic();
+      return failPostAccessPrecheckDiagnostic("gpu builtins require a compute definition");
     }
     return true;
   }
@@ -62,8 +61,7 @@ bool SemanticsValidator::validateExprPostAccessPrechecks(
   PathSpaceBuiltin pathSpaceBuiltin;
   if (getPathSpaceBuiltin(expr, pathSpaceBuiltin) &&
       defMap_.find(resolved) == defMap_.end()) {
-    error_ = pathSpaceBuiltin.name + " is statement-only";
-    return publishPostAccessPrecheckDiagnostic();
+    return failPostAccessPrecheckDiagnostic(pathSpaceBuiltin.name + " is statement-only");
   }
 
   if (!resolvedMethod && resolved == "/file_error/why" &&
@@ -82,10 +80,9 @@ bool SemanticsValidator::validateExprPostAccessPrechecks(
        hasDeclaredDefinitionPath(resolved) ||
        hasImportedDefinitionPath(resolved)) &&
       (isStdlibBufferLoadWrapperCall || isStdlibBufferStoreWrapperCall)) {
-    error_ = isStdlibBufferLoadWrapperCall
-                 ? "buffer_load requires a compute definition"
-                 : "buffer_store requires a compute definition";
-    return publishPostAccessPrecheckDiagnostic();
+    return failPostAccessPrecheckDiagnostic(
+        isStdlibBufferLoadWrapperCall ? "buffer_load requires a compute definition"
+                                      : "buffer_store requires a compute definition");
   }
 
   return true;

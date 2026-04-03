@@ -38,6 +38,10 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failCollectionAccessTargetDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishCollectionAccessTargetDiagnostic();
+  };
 
   std::string accessHelperName;
   const bool hasBuiltinAccessSpelling =
@@ -249,8 +253,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       if (!isBuiltinMethod &&
           !hasDeclaredDefinitionPath(methodResolved) &&
           !hasImportedDefinitionPath(methodResolved)) {
-        error_ = "unknown method: " + methodResolved;
-        return publishCollectionAccessTargetDiagnostic();
+        return failCollectionAccessTargetDiagnostic("unknown method: " + methodResolved);
       }
       if (hasAlternativeCollectionReceiver && receiverIndex == 0) {
         continue;
@@ -337,8 +340,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
             methodReceiverIndex = 0;
             if (!hasDeclaredDefinitionPath(methodResolved) &&
                 !hasImportedDefinitionPath(methodResolved)) {
-              error_ = "unknown method: " + methodResolved;
-              return publishCollectionAccessTargetDiagnostic();
+              return failCollectionAccessTargetDiagnostic("unknown method: " + methodResolved);
             }
             resolved = methodResolved;
             resolvedMethod = false;
@@ -398,8 +400,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
               return true;
             }
           }
-          error_ = "unknown method: " + receiverStructPath + "/" + accessHelperName;
-          return publishCollectionAccessTargetDiagnostic();
+          return failCollectionAccessTargetDiagnostic("unknown method: " + receiverStructPath + "/" +
+                                                      accessHelperName);
         }
       }
     }
@@ -456,8 +458,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         return false;
       }
       if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
-        error_ = "unknown method: " + methodResolved;
-        return publishCollectionAccessTargetDiagnostic();
+        return failCollectionAccessTargetDiagnostic("unknown method: " + methodResolved);
       }
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
@@ -491,8 +492,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         return false;
       }
       if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
-        error_ = "unknown method: " + methodResolved;
-        return publishCollectionAccessTargetDiagnostic();
+        return failCollectionAccessTargetDiagnostic("unknown method: " + methodResolved);
       }
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
@@ -520,8 +520,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
           methodResolved == "/map/contains" &&
           !hasImportedDefinitionPath("/contains") &&
           !hasDeclaredDefinitionPath("/contains")) {
-        error_ = "unknown call target: /std/collections/map/contains";
-        return publishCollectionAccessTargetDiagnostic();
+        return failCollectionAccessTargetDiagnostic("unknown call target: /std/collections/map/contains");
       }
       if (isBuiltinMethod) {
         if (((methodResolved == "/std/collections/map/contains" &&
@@ -545,8 +544,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
             !context.isIndexedArgsPackMapReceiverTarget(receiverCandidate) &&
             !hasImportedDefinitionPath("/std/collections/map/contains") &&
             !hasDeclaredDefinitionPath("/std/collections/map/contains")) {
-          error_ = "unknown call target: /std/collections/map/contains";
-          return publishCollectionAccessTargetDiagnostic();
+          return failCollectionAccessTargetDiagnostic(
+              "unknown call target: /std/collections/map/contains");
         }
         if ((methodResolved == "/map/at" || methodResolved == "/map/at_unsafe" ||
              methodResolved == "/std/collections/map/at" ||
@@ -559,14 +558,13 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
             !hasDeclaredDefinitionPath("/std/collections/map/" +
                                        std::string(methodResolved.find("unsafe") != std::string::npos ? "at_unsafe"
                                                                                                        : "at"))) {
-          error_ = "unknown call target: /std/collections/map/" +
-                   std::string(methodResolved.find("unsafe") != std::string::npos ? "at_unsafe" : "at");
-          return publishCollectionAccessTargetDiagnostic();
+          return failCollectionAccessTargetDiagnostic(
+              "unknown call target: /std/collections/map/" +
+              std::string(methodResolved.find("unsafe") != std::string::npos ? "at_unsafe" : "at"));
         }
       } else if (defMap_.find(methodResolved) == defMap_.end() &&
                  !context.hasResolvableMapHelperPath(methodResolved)) {
-        error_ = "unknown method: " + methodResolved;
-        return publishCollectionAccessTargetDiagnostic();
+        return failCollectionAccessTargetDiagnostic("unknown method: " + methodResolved);
       }
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;

@@ -59,6 +59,12 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "auto publishCollectionCountCapacityDiagnostic = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "auto failCollectionCountCapacityDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "error_ = std::move(message);") !=
+        std::string::npos);
   CHECK(semanticsExprSource.find(
             "auto publishPreDispatchDirectCallDiagnostic = [&]() -> bool {") ==
         std::string::npos);
@@ -70,6 +76,12 @@
         std::string::npos);
   CHECK(semanticsExprPostAccessPrechecksSource.find(
             "auto publishPostAccessPrecheckDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprPostAccessPrechecksSource.find(
+            "auto failPostAccessPrecheckDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprPostAccessPrechecksSource.find(
+            "error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("if (!expr.isMethodCall && setupOut.isStdNamespacedVectorCountCall &&") ==
         std::string::npos);
@@ -452,10 +464,16 @@
   CHECK(semanticsExprCollectionAccessSource.find(
             "auto publishCollectionAccessTargetDiagnostic = [&]() -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find(
+            "auto failCollectionAccessTargetDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
   CHECK(semanticsExprCollectionAccessSource.find("captureExprContext(expr);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionAccessSource.find(
             "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find(
+            "error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionAccessSource.find("unknown method: ") !=
         std::string::npos);
@@ -941,7 +959,19 @@
             "auto publishFieldAccessDiagnostic = [&]() -> bool {") !=
         std::string::npos);
   CHECK(semanticsExprFieldResolutionSource.find(
+            "auto failFieldAccessDiagnostic = [&](std::string message) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprFieldResolutionSource.find(
             "bool SemanticsValidator::resolveStructFieldBinding(const std::vector<ParameterInfo> &params,") !=
+        std::string::npos);
+  CHECK(semanticsExprFieldResolutionSource.find(
+            "auto publishFieldResolutionDiagnostic = [&](const Expr &diagnosticExpr) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprFieldResolutionSource.find(
+            "auto failFieldResolutionDiagnostic = [&](const Expr &diagnosticExpr,") !=
+        std::string::npos);
+  CHECK(semanticsExprFieldResolutionSource.find(
+            "error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprFieldResolutionSource.find("bool SemanticsValidator::isTypeNamespaceMethodCall") !=
         std::string::npos);

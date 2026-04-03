@@ -217,6 +217,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     captureExprContext(receiver);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failMethodTargetResolutionDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishMethodTargetResolutionDiagnostic();
+  };
   auto stampFileErrorResultFailure = [&](std::string_view site,
                                          std::string_view typeName = {},
                                          std::string_view resolvedType = {}) {
@@ -1870,9 +1874,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     std::string keyType;
     std::string valueType;
     if (resolveExperimentalMapTarget(receiver, keyType, valueType)) {
-      error_ = "unknown call target: " +
-               preferredCanonicalExperimentalMapHelperTarget(normalizedMethodName);
-      return publishMethodTargetResolutionDiagnostic();
+      return failMethodTargetResolutionDiagnostic(
+          "unknown call target: " +
+          preferredCanonicalExperimentalMapHelperTarget(normalizedMethodName));
     }
     return setPreferredMapMethodTarget(receiver, normalizedMethodName);
   }
@@ -1883,8 +1887,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       (explicitVectorReceiverFamily == "string" || explicitVectorReceiverFamily == "array" ||
        explicitVectorReceiverFamily == "map")) {
     if (!hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {
-      error_ = "unknown method: " + explicitVectorHelperPath;
-      return publishMethodTargetResolutionDiagnostic();
+      return failMethodTargetResolutionDiagnostic("unknown method: " + explicitVectorHelperPath);
     }
     resolvedOut = explicitVectorHelperPath;
     isBuiltinOut = false;
@@ -1898,8 +1901,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
        ((normalizedMethodName == "count" || normalizedMethodName == "capacity") &&
         explicitVectorReceiverFamily == "map"))) {
     if (!hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {
-      error_ = "unknown method: " + explicitVectorHelperPath;
-      return publishMethodTargetResolutionDiagnostic();
+      return failMethodTargetResolutionDiagnostic("unknown method: " + explicitVectorHelperPath);
     }
     resolvedOut = explicitVectorHelperPath;
     isBuiltinOut = false;
@@ -2068,16 +2070,16 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         !receiver.args.empty()) {
       std::string vectorElemType;
       if (resolveVectorTarget(receiver.args.front(), vectorElemType)) {
-        error_ = "unknown method: " + removedVectorMethodCompatibilityPath;
-        return publishMethodTargetResolutionDiagnostic();
+        return failMethodTargetResolutionDiagnostic("unknown method: " +
+                                                    removedVectorMethodCompatibilityPath);
       }
     }
     std::string accessHelperName;
     if (getBuiltinArrayAccessName(receiver, accessHelperName) && !receiver.args.empty()) {
       const std::string removedMapCompatibilityPath = getDirectMapHelperCompatibilityPath(receiver);
       if (!removedMapCompatibilityPath.empty()) {
-        error_ = "unknown call target: " + removedMapCompatibilityPath;
-        return publishMethodTargetResolutionDiagnostic();
+        return failMethodTargetResolutionDiagnostic("unknown call target: " +
+                                                    removedMapCompatibilityPath);
       }
       size_t accessReceiverIndex = 0;
       if (!receiver.isMethodCall && hasNamedArguments(receiver.argNames)) {
@@ -2109,8 +2111,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             !hasSamePathRemovedVectorAccessHelper) {
           std::string vectorElemType;
           if (resolveVectorTarget(accessReceiver, vectorElemType)) {
-            error_ = "unknown method: " + removedVectorAccessCompatibilityPath;
-            return publishMethodTargetResolutionDiagnostic();
+            return failMethodTargetResolutionDiagnostic("unknown method: " +
+                                                        removedVectorAccessCompatibilityPath);
           }
         }
         auto accessDefIt = defMap_.find(resolveCalleePath(receiver));
@@ -2361,8 +2363,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
          (normalizedMethodName == "count" &&
           receiverCollectionTypePath == "/map"))) {
       if (!hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {
-        error_ = "unknown method: " + explicitVectorHelperPath;
-        return publishMethodTargetResolutionDiagnostic();
+        return failMethodTargetResolutionDiagnostic("unknown method: " + explicitVectorHelperPath);
       }
       resolvedOut = explicitVectorHelperPath;
       isBuiltinOut = false;
@@ -2466,8 +2467,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
        isMapCollectionTypeName(normalizedTypeName))) {
     if (!hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {
       stampFileErrorResultFailure("std-vector-helper-incompatible", typeName);
-      error_ = "unknown method: " + explicitVectorHelperPath;
-      return publishMethodTargetResolutionDiagnostic();
+      return failMethodTargetResolutionDiagnostic("unknown method: " + explicitVectorHelperPath);
     }
     resolvedOut = explicitVectorHelperPath;
     isBuiltinOut = false;
@@ -2479,8 +2479,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       isMapCollectionTypeName(normalizedTypeName)) {
     if (!hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {
       stampFileErrorResultFailure("vector-helper-incompatible", typeName);
-      error_ = "unknown method: " + explicitVectorHelperPath;
-      return publishMethodTargetResolutionDiagnostic();
+      return failMethodTargetResolutionDiagnostic("unknown method: " + explicitVectorHelperPath);
     }
     resolvedOut = explicitVectorHelperPath;
     isBuiltinOut = false;
@@ -2543,13 +2542,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return false;
     }
     stampFileErrorResultFailure("unknown-target-empty-type", typeName);
-    error_ = "unknown method target for " + normalizedMethodName;
-    return publishMethodTargetResolutionDiagnostic();
+    return failMethodTargetResolutionDiagnostic("unknown method target for " + normalizedMethodName);
   }
   if (typeName == "Pointer" || typeName == "Reference") {
     stampFileErrorResultFailure("pointer-like-type", typeName);
-    error_ = "unknown method target for " + normalizedMethodName;
-    return publishMethodTargetResolutionDiagnostic();
+    return failMethodTargetResolutionDiagnostic("unknown method target for " + normalizedMethodName);
   }
   if (isPrimitiveBindingTypeName(normalizedBaseTypeName)) {
     resolvedOut = "/" + normalizedBaseTypeName + "/" + normalizedMethodName;
@@ -2561,13 +2558,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
   if (traceFileErrorResult && receiver.kind == Expr::Kind::Name &&
       receiver.name == "FileError" && resolvedType.empty()) {
-    error_ = "resolveMethodTarget FileError-result-fallthrough receiver.kind=" +
-             std::string(exprKindName(receiver.kind)) +
-             " receiver.name=" + receiver.name +
-             " receiver.namespace=" + receiver.namespacePrefix +
-             " call.namespace=" + callNamespacePrefix +
-             " typeName=" + typeName;
-    return publishMethodTargetResolutionDiagnostic();
+    return failMethodTargetResolutionDiagnostic(
+        "resolveMethodTarget FileError-result-fallthrough receiver.kind=" +
+        std::string(exprKindName(receiver.kind)) +
+        " receiver.name=" + receiver.name +
+        " receiver.namespace=" + receiver.namespacePrefix +
+        " call.namespace=" + callNamespacePrefix +
+        " typeName=" + typeName);
   }
   if ((normalizedMethodName == "count" || normalizedMethodName == "capacity" ||
        normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
