@@ -102,4 +102,3 @@ Coverage and migration cleanup:
 - ○ Attach stable semantic-product node identities or sort keys to diagnostics so later parallel validation can merge and order them deterministically.
 - ○ Split per-definition validation state from validator-global caches so semantic-product construction uses explicit contexts rather than shared mutable fields.
 - ○ Update CLI help, dump-stage docs/spec text, and pipeline-facing tests to document the semantic-product inspection surface and its relation to existing AST/IR dumps.
-- ○ Add a staged migration note in `docs/PrimeStruct.md` for the semantics-to-lowering boundary, including exit criteria for removing AST-dependent lowerer logic.

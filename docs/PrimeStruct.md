@@ -89,6 +89,37 @@ deterministic dependency model without changing the public language surface.
   diagnostics must not depend on hash iteration order, parallel scheduling, or unrelated definitions elsewhere in the
   program.
 
+### Planned semantics-to-lowering boundary
+PrimeStruct is migrating toward an explicit post-semantics product that sits between the syntax-faithful AST and IR
+lowering. The goal is to stop re-deriving lowering facts from mutated AST state and instead hand IR preparation one
+deterministic, inspectable semantics artifact.
+
+Planned boundary shape:
+- The raw AST remains the syntax-faithful structure used for parsing, source spans, and surface-oriented dumps.
+- Semantics produces a dedicated lowering-facing artifact such as `SemanticProgram` or `ResolvedModule`.
+- That semantic product owns resolved call targets, binding/result types, effect and capability facts, struct metadata,
+  and the graph-backed local/query/`try(...)` inference facts that lowering currently has to reconstruct.
+- IR preparation consumes that semantic product directly instead of re-reading helper aliases, binding kinds, or
+  receiver metadata from the AST.
+
+Migration stages:
+1. Define the semantic-product type and its ownership contract.
+2. Materialize the first lowering-required facts into that product while keeping the existing AST-based lowerer path
+   available behind a temporary adapter.
+3. Thread the semantic product through compile-pipeline success results, dumps, and backend entrypoints.
+4. Cut `prepareIrModule` and `IrLowerer::lower` over to the semantic product.
+5. Remove the temporary adapter and the AST-dependent lowerer re-derivations once coverage proves parity.
+
+Exit criteria for removing AST-dependent lowerer logic:
+- `Semantics::validate` or `CompilePipelineOutput` publishes the semantic product as the canonical post-semantics
+  success artifact.
+- `prepareIrModule` and `IrLowerer::lower` accept the semantic product directly in production entrypoints.
+- Lowerer setup no longer re-derives call targets, binding types, or helper-path decisions from raw AST state.
+- A deterministic semantic-product dump exists and has golden coverage alongside the existing AST/IR dump stages.
+- End-to-end C++/VM/native coverage exercises the semantic-product boundary rather than only snapshot helpers.
+- The remaining AST dependency is limited to syntax-faithful provenance data such as spans/debug mapping, with that
+  boundary documented explicitly.
+
 ### Language ethos (v1)
 - **Simplified and coherent C:** keep the core small, explicit, and close to how the machine behaves when it matters.
 - **Sane subset of C++:** keep value types, structs, and explicit control flow, but avoid implicit conversions,

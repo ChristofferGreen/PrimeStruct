@@ -11,6 +11,10 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Group 8 - SoA de-builtinization**
 - ✓ Delete the remaining root builtin `count` fallback handling in semantics once equivalent stdlib-owned helper routing and helper-shadow parity exist for the old `soa_vector<T>` surface. Completed: root bare/method/old-explicit builtin `count` forms already rewrite to `/std/collections/soa_vector/count`, helper-return and vector-target same-path `/soa_vector/count` shadow cases already validate through the shared canonical/shadow path, and focused semantics plus dump coverage already lock that boundary, so this is no longer a live semantics slice.
 
+**Architecture / Type-resolution graph**
+**Group 12 - Semantics/lowering boundary**
+- ✓ Add a staged migration note in `docs/PrimeStruct.md` for the semantics-to-lowering boundary, including exit criteria for removing AST-dependent lowerer logic. Completed: `docs/PrimeStruct.md` now documents the planned semantic-product boundary, its staged cutover path, and the explicit exit criteria for deleting AST-dependent lowerer re-derivations.
+
 **Todo Cleanup (April 2, 2026)**
 
 **Types & Semantics**
