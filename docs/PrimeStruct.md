@@ -174,6 +174,24 @@ Migration stages:
 4. Cut `prepareIrModule` and `IrLowerer::lower` over to the semantic product.
 5. Remove the temporary adapter and the AST-dependent lowerer re-derivations once coverage proves parity.
 
+Temporary migration adapter contract:
+- The adapter exists only to let lowering entrypoints accept either a raw `Program` or a semantic product during the
+  cutover; it is not a second permanent lowering API.
+- If a semantic product is present, the adapter must prefer semantic-product facts over any AST-side re-derivation.
+- If only a raw `Program` is present, the adapter may perform the minimum compatibility derivation needed to preserve
+  current lowering behavior, but that fallback should stay explicitly transitional.
+- The adapter should not invent a third ownership model; provenance still comes from the AST-backed ids/spans and
+  lowering-facing meaning still comes from the semantic product whenever available.
+- The adapter boundary should stay narrow: compile-pipeline handoff, `prepareIrModule`, and `IrLowerer::lower` are the
+  intended temporary consumers.
+- Removal criteria:
+  - `CompilePipelineOutput` publishes the semantic product on the success path.
+  - `prepareIrModule` and `IrLowerer::lower` consume the semantic product directly in production codepaths.
+  - Lowerer setup no longer needs AST-only compatibility queries for call targets, binding metadata, helper routing, or
+    effect/layout facts.
+  - Coverage proves parity for the semantic-product path across C++/VM/native before deleting the raw-`Program`
+    fallback.
+
 Exit criteria for removing AST-dependent lowerer logic:
 - `Semantics::validate` or `CompilePipelineOutput` publishes the semantic product as the canonical post-semantics
   success artifact.
