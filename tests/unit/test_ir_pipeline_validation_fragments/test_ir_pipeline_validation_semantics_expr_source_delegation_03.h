@@ -309,8 +309,13 @@
   CHECK(semanticsExprBlockSource.find("bool SemanticsValidator::validateBlockExpr") != std::string::npos);
   CHECK(semanticsExprBlockSource.find("auto publishBlockDiagnostic = [&](const Expr &diagnosticExpr) -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprBlockSource.find(
+            "auto failBlockDiagnostic = [&](const Expr &diagnosticExpr,") !=
+        std::string::npos);
   CHECK(semanticsExprBlockSource.find("captureExprContext(diagnosticExpr);") != std::string::npos);
   CHECK(semanticsExprBlockSource.find("return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprBlockSource.find("error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprBlockSource.find("block expression does not accept arguments") != std::string::npos);
   CHECK(semanticsExprBlockSource.find("block expression must end with an expression") != std::string::npos);
@@ -351,8 +356,13 @@
   CHECK(semanticsExprLambdaSource.find("bool SemanticsValidator::validateLambdaExpr") != std::string::npos);
   CHECK(semanticsExprLambdaSource.find("auto publishLambdaDiagnostic = [&](const Expr &diagnosticExpr) -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprLambdaSource.find(
+            "auto failLambdaDiagnostic = [&](const Expr &diagnosticExpr,") !=
+        std::string::npos);
   CHECK(semanticsExprLambdaSource.find("captureExprContext(diagnosticExpr);") != std::string::npos);
   CHECK(semanticsExprLambdaSource.find("return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprLambdaSource.find("error_ = std::move(message);") !=
         std::string::npos);
   CHECK(semanticsExprLambdaSource.find("#include \"SemanticsValidatorExprCaptureSplitStep.h\"") !=
         std::string::npos);
@@ -487,6 +497,9 @@
             "auto failCollectionAccessDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
   CHECK(semanticsExprCollectionAccessValidationSource.find(
+            "auto failCollectionAccessMapKeyMismatch = [&](const std::string &helperName,") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
             "captureExprContext(expr);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionAccessValidationSource.find(
@@ -619,6 +632,9 @@
   CHECK(semanticsExprLateMapAccessBuiltinsSource.find(
             "auto failLateMapAccessBuiltinDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
+  CHECK(semanticsExprLateMapAccessBuiltinsSource.find(
+            "auto failLateMapAccessKeyMismatch = [&](const std::string &helperName,") !=
+        std::string::npos);
   CHECK(semanticsExprLateMapAccessBuiltinsSource.find("captureExprContext(expr);") !=
         std::string::npos);
   CHECK(semanticsExprLateMapAccessBuiltinsSource.find(
@@ -632,6 +648,9 @@
         std::string::npos);
   CHECK(semanticsExprLateMapAccessBuiltinsSource.find(
             "tryAt requires map target") !=
+        std::string::npos);
+  CHECK(semanticsExprPreDispatchDirectCallsSource.find(
+            "auto failPreDispatchDirectCallMapKeyMismatch =") !=
         std::string::npos);
   CHECK(semanticsExprReferenceEscapesSource.find(
             "bool SemanticsValidator::reportReferenceAssignmentEscape(") !=

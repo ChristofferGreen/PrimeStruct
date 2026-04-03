@@ -27,9 +27,10 @@
   CHECK(semanticsExprPreDispatchDirectCallsSource.find(
             "explicitCanonicalExperimentalMapBorrowedHelperPath(") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("auto setCanonicalMapKeyMismatch =") ==
+  CHECK(semanticsExprSource.find("auto failPreDispatchDirectCallMapKeyMismatch =") ==
         std::string::npos);
-  CHECK(semanticsExprPreDispatchDirectCallsSource.find("auto setCanonicalMapKeyMismatch =") !=
+  CHECK(semanticsExprPreDispatchDirectCallsSource.find(
+            "auto failPreDispatchDirectCallMapKeyMismatch =") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("auto isExperimentalMapReceiverExpr = [&](const Expr &candidate)") ==
         std::string::npos);

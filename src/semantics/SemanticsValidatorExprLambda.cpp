@@ -15,15 +15,18 @@ bool SemanticsValidator::validateLambdaExpr(const std::vector<ParameterInfo> &pa
     captureExprContext(diagnosticExpr);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failLambdaDiagnostic = [&](const Expr &diagnosticExpr,
+                                  std::string message) -> bool {
+    error_ = std::move(message);
+    return publishLambdaDiagnostic(diagnosticExpr);
+  };
   auto addCapturedBinding = [&](std::unordered_map<std::string, BindingInfo> &lambdaLocals,
                                 const std::string &name) -> bool {
     if (lambdaLocals.count(name) > 0) {
-      error_ = "duplicate lambda capture: " + name;
-      return publishLambdaDiagnostic(expr);
+      return failLambdaDiagnostic(expr, "duplicate lambda capture: " + name);
     }
     if (currentValidationContext_.movedBindings.count(name) > 0) {
-      error_ = "use-after-move: " + name;
-      return publishLambdaDiagnostic(expr);
+      return failLambdaDiagnostic(expr, "use-after-move: " + name);
     }
     if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
       lambdaLocals.emplace(name, *paramBinding);
@@ -34,13 +37,11 @@ bool SemanticsValidator::validateLambdaExpr(const std::vector<ParameterInfo> &pa
       lambdaLocals.emplace(name, it->second);
       return true;
     }
-    error_ = "unknown capture: " + name;
-    return publishLambdaDiagnostic(expr);
+    return failLambdaDiagnostic(expr, "unknown capture: " + name);
   };
 
   if (!expr.hasBodyArguments && expr.bodyArguments.empty()) {
-    error_ = "lambda requires a body";
-    return publishLambdaDiagnostic(expr);
+    return failLambdaDiagnostic(expr, "lambda requires a body");
   }
 
   std::unordered_map<std::string, BindingInfo> lambdaLocals;
@@ -54,23 +55,21 @@ bool SemanticsValidator::validateLambdaExpr(const std::vector<ParameterInfo> &pa
     for (const auto &capture : expr.lambdaCaptures) {
       std::vector<std::string> tokens = runSemanticsValidatorExprCaptureSplitStep(capture);
       if (tokens.empty()) {
-        error_ = "invalid lambda capture";
-        return publishLambdaDiagnostic(expr);
+        return failLambdaDiagnostic(expr, "invalid lambda capture");
       }
       if (tokens.size() == 1) {
         const std::string &token = tokens[0];
         if (token == "=" || token == "&") {
           if (!captureAllToken.empty()) {
-            error_ = "invalid lambda capture";
-            return publishLambdaDiagnostic(expr);
+            return failLambdaDiagnostic(expr, "invalid lambda capture");
           }
           captureAllToken = token;
           captureAll = true;
           continue;
         }
         if (!explicitNames.insert(token).second) {
-          error_ = "duplicate lambda capture: " + token;
-          return publishLambdaDiagnostic(expr);
+          return failLambdaDiagnostic(expr,
+                                      "duplicate lambda capture: " + token);
         }
         captureNames.push_back(token);
         continue;
@@ -79,22 +78,19 @@ bool SemanticsValidator::validateLambdaExpr(const std::vector<ParameterInfo> &pa
         const std::string &qualifier = tokens[0];
         const std::string &name = tokens[1];
         if (qualifier != "value" && qualifier != "ref") {
-          error_ = "invalid lambda capture";
-          return publishLambdaDiagnostic(expr);
+          return failLambdaDiagnostic(expr, "invalid lambda capture");
         }
         if (name == "=" || name == "&") {
-          error_ = "invalid lambda capture";
-          return publishLambdaDiagnostic(expr);
+          return failLambdaDiagnostic(expr, "invalid lambda capture");
         }
         if (!explicitNames.insert(name).second) {
-          error_ = "duplicate lambda capture: " + name;
-          return publishLambdaDiagnostic(expr);
+          return failLambdaDiagnostic(expr,
+                                      "duplicate lambda capture: " + name);
         }
         captureNames.push_back(name);
         continue;
       }
-      error_ = "invalid lambda capture";
-      return publishLambdaDiagnostic(expr);
+      return failLambdaDiagnostic(expr, "invalid lambda capture");
     }
     if (captureAll) {
       for (const auto &param : params) {
@@ -111,8 +107,7 @@ bool SemanticsValidator::validateLambdaExpr(const std::vector<ParameterInfo> &pa
         if (findParamBinding(params, name) || locals.count(name) > 0) {
           continue;
         }
-        error_ = "unknown capture: " + name;
-        return publishLambdaDiagnostic(expr);
+        return failLambdaDiagnostic(expr, "unknown capture: " + name);
       }
     } else {
       for (const auto &name : captureNames) {
@@ -133,20 +128,20 @@ bool SemanticsValidator::validateLambdaExpr(const std::vector<ParameterInfo> &pa
   lambdaParams.reserve(expr.args.size());
   for (const auto &param : expr.args) {
     if (!param.isBinding) {
-      error_ = "lambda parameters must use binding syntax";
-      return publishLambdaDiagnostic(param);
+      return failLambdaDiagnostic(param,
+                                  "lambda parameters must use binding syntax");
     }
     if (param.hasBodyArguments || !param.bodyArguments.empty()) {
-      error_ = "lambda parameter does not accept block arguments: " + param.name;
-      return publishLambdaDiagnostic(param);
+      return failLambdaDiagnostic(
+          param, "lambda parameter does not accept block arguments: " +
+                     param.name);
     }
     if (!seen.insert(param.name).second) {
-      error_ = "duplicate parameter: " + param.name;
-      return publishLambdaDiagnostic(param);
+      return failLambdaDiagnostic(param, "duplicate parameter: " + param.name);
     }
     if (lambdaLocals.count(param.name) > 0) {
-      error_ = "duplicate binding name: " + param.name;
-      return publishLambdaDiagnostic(param);
+      return failLambdaDiagnostic(param,
+                                  "duplicate binding name: " + param.name);
     }
     BindingInfo binding;
     std::optional<std::string> restrictType;
@@ -154,16 +149,21 @@ bool SemanticsValidator::validateLambdaExpr(const std::vector<ParameterInfo> &pa
       return false;
     }
     if (param.args.size() > 1) {
-      error_ = "lambda parameter defaults accept at most one argument: " + param.name;
-      return publishLambdaDiagnostic(param);
+      return failLambdaDiagnostic(
+          param, "lambda parameter defaults accept at most one argument: " +
+                     param.name);
     }
     if (param.args.size() == 1 && !isDefaultExprAllowed(param.args.front(), defaultResolvesToDefinition)) {
       if (param.args.front().kind == Expr::Kind::Call && hasNamedArguments(param.args.front().argNames)) {
-        error_ = "lambda parameter default does not accept named arguments: " + param.name;
+        return failLambdaDiagnostic(
+            param, "lambda parameter default does not accept named arguments: " +
+                       param.name);
       } else {
-        error_ = "lambda parameter default must be a literal or pure expression: " + param.name;
+        return failLambdaDiagnostic(
+            param,
+            "lambda parameter default must be a literal or pure expression: " +
+                param.name);
       }
-      return publishLambdaDiagnostic(param);
     }
     if (!hasExplicitBindingTypeTransform(param) && param.args.size() == 1) {
       (void)tryInferBindingTypeFromInitializer(param.args.front(), {}, {}, binding, hasAnyMathImport());
@@ -181,8 +181,8 @@ bool SemanticsValidator::validateLambdaExpr(const std::vector<ParameterInfo> &pa
                                   info.binding.typeTemplateArg,
                                   hasTemplate,
                                   expr.namespacePrefix)) {
-        error_ = "restrict type does not match binding type";
-        return publishLambdaDiagnostic(param);
+        return failLambdaDiagnostic(param,
+                                    "restrict type does not match binding type");
       }
     }
     lambdaLocals.emplace(info.name, info.binding);

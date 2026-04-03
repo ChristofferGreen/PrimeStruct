@@ -25,6 +25,23 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     error_ = std::move(message);
     return publishLateMapAccessBuiltinDiagnostic();
   };
+  auto failLateMapAccessKeyMismatch = [&](const std::string &helperName,
+                                          const std::string &mapKeyType) {
+    if (expr.name.rfind("/std/collections/map/", 0) == 0 ||
+        expr.namespacePrefix == "/std/collections/map" ||
+        expr.namespacePrefix == "std/collections/map") {
+      return failLateMapAccessBuiltinDiagnostic(
+          "argument type mismatch for /std/collections/map/" + helperName +
+          " parameter key");
+    }
+    if (normalizeBindingTypeName(mapKeyType) == "string") {
+      return failLateMapAccessBuiltinDiagnostic(helperName +
+                                                " requires string map key");
+    }
+    return failLateMapAccessBuiltinDiagnostic(helperName +
+                                              " requires map key type " +
+                                              mapKeyType);
+  };
 
   std::string builtinName;
   if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinName) &&
@@ -231,21 +248,6 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
        this->isIndexedArgsPackMapReceiverTarget(
            expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)],
            *context.dispatchResolvers))) {
-    auto setMapKeyMismatch = [&](const std::string &mapKeyType) {
-      if (expr.name.rfind("/std/collections/map/", 0) == 0 ||
-          expr.namespacePrefix == "/std/collections/map" ||
-          expr.namespacePrefix == "std/collections/map") {
-        error_ = "argument type mismatch for /std/collections/map/" +
-                 builtinName + " parameter key";
-        return;
-      }
-      if (normalizeBindingTypeName(mapKeyType) == "string") {
-        error_ = builtinName + " requires string map key";
-      } else {
-        error_ = builtinName + " requires map key type " + mapKeyType;
-      }
-    };
-
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
     const bool hasBareMapOperands =
@@ -267,21 +269,18 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         if (normalizeBindingTypeName(mapKeyType) == "string") {
           if (!this->isStringExprForArgumentValidation(keyExpr,
                                                        *context.dispatchResolvers)) {
-            setMapKeyMismatch(mapKeyType);
-            return publishLateMapAccessBuiltinDiagnostic();
+            return failLateMapAccessKeyMismatch(builtinName, mapKeyType);
           }
         } else {
           ReturnKind keyKind =
               returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
           if (keyKind != ReturnKind::Unknown) {
             if (context.dispatchResolvers->resolveStringTarget(keyExpr)) {
-              setMapKeyMismatch(mapKeyType);
-              return publishLateMapAccessBuiltinDiagnostic();
+              return failLateMapAccessKeyMismatch(builtinName, mapKeyType);
             }
             ReturnKind indexKind = inferExprReturnKind(keyExpr, params, locals);
             if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
-              setMapKeyMismatch(mapKeyType);
-              return publishLateMapAccessBuiltinDiagnostic();
+              return failLateMapAccessKeyMismatch(builtinName, mapKeyType);
             }
           }
         }
@@ -298,21 +297,6 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
   if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinName) &&
       expr.args.size() == 2 && defMap_.find(resolved) == defMap_.end() &&
       hasImportedDefinitionPath("/std/collections/map/" + builtinName)) {
-    auto setMapKeyMismatch = [&](const std::string &mapKeyType) {
-      if (expr.name.rfind("/std/collections/map/", 0) == 0 ||
-          expr.namespacePrefix == "/std/collections/map" ||
-          expr.namespacePrefix == "std/collections/map") {
-        error_ = "argument type mismatch for /std/collections/map/" +
-                 builtinName + " parameter key";
-        return;
-      }
-      if (normalizeBindingTypeName(mapKeyType) == "string") {
-        error_ = builtinName + " requires string map key";
-      } else {
-        error_ = builtinName + " requires map key type " + mapKeyType;
-      }
-    };
-
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
     const bool hasBareMapOperands =
@@ -332,21 +316,18 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         if (normalizeBindingTypeName(mapKeyType) == "string") {
           if (!this->isStringExprForArgumentValidation(keyExpr,
                                                        *context.dispatchResolvers)) {
-            setMapKeyMismatch(mapKeyType);
-            return publishLateMapAccessBuiltinDiagnostic();
+            return failLateMapAccessKeyMismatch(builtinName, mapKeyType);
           }
         } else {
           ReturnKind keyKind =
               returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
           if (keyKind != ReturnKind::Unknown) {
             if (context.dispatchResolvers->resolveStringTarget(keyExpr)) {
-              setMapKeyMismatch(mapKeyType);
-              return publishLateMapAccessBuiltinDiagnostic();
+              return failLateMapAccessKeyMismatch(builtinName, mapKeyType);
             }
             ReturnKind indexKind = inferExprReturnKind(keyExpr, params, locals);
             if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
-              setMapKeyMismatch(mapKeyType);
-              return publishLateMapAccessBuiltinDiagnostic();
+              return failLateMapAccessKeyMismatch(builtinName, mapKeyType);
             }
           }
         }

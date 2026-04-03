@@ -53,6 +53,25 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     error_ = std::move(message);
     return publishPreDispatchDirectCallDiagnostic();
   };
+  auto failPreDispatchDirectCallMapKeyMismatch =
+      [&](const std::string &helperName, const std::string &mapKeyType) {
+        const std::string canonicalPath =
+            "/std/collections/map/" + helperName;
+        if (expr.name.rfind("/std/collections/map/", 0) == 0 ||
+            expr.namespacePrefix == "/std/collections/map" ||
+            expr.namespacePrefix == "std/collections/map") {
+          return failPreDispatchDirectCallDiagnostic(
+              "argument type mismatch for " + canonicalPath +
+              " parameter key");
+        }
+        if (normalizeBindingTypeName(mapKeyType) == "string") {
+          return failPreDispatchDirectCallDiagnostic(helperName +
+                                                     " requires string map key");
+        }
+        return failPreDispatchDirectCallDiagnostic(helperName +
+                                                   " requires map key type " +
+                                                   mapKeyType);
+      };
   if (context.dispatchBootstrap == nullptr) {
     return true;
   }
@@ -172,22 +191,6 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
         hasImportedDefinitionPath("/std/collections/map/" + builtinAccessName) &&
         defMap_.find("/std/collections/map/" + builtinAccessName) == defMap_.end() &&
         !hasDeclaredDefinitionPath("/map/" + builtinAccessName)) {
-      auto setCanonicalMapKeyMismatch = [&](const std::string &mapKeyType) {
-        const std::string canonicalPath =
-            "/std/collections/map/" + builtinAccessName;
-        if (expr.name.rfind("/std/collections/map/", 0) == 0 ||
-            expr.namespacePrefix == "/std/collections/map" ||
-            expr.namespacePrefix == "std/collections/map") {
-          error_ = "argument type mismatch for " + canonicalPath +
-                   " parameter key";
-          return;
-        }
-        if (normalizeBindingTypeName(mapKeyType) == "string") {
-          error_ = builtinAccessName + " requires string map key";
-        } else {
-          error_ = builtinAccessName + " requires map key type " + mapKeyType;
-        }
-      };
       size_t receiverIndex = 0;
       size_t keyIndex = 1;
       const bool hasBareMapOperands = this->bareMapHelperOperandIndices(
@@ -207,8 +210,8 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
           if (normalizeBindingTypeName(mapKeyType) == "string") {
             if (!this->isStringExprForArgumentValidation(
                     keyExpr, dispatchBootstrap.dispatchResolvers)) {
-              setCanonicalMapKeyMismatch(mapKeyType);
-              return publishPreDispatchDirectCallDiagnostic();
+              return failPreDispatchDirectCallMapKeyMismatch(
+                  builtinAccessName, mapKeyType);
             }
           } else {
             ReturnKind keyKind =
@@ -216,14 +219,14 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
             if (keyKind != ReturnKind::Unknown) {
               if (dispatchBootstrap.dispatchResolvers.resolveStringTarget(
                       keyExpr)) {
-                setCanonicalMapKeyMismatch(mapKeyType);
-                return publishPreDispatchDirectCallDiagnostic();
+                return failPreDispatchDirectCallMapKeyMismatch(
+                    builtinAccessName, mapKeyType);
               }
               ReturnKind indexKind =
                   inferExprReturnKind(keyExpr, params, locals);
               if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
-                setCanonicalMapKeyMismatch(mapKeyType);
-                return publishPreDispatchDirectCallDiagnostic();
+                return failPreDispatchDirectCallMapKeyMismatch(
+                    builtinAccessName, mapKeyType);
               }
             }
           }

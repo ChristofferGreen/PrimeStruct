@@ -102,6 +102,27 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     error_ = std::move(message);
     return publishCollectionAccessDiagnostic();
   };
+  auto failCollectionAccessMapKeyMismatch = [&](const std::string &helperName,
+                                                const std::string &mapKeyType) {
+    const bool isExplicitCanonicalMapAccessCall =
+        !expr.isMethodCall &&
+        ((resolved == "/std/collections/map/at" ||
+          resolved == "/std/collections/map/at_unsafe") ||
+         expr.name.rfind("/std/collections/map/", 0) == 0 ||
+         expr.namespacePrefix == "/std/collections/map" ||
+         expr.namespacePrefix == "std/collections/map");
+    if (isExplicitCanonicalMapAccessCall) {
+      return failCollectionAccessDiagnostic("argument type mismatch for " +
+                                            resolved + " parameter key");
+    }
+    if (normalizeBindingTypeName(mapKeyType) == "string") {
+      return failCollectionAccessDiagnostic(helperName +
+                                            " requires string map key");
+    }
+    return failCollectionAccessDiagnostic(helperName +
+                                          " requires map key type " +
+                                          mapKeyType);
+  };
 
   auto returnKindForBinding = [](const BindingInfo &binding) -> ReturnKind {
     if (binding.typeName == "Reference") {
@@ -158,29 +179,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     ReturnKind kind = inferExprReturnKind(arg, params, locals);
     return kind == ReturnKind::String || arg.kind == Expr::Kind::StringLiteral;
   };
-  auto setMapKeyMismatchError = [&](const std::string &helperName,
-                                    const Expr &,
-                                    const std::string &mapKeyType) {
-    const bool isExplicitCanonicalMapAccessCall =
-        !expr.isMethodCall &&
-        ((resolved == "/std/collections/map/at" ||
-          resolved == "/std/collections/map/at_unsafe") ||
-         expr.name.rfind("/std/collections/map/", 0) == 0 ||
-         expr.namespacePrefix == "/std/collections/map" ||
-         expr.namespacePrefix == "std/collections/map");
-    if (isExplicitCanonicalMapAccessCall) {
-      error_ = "argument type mismatch for " + resolved + " parameter key";
-      return;
-    }
-    if (normalizeBindingTypeName(mapKeyType) == "string") {
-      error_ = helperName + " requires string map key";
-    } else {
-      error_ = helperName + " requires map key type " + mapKeyType;
-    }
-  };
-
   auto validateMapKeyExpr = [&](const std::string &helperName,
-                                const Expr &receiverExpr,
                                 const Expr &keyExpr,
                                 const std::string &mapKeyType) -> bool {
     if (mapKeyType.empty()) {
@@ -188,8 +187,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     }
     if (normalizeBindingTypeName(mapKeyType) == "string") {
       if (!isStringExpr(keyExpr)) {
-        setMapKeyMismatchError(helperName, receiverExpr, mapKeyType);
-        return false;
+        return failCollectionAccessMapKeyMismatch(helperName, mapKeyType);
       }
       return true;
     }
@@ -199,13 +197,11 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     }
     if (context.resolveStringTarget != nullptr &&
         context.resolveStringTarget(keyExpr)) {
-      setMapKeyMismatchError(helperName, receiverExpr, mapKeyType);
-      return false;
+      return failCollectionAccessMapKeyMismatch(helperName, mapKeyType);
     }
     ReturnKind indexKind = inferExprReturnKind(keyExpr, params, locals);
     if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
-      setMapKeyMismatchError(helperName, receiverExpr, mapKeyType);
-      return false;
+      return failCollectionAccessMapKeyMismatch(helperName, mapKeyType);
     }
     return true;
   };
@@ -231,8 +227,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       }
       return failCollectionAccessDiagnostic(helperName + " requires map target");
     }
-    if (!validateMapKeyExpr(helperName, expr.args.front(), expr.args[1], mapKeyType)) {
-      return publishCollectionAccessDiagnostic();
+    if (!validateMapKeyExpr(helperName, expr.args[1], mapKeyType)) {
+      return false;
     }
     if (!validateExpr(params, locals, expr.args.front()) ||
         !validateExpr(params, locals, expr.args[1])) {
@@ -574,8 +570,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
         return failCollectionAccessDiagnostic(
             builtinName + " requires integer index [collection]");
       }
-    } else if (!validateMapKeyExpr(builtinName, receiverExpr, expr.args[indexArgIndex], mapKeyType)) {
-      return publishCollectionAccessDiagnostic();
+    } else if (!validateMapKeyExpr(builtinName, expr.args[indexArgIndex], mapKeyType)) {
+      return false;
     }
 
     for (const auto &arg : expr.args) {
