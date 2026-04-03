@@ -204,6 +204,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Types & Semantics**
 **Group 4 - Ownership and lifetime substrate**
 - ✓ Split the remaining builtin ownership/drop substrate into explicit vector discard, vector indexed-removal, and wider builtin-map growth/drop slices.
+- ✓ Split the remaining builtin `vector` indexed-removal runtime items into explicit lowered primitive and final wiring/guard-relaxation slices, so the live Group 4 queue now names `remove_at` destruction, `remove_swap` survivor swap, and `remove_at` survivor compaction prerequisites directly instead of hiding each under one oversized runtime bullet.
 - ✓ Replace the temporary builtin canonical `map<K, V>` insert staircase with one generic arbitrary-`n` growth/drop implementation.
 - ✓ Delete the remaining dead count-by-count builtin-map growth branches after the generic lowerer path landed.
 
