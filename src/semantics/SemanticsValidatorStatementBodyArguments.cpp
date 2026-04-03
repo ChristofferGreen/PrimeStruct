@@ -45,6 +45,10 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
     captureExprContext(stmt);
     return publishCurrentStructuredDiagnosticNow();
   };
+  auto failStatementDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
+    return publishStatementDiagnostic();
+  };
   if (!(stmt.hasBodyArguments || !stmt.bodyArguments.empty()) || isBuiltinBlockCall(stmt) || stmt.isLambda) {
     return true;
   }
@@ -52,8 +56,7 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
 
   std::string collectionName;
   if (defMap_.find(resolveCalleePath(stmt)) == defMap_.end() && getBuiltinCollectionName(stmt, collectionName)) {
-    error_ = collectionName + " literal does not accept block arguments";
-    return publishStatementDiagnostic();
+    return failStatementDiagnostic(collectionName + " literal does not accept block arguments");
   }
 
   auto shouldPreserveBodyArgumentTarget = [&](const std::string &path) -> bool {
@@ -345,8 +348,7 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
   std::string resolved;
   resolveBodyArgumentTarget(stmt, resolved);
   if (defMap_.count(resolved) == 0) {
-    error_ = "block arguments require a definition target: " + resolved;
-    return publishStatementDiagnostic();
+    return failStatementDiagnostic("block arguments require a definition target: " + resolved);
   }
 
   Expr call = stmt;

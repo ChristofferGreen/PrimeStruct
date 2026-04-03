@@ -59,27 +59,26 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
     captureExprContext(stmt);
     return publishCurrentStructuredDiagnosticNow();
   };
-  if (hasNamedArguments(stmt.argNames)) {
-    error_ = "named arguments not supported for builtin calls";
+  auto failReturnDiagnostic = [&](std::string message) -> bool {
+    error_ = std::move(message);
     return publishReturnDiagnostic();
+  };
+  if (hasNamedArguments(stmt.argNames)) {
+    return failReturnDiagnostic("named arguments not supported for builtin calls");
   }
   if (!allowReturn) {
-    error_ = "return not allowed in execution body";
-    return publishReturnDiagnostic();
+    return failReturnDiagnostic("return not allowed in execution body");
   }
   if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
-    error_ = "return does not accept block arguments";
-    return publishReturnDiagnostic();
+    return failReturnDiagnostic("return does not accept block arguments");
   }
   if (returnKind == ReturnKind::Void) {
     if (!stmt.args.empty()) {
-      error_ = "return value not allowed for void definition";
-      return publishReturnDiagnostic();
+      return failReturnDiagnostic("return value not allowed for void definition");
     }
   } else {
     if (stmt.args.size() != 1) {
-      error_ = "return requires exactly one argument";
-      return publishReturnDiagnostic();
+      return failReturnDiagnostic("return requires exactly one argument");
     }
     auto declaresAutoReturn = [&]() {
       auto defIt = defMap_.find(currentValidationContext_.definitionPath);
@@ -127,13 +126,11 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
         expectedReferenceTarget.has_value()) {
       const Expr &returnExpr = stmt.args.front();
       if (returnExpr.kind != Expr::Kind::Name) {
-        error_ = "reference return requires direct parameter reference";
-        return publishReturnDiagnostic();
+        return failReturnDiagnostic("reference return requires direct parameter reference");
       }
       const BindingInfo *paramBinding = findParamBinding(params, returnExpr.name);
       if (paramBinding == nullptr || paramBinding->typeName != "Reference") {
-        error_ = "reference return requires direct parameter reference";
-        return publishReturnDiagnostic();
+        return failReturnDiagnostic("reference return requires direct parameter reference");
       }
       auto normalizeReferenceTarget = [&](const std::string &target) -> std::string {
         std::string trimmed = target;
@@ -150,8 +147,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       };
       if (normalizeReferenceTarget(paramBinding->typeTemplateArg) !=
           normalizeReferenceTarget(*expectedReferenceTarget)) {
-        error_ = "reference return type mismatch";
-        return publishReturnDiagnostic();
+        return failReturnDiagnostic("reference return type mismatch");
       }
     }
     bool validatedPointerLikeReturn = false;
@@ -167,8 +163,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
             !errorTypesMatch(actualReturnBinding.typeTemplateArg,
                              declaredReturnBinding.typeTemplateArg,
                              namespacePrefix)) {
-          error_ = "return type mismatch: expected " + declaredReturnBinding.typeName;
-          return publishReturnDiagnostic();
+          return failReturnDiagnostic("return type mismatch: expected " + declaredReturnBinding.typeName);
         }
         validatedPointerLikeReturn = true;
       }
@@ -253,16 +248,13 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
                 expectedType == "/string") {
               expectedType.erase(0, 1);
             }
-            error_ = returnTypeMismatchDiagnostic(structIt->second, actualStruct, expectedType);
-            return publishReturnDiagnostic();
+            return failReturnDiagnostic(returnTypeMismatchDiagnostic(structIt->second, actualStruct, expectedType));
           }
         } else if (exprKind != ReturnKind::Array) {
-          error_ = "return type mismatch: expected array";
-          return publishReturnDiagnostic();
+          return failReturnDiagnostic("return type mismatch: expected array");
         }
       } else if (exprKind != ReturnKind::Unknown && exprKind != returnKind) {
-        error_ = "return type mismatch: expected " + typeNameForReturnKind(returnKind);
-        return publishReturnDiagnostic();
+        return failReturnDiagnostic("return type mismatch: expected " + typeNameForReturnKind(returnKind));
       }
     }
   }
