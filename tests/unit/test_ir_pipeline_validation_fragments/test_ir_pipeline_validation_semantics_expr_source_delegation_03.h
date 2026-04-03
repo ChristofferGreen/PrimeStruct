@@ -644,6 +644,9 @@
   CHECK(semanticsExprFieldResolutionSource.find("bool SemanticsValidator::validateExprFieldAccess") !=
         std::string::npos);
   CHECK(semanticsExprFieldResolutionSource.find(
+            "auto publishFieldAccessDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprFieldResolutionSource.find(
             "bool SemanticsValidator::resolveStructFieldBinding(const std::vector<ParameterInfo> &params,") !=
         std::string::npos);
   CHECK(semanticsExprFieldResolutionSource.find("bool SemanticsValidator::isTypeNamespaceMethodCall") !=

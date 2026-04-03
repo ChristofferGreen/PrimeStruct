@@ -5,21 +5,25 @@ namespace primec::semantics {
 bool SemanticsValidator::validateExprFieldAccess(const std::vector<ParameterInfo> &params,
                                                  const std::unordered_map<std::string, BindingInfo> &locals,
                                                  const Expr &expr) {
+  auto publishFieldAccessDiagnostic = [&]() -> bool {
+    captureExprContext(expr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   if (expr.args.size() != 1) {
     error_ = "field access requires a receiver";
-    return false;
+    return publishFieldAccessDiagnostic();
   }
   if (!expr.templateArgs.empty()) {
     error_ = "field access does not accept template arguments";
-    return false;
+    return publishFieldAccessDiagnostic();
   }
   if (hasNamedArguments(expr.argNames)) {
     error_ = "field access does not accept named arguments";
-    return false;
+    return publishFieldAccessDiagnostic();
   }
   if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
     error_ = "field access does not accept block arguments";
-    return false;
+    return publishFieldAccessDiagnostic();
   }
   std::string typeReceiverPath;
   const bool typeNamespaceReceiver =
@@ -37,7 +41,7 @@ bool SemanticsValidator::validateExprFieldAccess(const std::vector<ParameterInfo
         error_ = "unknown field: " + expr.name;
       }
     }
-    return false;
+    return publishFieldAccessDiagnostic();
   }
   return true;
 }
