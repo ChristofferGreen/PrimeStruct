@@ -466,6 +466,29 @@ Planned diagnostic ordering contract for semantic-product identities:
 - Implementation is complete only when diagnostics emitted from equivalent semantic facts retain the same order across
   repeated runs and across future parallel merge boundaries, without depending on hash iteration or worker scheduling.
 
+Planned validation-context split contract:
+- Semantic-product construction should move toward explicit per-definition validation contexts instead of relying on
+  validator-global mutable caches.
+- A per-definition validation context should own only the state needed to validate one definition or execution body:
+  - current definition identity and canonical path
+  - definition-local binding/type/effect facts
+  - graph-backed local/query/`try(...)` working state for that definition
+  - deterministic diagnostic buffering tied to that definition
+- Validator-global state should be reduced to shared read-only inputs and canonical registries, such as:
+  - imported/declared definition maps
+  - canonical type/layout registries
+  - immutable compile-pipeline configuration and options
+- The split should eliminate hidden coupling where one definition’s validation mutates caches later read as semantic
+  truth for another definition without an explicit handoff.
+- Temporary compatibility adapters are acceptable during migration, but they must make the context boundary explicit:
+  global registries flow into per-definition contexts, and validated semantic facts flow back out as published results.
+- Completion criteria:
+  - semantic-product builder slices can run from explicit per-definition contexts
+  - validator-global fields are no longer required to reconstruct lowering-facing semantic facts after validation
+  - repeated validation of the same definition under unchanged global inputs is deterministic and context-local
+- This split is a prerequisite for later parallel validation because worker tasks need isolated validation state and one
+  deterministic merge surface for published semantic facts and diagnostics.
+
 ### Language ethos (v1)
 - **Simplified and coherent C:** keep the core small, explicit, and close to how the machine behaves when it matters.
 - **Sane subset of C++:** keep value types, structs, and explicit control flow, but avoid implicit conversions,
