@@ -19,6 +19,10 @@ bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
     const Expr &stmt,
     bool &handled) {
   handled = false;
+  auto publishStatementDiagnostic = [&]() -> bool {
+    captureExprContext(stmt);
+    return publishCurrentStructuredDiagnosticNow();
+  };
 
   auto isIntegerKind = [&](ReturnKind kind) -> bool {
     return kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64;
@@ -179,38 +183,38 @@ bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
     handled = true;
     if (currentValidationContext_.definitionIsCompute) {
       error_ = "dispatch is not allowed in compute definitions";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (currentValidationContext_.activeEffects.count("gpu_dispatch") == 0) {
       error_ = "dispatch requires gpu_dispatch effect";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (hasNamedArguments(stmt.argNames)) {
       error_ = "named arguments not supported for builtin calls";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (!stmt.templateArgs.empty()) {
       error_ = "dispatch does not accept template arguments";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
       error_ = "dispatch does not accept block arguments";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (stmt.args.size() < 4) {
       error_ = "dispatch requires kernel and three dimension arguments";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (stmt.args.front().kind != Expr::Kind::Name) {
       error_ = "dispatch requires kernel name as first argument";
-      return false;
+      return publishStatementDiagnostic();
     }
     const Expr &kernelExpr = stmt.args.front();
     const std::string kernelPath = resolveCalleePath(kernelExpr);
     auto defIt = defMap_.find(kernelPath);
     if (defIt == defMap_.end()) {
       error_ = "unknown kernel: " + kernelPath;
-      return false;
+      return publishStatementDiagnostic();
     }
     bool isCompute = false;
     for (const auto &transform : defIt->second->transforms) {
@@ -221,7 +225,7 @@ bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
     }
     if (!isCompute) {
       error_ = "dispatch requires compute definition: " + kernelPath;
-      return false;
+      return publishStatementDiagnostic();
     }
     for (size_t i = 1; i <= 3; ++i) {
       if (!validateExpr(params, locals, stmt.args[i])) {
@@ -230,7 +234,7 @@ bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
       ReturnKind dimKind = inferExprReturnKind(stmt.args[i], params, locals);
       if (!isIntegerKind(dimKind)) {
         error_ = "dispatch dimensions require integer expressions";
-        return false;
+        return publishStatementDiagnostic();
       }
     }
     const auto &kernelParams = paramsByDef_[kernelPath];
@@ -240,7 +244,7 @@ bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
     if ((!hasTrailingArgsPack && stmt.args.size() != minDispatchArgs) ||
         (hasTrailingArgsPack && stmt.args.size() < minDispatchArgs)) {
       error_ = "dispatch argument count mismatch for " + kernelPath;
-      return false;
+      return publishStatementDiagnostic();
     }
     for (size_t i = 4; i < stmt.args.size(); ++i) {
       if (!validateExpr(params, locals, stmt.args[i])) {
@@ -255,23 +259,23 @@ bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
     if (!currentValidationContext_.definitionIsCompute &&
         !isStdlibBufferStoreWrapperDefinitionPath(currentValidationContext_.definitionPath)) {
       error_ = "buffer_store requires a compute definition";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (hasNamedArguments(stmt.argNames)) {
       error_ = "named arguments not supported for builtin calls";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (!stmt.templateArgs.empty()) {
       error_ = "buffer_store does not accept template arguments";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (stmt.args.size() != 3) {
       error_ = "buffer_store requires buffer, index, and value arguments";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
       error_ = "buffer_store does not accept block arguments";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (!validateExpr(params, locals, stmt.args[0]) || !validateExpr(params, locals, stmt.args[1]) ||
         !validateExpr(params, locals, stmt.args[2])) {
@@ -280,22 +284,22 @@ bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
     std::string elemType;
     if (!resolveBufferElemType(stmt.args[0], elemType)) {
       error_ = "buffer_store requires Buffer input";
-      return false;
+      return publishStatementDiagnostic();
     }
     ReturnKind elemKind = returnKindForTypeName(elemType);
     if (!isNumericOrBoolKind(elemKind)) {
       error_ = "buffer_store requires numeric/bool element type";
-      return false;
+      return publishStatementDiagnostic();
     }
     ReturnKind indexKind = inferExprReturnKind(stmt.args[1], params, locals);
     if (!isIntegerKind(indexKind)) {
       error_ = "buffer_store requires integer index";
-      return false;
+      return publishStatementDiagnostic();
     }
     ReturnKind valueKind = inferExprReturnKind(stmt.args[2], params, locals);
     if (valueKind != ReturnKind::Unknown && valueKind != elemKind) {
       error_ = "buffer_store value type mismatch";
-      return false;
+      return publishStatementDiagnostic();
     }
     return true;
   }
@@ -305,24 +309,24 @@ bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
     handled = true;
     if (hasNamedArguments(stmt.argNames)) {
       error_ = "named arguments not supported for builtin calls";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (!stmt.templateArgs.empty()) {
       error_ = pathSpaceBuiltin.name + " does not accept template arguments";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
       error_ = pathSpaceBuiltin.name + " does not accept block arguments";
-      return false;
+      return publishStatementDiagnostic();
     }
     if (stmt.args.size() != pathSpaceBuiltin.argumentCount) {
       error_ = pathSpaceBuiltin.name + " requires exactly " + std::to_string(pathSpaceBuiltin.argumentCount) +
                " argument" + (pathSpaceBuiltin.argumentCount == 1 ? "" : "s");
-      return false;
+      return publishStatementDiagnostic();
     }
     if (currentValidationContext_.activeEffects.count(pathSpaceBuiltin.requiredEffect) == 0) {
       error_ = pathSpaceBuiltin.name + " requires " + pathSpaceBuiltin.requiredEffect + " effect";
-      return false;
+      return publishStatementDiagnostic();
     }
     auto isStringExpr = [&](const Expr &candidate) -> bool {
       if (candidate.kind == Expr::Kind::StringLiteral) {
@@ -390,7 +394,7 @@ bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
     };
     if (!isStringExpr(stmt.args.front())) {
       error_ = pathSpaceBuiltin.name + " requires string path argument";
-      return false;
+      return publishStatementDiagnostic();
     }
     for (const auto &arg : stmt.args) {
       if (!validateExpr(params, locals, arg)) {
