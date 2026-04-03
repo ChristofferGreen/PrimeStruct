@@ -432,6 +432,14 @@
             "bool SemanticsValidator::validateExprLateUnknownTargetFallbacks") !=
         std::string::npos);
   CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
+            "auto publishLateUnknownTargetDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprLateUnknownTargetFallbacksSource.find("captureExprContext(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
+            "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
             "const std::string aliasMapMethodTarget = \"/map/\" + expr.name;") !=
         std::string::npos);
   CHECK(semanticsExprStructConstructorsSource.find(

@@ -10,6 +10,10 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
     const Expr &expr,
     const ExprLateUnknownTargetFallbackContext &context,
     bool &handledOut) {
+  auto publishLateUnknownTargetDiagnostic = [&]() -> bool {
+    captureExprContext(expr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   handledOut = false;
   if (context.resolveMapTarget != nullptr && expr.isMethodCall &&
       (expr.name == "count" || expr.name == "contains" ||
@@ -84,12 +88,12 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
     handledOut = true;
     error_ =
         "stdlib File write/write_line currently support up to nine values; broader arities await [args<T>] runtime support";
-    return false;
+    return publishLateUnknownTargetDiagnostic();
   }
 
   handledOut = true;
   error_ = "unknown call target: " + formatUnknownCallTarget(expr);
-  return false;
+  return publishLateUnknownTargetDiagnostic();
 }
 
 } // namespace primec::semantics
