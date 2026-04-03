@@ -7,6 +7,15 @@
 
 namespace primec::semantics {
 
+bool SemanticsValidator::publishPassesDefinitionsDiagnostic(const Expr *expr) {
+  if (expr != nullptr) {
+    captureExprContext(*expr);
+  } else if (currentDefinitionContext_ != nullptr) {
+    captureDefinitionContext(*currentDefinitionContext_);
+  }
+  return publishCurrentStructuredDiagnosticNow();
+}
+
 bool SemanticsValidator::validateDefinitions() {
   std::vector<SemanticDiagnosticRecord> collectedRecords;
   const bool collectDiagnostics = shouldCollectStructuredDiagnostics();
@@ -24,6 +33,7 @@ bool SemanticsValidator::validateDefinitions() {
     if (!validateCapabilitiesSubset(def.transforms, def.fullPath)) {
       if (error_.empty()) {
         error_ = "validateCapabilitiesSubset failed on " + def.fullPath;
+        return publishPassesDefinitionsDiagnostic();
       }
       return false;
     }
@@ -39,6 +49,7 @@ bool SemanticsValidator::validateDefinitions() {
       if (!validateExpr(defParams, locals, *param.defaultExpr)) {
         if (error_.empty()) {
           error_ = "default expression validation failed on " + def.fullPath;
+          return publishPassesDefinitionsDiagnostic(param.defaultExpr);
         }
         return false;
       }
@@ -50,7 +61,7 @@ bool SemanticsValidator::validateDefinitions() {
     }
     if (isLifecycleHelperName(def.fullPath) && kind != ReturnKind::Void) {
       error_ = "lifecycle helpers must return void: " + def.fullPath;
-      return false;
+      return publishPassesDefinitionsDiagnostic();
     }
     const std::optional<OnErrorHandler> &onErrorHandler = currentValidationContext_.onError;
     if (onErrorHandler.has_value() &&
@@ -58,7 +69,7 @@ bool SemanticsValidator::validateDefinitions() {
          !currentValidationContext_.resultType->isResult) &&
         kind != ReturnKind::Int) {
       error_ = "on_error requires Result or int return type on " + def.fullPath;
-      return false;
+      return publishPassesDefinitionsDiagnostic();
     }
     if (onErrorHandler.has_value() &&
         currentValidationContext_.resultType.has_value() &&
@@ -67,7 +78,7 @@ bool SemanticsValidator::validateDefinitions() {
                          currentValidationContext_.resultType->errorType,
                          def.namespacePrefix)) {
       error_ = "on_error error type mismatch on " + def.fullPath;
-      return false;
+      return publishPassesDefinitionsDiagnostic();
     }
     if (onErrorHandler.has_value()) {
       OnErrorScope onErrorScope(*this, std::nullopt);
@@ -75,6 +86,7 @@ bool SemanticsValidator::validateDefinitions() {
         if (!validateExpr(defParams, locals, arg)) {
           if (error_.empty()) {
             error_ = "on_error bound-arg validation failed on " + def.fullPath;
+            return publishPassesDefinitionsDiagnostic(&arg);
           }
           return false;
         }
@@ -96,6 +108,7 @@ bool SemanticsValidator::validateDefinitions() {
                              stmtIndex)) {
         if (error_.empty()) {
           error_ = "statement validation failed on " + def.fullPath;
+          return publishPassesDefinitionsDiagnostic(&stmt);
         }
         return false;
       }
@@ -105,6 +118,7 @@ bool SemanticsValidator::validateDefinitions() {
       if (!validateExpr(defParams, locals, *def.returnExpr)) {
         if (error_.empty()) {
           error_ = "return expression validation failed on " + def.fullPath;
+          return publishPassesDefinitionsDiagnostic(&*def.returnExpr);
         }
         return false;
       }
@@ -118,7 +132,7 @@ bool SemanticsValidator::validateDefinitions() {
         } else {
           error_ = "missing return statement in " + def.fullPath;
         }
-        return false;
+        return publishPassesDefinitionsDiagnostic();
       }
     }
     bool shouldCheckUninitialized = (kind == ReturnKind::Void);
@@ -130,7 +144,7 @@ bool SemanticsValidator::validateDefinitions() {
           validateUninitializedDefiniteState(defParams, def.statements);
       if (uninitError.has_value()) {
         error_ = *uninitError;
-        return false;
+        return publishPassesDefinitionsDiagnostic();
       }
     }
     return true;

@@ -504,6 +504,7 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
       semanticsPassesDiagnosticsPath,
   });
   const std::string semanticsPassesEffectsSource = readText(semanticsPassesEffectsPath);
+  const std::string semanticsPassesDefinitionsSource = readText(semanticsPassesDefinitionsPath);
   const std::string semanticsPassesStructLayoutsSource = readText(semanticsPassesStructLayoutsPath);
   const std::string semanticsPassesDiagnosticsSource = readText(semanticsPassesDiagnosticsPath);
   const std::string semanticsExecutionDiagnosticsSource = readText(semanticsExecutionDiagnosticsPath);
@@ -534,6 +535,15 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
   CHECK(semanticsPassesEffectsSource.find("return publishPassesEffectsDiagnostic(&expr);") !=
         std::string::npos);
   CHECK(semanticsPassesEffectsSource.find("return publishPassesEffectsDiagnostic();") !=
+        std::string::npos);
+  CHECK(semanticsPassesDefinitionsSource.find(
+            "bool SemanticsValidator::publishPassesDefinitionsDiagnostic(") !=
+        std::string::npos);
+  CHECK(semanticsPassesDefinitionsSource.find(
+            "return publishPassesDefinitionsDiagnostic();") !=
+        std::string::npos);
+  CHECK(semanticsPassesDefinitionsSource.find(
+            "return publishPassesDefinitionsDiagnostic(&stmt);") !=
         std::string::npos);
   CHECK(semanticsPassesStructLayoutsSource.find(
             "bool SemanticsValidator::publishPassesStructLayoutsDiagnostic()") !=
