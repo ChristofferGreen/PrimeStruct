@@ -72,4 +72,4 @@ Coverage and migration cleanup:
 - ○ Replace `SemanticsValidator`'s shared mutable `error_` flow with a structured diagnostic sink in the current single-threaded path while preserving deterministic first-error behavior.
 - ○ Attach stable semantic-product node identities or sort keys to diagnostics so later parallel validation can merge and order them deterministically.
 - ○ Split per-definition validation state from validator-global caches so semantic-product construction uses explicit contexts rather than shared mutable fields.
-- ○ Add pipeline-facing tests that document and exercise the semantic-product inspection surface and its relation to existing AST/IR dumps once that stage exists.
+- ○ Implement pipeline-facing tests that exercise the semantic-product inspection surface and its relation to existing AST/IR dumps once that stage exists, now that the test matrix is documented.

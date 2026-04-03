@@ -266,6 +266,32 @@ Planned semantic-product unit/golden suite:
 - Existing snapshot-helper tests that are really asserting lowering-facing facts should migrate here once the semantic
   product is available, so there is one canonical golden surface for those facts.
 
+Planned pipeline-facing semantic-product conformance matrix:
+- Keep a separate compile-pipeline matrix for consumers that cross the semantic/lowering boundary instead of extending
+  the narrow semantic-product golden suite to cover full backend behavior.
+- The first pipeline-facing cases should prove inspection-surface order and consistency:
+  - `ast-semantic` remains syntax-shaped.
+  - the future semantic-product dump exposes lowering-facing facts directly.
+  - `ir` remains the first backend-facing dump after semantic-product consumption.
+- Initial end-to-end cases should pin one lowering-facing fact family at a time across the normal compile pipeline:
+  - resolved helper/call targets
+  - inferred binding/result types
+  - effect/capability summaries consumed by lowering
+  - struct/layout facts consumed by lowering
+- Coverage should stay split by intent:
+  - semantic-product golden tests validate formatter and deterministic fact ordering.
+  - pipeline-facing conformance tests validate that compile-pipeline entrypoints, dump stages, and C++/VM/native
+    lowering all consume the same semantic-product facts.
+- When the semantic-product stage exists, tests that currently compare AST snapshots only because no lowering-facing
+  inspection surface exists should move to the semantic-product dump or the pipeline-facing conformance matrix,
+  depending on whether they are formatter-facing or backend-facing.
+- Exit criteria for this test layer:
+  - semantic-product dump and `ir` dumps can be compared in the same scenario without AST-only re-derivation.
+  - C++/VM/native compile-pipeline cases prove that lowering uses published semantic-product facts rather than hidden
+    AST-side caches.
+  - `primec/testing/SemanticsValidationHelpers.h` snapshot assertions for lowering-facing facts are reduced to syntax-
+    owned cases only.
+
 ### Language ethos (v1)
 - **Simplified and coherent C:** keep the core small, explicit, and close to how the machine behaves when it matters.
 - **Sane subset of C++:** keep value types, structs, and explicit control flow, but avoid implicit conversions,

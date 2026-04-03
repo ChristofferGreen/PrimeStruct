@@ -99,6 +99,14 @@ Planned semantic-product dump requirements:
   struct/layout metadata, and provenance handles.
 - No attempt to replace syntax-oriented dumps; syntax-faithful structure remains owned by `ast` / `ast-semantic`.
 
+Planned pipeline-facing semantic-product conformance requirements:
+- Pipeline-facing tests should verify the relationship between `ast-semantic`, the future semantic-product stage, and
+  `ir`, rather than treating any one of them as a substitute for the others.
+- Semantic-product golden tests should stay narrow and formatter-focused; broader compile-pipeline C++/VM/native cases
+  should prove that lowering consumes published semantic-product facts.
+- Lowering-facing snapshot assertions that are currently expressed through AST-shaped helpers should migrate either to
+  the semantic-product dump or to those pipeline-facing conformance cases once the semantic-product stage exists.
+
 Use `--emit=ir` to write serialized PSIR bytecode to the output path after semantic validation.
 
 ## 2. Lexical Structure
