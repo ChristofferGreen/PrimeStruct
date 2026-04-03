@@ -109,6 +109,23 @@ Planned graph performance guardrails:
 - Parallel solve remains blocked until the single-threaded graph path has deterministic perf baselines, reproducible
   invalidation measurements, and coverage that can distinguish correctness regressions from acceptable budget updates.
 
+Planned CT-eval boundary on the graph path:
+- Compile-time evaluation must not grow a second hidden inference/cache model beside the graph-backed resolver.
+- Each CT-eval consumer should do exactly one of two things:
+  - consume graph-backed query/binding/result facts directly, or
+  - stop at one explicit adapter boundary that is documented and tested as syntax-owned or semantic-product-owned.
+- The preferred end-state is direct graph consumption for:
+  - compile-time receiver classification
+  - call-target and template-argument resolution needed by CT-eval
+  - local `auto`, query, `try(...)`, and `on_error` facts consulted during compile-time execution
+- If any CT-eval path keeps a temporary adapter boundary during migration, that adapter must not invent new inference
+  state; it may only translate already-published graph/semantic-product facts into the shape CT-eval currently expects.
+- CT-eval parity coverage should pin both:
+  - successful compile-time evaluation that depends on shared graph facts, and
+  - deterministic diagnostics when graph-backed dependencies remain unresolved or contradictory.
+- Template-inference migration and optional parallel solve remain blocked on this boundary being explicit, because both
+  features would otherwise multiply hidden solver state across compile-time and runtime-oriented semantics paths.
+
 ### Planned semantics-to-lowering boundary
 PrimeStruct is migrating toward an explicit post-semantics product that sits between the syntax-faithful AST and IR
 lowering. The goal is to stop re-deriving lowering facts from mutated AST state and instead hand IR preparation one
