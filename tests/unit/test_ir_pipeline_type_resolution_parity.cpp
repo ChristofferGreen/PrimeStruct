@@ -99,6 +99,29 @@ main() {
           false,
       },
       {
+          "result_try_local_auto_success",
+          R"(
+MyError {
+}
+
+[return<void>]
+unexpectedError([MyError] err) {
+}
+
+[return<Result<int, MyError>>]
+lookup() {
+  return(Result.ok(4i32))
+}
+
+[return<Result<int, MyError>> on_error<MyError, /unexpectedError>]
+main() {
+  [auto] selected{try(lookup())}
+  return(Result.ok(selected))
+}
+)",
+          true,
+      },
+      {
           "block_local_auto_struct",
           R"(
 [struct]
