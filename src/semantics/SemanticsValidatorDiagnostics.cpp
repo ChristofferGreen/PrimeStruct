@@ -147,4 +147,34 @@ bool SemanticsValidator::collectDuplicateDefinitionDiagnostics() {
   return false;
 }
 
+bool SemanticsValidator::shouldCollectStructuredDiagnostics() const {
+  return collectDiagnostics_ && diagnosticInfo_ != nullptr;
+}
+
+void SemanticsValidator::clearStructuredDiagnosticContext() {
+  if (!shouldCollectStructuredDiagnostics()) {
+    return;
+  }
+  diagnosticSink_.clearContext();
+}
+
+void SemanticsValidator::moveCurrentStructuredDiagnosticTo(std::vector<SemanticDiagnosticRecord> &out) {
+  if (!shouldCollectStructuredDiagnostics() || error_.empty()) {
+    return;
+  }
+  out.push_back(diagnosticSink_.makeRecord(error_));
+  error_.clear();
+  clearStructuredDiagnosticContext();
+}
+
+bool SemanticsValidator::finalizeCollectedStructuredDiagnostics(
+    std::vector<SemanticDiagnosticRecord> &records) {
+  if (!shouldCollectStructuredDiagnostics() || records.empty()) {
+    return true;
+  }
+  diagnosticSink_.setRecords(std::move(records));
+  error_ = diagnosticInfo_->records.front().message;
+  return false;
+}
+
 } // namespace primec::semantics

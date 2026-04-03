@@ -7,21 +7,7 @@ namespace primec::semantics {
 
 bool SemanticsValidator::validateExecutions() {
   std::vector<SemanticDiagnosticRecord> collectedRecords;
-  const bool collectDiagnostics = collectDiagnostics_ && diagnosticInfo_ != nullptr;
-  auto resetCollectedState = [&]() {
-    if (!collectDiagnostics) {
-      return;
-    }
-    diagnosticSink_.clearContext();
-  };
-  auto pushCollectedRecord = [&]() {
-    if (!collectDiagnostics || error_.empty()) {
-      return;
-    }
-    collectedRecords.push_back(diagnosticSink_.makeRecord(error_));
-    error_.clear();
-    resetCollectedState();
-  };
+  const bool collectDiagnostics = shouldCollectStructuredDiagnostics();
   auto validateExecution = [&](const Execution &exec) -> bool {
     ExecutionContextScope executionScope(*this, exec);
     ValidationContextScope validationContextScope(*this, buildExecutionValidationContext(exec));
@@ -158,7 +144,7 @@ bool SemanticsValidator::validateExecutions() {
   };
 
   for (const auto &exec : program_.executions) {
-    resetCollectedState();
+    clearStructuredDiagnosticContext();
     if (collectDiagnostics) {
       ValidationContextScope validationContextScope(*this, buildExecutionValidationContext(exec));
       std::vector<SemanticDiagnosticRecord> intraExecutionRecords;
@@ -177,13 +163,11 @@ bool SemanticsValidator::validateExecutions() {
       if (!collectDiagnostics) {
         return false;
       }
-      pushCollectedRecord();
+      moveCurrentStructuredDiagnosticTo(collectedRecords);
     }
   }
 
-  if (collectDiagnostics && !collectedRecords.empty()) {
-    diagnosticSink_.setRecords(std::move(collectedRecords));
-    error_ = diagnosticInfo_->records.front().message;
+  if (!finalizeCollectedStructuredDiagnostics(collectedRecords)) {
     return false;
   }
 

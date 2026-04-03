@@ -211,3 +211,7 @@
   void captureDefinitionContext(const Definition &def);
   void captureExecutionContext(const Execution &exec);
   bool collectDuplicateDefinitionDiagnostics();
+  bool shouldCollectStructuredDiagnostics() const;
+  void clearStructuredDiagnosticContext();
+  void moveCurrentStructuredDiagnosticTo(std::vector<SemanticDiagnosticRecord> &out);
+  bool finalizeCollectedStructuredDiagnostics(std::vector<SemanticDiagnosticRecord> &records);
