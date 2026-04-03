@@ -59,7 +59,7 @@ Pipeline plumbing:
 
 Lowering cutover:
 - ○ Cut over `IrLowerer::lower` and `prepareIrModule` so IR preparation consumes the semantic product directly, then retire the raw-`Program` lowering path once the temporary adapter is removed.
-- ○ Switch `IrLowerer` entry setup to consume resolved call targets from the semantic product instead of re-deriving them from AST state.
+- ○ Implement the `IrLowerer` entry-setup cutover now that the handoff contract is documented, consuming resolved call targets from the semantic product instead of re-deriving them from AST state.
 - ○ Switch lowerer type/binding setup to consume semantic-product binding metadata instead of repeating helper/type inference logic.
 - ○ Switch lowerer effect/capability and struct-layout setup to consume semantic-product metadata instead of re-reading AST/transforms for those facts.
 

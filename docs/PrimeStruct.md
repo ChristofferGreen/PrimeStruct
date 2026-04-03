@@ -417,6 +417,20 @@ Exit criteria for removing AST-dependent lowerer logic:
 - The remaining AST dependency is limited to syntax-faithful provenance data such as spans/debug mapping, with that
   boundary documented explicitly.
 
+Planned lowerer entry-setup handoff:
+- `IrLowerer` entry setup should consume resolved call targets from the semantic product instead of re-deriving callee
+  paths, helper-family choices, or canonical-versus-same-path decisions from AST state.
+- Entry setup should treat the semantic product as the authoritative source for:
+  - the resolved entry definition/call target
+  - canonical helper-routing decisions already made during semantics
+  - entry-facing binding/type facts needed before statement/expression lowering begins
+- The lowerer may still consult AST-backed provenance for source locations/debug mapping, but it should not perform a
+  second semantic resolution pass to discover which callable path was selected.
+- Completion criteria:
+  - entry setup can initialize lowering from semantic-product call-target data alone
+  - helper-shadow and canonical-path behavior matches current semantics without lowerer-side re-resolution
+  - the old AST-derived entry target path is removed or reduced to a temporary adapter boundary only
+
 Planned inspection-surface relationship:
 - `pre_ast`: post-import, post-text-transform source text
 - `ast`: parser-owned syntax tree before semantic canonicalization
