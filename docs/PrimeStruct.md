@@ -305,7 +305,10 @@ Ownership split by responsibility:
 Planned first semantic-product builder slice:
 - The first builder slice should materialize only the lowering-facing facts already treated as stable by the current
   semantics pipeline:
-  - resolved call targets and helper-vs-canonical path choices
+  - resolved call targets and helper-vs-canonical path choices, split concretely into:
+    - direct-call targets and canonical callee paths
+    - receiver/method-call targets and receiver-side helper-family choices
+    - helper-vs-canonical path choices for collection/builtin bridge surfaces
   - final binding/result type facts for parameters, locals, temporaries, and returns
   - effect/capability summaries needed by IR preparation
   - struct/enum/layout metadata already computed during semantic validation

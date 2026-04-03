@@ -128,7 +128,10 @@ Boundary note: this group is now split into semantic-product creation, pipeline 
 
 Semantic product creation:
 - ◐ Implement the first semantic-product builder slice now that its scope is documented. Progress: the documented scope is now split into explicit fact-family slices so the initial publication pass can land incrementally without mixing unrelated lowering facts into one change.
-  - ○ Materialize resolved call targets and helper-vs-canonical path choices into the semantic product.
+  - ◐ Materialize resolved call targets and helper-vs-canonical path choices into the semantic product. Progress: this call-target surface is now split into explicit direct-call, receiver-call, and helper-routing slices so lowering-facing semantic publication can follow the existing resolution families instead of one broad target bucket.
+    - ○ Materialize resolved direct-call targets and canonical callee paths into the semantic product.
+    - ○ Materialize resolved receiver/method-call targets and receiver-side helper-family choices into the semantic product.
+    - ○ Materialize helper-vs-canonical path choices for collection/builtin bridge surfaces into the semantic product.
   - ○ Materialize final binding/result type facts for parameters, locals, temporaries, and returns into the semantic product.
   - ○ Materialize effect/capability summaries needed by IR preparation into the semantic product.
   - ○ Materialize struct/enum/layout metadata already computed during semantic validation into the semantic product.
