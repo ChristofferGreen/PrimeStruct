@@ -337,6 +337,16 @@
   CHECK(semanticsExprCollectionPredicatesSource.find(
             "bool SemanticsValidator::validateCollectionElementType") !=
         std::string::npos);
+  CHECK(semanticsExprCollectionPredicatesSource.find(
+            "auto publishCollectionPredicateDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionPredicatesSource.find("captureExprContext(arg);") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionPredicatesSource.find(
+            "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionPredicatesSource.find("error_ = errorPrefix + typeName;") !=
+        std::string::npos);
   CHECK(semanticsExprCollectionAccessValidationSource.find(
             "bool SemanticsValidator::validateExprCollectionAccessFallbacks") !=
         std::string::npos);

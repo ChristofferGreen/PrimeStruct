@@ -254,11 +254,15 @@ bool SemanticsValidator::validateCollectionElementType(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
     const BuiltinCollectionDispatchResolvers &dispatchResolvers) {
+  auto publishCollectionPredicateDiagnostic = [&]() -> bool {
+    captureExprContext(arg);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   const std::string normalizedType = normalizeBindingTypeName(typeName);
   if (normalizedType == "string") {
     if (!isStringExprForArgumentValidation(arg, dispatchResolvers)) {
       error_ = errorPrefix + typeName;
-      return false;
+      return publishCollectionPredicateDiagnostic();
     }
     return true;
   }
@@ -268,12 +272,12 @@ bool SemanticsValidator::validateCollectionElementType(
   }
   if (isStringExprForArgumentValidation(arg, dispatchResolvers)) {
     error_ = errorPrefix + typeName;
-    return false;
+    return publishCollectionPredicateDiagnostic();
   }
   ReturnKind argKind = inferExprReturnKind(arg, params, locals);
   if (argKind != ReturnKind::Unknown && argKind != expectedKind) {
     error_ = errorPrefix + typeName;
-    return false;
+    return publishCollectionPredicateDiagnostic();
   }
   return true;
 }
