@@ -56,6 +56,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferDefinition.cpp";
   const std::filesystem::path semanticsInferGraphPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferGraph.cpp";
+  const std::filesystem::path semanticsDiagnosticsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorDiagnostics.cpp";
   const std::filesystem::path semanticsInferMethodResolutionPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferMethodResolution.cpp";
   const std::filesystem::path semanticsInferStructReturnPath =
@@ -85,12 +87,14 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsInferControlFlowPath));
   REQUIRE(std::filesystem::exists(semanticsInferDefinitionPath));
   REQUIRE(std::filesystem::exists(semanticsInferGraphPath));
+  REQUIRE(std::filesystem::exists(semanticsDiagnosticsPath));
   REQUIRE(std::filesystem::exists(semanticsInferMethodResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsInferStructReturnPath));
   REQUIRE(std::filesystem::exists(semanticsInferTargetResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsInferUtilityPath));
   REQUIRE(std::filesystem::exists(semanticsCollectionHelperRewritesPath));
   const std::string semanticsInferSource = readText(semanticsInferPath);
+  const std::string semanticsDiagnosticsSource = readText(semanticsDiagnosticsPath);
   const std::string semanticsInferCombinedSource = readTexts({
       semanticsInferPath,
       semanticsInferCollectionCountCapacityPath,
@@ -485,9 +489,30 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "auto failInferDefinitionStatementDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
   CHECK(semanticsInferDefinitionSource.find("if (isForCall(stmt) && stmt.args.size() == 4)") != std::string::npos);
+  CHECK(semanticsDiagnosticsSource.find(
+            "bool SemanticsValidator::definitionDiagnosticOrderLess(") !=
+        std::string::npos);
+  CHECK(semanticsDiagnosticsSource.find(
+            "void SemanticsValidator::sortDefinitionsForDiagnosticOrder(") !=
+        std::string::npos);
+  CHECK(semanticsDiagnosticsSource.find(
+            "bool SemanticsValidator::typeResolutionNodeDiagnosticOrderLess(") !=
+        std::string::npos);
+  CHECK(semanticsDiagnosticsSource.find(
+            "void SemanticsValidator::sortTypeResolutionNodesForDiagnosticOrder(") !=
+        std::string::npos);
   CHECK(semanticsInferGraphPath.string().find("SemanticsValidatorInferGraph.cpp") !=
         std::string::npos);
   const std::string semanticsInferGraphSource = readText(semanticsInferGraphPath);
+  CHECK(semanticsInferGraphSource.find(
+            "void sortDefinitionsForDeterministicDiagnostics(") ==
+        std::string::npos);
+  CHECK(semanticsInferGraphSource.find(
+            "auto collectUnknownDefinitionNodes =") !=
+        std::string::npos);
+  CHECK(semanticsInferGraphSource.find(
+            "sortTypeResolutionNodesForDiagnosticOrder(unresolvedNodes);") !=
+        std::string::npos);
   CHECK(semanticsInferGraphSource.find(
             "auto failInferGraphDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);

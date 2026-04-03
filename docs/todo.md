@@ -135,6 +135,5 @@ Coverage and migration cleanup:
 - ○ Migrate tests and public testing helpers from `primec/testing/SemanticsValidationHelpers.h` now that their boundary/migration contract is documented, moving lowering-facing assertions onto the semantic-product inspection surface.
 - ○ Delete redundant testing-only semantic snapshot plumbing now that its migration/removal contract is documented, leaving one canonical lowering-facing inspection surface once equivalent semantic-product dumps and conformance coverage exist.
 - ○ Delete lowerer-side stdlib/helper alias fallback paths now that their semantic-product removal contract is documented, once equivalent canonical resolution is provided by the semantic product.
-- ○ Implement stable semantic-product node identities or sort keys for diagnostics now that the merge-order contract is documented, so later parallel validation can publish deterministic diagnostic order.
 - ○ Implement the per-definition validation-state split now that the context/caching contract is documented, so semantic-product construction can use explicit contexts instead of validator-global mutable fields.
 - ○ Implement pipeline-facing tests that exercise the semantic-product inspection surface and its relation to existing AST/IR dumps once that stage exists, now that the test matrix is documented.

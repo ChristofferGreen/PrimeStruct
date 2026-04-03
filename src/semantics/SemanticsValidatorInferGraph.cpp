@@ -5,28 +5,11 @@
 
 #include <algorithm>
 #include <functional>
-#include <limits>
 #include <sstream>
 
 namespace primec::semantics {
 
 namespace {
-
-void sortDefinitionsForDeterministicDiagnostics(std::vector<const Definition *> &definitions) {
-  std::stable_sort(definitions.begin(), definitions.end(), [](const Definition *left, const Definition *right) {
-    const int leftLine = left->sourceLine > 0 ? left->sourceLine : std::numeric_limits<int>::max();
-    const int rightLine = right->sourceLine > 0 ? right->sourceLine : std::numeric_limits<int>::max();
-    if (leftLine != rightLine) {
-      return leftLine < rightLine;
-    }
-    const int leftColumn = left->sourceColumn > 0 ? left->sourceColumn : std::numeric_limits<int>::max();
-    const int rightColumn = right->sourceColumn > 0 ? right->sourceColumn : std::numeric_limits<int>::max();
-    if (leftColumn != rightColumn) {
-      return leftColumn < rightColumn;
-    }
-    return left->fullPath < right->fullPath;
-  });
-}
 
 std::string formatReturnInferenceCycleDiagnostic(const std::vector<const Definition *> &definitions) {
   std::ostringstream message;
@@ -63,9 +46,9 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
   const TypeResolutionGraph graph = buildTypeResolutionGraph(program_);
   const CondensationDag dag = computeTypeResolutionDependencyDag(graph);
 
-  auto collectUnknownDefinitions = [&](const CondensationDagNode &componentNode) {
-    std::vector<const Definition *> definitions;
-    definitions.reserve(componentNode.memberNodeIds.size());
+  auto collectUnknownDefinitionNodes = [&](const CondensationDagNode &componentNode) {
+    std::vector<const TypeResolutionGraphNode *> unresolvedNodes;
+    unresolvedNodes.reserve(componentNode.memberNodeIds.size());
     for (uint32_t nodeId : componentNode.memberNodeIds) {
       if (nodeId >= graph.nodes.size()) {
         continue;
@@ -82,13 +65,36 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
       if (defIt == defMap_.end() || defIt->second == nullptr) {
         continue;
       }
+      unresolvedNodes.push_back(&node);
+    }
+    sortTypeResolutionNodesForDiagnosticOrder(unresolvedNodes);
+    return unresolvedNodes;
+  };
+  auto collectUnknownDefinitions = [&](const CondensationDagNode &componentNode) {
+    std::vector<const Definition *> definitions;
+    const std::vector<const TypeResolutionGraphNode *> unresolvedNodes =
+        collectUnknownDefinitionNodes(componentNode);
+    definitions.reserve(unresolvedNodes.size());
+    for (const TypeResolutionGraphNode *node : unresolvedNodes) {
+      auto defIt = defMap_.find(node->resolvedPath);
+      if (defIt == defMap_.end() || defIt->second == nullptr) {
+        continue;
+      }
       definitions.push_back(defIt->second);
     }
-    sortDefinitionsForDeterministicDiagnostics(definitions);
     return definitions;
   };
   auto failInferGraphCycleDiagnostic =
-      [&](const std::vector<const Definition *> &unresolvedDefinitions) -> bool {
+      [&](const std::vector<const TypeResolutionGraphNode *> &unresolvedNodes) -> bool {
+    std::vector<const Definition *> unresolvedDefinitions;
+    unresolvedDefinitions.reserve(unresolvedNodes.size());
+    for (const TypeResolutionGraphNode *node : unresolvedNodes) {
+      auto defIt = defMap_.find(node->resolvedPath);
+      if (defIt == defMap_.end() || defIt->second == nullptr) {
+        continue;
+      }
+      unresolvedDefinitions.push_back(defIt->second);
+    }
     const std::string message =
         formatReturnInferenceCycleDiagnostic(unresolvedDefinitions);
     if (collectDiagnostics_ && diagnosticInfo_ != nullptr) {
@@ -102,7 +108,8 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
         record.primarySpan.endColumn = primary->sourceColumn;
         record.hasPrimarySpan = true;
       }
-      for (const Definition *definition : unresolvedDefinitions) {
+      for (size_t index = 0; index < unresolvedDefinitions.size(); ++index) {
+        const Definition *definition = unresolvedDefinitions[index];
         if (definition->sourceLine <= 0 || definition->sourceColumn <= 0) {
           continue;
         }
@@ -111,7 +118,7 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
         span.span.column = definition->sourceColumn;
         span.span.endLine = definition->sourceLine;
         span.span.endColumn = definition->sourceColumn;
-        span.label = "cycle member: " + definition->fullPath;
+        span.label = "cycle member: " + unresolvedNodes[index]->resolvedPath;
         record.relatedSpans.push_back(std::move(span));
       }
       diagnosticSink_.setRecords({std::move(record)});
@@ -144,13 +151,23 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
       }
     } while (changed);
 
-    std::vector<const Definition *> unresolvedDefinitions = collectUnknownDefinitions(componentNode);
+    std::vector<const TypeResolutionGraphNode *> unresolvedNodes =
+        collectUnknownDefinitionNodes(componentNode);
+    std::vector<const Definition *> unresolvedDefinitions;
+    unresolvedDefinitions.reserve(unresolvedNodes.size());
+    for (const TypeResolutionGraphNode *node : unresolvedNodes) {
+      auto defIt = defMap_.find(node->resolvedPath);
+      if (defIt == defMap_.end() || defIt->second == nullptr) {
+        continue;
+      }
+      unresolvedDefinitions.push_back(defIt->second);
+    }
     if (unresolvedDefinitions.empty()) {
       continue;
     }
 
     if (componentHasCycle) {
-      return failInferGraphCycleDiagnostic(unresolvedDefinitions);
+      return failInferGraphCycleDiagnostic(unresolvedNodes);
     }
 
     for (const Definition *definition : unresolvedDefinitions) {

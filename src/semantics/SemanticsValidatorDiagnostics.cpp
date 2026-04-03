@@ -1,5 +1,7 @@
 #include "SemanticsValidator.h"
 
+#include "TypeResolutionGraph.h"
+
 #include <algorithm>
 #include <limits>
 #include <string>
@@ -8,6 +10,22 @@
 #include <vector>
 
 namespace primec::semantics {
+
+namespace {
+
+int diagnosticOrderCoordinate(int value) {
+  return value > 0 ? value : std::numeric_limits<int>::max();
+}
+
+std::string diagnosticOwningPath(const std::string &path) {
+  const size_t lastSlash = path.find_last_of('/');
+  if (lastSlash == std::string::npos || lastSlash == 0) {
+    return {};
+  }
+  return path.substr(0, lastSlash);
+}
+
+} // namespace
 
 void SemanticsValidator::capturePrimarySpanIfUnset(int line, int column) {
   diagnosticSink_.capturePrimarySpanIfUnset(line, column);
@@ -63,6 +81,73 @@ bool SemanticsValidator::failExecutionDiagnostic(const Execution &exec,
   return publishCurrentStructuredDiagnosticNow();
 }
 
+bool SemanticsValidator::definitionDiagnosticOrderLess(
+    const Definition *left,
+    const Definition *right) {
+  const std::string leftOwningPath = diagnosticOwningPath(left->fullPath);
+  const std::string rightOwningPath = diagnosticOwningPath(right->fullPath);
+  if (leftOwningPath != rightOwningPath) {
+    return leftOwningPath < rightOwningPath;
+  }
+  const int leftLine = diagnosticOrderCoordinate(left->sourceLine);
+  const int rightLine = diagnosticOrderCoordinate(right->sourceLine);
+  if (leftLine != rightLine) {
+    return leftLine < rightLine;
+  }
+  const int leftColumn = diagnosticOrderCoordinate(left->sourceColumn);
+  const int rightColumn = diagnosticOrderCoordinate(right->sourceColumn);
+  if (leftColumn != rightColumn) {
+    return leftColumn < rightColumn;
+  }
+  return left->fullPath < right->fullPath;
+}
+
+void SemanticsValidator::sortDefinitionsForDiagnosticOrder(
+    std::vector<const Definition *> &definitions) {
+  std::stable_sort(definitions.begin(), definitions.end(), [](const Definition *left,
+                                                              const Definition *right) {
+    return definitionDiagnosticOrderLess(left, right);
+  });
+}
+
+bool SemanticsValidator::typeResolutionNodeDiagnosticOrderLess(
+    const TypeResolutionGraphNode &left,
+    const TypeResolutionGraphNode &right) {
+  if (left.scopePath != right.scopePath) {
+    return left.scopePath < right.scopePath;
+  }
+  const int leftLine = diagnosticOrderCoordinate(left.sourceLine);
+  const int rightLine = diagnosticOrderCoordinate(right.sourceLine);
+  if (leftLine != rightLine) {
+    return leftLine < rightLine;
+  }
+  const int leftColumn = diagnosticOrderCoordinate(left.sourceColumn);
+  const int rightColumn = diagnosticOrderCoordinate(right.sourceColumn);
+  if (leftColumn != rightColumn) {
+    return leftColumn < rightColumn;
+  }
+  if (left.resolvedPath != right.resolvedPath) {
+    return left.resolvedPath < right.resolvedPath;
+  }
+  if (left.kind != right.kind) {
+    return static_cast<int>(left.kind) < static_cast<int>(right.kind);
+  }
+  if (left.id != right.id) {
+    return left.id < right.id;
+  }
+  return left.label < right.label;
+}
+
+void SemanticsValidator::sortTypeResolutionNodesForDiagnosticOrder(
+    std::vector<const TypeResolutionGraphNode *> &nodes) {
+  std::stable_sort(nodes.begin(),
+                   nodes.end(),
+                   [](const TypeResolutionGraphNode *left,
+                      const TypeResolutionGraphNode *right) {
+                     return typeResolutionNodeDiagnosticOrderLess(*left, *right);
+                   });
+}
+
 bool SemanticsValidator::collectDuplicateDefinitionDiagnostics() {
   std::unordered_map<std::string, std::vector<const Definition *>> definitionsByPath;
   definitionsByPath.reserve(program_.definitions.size());
@@ -81,19 +166,7 @@ bool SemanticsValidator::collectDuplicateDefinitionDiagnostics() {
       continue;
     }
     auto &defs = entry.second;
-    std::stable_sort(defs.begin(), defs.end(), [](const Definition *left, const Definition *right) {
-      const int leftLine = left->sourceLine > 0 ? left->sourceLine : std::numeric_limits<int>::max();
-      const int rightLine = right->sourceLine > 0 ? right->sourceLine : std::numeric_limits<int>::max();
-      if (leftLine != rightLine) {
-        return leftLine < rightLine;
-      }
-      const int leftColumn = left->sourceColumn > 0 ? left->sourceColumn : std::numeric_limits<int>::max();
-      const int rightColumn = right->sourceColumn > 0 ? right->sourceColumn : std::numeric_limits<int>::max();
-      if (leftColumn != rightColumn) {
-        return leftColumn < rightColumn;
-      }
-      return left->fullPath < right->fullPath;
-    });
+    sortDefinitionsForDiagnosticOrder(defs);
     duplicateGroups.push_back(DuplicateGroup{entry.first, defs});
   }
   if (duplicateGroups.empty()) {
@@ -105,19 +178,11 @@ bool SemanticsValidator::collectDuplicateDefinitionDiagnostics() {
                    [](const DuplicateGroup &left, const DuplicateGroup &right) {
                      const Definition *leftDef = left.definitions.front();
                      const Definition *rightDef = right.definitions.front();
-                     const int leftLine = leftDef->sourceLine > 0 ? leftDef->sourceLine
-                                                                  : std::numeric_limits<int>::max();
-                     const int rightLine = rightDef->sourceLine > 0 ? rightDef->sourceLine
-                                                                    : std::numeric_limits<int>::max();
-                     if (leftLine != rightLine) {
-                       return leftLine < rightLine;
+                     if (definitionDiagnosticOrderLess(leftDef, rightDef)) {
+                       return true;
                      }
-                     const int leftColumn = leftDef->sourceColumn > 0 ? leftDef->sourceColumn
-                                                                      : std::numeric_limits<int>::max();
-                     const int rightColumn = rightDef->sourceColumn > 0 ? rightDef->sourceColumn
-                                                                        : std::numeric_limits<int>::max();
-                     if (leftColumn != rightColumn) {
-                       return leftColumn < rightColumn;
+                     if (definitionDiagnosticOrderLess(rightDef, leftDef)) {
+                       return false;
                      }
                      return left.path < right.path;
                    });

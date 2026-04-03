@@ -209,6 +209,13 @@
   bool failExprDiagnostic(const Expr &expr, std::string message);
   bool failDefinitionDiagnostic(const Definition &def, std::string message);
   bool failExecutionDiagnostic(const Execution &exec, std::string message);
+  static bool definitionDiagnosticOrderLess(const Definition *left,
+                                            const Definition *right);
+  static void sortDefinitionsForDiagnosticOrder(std::vector<const Definition *> &definitions);
+  static bool typeResolutionNodeDiagnosticOrderLess(const TypeResolutionGraphNode &left,
+                                                    const TypeResolutionGraphNode &right);
+  static void sortTypeResolutionNodesForDiagnosticOrder(
+      std::vector<const TypeResolutionGraphNode *> &nodes);
   bool collectDuplicateDefinitionDiagnostics();
   bool shouldCollectStructuredDiagnostics() const;
   void clearStructuredDiagnosticContext();

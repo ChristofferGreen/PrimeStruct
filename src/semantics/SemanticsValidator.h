@@ -15,6 +15,7 @@
 namespace primec::semantics {
 
 struct TypeResolutionGraph;
+struct TypeResolutionGraphNode;
 
 class SemanticsValidator {
 public:
