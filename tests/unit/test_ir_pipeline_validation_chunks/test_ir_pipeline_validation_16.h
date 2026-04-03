@@ -452,13 +452,13 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "soaPendingUnavailableMethodDiagnostic(\n"
             "      resolvedPath,\n"
-            "      hasVisibleSoaHelperTargetForMonomorph(ctx, \"ref\"))") !=
+            "      hasVisibleSoaHelperTarget(\"ref\"))") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "bool hasVisibleDefinitionPathForMonomorph(const Context &ctx,") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "bool hasVisibleSoaHelperTargetForMonomorph(const Context &ctx,") !=
+            "bool hasVisibleSoaHelperTargetForMonomorph(const Context &ctx,") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool hasVisibleSoaRefHelper =") ==
@@ -470,7 +470,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "ctx.sourceDefs.count(ownedPath) > 0 ||") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "hasVisibleSoaHelperTargetForMonomorph(ctx, normalizedName)") !=
+            "hasVisibleSoaHelperTarget(normalizedName)") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "soaPendingUnavailableMethodDiagnosticForMonomorph(\n"
@@ -479,7 +479,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "soaPendingUnavailableMethodDiagnostic(\n"
             "              resolvedPath,\n"
-            "              hasVisibleSoaHelperTargetForMonomorph(ctx, \"ref\"))") !=
+            "              hasVisibleSoaHelperTarget(\"ref\"))") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "soaDirectFieldViewPendingDiagnostic(normalizedName)") ==

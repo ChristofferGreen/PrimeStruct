@@ -27,13 +27,6 @@ bool inferBindingTypeForMonomorph(const Expr &initializer,
   return inferBlockBodyBindingTypeForMonomorph(initializer, params, locals, allowMathBare, ctx, infoOut);
 }
 
-bool hasVisibleSoaHelperTargetForMonomorph(const Context &ctx,
-                                           std::string_view helperName) {
-  const std::string ownedPath = "/soa_vector/" + std::string(helperName);
-  return ctx.sourceDefs.count(ownedPath) > 0 ||
-         ctx.helperOverloads.count(ownedPath) > 0;
-}
-
 bool inferImplicitTemplateArgs(const Definition &def,
                                const Expr &callExpr,
                                const LocalTypeMap &locals,
@@ -160,6 +153,11 @@ bool inferImplicitTemplateArgs(const Definition &def,
     if (normalizedName.empty()) {
       return {};
     }
+    auto hasVisibleSoaHelperTarget = [&](std::string_view helperName) {
+      const std::string ownedPath = "/soa_vector/" + std::string(helperName);
+      return ctx.sourceDefs.count(ownedPath) > 0 ||
+             ctx.helperOverloads.count(ownedPath) > 0;
+    };
     auto resolvesBuiltinSoaReceiver = [&](const Expr &receiverExpr) {
       auto matchesTypeText = [&](std::string typeText) {
         typeText = normalizeBindingTypeName(typeText);
@@ -200,7 +198,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
     if (candidate.isMethodCall) {
       if (const auto pending = soaPendingUnavailableMethodDiagnostic(
               resolvedPath,
-              hasVisibleSoaHelperTargetForMonomorph(ctx, "ref"))) {
+              hasVisibleSoaHelperTarget("ref"))) {
         return *pending;
       }
     }
@@ -211,7 +209,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
         normalizedName == "soa_vector/ref" || resolvedPath == "/soa_vector/ref";
     if (normalizedName == "ref" || isCanonicalBuiltinSoaRefCall ||
         isOldSurfaceBuiltinSoaRefCall) {
-      if (hasVisibleSoaHelperTargetForMonomorph(ctx, "ref")) {
+      if (hasVisibleSoaHelperTarget("ref")) {
         return {};
       }
       if (isCanonicalBuiltinSoaRefCall &&
@@ -238,7 +236,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
         normalizedName == "contains") {
       return {};
     }
-    if (hasVisibleSoaHelperTargetForMonomorph(ctx, normalizedName)) {
+    if (hasVisibleSoaHelperTarget(normalizedName)) {
       return {};
     }
     return soaDirectPendingUnavailableMethodDiagnostic(
