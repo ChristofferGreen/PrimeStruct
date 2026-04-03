@@ -207,6 +207,10 @@ bool SemanticsValidator::reportReferenceAssignmentEscape(
     const std::unordered_map<std::string, BindingInfo> &locals,
     const std::string &sinkName,
     const Expr &rhsExpr) {
+  auto publishReferenceEscapeDiagnostic = [&]() -> bool {
+    captureExprContext(rhsExpr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
   std::string sourceRoot;
   if (!resolveEscapingReferenceRoot(params, locals, rhsExpr, sourceRoot)) {
     return false;
@@ -223,7 +227,7 @@ bool SemanticsValidator::reportReferenceAssignmentEscape(
     error_ = "reference escapes via assignment to " + sink +
              " (root: " + sourceRoot + ", sink: " + sink + ")";
   }
-  return true;
+  return publishReferenceEscapeDiagnostic();
 }
 
 bool SemanticsValidator::resolveReferenceEscapeSink(

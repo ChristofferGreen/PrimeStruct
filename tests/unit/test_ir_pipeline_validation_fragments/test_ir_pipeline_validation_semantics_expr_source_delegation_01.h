@@ -218,6 +218,8 @@
       readText(semanticsExprMutationBorrowsPath);
   const std::string semanticsExprNamedArgumentBuiltinsSource = readText(semanticsExprNamedArgumentBuiltinsPath);
   const std::string semanticsExprPointerLikeSource = readText(semanticsExprPointerLikePath);
+  const std::string semanticsExprReferenceEscapesSource =
+      readText(semanticsExprReferenceEscapesPath);
   const std::string semanticsExprReceiverPathsSource = readText(semanticsExprReceiverPathsPath);
   const std::string semanticsExprTrySource = readText(semanticsExprTryPath);
   const std::string semanticsCollectionHelperRewritesSource = readText(semanticsCollectionHelperRewritesPath);

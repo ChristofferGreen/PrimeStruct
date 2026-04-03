@@ -519,6 +519,21 @@
   CHECK(semanticsExprLateMapAccessBuiltinsSource.find(
             "tryAt requires map target") !=
         std::string::npos);
+  CHECK(semanticsExprReferenceEscapesSource.find(
+            "bool SemanticsValidator::reportReferenceAssignmentEscape(") !=
+        std::string::npos);
+  CHECK(semanticsExprReferenceEscapesSource.find(
+            "auto publishReferenceEscapeDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprReferenceEscapesSource.find(
+            "captureExprContext(rhsExpr);") !=
+        std::string::npos);
+  CHECK(semanticsExprReferenceEscapesSource.find(
+            "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprReferenceEscapesSource.find(
+            "unsafe reference escapes via assignment to ") !=
+        std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "auto publishMethodResolutionDiagnostic = [&]() -> bool {") !=
         std::string::npos);
