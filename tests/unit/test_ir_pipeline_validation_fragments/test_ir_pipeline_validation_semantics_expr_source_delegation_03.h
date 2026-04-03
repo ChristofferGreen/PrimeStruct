@@ -502,6 +502,20 @@
   CHECK(semanticsExprLateMapAccessBuiltinsSource.find(
             "tryAt requires map target") !=
         std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "auto publishMethodResolutionDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find("captureExprContext(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "method call missing receiver") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "unknown method: /vector/count") !=
+        std::string::npos);
   CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
             "bool SemanticsValidator::validateExprLateUnknownTargetFallbacks") !=
         std::string::npos);
