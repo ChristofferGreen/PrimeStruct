@@ -45,6 +45,8 @@
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionPredicates.cpp";
   const std::filesystem::path semanticsExprCollectionCountCapacityPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionCountCapacity.cpp";
+  const std::filesystem::path semanticsExprCountCapacityMapBuiltinsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprCountCapacityMapBuiltins.cpp";
   const std::filesystem::path semanticsExprCollectionAccessPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionAccess.cpp";
   const std::filesystem::path semanticsExprCollectionAccessValidationPath =
@@ -123,6 +125,7 @@
   REQUIRE(std::filesystem::exists(semanticsExprArgumentValidationCollectionsPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionPredicatesPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionCountCapacityPath));
+  REQUIRE(std::filesystem::exists(semanticsExprCountCapacityMapBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionAccessPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionAccessValidationPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionDispatchSetupPath));
@@ -176,6 +179,8 @@
   const std::string semanticsExprCollectionPredicatesSource = readText(semanticsExprCollectionPredicatesPath);
   const std::string semanticsExprCollectionCountCapacitySource =
       readText(semanticsExprCollectionCountCapacityPath);
+  const std::string semanticsExprCountCapacityMapBuiltinsSource =
+      readText(semanticsExprCountCapacityMapBuiltinsPath);
   const std::string semanticsExprCollectionAccessSource =
       readText(semanticsExprCollectionAccessPath);
   const std::string semanticsExprCollectionAccessValidationSource =

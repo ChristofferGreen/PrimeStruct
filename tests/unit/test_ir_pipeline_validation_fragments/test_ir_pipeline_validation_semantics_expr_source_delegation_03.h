@@ -370,6 +370,19 @@
         std::string::npos);
   CHECK(semanticsExprCollectionPredicatesSource.find("error_ = errorPrefix + typeName;") !=
         std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "bool SemanticsValidator::validateExprCountCapacityMapBuiltins") !=
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "auto publishCountCapacityMapBuiltinDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find("captureExprContext(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "count requires map target") != std::string::npos);
   CHECK(semanticsExprCollectionAccessSource.find(
             "bool SemanticsValidator::resolveExprCollectionAccessTarget") !=
         std::string::npos);

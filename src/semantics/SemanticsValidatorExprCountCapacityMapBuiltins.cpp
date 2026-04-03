@@ -23,6 +23,11 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
   }
   auto it = defMap_.find(resolved);
 
+  auto publishCountCapacityMapBuiltinDiagnostic = [&]() -> bool {
+    captureExprContext(expr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
+
   const bool isDirectVectorCountWrapperCall =
       !expr.isMethodCall && !resolvedMethod &&
       (resolved.rfind("/std/collections/vectorCount", 0) == 0 ||
@@ -80,7 +85,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
         normalizeBindingTypeName(expr.templateArgs.front()) !=
             normalizeBindingTypeName(elemType)) {
       error_ = std::string(helperName) + " does not accept template arguments";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     return true;
   };
@@ -89,11 +94,11 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
         handledOut = true;
         if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
           error_ = std::string(helperName) + " does not accept block arguments";
-          return false;
+          return publishCountCapacityMapBuiltinDiagnostic();
         }
         if (expr.args.size() != 1) {
           error_ = "argument count mismatch for builtin " + std::string(helperName);
-          return false;
+          return publishCountCapacityMapBuiltinDiagnostic();
         }
         std::string elemType;
         if (!inferDirectVectorElementType(expr.args.front(), elemType)) {
@@ -101,14 +106,14 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
             return false;
           }
           error_ = std::string(helperName) + " requires vector target";
-          return false;
+          return publishCountCapacityMapBuiltinDiagnostic();
         }
         std::string expectedElemType;
         if (!expr.templateArgs.empty()) {
           if (expr.templateArgs.size() != 1) {
             error_ = "argument type mismatch for " + std::string(resolvedPath) +
                      " parameter values";
-            return false;
+            return publishCountCapacityMapBuiltinDiagnostic();
           }
           expectedElemType = expr.templateArgs.front();
         } else if (it != defMap_.end() && it->second != nullptr &&
@@ -136,7 +141,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
                 normalizeBindingTypeName(elemType)) {
           error_ = "argument type mismatch for " + std::string(resolvedPath) +
                    " parameter values";
-          return false;
+          return publishCountCapacityMapBuiltinDiagnostic();
         }
         return validateExpr(params, locals, expr.args.front());
       };
@@ -156,11 +161,11 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     handledOut = true;
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       error_ = "count does not accept block arguments";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     if (expr.args.size() != 1) {
       error_ = "argument count mismatch for builtin count";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     std::string elemType;
     if (!(*dispatchResolvers).resolveSoaVectorTarget(expr.args.front(),
@@ -169,7 +174,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
         return false;
       }
       error_ = "count requires soa_vector target";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     if (!validateSoaHelperReturnTemplateArgs(expr.args.front(), elemType, "count")) {
       return false;
@@ -208,15 +213,15 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
         !hasImportedDefinitionPath("/std/collections/map/count") &&
         !hasDeclaredDefinitionPath("/std/collections/map/count")) {
       error_ = "unknown call target: /std/collections/map/count";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       error_ = "count does not accept block arguments";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     if (expr.args.size() != 1) {
       error_ = "argument count mismatch for builtin count";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     if (logicalResolvedMethod == "/map/count" ||
         logicalResolvedMethod == "/std/collections/map/count") {
@@ -225,7 +230,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
           return false;
         }
         error_ = "count requires map target";
-        return false;
+        return publishCountCapacityMapBuiltinDiagnostic();
       }
     } else if (logicalResolvedMethod == "/soa_vector/count" ||
                logicalResolvedMethod == "/std/collections/soa_vector/count") {
@@ -242,14 +247,14 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
           return false;
         }
         error_ = "count requires soa_vector target";
-        return false;
+        return publishCountCapacityMapBuiltinDiagnostic();
       }
       if (!validateSoaHelperReturnTemplateArgs(expr.args.front(), elemType, "count")) {
         return false;
       }
     } else if (!expr.templateArgs.empty()) {
       error_ = "count does not accept template arguments";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     return validateExpr(params, locals, expr.args.front());
   }
@@ -265,26 +270,26 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
         !hasImportedDefinitionPath("/std/collections/map/count") &&
         !hasDeclaredDefinitionPath("/std/collections/map/count")) {
       error_ = "unknown call target: /std/collections/map/count";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     if (!expr.templateArgs.empty()) {
       error_ = "count does not accept template arguments";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       error_ = "count does not accept block arguments";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     if (expr.args.size() != 1) {
       error_ = "argument count mismatch for builtin count";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     if (!context.resolveMapTarget(expr.args.front())) {
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
       }
       error_ = "count requires map target";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     return validateExpr(params, locals, expr.args.front());
   }
@@ -365,15 +370,15 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
                                      1);
     if (!expr.templateArgs.empty()) {
       error_ = helperName + " does not accept template arguments";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       error_ = helperName + " does not accept block arguments";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     if (expr.args.size() != 2) {
       error_ = "argument count mismatch for builtin " + helperName;
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     const Expr &receiverExpr = expr.args.front();
     const Expr &keyExpr = expr.args[1];
@@ -383,13 +388,13 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
         return false;
       }
       error_ = helperName + " requires map target";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     if (!mapKeyType.empty()) {
       if (normalizeBindingTypeName(mapKeyType) == "string") {
         if (!isStringExprForArgumentValidation(keyExpr, *dispatchResolvers)) {
           setCanonicalMapKeyMismatch(receiverExpr, helperName, mapKeyType);
-          return false;
+          return publishCountCapacityMapBuiltinDiagnostic();
         }
       } else {
         ReturnKind keyKind =
@@ -398,14 +403,14 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
           if ((*dispatchResolvers).resolveStringTarget != nullptr &&
               (*dispatchResolvers).resolveStringTarget(keyExpr)) {
             setCanonicalMapKeyMismatch(receiverExpr, helperName, mapKeyType);
-            return false;
+            return publishCountCapacityMapBuiltinDiagnostic();
           }
           ReturnKind candidateKind =
               inferExprReturnKind(keyExpr, params, locals);
           if (candidateKind != ReturnKind::Unknown &&
               candidateKind != keyKind) {
             setCanonicalMapKeyMismatch(receiverExpr, helperName, mapKeyType);
-            return false;
+            return publishCountCapacityMapBuiltinDiagnostic();
           }
         }
       }
@@ -432,15 +437,15 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     }
     if (!expr.templateArgs.empty()) {
       error_ = "count does not accept template arguments";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       error_ = "count does not accept block arguments";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     if (expr.args.size() != 1) {
       error_ = "argument count mismatch for builtin count";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     return validateExpr(params, locals, expr.args.front());
   }
@@ -451,20 +456,20 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     handledOut = true;
     if (!expr.templateArgs.empty()) {
       error_ = "capacity does not accept template arguments";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       error_ = "capacity does not accept block arguments";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     if (expr.args.size() != 1) {
       error_ = "argument count mismatch for builtin capacity";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     std::string elemType;
     if (!context.resolveVectorTarget(expr.args.front(), elemType)) {
       error_ = "capacity requires vector target";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     return validateExpr(params, locals, expr.args.front());
   }
@@ -476,20 +481,20 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     handledOut = true;
     if (!expr.templateArgs.empty()) {
       error_ = "capacity does not accept template arguments";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       error_ = "capacity does not accept block arguments";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     if (expr.args.size() != 1) {
       error_ = "argument count mismatch for builtin capacity";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     std::string elemType;
     if (!context.resolveVectorTarget(expr.args.front(), elemType)) {
       error_ = "capacity requires vector target";
-      return false;
+      return publishCountCapacityMapBuiltinDiagnostic();
     }
     return validateExpr(params, locals, expr.args.front());
   }
