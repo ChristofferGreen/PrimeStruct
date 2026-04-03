@@ -448,12 +448,13 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   instructions.push_back({subOp, 0});
   instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(lastIndexLocal)});
 
+  const auto targetInfo = resolveArrayVectorAccessTargetInfo(target, localsIn);
+  const std::string removedStructPath = targetInfo.structTypeName;
+  const Definition *destroyHelper = removedStructPath.empty()
+                                        ? nullptr
+                                        : resolveDestroyHelperForStruct(removedStructPath);
+
   if (vectorHelper == "remove_swap") {
-    const auto targetInfo = resolveArrayVectorAccessTargetInfo(target, localsIn);
-    const std::string removedStructPath = targetInfo.structTypeName;
-    const Definition *destroyHelper = removedStructPath.empty()
-                                          ? nullptr
-                                          : resolveDestroyHelperForStruct(removedStructPath);
     const int32_t dataPtrLocal = allocTempLocal();
     emitLoadVectorDataPtr(dataPtrLocal);
     const int32_t destPtrLocal = allocTempLocal();
@@ -540,6 +541,19 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   const int32_t tempValueLocal = allocTempLocal();
   const int32_t dataPtrLocal = allocTempLocal();
   emitLoadVectorDataPtr(dataPtrLocal);
+
+  if (!emitVectorDestroySlot(instructions,
+                             dataPtrLocal,
+                             indexLocal,
+                             indexKind,
+                             removedStructPath,
+                             destroyHelper,
+                             localsIn,
+                             allocTempLocal,
+                             emitInlineDefinitionCall,
+                             error)) {
+    return VectorStatementHelperEmitResult::Error;
+  }
 
   const size_t loopStart = instructions.size();
   instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
