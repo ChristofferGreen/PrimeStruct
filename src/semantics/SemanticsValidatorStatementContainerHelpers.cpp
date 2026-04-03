@@ -215,8 +215,10 @@ bool SemanticsValidator::validateVectorIndexedRemovalHelperElementType(
     const std::string &namespacePrefix,
     const std::vector<std::string> *definitionTemplateArgs) {
   auto failContainerHelperDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return false;
+    if (currentDefinitionContext_ != nullptr) {
+      return failDefinitionDiagnostic(*currentDefinitionContext_, std::move(message));
+    }
+    return failUncontextualizedDiagnostic(std::move(message));
   };
   std::string experimentalElemType;
   if (!extractExperimentalVectorElementType(binding, experimentalElemType) &&
@@ -243,8 +245,10 @@ bool SemanticsValidator::validateVectorRelocationHelperElementType(
     const std::string &namespacePrefix,
     const std::vector<std::string> *definitionTemplateArgs) {
   auto failContainerHelperDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return false;
+    if (currentDefinitionContext_ != nullptr) {
+      return failDefinitionDiagnostic(*currentDefinitionContext_, std::move(message));
+    }
+    return failUncontextualizedDiagnostic(std::move(message));
   };
   std::string experimentalElemType;
   if (extractExperimentalVectorElementType(binding, experimentalElemType)) {

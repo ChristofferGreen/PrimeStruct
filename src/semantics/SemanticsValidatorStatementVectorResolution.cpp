@@ -188,9 +188,7 @@ bool SemanticsValidator::validateVectorStatementElementType(
     const Expr &arg,
     const std::string &typeName) {
   auto failVectorElementDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    captureExprContext(arg);
-    return publishCurrentStructuredDiagnosticNow();
+    return failExprDiagnostic(arg, std::move(message));
   };
   if (typeName.empty()) {
     return failVectorElementDiagnostic("push requires vector element type");
@@ -236,9 +234,7 @@ bool SemanticsValidator::validateVectorStatementHelperTarget(
     const char *helperName,
     BindingInfo &bindingOut) {
   auto failVectorTargetDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    captureExprContext(target);
-    return publishCurrentStructuredDiagnosticNow();
+    return failExprDiagnostic(target, std::move(message));
   };
   const std::string helper = helperName == nullptr ? "" : std::string(helperName);
   const bool allowSoaVectorTarget = helper == "push" || helper == "reserve";
@@ -423,9 +419,7 @@ bool SemanticsValidator::validateVectorStatementHelperReceiver(
     const Expr &receiver,
     const std::string &helperName) {
   auto failVectorReceiverDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    captureExprContext(receiver);
-    return publishCurrentStructuredDiagnosticNow();
+    return failExprDiagnostic(receiver, std::move(message));
   };
   if (!validateExpr(params, locals, receiver)) {
     return false;

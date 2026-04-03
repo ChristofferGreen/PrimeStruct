@@ -16,8 +16,10 @@ bool SemanticsValidator::publishPassesStructLayoutsDiagnostic() {
 
 bool SemanticsValidator::validateStructLayouts() {
   auto failPassesStructLayoutsDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishPassesStructLayoutsDiagnostic();
+    if (currentDefinitionContext_ != nullptr) {
+      return failDefinitionDiagnostic(*currentDefinitionContext_, std::move(message));
+    }
+    return failUncontextualizedDiagnostic(std::move(message));
   };
   struct LayoutInfo {
     uint32_t sizeBytes = 0;

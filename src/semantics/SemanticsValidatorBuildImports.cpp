@@ -10,15 +10,11 @@ bool SemanticsValidator::buildImportAliases() {
   importAliases_.clear();
   std::vector<SemanticDiagnosticRecord> importDiagnosticRecords;
   const bool collectImportDiagnostics = shouldCollectStructuredDiagnostics();
-  auto publishImportDiagnostic = [&](const Definition *relatedDef = nullptr) -> bool {
-    if (relatedDef != nullptr) {
-      captureDefinitionContext(*relatedDef);
-    }
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failImportDiagnostic = [&](std::string message, const Definition *relatedDef = nullptr) -> bool {
-    error_ = std::move(message);
-    return publishImportDiagnostic(relatedDef);
+    if (relatedDef != nullptr) {
+      return failDefinitionDiagnostic(*relatedDef, std::move(message));
+    }
+    return failUncontextualizedDiagnostic(std::move(message));
   };
 
   auto addImportDiagnostic = [&](const std::string &message, const Definition *relatedDef = nullptr) {

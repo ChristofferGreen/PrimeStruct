@@ -45,13 +45,10 @@
   CHECK(semanticsExprSource.find("auto publishCollectionDispatchDiagnostic = [&]() -> bool {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "auto publishCollectionDispatchDiagnostic = [&]() -> bool {") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "auto failCollectionDispatchDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "error_ = std::move(message);") !=
+            "return failExprDiagnostic(expr, std::move(message));") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "auto publishCollectionCountCapacityDiagnostic = [&]() -> bool {") ==
@@ -66,7 +63,7 @@
             "auto publishPreDispatchDirectCallDiagnostic = [&]() -> bool {") ==
         std::string::npos);
   CHECK(semanticsExprPreDispatchDirectCallsSource.find(
-            "auto publishPreDispatchDirectCallDiagnostic = [&]() -> bool {") !=
+            "return failExprDiagnostic(expr, std::move(message));") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "auto publishPostAccessPrecheckDiagnostic = [&]() -> bool {") ==
@@ -304,8 +301,6 @@
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprPredicates.h\"") == std::string::npos);
   CHECK(semanticsExprSource.find("#include \"SemanticsValidatorExprValidation.h\"") == std::string::npos);
   CHECK(semanticsExprBlockSource.find("bool SemanticsValidator::validateBlockExpr") != std::string::npos);
-  CHECK(semanticsExprBlockSource.find("auto publishBlockDiagnostic = [&](const Expr &diagnosticExpr) -> bool {") !=
-        std::string::npos);
   CHECK(semanticsExprBlockSource.find(
             "auto failBlockDiagnostic = [&](const Expr &diagnosticExpr,") !=
         std::string::npos);
@@ -428,7 +423,7 @@
             "bool SemanticsValidator::validateCollectionElementType") !=
         std::string::npos);
   CHECK(semanticsExprCollectionPredicatesSource.find(
-            "auto publishCollectionPredicateDiagnostic = [&]() -> bool {") !=
+            "return failExprDiagnostic(arg, std::move(message));") !=
         std::string::npos);
   CHECK(semanticsExprCollectionPredicatesSource.find(
             "auto failCollectionPredicateDiagnostic =\n"
@@ -695,18 +690,10 @@
             "bool SemanticsValidator::validateExprResolvedCallArguments") !=
         std::string::npos);
   CHECK(semanticsExprResolvedCallArgumentsSource.find(
-            "auto publishResolvedCallArgumentDiagnostic = [&]() -> bool {") !=
-        std::string::npos);
-  CHECK(semanticsExprResolvedCallArgumentsSource.find(
             "auto failResolvedCallArgumentDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
-  CHECK(semanticsExprResolvedCallArgumentsSource.find("captureExprContext(expr);") !=
-        std::string::npos);
   CHECK(semanticsExprResolvedCallArgumentsSource.find(
-            "return publishCurrentStructuredDiagnosticNow();") !=
-        std::string::npos);
-  CHECK(semanticsExprResolvedCallArgumentsSource.find(
-            "error_ = std::move(message);") !=
+            "return failExprDiagnostic(expr, std::move(message));") !=
         std::string::npos);
   CHECK(semanticsExprResolvedCallArgumentsSource.find(
             "const std::vector<Expr> *orderedCallArgs = &expr.args;") !=

@@ -7,14 +7,9 @@ namespace primec::semantics {
 bool SemanticsValidator::validateBlockExpr(const std::vector<ParameterInfo> &params,
                                            const std::unordered_map<std::string, BindingInfo> &locals,
                                            const Expr &expr) {
-  auto publishBlockDiagnostic = [&](const Expr &diagnosticExpr) -> bool {
-    captureExprContext(diagnosticExpr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failBlockDiagnostic = [&](const Expr &diagnosticExpr,
                                  std::string message) -> bool {
-    error_ = std::move(message);
-    return publishBlockDiagnostic(diagnosticExpr);
+    return failExprDiagnostic(diagnosticExpr, std::move(message));
   };
   if (!expr.args.empty() || !expr.templateArgs.empty() || hasNamedArguments(expr.argNames)) {
     return failBlockDiagnostic(expr, "block expression does not accept arguments");

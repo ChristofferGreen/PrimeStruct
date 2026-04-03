@@ -39,13 +39,8 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
       context.diagnosticResolved == nullptr) {
     return true;
   }
-  auto publishResolvedCallArgumentDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failResolvedCallArgumentDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishResolvedCallArgumentDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
 
   Expr reorderedCallExpr;
@@ -85,7 +80,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
       return failResolvedCallArgumentDiagnostic("argument count mismatch for " +
                                                 *context.diagnosticResolved);
     }
-    return publishResolvedCallArgumentDiagnostic();
+    return false;
   }
 
   std::vector<const Expr *> orderedArgs;

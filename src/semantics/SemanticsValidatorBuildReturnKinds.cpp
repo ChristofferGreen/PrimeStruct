@@ -121,13 +121,8 @@ bool SemanticsValidator::buildDefinitionReturnKinds(const std::unordered_set<std
   const bool collectReturnKindDiagnostics = shouldCollectStructuredDiagnostics();
   for (const auto &def : program_.definitions) {
     DefinitionContextScope definitionScope(*this, def);
-    auto publishReturnKindDiagnostic = [&]() -> bool {
-      captureDefinitionContext(def);
-      return publishCurrentStructuredDiagnosticNow();
-    };
     auto failReturnKindDiagnostic = [&](std::string message) -> bool {
-      error_ = std::move(message);
-      return publishReturnKindDiagnostic();
+      return failDefinitionDiagnostic(def, std::move(message));
     };
     auto addReturnKindDiagnostic = [&](const std::string &message) -> bool {
       if (!collectReturnKindDiagnostics) {

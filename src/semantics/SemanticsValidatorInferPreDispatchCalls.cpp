@@ -45,7 +45,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
     return kind;
   };
   auto failInferPreDispatchDiagnostic = [&](std::string message) -> ReturnKind {
-    error_ = std::move(message);
+    (void)failExprDiagnostic(expr, std::move(message));
     return finish(ReturnKind::Unknown);
   };
 

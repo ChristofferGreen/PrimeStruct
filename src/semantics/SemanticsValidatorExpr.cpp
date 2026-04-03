@@ -23,8 +23,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     return publishCurrentStructuredDiagnosticNow();
   };
   auto failExprRootDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishExprRootDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
   if (expr.isLambda) {
     return validateLambdaExpr(params, locals, expr, enclosingStatements, statementIndex);

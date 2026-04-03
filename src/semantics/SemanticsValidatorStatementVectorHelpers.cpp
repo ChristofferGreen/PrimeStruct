@@ -140,8 +140,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     return publishCurrentStructuredDiagnosticNow();
   };
   auto failStatementDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishStatementDiagnostic();
+    return failExprDiagnostic(stmt, std::move(message));
   };
   auto publishExistingStatementDiagnostic = [&]() -> bool {
     if (error_.empty()) {

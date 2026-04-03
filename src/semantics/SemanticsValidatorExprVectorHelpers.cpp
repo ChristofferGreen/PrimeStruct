@@ -375,13 +375,8 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
                                                      bool &hasResolutionOut,
                                                      std::string &resolvedPathOut,
                                                      size_t &receiverIndexOut) {
-  auto publishVectorHelperDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failVectorHelperDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishVectorHelperDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
   hasResolutionOut = false;
   resolvedPathOut.clear();

@@ -11,13 +11,8 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
     std::string &resolved,
     ExprCollectionDispatchSetup &setupOut) {
   setupOut = {};
-  auto publishCollectionDispatchDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failCollectionDispatchDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishCollectionDispatchDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
 
   std::string accessHelperName;

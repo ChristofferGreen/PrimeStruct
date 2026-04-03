@@ -45,13 +45,8 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
   rewrittenExprOut.reset();
   handledOut = false;
   resolvedOut = resolveCalleePath(expr);
-  auto publishPreDispatchDirectCallDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failPreDispatchDirectCallDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishPreDispatchDirectCallDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
   auto failPreDispatchDirectCallMapKeyMismatch =
       [&](const std::string &helperName, const std::string &mapKeyType) {

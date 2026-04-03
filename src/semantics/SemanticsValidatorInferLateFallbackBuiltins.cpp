@@ -33,7 +33,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
     return kind;
   };
   auto failInferLateFallbackDiagnostic = [&](std::string message) -> ReturnKind {
-    error_ = std::move(message);
+    (void)failExprDiagnostic(expr, std::move(message));
     return finish(ReturnKind::Unknown);
   };
 

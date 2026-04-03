@@ -8,7 +8,7 @@ bool SemanticsValidator::resolveBuiltinCollectionCountCapacityReturnKind(
     ReturnKind &kindOut) {
   kindOut = ReturnKind::Unknown;
   auto failInferCountCapacityDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
+    (void)failExprDiagnostic(callExpr, std::move(message));
     return false;
   };
   if (callExpr.isMethodCall || callExpr.args.empty()) {

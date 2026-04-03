@@ -8,8 +8,7 @@ namespace primec::semantics {
 
 bool SemanticsValidator::buildDefinitionMaps() {
   auto failBuildDefinitionMapDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishCurrentStructuredDiagnosticNow();
+    return failUncontextualizedDiagnostic(std::move(message));
   };
   defaultEffectSet_.clear();
   entryDefaultEffectSet_.clear();

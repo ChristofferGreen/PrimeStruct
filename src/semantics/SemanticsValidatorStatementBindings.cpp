@@ -30,13 +30,8 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   }
 
   handled = true;
-  auto publishBindingDiagnostic = [&]() -> bool {
-    captureExprContext(stmt);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failBindingDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishBindingDiagnostic();
+    return failExprDiagnostic(stmt, std::move(message));
   };
   const std::vector<std::string> *definitionTemplateArgs = nullptr;
   auto currentDefIt = defMap_.find(currentValidationContext_.definitionPath);

@@ -27,7 +27,7 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
 
   auto addTransformDiagnostic = [&](const std::string &message) -> bool {
     if (!collectTransformDiagnostics) {
-      error_ = message;
+      (void)failDefinitionDiagnostic(def, message);
       return true;
     }
     SemanticDiagnosticRecord record;

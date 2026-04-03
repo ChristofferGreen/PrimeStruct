@@ -41,13 +41,8 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
                                                         size_t statementIndex,
                                                         bool &handled) {
   handled = false;
-  auto publishStatementDiagnostic = [&]() -> bool {
-    captureExprContext(stmt);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failStatementDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishStatementDiagnostic();
+    return failExprDiagnostic(stmt, std::move(message));
   };
   if (!(stmt.hasBodyArguments || !stmt.bodyArguments.empty()) || isBuiltinBlockCall(stmt) || stmt.isLambda) {
     return true;

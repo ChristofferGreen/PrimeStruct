@@ -22,8 +22,13 @@ bool SemanticsValidator::validateDefinitions() {
   auto validateDefinition = [&](const Definition &def) -> bool {
     auto failPassesDefinitionsDiagnostic =
         [&](const Expr *expr, std::string message) -> bool {
-      error_ = std::move(message);
-      return publishPassesDefinitionsDiagnostic(expr);
+      if (expr != nullptr) {
+        return failExprDiagnostic(*expr, std::move(message));
+      }
+      if (currentDefinitionContext_ != nullptr) {
+        return failDefinitionDiagnostic(*currentDefinitionContext_, std::move(message));
+      }
+      return failUncontextualizedDiagnostic(std::move(message));
     };
     DefinitionContextScope definitionScope(*this, def);
     ValidationContextScope validationContextScope(*this, buildDefinitionValidationContext(def));

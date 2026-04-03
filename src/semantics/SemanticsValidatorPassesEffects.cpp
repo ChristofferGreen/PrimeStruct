@@ -46,8 +46,13 @@ std::unordered_set<std::string> SemanticsValidator::resolveEffects(const std::ve
 bool SemanticsValidator::validateCapabilitiesSubset(const std::vector<Transform> &transforms,
                                                     const std::string &context) {
   auto failPassesEffectsDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishPassesEffectsDiagnostic();
+    if (currentExecutionContext_ != nullptr) {
+      return failExecutionDiagnostic(*currentExecutionContext_, std::move(message));
+    }
+    if (currentDefinitionContext_ != nullptr) {
+      return failDefinitionDiagnostic(*currentDefinitionContext_, std::move(message));
+    }
+    return failUncontextualizedDiagnostic(std::move(message));
   };
   bool sawCapabilities = false;
   std::unordered_set<std::string> capabilities;
@@ -74,8 +79,7 @@ bool SemanticsValidator::validateCapabilitiesSubset(const std::vector<Transform>
 
 bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordered_set<std::string> &effectsOut) {
   auto failPassesEffectsDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishPassesEffectsDiagnostic(&expr);
+    return failExprDiagnostic(expr, std::move(message));
   };
   effectsOut = currentValidationContext_.activeEffects;
   bool sawEffects = false;

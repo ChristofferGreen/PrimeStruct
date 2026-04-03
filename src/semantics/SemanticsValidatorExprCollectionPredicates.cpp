@@ -254,14 +254,9 @@ bool SemanticsValidator::validateCollectionElementType(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
     const BuiltinCollectionDispatchResolvers &dispatchResolvers) {
-  auto publishCollectionPredicateDiagnostic = [&]() -> bool {
-    captureExprContext(arg);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failCollectionPredicateDiagnostic =
       [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishCollectionPredicateDiagnostic();
+    return failExprDiagnostic(arg, std::move(message));
   };
   const std::string normalizedType = normalizeBindingTypeName(typeName);
   if (normalizedType == "string") {

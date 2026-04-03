@@ -19,7 +19,7 @@ ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKi
   handled = true;
   auto failInferDirectCountCapacityDiagnostic =
       [&](std::string message) -> ReturnKind {
-    error_ = std::move(message);
+    (void)failExprDiagnostic(expr, std::move(message));
     return ReturnKind::Unknown;
   };
   const auto inferHelperReturnKind = [&](const std::string &helperName,

@@ -333,6 +333,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferCollectionDirectCountCapacitySource.find(
             "auto failInferDirectCountCapacityDiagnostic =") !=
         std::string::npos);
+  CHECK(semanticsInferCollectionDirectCountCapacitySource.find(
+            "(void)failExprDiagnostic(expr, std::move(message));") !=
+        std::string::npos);
   CHECK(semanticsInferCollectionDirectCountCapacitySource.find("const auto inferHelperReturnKind = [&](const std::string &helperName,") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDirectCountCapacitySource.find("if (context.isDirectCountCall)") != std::string::npos);
@@ -361,6 +364,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferLateFallbackBuiltinsSource.find(
             "auto failInferLateFallbackDiagnostic = [&](std::string message) -> ReturnKind {") !=
         std::string::npos);
+  CHECK(semanticsInferLateFallbackBuiltinsSource.find(
+            "(void)failExprDiagnostic(expr, std::move(message));") !=
+        std::string::npos);
   CHECK(semanticsInferLateFallbackBuiltinsSource.find("const bool isBuiltinGet = isSimpleCallName(expr, \"get\");") !=
         std::string::npos);
   CHECK(semanticsInferLateFallbackBuiltinsSource.find(
@@ -380,6 +386,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find(
             "auto failInferPreDispatchDiagnostic = [&](std::string message) -> ReturnKind {") !=
+        std::string::npos);
+  CHECK(semanticsInferPreDispatchCallsSource.find(
+            "(void)failExprDiagnostic(expr, std::move(message));") !=
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find("std::function<ReturnKind(const Expr &)> pointerTargetKind =") !=
         std::string::npos);
@@ -411,6 +420,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferResolvedCallsSource.find(
             "auto failInferResolvedCallDiagnostic = [&](std::string message) -> ReturnKind {") !=
+        std::string::npos);
+  CHECK(semanticsInferResolvedCallsSource.find(
+            "(void)failExprDiagnostic(expr, std::move(message));") !=
         std::string::npos);
   CHECK(semanticsInferResolvedCallsSource.find(
             "auto isTypeNamespaceMethodCall = [&](const Expr &callExpr,") !=
@@ -581,9 +593,13 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsPassesEffectsSource.find("bool SemanticsValidator::resolveExecutionEffects(") !=
         std::string::npos);
-  CHECK(semanticsPassesEffectsSource.find("return publishPassesEffectsDiagnostic(&expr);") !=
+  CHECK(semanticsPassesEffectsSource.find("return failExprDiagnostic(expr, std::move(message));") !=
         std::string::npos);
-  CHECK(semanticsPassesEffectsSource.find("return publishPassesEffectsDiagnostic();") !=
+  CHECK(semanticsPassesEffectsSource.find(
+            "return failExecutionDiagnostic(*currentExecutionContext_, std::move(message));") !=
+        std::string::npos);
+  CHECK(semanticsPassesEffectsSource.find(
+            "return failDefinitionDiagnostic(*currentDefinitionContext_, std::move(message));") !=
         std::string::npos);
   CHECK(semanticsPassesDefinitionsSource.find(
             "bool SemanticsValidator::publishPassesDefinitionsDiagnostic(") !=
@@ -592,10 +608,13 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
             "auto failPassesDefinitionsDiagnostic =") !=
         std::string::npos);
   CHECK(semanticsPassesDefinitionsSource.find(
-            "return publishPassesDefinitionsDiagnostic();") !=
+            "return failUncontextualizedDiagnostic(std::move(message));") !=
         std::string::npos);
   CHECK(semanticsPassesDefinitionsSource.find(
-            "return publishPassesDefinitionsDiagnostic(&stmt);") !=
+            "return failExprDiagnostic(*expr, std::move(message));") !=
+        std::string::npos);
+  CHECK(semanticsPassesDefinitionsSource.find(
+            "return failDefinitionDiagnostic(*currentDefinitionContext_, std::move(message));") !=
         std::string::npos);
   CHECK(semanticsPassesDefinitionsSource.find(
             "rememberFirstCollectedDiagnosticMessage(intraDefinitionRecords.front().message);") !=
@@ -619,7 +638,7 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
             "auto failPassesStructLayoutsDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
   CHECK(semanticsPassesStructLayoutsSource.find(
-            "return publishPassesStructLayoutsDiagnostic();") !=
+            "return failDefinitionDiagnostic(*currentDefinitionContext_, std::move(message));") !=
         std::string::npos);
   CHECK(semanticsTraitsSource.find(
             "auto failTraitDiagnostic = [&](const Definition &defContext,") !=
@@ -832,15 +851,14 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
   CHECK(semanticsStatementVectorResolutionSource.find(
             "auto failVectorReceiverDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find("captureExprContext(receiver);") !=
+  CHECK(semanticsStatementVectorResolutionSource.find(
+            "return failExprDiagnostic(receiver, std::move(message));") !=
         std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find("captureExprContext(arg);") !=
+  CHECK(semanticsStatementVectorResolutionSource.find(
+            "return failExprDiagnostic(arg, std::move(message));") !=
         std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find("captureExprContext(target);") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find("return publishCurrentStructuredDiagnosticNow();") !=
-        std::string::npos);
-  CHECK(semanticsStatementVectorResolutionSource.find("error_ = std::move(message);") !=
+  CHECK(semanticsStatementVectorResolutionSource.find(
+            "return failExprDiagnostic(target, std::move(message));") !=
         std::string::npos);
   CHECK(semanticsStatementReturnsSource.find(
             "auto publishReturnDiagnostic = [&]() -> bool {") !=
@@ -971,9 +989,6 @@ TEST_CASE("semantics validator build return-kind publication stays stable") {
             "bool SemanticsValidator::buildDefinitionReturnKinds(") !=
         std::string::npos);
   CHECK(buildReturnKindsSource.find(
-            "auto publishReturnKindDiagnostic = [&]() -> bool {") !=
-        std::string::npos);
-  CHECK(buildReturnKindsSource.find(
             "auto failReturnKindDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
   CHECK(buildReturnKindsSource.find(
@@ -982,9 +997,8 @@ TEST_CASE("semantics validator build return-kind publication stays stable") {
   CHECK(buildReturnKindsSource.find(
             "rememberFirstCollectedDiagnosticMessage(message);") !=
         std::string::npos);
-  CHECK(buildReturnKindsSource.find("captureDefinitionContext(def);") !=
-        std::string::npos);
-  CHECK(buildReturnKindsSource.find("return publishCurrentStructuredDiagnosticNow();") !=
+  CHECK(buildReturnKindsSource.find(
+            "return failDefinitionDiagnostic(def, std::move(message));") !=
         std::string::npos);
   CHECK(buildReturnKindsSource.find(
             "soa_vector return type requires struct element type on ") !=
@@ -1015,15 +1029,18 @@ TEST_CASE("semantics validator build import publication stays stable") {
   CHECK(buildImportsSource.find("bool SemanticsValidator::buildImportAliases()") !=
         std::string::npos);
   CHECK(buildImportsSource.find(
-            "auto publishImportDiagnostic = [&](const Definition *relatedDef = nullptr) -> bool {") !=
-        std::string::npos);
-  CHECK(buildImportsSource.find(
             "auto failImportDiagnostic = [&](std::string message, const Definition *relatedDef = nullptr) -> bool {") !=
         std::string::npos);
   CHECK(buildImportsSource.find(
             "auto addImportDiagnostic = [&](const std::string &message, const Definition *relatedDef = nullptr) {") !=
         std::string::npos);
   CHECK(buildImportsSource.find("return failImportDiagnostic(message, relatedDef);") !=
+        std::string::npos);
+  CHECK(buildImportsSource.find(
+            "return failDefinitionDiagnostic(*relatedDef, std::move(message));") !=
+        std::string::npos);
+  CHECK(buildImportsSource.find(
+            "return failUncontextualizedDiagnostic(std::move(message));") !=
         std::string::npos);
   CHECK(buildImportsSource.find("rememberFirstCollectedDiagnosticMessage(message);") !=
         std::string::npos);

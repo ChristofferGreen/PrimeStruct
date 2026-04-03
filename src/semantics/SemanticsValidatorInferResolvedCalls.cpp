@@ -25,7 +25,7 @@ ReturnKind SemanticsValidator::inferResolvedCallReturnKind(
 
   handled = true;
   auto failInferResolvedCallDiagnostic = [&](std::string message) -> ReturnKind {
-    error_ = std::move(message);
+    (void)failExprDiagnostic(expr, std::move(message));
     return ReturnKind::Unknown;
   };
   if (inferCollectionDispatchSetup.hasPreferredBuiltinAccessKind &&

@@ -10,13 +10,8 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
     const Expr &expr,
     const ExprLateUnknownTargetFallbackContext &context,
     bool &handledOut) {
-  auto publishLateUnknownTargetDiagnostic = [&]() -> bool {
-    captureExprContext(expr);
-    return publishCurrentStructuredDiagnosticNow();
-  };
   auto failLateUnknownTargetDiagnostic = [&](std::string message) -> bool {
-    error_ = std::move(message);
-    return publishLateUnknownTargetDiagnostic();
+    return failExprDiagnostic(expr, std::move(message));
   };
   handledOut = false;
   if (context.resolveMapTarget != nullptr && expr.isMethodCall &&

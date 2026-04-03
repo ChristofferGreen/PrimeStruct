@@ -12,11 +12,10 @@ namespace primec::semantics {
 
 bool SemanticsValidator::validateEntry() {
   auto failEntryDiagnostic = [&](std::string message, const Definition *def = nullptr) -> bool {
-    error_ = std::move(message);
     if (def != nullptr) {
-      captureDefinitionContext(*def);
+      return failDefinitionDiagnostic(*def, std::move(message));
     }
-    return publishCurrentStructuredDiagnosticNow();
+    return failUncontextualizedDiagnostic(std::move(message));
   };
   auto entryIt = defMap_.find(entryPath_);
   if (entryIt == defMap_.end()) {
