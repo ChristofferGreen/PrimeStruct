@@ -72,6 +72,14 @@
         std::string::npos);
   CHECK(semanticsExprSource.find("return validateExprFieldAccess(params, locals, expr);") !=
         std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "auto publishExprRootDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "entry argument strings are only supported in print calls or string bindings") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("unknown identifier: ") !=
+        std::string::npos);
   CHECK(semanticsExprSource.find("field access requires a receiver") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("if (resolveMapTargetWithTypes(target, keyType, valueType) ||") ==
@@ -646,6 +654,20 @@
         std::string::npos);
   CHECK(semanticsExprGpuBufferSource.find(
             "dispatch requires kernel and three dimension arguments") !=
+        std::string::npos);
+  CHECK(semanticsExprNumericSource.find(
+            "bool SemanticsValidator::validateNumericBuiltinExpr") !=
+        std::string::npos);
+  CHECK(semanticsExprNumericSource.find(
+            "auto publishNumericDiagnostic = [&]() -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsExprNumericSource.find("captureExprContext(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprNumericSource.find(
+            "return publishCurrentStructuredDiagnosticNow();") !=
+        std::string::npos);
+  CHECK(semanticsExprNumericSource.find(
+            "argument count mismatch for builtin ") !=
         std::string::npos);
   CHECK(semanticsExprScalarPointerMemorySource.find(
             "bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins") !=

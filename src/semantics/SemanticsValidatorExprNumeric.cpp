@@ -14,6 +14,10 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
                                                     const Expr &expr,
                                                     bool &handled) {
   handled = false;
+  auto publishNumericDiagnostic = [&]() -> bool {
+    captureExprContext(expr);
+    return publishCurrentStructuredDiagnosticNow();
+  };
 
   auto numericInfoForKind = [](ReturnKind kind) -> NumericInfo {
     switch (kind) {
@@ -324,7 +328,7 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
     size_t expectedArgs = builtinName == "negate" ? 1 : 2;
     if (expr.args.size() != expectedArgs) {
       error_ = "argument count mismatch for builtin " + builtinName;
-      return false;
+      return publishNumericDiagnostic();
     }
     const bool isPlusMinus = builtinName == "plus" || builtinName == "minus";
     bool leftPointer = false;
@@ -336,31 +340,31 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
     if (isPlusMinus && expr.args.size() == 2 && (leftPointer || rightPointer)) {
       if (leftPointer && rightPointer) {
         error_ = "pointer arithmetic does not support pointer + pointer";
-        return false;
+        return publishNumericDiagnostic();
       }
       if (rightPointer) {
         error_ = "pointer arithmetic requires pointer on the left";
-        return false;
+        return publishNumericDiagnostic();
       }
       const Expr &offsetExpr = expr.args[1];
       ReturnKind offsetKind = inferExprReturnKind(offsetExpr, params, locals);
       if (offsetKind != ReturnKind::Unknown && offsetKind != ReturnKind::Int && offsetKind != ReturnKind::Int64 &&
           offsetKind != ReturnKind::UInt64) {
         error_ = "pointer arithmetic requires integer offset";
-        return false;
+        return publishNumericDiagnostic();
       }
     } else if (leftPointer || rightPointer) {
       error_ = "arithmetic operators require numeric operands in " + currentValidationContext_.definitionPath;
-      return false;
+      return publishNumericDiagnostic();
     }
     if (builtinName == "negate") {
       if (!isNumericExpr(params, locals, expr.args.front())) {
         error_ = "arithmetic operators require numeric operands in " + currentValidationContext_.definitionPath;
-        return false;
+        return publishNumericDiagnostic();
       }
       if (isUnsignedExpr(expr.args.front())) {
         error_ = "negate does not support unsigned operands";
-        return false;
+        return publishNumericDiagnostic();
       }
       return validateArgs();
     }
@@ -372,7 +376,7 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
         if (!leftMathType.empty() || !rightMathType.empty()) {
           if (leftMathType.empty() || rightMathType.empty() || leftMathType != rightMathType) {
             error_ = builtinName + " requires matching matrix/quaternion operand types";
-            return false;
+            return publishNumericDiagnostic();
           }
           useMatrixQuaternionShapeRules = true;
         }
@@ -386,7 +390,7 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
           if (!multiplyInfo.valid) {
             error_ =
                 "multiply requires scalar scaling, matrix-vector, matrix-matrix, quaternion-quaternion, or quaternion-Vec3 operands";
-            return false;
+            return publishNumericDiagnostic();
           }
           return validateArgs();
         }
@@ -396,34 +400,34 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
         if (divideInfo.handled) {
           if (!divideInfo.valid) {
             error_ = "divide requires matrix/quaternion composite-by-scalar operands";
-            return false;
+            return publishNumericDiagnostic();
           }
           return validateArgs();
         }
       }
       if (!isNumericExpr(params, locals, expr.args[0]) || !isNumericExpr(params, locals, expr.args[1])) {
         error_ = "arithmetic operators require numeric operands in " + currentValidationContext_.definitionPath;
-        return false;
+        return publishNumericDiagnostic();
       }
       if (hasMixedNumericDomain(expr.args)) {
         error_ = "arithmetic operators do not support mixed software/fixed numeric operands";
-        return false;
+        return publishNumericDiagnostic();
       }
       if (hasMixedComplexNumeric(expr.args)) {
         error_ = "arithmetic operators do not support mixed complex/real operands";
-        return false;
+        return publishNumericDiagnostic();
       }
       if (hasMixedSignedness(expr.args, false)) {
         error_ = "arithmetic operators do not support mixed signed/unsigned operands";
-        return false;
+        return publishNumericDiagnostic();
       }
       if (hasMixedNumericCategory(expr.args)) {
         error_ = "arithmetic operators do not support mixed int/float operands";
-        return false;
+        return publishNumericDiagnostic();
       }
     } else if (leftPointer && !isNumericExpr(params, locals, expr.args[1])) {
       error_ = "arithmetic operators require numeric operands in " + currentValidationContext_.definitionPath;
-      return false;
+      return publishNumericDiagnostic();
     }
     return validateArgs();
   }
@@ -433,14 +437,14 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
     size_t expectedArgs = builtinName == "not" ? 1 : 2;
     if (expr.args.size() != expectedArgs) {
       error_ = "argument count mismatch for builtin " + builtinName;
-      return false;
+      return publishNumericDiagnostic();
     }
     const bool isBooleanOp = builtinName == "and" || builtinName == "or" || builtinName == "not";
     if (isBooleanOp) {
       for (const auto &arg : expr.args) {
         if (!isBoolExpr(arg)) {
           error_ = "boolean operators require bool operands";
-          return false;
+          return publishNumericDiagnostic();
         }
       }
     } else {
@@ -456,34 +460,34 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
       if (sawString) {
         if (sawNonString) {
           error_ = "comparisons do not support mixed string/numeric operands";
-          return false;
+          return publishNumericDiagnostic();
         }
       } else {
         for (const auto &arg : expr.args) {
           if (!isComparisonOperand(params, locals, arg)) {
             error_ = "comparisons require numeric, bool, or string operands";
-            return false;
+            return publishNumericDiagnostic();
           }
         }
         if (hasMixedNumericDomain(expr.args)) {
           error_ = "comparisons do not support mixed software/fixed numeric operands";
-          return false;
+          return publishNumericDiagnostic();
         }
         if (hasMixedComplexNumeric(expr.args)) {
           error_ = "comparisons do not support mixed complex/real operands";
-          return false;
+          return publishNumericDiagnostic();
         }
         if (builtinName != "equal" && builtinName != "not_equal" && hasComplexNumeric(expr.args)) {
           error_ = "comparisons do not support ordered complex operands";
-          return false;
+          return publishNumericDiagnostic();
         }
         if (hasMixedSignedness(expr.args, true)) {
           error_ = "comparisons do not support mixed signed/unsigned operands";
-          return false;
+          return publishNumericDiagnostic();
         }
         if (hasMixedNumericCategory(expr.args)) {
           error_ = "comparisons do not support mixed int/float operands";
-          return false;
+          return publishNumericDiagnostic();
         }
       }
     }
@@ -494,29 +498,29 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
     handled = true;
     if (expr.args.size() != 3) {
       error_ = "argument count mismatch for builtin " + builtinName;
-      return false;
+      return publishNumericDiagnostic();
     }
     for (const auto &arg : expr.args) {
       if (!isNumericExpr(params, locals, arg)) {
         error_ = "clamp requires numeric operands";
-        return false;
+        return publishNumericDiagnostic();
       }
     }
     if (hasMixedNumericDomain(expr.args)) {
       error_ = "clamp does not support mixed software/fixed numeric operands";
-      return false;
+      return publishNumericDiagnostic();
     }
     if (hasComplexNumeric(expr.args)) {
       error_ = "clamp does not support complex operands";
-      return false;
+      return publishNumericDiagnostic();
     }
     if (hasMixedSignedness(expr.args, false)) {
       error_ = "clamp does not support mixed signed/unsigned operands";
-      return false;
+      return publishNumericDiagnostic();
     }
     if (hasMixedNumericCategory(expr.args)) {
       error_ = "clamp does not support mixed int/float operands";
-      return false;
+      return publishNumericDiagnostic();
     }
     return validateArgs();
   }
@@ -525,29 +529,29 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
     handled = true;
     if (expr.args.size() != 2) {
       error_ = "argument count mismatch for builtin " + builtinName;
-      return false;
+      return publishNumericDiagnostic();
     }
     for (const auto &arg : expr.args) {
       if (!isNumericExpr(params, locals, arg)) {
         error_ = builtinName + " requires numeric operands";
-        return false;
+        return publishNumericDiagnostic();
       }
     }
     if (hasMixedNumericDomain(expr.args)) {
       error_ = builtinName + " does not support mixed software/fixed numeric operands";
-      return false;
+      return publishNumericDiagnostic();
     }
     if (hasComplexNumeric(expr.args)) {
       error_ = builtinName + " does not support complex operands";
-      return false;
+      return publishNumericDiagnostic();
     }
     if (hasMixedSignedness(expr.args, false)) {
       error_ = builtinName + " does not support mixed signed/unsigned operands";
-      return false;
+      return publishNumericDiagnostic();
     }
     if (hasMixedNumericCategory(expr.args)) {
       error_ = builtinName + " does not support mixed int/float operands";
-      return false;
+      return publishNumericDiagnostic();
     }
     return validateArgs();
   }
@@ -556,15 +560,15 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
     handled = true;
     if (expr.args.size() != 1) {
       error_ = "argument count mismatch for builtin " + builtinName;
-      return false;
+      return publishNumericDiagnostic();
     }
     if (!isNumericExpr(params, locals, expr.args.front())) {
       error_ = builtinName + " requires numeric operand";
-      return false;
+      return publishNumericDiagnostic();
     }
     if (builtinName == "sign" && hasComplexNumeric(expr.args)) {
       error_ = "sign does not support complex operands";
-      return false;
+      return publishNumericDiagnostic();
     }
     return validateExpr(params, locals, expr.args.front());
   }
@@ -573,15 +577,15 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
     handled = true;
     if (expr.args.size() != 1) {
       error_ = "argument count mismatch for builtin " + builtinName;
-      return false;
+      return publishNumericDiagnostic();
     }
     if (!isNumericExpr(params, locals, expr.args.front())) {
       error_ = builtinName + " requires numeric operand";
-      return false;
+      return publishNumericDiagnostic();
     }
     if (hasComplexNumeric(expr.args)) {
       error_ = builtinName + " does not support complex operands";
-      return false;
+      return publishNumericDiagnostic();
     }
     return validateExpr(params, locals, expr.args.front());
   }
@@ -590,11 +594,11 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
     handled = true;
     if (!expr.templateArgs.empty()) {
       error_ = builtinName + " does not accept template arguments";
-      return false;
+      return publishNumericDiagnostic();
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       error_ = builtinName + " does not accept block arguments";
-      return false;
+      return publishNumericDiagnostic();
     }
     size_t expectedArgs = 1;
     if (builtinName == "lerp" || builtinName == "fma") {
@@ -605,13 +609,13 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
     }
     if (expr.args.size() != expectedArgs) {
       error_ = "argument count mismatch for builtin " + builtinName;
-      return false;
+      return publishNumericDiagnostic();
     }
     auto validateFloatArgs = [&](size_t count) -> bool {
       for (size_t i = 0; i < count; ++i) {
         if (!isFloatExpr(params, locals, expr.args[i])) {
           error_ = builtinName + " requires float operands";
-          return false;
+          return publishNumericDiagnostic();
         }
       }
       return true;
@@ -620,24 +624,24 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
       for (const auto &arg : expr.args) {
         if (!isNumericExpr(params, locals, arg)) {
           error_ = builtinName + " requires numeric operands";
-          return false;
+          return publishNumericDiagnostic();
         }
       }
       if (hasMixedNumericDomain(expr.args)) {
         error_ = builtinName + " does not support mixed software/fixed numeric operands";
-        return false;
+        return publishNumericDiagnostic();
       }
       if (hasMixedComplexNumeric(expr.args)) {
         error_ = builtinName + " does not support mixed complex/real operands";
-        return false;
+        return publishNumericDiagnostic();
       }
       if (hasMixedSignedness(expr.args, false)) {
         error_ = builtinName + " does not support mixed signed/unsigned operands";
-        return false;
+        return publishNumericDiagnostic();
       }
       if (hasMixedNumericCategory(expr.args)) {
         error_ = builtinName + " does not support mixed int/float operands";
-        return false;
+        return publishNumericDiagnostic();
       }
     } else if (builtinName == "is_nan" || builtinName == "is_inf" || builtinName == "is_finite") {
       if (!validateFloatArgs(1)) {
