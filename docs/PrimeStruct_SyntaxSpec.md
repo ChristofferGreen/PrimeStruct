@@ -988,8 +988,8 @@ validation and collection-return inference, plus direct same-path
 `/soa_vector/<helper>` visibility checks in count/builtin/method/vector
 routing, direct pending field-view detection, and return-inference
 helper-shadow probes now all route through shared validator helpers,
-with the remaining vector-target `count/get/ref` method/infer same-path
-visibility probes now also using that shared helper instead of direct
+with the remaining vector-target and builtin count/get/ref same-path
+probes now also using shared target helpers instead of direct
 `/soa_vector/count|get|ref` checks,
 with the validator-side direct builtin `ref(...)` visibility split now also
 using that same shared helper instead of a hardcoded `/soa_vector/ref` probe,
