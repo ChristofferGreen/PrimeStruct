@@ -575,7 +575,7 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, error));
-  CHECK(error.find("ref requires soa_vector target") != std::string::npos);
+  CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
 }
 
 TEST_CASE("semantics accepts to_soa before lowerer rejection") {

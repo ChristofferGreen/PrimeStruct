@@ -106,13 +106,20 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
   }
 
   auto isDirectSoaVectorTarget = [&](const Expr &target) {
+    auto isDirectSoaBinding = [&](const BindingInfo &binding) {
+      if (normalizeBindingTypeName(binding.typeName) == "soa_vector") {
+        return true;
+      }
+      std::string elemType;
+      return extractExperimentalSoaVectorElementType(binding, elemType);
+    };
     if (target.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-        return normalizeBindingTypeName(paramBinding->typeName) == "soa_vector";
+        return isDirectSoaBinding(*paramBinding);
       }
       auto localIt = locals.find(target.name);
       return localIt != locals.end() &&
-             normalizeBindingTypeName(localIt->second.typeName) == "soa_vector";
+             isDirectSoaBinding(localIt->second);
     }
     std::string builtinCollection;
     return getBuiltinCollectionName(target, builtinCollection) &&
@@ -208,6 +215,21 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
                receiver, params, locals, inferredTypeText) &&
            assignBindingTypeFromText(inferredTypeText, bindingOut);
   };
+  auto resolveDirectSoaReceiver = [&](const Expr &receiver,
+                                      std::string &elemTypeOut) -> bool {
+    BindingInfo receiverBinding;
+    if (!inferSoaReceiverBinding(receiver, receiverBinding)) {
+      return false;
+    }
+    if (normalizeBindingTypeName(receiverBinding.typeName) == "soa_vector" &&
+        !receiverBinding.typeTemplateArg.empty()) {
+      elemTypeOut = receiverBinding.typeTemplateArg;
+      return true;
+    }
+    return extractExperimentalSoaVectorElementType(receiverBinding,
+                                                   elemTypeOut) &&
+           !elemTypeOut.empty();
+  };
 
   const std::string resolved = resolveCalleePath(candidate);
   if (splitSoaFieldViewHelperPath(resolved, fieldNameOut)) {
@@ -245,18 +267,15 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
     receiver = &candidate.args.front();
   }
 
-  BindingInfo receiverBinding;
-  if (!inferSoaReceiverBinding(*receiver, receiverBinding)) {
-    return false;
-  }
-
   std::string receiverElemType;
-  if (normalizeBindingTypeName(receiverBinding.typeName) == "soa_vector" &&
-      !receiverBinding.typeTemplateArg.empty()) {
-    receiverElemType = receiverBinding.typeTemplateArg;
-  } else if (!extractExperimentalSoaVectorElementType(receiverBinding,
-                                                      receiverElemType) ||
-             receiverElemType.empty()) {
+  if (!const_cast<SemanticsValidator *>(this)
+           ->resolveSoaVectorOrExperimentalBorrowedReceiver(
+               *receiver,
+               params,
+               locals,
+               resolveDirectSoaReceiver,
+               receiverElemType) ||
+      receiverElemType.empty()) {
     return false;
   }
 
@@ -293,6 +312,48 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
     const Expr &candidate,
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals) const {
+  auto assignBindingTypeFromText = [](const std::string &typeText,
+                                      BindingInfo &bindingOut) -> bool {
+    const std::string normalizedType = normalizeBindingTypeName(typeText);
+    if (normalizedType.empty()) {
+      return false;
+    }
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(normalizedType, base, argText)) {
+      bindingOut.typeName = normalizeBindingTypeName(base);
+      bindingOut.typeTemplateArg = argText;
+      return true;
+    }
+    bindingOut.typeName = normalizedType;
+    bindingOut.typeTemplateArg.clear();
+    return true;
+  };
+  auto isExperimentalSoaLikeExpr = [&](const Expr &expr) {
+    auto bindingIsExperimentalSoaLike = [&](const BindingInfo &binding) {
+      std::string elemType;
+      return extractExperimentalSoaVectorElementType(binding, elemType);
+    };
+    if (expr.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(params, expr.name)) {
+        return bindingIsExperimentalSoaLike(*paramBinding);
+      }
+      auto localIt = locals.find(expr.name);
+      return localIt != locals.end() &&
+             bindingIsExperimentalSoaLike(localIt->second);
+    }
+    BindingInfo inferredBinding;
+    if (const_cast<SemanticsValidator *>(this)->inferBindingTypeFromInitializer(
+            expr, params, locals, inferredBinding)) {
+      return bindingIsExperimentalSoaLike(inferredBinding);
+    }
+    std::string inferredTypeText;
+    return const_cast<SemanticsValidator *>(this)->inferQueryExprTypeText(
+               expr, params, locals, inferredTypeText) &&
+           assignBindingTypeFromText(inferredTypeText, inferredBinding) &&
+           bindingIsExperimentalSoaLike(inferredBinding);
+  };
+
   std::string fieldName;
   if (isBuiltinSoaFieldViewExpr(candidate, params, locals, &fieldName)) {
     return soaFieldViewHelperPath(fieldName);
@@ -300,6 +361,8 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
   const auto soaAccessHelper =
       builtinSoaAccessHelperName(candidate, params, locals);
   if (soaAccessHelper.has_value() && *soaAccessHelper == "ref" &&
+      !candidate.args.empty() &&
+      !isExperimentalSoaLikeExpr(candidate.args.front()) &&
       !usesSamePathSoaHelperTargetForCurrentImports("ref")) {
     return std::string("/soa_vector/ref");
   }

@@ -65,6 +65,8 @@
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprLateCallCompatibility.cpp";
   const std::filesystem::path semanticsExprLateMapSoaBuiltinsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprLateMapSoaBuiltins.cpp";
+  const std::filesystem::path semanticsInferMethodResolutionPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferMethodResolution.cpp";
   const std::filesystem::path semanticsExprMethodResolutionPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprMethodResolution.cpp";
   const std::filesystem::path semanticsExprMethodTargetResolutionPath =
@@ -127,6 +129,7 @@
   REQUIRE(std::filesystem::exists(semanticsExprLateFallbackBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprLateCallCompatibilityPath));
   REQUIRE(std::filesystem::exists(semanticsExprLateMapSoaBuiltinsPath));
+  REQUIRE(std::filesystem::exists(semanticsInferMethodResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprMethodResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprMethodTargetResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprLateMapAccessBuiltinsPath));
@@ -186,6 +189,8 @@
       readText(semanticsExprLateCallCompatibilityPath);
   const std::string semanticsExprLateMapSoaBuiltinsSource =
       readText(semanticsExprLateMapSoaBuiltinsPath);
+  const std::string semanticsInferMethodResolutionSource =
+      readText(semanticsInferMethodResolutionPath);
   const std::string semanticsExprMethodResolutionSource =
       readText(semanticsExprMethodResolutionPath);
   const std::string semanticsExprMethodTargetResolutionSource =
@@ -256,8 +261,9 @@
   CHECK(semanticsExprMethodCompatibilitySetupSource.find("soaBorrowedViewPendingDiagnostic()") ==
         std::string::npos);
   CHECK(semanticsExprMethodCompatibilitySetupSource.find(
-            "return this->soaUnavailableMethodDiagnosticForCurrentImports(\n"
-            "        resolvedPath);") !=
+            "return soaUnavailableMethodDiagnostic(\n"
+            "        resolvedPath,\n"
+            "        this->usesSamePathSoaHelperTargetForCurrentImports(\"ref\"));") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "prepareExprCollectionDispatchSetup(\n"

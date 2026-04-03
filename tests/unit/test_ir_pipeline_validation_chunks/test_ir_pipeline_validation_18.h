@@ -220,19 +220,23 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = \"/soa_vector/count\";") ==
         std::string::npos);
-  CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = preferredSoaCountMethodTarget();") !=
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "resolvedOut = preferredSoaHelperTargetForCurrentImports(\"count\");") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = \"/soa_vector/get\";") ==
         std::string::npos);
-  CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = preferredSoaGetMethodTarget();") !=
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "resolvedOut = preferredSoaHelperTargetForCurrentImports(\"get\");") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = \"/soa_vector/ref\";") ==
         std::string::npos);
-  CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = preferredSoaRefMethodTarget();") !=
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "resolvedOut = preferredSoaHelperTargetForCurrentImports(\"ref\");") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = \"/to_aos\";") ==
         std::string::npos);
-  CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = preferredSoaToAosMethodTarget();") !=
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "resolvedOut = preferredSoaHelperTargetForCurrentImports(\"to_aos\");") !=
         std::string::npos);
   CHECK(semanticsInferSource.find("auto extractWrappedPointeeType = [&](const std::string &typeText, std::string &pointeeTypeOut) -> bool {") ==
         std::string::npos);
@@ -359,9 +363,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "if (!expr.isMethodCall && isSimpleCallName(expr, \"buffer_load\") &&") !=
         std::string::npos);
   CHECK(semanticsInferLateFallbackBuiltinsSource.find(
-            "error_ =\n"
-            "            this->soaUnavailableMethodDiagnosticForCurrentImports(\n"
-            "                methodResolved);") !=
+            "error_ = soaUnavailableMethodDiagnostic(\n"
+            "            methodResolved,\n"
+            "            usesSamePathSoaHelperTargetForCurrentImports(\"ref\"));") !=
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find("ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(") !=
         std::string::npos);
@@ -372,9 +376,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferPreDispatchCallsSource.find("if (getVectorStatementHelperName(expr, vectorHelper) && !expr.args.empty()) {") !=
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find(
-            "error_ =\n"
-            "            this->soaUnavailableMethodDiagnosticForCurrentImports(\n"
-            "                methodResolved);") !=
+            "error_ = soaUnavailableMethodDiagnostic(\n"
+            "            methodResolved,\n"
+            "            usesSamePathSoaHelperTargetForCurrentImports(\"ref\"));") !=
         std::string::npos);
   CHECK(semanticsBuiltinPathHelpersSource.find(
             "std::string soaFieldViewOrUnknownMethodDiagnostic(std::string_view resolvedPath)") ==

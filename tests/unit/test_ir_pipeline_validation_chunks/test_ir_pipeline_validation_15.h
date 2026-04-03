@@ -600,6 +600,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
 
   const std::filesystem::path builtinPathHelpersPath =
       repoRoot / "src" / "semantics" / "SemanticsBuiltinPathHelpers.cpp";
+  const std::filesystem::path semanticsHelpersPath =
+      repoRoot / "src" / "semantics" / "SemanticsHelpers.h";
   const std::filesystem::path buildInitializerInferencePath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorBuildInitializerInference.cpp";
   const std::filesystem::path exprArgumentValidationCollectionsPath =
@@ -608,6 +610,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprMapSoaBuiltins.cpp";
   const std::filesystem::path exprCountCapacityMapBuiltinsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCountCapacityMapBuiltins.cpp";
+  const std::filesystem::path exprMethodCompatibilitySetupPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprMethodCompatibilitySetup.cpp";
+  const std::filesystem::path inferPreDispatchCallsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferPreDispatchCalls.cpp";
+  const std::filesystem::path inferLateFallbackBuiltinsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferLateFallbackBuiltins.cpp";
   const std::filesystem::path inferMethodResolutionPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferMethodResolution.cpp";
   const std::filesystem::path exprMethodTargetResolutionPath =
@@ -627,10 +635,14 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   const std::filesystem::path statementReturnsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorStatementReturns.cpp";
   REQUIRE(std::filesystem::exists(builtinPathHelpersPath));
+  REQUIRE(std::filesystem::exists(semanticsHelpersPath));
   REQUIRE(std::filesystem::exists(buildInitializerInferencePath));
   REQUIRE(std::filesystem::exists(exprArgumentValidationCollectionsPath));
   REQUIRE(std::filesystem::exists(exprMapSoaBuiltinsPath));
   REQUIRE(std::filesystem::exists(exprCountCapacityMapBuiltinsPath));
+  REQUIRE(std::filesystem::exists(exprMethodCompatibilitySetupPath));
+  REQUIRE(std::filesystem::exists(inferPreDispatchCallsPath));
+  REQUIRE(std::filesystem::exists(inferLateFallbackBuiltinsPath));
   REQUIRE(std::filesystem::exists(inferMethodResolutionPath));
   REQUIRE(std::filesystem::exists(exprMethodTargetResolutionPath));
   REQUIRE(std::filesystem::exists(exprCollectionAccessPath));
@@ -642,11 +654,17 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   REQUIRE(std::filesystem::exists(statementReturnsPath));
 
   const std::string builtinPathHelpersSource = readText(builtinPathHelpersPath);
+  const std::string semanticsHelpersSource = readText(semanticsHelpersPath);
   const std::string buildInitializerInferenceSource = readText(buildInitializerInferencePath);
   const std::string exprArgumentValidationCollectionsSource =
       readText(exprArgumentValidationCollectionsPath);
   const std::string exprMapSoaBuiltinsSource = readText(exprMapSoaBuiltinsPath);
   const std::string exprCountCapacityMapBuiltinsSource = readText(exprCountCapacityMapBuiltinsPath);
+  const std::string exprMethodCompatibilitySetupSource =
+      readText(exprMethodCompatibilitySetupPath);
+  const std::string inferPreDispatchCallsSource = readText(inferPreDispatchCallsPath);
+  const std::string inferLateFallbackBuiltinsSource =
+      readText(inferLateFallbackBuiltinsPath);
   const std::string inferMethodResolutionSource = readText(inferMethodResolutionPath);
   const std::string exprMethodTargetResolutionSource = readText(exprMethodTargetResolutionPath);
   const std::string exprCollectionAccessSource = readText(exprCollectionAccessPath);
@@ -700,7 +718,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "bool SemanticsValidator::hasVisibleSoaRefHelper() const {") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "if (hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/ref\")) {") !=
+            "!usesSamePathSoaHelperTargetForCurrentImports(\"ref\")") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
             "hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/ref\")") ==
@@ -720,24 +738,23 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "soaDirectBorrowedViewPendingDiagnostic()") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "soaDirectPendingUnavailableMethodDiagnostic(\n"
-            "        soaFieldViewHelperPath(fieldName))") !=
+            "return soaFieldViewHelperPath(fieldName);") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "soaDirectPendingUnavailableMethodDiagnostic(\"/soa_vector/ref\")") !=
+            "return std::string(\"/soa_vector/ref\");") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find("soaFieldViewOrUnknownMethodDiagnostic(") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "return soaUnavailableMethodDiagnostic(resolvedPath,") !=
+            "return soaUnavailableMethodDiagnostic(resolvedPath,") ==
         std::string::npos);
   CHECK(statementBindingsSource.find("isBuiltinSoaRefExpr(") ==
         std::string::npos);
-  CHECK(statementBindingsSource.find("builtinSoaAccessHelperName(") !=
+  CHECK(statementBindingsSource.find("builtinSoaAccessHelperName(") ==
         std::string::npos);
   CHECK(inferDefinitionSource.find("isBuiltinSoaRefExpr(") ==
         std::string::npos);
-  CHECK(inferDefinitionSource.find("builtinSoaAccessHelperName(") !=
+  CHECK(inferDefinitionSource.find("builtinSoaAccessHelperName(") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find("soaFieldViewPendingDiagnostic(fieldName)") ==
         std::string::npos);
@@ -772,7 +789,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "soaDirectPendingUnavailableMethodDiagnostic(resolved)") !=
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
-            "hasVisibleDefinitionPathForCurrentImports(samePath)") !=
+            "hasVisibleDefinitionPathForCurrentImports(\n"
+            "              \"/soa_vector/\" + helperName)") !=
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("auto hasVisibleSamePathSoaAccessHelper =") ==
         std::string::npos);
@@ -794,7 +812,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprMapSoaBuiltinsSource.find("\"/soa_vector/field_view/\"") == std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
             "this->resolveDirectSoaVectorOrExperimentalBorrowedReceiver(\n"
-            "        target, params, locals, context.resolveSoaVectorTarget, elemTypeOut)") !=
+            "        target, params, locals, context.resolveSoaVectorTarget, elemTypeOut)") ==
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("auto resolveDirectSoaReceiver =") ==
         std::string::npos);
@@ -929,9 +947,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(inferMethodResolutionSource.find(
             "usesSamePathSoaHelperTargetForCurrentImports(\"ref\")") !=
         std::string::npos);
-  CHECK(inferDefinitionSource.find("isBuiltinSoaFieldViewExpr(") != std::string::npos);
+  CHECK(inferDefinitionSource.find("isBuiltinSoaFieldViewExpr(") == std::string::npos);
   CHECK(inferDefinitionSource.find("isBuiltinSoaRefExpr(") == std::string::npos);
-  CHECK(inferDefinitionSource.find("builtinSoaAccessHelperName(") !=
+  CHECK(inferDefinitionSource.find("builtinSoaAccessHelperName(") ==
         std::string::npos);
   CHECK(inferDefinitionSource.find(
             "hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/\" + helperName)") !=
@@ -979,7 +997,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(inferDefinitionSource.find("soa_vector borrowed views are not implemented yet: ref") ==
         std::string::npos);
-  CHECK(inferDefinitionSource.find("soaBorrowedViewPendingDiagnostic()") !=
+  CHECK(inferDefinitionSource.find("soaBorrowedViewPendingDiagnostic()") ==
         std::string::npos);
   CHECK(inferDefinitionSource.find(
             "builtinSoaDirectPendingHelperPath(*valueExpr, defParams,") !=

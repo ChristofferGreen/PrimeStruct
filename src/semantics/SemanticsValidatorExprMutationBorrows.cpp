@@ -572,10 +572,16 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
         error_ = "assign target must be a mutable binding";
         return false;
       }
-      const Expr &fieldReceiver = fieldTarget.args.front();
-      if (!validateExpr(params, locals, fieldReceiver)) {
+      if (auto pendingPath =
+              builtinSoaDirectPendingHelperPath(fieldTarget, params, locals);
+          pendingPath.has_value()) {
+        error_ = soaDirectPendingUnavailableMethodDiagnostic(*pendingPath);
         return false;
       }
+      if (!validateExpr(params, locals, fieldTarget)) {
+        return false;
+      }
+      const Expr &fieldReceiver = fieldTarget.args.front();
       BindingInfo fieldBinding;
       if (!this->resolveStructFieldBinding(params, locals, fieldReceiver,
                                            fieldTarget.name, fieldBinding)) {

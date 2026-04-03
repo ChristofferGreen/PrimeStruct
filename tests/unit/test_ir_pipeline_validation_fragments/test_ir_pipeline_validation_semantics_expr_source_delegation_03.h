@@ -539,7 +539,7 @@
             "usesSamePathSoaHelperTargetForCurrentImports(\"count\")") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "hasVisibleDefinitionPathForCurrentImports(canonical)") !=
+            "hasVisibleDefinitionPathForCurrentImports(canonical)") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)") ==
@@ -548,7 +548,7 @@
             "usesSamePathSoaHelperTargetForCurrentImports(\"count\")") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
-            "hasVisibleDefinitionPathForCurrentImports(canonical)") !=
+            "hasVisibleDefinitionPathForCurrentImports(canonical)") ==
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
             "hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)") ==

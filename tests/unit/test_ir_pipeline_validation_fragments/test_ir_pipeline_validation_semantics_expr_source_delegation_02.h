@@ -141,21 +141,15 @@
   CHECK(semanticsExprMethodTargetResolutionSource.find("setCollectionMethodTarget(\"/soa_vector/count\")") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "setCollectionMethodTarget(preferredSoaCountMethodTarget())") != std::string::npos);
-  CHECK(semanticsExprMethodTargetResolutionSource.find("auto preferredSoaGetMethodTarget = [&]()") !=
-        std::string::npos);
+            "preferredSoaHelperTargetForCurrentImports(\"count\")") != std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "setCollectionMethodTarget(preferredSoaGetMethodTarget())") != std::string::npos);
-  CHECK(semanticsExprMethodTargetResolutionSource.find("auto preferredSoaRefMethodTarget = [&]()") !=
-        std::string::npos);
+            "preferredSoaHelperTargetForCurrentImports(\"get\")") != std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "setCollectionMethodTarget(preferredSoaRefMethodTarget())") != std::string::npos);
-  CHECK(semanticsExprMethodTargetResolutionSource.find("auto preferredSoaToAosMethodTarget = [&]()") !=
-        std::string::npos);
+            "preferredSoaHelperTargetForCurrentImports(\"ref\")") != std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "preferredSoaHelperTargetForCurrentImports(\"to_aos\")") != std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find("setCollectionMethodTarget(\"/to_aos\")") ==
         std::string::npos);
-  CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "setCollectionMethodTarget(preferredSoaToAosMethodTarget())") != std::string::npos);
   CHECK(semanticsExprSource.find(
             "auto resolveVectorMutatorName = [&](const std::string &name, std::string &helperOut) -> bool {") ==
         std::string::npos);
