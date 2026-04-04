@@ -13,10 +13,16 @@ bool runLowerEntrySetup(const Program &program,
                         uint64_t &entryEffectMaskOut,
                         uint64_t &entryCapabilityMaskOut,
                         std::string &error) {
-  (void)semanticProgram;
   entryDefOut = nullptr;
   entryEffectMaskOut = 0;
   entryCapabilityMaskOut = 0;
+
+  if (semanticProgram != nullptr && !semanticProgram->entryPath.empty() &&
+      semanticProgram->entryPath != entryPath) {
+    error = "semantic product entry path mismatch: expected " + entryPath + ", got " +
+            semanticProgram->entryPath;
+    return false;
+  }
 
   if (!findEntryDefinition(program, entryPath, entryDefOut, error)) {
     return false;

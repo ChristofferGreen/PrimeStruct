@@ -25,11 +25,42 @@ bool buildProgramEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResol
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
     EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
+  return buildProgramEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
+      stringTable,
+      function,
+      program,
+      nullptr,
+      entryDef,
+      entryPath,
+      defMap,
+      importAliases,
+      structNames,
+      structReserveHint,
+      enumerateStructLayoutFields,
+      out,
+      error);
+}
+
+bool buildProgramEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
+    std::vector<std::string> &stringTable,
+    IrFunction &function,
+    const Program &program,
+    const SemanticProgram *semanticProgram,
+    const Definition &entryDef,
+    const std::string &entryPath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    const std::unordered_set<std::string> &structNames,
+    std::size_t structReserveHint,
+    const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
+    EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup &out,
+    std::string &error) {
   const bool hasMathImport = hasProgramMathImport(program.imports);
   return buildEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
       stringTable,
       function,
       program,
+      semanticProgram,
       entryDef,
       entryPath,
       defMap,
@@ -56,6 +87,38 @@ bool buildEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSe
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
     EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
+  return buildEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
+      stringTable,
+      function,
+      program,
+      nullptr,
+      entryDef,
+      entryPath,
+      defMap,
+      importAliases,
+      hasMathImport,
+      structNames,
+      structReserveHint,
+      enumerateStructLayoutFields,
+      out,
+      error);
+}
+
+bool buildEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
+    std::vector<std::string> &stringTable,
+    IrFunction &function,
+    const Program &program,
+    const SemanticProgram *semanticProgram,
+    const Definition &entryDef,
+    const std::string &entryPath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    bool hasMathImport,
+    const std::unordered_set<std::string> &structNames,
+    std::size_t structReserveHint,
+    const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
+    EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup &out,
+    std::string &error) {
   std::destroy_at(&out);
   std::construct_at(&out);
   if (!analyzeEntryReturnTransforms(entryDef, entryPath, out.entryReturnConfig, error)) {
@@ -65,6 +128,7 @@ bool buildEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSe
           stringTable,
           function,
           program,
+          semanticProgram,
           entryDef,
           out.entryReturnConfig.returnsVoid,
           defMap,
@@ -94,12 +158,45 @@ bool buildRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
     RuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
+  return buildRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
+      stringTable,
+      function,
+      program,
+      nullptr,
+      entryDef,
+      definitionReturnsVoid,
+      defMap,
+      importAliases,
+      hasMathImport,
+      structNames,
+      structReserveHint,
+      enumerateStructLayoutFields,
+      out,
+      error);
+}
+
+bool buildRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
+    std::vector<std::string> &stringTable,
+    IrFunction &function,
+    const Program &program,
+    const SemanticProgram *semanticProgram,
+    const Definition &entryDef,
+    bool definitionReturnsVoid,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    bool hasMathImport,
+    const std::unordered_set<std::string> &structNames,
+    std::size_t structReserveHint,
+    const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
+    RuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup &out,
+    std::string &error) {
   std::destroy_at(&out);
   std::construct_at(&out);
   out.runtimeErrorAndStringLiteralSetup =
       makeRuntimeErrorAndStringLiteralSetup(stringTable, function, error);
   if (!buildEntrySetupMathTypeStructAndUninitializedResolutionSetup(
           program,
+          semanticProgram,
           entryDef,
           definitionReturnsVoid,
           defMap,
@@ -127,6 +224,33 @@ bool buildEntrySetupMathTypeStructAndUninitializedResolutionSetup(
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
     EntrySetupMathTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
+  return buildEntrySetupMathTypeStructAndUninitializedResolutionSetup(program,
+                                                                      nullptr,
+                                                                      entryDef,
+                                                                      definitionReturnsVoid,
+                                                                      defMap,
+                                                                      importAliases,
+                                                                      hasMathImport,
+                                                                      structNames,
+                                                                      structReserveHint,
+                                                                      enumerateStructLayoutFields,
+                                                                      out,
+                                                                      error);
+}
+
+bool buildEntrySetupMathTypeStructAndUninitializedResolutionSetup(
+    const Program &program,
+    const SemanticProgram *semanticProgram,
+    const Definition &entryDef,
+    bool definitionReturnsVoid,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    bool hasMathImport,
+    const std::unordered_set<std::string> &structNames,
+    std::size_t structReserveHint,
+    const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
+    EntrySetupMathTypeStructAndUninitializedResolutionSetup &out,
+    std::string &error) {
   std::destroy_at(&out);
   std::construct_at(&out);
   if (!buildEntryCountCallOnErrorSetup(program,
@@ -134,6 +258,7 @@ bool buildEntrySetupMathTypeStructAndUninitializedResolutionSetup(
                                         definitionReturnsVoid,
                                         defMap,
                                         importAliases,
+                                        semanticProgram,
                                         out.entryCountCallOnErrorSetup,
                                         error)) {
     return false;

@@ -47,6 +47,7 @@ struct LowerInferenceSetupBootstrapInput {
   const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
   const std::unordered_map<std::string, std::string> *importAliases = nullptr;
   const std::unordered_set<std::string> *structNames = nullptr;
+  const SemanticProductTargetAdapter *semanticProductTargets = nullptr;
 
   IsArrayCountCallFn isArrayCountCall = {};
   IsVectorCapacityCallFn isVectorCapacityCall = {};
@@ -173,6 +174,7 @@ struct LowerInferenceSetupInput {
   const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
   const std::unordered_map<std::string, std::string> *importAliases = nullptr;
   const std::unordered_set<std::string> *structNames = nullptr;
+  const SemanticProductTargetAdapter *semanticProductTargets = nullptr;
 
   IsArrayCountCallFn isArrayCountCall = {};
   IsStringCountCallFn isStringCountCall = {};

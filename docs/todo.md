@@ -93,7 +93,7 @@ Pipeline plumbing:
     - ✓ Thread semantic-product-aware user-visible diagnostic ordering/reporting through the remaining CLI/runtime consumers. Completed: `CliDriver` now formats compile-pipeline failures directly from `CompilePipelineOutput.failure`, and post-semantics CLI diagnostics explicitly report when the semantic product remains available.
 - ◐ Implement the temporary migration adapter now that its cutover/removal contract is documented. Progress: the remaining adapter work is now split into lowering-facing fact families instead of one umbrella shim item.
   - ◐ Implement the migration adapter for lowering-facing resolved target, binding, effect, and layout facts. Progress: this lowering-facing adapter is now split into direct target, binding/type, and effect/layout seams instead of one broad fact-family bucket.
-    - ○ Implement the migration adapter for resolved direct-call, receiver-call, and helper-routing target facts.
+    - ✓ Implement the migration adapter for resolved direct-call, receiver-call, and helper-routing target facts. Completed: lowerer entry/setup call resolution now snapshots semantic-product direct-call targets, receiver/method-call targets, and helper-routing choices into a temporary adapter and prefers those facts before any AST-side compatibility fallback.
     - ○ Implement the migration adapter for lowering-facing binding/result type facts.
     - ○ Implement the migration adapter for lowering-facing effect/capability and layout facts.
   - ◐ Implement the migration adapter for graph-backed query/local-`auto`/`try(...)`/`on_error` facts that are still read from legacy validator state. Progress: this graph-facing adapter is now split into per-fact-family seams so the remaining legacy reads can be retired incrementally.
@@ -115,10 +115,6 @@ Lowering cutover:
   - ○ Make `prepareIrModule` consume the semantic product directly instead of re-reading lowering facts from raw `Program` state.
   - ○ Make `IrLowerer::lower` consume the semantic product directly at its main lowering entrypoint.
   - ○ Retire the raw-`Program` lowering entry path once the temporary adapter is no longer needed.
-- ◐ Implement the `IrLowerer` entry-setup cutover now that the handoff contract is documented. Progress: the lowering entry setup is now split into explicit direct-call target, receiver-call target, and helper-routing slices instead of one umbrella target handoff item.
-  - ○ Consume semantic-product direct-call targets in lowerer entry setup instead of re-deriving canonical callees from AST state.
-  - ○ Consume semantic-product receiver/method-call targets in lowerer entry setup instead of re-deriving them from AST state.
-  - ○ Consume semantic-product helper-routing choices in lowerer entry setup instead of re-deriving helper-vs-canonical paths from AST state.
 - ◐ Implement the lowerer type/binding setup cutover now that the handoff contract is documented. Progress: the lowerer binding cutover is now split into parameters/locals, temporaries/returns, and helper-owned binding metadata instead of one umbrella type handoff item.
   - ◐ Consume semantic-product parameter and local binding metadata in lowerer setup. Progress: this binding family is now split into parameter, local, and lowered entry-argument seams instead of one broad parameter/local bucket.
     - ○ Consume semantic-product parameter binding metadata in lowerer setup.

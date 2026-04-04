@@ -104,10 +104,22 @@ bool buildEntryCallOnErrorSetup(const Program &program,
                                 const std::unordered_map<std::string, std::string> &importAliases,
                                 EntryCallOnErrorSetup &out,
                                 std::string &error) {
+  return buildEntryCallOnErrorSetup(
+      program, entryDef, definitionReturnsVoid, defMap, importAliases, nullptr, out, error);
+}
+
+bool buildEntryCallOnErrorSetup(const Program &program,
+                                const Definition &entryDef,
+                                bool definitionReturnsVoid,
+                                const std::unordered_map<std::string, const Definition *> &defMap,
+                                const std::unordered_map<std::string, std::string> &importAliases,
+                                const SemanticProgram *semanticProgram,
+                                EntryCallOnErrorSetup &out,
+                                std::string &error) {
   std::destroy_at(&out);
   std::construct_at(&out);
   const EntryCallResolutionSetup entryCallResolutionSetup = buildEntryCallResolutionSetup(
-      entryDef, definitionReturnsVoid, defMap, importAliases);
+      entryDef, definitionReturnsVoid, defMap, importAliases, semanticProgram);
   out.callResolutionAdapters = entryCallResolutionSetup.adapters;
   out.hasTailExecution = entryCallResolutionSetup.hasTailExecution;
   if (!buildOnErrorByDefinitionFromCallResolutionAdapters(
@@ -124,13 +136,32 @@ bool buildEntryCountCallOnErrorSetup(const Program &program,
                                      const std::unordered_map<std::string, std::string> &importAliases,
                                      EntryCountCallOnErrorSetup &out,
                                      std::string &error) {
+  return buildEntryCountCallOnErrorSetup(
+      program, entryDef, definitionReturnsVoid, defMap, importAliases, nullptr, out, error);
+}
+
+bool buildEntryCountCallOnErrorSetup(const Program &program,
+                                     const Definition &entryDef,
+                                     bool definitionReturnsVoid,
+                                     const std::unordered_map<std::string, const Definition *> &defMap,
+                                     const std::unordered_map<std::string, std::string> &importAliases,
+                                     const SemanticProgram *semanticProgram,
+                                     EntryCountCallOnErrorSetup &out,
+                                     std::string &error) {
   std::destroy_at(&out);
   std::construct_at(&out);
   if (!buildEntryCountAccessSetup(entryDef, out.countAccessSetup, error)) {
     return false;
   }
   if (!buildEntryCallOnErrorSetup(
-          program, entryDef, definitionReturnsVoid, defMap, importAliases, out.callOnErrorSetup, error)) {
+          program,
+          entryDef,
+          definitionReturnsVoid,
+          defMap,
+          importAliases,
+          semanticProgram,
+          out.callOnErrorSetup,
+          error)) {
     return false;
   }
   return true;

@@ -32,6 +32,34 @@ const Definition *resolveMethodCallDefinitionFromExpr(
                                              structNames,
                                              inferExprKind,
                                              resolveExprPath,
+                                             nullptr,
+                                             defMap,
+                                             errorOut);
+}
+
+const Definition *resolveMethodCallDefinitionFromExpr(
+    const Expr &callExpr,
+    const LocalMap &localsIn,
+    const IsMethodCallClassifierFn &isArrayCountCall,
+    const IsMethodCallClassifierFn &isVectorCapacityCall,
+    const IsMethodCallClassifierFn &isEntryArgsName,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    const std::unordered_set<std::string> &structNames,
+    const InferReceiverExprKindFn &inferExprKind,
+    const ResolveReceiverExprPathFn &resolveExprPath,
+    const SemanticProductTargetAdapter *semanticProductTargets,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    std::string &errorOut) {
+  return resolveMethodCallDefinitionFromExpr(callExpr,
+                                             localsIn,
+                                             isArrayCountCall,
+                                             isVectorCapacityCall,
+                                             isEntryArgsName,
+                                             importAliases,
+                                             structNames,
+                                             inferExprKind,
+                                             resolveExprPath,
+                                             semanticProductTargets,
                                              {},
                                              defMap,
                                              errorOut);
@@ -50,6 +78,35 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     const GetReturnInfoForPathFn &getReturnInfo,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut) {
+  return resolveMethodCallDefinitionFromExpr(callExpr,
+                                             localsIn,
+                                             isArrayCountCall,
+                                             isVectorCapacityCall,
+                                             isEntryArgsName,
+                                             importAliases,
+                                             structNames,
+                                             inferExprKind,
+                                             resolveExprPath,
+                                             nullptr,
+                                             getReturnInfo,
+                                             defMap,
+                                             errorOut);
+}
+
+const Definition *resolveMethodCallDefinitionFromExpr(
+    const Expr &callExpr,
+    const LocalMap &localsIn,
+    const IsMethodCallClassifierFn &isArrayCountCall,
+    const IsMethodCallClassifierFn &isVectorCapacityCall,
+    const IsMethodCallClassifierFn &isEntryArgsName,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    const std::unordered_set<std::string> &structNames,
+    const InferReceiverExprKindFn &inferExprKind,
+    const ResolveReceiverExprPathFn &resolveExprPath,
+    const SemanticProductTargetAdapter *semanticProductTargets,
+    const GetReturnInfoForPathFn &getReturnInfo,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    std::string &errorOut) {
   if (callExpr.kind != Expr::Kind::Call || callExpr.isBinding) {
     return nullptr;
   }
@@ -60,6 +117,17 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       return defIt->second;
     }
     return nullptr;
+  }
+
+  if (semanticProductTargets != nullptr) {
+    if (const std::string resolvedPath =
+            findSemanticProductMethodCallTarget(*semanticProductTargets, callExpr);
+        !resolvedPath.empty()) {
+      auto defIt = defMap.find(resolvedPath);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+    }
   }
 
   std::string accessName;
@@ -310,6 +378,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
                                                         structNames,
                                                         inferExprKind,
                                                         resolveExprPath,
+                                                        semanticProductTargets,
                                                         getReturnInfo,
                                                         defMap,
                                                         nestedError);

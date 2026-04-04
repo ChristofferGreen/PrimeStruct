@@ -47,6 +47,7 @@ bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &in
   const auto *defMap = input.defMap;
   const auto *importAliases = input.importAliases;
   const auto *structNames = input.structNames;
+  const auto *semanticProductTargets = input.semanticProductTargets;
   const auto isArrayCountCall = input.isArrayCountCall;
   const auto isVectorCapacityCall = input.isVectorCapacityCall;
   const auto isEntryArgsName = input.isEntryArgsName;
@@ -60,6 +61,7 @@ bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &in
                                           isVectorCapacityCall,
                                           isEntryArgsName,
                                           resolveExprPath,
+                                          semanticProductTargets,
                                           &stateOut,
                                           &errorOut](const Expr &callExpr,
                                                      const LocalMap &localsIn) -> const Definition * {
@@ -72,6 +74,7 @@ bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &in
                                                *structNames,
                                                stateOut.inferExprKind,
                                                resolveExprPath,
+                                               semanticProductTargets,
                                                stateOut.getReturnInfo,
                                                *defMap,
                                                errorOut);
@@ -101,6 +104,7 @@ bool runLowerInferenceSetup(const LowerInferenceSetupInput &input,
               .defMap = input.defMap,
               .importAliases = input.importAliases,
               .structNames = input.structNames,
+              .semanticProductTargets = input.semanticProductTargets,
               .isArrayCountCall = input.isArrayCountCall,
               .isVectorCapacityCall = input.isVectorCapacityCall,
               .isEntryArgsName = input.isEntryArgsName,

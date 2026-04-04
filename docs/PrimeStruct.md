@@ -376,6 +376,9 @@ Temporary migration adapter contract:
   lowering-facing meaning still comes from the semantic product whenever available.
 - The adapter boundary should stay narrow: compile-pipeline handoff, `prepareIrModule`, and `IrLowerer::lower` are the
   intended temporary consumers.
+- Current status: the adapter now feeds lowering entry/setup with semantic-product direct-call targets,
+  receiver/method-call targets, and helper-routing choices. Remaining adapter work is limited to binding/result,
+  effect/capability, and layout fact families plus the graph-backed query/local-auto/`try(...)`/`on_error` seams.
 - Removal criteria:
   - `CompilePipelineOutput` publishes the semantic product on the success path.
   - `prepareIrModule` and `IrLowerer::lower` consume the semantic product directly in production codepaths.

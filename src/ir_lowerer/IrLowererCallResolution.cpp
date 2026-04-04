@@ -88,8 +88,17 @@ ResolveDefinitionCallFn makeResolveDefinitionCall(
 CallResolutionAdapters makeCallResolutionAdapters(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases) {
+  return makeCallResolutionAdapters(defMap, importAliases, nullptr);
+}
+
+CallResolutionAdapters makeCallResolutionAdapters(
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    const SemanticProgram *semanticProgram) {
   CallResolutionAdapters adapters;
-  adapters.resolveExprPath = makeResolveCallPathFromScope(defMap, importAliases);
+  adapters.semanticProductTargets = buildSemanticProductTargetAdapter(semanticProgram);
+  adapters.resolveExprPath = makeResolveCallPathFromScope(
+      defMap, importAliases, adapters.semanticProductTargets);
   adapters.isTailCallCandidate = makeIsTailCallCandidate(defMap, adapters.resolveExprPath);
   adapters.definitionExists = makeDefinitionExistsByPath(defMap);
   return adapters;
@@ -100,8 +109,21 @@ EntryCallResolutionSetup buildEntryCallResolutionSetup(
     bool definitionReturnsVoid,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases) {
+  return buildEntryCallResolutionSetup(entryDef,
+                                       definitionReturnsVoid,
+                                       defMap,
+                                       importAliases,
+                                       nullptr);
+}
+
+EntryCallResolutionSetup buildEntryCallResolutionSetup(
+    const Definition &entryDef,
+    bool definitionReturnsVoid,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    const SemanticProgram *semanticProgram) {
   EntryCallResolutionSetup setup{};
-  setup.adapters = makeCallResolutionAdapters(defMap, importAliases);
+  setup.adapters = makeCallResolutionAdapters(defMap, importAliases, semanticProgram);
   setup.hasTailExecution = hasTailExecutionCandidate(
       entryDef.statements, definitionReturnsVoid, setup.adapters.isTailCallCandidate);
   return setup;
@@ -110,7 +132,22 @@ EntryCallResolutionSetup buildEntryCallResolutionSetup(
 ResolveExprPathFn makeResolveCallPathFromScope(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases) {
-  return [defMap, importAliases](const Expr &expr) {
+  return makeResolveCallPathFromScope(defMap, importAliases, {});
+}
+
+ResolveExprPathFn makeResolveCallPathFromScope(
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    const SemanticProductTargetAdapter &semanticProductTargets) {
+  return [defMap, importAliases, semanticProductTargets](const Expr &expr) {
+    if (const std::string chosenPath = findSemanticProductBridgePathChoice(semanticProductTargets, expr);
+        !chosenPath.empty()) {
+      return chosenPath;
+    }
+    if (const std::string resolvedPath = findSemanticProductDirectCallTarget(semanticProductTargets, expr);
+        !resolvedPath.empty()) {
+      return resolvedPath;
+    }
     return resolveCallPathFromScope(expr, defMap, importAliases);
   };
 }

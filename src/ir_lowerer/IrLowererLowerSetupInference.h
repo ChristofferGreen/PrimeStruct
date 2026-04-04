@@ -6,6 +6,7 @@
               .defMap = &defMap,
               .importAliases = &importAliases,
               .structNames = &structNames,
+              .semanticProductTargets = &callResolutionAdapters.semanticProductTargets,
               .isArrayCountCall = isArrayCountCall,
               .isStringCountCall = isStringCountCall,
               .isVectorCapacityCall = isVectorCapacityCall,

@@ -38,6 +38,7 @@
   if (!ir_lowerer::runLowerLocalsSetup(stringTable,
                                        function,
                                        program,
+                                       semanticProgram,
                                        *entryDef,
                                        entryPath,
                                        defMap,
