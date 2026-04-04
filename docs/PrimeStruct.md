@@ -357,6 +357,10 @@ Planned ownership-split test matrix:
 - Deterministic ordering:
   semantic-product ownership/provenance tests should be able to use golden files without incidental ordering noise
   from modules, definitions, bindings, or diagnostics.
+- Current status:
+  source-span parity tests and deterministic ownership-order coverage now pin the lowering-facing semantic-product
+  surfaces that currently publish source handles; remaining ownership/provenance work is debug/source-map parity plus
+  syntax-boundary coverage.
 
 Migration stages:
 1. Define the semantic-product type and its ownership contract.
@@ -579,9 +583,11 @@ Current semantic-product dump contract:
   resolved targets, inferred types, effects, or helper-routing facts.
 
 Planned semantic-product unit/golden suite:
-- Current status: the exact semantic-product formatter golden already pins resolved call/helper
-  targets, binding/result facts, and effect/capability plus struct/layout metadata. The remaining
-  narrow golden work is provenance-handle coverage.
+- Current status: the exact semantic-product formatter golden now pins resolved call/helper targets,
+  binding/result facts, effect/capability plus struct/layout metadata, and the current `line:column`
+  provenance-handle surface carried by lowering-facing semantic-product facts. The remaining live
+  Group 12 coverage work is now pipeline-facing/backend conformance rather than narrow formatter
+  coverage.
 - Keep one narrow golden corpus focused on exported lowering facts rather than full pipeline behavior.
 - Prefer small representative programs that pin one fact family at a time:
   - resolved call/helper targets

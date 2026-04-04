@@ -1,11 +1,74 @@
 #include <algorithm>
 #include <cstdint>
+#include <string_view>
 
 #include "primec/testing/SemanticsValidationHelpers.h"
 
 #include "third_party/doctest.h"
 #include "test_semantics_helpers.h"
 #include "test_semantics_type_resolution_graph_helpers.h"
+
+namespace {
+
+const primec::Definition *findDefinitionByPath(const primec::Program &program, std::string_view fullPath) {
+  const auto it =
+      std::find_if(program.definitions.begin(),
+                   program.definitions.end(),
+                   [fullPath](const primec::Definition &definition) { return definition.fullPath == fullPath; });
+  return it == program.definitions.end() ? nullptr : &*it;
+}
+
+const primec::Expr *findBindingStatementByName(const primec::Definition &definition, std::string_view name) {
+  const auto it =
+      std::find_if(definition.statements.begin(),
+                   definition.statements.end(),
+                   [name](const primec::Expr &statement) { return statement.isBinding && statement.name == name; });
+  return it == definition.statements.end() ? nullptr : &*it;
+}
+
+template <typename Predicate>
+const primec::Expr *findExprRecursive(const primec::Expr &expr, const Predicate &predicate) {
+  if (predicate(expr)) {
+    return &expr;
+  }
+  for (const auto &arg : expr.args) {
+    if (const primec::Expr *found = findExprRecursive(arg, predicate)) {
+      return found;
+    }
+  }
+  for (const auto &bodyExpr : expr.bodyArguments) {
+    if (const primec::Expr *found = findExprRecursive(bodyExpr, predicate)) {
+      return found;
+    }
+  }
+  return nullptr;
+}
+
+template <typename Predicate>
+const primec::Expr *findExprInDefinition(const primec::Definition &definition, const Predicate &predicate) {
+  for (const auto &parameter : definition.parameters) {
+    if (const primec::Expr *found = findExprRecursive(parameter, predicate)) {
+      return found;
+    }
+  }
+  for (const auto &statement : definition.statements) {
+    if (const primec::Expr *found = findExprRecursive(statement, predicate)) {
+      return found;
+    }
+  }
+  if (definition.returnExpr.has_value()) {
+    return findExprRecursive(*definition.returnExpr, predicate);
+  }
+  return nullptr;
+}
+
+template <typename Entry, typename Predicate>
+const Entry *findSemanticEntry(const std::vector<Entry> &entries, const Predicate &predicate) {
+  const auto it = std::find_if(entries.begin(), entries.end(), predicate);
+  return it == entries.end() ? nullptr : &*it;
+}
+
+} // namespace
 
 TEST_SUITE_BEGIN("primestruct.semantics.type_resolution_graph");
 
@@ -663,6 +726,215 @@ main() {
   CHECK(onErrorIt->returnResultHasValue);
   CHECK(onErrorIt->returnResultValueType == "int");
   CHECK(onErrorIt->returnResultErrorType == "MyError");
+}
+
+TEST_CASE("semantic product source locations stay aligned with AST-owned lowering facts") {
+  const std::string source =
+      "Packet {\n"
+      "  [i32] left{1i32}\n"
+      "  [i64] right{2i64}\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "pick([i32] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "/vector/count([vector<i32>] self) {\n"
+      "  return(17i32)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main([array<string>] argv) {\n"
+      "  [vector<i32>] values{vector<i32>()}\n"
+      "  [i32] direct{pick(1i32)}\n"
+      "  [i32] method{values.count()}\n"
+      "  [i32] bridge{count(values)}\n"
+      "  return(bridge)\n"
+      "}\n";
+
+  const primec::Program astProgram = parseProgram(source);
+  const primec::Definition *packetDefinition = findDefinitionByPath(astProgram, "/Packet");
+  const primec::Definition *mainDefinition = findDefinitionByPath(astProgram, "/main");
+  REQUIRE(packetDefinition != nullptr);
+  REQUIRE(mainDefinition != nullptr);
+  REQUIRE(mainDefinition->returnExpr.has_value());
+
+  const primec::Expr *packetLeftField = findBindingStatementByName(*packetDefinition, "left");
+  const primec::Expr *mainValuesBinding = findBindingStatementByName(*mainDefinition, "values");
+  const primec::Expr *directCallExpr =
+      findExprInDefinition(*mainDefinition,
+                           [](const primec::Expr &expr) {
+                             return expr.kind == primec::Expr::Kind::Call && !expr.isMethodCall &&
+                                    expr.name == "pick";
+                           });
+  const primec::Expr *methodCallExpr =
+      findExprInDefinition(*mainDefinition,
+                           [](const primec::Expr &expr) {
+                             return expr.kind == primec::Expr::Kind::Call && expr.isMethodCall &&
+                                    expr.name == "count";
+                           });
+  const primec::Expr *bridgeCallExpr =
+      findExprInDefinition(*mainDefinition,
+                           [](const primec::Expr &expr) {
+                             return expr.kind == primec::Expr::Kind::Call && !expr.isMethodCall &&
+                                    expr.name == "count";
+                           });
+  REQUIRE(packetLeftField != nullptr);
+  REQUIRE(mainValuesBinding != nullptr);
+  REQUIRE(directCallExpr != nullptr);
+  REQUIRE(methodCallExpr != nullptr);
+  REQUIRE(bridgeCallExpr != nullptr);
+
+  auto semanticAst = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(semanticAst, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *typeEntry =
+      findSemanticEntry(semanticProgram.typeMetadata,
+                        [](const primec::SemanticProgramTypeMetadata &entry) { return entry.fullPath == "/Packet"; });
+  REQUIRE(typeEntry != nullptr);
+  CHECK(typeEntry->sourceLine == packetDefinition->sourceLine);
+  CHECK(typeEntry->sourceColumn == packetDefinition->sourceColumn);
+
+  const auto *fieldEntry = findSemanticEntry(
+      semanticProgram.structFieldMetadata,
+      [](const primec::SemanticProgramStructFieldMetadata &entry) {
+        return entry.structPath == "/Packet" && entry.fieldName == "left";
+      });
+  REQUIRE(fieldEntry != nullptr);
+  CHECK(fieldEntry->sourceLine == packetLeftField->sourceLine);
+  CHECK(fieldEntry->sourceColumn == packetLeftField->sourceColumn);
+
+  const auto *parameterEntry = findSemanticEntry(
+      semanticProgram.bindingFacts,
+      [](const primec::SemanticProgramBindingFact &entry) {
+        return entry.scopePath == "/main" && entry.siteKind == "parameter" && entry.name == "argv";
+      });
+  REQUIRE(parameterEntry != nullptr);
+  CHECK(parameterEntry->sourceLine == mainDefinition->parameters[0].sourceLine);
+  CHECK(parameterEntry->sourceColumn == mainDefinition->parameters[0].sourceColumn);
+
+  const auto *localEntry = findSemanticEntry(
+      semanticProgram.bindingFacts,
+      [](const primec::SemanticProgramBindingFact &entry) {
+        return entry.scopePath == "/main" && entry.siteKind == "local" && entry.name == "values";
+      });
+  REQUIRE(localEntry != nullptr);
+  CHECK(localEntry->sourceLine == mainValuesBinding->sourceLine);
+  CHECK(localEntry->sourceColumn == mainValuesBinding->sourceColumn);
+
+  const auto *temporaryEntry = findSemanticEntry(
+      semanticProgram.bindingFacts,
+      [](const primec::SemanticProgramBindingFact &entry) {
+        return entry.scopePath == "/main" && entry.siteKind == "temporary" && entry.name == "pick";
+      });
+  REQUIRE(temporaryEntry != nullptr);
+  CHECK(temporaryEntry->sourceLine == directCallExpr->sourceLine);
+  CHECK(temporaryEntry->sourceColumn == directCallExpr->sourceColumn);
+
+  const auto *directCallEntry = findSemanticEntry(
+      semanticProgram.directCallTargets,
+      [](const primec::SemanticProgramDirectCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.callName == "pick";
+      });
+  REQUIRE(directCallEntry != nullptr);
+  CHECK(directCallEntry->sourceLine == directCallExpr->sourceLine);
+  CHECK(directCallEntry->sourceColumn == directCallExpr->sourceColumn);
+
+  const auto *methodCallEntry = findSemanticEntry(
+      semanticProgram.methodCallTargets,
+      [](const primec::SemanticProgramMethodCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.methodName == "count";
+      });
+  REQUIRE(methodCallEntry != nullptr);
+  CHECK(methodCallEntry->sourceLine == methodCallExpr->sourceLine);
+  CHECK(methodCallEntry->sourceColumn == methodCallExpr->sourceColumn);
+
+  const auto *bridgeEntry = findSemanticEntry(
+      semanticProgram.bridgePathChoices,
+      [](const primec::SemanticProgramBridgePathChoice &entry) {
+        return entry.scopePath == "/main" && entry.helperName == "count";
+      });
+  REQUIRE(bridgeEntry != nullptr);
+  CHECK(bridgeEntry->sourceLine == bridgeCallExpr->sourceLine);
+  CHECK(bridgeEntry->sourceColumn == bridgeCallExpr->sourceColumn);
+
+  const auto *returnEntry = findSemanticEntry(
+      semanticProgram.returnFacts,
+      [](const primec::SemanticProgramReturnFact &entry) { return entry.definitionPath == "/main"; });
+  REQUIRE(returnEntry != nullptr);
+  CHECK(returnEntry->sourceLine == mainDefinition->returnExpr->sourceLine);
+  CHECK(returnEntry->sourceColumn == mainDefinition->returnExpr->sourceColumn);
+}
+
+TEST_CASE("semantic product ownership surfaces keep deterministic source order") {
+  const std::string source =
+      "Record {\n"
+      "  [i32] zeta{1i32}\n"
+      "  [i32] alpha{2i32}\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "first([i32] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "second([i32] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [i32] zeta{second(2i32)}\n"
+      "  [i32] alpha{first(1i32)}\n"
+      "  return(alpha)\n"
+      "}\n";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  std::vector<std::string> fieldOrder;
+  for (const auto &entry : semanticProgram.structFieldMetadata) {
+    if (entry.structPath == "/Record") {
+      fieldOrder.push_back(entry.fieldName);
+    }
+  }
+  CHECK(fieldOrder == std::vector<std::string>{"zeta", "alpha"});
+
+  std::vector<std::string> localBindingOrder;
+  for (const auto &entry : semanticProgram.bindingFacts) {
+    if (entry.scopePath == "/main" && entry.siteKind == "local") {
+      localBindingOrder.push_back(entry.name);
+    }
+  }
+  CHECK(localBindingOrder == std::vector<std::string>{"zeta", "alpha"});
+
+  std::vector<std::string> directCallOrder;
+  for (const auto &entry : semanticProgram.directCallTargets) {
+    if (entry.scopePath == "/main" && (entry.callName == "second" || entry.callName == "first")) {
+      directCallOrder.push_back(entry.callName);
+    }
+  }
+  CHECK(directCallOrder == std::vector<std::string>{"second", "first"});
+
+  const std::string dump = primec::formatSemanticProgram(semanticProgram);
+  const size_t zetaFieldPos = dump.find("struct_field_metadata[0]: struct_path=\"/Record\" field_name=\"zeta\"");
+  const size_t alphaFieldPos = dump.find("struct_field_metadata[1]: struct_path=\"/Record\" field_name=\"alpha\"");
+  REQUIRE(zetaFieldPos != std::string::npos);
+  REQUIRE(alphaFieldPos != std::string::npos);
+  CHECK(zetaFieldPos < alphaFieldPos);
 }
 
 TEST_CASE("type resolution local Result.ok metadata stays aligned with wrapped call snapshots") {

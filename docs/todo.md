@@ -79,11 +79,9 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
 **Group 12 - Semantics/lowering boundary**
 Boundary note: this group is now split into semantic-product creation, pipeline plumbing, lowering cutover, and cleanup so it can be worked incrementally instead of as one flat migration queue.
 
-- ◐ Implement ownership-split tests for source spans, debug/source-map provenance, and syntax-faithful data using the documented test matrix. Progress: the documented matrix is now split into explicit ownership/parity slices so provenance coverage can land incrementally.
-  - ○ Add source-span parity tests for semantic-product entries that feed lowering-facing facts.
+- ◐ Implement ownership-split tests for source spans, debug/source-map provenance, and syntax-faithful data using the documented test matrix. Progress: source-span parity and deterministic ownership-order coverage now pin the lowering-facing semantic-product surfaces that publish source handles today; remaining work is the debug/source-map parity boundary plus syntax-reproduction boundary coverage.
   - ○ Add debug/source-map provenance parity tests for semantic-product-backed lowering/debug entrypoints.
   - ○ Add syntax-reproduction boundary tests that keep syntax-owned data on AST dumps and lowering-owned data on the semantic-product surface.
-  - ○ Add deterministic ordering tests for semantic-product ownership/provenance surfaces.
 
 Lowering cutover:
 - ◐ Implement the `prepareIrModule` / `IrLowerer::lower` entrypoint cutover now that the handoff contract is documented. Progress: this entrypoint cutover is now split into IR preparation, lowerer entry, and raw-`Program` retirement seams instead of one umbrella handoff bullet.
@@ -92,8 +90,6 @@ Lowering cutover:
   - ○ Retire the raw-`Program` lowering entry path once the temporary adapter is no longer needed.
 
 Coverage and migration cleanup:
-- ◐ Implement the narrow semantic-product unit/golden suite now that its fact coverage and scope are documented. Progress: the exact semantic-product formatter golden now covers resolved call/helper targets, binding/result type facts, and effect/capability plus struct/layout metadata; remaining work is provenance-handle coverage.
-  - ○ Add narrow semantic-product golden coverage for provenance handles back to AST-owned ids/spans.
 - ◐ Add end-to-end compile-pipeline conformance cases that exercise the semantic-product boundary through C++/VM/native lowering paths. Progress: this conformance surface is now split into per-backend lowering consumers instead of one umbrella pipeline item.
   - ○ Add end-to-end semantic-product boundary conformance for the C++ lowering path.
   - ○ Add end-to-end semantic-product boundary conformance for the VM lowering path.
