@@ -12,6 +12,18 @@
 #include <utility>
 
 namespace primec::ir_lowerer {
+namespace {
+
+std::unordered_map<std::string, const Definition *> buildDefinitionBodyLookup(const Program &program) {
+  std::unordered_map<std::string, const Definition *> definitionsByPath;
+  definitionsByPath.reserve(program.definitions.size());
+  for (const auto &def : program.definitions) {
+    definitionsByPath.emplace(def.fullPath, &def);
+  }
+  return definitionsByPath;
+}
+
+} // namespace
 
 bool buildCallableDefinitionCallContext(
     const Definition &def,
@@ -167,10 +179,11 @@ CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
     std::string &error) {
   const SemanticProductTargetAdapter semanticProductTargets =
       buildSemanticProductTargetAdapter(semanticProgram);
-  for (const auto &def : program.definitions) {
+  const auto definitionsByPath = buildDefinitionBodyLookup(program);
+  auto lowerDefinition = [&](const Definition &def) -> CallableDefinitionOrchestrationResult {
     if (def.fullPath == entryDef.fullPath || isStructDefinition(def) ||
         loweredCallTargets.find(def.fullPath) == loweredCallTargets.end()) {
-      continue;
+      return CallableDefinitionOrchestrationResult::Emitted;
     }
     bool hasArgsPackParam = false;
     for (const auto &param : def.parameters) {
@@ -180,7 +193,7 @@ CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
       }
     }
     if (hasArgsPackParam) {
-      continue;
+      return CallableDefinitionOrchestrationResult::Emitted;
     }
 
     ReturnInfo returnInfo;
@@ -246,6 +259,27 @@ CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
       return CallableDefinitionOrchestrationResult::Error;
     }
     outFunctions.push_back(std::move(function));
+    return CallableDefinitionOrchestrationResult::Emitted;
+  };
+
+  if (semanticProgram != nullptr && !semanticProgram->definitions.empty()) {
+    for (const auto &definitionEntry : semanticProgram->definitions) {
+      const auto defIt = definitionsByPath.find(definitionEntry.fullPath);
+      if (defIt == definitionsByPath.end() || defIt->second == nullptr) {
+        error = "semantic product definition missing AST body: " + definitionEntry.fullPath;
+        return CallableDefinitionOrchestrationResult::Error;
+      }
+      if (lowerDefinition(*defIt->second) == CallableDefinitionOrchestrationResult::Error) {
+        return CallableDefinitionOrchestrationResult::Error;
+      }
+    }
+    return CallableDefinitionOrchestrationResult::Emitted;
+  }
+
+  for (const auto &def : program.definitions) {
+    if (lowerDefinition(def) == CallableDefinitionOrchestrationResult::Error) {
+      return CallableDefinitionOrchestrationResult::Error;
+    }
   }
 
   return CallableDefinitionOrchestrationResult::Emitted;

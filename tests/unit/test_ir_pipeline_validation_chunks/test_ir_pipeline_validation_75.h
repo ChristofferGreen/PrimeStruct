@@ -455,6 +455,62 @@ TEST_CASE("ir lowerer statement call helper orchestrates callable lowering") {
             error) == Result::Error);
 }
 
+TEST_CASE("ir lowerer statement call helper prefers semantic callable inventory") {
+  using Result = primec::ir_lowerer::CallableDefinitionOrchestrationResult;
+
+  primec::Program program;
+  primec::Definition entry;
+  entry.fullPath = "/main/entry";
+  primec::Definition skipped;
+  skipped.fullPath = "/main/skipped";
+  primec::Definition target;
+  target.fullPath = "/main/target";
+  program.definitions = {entry, skipped, target};
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.definitions.push_back({.name = "entry", .fullPath = "/main/entry"});
+  semanticProgram.definitions.push_back({.name = "target", .fullPath = "/main/target"});
+
+  std::unordered_set<std::string> loweredCallTargets = {"/main/skipped", "/main/target"};
+  primec::IrFunction function;
+  int32_t nextLocal = 0;
+  std::vector<primec::IrFunction> outFunctions;
+  int buildCalls = 0;
+  std::string builtPath;
+  std::string error;
+
+  CHECK(primec::ir_lowerer::lowerCallableDefinitionOrchestration(
+            program,
+            program.definitions.front(),
+            &semanticProgram,
+            loweredCallTargets,
+            [](const primec::Definition &) { return false; },
+            [](const std::string &, primec::ir_lowerer::ReturnInfo &info) {
+              info.returnsVoid = true;
+              return true;
+            },
+            {},
+            {},
+            [](const primec::Expr &) { return false; },
+            []() {},
+            [&](const primec::Definition &def, int32_t &, primec::ir_lowerer::LocalMap &, primec::Expr &, std::string &) {
+              ++buildCalls;
+              builtPath = def.fullPath;
+              return true;
+            },
+            [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
+              return true;
+            },
+            [](const std::string &, const primec::ir_lowerer::ReturnInfo &) { return true; },
+            function,
+            nextLocal,
+            outFunctions,
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(buildCalls == 1);
+  CHECK(builtPath == "/main/target");
+}
+
 TEST_CASE("ir lowerer statement call helper orchestrates entry execution cleanup") {
   using Result = primec::ir_lowerer::EntryCallableExecutionResult;
 
@@ -641,4 +697,3 @@ TEST_CASE("ir lowerer statement call helper finalizes function table wiring") {
   REQUIRE(outFunctions[1].instructions.size() == 1);
   CHECK(outFunctions[1].instructions[0].op == primec::IrOpcode::ReturnVoid);
 }
-

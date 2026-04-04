@@ -556,6 +556,12 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(statementCallHelpersSource.find("buildSemanticProductTargetAdapter(semanticProgram)") !=
         std::string::npos);
+  CHECK(statementCallHelpersSource.find("const auto definitionsByPath = buildDefinitionBodyLookup(program);") !=
+        std::string::npos);
+  CHECK(statementCallHelpersSource.find("if (semanticProgram != nullptr && !semanticProgram->definitions.empty()) {") !=
+        std::string::npos);
+  CHECK(statementCallHelpersSource.find("semantic product definition missing AST body: ") !=
+        std::string::npos);
   CHECK(statementCallHelpersSource.find("findSemanticProductCallableSummary(semanticProductTargets, def.fullPath)") !=
         std::string::npos);
   CHECK(functionTableStepHeader.find("const SemanticProgram *semanticProgram = nullptr;") !=
