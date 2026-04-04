@@ -8,14 +8,9 @@ main() {
   return(plus(1i32, 2i32))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 1);
   CHECK(module.functions[0].instructions.size() == 4);
@@ -55,14 +50,9 @@ main() {
   return(min(inc(2i32), 4i32))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 }
 
@@ -80,14 +70,9 @@ main() {
   return(1i32)
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 }
 
@@ -110,14 +95,9 @@ main() {
   return(1i32)
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 }
 
@@ -142,14 +122,9 @@ main() {
   return(sample.z)
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
 
   primec::Vm vm;
   uint64_t result = 0;
@@ -192,14 +167,9 @@ main() {
   [i32] value{2i32}
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 1);
   REQUIRE(module.functions[0].instructions.size() == 3);
@@ -231,14 +201,9 @@ main() {
   return(2i32)
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 1);
   const auto &inst = module.functions[0].instructions;
@@ -256,14 +221,9 @@ main() {
   return(plus(1i64, 2i64))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 1);
   const auto &inst = module.functions[0].instructions;
@@ -287,14 +247,9 @@ main() {
   return(greater_than(0xFFFFFFFFFFFFFFFFu64, 1u64))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   bool sawCmp = false;
@@ -322,14 +277,9 @@ main() {
   return(value)
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
   const auto &inst = module.functions[0].instructions;
   REQUIRE(inst.size() == 10);
@@ -359,14 +309,9 @@ main() {
   return(assign(value, 4i32))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
   const auto &inst = module.functions[0].instructions;
   REQUIRE(inst.size() == 6);
@@ -392,14 +337,9 @@ main() {
   return(increment(value))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
   const auto &inst = module.functions[0].instructions;
   REQUIRE(inst.size() == 8);
@@ -427,14 +367,9 @@ main() {
   return(decrement(value))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
   const auto &inst = module.functions[0].instructions;
   REQUIRE(inst.size() == 8);

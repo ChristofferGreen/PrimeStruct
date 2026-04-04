@@ -6,7 +6,6 @@
 
 #include "primec/Ast.h"
 #include "primec/Ir.h"
-#include "primec/IrLowerer.h"
 #include "primec/IrSerializer.h"
 #include "primec/Vm.h"
 #include "test_ir_pipeline_helpers.h"
@@ -63,14 +62,9 @@ main() {
                    forward_mixed(ok_value(4i32), fail_bad()))))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -147,14 +141,9 @@ main() {
                    forward_mixed(t0, t1))))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -231,14 +220,9 @@ main() {
                    forward_mixed(t0, t1))))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -296,14 +280,9 @@ main() {
                    forward_mixed(ok_status(), fail_bad()))))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -378,14 +357,9 @@ main() {
                    forward_mixed(t0, t1))))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -460,14 +434,9 @@ main() {
                    forward_mixed(t0, t1))))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
