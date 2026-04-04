@@ -456,6 +456,10 @@ Planned lowerer entrypoint cutover:
   - any remaining raw-`Program` compatibility path is temporary adapter code only
 - That first entrypoint seam is already live at `prepareIrModule(...)`; the remaining production cutover work is the
   main `IrLowerer::lower(...)` entry plus eventual retirement of the raw-`Program` lowering path.
+- The remaining `IrLowerer::lower(...)` work is not one monolithic seam anymore:
+  - lowerer-wide entry/effect/runtime-reflection validation still scans raw `Program` state
+  - import/layout setup still rebuilds some inventories from raw definitions/imports
+  - helper/local setup still keeps a raw-`Program` path for `on_error`, uninitialized, and statement-call support
 - The entrypoint boundary should make ownership explicit:
   - lowering-facing meaning comes from the semantic product
   - syntax-faithful provenance, spans, and source reproduction remain AST-owned
