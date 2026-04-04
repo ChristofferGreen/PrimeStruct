@@ -379,6 +379,64 @@ SemanticsValidator::callBindingSnapshotForTesting() {
   return entries;
 }
 
+std::vector<SemanticsValidator::DirectCallTargetSnapshotEntry>
+SemanticsValidator::directCallTargetSnapshotForSemanticProduct() const {
+  std::vector<DirectCallTargetSnapshotEntry> entries;
+  std::function<void(const std::string &, const Expr &)> visitExpr;
+  auto visitExprs = [&](const std::string &scopePath, const std::vector<Expr> &exprs) {
+    for (const auto &expr : exprs) {
+      visitExpr(scopePath, expr);
+    }
+  };
+
+  visitExpr = [&](const std::string &scopePath, const Expr &expr) {
+    if (expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
+      const std::string resolvedPath = resolveCalleePath(expr);
+      if (!resolvedPath.empty()) {
+        entries.push_back(DirectCallTargetSnapshotEntry{
+            scopePath,
+            expr.name,
+            resolvedPath,
+            expr.sourceLine,
+            expr.sourceColumn,
+        });
+      }
+    }
+    visitExprs(scopePath, expr.args);
+    visitExprs(scopePath, expr.bodyArguments);
+  };
+
+  for (const auto &def : program_.definitions) {
+    visitExprs(def.fullPath, def.parameters);
+    visitExprs(def.fullPath, def.statements);
+    if (def.returnExpr.has_value()) {
+      visitExpr(def.fullPath, *def.returnExpr);
+    }
+  }
+
+  for (const auto &exec : program_.executions) {
+    visitExprs(exec.fullPath, exec.arguments);
+    visitExprs(exec.fullPath, exec.bodyArguments);
+  }
+
+  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+    if (left.scopePath != right.scopePath) {
+      return left.scopePath < right.scopePath;
+    }
+    if (left.sourceLine != right.sourceLine) {
+      return left.sourceLine < right.sourceLine;
+    }
+    if (left.sourceColumn != right.sourceColumn) {
+      return left.sourceColumn < right.sourceColumn;
+    }
+    if (left.callName != right.callName) {
+      return left.callName < right.callName;
+    }
+    return left.resolvedPath < right.resolvedPath;
+  });
+  return entries;
+}
+
 std::vector<SemanticsValidator::QueryReceiverBindingSnapshotEntry>
 SemanticsValidator::queryReceiverBindingSnapshotForTesting() {
   std::vector<QueryReceiverBindingSnapshotEntry> entries;

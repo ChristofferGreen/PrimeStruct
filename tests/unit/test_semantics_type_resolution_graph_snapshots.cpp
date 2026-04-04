@@ -215,6 +215,40 @@ TEST_CASE("type resolution query call metadata stays aligned with call snapshot"
   CHECK(queryEntry.typeText == callEntry.bindingTypeText);
 }
 
+TEST_CASE("semantic product publishes resolved direct-call targets") {
+  const std::string source =
+      "[return<T>]\n"
+      "id<T>([T] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [auto] selected{id(1i32)}\n"
+      "  return(selected)\n"
+      "}\n";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto targetIt =
+      std::find_if(semanticProgram.directCallTargets.begin(),
+                   semanticProgram.directCallTargets.end(),
+                   [](const primec::SemanticProgramDirectCallTarget &entry) {
+                     return entry.scopePath == "/main" &&
+                            entry.callName == "id" &&
+                            entry.resolvedPath.rfind("/id__t", 0) == 0;
+                   });
+  REQUIRE(targetIt != semanticProgram.directCallTargets.end());
+  CHECK(targetIt->sourceLine > 0);
+  CHECK(targetIt->sourceColumn > 0);
+}
+
 TEST_CASE("type resolution local Result.ok metadata stays aligned with wrapped call snapshots") {
   const std::string source =
       "MyError {\n"

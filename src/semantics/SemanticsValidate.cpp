@@ -98,7 +98,9 @@ bool runTypeResolutionSnapshot(
 
 namespace {
 
-SemanticProgram buildSemanticProgram(const Program &program, const std::string &entryPath) {
+SemanticProgram buildSemanticProgram(const Program &program,
+                                     const std::string &entryPath,
+                                     const semantics::SemanticsValidator &validator) {
   SemanticProgram semanticProgram;
   semanticProgram.entryPath = entryPath;
   semanticProgram.sourceImports = program.sourceImports;
@@ -122,6 +124,17 @@ SemanticProgram buildSemanticProgram(const Program &program, const std::string &
     execution.sourceLine = exec.sourceLine;
     execution.sourceColumn = exec.sourceColumn;
     semanticProgram.executions.push_back(std::move(execution));
+  }
+  const auto directCallTargets = validator.directCallTargetSnapshotForSemanticProduct();
+  semanticProgram.directCallTargets.reserve(directCallTargets.size());
+  for (const auto &entry : directCallTargets) {
+    semanticProgram.directCallTargets.push_back(SemanticProgramDirectCallTarget{
+        entry.scopePath,
+        entry.callName,
+        entry.resolvedPath,
+        entry.sourceLine,
+        entry.sourceColumn,
+    });
   }
   return semanticProgram;
 }
@@ -4220,7 +4233,7 @@ bool Semantics::validate(Program &program,
     return false;
   }
   if (semanticProgramOut != nullptr) {
-    *semanticProgramOut = buildSemanticProgram(program, entryPath);
+    *semanticProgramOut = buildSemanticProgram(program, entryPath, validator);
   }
   error.clear();
   validationSucceeded = true;

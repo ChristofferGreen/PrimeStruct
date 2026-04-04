@@ -136,9 +136,12 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::string semanticsHeader = readTextFile(semanticsHeaderPath);
   const std::string compilePipelineSource = readTextFile(compilePipelineSourcePath);
   const std::string semanticsValidate = readTextFile(semanticsValidatePath);
+  CHECK(semanticProduct.find("struct SemanticProgramDirectCallTarget") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramDefinition") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramExecution") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgram") != std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramDirectCallTarget> directCallTargets;") !=
+        std::string::npos);
   CHECK(compilePipelineHeader.find("SemanticProgram semanticProgram;") != std::string::npos);
   CHECK(compilePipelineHeader.find("bool hasSemanticProgram = false;") != std::string::npos);
   CHECK(semanticsHeader.find("SemanticProgram *semanticProgramOut = nullptr") != std::string::npos);
@@ -146,8 +149,11 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(compilePipelineSource.find("&semanticProgram") != std::string::npos);
   CHECK(compilePipelineSource.find("output.semanticProgram = std::move(semanticProgram);") != std::string::npos);
   CHECK(compilePipelineSource.find("output.hasSemanticProgram = true;") != std::string::npos);
-  CHECK(semanticsValidate.find("SemanticProgram buildSemanticProgram(const Program &program, const std::string &entryPath)") !=
+  CHECK(semanticsValidate.find("SemanticProgram buildSemanticProgram(const Program &program,") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("*semanticProgramOut = buildSemanticProgram(program, entryPath);") !=
+  CHECK(semanticsValidate.find("validator.directCallTargetSnapshotForSemanticProduct()") != std::string::npos);
+  CHECK(semanticsValidate.find("*semanticProgramOut = buildSemanticProgram(program, entryPath);") ==
+        std::string::npos);
+  CHECK(semanticsValidate.find("*semanticProgramOut = buildSemanticProgram(program, entryPath, validator);") !=
         std::string::npos);
 }

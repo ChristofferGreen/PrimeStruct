@@ -139,6 +139,14 @@ public:
     BindingInfo binding;
   };
 
+  struct DirectCallTargetSnapshotEntry {
+    std::string scopePath;
+    std::string callName;
+    std::string resolvedPath;
+    int sourceLine = 0;
+    int sourceColumn = 0;
+  };
+
   struct QueryReceiverBindingSnapshotEntry {
     std::string scopePath;
     std::string callName;
@@ -191,6 +199,7 @@ public:
   std::vector<QueryResultTypeSnapshotEntry> queryResultTypeSnapshotForTesting();
   std::vector<TryValueSnapshotEntry> tryValueSnapshotForTesting();
   std::vector<CallBindingSnapshotEntry> callBindingSnapshotForTesting();
+  std::vector<DirectCallTargetSnapshotEntry> directCallTargetSnapshotForSemanticProduct() const;
   std::vector<QueryReceiverBindingSnapshotEntry> queryReceiverBindingSnapshotForTesting();
   std::vector<OnErrorSnapshotEntry> onErrorSnapshotForTesting();
   std::vector<ValidationContextSnapshotEntry> validationContextSnapshotForTesting() const;
