@@ -8,6 +8,7 @@
 #include "IrLowererSharedTypes.h"
 #include "primec/Ast.h"
 #include "primec/Ir.h"
+#include "primec/SemanticProduct.h"
 
 namespace primec::ir_lowerer {
 
@@ -40,9 +41,18 @@ enum class CountAccessCallEmitResult {
 };
 
 bool resolveEntryArgsParameter(const Definition &entryDef,
+                               const SemanticProgram *semanticProgram,
                                bool &hasEntryArgsOut,
                                std::string &entryArgsNameOut,
                                std::string &error);
+bool resolveEntryArgsParameter(const Definition &entryDef,
+                               bool &hasEntryArgsOut,
+                               std::string &entryArgsNameOut,
+                               std::string &error);
+bool buildEntryCountAccessSetup(const Definition &entryDef,
+                                const SemanticProgram *semanticProgram,
+                                EntryCountAccessSetup &out,
+                                std::string &error);
 bool buildEntryCountAccessSetup(const Definition &entryDef, EntryCountAccessSetup &out, std::string &error);
 CountAccessClassifiers makeCountAccessClassifiers(bool hasEntryArgs, const std::string &entryArgsName);
 IsEntryArgsNameFn makeIsEntryArgsName(bool hasEntryArgs, const std::string &entryArgsName);

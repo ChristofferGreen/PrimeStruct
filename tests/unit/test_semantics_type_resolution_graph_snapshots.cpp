@@ -467,7 +467,7 @@ TEST_CASE("semantic product publishes binding and return facts") {
       "}\n"
       "\n"
       "[return<i32>]\n"
-      "main() {\n"
+      "main([array<string>] argv) {\n"
       "  [i32] seed{7i32}\n"
       "  [i32] chosen{id(seed)}\n"
       "  return(chosen)\n"
@@ -513,6 +513,17 @@ TEST_CASE("semantic product publishes binding and return facts") {
                    });
   REQUIRE(helperParameterIt != semanticProgram.bindingFacts.end());
   CHECK(helperParameterIt->bindingTypeText == "i32");
+
+  const auto entryParameterIt =
+      std::find_if(semanticProgram.bindingFacts.begin(),
+                   semanticProgram.bindingFacts.end(),
+                   [](const primec::SemanticProgramBindingFact &entry) {
+                     return entry.scopePath == "/main" &&
+                            entry.siteKind == "parameter" &&
+                            entry.name == "argv";
+                   });
+  REQUIRE(entryParameterIt != semanticProgram.bindingFacts.end());
+  CHECK(entryParameterIt->bindingTypeText == "array<string>");
 
   const auto tempIt =
       std::find_if(semanticProgram.bindingFacts.begin(),

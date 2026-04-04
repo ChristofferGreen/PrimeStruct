@@ -15,10 +15,61 @@ using count_access_detail::isMapBuiltinName;
 using count_access_detail::isVectorBuiltinName;
 using count_access_detail::isVectorCountTarget;
 
+namespace {
+
+bool resolveEntryArgsParameterFromSemanticProduct(const Definition &entryDef,
+                                                  const SemanticProgram *semanticProgram,
+                                                  bool &hasEntryArgsOut,
+                                                  std::string &entryArgsNameOut,
+                                                  std::string &error) {
+  hasEntryArgsOut = false;
+  entryArgsNameOut.clear();
+  if (semanticProgram == nullptr) {
+    return true;
+  }
+
+  const SemanticProgramBindingFact *entryParamFact = nullptr;
+  std::size_t entryParamCount = 0;
+  for (const auto &entry : semanticProgram->bindingFacts) {
+    if (entry.scopePath != entryDef.fullPath || entry.siteKind != "parameter") {
+      continue;
+    }
+    ++entryParamCount;
+    if (entryParamFact == nullptr) {
+      entryParamFact = &entry;
+    }
+  }
+
+  if (entryParamCount == 0) {
+    return true;
+  }
+  if (entryParamCount != 1) {
+    error = "native backend only supports a single array<string> entry parameter";
+    return false;
+  }
+  if (entryParamFact->bindingTypeText != "array<string>") {
+    error = "native backend entry parameter must be array<string>";
+    return false;
+  }
+
+  hasEntryArgsOut = true;
+  entryArgsNameOut = entryParamFact->name;
+  return true;
+}
+
+} // namespace
+
 bool resolveEntryArgsParameter(const Definition &entryDef,
+                               const SemanticProgram *semanticProgram,
                                bool &hasEntryArgsOut,
                                std::string &entryArgsNameOut,
                                std::string &error) {
+  if (resolveEntryArgsParameterFromSemanticProduct(
+          entryDef, semanticProgram, hasEntryArgsOut, entryArgsNameOut, error) &&
+      semanticProgram != nullptr) {
+    return true;
+  }
+
   hasEntryArgsOut = false;
   entryArgsNameOut.clear();
   if (entryDef.parameters.empty()) {
@@ -42,14 +93,28 @@ bool resolveEntryArgsParameter(const Definition &entryDef,
   return true;
 }
 
-bool buildEntryCountAccessSetup(const Definition &entryDef, EntryCountAccessSetup &out, std::string &error) {
+bool resolveEntryArgsParameter(const Definition &entryDef,
+                               bool &hasEntryArgsOut,
+                               std::string &entryArgsNameOut,
+                               std::string &error) {
+  return resolveEntryArgsParameter(entryDef, nullptr, hasEntryArgsOut, entryArgsNameOut, error);
+}
+
+bool buildEntryCountAccessSetup(const Definition &entryDef,
+                                const SemanticProgram *semanticProgram,
+                                EntryCountAccessSetup &out,
+                                std::string &error) {
   std::destroy_at(&out);
   std::construct_at(&out);
-  if (!resolveEntryArgsParameter(entryDef, out.hasEntryArgs, out.entryArgsName, error)) {
+  if (!resolveEntryArgsParameter(entryDef, semanticProgram, out.hasEntryArgs, out.entryArgsName, error)) {
     return false;
   }
   out.classifiers = makeCountAccessClassifiers(out.hasEntryArgs, out.entryArgsName);
   return true;
+}
+
+bool buildEntryCountAccessSetup(const Definition &entryDef, EntryCountAccessSetup &out, std::string &error) {
+  return buildEntryCountAccessSetup(entryDef, nullptr, out, error);
 }
 
 CountAccessClassifiers makeCountAccessClassifiers(bool hasEntryArgs, const std::string &entryArgsName) {

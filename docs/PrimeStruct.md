@@ -473,8 +473,8 @@ Planned lowerer entry-setup handoff:
 
 Planned lowerer type/binding handoff:
 - Current status: lowerer parameter/local setup, helper-parameter setup, temporary call binding
-  setup, and helper-result binding setup now prefer published semantic-product binding facts;
-  remaining work is lowered entry-argument seams plus helper-local synthetic and implicit
+  setup, helper-result binding setup, and lowered entry-count setup now prefer published
+  semantic-product binding facts; remaining work is helper-local synthetic and implicit
   helper-temporary metadata.
 - After entry setup is cut over, lowering should consume binding metadata from the semantic product instead of
   re-running helper-family checks, fallback type inference, or binding-shape recovery against the AST.

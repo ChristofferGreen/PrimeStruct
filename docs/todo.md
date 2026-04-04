@@ -115,9 +115,7 @@ Lowering cutover:
   - ○ Make `prepareIrModule` consume the semantic product directly instead of re-reading lowering facts from raw `Program` state.
   - ○ Make `IrLowerer::lower` consume the semantic product directly at its main lowering entrypoint.
   - ○ Retire the raw-`Program` lowering entry path once the temporary adapter is no longer needed.
-- ◐ Implement the lowerer type/binding setup cutover now that the handoff contract is documented. Progress: semantic-product binding facts now cover lowerer parameter/local setup, helper-parameter setup, temporary binding setup, and helper-result binding setup; remaining work is lowered entry-argument seams plus helper-local synthetic and implicit helper-temporary metadata.
-  - ◐ Consume semantic-product parameter and local binding metadata in lowerer setup. Progress: semantic-product binding facts now drive parameter and local binding classification; remaining work in this family is lowered entry-argument seams.
-    - ○ Consume semantic-product lowered entry-argument binding metadata in lowerer setup.
+- ◐ Implement the lowerer type/binding setup cutover now that the handoff contract is documented. Progress: semantic-product binding facts now cover lowerer parameter/local setup, lowered entry-argument setup, helper-parameter setup, temporary binding setup, and helper-result binding setup; remaining work is helper-local synthetic and implicit helper-temporary metadata.
   - ◐ Consume semantic-product temporary and return binding metadata in lowerer setup. Progress: entry return/result setup now consumes semantic-product return facts and callable summaries, and temporary call-expression binding setup now consumes semantic-product binding facts; remaining work is implicit helper temporaries.
     - ○ Consume semantic-product implicit helper-temporary metadata in lowerer setup.
   - ◐ Consume semantic-product helper-owned binding/type metadata in lowerer setup. Progress: semantic-product binding facts now cover helper parameters and helper results; remaining work in this helper-owned family is helper-local synthetic metadata.

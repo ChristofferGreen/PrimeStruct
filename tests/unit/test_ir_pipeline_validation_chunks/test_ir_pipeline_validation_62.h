@@ -560,6 +560,47 @@ TEST_CASE("ir lowerer count access helpers classify entry args and count calls")
   CHECK_FALSE(primec::ir_lowerer::resolveEntryArgsParameter(entryDef, hasEntryArgs, entryArgsName, error));
   CHECK(error == "native backend does not allow entry parameter defaults");
 
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      "/main",
+      "parameter",
+      "semanticArgv",
+      "/main/semanticArgv",
+      "array<string>",
+      false,
+      false,
+      false,
+      "",
+      3,
+      1,
+  });
+  entryDef.fullPath = "/main";
+  entryDef.parameters.clear();
+  error.clear();
+  hasEntryArgs = false;
+  entryArgsName.clear();
+  REQUIRE(primec::ir_lowerer::resolveEntryArgsParameter(
+      entryDef, &semanticProgram, hasEntryArgs, entryArgsName, error));
+  CHECK(hasEntryArgs);
+  CHECK(entryArgsName == "semanticArgv");
+  CHECK(error.empty());
+
+  primec::Expr staleParam;
+  staleParam.name = "stale";
+  primec::Transform staleTransform;
+  staleTransform.name = "array";
+  staleTransform.templateArgs = {"i64"};
+  staleParam.transforms.push_back(staleTransform);
+  entryDef.parameters = {staleParam};
+  error.clear();
+  hasEntryArgs = false;
+  entryArgsName.clear();
+  REQUIRE(primec::ir_lowerer::resolveEntryArgsParameter(
+      entryDef, &semanticProgram, hasEntryArgs, entryArgsName, error));
+  CHECK(hasEntryArgs);
+  CHECK(entryArgsName == "semanticArgv");
+  CHECK(error.empty());
+
   primec::ir_lowerer::LocalMap locals;
   primec::Expr entryName;
   entryName.kind = primec::Expr::Kind::Name;

@@ -56,6 +56,41 @@ TEST_CASE("ir lowerer count access helpers build bundled entry count setup") {
   CHECK(error == "native backend only supports a single array<string> entry parameter");
 }
 
+TEST_CASE("ir lowerer count access helpers prefer semantic product entry args facts") {
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+
+  primec::Expr staleParam;
+  staleParam.name = "stale";
+  primec::Transform staleTransform;
+  staleTransform.name = "array";
+  staleTransform.templateArgs = {"i64"};
+  staleParam.transforms.push_back(staleTransform);
+  entryDef.parameters = {staleParam};
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      "/main",
+      "parameter",
+      "argv",
+      "/main/argv",
+      "array<string>",
+      false,
+      false,
+      false,
+      "",
+      2,
+      3,
+  });
+
+  primec::ir_lowerer::EntryCountAccessSetup setup;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::buildEntryCountAccessSetup(entryDef, &semanticProgram, setup, error));
+  CHECK(setup.hasEntryArgs);
+  CHECK(setup.entryArgsName == "argv");
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer count access helpers reject removed /array/capacity alias") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo vecInfo;

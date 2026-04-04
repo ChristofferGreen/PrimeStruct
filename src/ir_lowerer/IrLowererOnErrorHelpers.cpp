@@ -150,7 +150,7 @@ bool buildEntryCountCallOnErrorSetup(const Program &program,
                                      std::string &error) {
   std::destroy_at(&out);
   std::construct_at(&out);
-  if (!buildEntryCountAccessSetup(entryDef, out.countAccessSetup, error)) {
+  if (!buildEntryCountAccessSetup(entryDef, semanticProgram, out.countAccessSetup, error)) {
     return false;
   }
   if (!buildEntryCallOnErrorSetup(

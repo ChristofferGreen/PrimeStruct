@@ -152,6 +152,12 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
       cwd / "src" / "ir_lowerer" / "IrLowererSetupMathHelpers.h";
   std::filesystem::path setupMathHelpersSourcePath =
       cwd / "src" / "ir_lowerer" / "IrLowererSetupMathHelpers.cpp";
+  std::filesystem::path countAccessHelpersHeaderPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererCountAccessHelpers.h";
+  std::filesystem::path countAccessHelpersSourcePath =
+      cwd / "src" / "ir_lowerer" / "IrLowererCountAccessHelpers.cpp";
+  std::filesystem::path onErrorHelpersSourcePath =
+      cwd / "src" / "ir_lowerer" / "IrLowererOnErrorHelpers.cpp";
   std::filesystem::path uninitializedTypeHelpersPath =
       cwd / "src" / "ir_lowerer" / "IrLowererUninitializedTypeHelpers.h";
   std::filesystem::path uninitializedSetupBuildersPath =
@@ -190,6 +196,12 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererSetupMathHelpers.h";
     setupMathHelpersSourcePath =
         cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererSetupMathHelpers.cpp";
+    countAccessHelpersHeaderPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererCountAccessHelpers.h";
+    countAccessHelpersSourcePath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererCountAccessHelpers.cpp";
+    onErrorHelpersSourcePath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererOnErrorHelpers.cpp";
     uninitializedTypeHelpersPath =
         cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererUninitializedTypeHelpers.h";
     uninitializedSetupBuildersPath =
@@ -220,6 +232,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   REQUIRE(std::filesystem::exists(bindingTypeHelpersSourcePath));
   REQUIRE(std::filesystem::exists(setupMathHelpersHeaderPath));
   REQUIRE(std::filesystem::exists(setupMathHelpersSourcePath));
+  REQUIRE(std::filesystem::exists(countAccessHelpersHeaderPath));
+  REQUIRE(std::filesystem::exists(countAccessHelpersSourcePath));
+  REQUIRE(std::filesystem::exists(onErrorHelpersSourcePath));
   REQUIRE(std::filesystem::exists(uninitializedTypeHelpersPath));
   REQUIRE(std::filesystem::exists(uninitializedSetupBuildersPath));
   REQUIRE(std::filesystem::exists(primecMainPath));
@@ -248,6 +263,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::string bindingTypeHelpersSource = readTextFile(bindingTypeHelpersSourcePath);
   const std::string setupMathHelpersHeader = readTextFile(setupMathHelpersHeaderPath);
   const std::string setupMathHelpersSource = readTextFile(setupMathHelpersSourcePath);
+  const std::string countAccessHelpersHeader = readTextFile(countAccessHelpersHeaderPath);
+  const std::string countAccessHelpersSource = readTextFile(countAccessHelpersSourcePath);
+  const std::string onErrorHelpersSource = readTextFile(onErrorHelpersSourcePath);
   const std::string uninitializedTypeHelpers = readTextFile(uninitializedTypeHelpersPath);
   const std::string uninitializedSetupBuilders = readTextFile(uninitializedSetupBuildersPath);
   const std::string primecMain = readTextFile(primecMainPath);
@@ -349,6 +367,16 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(bindingTypeHelpersHeader.find("BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgram = nullptr);") !=
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find("findSemanticProductBindingFact(semanticProductTargets, expr)") !=
+        std::string::npos);
+  CHECK(countAccessHelpersHeader.find("const SemanticProgram *semanticProgram,") != std::string::npos);
+  CHECK(countAccessHelpersSource.find("resolveEntryArgsParameter(const Definition &entryDef,\n"
+                                      "                               const SemanticProgram *semanticProgram,") !=
+        std::string::npos);
+  CHECK(countAccessHelpersSource.find("entry.scopePath != entryDef.fullPath || entry.siteKind != \"parameter\"") !=
+        std::string::npos);
+  CHECK(countAccessHelpersSource.find("entryParamFact->bindingTypeText != \"array<string>\"") !=
+        std::string::npos);
+  CHECK(onErrorHelpersSource.find("buildEntryCountAccessSetup(entryDef, semanticProgram, out.countAccessSetup, error)") !=
         std::string::npos);
   CHECK(setupMathHelpersHeader.find("SetupMathAndBindingAdapters makeSetupMathAndBindingAdapters(bool hasMathImport,") !=
         std::string::npos);
