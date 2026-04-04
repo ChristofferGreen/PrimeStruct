@@ -3398,9 +3398,11 @@ runtime trap on already-canonicalized bare/direct/method/slash-method calls.
 That single-column borrowed-slot substrate is the current completed foothold, but today that
 foothold is the indexed/field-level borrowed projection surface (`ref(...).field`,
 `.ref(i).field`, and `value.field()[i]`-style reads/writes) rather than standalone
-`ref(...)` values. The remaining borrowed-view work is now tracked as language-level
-invalidation on top of that projection substrate first, then richer standalone borrowed
-field-view semantics on top of the same substrate. Successful experimental
+`ref(...)` values. Those projections are recomputed per use through the existing
+`soaVectorGet(...).field` / `soaVectorRef(...).field` rewrite and lowering path, so they do
+not yet materialize a standalone borrowed object that can survive later wrapper mutation. The
+remaining borrowed-view work therefore starts when standalone `ref(...)` values or
+standalone borrowed field-view values exist on top of the same substrate. Successful experimental
 `value.field()[i]` indexing now has its first completed read-only reflected slices on top of
 the current substrate for direct wrapper receivers, borrowed local shorthand, inline
 `location(...)` borrow expressions, explicitly dereferenced borrowed local receivers, borrowed
@@ -3412,10 +3414,10 @@ receivers now also share the completed read-only method surface for `get`, `ref`
 field-view work is richer borrowed/mutating behavior rather than backend cleanup for that
 read-only path.
   - **Borrowed-view invalidation contract:** the next language-level substrate slice should treat
-    `ref(...)` and future field-view borrows as ephemeral views over wrapper-owned SoA column
-    storage rather than as independently owning proxies. The intended contract is:
-    `get(...)` remains value-style and never carries invalidation state; `ref(...)`,
-    `value.field()[i]`, and future borrowed field-view helpers remain valid only while the
+    standalone `ref(...)` values and future standalone field-view borrows as ephemeral views over
+    wrapper-owned SoA column storage rather than as independently owning proxies. The intended
+    contract is: `get(...)` remains value-style and never carries invalidation state; standalone
+    `ref(...)` values and future standalone borrowed field-view values remain valid only while the
     underlying wrapper stays at a stable layout and stable element count; any structural
     mutation (`push`, `reserve`, future remove/clear growth-shrinking helpers, direct AoS/SoA
     conversion that reallocates, or wrapper destruction) invalidates all outstanding borrowed
@@ -3424,14 +3426,13 @@ read-only path.
     implementation target is explicit validation and runtime/provenance rules for that
     invalidation boundary, not another compiler-owned pending-diagnostic special case. The
     current completed foothold is indexed borrowed-slot read/write projections
-    (`ref(...).field`, `.ref(i).field`, and `value.field()[i]`-style reads/writes);
-    standalone `ref(...)` values plus standalone borrowed field-view values are still later
-    surfaces. The remaining implementation work therefore naturally splits into current
-    projection-surface growth invalidation (`push`, `reserve`), later shrink/motion
-    invalidation (`remove_*`, `clear`, and later size-changing helpers), storage-
-    replacement/destruction invalidation, later standalone `ref(...)` invalidation,
-    later standalone field-view invalidation on those same families, and provenance/escape
-    rules for helper-derived borrowed views.
+    (`ref(...).field`, `.ref(i).field`, and `value.field()[i]`-style reads/writes), but those
+    projections are recomputed per use through the helper rewrite path and do not yet
+    materialize a standalone borrowed object that needs its own persisted invalidation state.
+    The remaining implementation work therefore starts with growth invalidation, later
+    shrink/motion invalidation, storage-replacement/destruction invalidation, and
+    provenance/escape rules for later standalone `ref(...)` values plus later standalone field-view
+    values on those same receiver families.
   - **Richer borrowed field-view contract:** the next borrowed-view slice should treat
     standalone field-view expressions as first-class non-owning column views rather than
     keeping `borrowed.field()` / `field(borrowed)` on the compiler-owned pending-diagnostic

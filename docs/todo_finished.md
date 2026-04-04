@@ -7,6 +7,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Removed the false current borrowed-slot projection invalidation/provenance subtree after confirming that the current projection surface rewrites each use to `soaVectorGet(...).field` / `soaVectorRef(...).field` and therefore does not materialize a standalone borrowed value that can survive later `push` / `reserve` / conversion / destruction events.
 - ✓ Split the live Group 8 borrowed-view invalidation queue again to match the actual current substrate, separating current indexed/field-level borrowed-slot projection invalidation from later standalone `ref(...)` and standalone borrowed field-view invalidation.
 - ✓ Split the live Group 8 borrowed-view invalidation queue again along the real current substrate boundary, separating current `ref(...)` borrowed-slot invalidation from later standalone borrowed field-view invalidation and splitting the current growth slice into explicit `push` and `reserve` follow-ups.
 - ✓ Split the live Group 8 borrowed-view structural invalidation item into current growth, later shrink/motion, conversion/destruction, and provenance-specific slices, so the remaining invalidation queue now matches the actual wrapper mutation and receiver families.

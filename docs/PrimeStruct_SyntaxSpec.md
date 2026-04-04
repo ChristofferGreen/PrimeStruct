@@ -1069,7 +1069,9 @@ instead of an inline pending branch. The remaining live
 follow-ups are now reduced to invalidation plus richer borrowed-view semantics on top of that
 substrate. The current completed borrowed foothold is the indexed/field-level borrowed
 projection surface (`ref(...).field`, `.ref(i).field`, and `value.field()[i]`-style
-reads/writes) rather than standalone `ref(...)` values.
+reads/writes) rather than standalone `ref(...)` values. Those projections are recomputed per use
+through the existing `soaVectorGet(...).field` / `soaVectorRef(...).field` helper path, so they
+do not yet materialize a standalone borrowed object that survives later wrapper mutation.
 Read-only wrapper field-view indexing now routes both method-form `values.field()[i]`
 and call-form `field(values)[i]` reflected reads, plus borrowed local `borrowed.field()[i]`,
 inline `location(values).field()[i]` / `field(dereference(location(values)))[i]`,
@@ -1123,12 +1125,12 @@ Those writes should preserve the same invalidation rules as other borrowed SoA v
 should not reintroduce builtin-only mutation branches outside the experimental helper path.
 The remaining implementation work naturally splits into direct/borrowed-local receivers,
 helper-return and method-like helper-return receivers, and inline `location(...)`-wrapped
-receivers. The same invalidation boundary also still needs its own implementation slices:
-current borrowed-slot projection growth invalidation (`push`, `reserve`), later shrink/motion
-invalidation (`remove_*`, `clear`, and later size-changing helpers), storage-
-replacement/destruction invalidation, later standalone `ref(...)` invalidation, later
-standalone field-view invalidation on those same families, and provenance/escape rules for
-helper-derived borrowed views.
+receivers. The same invalidation boundary therefore starts with later standalone `ref(...)`
+values and later standalone borrowed field-view values rather than the current indexed
+projection syntax. The remaining implementation slices are growth invalidation, later
+shrink/motion invalidation, storage-replacement/destruction invalidation, and provenance/escape
+rules for those later standalone borrowed surfaces on `location(...)`, helper-return, and
+method-like helper-return receivers.
 Non-empty literals still emit the deterministic unsupported diagnostic
 `native backend does not support non-empty soa_vector literals`.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the
