@@ -7,6 +7,59 @@
 #include <utility>
 
 namespace primec::ir_lowerer {
+namespace {
+
+const Transform *findOnErrorTransform(const Definition &def, std::string &error) {
+  const Transform *found = nullptr;
+  for (const auto &transform : def.transforms) {
+    if (transform.name != "on_error") {
+      continue;
+    }
+    if (found != nullptr) {
+      error = "duplicate on_error transform on " + def.fullPath;
+      return nullptr;
+    }
+    found = &transform;
+  }
+  return found;
+}
+
+bool buildOnErrorHandlerFromSemanticFact(const Definition &def,
+                                         const SemanticProgramOnErrorFact &fact,
+                                         std::optional<OnErrorHandler> &out,
+                                         std::string &error) {
+  out = OnErrorHandler{};
+  out->errorType = fact.errorType;
+  out->handlerPath = fact.handlerPath;
+  out->boundArgs.clear();
+  out->boundArgs.reserve(fact.boundArgCount);
+
+  if (fact.boundArgCount == 0) {
+    return true;
+  }
+
+  const Transform *transform = findOnErrorTransform(def, error);
+  if (transform == nullptr) {
+    if (error.empty()) {
+      error = "missing on_error transform arguments on " + def.fullPath;
+    }
+    return false;
+  }
+  if (transform->arguments.size() != fact.boundArgCount) {
+    error = "semantic-product on_error bound arg mismatch on " + def.fullPath;
+    return false;
+  }
+  for (const auto &argText : transform->arguments) {
+    Expr argExpr;
+    if (!parseTransformArgumentExpr(argText, def.namespacePrefix, argExpr, error)) {
+      return false;
+    }
+    out->boundArgs.push_back(std::move(argExpr));
+  }
+  return true;
+}
+
+} // namespace
 
 bool parseTransformArgumentExpr(const std::string &text,
                                 const std::string &namespacePrefix,
@@ -72,13 +125,31 @@ bool buildOnErrorByDefinition(const Program &program,
                               const DefinitionExistsFn &definitionExists,
                               OnErrorByDefinition &out,
                               std::string &error) {
+  return buildOnErrorByDefinition(program, nullptr, resolveExprPath, definitionExists, out, error);
+}
+
+bool buildOnErrorByDefinition(const Program &program,
+                              const SemanticProgram *semanticProgram,
+                              const ResolveExprPathFn &resolveExprPath,
+                              const DefinitionExistsFn &definitionExists,
+                              OnErrorByDefinition &out,
+                              std::string &error) {
+  const SemanticProductTargetAdapter semanticProductTargets =
+      buildSemanticProductTargetAdapter(semanticProgram);
   out.clear();
   out.reserve(program.definitions.size());
   for (const auto &def : program.definitions) {
     std::optional<OnErrorHandler> handler;
-    if (!parseOnErrorTransform(
-            def.transforms, def.namespacePrefix, def.fullPath, resolveExprPath, definitionExists, handler, error)) {
-      return false;
+    if (const auto *onErrorFact = findSemanticProductOnErrorFact(semanticProductTargets, def.fullPath);
+        onErrorFact != nullptr) {
+      if (!buildOnErrorHandlerFromSemanticFact(def, *onErrorFact, handler, error)) {
+        return false;
+      }
+    } else {
+      if (!parseOnErrorTransform(
+              def.transforms, def.namespacePrefix, def.fullPath, resolveExprPath, definitionExists, handler, error)) {
+        return false;
+      }
     }
     out.emplace(def.fullPath, std::move(handler));
   }
@@ -90,7 +161,18 @@ bool buildOnErrorByDefinitionFromCallResolutionAdapters(
     const CallResolutionAdapters &callResolutionAdapters,
     OnErrorByDefinition &out,
     std::string &error) {
+  return buildOnErrorByDefinition(
+      program, nullptr, callResolutionAdapters.resolveExprPath, callResolutionAdapters.definitionExists, out, error);
+}
+
+bool buildOnErrorByDefinitionFromCallResolutionAdapters(
+    const Program &program,
+    const SemanticProgram *semanticProgram,
+    const CallResolutionAdapters &callResolutionAdapters,
+    OnErrorByDefinition &out,
+    std::string &error) {
   return buildOnErrorByDefinition(program,
+                                  semanticProgram,
                                   callResolutionAdapters.resolveExprPath,
                                   callResolutionAdapters.definitionExists,
                                   out,
@@ -123,7 +205,7 @@ bool buildEntryCallOnErrorSetup(const Program &program,
   out.callResolutionAdapters = entryCallResolutionSetup.adapters;
   out.hasTailExecution = entryCallResolutionSetup.hasTailExecution;
   if (!buildOnErrorByDefinitionFromCallResolutionAdapters(
-          program, out.callResolutionAdapters, out.onErrorByDefinition, error)) {
+          program, semanticProgram, out.callResolutionAdapters, out.onErrorByDefinition, error)) {
     return false;
   }
   return true;

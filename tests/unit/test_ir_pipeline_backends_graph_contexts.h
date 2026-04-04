@@ -453,6 +453,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterHeader.find("struct SemanticProductTargetAdapter") != std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramCallableSummary *findSemanticProductCallableSummary(") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("std::unordered_map<std::string, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionPath;") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<std::string, const SemanticProgramTypeMetadata *> typeMetadataByPath;") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::vector<const SemanticProgramTypeMetadata *> orderedStructTypeMetadata;") !=
@@ -472,6 +476,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterSource.find("buildSemanticProductTargetAdapter(const SemanticProgram *semanticProgram)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.callableSummariesByPath.reserve(") != std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.onErrorFactsByDefinitionPath.reserve(semanticProgram->onErrorFacts.size())") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.typeMetadataByPath.reserve(semanticProgram->typeMetadata.size())") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.orderedStructTypeMetadata.reserve(semanticProgram->typeMetadata.size())") !=
@@ -541,6 +547,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(countAccessHelpersSource.find("entryParamFact->bindingTypeText != \"array<string>\"") !=
         std::string::npos);
   CHECK(onErrorHelpersSource.find("buildEntryCountAccessSetup(entryDef, semanticProgram, out.countAccessSetup, error)") !=
+        std::string::npos);
+  CHECK(onErrorHelpersSource.find("findSemanticProductOnErrorFact(semanticProductTargets, def.fullPath)") !=
+        std::string::npos);
+  CHECK(onErrorHelpersSource.find("buildOnErrorByDefinition(program, semanticProgram,") !=
         std::string::npos);
   CHECK(statementCallHelpersHeader.find("const SemanticProgram *semanticProgram,") !=
         std::string::npos);

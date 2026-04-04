@@ -460,7 +460,7 @@ Planned lowerer entrypoint cutover:
   - top-level lowerer entry/effect validation now prefers semantic-product callable summaries, while nested expression-transform checks remain syntax-owned
   - native-backend software-numeric and runtime-reflection rejection still run as separate backend policy scans
   - import/layout setup now treats its remaining `Definition*` map as an explicitly AST-owned provenance/body inventory for field statements, namespace prefixes, and recursive layout traversal; the import-alias table is pinned as a syntax-owned shorthand layer derived from spelled `import` directives plus wildcard expansion; top-level struct layout enumeration already prefers semantic-product type inventories, so the only live raw-`Program` seam left there is AST-owned field/provenance traversal inside layout computation
-  - helper/local setup still keeps a raw-`Program` path for `on_error`, uninitialized, and statement-call support
+  - helper/local setup now prefers semantic-product `on_error` facts for handler path/error type/count while leaving bound-arg expressions syntax-owned; the remaining raw-`Program` seams there are callable-definition/statement-call inventory scans plus the syntax-owned math-import surface used during uninitialized setup
 - The entrypoint boundary should make ownership explicit:
   - lowering-facing meaning comes from the semantic product
   - syntax-faithful provenance, spans, and source reproduction remain AST-owned

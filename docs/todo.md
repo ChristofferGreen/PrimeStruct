@@ -86,7 +86,10 @@ Lowering cutover:
       - ○ Decide and pin the long-term surface for native-backend software-numeric rejection scans.
       - ○ Decide and pin the long-term surface for native-backend runtime-reflection rejection scans.
     - ✓ Replace lowerer import/layout setup reads of raw `Program` state with semantic-product-backed inventories plus syntax-owned import aliases only. Completed: field ordering/type/envelope metadata, struct-like classification, explicit alignment, struct-name inventory, and top-level struct layout enumeration now come from the semantic product; the residual AST traversal inside layout computation is now explicitly pinned as syntax-owned field/provenance access for `public/private`, `static`, `pod/handle/gpu_lane`, field-local alignment, and direct source provenance.
-    - ○ Replace lowerer helper/local setup reads of raw `Program` state with semantic-product-backed callable, binding, return, and `on_error` facts.
+    - ◐ Replace lowerer helper/local setup reads of raw `Program` state with semantic-product-backed callable, binding, return, and `on_error` facts. Progress: helper/local `on_error` metadata now prefers semantic-product `on_error` facts while keeping bound-arg expressions syntax-owned; the remaining raw-`Program` seams are callable-definition/statement-call inventory scans and the syntax-owned math-import surface used during uninitialized setup.
+      - ✓ Replace helper/local `on_error` metadata reads with semantic-product-backed `on_error` facts while keeping bound-arg expressions syntax-owned. Completed: lowerer helper/local setup now takes handler path/error type/bound-arg count from published semantic-product `on_error` facts and only re-reads the raw AST transform arguments to parse executable bound-arg expressions.
+      - ○ Replace helper/local callable-definition/statement-call inventory scans with semantic-product callable inventories plus AST-owned bodies.
+      - ○ Decide and pin the long-term syntax-owned math-import surface used during uninitialized/helper-local setup.
   - ○ Retire the raw-`Program` lowering entry path once the temporary adapter is no longer needed.
 
 Coverage and migration cleanup:

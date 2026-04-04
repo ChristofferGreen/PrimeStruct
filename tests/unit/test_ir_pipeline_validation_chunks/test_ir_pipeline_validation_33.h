@@ -83,6 +83,55 @@ TEST_CASE("ir lowerer on_error helpers wire definition handlers from call adapte
   CHECK_FALSE(onErrorByDef.at("/handler").has_value());
 }
 
+TEST_CASE("ir lowerer on_error helpers prefer semantic-product metadata") {
+  primec::Program program;
+
+  primec::Definition handlerDef;
+  handlerDef.fullPath = "/handler";
+  handlerDef.namespacePrefix = "";
+  program.definitions.push_back(handlerDef);
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.namespacePrefix = "";
+  primec::Transform onError;
+  onError.name = "on_error";
+  onError.templateArgs = {"WrongError", "missing"};
+  onError.arguments = {"1i32"};
+  mainDef.transforms.push_back(onError);
+  program.definitions.push_back(mainDef);
+
+  auto resolveExprPath = [](const primec::Expr &expr) {
+    if (!expr.name.empty() && expr.name[0] == '/') {
+      return expr.name;
+    }
+    return std::string("/") + expr.name;
+  };
+  auto definitionExists = [](const std::string &path) { return path == "/handler" || path == "/main"; };
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
+      .definitionPath = "/main",
+      .returnKind = "void",
+      .handlerPath = "/handler",
+      .errorType = "FileError",
+      .boundArgCount = 1,
+  });
+
+  primec::ir_lowerer::OnErrorByDefinition onErrorByDef;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::buildOnErrorByDefinition(
+      program, &semanticProgram, resolveExprPath, definitionExists, onErrorByDef, error));
+  CHECK(error.empty());
+
+  REQUIRE(onErrorByDef.count("/main") == 1);
+  REQUIRE(onErrorByDef.at("/main").has_value());
+  CHECK(onErrorByDef.at("/main")->errorType == "FileError");
+  CHECK(onErrorByDef.at("/main")->handlerPath == "/handler");
+  REQUIRE(onErrorByDef.at("/main")->boundArgs.size() == 1);
+  CHECK(onErrorByDef.at("/main")->boundArgs.front().literalValue == 1);
+}
+
 TEST_CASE("ir lowerer on_error helpers build bundled entry call and on_error setup") {
   primec::Program program;
 
@@ -142,6 +191,46 @@ TEST_CASE("ir lowerer on_error helpers build bundled entry call and on_error set
   CHECK_FALSE(primec::ir_lowerer::buildEntryCallOnErrorSetup(
       badProgram, badProgram.definitions[2], true, badDefMap, importAliases, setup, error));
   CHECK(error == "unknown on_error handler: /missing");
+}
+
+TEST_CASE("ir lowerer on_error entry setup validates semantic bound arg counts") {
+  primec::Program program;
+
+  primec::Definition handlerDef;
+  handlerDef.fullPath = "/handler";
+  handlerDef.namespacePrefix = "";
+  program.definitions.push_back(handlerDef);
+
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+  entryDef.namespacePrefix = "";
+  primec::Transform onError;
+  onError.name = "on_error";
+  onError.templateArgs = {"FileError", "handler"};
+  onError.arguments = {"1i32"};
+  entryDef.transforms.push_back(onError);
+  program.definitions.push_back(entryDef);
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/handler", &program.definitions[0]},
+      {"/main", &program.definitions[1]},
+  };
+  const std::unordered_map<std::string, std::string> importAliases = {};
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
+      .definitionPath = "/main",
+      .returnKind = "void",
+      .handlerPath = "/handler",
+      .errorType = "FileError",
+      .boundArgCount = 2,
+  });
+
+  primec::ir_lowerer::EntryCallOnErrorSetup setup;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::buildEntryCallOnErrorSetup(
+      program, program.definitions[1], true, defMap, importAliases, &semanticProgram, setup, error));
+  CHECK(error == "semantic-product on_error bound arg mismatch on /main");
 }
 
 TEST_CASE("ir lowerer on_error helpers build bundled entry count and call/on_error setup") {
@@ -606,4 +695,3 @@ TEST_CASE(
       error));
   CHECK(error == "native backend does not support string array return types on /main");
 }
-

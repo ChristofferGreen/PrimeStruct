@@ -94,6 +94,13 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
     }
   }
 
+  adapter.onErrorFactsByDefinitionPath.reserve(semanticProgram->onErrorFacts.size());
+  for (const auto &entry : semanticProgram->onErrorFacts) {
+    if (!entry.definitionPath.empty()) {
+      adapter.onErrorFactsByDefinitionPath[entry.definitionPath] = &entry;
+    }
+  }
+
   adapter.typeMetadataByPath.reserve(semanticProgram->typeMetadata.size());
   adapter.orderedStructTypeMetadata.reserve(semanticProgram->typeMetadata.size());
   for (const auto &entry : semanticProgram->typeMetadata) {
@@ -186,6 +193,18 @@ const SemanticProgramCallableSummary *findSemanticProductCallableSummary(const S
     return nullptr;
   }
   if (const auto it = adapter.callableSummariesByPath.find(fullPath); it != adapter.callableSummariesByPath.end()) {
+    return it->second;
+  }
+  return nullptr;
+}
+
+const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(const SemanticProductTargetAdapter &adapter,
+                                                                const std::string &definitionPath) {
+  if (definitionPath.empty()) {
+    return nullptr;
+  }
+  if (const auto it = adapter.onErrorFactsByDefinitionPath.find(definitionPath);
+      it != adapter.onErrorFactsByDefinitionPath.end()) {
     return it->second;
   }
   return nullptr;

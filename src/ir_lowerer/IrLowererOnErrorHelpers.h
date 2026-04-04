@@ -9,6 +9,7 @@
 #include "IrLowererCallHelpers.h"
 #include "IrLowererCountAccessHelpers.h"
 #include "IrLowererFlowHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "primec/Ast.h"
 
 namespace primec::ir_lowerer {
@@ -42,8 +43,20 @@ bool buildOnErrorByDefinition(const Program &program,
                               const DefinitionExistsFn &definitionExists,
                               OnErrorByDefinition &out,
                               std::string &error);
+bool buildOnErrorByDefinition(const Program &program,
+                              const SemanticProgram *semanticProgram,
+                              const ResolveExprPathFn &resolveExprPath,
+                              const DefinitionExistsFn &definitionExists,
+                              OnErrorByDefinition &out,
+                              std::string &error);
 bool buildOnErrorByDefinitionFromCallResolutionAdapters(
     const Program &program,
+    const CallResolutionAdapters &callResolutionAdapters,
+    OnErrorByDefinition &out,
+    std::string &error);
+bool buildOnErrorByDefinitionFromCallResolutionAdapters(
+    const Program &program,
+    const SemanticProgram *semanticProgram,
     const CallResolutionAdapters &callResolutionAdapters,
     OnErrorByDefinition &out,
     std::string &error);

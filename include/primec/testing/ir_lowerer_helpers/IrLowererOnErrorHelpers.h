@@ -31,8 +31,20 @@ bool buildOnErrorByDefinition(const Program &program,
                               const DefinitionExistsFn &definitionExists,
                               OnErrorByDefinition &out,
                               std::string &error);
+bool buildOnErrorByDefinition(const Program &program,
+                              const SemanticProgram *semanticProgram,
+                              const ResolveExprPathFn &resolveExprPath,
+                              const DefinitionExistsFn &definitionExists,
+                              OnErrorByDefinition &out,
+                              std::string &error);
 bool buildOnErrorByDefinitionFromCallResolutionAdapters(
     const Program &program,
+    const CallResolutionAdapters &callResolutionAdapters,
+    OnErrorByDefinition &out,
+    std::string &error);
+bool buildOnErrorByDefinitionFromCallResolutionAdapters(
+    const Program &program,
+    const SemanticProgram *semanticProgram,
     const CallResolutionAdapters &callResolutionAdapters,
     OnErrorByDefinition &out,
     std::string &error);
@@ -43,10 +55,26 @@ bool buildEntryCallOnErrorSetup(const Program &program,
                                 const std::unordered_map<std::string, std::string> &importAliases,
                                 EntryCallOnErrorSetup &out,
                                 std::string &error);
+bool buildEntryCallOnErrorSetup(const Program &program,
+                                const Definition &entryDef,
+                                bool definitionReturnsVoid,
+                                const std::unordered_map<std::string, const Definition *> &defMap,
+                                const std::unordered_map<std::string, std::string> &importAliases,
+                                const SemanticProgram *semanticProgram,
+                                EntryCallOnErrorSetup &out,
+                                std::string &error);
 bool buildEntryCountCallOnErrorSetup(const Program &program,
                                      const Definition &entryDef,
                                      bool definitionReturnsVoid,
                                      const std::unordered_map<std::string, const Definition *> &defMap,
                                      const std::unordered_map<std::string, std::string> &importAliases,
+                                     EntryCountCallOnErrorSetup &out,
+                                     std::string &error);
+bool buildEntryCountCallOnErrorSetup(const Program &program,
+                                     const Definition &entryDef,
+                                     bool definitionReturnsVoid,
+                                     const std::unordered_map<std::string, const Definition *> &defMap,
+                                     const std::unordered_map<std::string, std::string> &importAliases,
+                                     const SemanticProgram *semanticProgram,
                                      EntryCountCallOnErrorSetup &out,
                                      std::string &error);
