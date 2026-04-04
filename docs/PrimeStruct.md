@@ -635,8 +635,9 @@ Planned pipeline-facing semantic-product conformance matrix:
   the narrow semantic-product golden suite to cover full backend behavior.
 - Current status: pipeline-facing inspection-order coverage now captures `ast-semantic`, `semantic-product`, and `ir`
   from the same compile-pipeline source and pins that the semantic-product dump is the lowering-facing boundary between
-  syntax-shaped AST output and backend-facing IR output. The public pipeline helper now also covers the C++ and VM
-  lowering paths end to end; the remaining live conformance work is native lowering consumption.
+  syntax-shaped AST output and backend-facing IR output. The public pipeline helper now also covers the C++/VM/native
+  lowering paths end to end, and backend-consumer conformance pins direct-call/method-call semantic facts on all three
+  backend families.
 - The first pipeline-facing cases should prove inspection-surface order and consistency:
   - `ast-semantic` remains syntax-shaped.
   - the semantic-product dump exposes lowering-facing facts directly.
@@ -684,8 +685,8 @@ Planned testing-helper migration contract:
 - Current status: `primec/testing/CompilePipelineDumpHelpers.h` now provides the semantic-product-aware dump helper for
   compile-pipeline tests plus the first semantic-product-aware pipeline conformance helper for prepared IR, and
   lowering-facing dump/compile-pipeline assertions now route through that helper surface rather than direct CLI shell
-  dumps or ad hoc test-local compile-pipeline wiring. The remaining helper migration work is moving backend-facing
-  assertions and native pipeline conformance onto the same semantic-product-aware surfaces.
+  dumps or ad hoc test-local compile-pipeline wiring. The remaining helper migration work is moving the rest of the
+  backend-facing assertions onto those same semantic-product-aware conformance surfaces.
 - `primec/testing/SemanticsValidationHelpers.h` and related helpers should migrate in this order:
   - move lowering-facing assertions onto semantic-product dump helpers or pipeline-facing conformance helpers
   - retain AST-facing helpers only for syntax-owned, provenance-owned, parser-facing, or canonicalization-facing checks
