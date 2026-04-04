@@ -457,7 +457,7 @@ Planned lowerer entrypoint cutover:
 - That first entrypoint seam is already live at `prepareIrModule(...)`; the remaining production cutover work is the
   main `IrLowerer::lower(...)` entry plus eventual retirement of the raw-`Program` lowering path.
 - The remaining `IrLowerer::lower(...)` work is not one monolithic seam anymore:
-  - lowerer-wide entry/effect validation still scans raw `Program` state where callable summaries have not taken over
+  - top-level lowerer entry/effect validation now prefers semantic-product callable summaries, while nested expression-transform checks remain syntax-owned
   - native-backend software-numeric and runtime-reflection rejection still run as separate backend policy scans
   - import/layout setup still rebuilds some inventories from raw definitions/imports
   - helper/local setup still keeps a raw-`Program` path for `on_error`, uninitialized, and statement-call support

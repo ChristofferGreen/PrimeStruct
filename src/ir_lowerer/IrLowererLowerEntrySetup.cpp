@@ -33,7 +33,7 @@ bool runLowerEntrySetup(const Program &program,
   if (!validateNoRuntimeReflectionQueries(program, error)) {
     return false;
   }
-  if (!validateProgramEffects(program, entryPath, defaultEffects, entryDefaultEffects, error)) {
+  if (!validateProgramEffects(program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error)) {
     return false;
   }
   if (!resolveEntryMetadataMasks(*entryDefOut,

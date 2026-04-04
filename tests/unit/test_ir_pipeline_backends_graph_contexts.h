@@ -553,6 +553,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irReturnInference.find("findSemanticProductReturnFact(semanticProductTargets, entryPath)") !=
         std::string::npos);
+  CHECK(irLowerEffects.find("return validateProgramEffects(program, nullptr, entryPath, defaultEffects, entryDefaultEffects, error);") !=
+        std::string::npos);
+  CHECK(irLowerEffects.find("findSemanticProductCallableSummary(*semanticProductTargetsPtr, fullPath)") !=
+        std::string::npos);
   CHECK(primecMain.find("pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr") !=
         std::string::npos);
   CHECK(primecMain.find("describeCompilePipelineFailure(pipelineOutput)") != std::string::npos);

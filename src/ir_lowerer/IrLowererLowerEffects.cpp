@@ -431,6 +431,43 @@ bool validateProgramEffects(const Program &program,
                             const std::vector<std::string> &defaultEffects,
                             const std::vector<std::string> &entryDefaultEffects,
                             std::string &error) {
+  return validateProgramEffects(program, nullptr, entryPath, defaultEffects, entryDefaultEffects, error);
+}
+
+bool validateProgramEffects(const Program &program,
+                            const SemanticProgram *semanticProgram,
+                            const std::string &entryPath,
+                            const std::vector<std::string> &defaultEffects,
+                            const std::vector<std::string> &entryDefaultEffects,
+                            std::string &error) {
+  SemanticProductTargetAdapter semanticProductTargets{};
+  const SemanticProductTargetAdapter *semanticProductTargetsPtr = nullptr;
+  if (semanticProgram != nullptr) {
+    semanticProductTargets = buildSemanticProductTargetAdapter(semanticProgram);
+    semanticProductTargetsPtr = &semanticProductTargets;
+  }
+
+  const auto validateCallableEffects =
+      [&](const std::string &fullPath,
+          const std::vector<Transform> &transforms,
+          bool isEntry,
+          const std::string &context) -> bool {
+    if (semanticProductTargetsPtr != nullptr) {
+      if (const auto *callableSummary =
+              findSemanticProductCallableSummary(*semanticProductTargetsPtr, fullPath);
+          callableSummary != nullptr) {
+        for (const auto &effect : callableSummary->activeEffects) {
+          if (!isSupportedEffect(effect)) {
+            error = "native backend does not support effect: " + effect + " on " + context;
+            return false;
+          }
+        }
+        return true;
+      }
+    }
+    return validateActiveEffects(transforms, context, isEntry, defaultEffects, entryDefaultEffects, error);
+  };
+
   const auto validateExprEffects = [&](const auto &self, const Expr &expr, const std::string &context) -> bool {
     if (!validateEffectsTransforms(expr.transforms, context, error)) {
       return false;
@@ -449,8 +486,7 @@ bool validateProgramEffects(const Program &program,
   };
 
   for (const auto &def : program.definitions) {
-    if (!validateActiveEffects(def.transforms, def.fullPath, def.fullPath == entryPath, defaultEffects, entryDefaultEffects,
-                               error)) {
+    if (!validateCallableEffects(def.fullPath, def.transforms, def.fullPath == entryPath, def.fullPath)) {
       return false;
     }
     for (const auto &param : def.parameters) {
@@ -469,7 +505,7 @@ bool validateProgramEffects(const Program &program,
   }
 
   for (const auto &exec : program.executions) {
-    if (!validateActiveEffects(exec.transforms, exec.fullPath, false, defaultEffects, entryDefaultEffects, error)) {
+    if (!validateCallableEffects(exec.fullPath, exec.transforms, false, exec.fullPath)) {
       return false;
     }
     for (const auto &arg : exec.arguments) {

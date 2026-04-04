@@ -1160,6 +1160,80 @@ TEST_CASE("ir lowerer effects unit rejects unsupported nested expression effects
   CHECK(error == "native backend does not support effect: unsupported_effect on /main");
 }
 
+TEST_CASE("ir lowerer effects unit prefers semantic product callable summaries") {
+  primec::Program program;
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+
+  primec::Transform badEffects;
+  badEffects.name = "effects";
+  badEffects.arguments = {"unsupported_effect"};
+  entryDef.transforms.push_back(badEffects);
+  program.definitions.push_back(entryDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      "/main",
+      false,
+      "i32",
+      false,
+      false,
+      {"io_out"},
+      {"io_out"},
+      false,
+      false,
+      "",
+      "",
+      false,
+      "",
+      "",
+      0,
+  });
+
+  std::string error;
+  CHECK(primec::ir_lowerer::validateProgramEffects(program, &semanticProgram, "/main", {}, {}, error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("ir lowerer effects unit keeps nested expression effect checks syntax owned") {
+  primec::Program program;
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+
+  primec::Expr statementExpr;
+  primec::Expr nestedArg;
+  primec::Transform badEffects;
+  badEffects.name = "effects";
+  badEffects.arguments = {"unsupported_effect"};
+  nestedArg.transforms.push_back(badEffects);
+  statementExpr.args.push_back(nestedArg);
+  entryDef.statements.push_back(statementExpr);
+  program.definitions.push_back(entryDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      "/main",
+      false,
+      "i32",
+      false,
+      false,
+      {"io_out"},
+      {"io_out"},
+      false,
+      false,
+      "",
+      "",
+      false,
+      "",
+      "",
+      0,
+  });
+
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::validateProgramEffects(program, &semanticProgram, "/main", {}, {}, error));
+  CHECK(error == "native backend does not support effect: unsupported_effect on /main");
+}
+
 TEST_CASE("ir lowerer effects unit resolves entry metadata masks") {
   primec::Definition entryDef;
   entryDef.fullPath = "/main";
