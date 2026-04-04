@@ -3,6 +3,7 @@
 #include <string_view>
 
 #include "primec/IrLowerer.h"
+#include "primec/testing/CompilePipelineDumpHelpers.h"
 #include "primec/testing/SemanticsValidationHelpers.h"
 
 #include "third_party/doctest.h"
@@ -1303,6 +1304,36 @@ TEST_CASE("semantic product formatter exact golden is stable") {
 )";
 
   CHECK(primec::formatSemanticProgram(semanticProgram) == expected);
+}
+
+TEST_CASE("semantic product dump helper matches formatter output") {
+  const std::string source =
+      "import /std/collections/*\n"
+      "\n"
+      "[return<T>]\n"
+      "id<T>([T] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [vector<i32>] values{vector<i32>()}\n"
+      "  return(id(values.count()))\n"
+      "}\n";
+
+  primec::testing::CompilePipelineBoundaryDumps dumps;
+  std::string error;
+  REQUIRE(primec::testing::captureSemanticBoundaryDumpsForTesting(source, "/main", dumps, error));
+  CHECK(error.empty());
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  CHECK(dumps.semanticProduct == primec::formatSemanticProgram(semanticProgram));
 }
 
 TEST_SUITE_END();

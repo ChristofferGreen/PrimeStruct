@@ -92,7 +92,7 @@ Coverage and migration cleanup:
   - ○ Add end-to-end semantic-product boundary conformance for the native lowering path.
 - ◐ Migrate tests and public testing helpers from `primec/testing/SemanticsValidationHelpers.h` now that their boundary/migration contract is documented, moving lowering-facing assertions onto the semantic-product inspection surface. Progress: this migration is now split into explicit helper-surface and assertion-migration slices instead of one broad cleanup item.
   - ◐ Move lowering-facing assertions onto semantic-product dump helpers or pipeline-facing conformance helpers. Progress: this assertion migration is now split into dump-based, pipeline-based, and backend-facing assertion seams instead of one broad assertion bucket.
-    - ○ Move lowering-facing dump assertions onto semantic-product dump helpers.
+    - ◐ Move lowering-facing dump assertions onto semantic-product dump helpers. Progress: `primec/testing/CompilePipelineDumpHelpers.h` now captures `ast-semantic` / `semantic-product` / `ir` boundary dumps for tests, and the first pipeline-facing inspection-order coverage plus formatter-parity coverage now use that helper.
     - ○ Move lowering-facing compile-pipeline assertions onto semantic-product pipeline conformance helpers.
     - ○ Move lowering-facing backend-facing assertions onto semantic-product-aware backend conformance helpers.
   - ◐ Narrow `primec/testing/SemanticsValidationHelpers.h` to syntax-owned and provenance-owned assertions only. Progress: this narrowing work is now split into syntax-owned, provenance-owned, and transitional compatibility seams instead of one broad header-cleanup item.
@@ -116,8 +116,7 @@ Coverage and migration cleanup:
   - ○ Delete lowerer-side direct-call stdlib/helper alias fallback paths once semantic-product direct-call targets exist.
   - ○ Delete lowerer-side receiver/method-call stdlib/helper alias fallback paths once semantic-product receiver-call targets exist.
   - ○ Delete lowerer-side collection/builtin bridge alias fallback paths once semantic-product helper-routing facts exist.
-- ◐ Implement pipeline-facing tests that exercise the semantic-product inspection surface and its relation to existing AST/IR dumps once that stage exists, now that the test matrix is documented. Progress: the documented conformance matrix is now split into explicit inspection-order and backend-consumer slices instead of one broad pipeline test item.
-  - ○ Add pipeline-facing tests that pin inspection-surface order and consistency across `ast-semantic`, semantic-product dump, and `ir`.
+- ◐ Implement pipeline-facing tests that exercise the semantic-product inspection surface and its relation to existing AST/IR dumps once that stage exists, now that the test matrix is documented. Progress: inspection-order and consistency coverage now pins `ast-semantic`, `semantic-product`, and `ir` through the compile pipeline; remaining work is backend-consumer coverage per lowering path.
   - ◐ Add pipeline-facing tests that pin lowering consumption of semantic-product facts across C++/VM/native. Progress: this backend-consumer coverage is now split into per-backend lowering consumers instead of one broad backend bucket.
     - ○ Add pipeline-facing tests that pin lowering consumption of semantic-product facts on the C++ backend.
     - ○ Add pipeline-facing tests that pin lowering consumption of semantic-product facts on the VM backend.

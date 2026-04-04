@@ -605,6 +605,10 @@ Planned semantic-product unit/golden suite:
 Planned pipeline-facing semantic-product conformance matrix:
 - Keep a separate compile-pipeline matrix for consumers that cross the semantic/lowering boundary instead of extending
   the narrow semantic-product golden suite to cover full backend behavior.
+- Current status: pipeline-facing inspection-order coverage now captures `ast-semantic`, `semantic-product`, and `ir`
+  from the same compile-pipeline source and pins that the semantic-product dump is the lowering-facing boundary between
+  syntax-shaped AST output and backend-facing IR output. The remaining live conformance work is per-backend lowering
+  consumption.
 - The first pipeline-facing cases should prove inspection-surface order and consistency:
   - `ast-semantic` remains syntax-shaped.
   - the semantic-product dump exposes lowering-facing facts directly.
@@ -649,6 +653,9 @@ Planned testing-only snapshot removal contract:
 
 Planned testing-helper migration contract:
 - Public testing helpers should be split by ownership boundary rather than by current implementation history.
+- Current status: `primec/testing/CompilePipelineDumpHelpers.h` now provides a semantic-product-aware dump helper for
+  compile-pipeline tests, and the remaining helper migration work is moving more lowering-facing assertions onto that
+  dump surface or the backend-facing conformance matrix.
 - `primec/testing/SemanticsValidationHelpers.h` and related helpers should migrate in this order:
   - move lowering-facing assertions onto semantic-product dump helpers or pipeline-facing conformance helpers
   - retain AST-facing helpers only for syntax-owned, provenance-owned, parser-facing, or canonicalization-facing checks

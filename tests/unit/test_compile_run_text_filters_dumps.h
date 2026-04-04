@@ -1,3 +1,5 @@
+#include "primec/testing/CompilePipelineDumpHelpers.h"
+
 TEST_CASE("dump pre_ast shows imports and text filters") {
   const std::string libPath =
       writeTemp("compile_dump_pre_ast_lib.prime", "// PRE_AST_LIB\n[return<int>]\nhelper(){ return(1i32) }\n");
@@ -2340,6 +2342,53 @@ TEST_CASE("semantic-product dump keeps provenance handles while ast-semantic kee
   CHECK(semanticProduct.find("source=\"2:") != std::string::npos);
   CHECK(semanticProduct.find("left{1}") == std::string::npos);
   CHECK(semanticProduct.find("return(selected)") == std::string::npos);
+}
+
+TEST_CASE("pipeline dump surfaces keep inspection order and lowering-facing boundaries") {
+  const std::string source =
+      "Packet {\n"
+      "  [i32] left{1i32}\n"
+      "  [i32] right{2i32}\n"
+      "}\n"
+      "\n"
+      "import /std/collections/*\n"
+      "\n"
+      "[return<T>]\n"
+      "id<T>([T] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [Packet] packet{Packet(3i32, 4i32)}\n"
+      "  [vector<i32>] values{vector<i32>()}\n"
+      "  [i32] selected{id(packet.left + values.count())}\n"
+      "  return(selected)\n"
+      "}\n";
+
+  primec::testing::CompilePipelineBoundaryDumps dumps;
+  std::string error;
+  REQUIRE(primec::testing::captureSemanticBoundaryDumpsForTesting(source, "/main", dumps, error));
+  CHECK(error.empty());
+
+  CHECK(dumps.astSemantic.find("left{1}") != std::string::npos);
+  CHECK(dumps.astSemantic.find("return(selected)") != std::string::npos);
+
+  CHECK(dumps.semanticProduct.find("semantic_product {") != std::string::npos);
+  CHECK(dumps.semanticProduct.find("direct_call_targets[") != std::string::npos);
+  CHECK(dumps.semanticProduct.find("method_call_targets[") != std::string::npos);
+  CHECK(dumps.semanticProduct.find("bridge_path_choices[") != std::string::npos);
+  CHECK(dumps.semanticProduct.find("binding_facts[") != std::string::npos);
+  CHECK(dumps.semanticProduct.find("return_facts[") != std::string::npos);
+  CHECK(dumps.semanticProduct.find("left{1}") == std::string::npos);
+  CHECK(dumps.semanticProduct.find("return(selected)") == std::string::npos);
+
+  CHECK(dumps.ir.find("module {") != std::string::npos);
+  CHECK(dumps.ir.find("def /main(): i32") != std::string::npos);
+  CHECK(dumps.ir.find("semantic_product {") == std::string::npos);
+  CHECK(dumps.ir.find("binding_facts[") == std::string::npos);
+  CHECK(dumps.ir.find("left{1}") == std::string::npos);
+  CHECK(dumps.ir.find("return(selected)") == std::string::npos);
 }
 
 TEST_CASE("primevm dump stage rejects unknown value") {
