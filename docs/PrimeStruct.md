@@ -1656,14 +1656,17 @@ or a semicolon if you intended to index.
     `/Type/SoaSchemaFieldVisibility([i32] index) -> string` over the non-static fields of `Type` in deterministic
     source order. `SoaSchema` also emits `/Type/SoaSchemaChunkCount() -> i32`,
     `/Type/SoaSchemaChunkFieldStart([i32] index) -> i32`, and `/Type/SoaSchemaChunkFieldCount([i32] index) -> i32`
-    so wide reflected schemas can be grouped into deterministic sixteen-column storage chunks. These helpers bridge the
-    current constant-index-only `meta.field_*<T>(i)` rule for reflected SoA work: callers can loop from `0` to
+    so wide reflected schemas can be grouped into deterministic sixteen-column storage chunks. `SoaSchema` now also
+    emits `/Type/SoaSchemaStorage` and `/Type/SoaSchemaStorageNew()` on top of that chunk layer, where each chunk
+    field is backed by `SoaColumn<T>` or `SoaColumnsN<...>` (`N <= 16`) over the reflected source-order fields.
+    These helpers bridge the current constant-index-only `meta.field_*<T>(i)` rule for reflected SoA work: callers can loop from `0` to
     `/Type/SoaSchemaFieldCount()` and query names/types/visibility through runtime
     `i32` indices without direct `meta.field_name<T>(...)` / `meta.field_type<T>(...)` /
     `meta.field_visibility<T>(...)` calls. Out-of-range string helper indices currently return the empty string
-    sentinel, while out-of-range chunk helper indices return `0i32`. The next follow-up for arbitrary-width SoA is
-    wiring allocation/grow/free onto this chunk-descriptor layer so schemas wider than the fixed sixteen-column
-    substrate can use multiple deterministic chunks instead of stopping at the pending-width gate.
+    sentinel, while out-of-range chunk helper indices return `0i32`. The next follow-ups for arbitrary-width SoA are
+    wiring grow/realloc and free/drop onto this chunked storage layer so schemas wider than the fixed sixteen-column
+    substrate can keep using multiple deterministic chunks instead of stopping at the pending-width gate for those
+    later operations.
 - **Baseline reflection API scope (v1):** reflection APIs are compile-time-only metadata queries. Runtime reflection
   objects/tables are out of scope and rejected (`/meta/object`, `/meta/table`).
 - **Reserved compile-time metadata query names:** `meta.type_name<T>`, `meta.type_kind<T>`, `meta.is_struct<T>`,

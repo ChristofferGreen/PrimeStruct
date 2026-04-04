@@ -337,6 +337,9 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
       if (!emitReflectionSoaSchemaHelpers(validationContext)) {
         return false;
       }
+      if (!emitReflectionSoaSchemaStorageHelpers(validationContext)) {
+        return false;
+      }
     }
 
     rewrittenDefinitions.push_back(std::move(def));

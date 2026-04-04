@@ -308,4 +308,57 @@ main() {
   CHECK(runCommand(quoteShellArg(nativePath)) == 63);
 }
 
+TEST_CASE("reflection SoaSchema storage helper runtime stays aligned across backends") {
+  const std::string source = R"(
+[struct reflect generate(SoaSchema)]
+Wide() {
+  [i32] f0{0i32}
+  [i32] f1{0i32}
+  [i32] f2{0i32}
+  [i32] f3{0i32}
+  [i32] f4{0i32}
+  [i32] f5{0i32}
+  [i32] f6{0i32}
+  [i32] f7{0i32}
+  [i32] f8{0i32}
+  [i32] f9{0i32}
+  [i32] f10{0i32}
+  [i32] f11{0i32}
+  [i32] f12{0i32}
+  [i32] f13{0i32}
+  [i32] f14{0i32}
+  [i32] f15{0i32}
+  [i32] f16{0i32}
+}
+
+[return<int>]
+main() {
+  [/Wide/SoaSchemaStorage mut] storage{/Wide/SoaSchemaStorageNew()}
+  [i32 mut] score{0i32}
+  if(equal(storage.chunk0.first.field_capacity(), 1i32), then() { assign(score, plus(score, 1i32)) }, else() { })
+  if(equal(storage.chunk0.sixteenth.field_capacity(), 1i32), then() { assign(score, plus(score, 2i32)) }, else() { })
+  if(equal(storage.chunk1.field_capacity(), 1i32), then() { assign(score, plus(score, 4i32)) }, else() { })
+  if(equal(storage.chunk0.first.field_count(), 0i32), then() { assign(score, plus(score, 8i32)) }, else() { })
+  if(equal(storage.chunk1.field_count(), 0i32), then() { assign(score, plus(score, 16i32)) }, else() { })
+  return(score)
+}
+)";
+  const std::string srcPath = writeTemp("compile_reflection_soa_schema_storage_runtime.prime", source);
+
+  const std::string vmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
+  CHECK(runCommand(vmCmd) == 31);
+
+  const std::string exePath = (testScratchPath("") / "primec_reflection_soa_schema_storage_exe").string();
+  const std::string exeCompileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(exeCompileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(exePath)) == 31);
+
+  const std::string nativePath = (testScratchPath("") / "primec_reflection_soa_schema_storage_native").string();
+  const std::string nativeCompileCmd =
+      "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(nativePath) + " --entry /main";
+  CHECK(runCommand(nativeCompileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(nativePath)) == 31);
+}
+
 TEST_SUITE_END();

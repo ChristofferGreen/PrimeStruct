@@ -10,10 +10,41 @@
 namespace primec::semantics {
 namespace {
 
+std::string formatTemplateArgs(const std::vector<std::string> &args) {
+  std::string out;
+  for (size_t i = 0; i < args.size(); ++i) {
+    if (i > 0) {
+      out += ", ";
+    }
+    out += args[i];
+  }
+  return out;
+}
+
+std::string escapeStringLiteral(const std::string &text) {
+  std::string escaped;
+  escaped.reserve(text.size() + 8);
+  escaped.push_back('"');
+  for (char c : text) {
+    if (c == '"' || c == '\\') {
+      escaped.push_back('\\');
+    }
+    escaped.push_back(c);
+  }
+  escaped += "\"utf8";
+  return escaped;
+}
+
 void appendPublicVisibility(Definition &helper) {
   Transform visibilityTransform;
   visibilityTransform.name = "public";
   helper.transforms.push_back(std::move(visibilityTransform));
+}
+
+void appendPublicVisibility(Expr &binding) {
+  Transform visibilityTransform;
+  visibilityTransform.name = "public";
+  binding.transforms.push_back(std::move(visibilityTransform));
 }
 
 Expr makeTypeBinding(const std::string &bindingName,
@@ -84,6 +115,25 @@ Expr makeReturnStatementExpr(Expr valueExpr) {
   returnCall.args.push_back(std::move(valueExpr));
   returnCall.argNames.push_back(std::nullopt);
   return returnCall;
+}
+
+Expr makeConstructorCall(const std::string &typeName) {
+  Expr call;
+  call.kind = Expr::Kind::Call;
+  std::string typeBase;
+  std::string typeArgText;
+  if (splitTemplateTypeName(typeName, typeBase, typeArgText) && !typeBase.empty() && !typeArgText.empty()) {
+    call.name = typeBase;
+    std::vector<std::string> typeArgs;
+    if (splitTopLevelTemplateArgs(typeArgText, typeArgs)) {
+      call.templateArgs = std::move(typeArgs);
+    } else {
+      call.templateArgs.push_back(typeArgText);
+    }
+  } else {
+    call.name = typeName;
+  }
+  return call;
 }
 
 Expr makeEnvelopeExpr(const std::string &name, std::vector<Expr> bodyArguments) {
@@ -334,6 +384,96 @@ bool emitReflectionSoaSchemaHelpers(ReflectionGeneratedHelperContext &context) {
 
   appendIndexedI32Helper("SoaSchemaChunkFieldStart", chunkStartHelperPath, chunkStarts);
   appendIndexedI32Helper("SoaSchemaChunkFieldCount", chunkFieldCountHelperPath, chunkFieldCounts);
+  return true;
+}
+
+bool emitReflectionSoaSchemaStorageHelpers(ReflectionGeneratedHelperContext &context) {
+  const std::string storageStructPath = context.def.fullPath + "/SoaSchemaStorage";
+  const std::string storageNewHelperPath = context.def.fullPath + "/SoaSchemaStorageNew";
+  for (const auto *helperPath : {&storageStructPath, &storageNewHelperPath}) {
+    if (context.definitionPaths.count(*helperPath) > 0) {
+      context.error = "generated reflection helper already exists: " + *helperPath;
+      return false;
+    }
+  }
+
+  auto makeChunkTypeName = [](const std::vector<std::string> &fieldTypes) {
+    if (fieldTypes.size() == 1) {
+      return std::string("/std/collections/experimental_soa_storage/SoaColumn<") + formatTemplateArgs(fieldTypes) +
+             ">";
+    }
+    return std::string("/std/collections/experimental_soa_storage/SoaColumns") +
+           std::to_string(fieldTypes.size()) + "<" + formatTemplateArgs(fieldTypes) + ">";
+  };
+
+  std::vector<std::string> chunkTypeNames;
+  const size_t chunkWidth = 16;
+  for (size_t start = 0; start < context.fieldNames.size(); start += chunkWidth) {
+    std::vector<std::string> chunkFieldTypes;
+    const size_t end = std::min(start + chunkWidth, context.fieldNames.size());
+    chunkFieldTypes.reserve(end - start);
+    for (size_t fieldIndex = start; fieldIndex < end; ++fieldIndex) {
+      const auto &fieldName = context.fieldNames[fieldIndex];
+      const auto typeIt = context.fieldTypeNames.find(fieldName);
+      if (typeIt == context.fieldTypeNames.end() || typeIt->second.empty()) {
+        context.error = "generated reflection helper " + storageStructPath + " does not support field envelope: " +
+                        fieldName;
+        return false;
+      }
+      chunkFieldTypes.push_back(typeIt->second);
+    }
+    chunkTypeNames.push_back(makeChunkTypeName(chunkFieldTypes));
+  }
+
+  Definition storageStruct;
+  storageStruct.name = "SoaSchemaStorage";
+  storageStruct.fullPath = storageStructPath;
+  storageStruct.namespacePrefix = context.def.fullPath;
+  storageStruct.sourceLine = context.def.sourceLine;
+  storageStruct.sourceColumn = context.def.sourceColumn;
+  appendPublicVisibility(storageStruct);
+  Transform structTransform;
+  structTransform.name = "struct";
+  storageStruct.transforms.push_back(std::move(structTransform));
+
+  for (size_t chunkIndex = 0; chunkIndex < chunkTypeNames.size(); ++chunkIndex) {
+    Expr chunkBinding =
+        makeTypeBinding("chunk" + std::to_string(chunkIndex), chunkTypeNames[chunkIndex], storageStruct.namespacePrefix, true);
+    appendPublicVisibility(chunkBinding);
+    chunkBinding.args.push_back(makeConstructorCall(chunkTypeNames[chunkIndex]));
+    chunkBinding.argNames.push_back(std::nullopt);
+    storageStruct.statements.push_back(std::move(chunkBinding));
+  }
+
+  context.rewrittenDefinitions.push_back(std::move(storageStruct));
+  context.definitionPaths.insert(storageStructPath);
+
+  auto makeHelper = [&](const std::string &name,
+                        const std::string &fullPath,
+                        const std::string &returnType,
+                        bool takesIndex) {
+    Definition helper;
+    helper.name = name;
+    helper.fullPath = fullPath;
+    helper.namespacePrefix = context.def.fullPath;
+    helper.sourceLine = context.def.sourceLine;
+    helper.sourceColumn = context.def.sourceColumn;
+    appendPublicVisibility(helper);
+    Transform returnTransform;
+    returnTransform.name = "return";
+    returnTransform.templateArgs.push_back(returnType);
+    helper.transforms.push_back(std::move(returnTransform));
+    if (takesIndex) {
+      helper.parameters.push_back(makeTypeBinding("index", "i32", helper.namespacePrefix));
+    }
+    return helper;
+  };
+
+  Definition storageNewHelper = makeHelper("SoaSchemaStorageNew", storageNewHelperPath, storageStructPath, false);
+  storageNewHelper.returnExpr = makeConstructorCall(storageStructPath);
+  storageNewHelper.hasReturnStatement = true;
+  context.rewrittenDefinitions.push_back(std::move(storageNewHelper));
+  context.definitionPaths.insert(storageNewHelperPath);
   return true;
 }
 
