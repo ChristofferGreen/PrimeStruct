@@ -445,6 +445,30 @@ TEST_CASE("semantic product publishes struct and enum metadata") {
   CHECK(modeIt->category == "enum");
   CHECK(modeIt->enumValueCount == 2u);
   CHECK(modeIt->fieldCount == 0u);
+  CHECK(modeIt->sourceLine > 0);
+  CHECK(modeIt->sourceColumn > 0);
+
+  const auto leftFieldIt =
+      std::find_if(semanticProgram.structFieldMetadata.begin(),
+                   semanticProgram.structFieldMetadata.end(),
+                   [](const primec::SemanticProgramStructFieldMetadata &entry) {
+                     return entry.structPath == "/Packet" && entry.fieldName == "left";
+                   });
+  REQUIRE(leftFieldIt != semanticProgram.structFieldMetadata.end());
+  CHECK(leftFieldIt->fieldIndex == 0u);
+  CHECK(leftFieldIt->bindingTypeText == "i32");
+  CHECK(leftFieldIt->sourceLine > 0);
+  CHECK(leftFieldIt->sourceColumn > 0);
+
+  const auto rightFieldIt =
+      std::find_if(semanticProgram.structFieldMetadata.begin(),
+                   semanticProgram.structFieldMetadata.end(),
+                   [](const primec::SemanticProgramStructFieldMetadata &entry) {
+                     return entry.structPath == "/Packet" && entry.fieldName == "right";
+                   });
+  REQUIRE(rightFieldIt != semanticProgram.structFieldMetadata.end());
+  CHECK(rightFieldIt->fieldIndex == 1u);
+  CHECK(rightFieldIt->bindingTypeText == "i64");
 }
 
 TEST_CASE("semantic product publishes binding and return facts") {
@@ -711,6 +735,7 @@ TEST_CASE("semantic product formatter emits deterministic lowering-facing sectio
   CHECK(dump.find("method_call_targets[") != std::string::npos);
   CHECK(dump.find("bridge_path_choices[") != std::string::npos);
   CHECK(dump.find("callable_summaries[") != std::string::npos);
+  CHECK(dump.find("struct_field_metadata[") != std::string::npos);
   CHECK(dump.find("binding_facts[") != std::string::npos);
   CHECK(dump.find("return_facts[") != std::string::npos);
 }
@@ -786,6 +811,22 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       0,
       11,
       5,
+  });
+  semanticProgram.structFieldMetadata.push_back(primec::SemanticProgramStructFieldMetadata{
+      "/Particle",
+      "left",
+      0,
+      "i32",
+      12,
+      7,
+  });
+  semanticProgram.structFieldMetadata.push_back(primec::SemanticProgramStructFieldMetadata{
+      "/Particle",
+      "right",
+      1,
+      "i64",
+      13,
+      7,
   });
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
       "/main",
@@ -889,6 +930,8 @@ TEST_CASE("semantic product formatter exact golden is stable") {
   bridge_path_choices[0]: scope_path="/main" collection_family="vector" helper_name="count" chosen_path="/std/collections/vector/count" source="9:13"
   callable_summaries[0]: full_path="/main" is_execution=true return_kind="return" is_compute=false is_unsafe=false active_effects=["io_out"] active_capabilities=["gpu"] has_result_type=true result_type_has_value=true result_value_type="i32" result_error_type="MyError" has_on_error=true on_error_handler_path="/unexpectedError" on_error_error_type="MyError" on_error_bound_arg_count=1
   type_metadata[0]: full_path="/Particle" category="struct" is_public=true has_no_padding=false has_platform_independent_padding=true has_explicit_alignment=true explicit_alignment_bytes=16 field_count=2 enum_value_count=0 source="11:5"
+  struct_field_metadata[0]: struct_path="/Particle" field_name="left" field_index=0 binding_type_text="i32" source="12:7"
+  struct_field_metadata[1]: struct_path="/Particle" field_name="right" field_index=1 binding_type_text="i64" source="13:7"
   binding_facts[0]: scope_path="/main" site_kind="local" name="value" resolved_path="/main/value" binding_type_text="i32" is_mutable=true is_entry_arg_string=false is_unsafe_reference=false reference_root="" source="12:7"
   return_facts[0]: definition_path="/main" return_kind="return" struct_path="/i32" binding_type_text="i32" is_mutable=false is_entry_arg_string=false is_unsafe_reference=false reference_root="" source="13:3"
   local_auto_facts[0]: scope_path="/main" binding_name="selected" binding_type_text="i32" initializer_resolved_path="/id" initializer_binding_type_text="i32" initializer_receiver_binding_type_text="" initializer_query_type_text="i32" initializer_result_has_value=false initializer_result_value_type="" initializer_result_error_type="" initializer_has_try=false initializer_try_operand_resolved_path="" initializer_try_operand_binding_type_text="" initializer_try_operand_receiver_binding_type_text="" initializer_try_operand_query_type_text="" initializer_try_value_type="" initializer_try_error_type="" initializer_try_context_return_kind="return" initializer_try_on_error_handler_path="" initializer_try_on_error_error_type="" initializer_try_on_error_bound_arg_count=0 source="14:9"

@@ -169,6 +169,17 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   std::to_string(entry.enumValueCount) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
+  for (size_t i = 0; i < semanticProgram.structFieldMetadata.size(); ++i) {
+    const auto &entry = semanticProgram.structFieldMetadata[i];
+    appendSemanticIndexedLine(out,
+                              "struct_field_metadata",
+                              i,
+                              "struct_path=" + quoteSemanticString(entry.structPath) + " field_name=" +
+                                  quoteSemanticString(entry.fieldName) + " field_index=" +
+                                  std::to_string(entry.fieldIndex) + " binding_type_text=" +
+                                  quoteSemanticString(entry.bindingTypeText) + " source=" +
+                                  quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
+  }
   for (size_t i = 0; i < semanticProgram.bindingFacts.size(); ++i) {
     const auto &entry = semanticProgram.bindingFacts[i];
     appendSemanticIndexedLine(out,

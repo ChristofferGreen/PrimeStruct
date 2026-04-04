@@ -529,9 +529,9 @@ Planned lowerer effect/struct-layout handoff:
   - aggregate classification for structs, collections, and wrapper-owned runtime shapes
   - backend-facing layout facts that should no longer depend on AST transform order
 - The next concrete migration seam is therefore:
-  - publish semantic-product struct field ordering/name/envelope/type metadata
-  - consume that published field metadata in lowerer layout planning instead of rebuilding
-    `LayoutFieldBinding` vectors from AST bindings
+  - semantic-product publication and lowerer layout setup now share ordered struct field
+    name/envelope/type metadata instead of rebuilding `LayoutFieldBinding` vectors from AST
+    bindings
   - explicitly leave syntax-owned field qualifiers (`public/private`, `static`,
     `pod/handle/gpu_lane`, field-local alignment) on the AST until there is a separate reason
     to publish them

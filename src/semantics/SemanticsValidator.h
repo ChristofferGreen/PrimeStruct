@@ -234,6 +234,15 @@ public:
     int sourceColumn = 0;
   };
 
+  struct StructFieldMetadataSnapshotEntry {
+    std::string structPath;
+    std::string fieldName;
+    size_t fieldIndex = 0;
+    int sourceLine = 0;
+    int sourceColumn = 0;
+    BindingInfo binding;
+  };
+
   struct BindingFactSnapshotEntry {
     std::string scopePath;
     std::string siteKind;
@@ -289,6 +298,7 @@ public:
   std::vector<BridgePathChoiceSnapshotEntry> bridgePathChoiceSnapshotForSemanticProduct() const;
   std::vector<CallableSummarySnapshotEntry> callableSummarySnapshotForSemanticProduct() const;
   std::vector<TypeMetadataSnapshotEntry> typeMetadataSnapshotForSemanticProduct() const;
+  std::vector<StructFieldMetadataSnapshotEntry> structFieldMetadataSnapshotForSemanticProduct();
   std::vector<BindingFactSnapshotEntry> bindingFactSnapshotForSemanticProduct();
   std::vector<ReturnFactSnapshotEntry> returnFactSnapshotForSemanticProduct() const;
   std::vector<LocalAutoBindingSnapshotEntry> localAutoFactSnapshotForSemanticProduct() const;

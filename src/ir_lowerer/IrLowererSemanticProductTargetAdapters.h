@@ -2,6 +2,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "primec/Ast.h"
 #include "primec/SemanticProduct.h"
@@ -14,6 +15,8 @@ struct SemanticProductTargetAdapter {
   std::unordered_map<std::string, std::string> bridgePathChoicesByExpr;
   std::unordered_map<std::string, const SemanticProgramCallableSummary *> callableSummariesByPath;
   std::unordered_map<std::string, const SemanticProgramTypeMetadata *> typeMetadataByPath;
+  std::unordered_map<std::string, std::vector<const SemanticProgramStructFieldMetadata *>>
+      structFieldMetadataByStructPath;
   std::unordered_map<std::string, const SemanticProgramReturnFact *> returnFactsByDefinitionPath;
   std::unordered_map<std::string, const SemanticProgramBindingFact *> bindingFactsByExpr;
 };
@@ -28,6 +31,9 @@ const SemanticProgramCallableSummary *findSemanticProductCallableSummary(
     const std::string &fullPath);
 const SemanticProgramTypeMetadata *findSemanticProductTypeMetadata(const SemanticProductTargetAdapter &adapter,
                                                                   const std::string &fullPath);
+const std::vector<const SemanticProgramStructFieldMetadata *> *findSemanticProductStructFieldMetadata(
+    const SemanticProductTargetAdapter &adapter,
+    const std::string &structPath);
 const SemanticProgramReturnFact *findSemanticProductReturnFact(const SemanticProductTargetAdapter &adapter,
                                                               const std::string &definitionPath);
 const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticProductTargetAdapter &adapter,

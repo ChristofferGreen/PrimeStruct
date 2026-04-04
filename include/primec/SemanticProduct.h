@@ -81,6 +81,15 @@ struct SemanticProgramTypeMetadata {
   int sourceColumn = 0;
 };
 
+struct SemanticProgramStructFieldMetadata {
+  std::string structPath;
+  std::string fieldName;
+  std::size_t fieldIndex = 0;
+  std::string bindingTypeText;
+  int sourceLine = 0;
+  int sourceColumn = 0;
+};
+
 struct SemanticProgramBindingFact {
   std::string scopePath;
   std::string siteKind;
@@ -187,6 +196,7 @@ struct SemanticProgram {
   std::vector<SemanticProgramBridgePathChoice> bridgePathChoices;
   std::vector<SemanticProgramCallableSummary> callableSummaries;
   std::vector<SemanticProgramTypeMetadata> typeMetadata;
+  std::vector<SemanticProgramStructFieldMetadata> structFieldMetadata;
   std::vector<SemanticProgramBindingFact> bindingFacts;
   std::vector<SemanticProgramReturnFact> returnFacts;
   std::vector<SemanticProgramLocalAutoFact> localAutoFacts;

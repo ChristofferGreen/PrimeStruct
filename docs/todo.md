@@ -108,11 +108,8 @@ Lowering cutover:
   - ○ Make `prepareIrModule` consume the semantic product directly instead of re-reading lowering facts from raw `Program` state.
   - ○ Make `IrLowerer::lower` consume the semantic product directly at its main lowering entrypoint.
   - ○ Retire the raw-`Program` lowering entry path once the temporary adapter is no longer needed.
-- ◐ Implement the lowerer effect/capability and struct-layout setup cutover now that the handoff contract is documented. Progress: entry and lowered-callable effect/capability setup now consume semantic-product callable summaries, and lowerer import/layout setup now consumes semantic-product type metadata for struct-like classification and explicit alignment; remaining work is only the richer field-binding-derived layout facts.
-  - ◐ Consume semantic-product struct/layout metadata in lowerer setup. Progress: struct-like classification and explicit alignment now prefer semantic-product type metadata; remaining work is now split into explicit field-metadata publication/consumption seams instead of one broad “richer layout facts” bucket.
-    - ○ Publish semantic-product struct field ordering, names, and layout envelopes so lowerer layout planning no longer has to reconstruct `LayoutFieldBinding` order from raw binding statements.
-    - ○ Publish semantic-product struct field binding type/envelope metadata for omitted-envelope and explicit field declarations so lowerer layout planning no longer has to re-infer field storage types from AST bindings.
-    - ○ Consume published semantic-product struct field ordering/name/envelope/type metadata in lowerer layout setup instead of rebuilding `structFieldInfoByName` from raw AST statements.
+- ◐ Implement the lowerer effect/capability and struct-layout setup cutover now that the handoff contract is documented. Progress: entry and lowered-callable effect/capability setup now consume semantic-product callable summaries, and lowerer import/layout setup now consumes semantic-product type metadata plus ordered struct field name/envelope/type metadata; remaining work is only pinning which field-level qualifiers remain syntax-owned.
+  - ◐ Consume semantic-product struct/layout metadata in lowerer setup. Progress: struct-like classification, explicit alignment, and ordered struct field name/envelope/type metadata now prefer semantic-product publication over AST reconstruction; remaining work is only pinning which field-level qualifiers remain syntax-owned.
     - ○ Decide and pin which field-level qualifiers remain syntax-owned during lowering (`public/private`, `static`, `pod/handle/gpu_lane`, field-local alignment) versus which should move onto the semantic product.
 
 Coverage and migration cleanup:

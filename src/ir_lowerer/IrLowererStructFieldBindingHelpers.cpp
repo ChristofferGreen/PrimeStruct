@@ -21,6 +21,16 @@ bool isSpecializedExperimentalCollectionTypeName(const std::string &typeName) {
          typeName.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
 }
 
+LayoutFieldBinding layoutFieldBindingFromSemanticProduct(
+    const SemanticProgramStructFieldMetadata &fieldMetadata) {
+  LayoutFieldBinding binding;
+  if (!splitTemplateTypeName(fieldMetadata.bindingTypeText, binding.typeName, binding.typeTemplateArg)) {
+    binding.typeName = fieldMetadata.bindingTypeText;
+    binding.typeTemplateArg.clear();
+  }
+  return binding;
+}
+
 } // namespace
 
 const Expr *getEnvelopeValueExpr(const Expr &candidate, bool allowAnyName) {
@@ -192,6 +202,19 @@ bool collectStructLayoutFieldBindings(
   for (const auto &def : program.definitions) {
     if (!isStructDefinition(def, semanticProductTargets)) {
       continue;
+    }
+    if (semanticProductTargets != nullptr) {
+      if (const auto *semanticFields =
+              findSemanticProductStructFieldMetadata(*semanticProductTargets, def.fullPath);
+          semanticFields != nullptr && !semanticFields->empty()) {
+        std::vector<LayoutFieldBinding> fields;
+        fields.reserve(semanticFields->size());
+        for (const SemanticProgramStructFieldMetadata *fieldMetadata : *semanticFields) {
+          fields.push_back(layoutFieldBindingFromSemanticProduct(*fieldMetadata));
+        }
+        fieldsByStructOut.emplace(def.fullPath, std::move(fields));
+        continue;
+      }
     }
     std::vector<LayoutFieldBinding> fields;
     std::unordered_map<std::string, LayoutFieldBinding> knownFields;

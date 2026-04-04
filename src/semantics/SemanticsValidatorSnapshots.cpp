@@ -893,6 +893,60 @@ SemanticsValidator::typeMetadataSnapshotForSemanticProduct() const {
   return entries;
 }
 
+std::vector<SemanticsValidator::StructFieldMetadataSnapshotEntry>
+SemanticsValidator::structFieldMetadataSnapshotForSemanticProduct() {
+  std::vector<StructFieldMetadataSnapshotEntry> entries;
+
+  auto withPreservedError = [&](const std::function<bool()> &fn) {
+    const std::string previousError = error_;
+    error_.clear();
+    const bool ok = fn();
+    error_.clear();
+    error_ = previousError;
+    return ok;
+  };
+
+  for (const auto &def : program_.definitions) {
+    const std::string category = typeMetadataCategoryForSnapshot(def);
+    if (category.empty() || category == "enum") {
+      continue;
+    }
+
+    size_t fieldIndex = 0;
+    for (const auto &stmt : def.statements) {
+      if (!stmt.isBinding || isStaticFieldStatement(stmt)) {
+        continue;
+      }
+
+      BindingInfo binding;
+      if (!withPreservedError([&]() { return resolveStructFieldBinding(def, stmt, binding); })) {
+        continue;
+      }
+
+      entries.push_back(StructFieldMetadataSnapshotEntry{
+          def.fullPath,
+          stmt.name,
+          fieldIndex,
+          stmt.sourceLine,
+          stmt.sourceColumn,
+          std::move(binding),
+      });
+      ++fieldIndex;
+    }
+  }
+
+  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+    if (left.structPath != right.structPath) {
+      return left.structPath < right.structPath;
+    }
+    if (left.fieldIndex != right.fieldIndex) {
+      return left.fieldIndex < right.fieldIndex;
+    }
+    return left.fieldName < right.fieldName;
+  });
+  return entries;
+}
+
 std::vector<SemanticsValidator::BindingFactSnapshotEntry>
 SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
   using ActiveLocalBindings = std::unordered_map<std::string, BindingInfo>;

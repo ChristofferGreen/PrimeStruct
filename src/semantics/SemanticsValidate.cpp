@@ -208,6 +208,18 @@ SemanticProgram buildSemanticProgram(const Program &program,
         entry.sourceColumn,
     });
   }
+  const auto structFieldMetadata = validator.structFieldMetadataSnapshotForSemanticProduct();
+  semanticProgram.structFieldMetadata.reserve(structFieldMetadata.size());
+  for (const auto &entry : structFieldMetadata) {
+    semanticProgram.structFieldMetadata.push_back(SemanticProgramStructFieldMetadata{
+        entry.structPath,
+        entry.fieldName,
+        entry.fieldIndex,
+        bindingTypeTextForSemanticProduct(entry.binding),
+        entry.sourceLine,
+        entry.sourceColumn,
+    });
+  }
   const auto bindingFacts = validator.bindingFactSnapshotForSemanticProduct();
   semanticProgram.bindingFacts.reserve(bindingFacts.size());
   for (const auto &entry : bindingFacts) {

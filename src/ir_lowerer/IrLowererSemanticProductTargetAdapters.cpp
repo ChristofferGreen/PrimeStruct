@@ -1,5 +1,6 @@
 #include "IrLowererSemanticProductTargetAdapters.h"
 
+#include <algorithm>
 #include <string_view>
 
 namespace primec::ir_lowerer {
@@ -100,6 +101,25 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
     }
   }
 
+  adapter.structFieldMetadataByStructPath.reserve(semanticProgram->structFieldMetadata.size());
+  for (const auto &entry : semanticProgram->structFieldMetadata) {
+    if (!entry.structPath.empty()) {
+      adapter.structFieldMetadataByStructPath[entry.structPath].push_back(&entry);
+    }
+  }
+  for (auto &[structPath, entries] : adapter.structFieldMetadataByStructPath) {
+    (void)structPath;
+    std::stable_sort(entries.begin(),
+                     entries.end(),
+                     [](const SemanticProgramStructFieldMetadata *left,
+                        const SemanticProgramStructFieldMetadata *right) {
+                       if (left->fieldIndex != right->fieldIndex) {
+                         return left->fieldIndex < right->fieldIndex;
+                       }
+                       return left->fieldName < right->fieldName;
+                     });
+  }
+
   adapter.returnFactsByDefinitionPath.reserve(semanticProgram->returnFacts.size());
   for (const auto &entry : semanticProgram->returnFacts) {
     if (!entry.definitionPath.empty()) {
@@ -173,6 +193,19 @@ const SemanticProgramTypeMetadata *findSemanticProductTypeMetadata(const Semanti
   }
   if (const auto it = adapter.typeMetadataByPath.find(fullPath); it != adapter.typeMetadataByPath.end()) {
     return it->second;
+  }
+  return nullptr;
+}
+
+const std::vector<const SemanticProgramStructFieldMetadata *> *findSemanticProductStructFieldMetadata(
+    const SemanticProductTargetAdapter &adapter,
+    const std::string &structPath) {
+  if (structPath.empty()) {
+    return nullptr;
+  }
+  if (const auto it = adapter.structFieldMetadataByStructPath.find(structPath);
+      it != adapter.structFieldMetadataByStructPath.end()) {
+    return &it->second;
   }
   return nullptr;
 }

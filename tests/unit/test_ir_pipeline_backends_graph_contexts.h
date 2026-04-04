@@ -359,6 +359,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticProduct.find("struct SemanticProgramBridgePathChoice") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramCallableSummary") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramTypeMetadata") != std::string::npos);
+  CHECK(semanticProduct.find("struct SemanticProgramStructFieldMetadata") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramBindingFact") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramReturnFact") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramLocalAutoFact") != std::string::npos);
@@ -379,6 +380,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticProduct.find("std::vector<SemanticProgramCallableSummary> callableSummaries;") !=
         std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramTypeMetadata> typeMetadata;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramStructFieldMetadata> structFieldMetadata;") !=
         std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramBindingFact> bindingFacts;") !=
         std::string::npos);
@@ -438,7 +441,11 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<std::string, const SemanticProgramTypeMetadata *> typeMetadataByPath;") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("std::unordered_map<std::string, std::vector<const SemanticProgramStructFieldMetadata *>>") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramTypeMetadata *findSemanticProductTypeMetadata(") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("findSemanticProductStructFieldMetadata(") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramReturnFact *findSemanticProductReturnFact(") !=
         std::string::npos);
@@ -451,10 +458,15 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterSource.find("adapter.callableSummariesByPath.reserve(") != std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.typeMetadataByPath.reserve(semanticProgram->typeMetadata.size())") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.structFieldMetadataByStructPath.reserve(semanticProgram->structFieldMetadata.size())") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("std::stable_sort(entries.begin(),") != std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.returnFactsByDefinitionPath.reserve(") != std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.bindingFactsByExpr.reserve(semanticProgram->bindingFacts.size())") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("const SemanticProgramTypeMetadata *findSemanticProductTypeMetadata(") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("findSemanticProductStructFieldMetadata(") !=
         std::string::npos);
   CHECK(lowerImportsStructsSetupHeader.find("const SemanticProgram *semanticProgram,") != std::string::npos);
   CHECK(lowerImportsStructsSetupSource.find("buildSemanticProductTargetAdapter(semanticProgram)") !=
@@ -471,6 +483,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(structFieldBindingHelpersHeader.find("const SemanticProductTargetAdapter *semanticProductTargets,") !=
         std::string::npos);
   CHECK(structFieldBindingHelpersSource.find("if (!isStructDefinition(def, semanticProductTargets)) {") !=
+        std::string::npos);
+  CHECK(structFieldBindingHelpersSource.find("layoutFieldBindingFromSemanticProduct(") !=
+        std::string::npos);
+  CHECK(structFieldBindingHelpersSource.find("findSemanticProductStructFieldMetadata(*semanticProductTargets, def.fullPath)") !=
         std::string::npos);
   CHECK(structLayoutHelpersHeader.find("const SemanticProgramTypeMetadata *typeMetadata,") !=
         std::string::npos);
@@ -540,6 +556,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticsValidate.find("validator.bridgePathChoiceSnapshotForSemanticProduct()") != std::string::npos);
   CHECK(semanticsValidate.find("validator.callableSummarySnapshotForSemanticProduct()") != std::string::npos);
   CHECK(semanticsValidate.find("validator.typeMetadataSnapshotForSemanticProduct()") != std::string::npos);
+  CHECK(semanticsValidate.find("validator.structFieldMetadataSnapshotForSemanticProduct()") !=
+        std::string::npos);
   CHECK(semanticsValidate.find("validator.bindingFactSnapshotForSemanticProduct()") != std::string::npos);
   CHECK(semanticsValidate.find("validator.returnFactSnapshotForSemanticProduct()") != std::string::npos);
   CHECK(semanticsValidate.find("validator.localAutoFactSnapshotForSemanticProduct()") != std::string::npos);
