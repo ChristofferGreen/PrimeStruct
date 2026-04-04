@@ -105,30 +105,6 @@ inline bool captureCompilePipelineDumpStageFromPath(const std::filesystem::path 
 
 } // namespace detail
 
-inline bool captureCompilePipelineDumpForTesting(const std::string &source,
-                                                 const std::string &entryPath,
-                                                 std::string_view dumpStage,
-                                                 std::string &dump,
-                                                 std::string &error,
-                                                 CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr) {
-  const std::filesystem::path sourcePath = detail::makeCompilePipelineDumpSourcePath();
-  {
-    std::ofstream file(sourcePath);
-    if (!file) {
-      error = "failed to write compile-pipeline dump test source";
-      return false;
-    }
-    file << source;
-  }
-
-  const bool ok = detail::captureCompilePipelineDumpStageFromPath(
-      sourcePath, entryPath, dumpStage, dump, error, diagnosticInfo);
-
-  std::error_code ec;
-  std::filesystem::remove(sourcePath, ec);
-  return ok;
-}
-
 inline bool captureSemanticBoundaryDumpsForTesting(const std::string &source,
                                                    const std::string &entryPath,
                                                    CompilePipelineBoundaryDumps &dumps,

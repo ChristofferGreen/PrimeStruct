@@ -90,7 +90,6 @@ Coverage and migration cleanup:
     - ○ Keep only provenance-owned assertions in `primec/testing/SemanticsValidationHelpers.h`.
     - ○ Delete transitional compatibility assertions from `primec/testing/SemanticsValidationHelpers.h` once replacements exist.
   - ◐ Delete redundant lowering-facing public testing helper entrypoints once the semantic-product replacements exist. Progress: this removal work is now split into dump-helper, pipeline-helper, and backend-helper entrypoint cleanup seams instead of one broad deletion item.
-    - ○ Delete redundant lowering-facing dump helper entrypoints.
     - ○ Delete redundant lowering-facing pipeline helper entrypoints.
     - ○ Delete redundant lowering-facing backend helper entrypoints.
 - ◐ Delete redundant testing-only semantic snapshot plumbing now that its migration/removal contract is documented, leaving one canonical lowering-facing inspection surface once equivalent semantic-product dumps and conformance coverage exist. Progress: this removal is now split into explicit snapshot-transport and compatibility-helper cleanup slices instead of one broad deletion item.
@@ -99,7 +98,6 @@ Coverage and migration cleanup:
     - ○ Delete redundant testing-only semantic snapshot serialization/plumbing.
     - ○ Delete redundant testing-only semantic snapshot fixture/loader plumbing.
   - ◐ Delete compatibility helpers that only existed to expose lowering facts before the semantic product surface existed. Progress: this compatibility cleanup is now split into dump-facing, pipeline-facing, and backend-facing helper seams instead of one broad helper bucket.
-    - ○ Delete dump-facing compatibility helpers that only exposed lowering facts before the semantic-product dump existed.
     - ○ Delete pipeline-facing compatibility helpers that only exposed lowering facts before semantic-product pipeline conformance existed.
     - ○ Delete backend-facing compatibility helpers that only exposed lowering facts before semantic-product backend conformance existed.
 - ◐ Delete lowerer-side stdlib/helper alias fallback paths now that their semantic-product removal contract is documented, once equivalent canonical resolution is provided by the semantic product. Progress: this alias-fallback cleanup is now split into direct-call, receiver-call, and collection bridge fallback seams instead of one umbrella removal item.
