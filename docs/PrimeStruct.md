@@ -653,9 +653,10 @@ Planned testing-only snapshot removal contract:
 
 Planned testing-helper migration contract:
 - Public testing helpers should be split by ownership boundary rather than by current implementation history.
-- Current status: `primec/testing/CompilePipelineDumpHelpers.h` now provides a semantic-product-aware dump helper for
-  compile-pipeline tests, and the remaining helper migration work is moving more lowering-facing assertions onto that
-  dump surface or the backend-facing conformance matrix.
+- Current status: `primec/testing/CompilePipelineDumpHelpers.h` now provides the semantic-product-aware dump helper for
+  compile-pipeline tests, and lowering-facing dump assertions now route through that helper rather than direct CLI
+  shell dumps. The remaining helper migration work is moving compile-pipeline and backend-facing assertions onto the
+  semantic-product-aware conformance surfaces.
 - `primec/testing/SemanticsValidationHelpers.h` and related helpers should migrate in this order:
   - move lowering-facing assertions onto semantic-product dump helpers or pipeline-facing conformance helpers
   - retain AST-facing helpers only for syntax-owned, provenance-owned, parser-facing, or canonicalization-facing checks

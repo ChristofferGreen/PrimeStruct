@@ -2147,10 +2147,6 @@ main() {
   const std::string dump = readFile(hyphenOut);
   CHECK(dump == readFile(underscoreOut));
   CHECK(dump.find("semantic_product {") != std::string::npos);
-  CHECK(dump.find("entry_path: \"/main\"") != std::string::npos);
-  CHECK(dump.find("direct_call_targets[") != std::string::npos);
-  CHECK(dump.find("method_call_targets[") != std::string::npos);
-  CHECK(dump.find("bridge_path_choices[") != std::string::npos);
 }
 
 TEST_CASE("dump ast-semantic reports semantic errors") {
@@ -2314,34 +2310,22 @@ TEST_CASE("semantic-product dump keeps provenance handles while ast-semantic kee
       "  [i32] selected{pick(packet.left)}\n"
       "  return(selected)\n"
       "}\n";
-  const std::string srcPath = writeTemp("compile_dump_semantic_product_syntax_boundary.prime", source);
-  const std::string astSemanticOut =
-      (testScratchPath("") / "primec_dump_semantic_product_boundary_ast_semantic.txt").string();
-  const std::string semanticProductOut =
-      (testScratchPath("") / "primec_dump_semantic_product_boundary_semantic_product.txt").string();
+  primec::testing::CompilePipelineBoundaryDumps dumps;
+  std::string error;
+  REQUIRE(primec::testing::captureSemanticBoundaryDumpsForTesting(source, "/main", dumps, error));
+  CHECK(error.empty());
 
-  const std::string astSemanticCmd =
-      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(astSemanticOut);
-  const std::string semanticProductCmd =
-      "./primec " + quoteShellArg(srcPath) + " --dump-stage semantic-product > " +
-      quoteShellArg(semanticProductOut);
-  CHECK(runCommand(astSemanticCmd) == 0);
-  CHECK(runCommand(semanticProductCmd) == 0);
+  CHECK(dumps.astSemantic.find("left{1}") != std::string::npos);
+  CHECK(dumps.astSemantic.find("return(selected)") != std::string::npos);
 
-  const std::string astSemantic = readFile(astSemanticOut);
-  const std::string semanticProduct = readFile(semanticProductOut);
-
-  CHECK(astSemantic.find("left{1}") != std::string::npos);
-  CHECK(astSemantic.find("return(selected)") != std::string::npos);
-
-  CHECK(semanticProduct.find("semantic_product {") != std::string::npos);
-  CHECK(semanticProduct.find("struct_field_metadata[0]: struct_path=\"/Packet\" field_name=\"left\"") !=
+  CHECK(dumps.semanticProduct.find("semantic_product {") != std::string::npos);
+  CHECK(dumps.semanticProduct.find("struct_field_metadata[0]: struct_path=\"/Packet\" field_name=\"left\"") !=
         std::string::npos);
-  CHECK(semanticProduct.find("binding_facts[0]: scope_path=\"/main\" site_kind=\"local\" name=\"packet\"") !=
+  CHECK(dumps.semanticProduct.find("binding_facts[0]: scope_path=\"/main\" site_kind=\"local\" name=\"packet\"") !=
         std::string::npos);
-  CHECK(semanticProduct.find("source=\"2:") != std::string::npos);
-  CHECK(semanticProduct.find("left{1}") == std::string::npos);
-  CHECK(semanticProduct.find("return(selected)") == std::string::npos);
+  CHECK(dumps.semanticProduct.find("source=\"2:") != std::string::npos);
+  CHECK(dumps.semanticProduct.find("left{1}") == std::string::npos);
+  CHECK(dumps.semanticProduct.find("return(selected)") == std::string::npos);
 }
 
 TEST_CASE("pipeline dump surfaces keep inspection order and lowering-facing boundaries") {

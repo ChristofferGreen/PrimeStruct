@@ -118,6 +118,20 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
         std::string::npos);
 }
 
+TEST_CASE("public semantic-product dump helper is available for pipeline tests") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path helperPath = cwd / "include" / "primec" / "testing" / "CompilePipelineDumpHelpers.h";
+  if (!std::filesystem::exists(helperPath)) {
+    helperPath = cwd.parent_path() / "include" / "primec" / "testing" / "CompilePipelineDumpHelpers.h";
+  }
+  REQUIRE(std::filesystem::exists(helperPath));
+
+  const std::string helper = readTextFile(helperPath);
+  CHECK(helper.find("struct CompilePipelineBoundaryDumps") != std::string::npos);
+  CHECK(helper.find("captureCompilePipelineDumpForTesting(") != std::string::npos);
+  CHECK(helper.find("captureSemanticBoundaryDumpsForTesting(") != std::string::npos);
+}
+
 TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path semanticProductPath = cwd / "include" / "primec" / "SemanticProduct.h";
