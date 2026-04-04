@@ -1108,7 +1108,9 @@ method-like helper returns, and inline `location(...)`-wrapped borrowed receiver
 field-view values inherit the same invalidation contract as `ref(...)`, stay borrowed rather
 than materializing owning vectors, and may later distinguish read-only versus mutable
 borrowed receivers on top of the current `soaVectorGet(...)` / `soaVectorRef(...)`
-substrate.
+substrate. The remaining implementation work naturally splits into direct / explicit-
+dereference receivers, helper-return and method-like helper-return receivers, inline
+`location(...)`-wrapped receivers, and pass/return/local-binding preservation.
 The remaining standalone mutating write step is that `assign(value.field(), next)` and
 `assign(field(value), next)` should stop on the pending diagnostic only until those
 receivers can lower through the existing writable wrapper substrate instead of mutating a
@@ -1117,6 +1119,11 @@ the rest of the wrapper path: direct wrapper locals, mutable borrowed locals, bo
 helper returns, method-like helper returns, and inline `location(...)`-wrapped variants.
 Those writes should preserve the same invalidation rules as other borrowed SoA views and
 should not reintroduce builtin-only mutation branches outside the experimental helper path.
+The remaining implementation work naturally splits into direct/borrowed-local receivers,
+helper-return and method-like helper-return receivers, and inline `location(...)`-wrapped
+receivers. The same invalidation boundary also still needs its own implementation slices:
+structural mutation invalidation, storage-replacement/destruction invalidation, and
+provenance/escape rules for helper-derived borrowed views.
 Non-empty literals still emit the deterministic unsupported diagnostic
 `native backend does not support non-empty soa_vector literals`.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the

@@ -3419,7 +3419,10 @@ read-only path.
     SoA views derived from that wrapper, including borrows reached through
     `location(...)`, helper-return receivers, and method-like helper-return receivers. The
     implementation target is explicit validation and runtime/provenance rules for that
-    invalidation boundary, not another compiler-owned pending-diagnostic special case.
+    invalidation boundary, not another compiler-owned pending-diagnostic special case. The
+    remaining implementation work naturally splits into structural mutation invalidation,
+    storage-replacement/destruction invalidation, and provenance/escape rules for
+    helper-derived borrowed views.
   - **Richer borrowed field-view contract:** the next borrowed-view slice should treat
     standalone field-view expressions as first-class non-owning column views rather than
     keeping `borrowed.field()` / `field(borrowed)` on the compiler-owned pending-diagnostic
@@ -3435,7 +3438,10 @@ read-only path.
     should preserve borrowed-view semantics instead of silently materializing an owning
     vector copy. The remaining implementation work is to thread that contract through the
     existing experimental wrapper helper/indexing substrate, not to add more builtin-only
-    fallback diagnostics.
+    fallback diagnostics. The remaining implementation work naturally splits into direct /
+    explicit-dereference receivers, borrowed helper-return and method-like helper-return
+    receivers, inline `location(...)`-wrapped receivers, and pass/return/local-binding
+    preservation.
   - **Standalone mutating field-view contract:** the remaining standalone mutating write slice
     should replace the current pending-only `assign(value.field(), next)` /
     `assign(field(value), next)` contract with the same writable column-view substrate that
@@ -3450,6 +3456,9 @@ read-only path.
     owning vector copy or reintroducing builtin-only mutation branches. The remaining
     implementation work is to thread those standalone method/call writes onto the existing
     experimental writable-field substrate, not to keep the old pending diagnostic in place.
+    The remaining implementation work naturally splits into direct/borrowed-local receivers,
+    borrowed helper-return plus method-like helper-return receivers, and inline
+    `location(...)`-wrapped receivers.
   - **Experimental SoA storage substrate:** the completed fixed-width reusable `.prime` storage layer now exists at
     `/std/collections/experimental_soa_storage/*` with single-column `SoaColumn<T>` helpers
     (`soaColumnNew<T>()`, `soaColumnCount<T>()`, `soaColumnCapacity<T>()`, `soaColumnReserve<T>()`,

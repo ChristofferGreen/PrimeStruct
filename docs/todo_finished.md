@@ -7,6 +7,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Split the live Group 8 borrowed-view invalidation, richer borrowed field-view, and standalone mutating field-view write items into explicit invalidation-family and receiver-family sub-slices, so the remaining SoA behavior queue now has concrete finish lines instead of three umbrella semantics bullets.
 - ✓ Added reflected chunked `SoaSchemaStorage` / `SoaSchemaStorageNew()` generation on top of the existing sixteen-column SoA substrate, so reflect-enabled schemas can now synthesize deterministic chunked allocation scaffolding before arbitrary-width grow/free wiring lands.
 - ✓ Added reflected chunked `SoaSchemaStorageCount(...)`, `SoaSchemaStorageCapacity(...)`, `SoaSchemaStorageReserve(...)`, and `SoaSchemaStorageClear(...)` generation on top of `SoaSchemaStorage`, so arbitrary-width reflected SoA schemas now have deterministic chunk-aware grow/realloc plus explicit clear helpers before implicit drop/lifecycle cleanup lands.
 - ✓ Finished reflected arbitrary-width chunked `SoaSchemaStorage` lifecycle cleanup by generating `/Type/SoaSchemaStorage/Destroy`, so reflect-enabled schemas now have deterministic chunked allocation, grow/realloc, explicit clear, and implicit drop/free cleanup on top of the sixteen-column substrate.
