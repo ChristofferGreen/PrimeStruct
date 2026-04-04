@@ -108,9 +108,6 @@ Lowering cutover:
   - ○ Make `prepareIrModule` consume the semantic product directly instead of re-reading lowering facts from raw `Program` state.
   - ○ Make `IrLowerer::lower` consume the semantic product directly at its main lowering entrypoint.
   - ○ Retire the raw-`Program` lowering entry path once the temporary adapter is no longer needed.
-- ◐ Implement the lowerer effect/capability and struct-layout setup cutover now that the handoff contract is documented. Progress: entry and lowered-callable effect/capability setup now consume semantic-product callable summaries, and lowerer import/layout setup now consumes semantic-product type metadata plus ordered struct field name/envelope/type metadata; remaining work is only pinning which field-level qualifiers remain syntax-owned.
-  - ◐ Consume semantic-product struct/layout metadata in lowerer setup. Progress: struct-like classification, explicit alignment, and ordered struct field name/envelope/type metadata now prefer semantic-product publication over AST reconstruction; remaining work is only pinning which field-level qualifiers remain syntax-owned.
-    - ○ Decide and pin which field-level qualifiers remain syntax-owned during lowering (`public/private`, `static`, `pod/handle/gpu_lane`, field-local alignment) versus which should move onto the semantic product.
 
 Coverage and migration cleanup:
 - ◐ Implement the narrow semantic-product unit/golden suite now that its fact coverage and scope are documented. Progress: the exact semantic-product formatter golden now covers resolved call/helper targets, binding/result type facts, and effect/capability plus struct/layout metadata; remaining work is provenance-handle coverage.

@@ -505,13 +505,10 @@ Planned lowerer effect/struct-layout handoff:
 - Current status: entry return/result setup, entry effect/capability mask setup, and lowered
   callable effect/capability setup now consume published semantic-product return facts and
   callable summaries. Lowerer import/layout setup now also prefers semantic-product type
-  metadata for struct-like classification and explicit alignment. The remaining cutover
-  work is the richer layout facts that still derive from field bindings. Concretely, the
-  lowerer still rebuilds field ordering plus `LayoutFieldBinding` envelopes/types from raw
-  binding statements, and field-level qualifiers such as visibility/category/static/alignment
-  still remain syntax-owned during layout planning. Enums already rewrite to struct form
-  before lowering, so there is no separate enum-specific lowerer metadata seam left to cut
-  over.
+  metadata for struct-like classification, explicit alignment, and ordered struct field
+  name/envelope/type metadata instead of reconstructing `LayoutFieldBinding` order from raw
+  field statements. Enums already rewrite to struct form before lowering, so there is no
+  separate enum-specific lowerer metadata seam left to cut over.
 - After the lowerer consumes semantic-product entry targets and binding metadata, effect/capability setup and
   struct-layout setup should consume published semantic-product facts instead of re-reading AST annotations,
   transform-produced helper state, or struct-shape details directly from canonicalized syntax.
@@ -529,9 +526,6 @@ Planned lowerer effect/struct-layout handoff:
   - aggregate classification for structs, collections, and wrapper-owned runtime shapes
   - backend-facing layout facts that should no longer depend on AST transform order
 - The next concrete migration seam is therefore:
-  - semantic-product publication and lowerer layout setup now share ordered struct field
-    name/envelope/type metadata instead of rebuilding `LayoutFieldBinding` vectors from AST
-    bindings
   - explicitly leave syntax-owned field qualifiers (`public/private`, `static`,
     `pod/handle/gpu_lane`, field-local alignment) on the AST until there is a separate reason
     to publish them
