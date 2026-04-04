@@ -437,6 +437,77 @@ SemanticsValidator::directCallTargetSnapshotForSemanticProduct() const {
   return entries;
 }
 
+std::vector<SemanticsValidator::MethodCallTargetSnapshotEntry>
+SemanticsValidator::methodCallTargetSnapshotForSemanticProduct() {
+  std::vector<MethodCallTargetSnapshotEntry> entries;
+
+  auto withPreservedError = [&](const std::function<bool()> &fn) {
+    const std::string previousError = error_;
+    error_.clear();
+    const bool ok = fn();
+    error_.clear();
+    error_ = previousError;
+    return ok;
+  };
+
+  forEachLocalAwareSnapshotCall([&](const Definition &def,
+                                    const std::vector<ParameterInfo> &defParams,
+                                    const Expr &expr,
+                                    const std::unordered_map<std::string, BindingInfo> &activeLocals) {
+    if (expr.kind != Expr::Kind::Call || !expr.isMethodCall || expr.args.empty()) {
+      return;
+    }
+
+    std::string resolvedPath;
+    bool builtin = false;
+    if (!resolveMethodTarget(defParams,
+                             activeLocals,
+                             expr.namespacePrefix,
+                             expr.args.front(),
+                             expr.name,
+                             resolvedPath,
+                             builtin) ||
+        resolvedPath.empty()) {
+      return;
+    }
+
+    BindingInfo receiverBinding;
+    if (!(withPreservedError([&]() {
+            return inferBindingTypeFromInitializer(
+                expr.args.front(), defParams, activeLocals, receiverBinding);
+          }) &&
+          !receiverBinding.typeName.empty())) {
+      receiverBinding = {};
+    }
+
+    entries.push_back(MethodCallTargetSnapshotEntry{
+        def.fullPath,
+        expr.name,
+        std::move(resolvedPath),
+        expr.sourceLine,
+        expr.sourceColumn,
+        std::move(receiverBinding),
+    });
+  });
+
+  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+    if (left.scopePath != right.scopePath) {
+      return left.scopePath < right.scopePath;
+    }
+    if (left.sourceLine != right.sourceLine) {
+      return left.sourceLine < right.sourceLine;
+    }
+    if (left.sourceColumn != right.sourceColumn) {
+      return left.sourceColumn < right.sourceColumn;
+    }
+    if (left.methodName != right.methodName) {
+      return left.methodName < right.methodName;
+    }
+    return left.resolvedPath < right.resolvedPath;
+  });
+  return entries;
+}
+
 std::vector<SemanticsValidator::QueryReceiverBindingSnapshotEntry>
 SemanticsValidator::queryReceiverBindingSnapshotForTesting() {
   std::vector<QueryReceiverBindingSnapshotEntry> entries;

@@ -249,6 +249,41 @@ TEST_CASE("semantic product publishes resolved direct-call targets") {
   CHECK(targetIt->sourceColumn > 0);
 }
 
+TEST_CASE("semantic product publishes resolved method-call targets") {
+  const std::string source =
+      "[return<i32>]\n"
+      "/vector/count([vector<i32>] self) {\n"
+      "  return(17i32)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [auto] values{vector(1i32)}\n"
+      "  return(values.count())\n"
+      "}\n";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto targetIt =
+      std::find_if(semanticProgram.methodCallTargets.begin(),
+                   semanticProgram.methodCallTargets.end(),
+                   [](const primec::SemanticProgramMethodCallTarget &entry) {
+                     return entry.scopePath == "/main" &&
+                            entry.methodName == "count" &&
+                            entry.resolvedPath == "/vector/count";
+                   });
+  REQUIRE(targetIt != semanticProgram.methodCallTargets.end());
+  CHECK(targetIt->receiverTypeText.find("vector") != std::string::npos);
+  CHECK(targetIt->sourceLine > 0);
+  CHECK(targetIt->sourceColumn > 0);
+}
+
 TEST_CASE("type resolution local Result.ok metadata stays aligned with wrapped call snapshots") {
   const std::string source =
       "MyError {\n"

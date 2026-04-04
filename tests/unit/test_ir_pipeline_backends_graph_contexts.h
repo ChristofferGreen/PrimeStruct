@@ -137,10 +137,13 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::string compilePipelineSource = readTextFile(compilePipelineSourcePath);
   const std::string semanticsValidate = readTextFile(semanticsValidatePath);
   CHECK(semanticProduct.find("struct SemanticProgramDirectCallTarget") != std::string::npos);
+  CHECK(semanticProduct.find("struct SemanticProgramMethodCallTarget") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramDefinition") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramExecution") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgram") != std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramDirectCallTarget> directCallTargets;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramMethodCallTarget> methodCallTargets;") !=
         std::string::npos);
   CHECK(compilePipelineHeader.find("SemanticProgram semanticProgram;") != std::string::npos);
   CHECK(compilePipelineHeader.find("bool hasSemanticProgram = false;") != std::string::npos);
@@ -152,6 +155,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticsValidate.find("SemanticProgram buildSemanticProgram(const Program &program,") !=
         std::string::npos);
   CHECK(semanticsValidate.find("validator.directCallTargetSnapshotForSemanticProduct()") != std::string::npos);
+  CHECK(semanticsValidate.find("validator.methodCallTargetSnapshotForSemanticProduct()") != std::string::npos);
   CHECK(semanticsValidate.find("*semanticProgramOut = buildSemanticProgram(program, entryPath);") ==
         std::string::npos);
   CHECK(semanticsValidate.find("*semanticProgramOut = buildSemanticProgram(program, entryPath, validator);") !=

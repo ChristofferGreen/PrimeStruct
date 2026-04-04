@@ -183,6 +183,15 @@ public:
     size_t onErrorBoundArgCount = 0;
   };
 
+  struct MethodCallTargetSnapshotEntry {
+    std::string scopePath;
+    std::string methodName;
+    std::string resolvedPath;
+    int sourceLine = 0;
+    int sourceColumn = 0;
+    BindingInfo receiverBinding;
+  };
+
   SemanticsValidator(const Program &program,
                      const std::string &entryPath,
                      std::string &error,
@@ -200,6 +209,7 @@ public:
   std::vector<TryValueSnapshotEntry> tryValueSnapshotForTesting();
   std::vector<CallBindingSnapshotEntry> callBindingSnapshotForTesting();
   std::vector<DirectCallTargetSnapshotEntry> directCallTargetSnapshotForSemanticProduct() const;
+  std::vector<MethodCallTargetSnapshotEntry> methodCallTargetSnapshotForSemanticProduct();
   std::vector<QueryReceiverBindingSnapshotEntry> queryReceiverBindingSnapshotForTesting();
   std::vector<OnErrorSnapshotEntry> onErrorSnapshotForTesting();
   std::vector<ValidationContextSnapshotEntry> validationContextSnapshotForTesting() const;

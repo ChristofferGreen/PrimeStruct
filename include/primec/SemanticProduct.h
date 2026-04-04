@@ -29,6 +29,15 @@ struct SemanticProgramDirectCallTarget {
   int sourceColumn = 0;
 };
 
+struct SemanticProgramMethodCallTarget {
+  std::string scopePath;
+  std::string methodName;
+  std::string receiverTypeText;
+  std::string resolvedPath;
+  int sourceLine = 0;
+  int sourceColumn = 0;
+};
+
 struct SemanticProgram {
   std::string entryPath;
   std::vector<std::string> sourceImports;
@@ -36,6 +45,7 @@ struct SemanticProgram {
   std::vector<SemanticProgramDefinition> definitions;
   std::vector<SemanticProgramExecution> executions;
   std::vector<SemanticProgramDirectCallTarget> directCallTargets;
+  std::vector<SemanticProgramMethodCallTarget> methodCallTargets;
 };
 
 } // namespace primec

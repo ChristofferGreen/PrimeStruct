@@ -100,7 +100,17 @@ namespace {
 
 SemanticProgram buildSemanticProgram(const Program &program,
                                      const std::string &entryPath,
-                                     const semantics::SemanticsValidator &validator) {
+                                     semantics::SemanticsValidator &validator) {
+  auto bindingTypeTextForSemanticProduct = [](const semantics::BindingInfo &binding) {
+    if (binding.typeName.empty()) {
+      return std::string{};
+    }
+    if (binding.typeTemplateArg.empty()) {
+      return binding.typeName;
+    }
+    return binding.typeName + "<" + binding.typeTemplateArg + ">";
+  };
+
   SemanticProgram semanticProgram;
   semanticProgram.entryPath = entryPath;
   semanticProgram.sourceImports = program.sourceImports;
@@ -131,6 +141,18 @@ SemanticProgram buildSemanticProgram(const Program &program,
     semanticProgram.directCallTargets.push_back(SemanticProgramDirectCallTarget{
         entry.scopePath,
         entry.callName,
+        entry.resolvedPath,
+        entry.sourceLine,
+        entry.sourceColumn,
+    });
+  }
+  const auto methodCallTargets = validator.methodCallTargetSnapshotForSemanticProduct();
+  semanticProgram.methodCallTargets.reserve(methodCallTargets.size());
+  for (const auto &entry : methodCallTargets) {
+    semanticProgram.methodCallTargets.push_back(SemanticProgramMethodCallTarget{
+        entry.scopePath,
+        entry.methodName,
+        bindingTypeTextForSemanticProduct(entry.receiverBinding),
         entry.resolvedPath,
         entry.sourceLine,
         entry.sourceColumn,
