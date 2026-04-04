@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -201,6 +202,38 @@ public:
     int sourceColumn = 0;
   };
 
+  struct CallableSummarySnapshotEntry {
+    std::string fullPath;
+    bool isExecution = false;
+    ReturnKind returnKind = ReturnKind::Unknown;
+    bool isCompute = false;
+    bool isUnsafe = false;
+    std::vector<std::string> activeEffects;
+    std::vector<std::string> activeCapabilities;
+    bool hasResultType = false;
+    bool resultTypeHasValue = false;
+    std::string resultValueType;
+    std::string resultErrorType;
+    bool hasOnError = false;
+    std::string onErrorHandlerPath;
+    std::string onErrorErrorType;
+    size_t onErrorBoundArgCount = 0;
+  };
+
+  struct TypeMetadataSnapshotEntry {
+    std::string fullPath;
+    std::string category;
+    bool isPublic = false;
+    bool hasNoPadding = false;
+    bool hasPlatformIndependentPadding = false;
+    bool hasExplicitAlignment = false;
+    uint32_t explicitAlignmentBytes = 0;
+    size_t fieldCount = 0;
+    size_t enumValueCount = 0;
+    int sourceLine = 0;
+    int sourceColumn = 0;
+  };
+
   SemanticsValidator(const Program &program,
                      const std::string &entryPath,
                      std::string &error,
@@ -220,6 +253,8 @@ public:
   std::vector<DirectCallTargetSnapshotEntry> directCallTargetSnapshotForSemanticProduct() const;
   std::vector<MethodCallTargetSnapshotEntry> methodCallTargetSnapshotForSemanticProduct();
   std::vector<BridgePathChoiceSnapshotEntry> bridgePathChoiceSnapshotForSemanticProduct() const;
+  std::vector<CallableSummarySnapshotEntry> callableSummarySnapshotForSemanticProduct() const;
+  std::vector<TypeMetadataSnapshotEntry> typeMetadataSnapshotForSemanticProduct() const;
   std::vector<QueryReceiverBindingSnapshotEntry> queryReceiverBindingSnapshotForTesting();
   std::vector<OnErrorSnapshotEntry> onErrorSnapshotForTesting();
   std::vector<ValidationContextSnapshotEntry> validationContextSnapshotForTesting() const;

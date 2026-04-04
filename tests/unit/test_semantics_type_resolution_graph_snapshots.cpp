@@ -349,6 +349,104 @@ TEST_CASE("semantic product publishes canonical collection bridge routing choice
   CHECK(choiceIt->sourceColumn > 0);
 }
 
+TEST_CASE("semantic product publishes callable effect and capability summaries") {
+  const std::string source =
+      "MyError {\n"
+      "}\n"
+      "\n"
+      "[return<void>]\n"
+      "unexpectedError([MyError] err) {\n"
+      "}\n"
+      "\n"
+      "[effects(io_out, asset_read) capabilities(io_out) return<Result<int, MyError>> on_error<MyError, /unexpectedError>]\n"
+      "main() {\n"
+      "  return(Result.ok(4i32))\n"
+      "}\n";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto summaryIt =
+      std::find_if(semanticProgram.callableSummaries.begin(),
+                   semanticProgram.callableSummaries.end(),
+                   [](const primec::SemanticProgramCallableSummary &entry) {
+                     return entry.fullPath == "/main" && !entry.isExecution;
+                   });
+  REQUIRE(summaryIt != semanticProgram.callableSummaries.end());
+  CHECK(summaryIt->returnKind == "i32");
+  CHECK(summaryIt->activeEffects ==
+        std::vector<std::string>{"asset_read", "io_out"});
+  CHECK(summaryIt->activeCapabilities == std::vector<std::string>{"io_out"});
+  CHECK(summaryIt->hasResultType);
+  CHECK(summaryIt->resultTypeHasValue);
+  CHECK(summaryIt->resultValueType == "int");
+  CHECK(summaryIt->resultErrorType == "MyError");
+  CHECK(summaryIt->hasOnError);
+  CHECK(summaryIt->onErrorHandlerPath == "/unexpectedError");
+  CHECK(summaryIt->onErrorErrorType == "MyError");
+}
+
+TEST_CASE("semantic product publishes struct and enum metadata") {
+  const std::string source =
+      "[public struct no_padding align_bytes(8)]\n"
+      "Packet {\n"
+      "  [i32] left{1i32}\n"
+      "  [i64] right{2i64}\n"
+      "}\n"
+      "\n"
+      "[enum]\n"
+      "Mode {\n"
+      "  Idle\n"
+      "  Busy\n"
+      "}\n"
+      "\n"
+      "[return<int>]\n"
+      "main() {\n"
+      "  return(0i32)\n"
+      "}\n";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto packetIt =
+      std::find_if(semanticProgram.typeMetadata.begin(),
+                   semanticProgram.typeMetadata.end(),
+                   [](const primec::SemanticProgramTypeMetadata &entry) {
+                     return entry.fullPath == "/Packet";
+                   });
+  REQUIRE(packetIt != semanticProgram.typeMetadata.end());
+  CHECK(packetIt->category == "struct");
+  CHECK(packetIt->isPublic);
+  CHECK(packetIt->hasNoPadding);
+  CHECK(packetIt->hasExplicitAlignment);
+  CHECK(packetIt->explicitAlignmentBytes == 8u);
+  CHECK(packetIt->fieldCount == 2u);
+  CHECK(packetIt->enumValueCount == 0u);
+  CHECK(packetIt->sourceLine > 0);
+  CHECK(packetIt->sourceColumn > 0);
+
+  const auto modeIt =
+      std::find_if(semanticProgram.typeMetadata.begin(),
+                   semanticProgram.typeMetadata.end(),
+                   [](const primec::SemanticProgramTypeMetadata &entry) {
+                     return entry.fullPath == "/Mode";
+                   });
+  REQUIRE(modeIt != semanticProgram.typeMetadata.end());
+  CHECK(modeIt->category == "enum");
+  CHECK(modeIt->enumValueCount == 2u);
+  CHECK(modeIt->fieldCount == 0u);
+}
+
 TEST_CASE("type resolution local Result.ok metadata stays aligned with wrapped call snapshots") {
   const std::string source =
       "MyError {\n"

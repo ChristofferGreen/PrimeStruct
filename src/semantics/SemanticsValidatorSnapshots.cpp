@@ -1,7 +1,9 @@
 #include "SemanticsValidator.h"
 
 #include <algorithm>
+#include <cctype>
 #include <functional>
+#include <limits>
 #include <optional>
 
 namespace primec::semantics {
@@ -70,6 +72,129 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
     return parsed;
   }
   return std::nullopt;
+}
+
+std::vector<std::string> snapshotCapabilities(const std::vector<Transform> &transforms) {
+  std::vector<std::string> capabilities;
+  for (const auto &transform : transforms) {
+    if (transform.name != "capabilities") {
+      continue;
+    }
+    capabilities = transform.arguments;
+    break;
+  }
+  std::sort(capabilities.begin(), capabilities.end());
+  capabilities.erase(std::unique(capabilities.begin(), capabilities.end()), capabilities.end());
+  return capabilities;
+}
+
+bool isStaticFieldStatement(const Expr &stmt) {
+  for (const auto &transform : stmt.transforms) {
+    if (transform.name == "static") {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool parsePositiveIntSnapshotArg(const std::string &text, uint32_t &valueOut) {
+  std::string digits = text;
+  if (digits.size() > 3 && digits.compare(digits.size() - 3, 3, "i32") == 0) {
+    digits.resize(digits.size() - 3);
+  }
+  if (digits.empty()) {
+    return false;
+  }
+  uint64_t value = 0;
+  for (char c : digits) {
+    if (!std::isdigit(static_cast<unsigned char>(c))) {
+      return false;
+    }
+    value = value * 10u + static_cast<uint64_t>(c - '0');
+    if (value > std::numeric_limits<uint32_t>::max()) {
+      return false;
+    }
+  }
+  valueOut = static_cast<uint32_t>(value);
+  return valueOut > 0;
+}
+
+bool explicitAlignmentBytesForSnapshot(const std::vector<Transform> &transforms, uint32_t &alignmentOut) {
+  alignmentOut = 0;
+  for (const auto &transform : transforms) {
+    if (transform.name != "align_bytes" && transform.name != "align_kbytes") {
+      continue;
+    }
+    if (transform.arguments.empty()) {
+      return false;
+    }
+    uint32_t value = 0;
+    if (!parsePositiveIntSnapshotArg(transform.arguments.front(), value)) {
+      return false;
+    }
+    if (transform.name == "align_kbytes") {
+      if (value > std::numeric_limits<uint32_t>::max() / 1024u) {
+        return false;
+      }
+      value *= 1024u;
+    }
+    alignmentOut = value;
+    return true;
+  }
+  return false;
+}
+
+bool isImplicitStructDefinitionSnapshot(const Definition &def) {
+  bool hasStructTransform = false;
+  bool hasReturnTransform = false;
+  for (const auto &transform : def.transforms) {
+    if (transform.name == "return") {
+      hasReturnTransform = true;
+    }
+    if (isStructTransformName(transform.name)) {
+      hasStructTransform = true;
+    }
+  }
+  if (hasStructTransform) {
+    return true;
+  }
+  if (hasReturnTransform || !def.parameters.empty() || def.hasReturnStatement || def.returnExpr.has_value()) {
+    return false;
+  }
+  for (const auto &stmt : def.statements) {
+    if (!stmt.isBinding) {
+      return false;
+    }
+  }
+  return true;
+}
+
+std::string typeMetadataCategoryForSnapshot(const Definition &def) {
+  bool sawStructLikeTransform = false;
+  for (const auto &transform : def.transforms) {
+    if (transform.name == "enum") {
+      return "enum";
+    }
+    if (transform.name == "gpu_lane") {
+      return "gpu_lane";
+    }
+    if (transform.name == "handle") {
+      return "handle";
+    }
+    if (transform.name == "pod") {
+      return "pod";
+    }
+    if (transform.name == "struct") {
+      return "struct";
+    }
+    if (isStructTransformName(transform.name)) {
+      sawStructLikeTransform = true;
+    }
+  }
+  if (sawStructLikeTransform || isImplicitStructDefinitionSnapshot(def)) {
+    return "struct";
+  }
+  return {};
 }
 
 } // namespace
@@ -636,6 +761,134 @@ SemanticsValidator::bridgePathChoiceSnapshotForSemanticProduct() const {
       return left.helperName < right.helperName;
     }
     return left.chosenPath < right.chosenPath;
+  });
+  return entries;
+}
+
+std::vector<SemanticsValidator::CallableSummarySnapshotEntry>
+SemanticsValidator::callableSummarySnapshotForSemanticProduct() const {
+  std::vector<CallableSummarySnapshotEntry> entries;
+  entries.reserve(program_.definitions.size() + program_.executions.size());
+
+  for (const auto &def : program_.definitions) {
+    const auto state = buildDefinitionValidationState(def);
+    const auto &context = state.context;
+    ReturnKind returnKind = ReturnKind::Unknown;
+    if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {
+      returnKind = returnKindIt->second;
+    }
+    entries.push_back(CallableSummarySnapshotEntry{
+        def.fullPath,
+        false,
+        returnKind,
+        context.definitionIsCompute,
+        context.definitionIsUnsafe,
+        std::vector<std::string>(context.activeEffects.begin(), context.activeEffects.end()),
+        snapshotCapabilities(def.transforms),
+        context.resultType.has_value() && context.resultType->isResult,
+        context.resultType.has_value() && context.resultType->isResult && context.resultType->hasValue,
+        context.resultType.has_value() && context.resultType->isResult ? context.resultType->valueType : std::string{},
+        context.resultType.has_value() && context.resultType->isResult ? context.resultType->errorType : std::string{},
+        context.onError.has_value(),
+        context.onError.has_value() ? context.onError->handlerPath : std::string{},
+        context.onError.has_value() ? context.onError->errorType : std::string{},
+        context.onError.has_value() ? context.onError->boundArgs.size() : 0,
+    });
+  }
+
+  for (const auto &exec : program_.executions) {
+    const auto state = buildExecutionValidationState(exec);
+    const auto &context = state.context;
+    entries.push_back(CallableSummarySnapshotEntry{
+        exec.fullPath,
+        true,
+        ReturnKind::Unknown,
+        context.definitionIsCompute,
+        context.definitionIsUnsafe,
+        std::vector<std::string>(context.activeEffects.begin(), context.activeEffects.end()),
+        snapshotCapabilities(exec.transforms),
+        false,
+        false,
+        {},
+        {},
+        false,
+        {},
+        {},
+        0,
+    });
+  }
+
+  for (auto &entry : entries) {
+    std::sort(entry.activeEffects.begin(), entry.activeEffects.end());
+    entry.activeEffects.erase(std::unique(entry.activeEffects.begin(), entry.activeEffects.end()),
+                              entry.activeEffects.end());
+  }
+
+  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+    if (left.fullPath != right.fullPath) {
+      return left.fullPath < right.fullPath;
+    }
+    return left.isExecution < right.isExecution;
+  });
+  return entries;
+}
+
+std::vector<SemanticsValidator::TypeMetadataSnapshotEntry>
+SemanticsValidator::typeMetadataSnapshotForSemanticProduct() const {
+  std::vector<TypeMetadataSnapshotEntry> entries;
+  entries.reserve(program_.definitions.size());
+
+  for (const auto &def : program_.definitions) {
+    const std::string category = typeMetadataCategoryForSnapshot(def);
+    if (category.empty()) {
+      continue;
+    }
+
+    bool hasNoPadding = false;
+    bool hasPlatformIndependentPadding = false;
+    for (const auto &transform : def.transforms) {
+      if (transform.name == "no_padding") {
+        hasNoPadding = true;
+      } else if (transform.name == "platform_independent_padding") {
+        hasPlatformIndependentPadding = true;
+      }
+    }
+
+    uint32_t explicitAlignmentBytes = 0;
+    const bool hasExplicitAlignment = explicitAlignmentBytesForSnapshot(def.transforms, explicitAlignmentBytes);
+
+    size_t fieldCount = 0;
+    size_t enumValueCount = 0;
+    if (category == "enum") {
+      enumValueCount = def.statements.size();
+    } else {
+      for (const auto &stmt : def.statements) {
+        if (stmt.isBinding && !isStaticFieldStatement(stmt)) {
+          ++fieldCount;
+        }
+      }
+    }
+
+    entries.push_back(TypeMetadataSnapshotEntry{
+        def.fullPath,
+        category,
+        publicDefinitions_.count(def.fullPath) > 0,
+        hasNoPadding,
+        hasPlatformIndependentPadding,
+        hasExplicitAlignment,
+        explicitAlignmentBytes,
+        fieldCount,
+        enumValueCount,
+        def.sourceLine,
+        def.sourceColumn,
+    });
+  }
+
+  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+    if (left.fullPath != right.fullPath) {
+      return left.fullPath < right.fullPath;
+    }
+    return left.category < right.category;
   });
   return entries;
 }

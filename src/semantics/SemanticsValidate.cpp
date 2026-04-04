@@ -170,6 +170,44 @@ SemanticProgram buildSemanticProgram(const Program &program,
         entry.sourceColumn,
     });
   }
+  const auto callableSummaries = validator.callableSummarySnapshotForSemanticProduct();
+  semanticProgram.callableSummaries.reserve(callableSummaries.size());
+  for (const auto &entry : callableSummaries) {
+    semanticProgram.callableSummaries.push_back(SemanticProgramCallableSummary{
+        entry.fullPath,
+        entry.isExecution,
+        semantics::returnKindSnapshotName(entry.returnKind),
+        entry.isCompute,
+        entry.isUnsafe,
+        entry.activeEffects,
+        entry.activeCapabilities,
+        entry.hasResultType,
+        entry.resultTypeHasValue,
+        entry.resultValueType,
+        entry.resultErrorType,
+        entry.hasOnError,
+        entry.onErrorHandlerPath,
+        entry.onErrorErrorType,
+        entry.onErrorBoundArgCount,
+    });
+  }
+  const auto typeMetadata = validator.typeMetadataSnapshotForSemanticProduct();
+  semanticProgram.typeMetadata.reserve(typeMetadata.size());
+  for (const auto &entry : typeMetadata) {
+    semanticProgram.typeMetadata.push_back(SemanticProgramTypeMetadata{
+        entry.fullPath,
+        entry.category,
+        entry.isPublic,
+        entry.hasNoPadding,
+        entry.hasPlatformIndependentPadding,
+        entry.hasExplicitAlignment,
+        entry.explicitAlignmentBytes,
+        entry.fieldCount,
+        entry.enumValueCount,
+        entry.sourceLine,
+        entry.sourceColumn,
+    });
+  }
   return semanticProgram;
 }
 
