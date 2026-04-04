@@ -454,6 +454,8 @@ Planned lowerer entrypoint cutover:
   - semantic success publishes a semantic product plus AST-backed provenance
   - IR preparation consumes the semantic product directly
   - any remaining raw-`Program` compatibility path is temporary adapter code only
+- That first entrypoint seam is already live at `prepareIrModule(...)`; the remaining production cutover work is the
+  main `IrLowerer::lower(...)` entry plus eventual retirement of the raw-`Program` lowering path.
 - The entrypoint boundary should make ownership explicit:
   - lowering-facing meaning comes from the semantic product
   - syntax-faithful provenance, spans, and source reproduction remain AST-owned
