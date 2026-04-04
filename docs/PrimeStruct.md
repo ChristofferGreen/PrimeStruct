@@ -397,9 +397,10 @@ Compile-pipeline publication contract:
   entry path, import inventories, deterministic definition/execution inventories, resolved direct-call targets with
   canonical callee paths, resolved receiver/method-call targets with receiver-side helper-family choices, and direct
   collection/builtin bridge routing choices are available now. Deterministic callable summaries (return kind,
-  compute/unsafe flags, active effects, capabilities, and result/on_error summaries) plus definition-level
-  struct/enum/layout metadata (category, visibility, layout-policy flags, explicit alignment, and field/item counts)
-  are also published now, while full binding/result facts remain a separate live builder item.
+  compute/unsafe flags, active effects, capabilities, and result/on_error summaries), definition-level
+  struct/enum/layout metadata (category, visibility, layout-policy flags, explicit alignment, and field/item counts),
+  final binding/result facts for parameters/locals/temporary call results/returns, and graph-backed local-auto,
+  query, `try(...)`, and `on_error` facts are also published now.
 - Dump-stage handling should be able to read either the syntax-facing canonical AST dump or the future semantic-product
   dump from the same compile-pipeline success result without re-running semantics.
 - Backend/runtime entrypoints should consume the semantic product from compile-pipeline output once available rather

@@ -81,6 +81,101 @@ struct SemanticProgramTypeMetadata {
   int sourceColumn = 0;
 };
 
+struct SemanticProgramBindingFact {
+  std::string scopePath;
+  std::string siteKind;
+  std::string name;
+  std::string resolvedPath;
+  std::string bindingTypeText;
+  bool isMutable = false;
+  bool isEntryArgString = false;
+  bool isUnsafeReference = false;
+  std::string referenceRoot;
+  int sourceLine = 0;
+  int sourceColumn = 0;
+};
+
+struct SemanticProgramReturnFact {
+  std::string definitionPath;
+  std::string returnKind;
+  std::string structPath;
+  std::string bindingTypeText;
+  bool isMutable = false;
+  bool isEntryArgString = false;
+  bool isUnsafeReference = false;
+  std::string referenceRoot;
+  int sourceLine = 0;
+  int sourceColumn = 0;
+};
+
+struct SemanticProgramLocalAutoFact {
+  std::string scopePath;
+  std::string bindingName;
+  std::string bindingTypeText;
+  std::string initializerResolvedPath;
+  std::string initializerBindingTypeText;
+  std::string initializerReceiverBindingTypeText;
+  std::string initializerQueryTypeText;
+  bool initializerResultHasValue = false;
+  std::string initializerResultValueType;
+  std::string initializerResultErrorType;
+  bool initializerHasTry = false;
+  std::string initializerTryOperandResolvedPath;
+  std::string initializerTryOperandBindingTypeText;
+  std::string initializerTryOperandReceiverBindingTypeText;
+  std::string initializerTryOperandQueryTypeText;
+  std::string initializerTryValueType;
+  std::string initializerTryErrorType;
+  std::string initializerTryContextReturnKind;
+  std::string initializerTryOnErrorHandlerPath;
+  std::string initializerTryOnErrorErrorType;
+  std::size_t initializerTryOnErrorBoundArgCount = 0;
+  int sourceLine = 0;
+  int sourceColumn = 0;
+};
+
+struct SemanticProgramQueryFact {
+  std::string scopePath;
+  std::string callName;
+  std::string resolvedPath;
+  std::string queryTypeText;
+  std::string bindingTypeText;
+  std::string receiverBindingTypeText;
+  bool hasResultType = false;
+  bool resultTypeHasValue = false;
+  std::string resultValueType;
+  std::string resultErrorType;
+  int sourceLine = 0;
+  int sourceColumn = 0;
+};
+
+struct SemanticProgramTryFact {
+  std::string scopePath;
+  std::string operandResolvedPath;
+  std::string operandBindingTypeText;
+  std::string operandReceiverBindingTypeText;
+  std::string operandQueryTypeText;
+  std::string valueType;
+  std::string errorType;
+  std::string contextReturnKind;
+  std::string onErrorHandlerPath;
+  std::string onErrorErrorType;
+  std::size_t onErrorBoundArgCount = 0;
+  int sourceLine = 0;
+  int sourceColumn = 0;
+};
+
+struct SemanticProgramOnErrorFact {
+  std::string definitionPath;
+  std::string returnKind;
+  std::string handlerPath;
+  std::string errorType;
+  std::size_t boundArgCount = 0;
+  bool returnResultHasValue = false;
+  std::string returnResultValueType;
+  std::string returnResultErrorType;
+};
+
 struct SemanticProgram {
   std::string entryPath;
   std::vector<std::string> sourceImports;
@@ -92,6 +187,12 @@ struct SemanticProgram {
   std::vector<SemanticProgramBridgePathChoice> bridgePathChoices;
   std::vector<SemanticProgramCallableSummary> callableSummaries;
   std::vector<SemanticProgramTypeMetadata> typeMetadata;
+  std::vector<SemanticProgramBindingFact> bindingFacts;
+  std::vector<SemanticProgramReturnFact> returnFacts;
+  std::vector<SemanticProgramLocalAutoFact> localAutoFacts;
+  std::vector<SemanticProgramQueryFact> queryFacts;
+  std::vector<SemanticProgramTryFact> tryFacts;
+  std::vector<SemanticProgramOnErrorFact> onErrorFacts;
 };
 
 } // namespace primec

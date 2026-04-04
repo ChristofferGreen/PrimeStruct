@@ -447,6 +447,178 @@ TEST_CASE("semantic product publishes struct and enum metadata") {
   CHECK(modeIt->fieldCount == 0u);
 }
 
+TEST_CASE("semantic product publishes binding and return facts") {
+  const std::string source =
+      "Pair {\n"
+      "  [i32] left{1i32}\n"
+      "  [i64] right{2i64}\n"
+      "}\n"
+      "\n"
+      "[return<T>]\n"
+      "id<T>([T] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<Pair>]\n"
+      "makePair([i32] base) {\n"
+      "  [i64] widened{2i64}\n"
+      "  [Pair] pair{Pair(base, widened)}\n"
+      "  return(pair)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [i32] seed{7i32}\n"
+      "  [i32] chosen{id(seed)}\n"
+      "  return(chosen)\n"
+      "}\n";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto parameterIt =
+      std::find_if(semanticProgram.bindingFacts.begin(),
+                   semanticProgram.bindingFacts.end(),
+                   [](const primec::SemanticProgramBindingFact &entry) {
+                     return entry.scopePath == "/makePair" &&
+                            entry.siteKind == "parameter" &&
+                            entry.name == "base";
+                   });
+  REQUIRE(parameterIt != semanticProgram.bindingFacts.end());
+  CHECK(parameterIt->bindingTypeText == "i32");
+
+  const auto localIt =
+      std::find_if(semanticProgram.bindingFacts.begin(),
+                   semanticProgram.bindingFacts.end(),
+                   [](const primec::SemanticProgramBindingFact &entry) {
+                     return entry.scopePath == "/makePair" &&
+                            entry.siteKind == "local" &&
+                            entry.name == "widened";
+                   });
+  REQUIRE(localIt != semanticProgram.bindingFacts.end());
+  CHECK(localIt->bindingTypeText == "i64");
+
+  const auto tempIt =
+      std::find_if(semanticProgram.bindingFacts.begin(),
+                   semanticProgram.bindingFacts.end(),
+                   [](const primec::SemanticProgramBindingFact &entry) {
+                     return entry.scopePath == "/main" &&
+                            entry.siteKind == "temporary" &&
+                            (entry.name == "id" || entry.name.rfind("/id__t", 0) == 0) &&
+                            entry.bindingTypeText == "i32";
+                   });
+  REQUIRE(tempIt != semanticProgram.bindingFacts.end());
+  CHECK(tempIt->sourceLine > 0);
+  CHECK(tempIt->sourceColumn > 0);
+
+  const auto mainReturnIt =
+      std::find_if(semanticProgram.returnFacts.begin(),
+                   semanticProgram.returnFacts.end(),
+                   [](const primec::SemanticProgramReturnFact &entry) {
+                     return entry.definitionPath == "/main";
+                   });
+  REQUIRE(mainReturnIt != semanticProgram.returnFacts.end());
+  CHECK(mainReturnIt->returnKind == "i32");
+  CHECK(mainReturnIt->bindingTypeText == "i32");
+
+  const auto pairReturnIt =
+      std::find_if(semanticProgram.returnFacts.begin(),
+                   semanticProgram.returnFacts.end(),
+                   [](const primec::SemanticProgramReturnFact &entry) {
+                     return entry.definitionPath == "/makePair";
+                   });
+  REQUIRE(pairReturnIt != semanticProgram.returnFacts.end());
+  CHECK(pairReturnIt->structPath == "/Pair");
+  CHECK(pairReturnIt->bindingTypeText == "Pair");
+}
+
+TEST_CASE("semantic product publishes graph-backed local auto query try and on_error facts") {
+  const std::string source = R"(
+MyError {
+}
+
+[return<void>]
+unexpectedError([MyError] err) {
+}
+
+[return<Result<int, MyError>>]
+lookup() {
+  return(Result.ok(4i32))
+}
+
+[return<Result<int, MyError>> on_error<MyError, /unexpectedError>]
+main() {
+  [auto] selected{try(lookup())}
+  return(Result.ok(selected))
+}
+)";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto localAutoIt =
+      std::find_if(semanticProgram.localAutoFacts.begin(),
+                   semanticProgram.localAutoFacts.end(),
+                   [](const primec::SemanticProgramLocalAutoFact &entry) {
+                     return entry.scopePath == "/main" && entry.bindingName == "selected";
+                   });
+  REQUIRE(localAutoIt != semanticProgram.localAutoFacts.end());
+  CHECK(localAutoIt->bindingTypeText == "int");
+  CHECK(localAutoIt->initializerResolvedPath == "/lookup");
+  CHECK(localAutoIt->initializerHasTry);
+  CHECK(localAutoIt->initializerTryValueType == "int");
+  CHECK(localAutoIt->initializerTryErrorType == "MyError");
+
+  const auto queryIt =
+      std::find_if(semanticProgram.queryFacts.begin(),
+                   semanticProgram.queryFacts.end(),
+                   [](const primec::SemanticProgramQueryFact &entry) {
+                     return entry.scopePath == "/main" && entry.resolvedPath == "/lookup";
+                   });
+  REQUIRE(queryIt != semanticProgram.queryFacts.end());
+  CHECK(queryIt->bindingTypeText == "Result<int, MyError>");
+  CHECK(queryIt->hasResultType);
+  CHECK(queryIt->resultTypeHasValue);
+  CHECK(queryIt->resultValueType == "int");
+  CHECK(queryIt->resultErrorType == "MyError");
+
+  const auto tryIt =
+      std::find_if(semanticProgram.tryFacts.begin(),
+                   semanticProgram.tryFacts.end(),
+                   [](const primec::SemanticProgramTryFact &entry) {
+                     return entry.scopePath == "/main" && entry.operandResolvedPath == "/lookup";
+                   });
+  REQUIRE(tryIt != semanticProgram.tryFacts.end());
+  CHECK(tryIt->valueType == "int");
+  CHECK(tryIt->errorType == "MyError");
+  CHECK(tryIt->contextReturnKind == "i32");
+  CHECK(tryIt->onErrorHandlerPath == "/unexpectedError");
+
+  const auto onErrorIt =
+      std::find_if(semanticProgram.onErrorFacts.begin(),
+                   semanticProgram.onErrorFacts.end(),
+                   [](const primec::SemanticProgramOnErrorFact &entry) {
+                     return entry.definitionPath == "/main";
+                   });
+  REQUIRE(onErrorIt != semanticProgram.onErrorFacts.end());
+  CHECK(onErrorIt->returnKind == "i32");
+  CHECK(onErrorIt->handlerPath == "/unexpectedError");
+  CHECK(onErrorIt->errorType == "MyError");
+  CHECK(onErrorIt->returnResultHasValue);
+  CHECK(onErrorIt->returnResultValueType == "int");
+  CHECK(onErrorIt->returnResultErrorType == "MyError");
+}
+
 TEST_CASE("type resolution local Result.ok metadata stays aligned with wrapped call snapshots") {
   const std::string source =
       "MyError {\n"

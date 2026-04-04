@@ -893,6 +893,276 @@ SemanticsValidator::typeMetadataSnapshotForSemanticProduct() const {
   return entries;
 }
 
+std::vector<SemanticsValidator::BindingFactSnapshotEntry>
+SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
+  using ActiveLocalBindings = std::unordered_map<std::string, BindingInfo>;
+
+  std::vector<BindingFactSnapshotEntry> entries;
+
+  for (const auto &def : program_.definitions) {
+    const auto paramsIt = paramsByDef_.find(def.fullPath);
+    if (paramsIt == paramsByDef_.end()) {
+      continue;
+    }
+    const auto &defParams = paramsIt->second;
+    const size_t paramCount = std::min(def.parameters.size(), defParams.size());
+    for (size_t i = 0; i < paramCount; ++i) {
+      entries.push_back(BindingFactSnapshotEntry{
+          def.fullPath,
+          "parameter",
+          defParams[i].name,
+          {},
+          def.parameters[i].sourceLine,
+          def.parameters[i].sourceColumn,
+          defParams[i].binding,
+      });
+    }
+  }
+
+  auto withPreservedError = [&](const std::function<bool()> &fn) {
+    const std::string previousError = error_;
+    error_.clear();
+    const bool ok = fn();
+    error_.clear();
+    error_ = previousError;
+    return ok;
+  };
+
+  auto inferBindingForLocals = [&](const Definition &def,
+                                   const std::vector<ParameterInfo> &defParams,
+                                   const ActiveLocalBindings &activeLocals,
+                                   const Expr &bindingExpr,
+                                   BindingInfo &bindingOut) {
+    const std::string namespacePrefix =
+        bindingExpr.namespacePrefix.empty() ? def.namespacePrefix : bindingExpr.namespacePrefix;
+    std::optional<std::string> restrictType;
+    if (!withPreservedError([&]() {
+          return parseBindingInfo(
+              bindingExpr, namespacePrefix, structNames_, importAliases_, bindingOut, restrictType, error_);
+        })) {
+      return false;
+    }
+    const bool hasExplicitType = hasExplicitBindingTypeTransform(bindingExpr);
+    const bool explicitAutoType = hasExplicitType && normalizeBindingTypeName(bindingOut.typeName) == "auto";
+    if (bindingExpr.args.size() == 1 && (!hasExplicitType || explicitAutoType)) {
+      BindingInfo inferred = bindingOut;
+      if (withPreservedError([&]() {
+            return inferBindingTypeFromInitializer(
+                bindingExpr.args.front(), defParams, activeLocals, inferred, &bindingExpr);
+          })) {
+        bindingOut = std::move(inferred);
+      }
+    }
+    if (!restrictType.has_value()) {
+      return true;
+    }
+    const bool hasTemplate = !bindingOut.typeTemplateArg.empty();
+    return restrictMatchesBinding(
+        *restrictType, bindingOut.typeName, bindingOut.typeTemplateArg, hasTemplate, namespacePrefix);
+  };
+
+  std::function<void(const Definition &, const std::vector<ParameterInfo> &, const Expr &, ActiveLocalBindings &)>
+      visitExpr;
+  std::function<void(const Definition &,
+                     const std::vector<ParameterInfo> &,
+                     const std::vector<Expr> &,
+                     ActiveLocalBindings &)>
+      visitExprSequence;
+
+  visitExprSequence = [&](const Definition &def,
+                          const std::vector<ParameterInfo> &defParams,
+                          const std::vector<Expr> &exprs,
+                          ActiveLocalBindings &activeLocals) {
+    for (const auto &expr : exprs) {
+      visitExpr(def, defParams, expr, activeLocals);
+    }
+  };
+
+  visitExpr = [&](const Definition &def,
+                  const std::vector<ParameterInfo> &defParams,
+                  const Expr &expr,
+                  ActiveLocalBindings &activeLocals) {
+    if (expr.isBinding) {
+      for (const auto &arg : expr.args) {
+        ActiveLocalBindings argLocals = activeLocals;
+        visitExpr(def, defParams, arg, argLocals);
+      }
+      if (!expr.bodyArguments.empty()) {
+        ActiveLocalBindings bodyLocals = activeLocals;
+        visitExprSequence(def, defParams, expr.bodyArguments, bodyLocals);
+      }
+
+      BindingInfo binding;
+      if (inferBindingForLocals(def, defParams, activeLocals, expr, binding)) {
+        entries.push_back(BindingFactSnapshotEntry{
+            def.fullPath,
+            "local",
+            expr.name,
+            {},
+            expr.sourceLine,
+            expr.sourceColumn,
+            binding,
+        });
+        activeLocals.emplace(expr.name, std::move(binding));
+      }
+      return;
+    }
+
+    if (expr.kind == Expr::Kind::Call) {
+      CallSnapshotData callData;
+      if (inferCallSnapshotData(defParams, activeLocals, expr, callData) &&
+          !callData.binding.typeName.empty()) {
+        entries.push_back(BindingFactSnapshotEntry{
+            def.fullPath,
+            "temporary",
+            expr.name,
+            std::move(callData.resolvedPath),
+            expr.sourceLine,
+            expr.sourceColumn,
+            std::move(callData.binding),
+        });
+      }
+    }
+
+    for (const auto &arg : expr.args) {
+      ActiveLocalBindings argLocals = activeLocals;
+      visitExpr(def, defParams, arg, argLocals);
+    }
+    if (!expr.bodyArguments.empty()) {
+      ActiveLocalBindings bodyLocals = activeLocals;
+      visitExprSequence(def, defParams, expr.bodyArguments, bodyLocals);
+    }
+  };
+
+  for (const auto &def : program_.definitions) {
+    DefinitionContextScope definitionScope(*this, def);
+    ValidationStateScope validationStateScope(*this, buildDefinitionValidationState(def));
+    const auto paramsIt = paramsByDef_.find(def.fullPath);
+    if (paramsIt == paramsByDef_.end()) {
+      continue;
+    }
+    const auto &defParams = paramsIt->second;
+
+    ActiveLocalBindings definitionLocals;
+    visitExprSequence(def, defParams, def.statements, definitionLocals);
+    if (def.returnExpr.has_value()) {
+      ActiveLocalBindings returnLocals = definitionLocals;
+      visitExpr(def, defParams, *def.returnExpr, returnLocals);
+    }
+  }
+
+  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+    if (left.scopePath != right.scopePath) {
+      return left.scopePath < right.scopePath;
+    }
+    if (left.sourceLine != right.sourceLine) {
+      return left.sourceLine < right.sourceLine;
+    }
+    if (left.sourceColumn != right.sourceColumn) {
+      return left.sourceColumn < right.sourceColumn;
+    }
+    if (left.siteKind != right.siteKind) {
+      return left.siteKind < right.siteKind;
+    }
+    if (left.name != right.name) {
+      return left.name < right.name;
+    }
+    return left.resolvedPath < right.resolvedPath;
+  });
+  return entries;
+}
+
+std::vector<SemanticsValidator::ReturnFactSnapshotEntry>
+SemanticsValidator::returnFactSnapshotForSemanticProduct() const {
+  std::vector<ReturnFactSnapshotEntry> entries;
+  entries.reserve(program_.definitions.size());
+  for (const auto &definition : program_.definitions) {
+    const auto kindIt = returnKinds_.find(definition.fullPath);
+    if (kindIt == returnKinds_.end()) {
+      continue;
+    }
+    ReturnFactSnapshotEntry entry;
+    entry.definitionPath = definition.fullPath;
+    entry.kind = kindIt->second;
+    entry.sourceLine = definition.returnExpr.has_value() ? definition.returnExpr->sourceLine : definition.sourceLine;
+    entry.sourceColumn =
+        definition.returnExpr.has_value() ? definition.returnExpr->sourceColumn : definition.sourceColumn;
+    if (const auto structIt = returnStructs_.find(definition.fullPath);
+        structIt != returnStructs_.end()) {
+      entry.structPath = structIt->second;
+    }
+    if (const auto bindingIt = returnBindings_.find(definition.fullPath);
+        bindingIt != returnBindings_.end()) {
+      entry.binding = bindingIt->second;
+    }
+    entries.push_back(std::move(entry));
+  }
+  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+    return left.definitionPath < right.definitionPath;
+  });
+  return entries;
+}
+
+std::vector<SemanticsValidator::LocalAutoBindingSnapshotEntry>
+SemanticsValidator::localAutoFactSnapshotForSemanticProduct() const {
+  return localAutoBindingSnapshotForTesting();
+}
+
+std::vector<SemanticsValidator::QueryFactSnapshotEntry>
+SemanticsValidator::queryFactSnapshotForSemanticProduct() {
+  std::vector<QueryFactSnapshotEntry> entries;
+  forEachLocalAwareSnapshotCall([&](const Definition &def,
+                                    const std::vector<ParameterInfo> &defParams,
+                                    const Expr &expr,
+                                    const std::unordered_map<std::string, BindingInfo> &activeLocals) {
+    QuerySnapshotData queryData;
+    if (!inferQuerySnapshotData(defParams, activeLocals, expr, queryData)) {
+      return;
+    }
+    entries.push_back(QueryFactSnapshotEntry{
+        def.fullPath,
+        expr.name,
+        std::move(queryData.resolvedPath),
+        expr.sourceLine,
+        expr.sourceColumn,
+        std::move(queryData.typeText),
+        std::move(queryData.binding),
+        std::move(queryData.receiverBinding),
+        queryData.resultInfo.isResult,
+        queryData.resultInfo.isResult && queryData.resultInfo.hasValue,
+        std::move(queryData.resultInfo.valueType),
+        std::move(queryData.resultInfo.errorType),
+    });
+  });
+
+  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+    if (left.scopePath != right.scopePath) {
+      return left.scopePath < right.scopePath;
+    }
+    if (left.sourceLine != right.sourceLine) {
+      return left.sourceLine < right.sourceLine;
+    }
+    if (left.sourceColumn != right.sourceColumn) {
+      return left.sourceColumn < right.sourceColumn;
+    }
+    if (left.callName != right.callName) {
+      return left.callName < right.callName;
+    }
+    return left.resolvedPath < right.resolvedPath;
+  });
+  return entries;
+}
+
+std::vector<SemanticsValidator::TryValueSnapshotEntry>
+SemanticsValidator::tryFactSnapshotForSemanticProduct() {
+  return tryValueSnapshotForTesting();
+}
+
+std::vector<SemanticsValidator::OnErrorSnapshotEntry>
+SemanticsValidator::onErrorFactSnapshotForSemanticProduct() {
+  return onErrorSnapshotForTesting();
+}
+
 std::vector<SemanticsValidator::QueryReceiverBindingSnapshotEntry>
 SemanticsValidator::queryReceiverBindingSnapshotForTesting() {
   std::vector<QueryReceiverBindingSnapshotEntry> entries;

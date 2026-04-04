@@ -208,6 +208,119 @@ SemanticProgram buildSemanticProgram(const Program &program,
         entry.sourceColumn,
     });
   }
+  const auto bindingFacts = validator.bindingFactSnapshotForSemanticProduct();
+  semanticProgram.bindingFacts.reserve(bindingFacts.size());
+  for (const auto &entry : bindingFacts) {
+    semanticProgram.bindingFacts.push_back(SemanticProgramBindingFact{
+        entry.scopePath,
+        entry.siteKind,
+        entry.name,
+        entry.resolvedPath,
+        bindingTypeTextForSemanticProduct(entry.binding),
+        entry.binding.isMutable,
+        entry.binding.isEntryArgString,
+        entry.binding.isUnsafeReference,
+        entry.binding.referenceRoot,
+        entry.sourceLine,
+        entry.sourceColumn,
+    });
+  }
+  const auto returnFacts = validator.returnFactSnapshotForSemanticProduct();
+  semanticProgram.returnFacts.reserve(returnFacts.size());
+  for (const auto &entry : returnFacts) {
+    semanticProgram.returnFacts.push_back(SemanticProgramReturnFact{
+        entry.definitionPath,
+        semantics::returnKindSnapshotName(entry.kind),
+        entry.structPath,
+        bindingTypeTextForSemanticProduct(entry.binding),
+        entry.binding.isMutable,
+        entry.binding.isEntryArgString,
+        entry.binding.isUnsafeReference,
+        entry.binding.referenceRoot,
+        entry.sourceLine,
+        entry.sourceColumn,
+    });
+  }
+  const auto localAutoFacts = validator.localAutoFactSnapshotForSemanticProduct();
+  semanticProgram.localAutoFacts.reserve(localAutoFacts.size());
+  for (const auto &entry : localAutoFacts) {
+    semanticProgram.localAutoFacts.push_back(SemanticProgramLocalAutoFact{
+        entry.scopePath,
+        entry.bindingName,
+        bindingTypeTextForSemanticProduct(entry.binding),
+        entry.initializerResolvedPath,
+        bindingTypeTextForSemanticProduct(entry.initializerBinding),
+        bindingTypeTextForSemanticProduct(entry.initializerReceiverBinding),
+        entry.initializerQueryTypeText,
+        entry.initializerResultHasValue,
+        entry.initializerResultValueType,
+        entry.initializerResultErrorType,
+        entry.initializerHasTry,
+        entry.initializerTryOperandResolvedPath,
+        bindingTypeTextForSemanticProduct(entry.initializerTryOperandBinding),
+        bindingTypeTextForSemanticProduct(entry.initializerTryOperandReceiverBinding),
+        entry.initializerTryOperandQueryTypeText,
+        entry.initializerTryValueType,
+        entry.initializerTryErrorType,
+        semantics::returnKindSnapshotName(entry.initializerTryContextReturnKind),
+        entry.initializerTryOnErrorHandlerPath,
+        entry.initializerTryOnErrorErrorType,
+        entry.initializerTryOnErrorBoundArgCount,
+        entry.sourceLine,
+        entry.sourceColumn,
+    });
+  }
+  const auto queryFacts = validator.queryFactSnapshotForSemanticProduct();
+  semanticProgram.queryFacts.reserve(queryFacts.size());
+  for (const auto &entry : queryFacts) {
+    semanticProgram.queryFacts.push_back(SemanticProgramQueryFact{
+        entry.scopePath,
+        entry.callName,
+        entry.resolvedPath,
+        entry.typeText,
+        bindingTypeTextForSemanticProduct(entry.binding),
+        bindingTypeTextForSemanticProduct(entry.receiverBinding),
+        entry.hasResultType,
+        entry.resultTypeHasValue,
+        entry.resultValueType,
+        entry.resultErrorType,
+        entry.sourceLine,
+        entry.sourceColumn,
+    });
+  }
+  const auto tryFacts = validator.tryFactSnapshotForSemanticProduct();
+  semanticProgram.tryFacts.reserve(tryFacts.size());
+  for (const auto &entry : tryFacts) {
+    semanticProgram.tryFacts.push_back(SemanticProgramTryFact{
+        entry.scopePath,
+        entry.operandResolvedPath,
+        bindingTypeTextForSemanticProduct(entry.operandBinding),
+        bindingTypeTextForSemanticProduct(entry.operandReceiverBinding),
+        entry.operandQueryTypeText,
+        entry.valueType,
+        entry.errorType,
+        semantics::returnKindSnapshotName(entry.contextReturnKind),
+        entry.onErrorHandlerPath,
+        entry.onErrorErrorType,
+        entry.onErrorBoundArgCount,
+        entry.sourceLine,
+        entry.sourceColumn,
+    });
+  }
+  const auto onErrorFacts = validator.onErrorFactSnapshotForSemanticProduct();
+  semanticProgram.onErrorFacts.reserve(onErrorFacts.size());
+  for (const auto &entry : onErrorFacts) {
+    semanticProgram.onErrorFacts.push_back(SemanticProgramOnErrorFact{
+        entry.definitionPath,
+        semantics::returnKindSnapshotName(entry.returnKind),
+        entry.handlerPath,
+        entry.errorType,
+        entry.boundArgCount,
+        entry.returnResultHasValue,
+        entry.returnResultValueType,
+        entry.returnResultErrorType,
+    });
+  }
   return semanticProgram;
 }
 

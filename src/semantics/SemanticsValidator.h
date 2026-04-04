@@ -234,6 +234,40 @@ public:
     int sourceColumn = 0;
   };
 
+  struct BindingFactSnapshotEntry {
+    std::string scopePath;
+    std::string siteKind;
+    std::string name;
+    std::string resolvedPath;
+    int sourceLine = 0;
+    int sourceColumn = 0;
+    BindingInfo binding;
+  };
+
+  struct ReturnFactSnapshotEntry {
+    std::string definitionPath;
+    ReturnKind kind = ReturnKind::Unknown;
+    std::string structPath;
+    BindingInfo binding;
+    int sourceLine = 0;
+    int sourceColumn = 0;
+  };
+
+  struct QueryFactSnapshotEntry {
+    std::string scopePath;
+    std::string callName;
+    std::string resolvedPath;
+    int sourceLine = 0;
+    int sourceColumn = 0;
+    std::string typeText;
+    BindingInfo binding;
+    BindingInfo receiverBinding;
+    bool hasResultType = false;
+    bool resultTypeHasValue = false;
+    std::string resultValueType;
+    std::string resultErrorType;
+  };
+
   SemanticsValidator(const Program &program,
                      const std::string &entryPath,
                      std::string &error,
@@ -255,6 +289,12 @@ public:
   std::vector<BridgePathChoiceSnapshotEntry> bridgePathChoiceSnapshotForSemanticProduct() const;
   std::vector<CallableSummarySnapshotEntry> callableSummarySnapshotForSemanticProduct() const;
   std::vector<TypeMetadataSnapshotEntry> typeMetadataSnapshotForSemanticProduct() const;
+  std::vector<BindingFactSnapshotEntry> bindingFactSnapshotForSemanticProduct();
+  std::vector<ReturnFactSnapshotEntry> returnFactSnapshotForSemanticProduct() const;
+  std::vector<LocalAutoBindingSnapshotEntry> localAutoFactSnapshotForSemanticProduct() const;
+  std::vector<QueryFactSnapshotEntry> queryFactSnapshotForSemanticProduct();
+  std::vector<TryValueSnapshotEntry> tryFactSnapshotForSemanticProduct();
+  std::vector<OnErrorSnapshotEntry> onErrorFactSnapshotForSemanticProduct();
   std::vector<QueryReceiverBindingSnapshotEntry> queryReceiverBindingSnapshotForTesting();
   std::vector<OnErrorSnapshotEntry> onErrorSnapshotForTesting();
   std::vector<ValidationContextSnapshotEntry> validationContextSnapshotForTesting() const;

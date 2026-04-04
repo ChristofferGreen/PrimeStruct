@@ -141,6 +141,12 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticProduct.find("struct SemanticProgramBridgePathChoice") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramCallableSummary") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramTypeMetadata") != std::string::npos);
+  CHECK(semanticProduct.find("struct SemanticProgramBindingFact") != std::string::npos);
+  CHECK(semanticProduct.find("struct SemanticProgramReturnFact") != std::string::npos);
+  CHECK(semanticProduct.find("struct SemanticProgramLocalAutoFact") != std::string::npos);
+  CHECK(semanticProduct.find("struct SemanticProgramQueryFact") != std::string::npos);
+  CHECK(semanticProduct.find("struct SemanticProgramTryFact") != std::string::npos);
+  CHECK(semanticProduct.find("struct SemanticProgramOnErrorFact") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramDefinition") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramExecution") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgram") != std::string::npos);
@@ -153,6 +159,18 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticProduct.find("std::vector<SemanticProgramCallableSummary> callableSummaries;") !=
         std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramTypeMetadata> typeMetadata;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramBindingFact> bindingFacts;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramReturnFact> returnFacts;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramLocalAutoFact> localAutoFacts;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramQueryFact> queryFacts;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramTryFact> tryFacts;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramOnErrorFact> onErrorFacts;") !=
         std::string::npos);
   CHECK(compilePipelineHeader.find("SemanticProgram semanticProgram;") != std::string::npos);
   CHECK(compilePipelineHeader.find("bool hasSemanticProgram = false;") != std::string::npos);
@@ -168,6 +186,12 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticsValidate.find("validator.bridgePathChoiceSnapshotForSemanticProduct()") != std::string::npos);
   CHECK(semanticsValidate.find("validator.callableSummarySnapshotForSemanticProduct()") != std::string::npos);
   CHECK(semanticsValidate.find("validator.typeMetadataSnapshotForSemanticProduct()") != std::string::npos);
+  CHECK(semanticsValidate.find("validator.bindingFactSnapshotForSemanticProduct()") != std::string::npos);
+  CHECK(semanticsValidate.find("validator.returnFactSnapshotForSemanticProduct()") != std::string::npos);
+  CHECK(semanticsValidate.find("validator.localAutoFactSnapshotForSemanticProduct()") != std::string::npos);
+  CHECK(semanticsValidate.find("validator.queryFactSnapshotForSemanticProduct()") != std::string::npos);
+  CHECK(semanticsValidate.find("validator.tryFactSnapshotForSemanticProduct()") != std::string::npos);
+  CHECK(semanticsValidate.find("validator.onErrorFactSnapshotForSemanticProduct()") != std::string::npos);
   CHECK(semanticsValidate.find("*semanticProgramOut = buildSemanticProgram(program, entryPath);") ==
         std::string::npos);
   CHECK(semanticsValidate.find("*semanticProgramOut = buildSemanticProgram(program, entryPath, validator);") !=

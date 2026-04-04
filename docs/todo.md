@@ -82,12 +82,7 @@ Boundary note: this group is now split into semantic-product creation, pipeline 
 Semantic product creation:
 - ◐ Implement the first semantic-product builder slice now that its scope is documented. Progress: the documented scope is now split into explicit fact-family slices so the initial publication pass can land incrementally without mixing unrelated lowering facts into one change.
   - ◐ Materialize resolved call targets and helper-vs-canonical path choices into the semantic product. Progress: this call-target surface is now split into explicit direct-call, receiver-call, and helper-routing slices so lowering-facing semantic publication can follow the existing resolution families instead of one broad target bucket.
-  - ○ Materialize final binding/result type facts for parameters, locals, temporaries, and returns into the semantic product.
 - ◐ Implement the second semantic-product builder slice now that its scope is documented. Progress: the documented graph-backed snapshot surface is now split into explicit fact-family slices so test-only metadata can move over incrementally instead of as one broad builder cut.
-  - ○ Materialize graph-backed local `auto` facts into the semantic product.
-  - ○ Materialize graph-backed query metadata into the semantic product.
-  - ○ Materialize graph-backed `try(...)` metadata into the semantic product.
-  - ○ Materialize graph-backed `on_error` metadata into the semantic product.
 
 Pipeline plumbing:
 - ◐ Implement the CLI/runtime plumbing cutover for the semantic product now that the end-to-end handoff contract is documented. Progress: this plumbing cut is now split into explicit CLI, runtime/backend, and failure/report seams instead of one umbrella handoff item.
