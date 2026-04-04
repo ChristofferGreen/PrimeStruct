@@ -1122,9 +1122,10 @@ should not reintroduce builtin-only mutation branches outside the experimental h
 The remaining implementation work naturally splits into direct/borrowed-local receivers,
 helper-return and method-like helper-return receivers, and inline `location(...)`-wrapped
 receivers. The same invalidation boundary also still needs its own implementation slices:
-current growth invalidation (`push`, `reserve`), later shrink/motion invalidation
-(`remove_*`, `clear`, and later size-changing helpers), storage-replacement/destruction
-invalidation, and provenance/escape rules for helper-derived borrowed views.
+current `ref(...)` growth invalidation (`push`, `reserve`), later shrink/motion
+invalidation (`remove_*`, `clear`, and later size-changing helpers), storage-
+replacement/destruction invalidation, later standalone field-view invalidation on those
+same families, and provenance/escape rules for helper-derived borrowed views.
 Non-empty literals still emit the deterministic unsupported diagnostic
 `native backend does not support non-empty soa_vector literals`.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the
