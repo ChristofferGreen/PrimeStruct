@@ -378,8 +378,10 @@ Temporary migration adapter contract:
   intended temporary consumers.
 - Current status: the adapter now feeds lowering entry/setup with semantic-product direct-call targets,
   receiver/method-call targets, helper-routing choices, source-owned binding/result facts, and the current
-  callable-summary/type-metadata effect-layout surfaces. Remaining adapter work is limited to the graph-backed
-  query/local-auto/`try(...)`/`on_error` seams plus the richer layout facts that still derive from field bindings.
+  callable-summary/type-metadata effect-layout surfaces. Remaining adapter work is limited to the richer layout facts
+  that still derive from field bindings. The published graph-backed local/query/`try(...)`/`on_error` facts are
+  currently inspection-surface facts, not lowerer-adapter inputs; `on_error` bound-arg expressions remain syntax-owned
+  and are still parsed from transforms when lowering needs executable handler arguments.
 - Removal criteria:
   - `CompilePipelineOutput` publishes the semantic product on the success path.
   - `prepareIrModule` and `IrLowerer::lower` consume the semantic product directly in production codepaths.
