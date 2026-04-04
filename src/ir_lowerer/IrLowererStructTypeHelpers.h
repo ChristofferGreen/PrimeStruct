@@ -13,6 +13,8 @@
 
 namespace primec::ir_lowerer {
 
+struct SemanticProductTargetAdapter;
+
 using ResolveStructTypeNameFn = std::function<bool(const std::string &, const std::string &, std::string &)>;
 using ValueKindFromTypeNameFn = std::function<LocalInfo::ValueKind(const std::string &)>;
 using InferStructExprPathFn = std::function<std::string(const Expr &)>;
@@ -118,7 +120,8 @@ bool isWildcardImportPath(const std::string &path, std::string &prefixOut);
 void buildDefinitionMapAndStructNames(
     const std::vector<Definition> &definitions,
     std::unordered_map<std::string, const Definition *> &defMapOut,
-    std::unordered_set<std::string> &structNamesOut);
+    std::unordered_set<std::string> &structNamesOut,
+    const SemanticProductTargetAdapter *semanticProductTargets = nullptr);
 void appendStructLayoutFieldsFromFieldBindings(
     const std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &structFieldInfoByName,
     const std::unordered_map<std::string, const Definition *> &defMap,

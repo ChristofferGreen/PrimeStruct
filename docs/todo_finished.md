@@ -7,6 +7,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Consumed semantic-product helper-owned layout/classification metadata in lowerer setup. Completed: lowerer import/layout setup now prefers published semantic-product type metadata for struct-like classification and explicit alignment, so helper-owned aggregate classification and alignment policy no longer have to be rediscovered only from raw AST transforms.
 - ✓ Consumed semantic-product execution-boundary effect/capability metadata in lowerer setup. Completed: lowered secondary callable definitions now prefer published semantic-product callable summaries for effect and capability masks instead of re-deriving those masks only from AST transforms during function-table lowering.
 - ✓ Retired the stale lowerer type/binding setup cutover TODO tail after auditing the
   remaining helper-local synthetic and implicit helper-temporary paths. Completed: the

@@ -11,7 +11,13 @@
 #include "primec/Ast.h"
 #include "primec/Ir.h"
 
+namespace primec {
+struct SemanticProgramTypeMetadata;
+}
+
 namespace primec::ir_lowerer {
+
+struct SemanticProductTargetAdapter;
 
 struct BindingTypeLayout {
   uint32_t sizeBytes = 0;
@@ -48,6 +54,7 @@ bool computeStructLayoutUncached(
     const Definition &def,
     const std::vector<LayoutFieldBinding> &fieldBindings,
     const std::function<bool(const LayoutFieldBinding &, BindingTypeLayout &, std::string &)> &resolveFieldTypeLayout,
+    const SemanticProgramTypeMetadata *typeMetadata,
     IrStructLayout &layoutOut,
     std::string &errorOut);
 bool computeStructLayoutFromFieldInfo(
@@ -56,10 +63,12 @@ bool computeStructLayoutFromFieldInfo(
     const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
+    const SemanticProductTargetAdapter *semanticProductTargets,
     IrStructLayout &layoutOut,
     std::string &errorOut);
 bool appendProgramStructLayouts(
     const Program &program,
+    const SemanticProductTargetAdapter *semanticProductTargets,
     const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
     std::vector<IrStructLayout> &layoutsOut,
     std::string &errorOut);

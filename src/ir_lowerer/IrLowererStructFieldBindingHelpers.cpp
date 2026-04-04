@@ -5,6 +5,7 @@
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererStructLayoutHelpers.h"
 #include "IrLowererStructReturnPathHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
@@ -184,11 +185,12 @@ bool collectStructLayoutFieldBindings(
     const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
     const std::function<std::string(const Expr &)> &resolveStructLayoutExprPath,
     const std::unordered_map<std::string, const Definition *> &defMap,
+    const SemanticProductTargetAdapter *semanticProductTargets,
     std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &fieldsByStructOut,
     std::string &errorOut) {
   fieldsByStructOut.clear();
   for (const auto &def : program.definitions) {
-    if (!isStructDefinition(def)) {
+    if (!isStructDefinition(def, semanticProductTargets)) {
       continue;
     }
     std::vector<LayoutFieldBinding> fields;
@@ -224,6 +226,7 @@ bool collectStructLayoutFieldBindingsFromProgramContext(
     const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases,
+    const SemanticProductTargetAdapter *semanticProductTargets,
     std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &fieldsByStructOut,
     std::string &errorOut) {
   const auto resolveStructLayoutExprPath = [&](const Expr &expr) -> std::string {
@@ -234,6 +237,7 @@ bool collectStructLayoutFieldBindingsFromProgramContext(
                                           resolveStructTypePath,
                                           resolveStructLayoutExprPath,
                                           defMap,
+                                          semanticProductTargets,
                                           fieldsByStructOut,
                                           errorOut);
 }

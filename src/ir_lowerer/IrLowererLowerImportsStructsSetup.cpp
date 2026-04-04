@@ -2,6 +2,7 @@
 
 #include <functional>
 
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererStructLayoutHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
 
@@ -9,6 +10,7 @@ namespace primec::ir_lowerer {
 
 bool runLowerImportsStructsSetup(
     const Program &program,
+    const SemanticProgram *semanticProgram,
     IrModule &outModule,
     std::unordered_map<std::string, const Definition *> &defMapOut,
     std::unordered_set<std::string> &structNamesOut,
@@ -20,7 +22,10 @@ bool runLowerImportsStructsSetup(
   importAliasesOut.clear();
   structFieldInfoByNameOut.clear();
 
-  buildDefinitionMapAndStructNames(program.definitions, defMapOut, structNamesOut);
+  const SemanticProductTargetAdapter semanticProductTargets =
+      buildSemanticProductTargetAdapter(semanticProgram);
+
+  buildDefinitionMapAndStructNames(program.definitions, defMapOut, structNamesOut, &semanticProductTargets);
   importAliasesOut = buildImportAliasesFromProgram(program.imports, program.definitions, defMapOut);
 
   auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) -> std::string {
@@ -33,6 +38,7 @@ bool runLowerImportsStructsSetup(
           resolveStructTypePath,
           defMapOut,
           importAliasesOut,
+          &semanticProductTargets,
           structFieldInfoByNameOut,
           errorOut)) {
     return false;
@@ -44,13 +50,21 @@ bool runLowerImportsStructsSetup(
   computeStructLayout = [&](const Definition &def, IrStructLayout &layoutOut) -> bool {
     auto computeUncachedLayout = [&](IrStructLayout &layout, std::string &layoutError) -> bool {
       return computeStructLayoutFromFieldInfo(
-          def, structFieldInfoByNameOut, resolveStructTypePath, defMapOut, computeStructLayout, layout, layoutError);
+          def,
+          structFieldInfoByNameOut,
+          resolveStructTypePath,
+          defMapOut,
+          computeStructLayout,
+          &semanticProductTargets,
+          layout,
+          layoutError);
     };
     return computeStructLayoutWithCache(
         def.fullPath, layoutCache, layoutStack, computeUncachedLayout, layoutOut, errorOut);
   };
 
-  if (!appendProgramStructLayouts(program, computeStructLayout, outModule.structLayouts, errorOut)) {
+  if (!appendProgramStructLayouts(
+          program, &semanticProductTargets, computeStructLayout, outModule.structLayouts, errorOut)) {
     return false;
   }
 

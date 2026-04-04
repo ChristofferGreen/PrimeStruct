@@ -7,6 +7,7 @@
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererStructTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
@@ -269,6 +270,7 @@ bool computeStructLayoutUncached(
     const Definition &def,
     const std::vector<LayoutFieldBinding> &fieldBindings,
     const std::function<bool(const LayoutFieldBinding &, BindingTypeLayout &, std::string &)> &resolveFieldTypeLayout,
+    const SemanticProgramTypeMetadata *typeMetadata,
     IrStructLayout &layoutOut,
     std::string &errorOut) {
   layoutOut = IrStructLayout{};
@@ -276,7 +278,11 @@ bool computeStructLayoutUncached(
   uint32_t structAlign = 1;
   uint32_t explicitStructAlign = 1;
   bool hasStructAlign = false;
-  if (!extractAlignment(def.transforms, "struct " + def.fullPath, explicitStructAlign, hasStructAlign, errorOut)) {
+  if (typeMetadata != nullptr && typeMetadata->hasExplicitAlignment) {
+    explicitStructAlign = typeMetadata->explicitAlignmentBytes;
+    hasStructAlign = true;
+  } else if (!extractAlignment(
+                 def.transforms, "struct " + def.fullPath, explicitStructAlign, hasStructAlign, errorOut)) {
     return false;
   }
 
@@ -317,6 +323,7 @@ bool computeStructLayoutFromFieldInfo(
     const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
+    const SemanticProductTargetAdapter *semanticProductTargets,
     IrStructLayout &layoutOut,
     std::string &errorOut) {
   auto fieldInfoIt = structFieldInfoByName.find(def.fullPath);
@@ -342,16 +349,20 @@ bool computeStructLayoutFromFieldInfo(
                                     fieldTypeLayout,
                                     fieldError);
   };
-  return computeStructLayoutUncached(def, fieldInfoIt->second, resolveFieldTypeLayout, layoutOut, errorOut);
+  const SemanticProgramTypeMetadata *typeMetadata =
+      semanticProductTargets == nullptr ? nullptr : findSemanticProductTypeMetadata(*semanticProductTargets, def.fullPath);
+  return computeStructLayoutUncached(
+      def, fieldInfoIt->second, resolveFieldTypeLayout, typeMetadata, layoutOut, errorOut);
 }
 
 bool appendProgramStructLayouts(
     const Program &program,
+    const SemanticProductTargetAdapter *semanticProductTargets,
     const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
     std::vector<IrStructLayout> &layoutsOut,
     std::string &errorOut) {
   for (const auto &def : program.definitions) {
-    if (!isStructDefinition(def)) {
+    if (!isStructDefinition(def, semanticProductTargets)) {
       continue;
     }
     IrStructLayout layout;

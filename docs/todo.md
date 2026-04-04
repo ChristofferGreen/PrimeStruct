@@ -115,11 +115,10 @@ Lowering cutover:
   - ○ Make `prepareIrModule` consume the semantic product directly instead of re-reading lowering facts from raw `Program` state.
   - ○ Make `IrLowerer::lower` consume the semantic product directly at its main lowering entrypoint.
   - ○ Retire the raw-`Program` lowering entry path once the temporary adapter is no longer needed.
-- ◐ Implement the lowerer effect/capability and struct-layout setup cutover now that the handoff contract is documented. Progress: entry and lowered-callable effect/capability setup now consume semantic-product callable summaries; remaining work is the broader struct/layout family.
-  - ◐ Consume semantic-product struct/enum/layout metadata in lowerer setup. Progress: this metadata family is now split into struct layout, enum metadata, and helper-owned layout classification seams instead of one broad layout bucket.
-    - ○ Consume semantic-product struct/layout metadata in lowerer setup.
+- ◐ Implement the lowerer effect/capability and struct-layout setup cutover now that the handoff contract is documented. Progress: entry and lowered-callable effect/capability setup now consume semantic-product callable summaries, and lowerer import/layout setup now consumes semantic-product type metadata for struct-like classification and explicit alignment; remaining work is enum lowering plus richer layout facts that still derive from field bindings.
+  - ◐ Consume semantic-product struct/enum/layout metadata in lowerer setup. Progress: struct-like classification and explicit alignment now prefer semantic-product type metadata during import/layout setup; remaining work is enum metadata plus layout facts such as field ordering and offsets that still come from field bindings.
+    - ◐ Consume semantic-product struct/layout metadata in lowerer setup. Progress: struct-like classification and explicit alignment now prefer semantic-product type metadata; remaining work is the richer layout facts that still derive from field bindings.
     - ○ Consume semantic-product enum metadata in lowerer setup.
-    - ○ Consume semantic-product helper-owned layout/classification metadata in lowerer setup.
 
 Coverage and migration cleanup:
 - ◐ Implement the narrow semantic-product unit/golden suite now that its fact coverage and scope are documented. Progress: the exact semantic-product formatter golden now covers resolved call/helper targets, binding/result type facts, and effect/capability plus struct/layout metadata; remaining work is provenance-handle coverage.

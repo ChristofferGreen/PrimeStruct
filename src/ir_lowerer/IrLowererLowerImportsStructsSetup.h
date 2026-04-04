@@ -7,6 +7,7 @@
 
 #include "primec/Ast.h"
 #include "primec/Ir.h"
+#include "primec/SemanticProduct.h"
 
 #include "IrLowererStructFieldBindingHelpers.h"
 
@@ -14,6 +15,7 @@ namespace primec::ir_lowerer {
 
 bool runLowerImportsStructsSetup(
     const Program &program,
+    const SemanticProgram *semanticProgram,
     IrModule &outModule,
     std::unordered_map<std::string, const Definition *> &defMapOut,
     std::unordered_set<std::string> &structNamesOut,

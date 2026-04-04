@@ -501,7 +501,9 @@ Planned lowerer type/binding handoff:
 Planned lowerer effect/struct-layout handoff:
 - Current status: entry return/result setup, entry effect/capability mask setup, and lowered
   callable effect/capability setup now consume published semantic-product return facts and
-  callable summaries. The remaining cutover work is the broader struct/layout family.
+  callable summaries. Lowerer import/layout setup now also prefers semantic-product type
+  metadata for struct-like classification and explicit alignment. The remaining cutover
+  work is enum lowering plus richer layout facts that still derive from field bindings.
 - After the lowerer consumes semantic-product entry targets and binding metadata, effect/capability setup and
   struct-layout setup should consume published semantic-product facts instead of re-reading AST annotations,
   transform-produced helper state, or struct-shape details directly from canonicalized syntax.

@@ -444,6 +444,17 @@ bool isStructDefinition(const Definition &def) {
   return true;
 }
 
+bool isStructDefinition(const Definition &def, const SemanticProductTargetAdapter *semanticProductTargets) {
+  if (semanticProductTargets != nullptr) {
+    if (const auto *typeMetadata = findSemanticProductTypeMetadata(*semanticProductTargets, def.fullPath);
+        typeMetadata != nullptr) {
+      return typeMetadata->category == "struct" || typeMetadata->category == "pod" ||
+             typeMetadata->category == "handle" || typeMetadata->category == "gpu_lane";
+    }
+  }
+  return isStructDefinition(def);
+}
+
 bool isStructHelperDefinition(const Definition &def,
                               const std::unordered_set<std::string> &structNames,
                               std::string &parentStructPathOut) {

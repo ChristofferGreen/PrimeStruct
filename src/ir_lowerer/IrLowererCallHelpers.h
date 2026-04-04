@@ -655,6 +655,7 @@ bool buildOrderedCallArguments(const Expr &callExpr,
 bool definitionHasTransform(const Definition &def, const std::string &transformName);
 bool isStructTransformName(const std::string &name);
 bool isStructDefinition(const Definition &def);
+bool isStructDefinition(const Definition &def, const SemanticProductTargetAdapter *semanticProductTargets);
 bool isStructHelperDefinition(const Definition &def,
                               const std::unordered_set<std::string> &structNames,
                               std::string &parentStructPathOut);

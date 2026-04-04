@@ -3,6 +3,7 @@
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStructFieldBindingHelpers.h"
 
@@ -89,14 +90,15 @@ bool isWildcardImportPath(const std::string &path, std::string &prefixOut) {
 void buildDefinitionMapAndStructNames(
     const std::vector<Definition> &definitions,
     std::unordered_map<std::string, const Definition *> &defMapOut,
-    std::unordered_set<std::string> &structNamesOut) {
+    std::unordered_set<std::string> &structNamesOut,
+    const SemanticProductTargetAdapter *semanticProductTargets) {
   defMapOut.clear();
   structNamesOut.clear();
   defMapOut.reserve(definitions.size());
   structNamesOut.reserve(definitions.size());
   for (const auto &def : definitions) {
     defMapOut.emplace(def.fullPath, &def);
-    if (isStructDefinition(def)) {
+    if (isStructDefinition(def, semanticProductTargets)) {
       structNamesOut.insert(def.fullPath);
     }
   }

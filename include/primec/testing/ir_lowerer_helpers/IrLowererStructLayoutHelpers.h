@@ -2,6 +2,8 @@
 
 
 
+struct SemanticProductTargetAdapter;
+
 struct BindingTypeLayout {
   uint32_t sizeBytes = 0;
   uint32_t alignmentBytes = 1;
@@ -37,21 +39,50 @@ bool computeStructLayoutUncached(
     const Definition &def,
     const std::vector<LayoutFieldBinding> &fieldBindings,
     const std::function<bool(const LayoutFieldBinding &, BindingTypeLayout &, std::string &)> &resolveFieldTypeLayout,
+    const SemanticProgramTypeMetadata *typeMetadata,
     IrStructLayout &layoutOut,
     std::string &errorOut);
+inline bool computeStructLayoutUncached(
+    const Definition &def,
+    const std::vector<LayoutFieldBinding> &fieldBindings,
+    const std::function<bool(const LayoutFieldBinding &, BindingTypeLayout &, std::string &)> &resolveFieldTypeLayout,
+    IrStructLayout &layoutOut,
+    std::string &errorOut) {
+  return computeStructLayoutUncached(def, fieldBindings, resolveFieldTypeLayout, nullptr, layoutOut, errorOut);
+}
 bool computeStructLayoutFromFieldInfo(
     const Definition &def,
     const std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &structFieldInfoByName,
     const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
+    const SemanticProductTargetAdapter *semanticProductTargets,
     IrStructLayout &layoutOut,
     std::string &errorOut);
+inline bool computeStructLayoutFromFieldInfo(
+    const Definition &def,
+    const std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &structFieldInfoByName,
+    const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
+    IrStructLayout &layoutOut,
+    std::string &errorOut) {
+  return computeStructLayoutFromFieldInfo(
+      def, structFieldInfoByName, resolveStructTypePath, defMap, computeStructLayout, nullptr, layoutOut, errorOut);
+}
 bool appendProgramStructLayouts(
     const Program &program,
+    const SemanticProductTargetAdapter *semanticProductTargets,
     const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
     std::vector<IrStructLayout> &layoutsOut,
     std::string &errorOut);
+inline bool appendProgramStructLayouts(
+    const Program &program,
+    const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
+    std::vector<IrStructLayout> &layoutsOut,
+    std::string &errorOut) {
+  return appendProgramStructLayouts(program, nullptr, computeStructLayout, layoutsOut, errorOut);
+}
 bool appendStructLayoutField(const std::string &structPath,
                              const Expr &fieldExpr,
                              const LayoutFieldBinding &binding,
@@ -66,4 +97,3 @@ bool isLayoutQualifierName(const std::string &name);
 IrStructFieldCategory fieldCategory(const Expr &expr);
 IrStructVisibility fieldVisibility(const Expr &expr);
 bool isStaticField(const Expr &expr);
-

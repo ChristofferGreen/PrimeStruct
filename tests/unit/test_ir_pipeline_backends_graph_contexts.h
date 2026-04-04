@@ -144,6 +144,24 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
       cwd / "src" / "ir_lowerer" / "IrLowererSemanticProductTargetAdapters.h";
   std::filesystem::path semanticTargetAdapterSourcePath =
       cwd / "src" / "ir_lowerer" / "IrLowererSemanticProductTargetAdapters.cpp";
+  std::filesystem::path lowerImportsStructsSetupHeaderPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerImportsStructsSetup.h";
+  std::filesystem::path lowerImportsStructsSetupSourcePath =
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerImportsStructsSetup.cpp";
+  std::filesystem::path lowerSetupImportsStructsPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerSetupImportsStructs.h";
+  std::filesystem::path structTypeHelpersHeaderPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererStructTypeHelpers.h";
+  std::filesystem::path structTypeHelpersSourcePath =
+      cwd / "src" / "ir_lowerer" / "IrLowererStructTypeHelpers.cpp";
+  std::filesystem::path structFieldBindingHelpersHeaderPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererStructFieldBindingHelpers.h";
+  std::filesystem::path structFieldBindingHelpersSourcePath =
+      cwd / "src" / "ir_lowerer" / "IrLowererStructFieldBindingHelpers.cpp";
+  std::filesystem::path structLayoutHelpersHeaderPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererStructLayoutHelpers.h";
+  std::filesystem::path structLayoutHelpersSourcePath =
+      cwd / "src" / "ir_lowerer" / "IrLowererStructLayoutHelpers.cpp";
   std::filesystem::path bindingTypeHelpersHeaderPath =
       cwd / "src" / "ir_lowerer" / "IrLowererBindingTypeHelpers.h";
   std::filesystem::path bindingTypeHelpersSourcePath =
@@ -198,6 +216,24 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererSemanticProductTargetAdapters.h";
     semanticTargetAdapterSourcePath =
         cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererSemanticProductTargetAdapters.cpp";
+    lowerImportsStructsSetupHeaderPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerImportsStructsSetup.h";
+    lowerImportsStructsSetupSourcePath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerImportsStructsSetup.cpp";
+    lowerSetupImportsStructsPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerSetupImportsStructs.h";
+    structTypeHelpersHeaderPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererStructTypeHelpers.h";
+    structTypeHelpersSourcePath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererStructTypeHelpers.cpp";
+    structFieldBindingHelpersHeaderPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererStructFieldBindingHelpers.h";
+    structFieldBindingHelpersSourcePath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererStructFieldBindingHelpers.cpp";
+    structLayoutHelpersHeaderPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererStructLayoutHelpers.h";
+    structLayoutHelpersSourcePath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererStructLayoutHelpers.cpp";
     bindingTypeHelpersHeaderPath =
         cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererBindingTypeHelpers.h";
     bindingTypeHelpersSourcePath =
@@ -248,6 +284,15 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   REQUIRE(std::filesystem::exists(irReturnInferencePath));
   REQUIRE(std::filesystem::exists(semanticTargetAdapterHeaderPath));
   REQUIRE(std::filesystem::exists(semanticTargetAdapterSourcePath));
+  REQUIRE(std::filesystem::exists(lowerImportsStructsSetupHeaderPath));
+  REQUIRE(std::filesystem::exists(lowerImportsStructsSetupSourcePath));
+  REQUIRE(std::filesystem::exists(lowerSetupImportsStructsPath));
+  REQUIRE(std::filesystem::exists(structTypeHelpersHeaderPath));
+  REQUIRE(std::filesystem::exists(structTypeHelpersSourcePath));
+  REQUIRE(std::filesystem::exists(structFieldBindingHelpersHeaderPath));
+  REQUIRE(std::filesystem::exists(structFieldBindingHelpersSourcePath));
+  REQUIRE(std::filesystem::exists(structLayoutHelpersHeaderPath));
+  REQUIRE(std::filesystem::exists(structLayoutHelpersSourcePath));
   REQUIRE(std::filesystem::exists(bindingTypeHelpersHeaderPath));
   REQUIRE(std::filesystem::exists(bindingTypeHelpersSourcePath));
   REQUIRE(std::filesystem::exists(setupMathHelpersHeaderPath));
@@ -284,6 +329,15 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::string irReturnInference = readTextFile(irReturnInferencePath);
   const std::string semanticTargetAdapterHeader = readTextFile(semanticTargetAdapterHeaderPath);
   const std::string semanticTargetAdapterSource = readTextFile(semanticTargetAdapterSourcePath);
+  const std::string lowerImportsStructsSetupHeader = readTextFile(lowerImportsStructsSetupHeaderPath);
+  const std::string lowerImportsStructsSetupSource = readTextFile(lowerImportsStructsSetupSourcePath);
+  const std::string lowerSetupImportsStructs = readTextFile(lowerSetupImportsStructsPath);
+  const std::string structTypeHelpersHeader = readTextFile(structTypeHelpersHeaderPath);
+  const std::string structTypeHelpersSource = readTextFile(structTypeHelpersSourcePath);
+  const std::string structFieldBindingHelpersHeader = readTextFile(structFieldBindingHelpersHeaderPath);
+  const std::string structFieldBindingHelpersSource = readTextFile(structFieldBindingHelpersSourcePath);
+  const std::string structLayoutHelpersHeader = readTextFile(structLayoutHelpersHeaderPath);
+  const std::string structLayoutHelpersSource = readTextFile(structLayoutHelpersSourcePath);
   const std::string bindingTypeHelpersHeader = readTextFile(bindingTypeHelpersHeaderPath);
   const std::string bindingTypeHelpersSource = readTextFile(bindingTypeHelpersSourcePath);
   const std::string setupMathHelpersHeader = readTextFile(setupMathHelpersHeaderPath);
@@ -382,6 +436,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterHeader.find("struct SemanticProductTargetAdapter") != std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramCallableSummary *findSemanticProductCallableSummary(") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("std::unordered_map<std::string, const SemanticProgramTypeMetadata *> typeMetadataByPath;") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("const SemanticProgramTypeMetadata *findSemanticProductTypeMetadata(") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramReturnFact *findSemanticProductReturnFact(") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<std::string, const SemanticProgramBindingFact *> bindingFactsByExpr;") !=
@@ -391,8 +449,38 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterSource.find("buildSemanticProductTargetAdapter(const SemanticProgram *semanticProgram)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.callableSummariesByPath.reserve(") != std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.typeMetadataByPath.reserve(semanticProgram->typeMetadata.size())") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.returnFactsByDefinitionPath.reserve(") != std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.bindingFactsByExpr.reserve(semanticProgram->bindingFacts.size())") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("const SemanticProgramTypeMetadata *findSemanticProductTypeMetadata(") !=
+        std::string::npos);
+  CHECK(lowerImportsStructsSetupHeader.find("const SemanticProgram *semanticProgram,") != std::string::npos);
+  CHECK(lowerImportsStructsSetupSource.find("buildSemanticProductTargetAdapter(semanticProgram)") !=
+        std::string::npos);
+  CHECK(lowerImportsStructsSetupSource.find("buildDefinitionMapAndStructNames(program.definitions, defMapOut, structNamesOut, &semanticProductTargets);") !=
+        std::string::npos);
+  CHECK(lowerImportsStructsSetupSource.find("&semanticProductTargets,") != std::string::npos);
+  CHECK(lowerSetupImportsStructs.find("program, semanticProgram, out, defMap, structNames, importAliases, structFieldInfoByName, error") !=
+        std::string::npos);
+  CHECK(structTypeHelpersHeader.find("const SemanticProductTargetAdapter *semanticProductTargets = nullptr") !=
+        std::string::npos);
+  CHECK(structTypeHelpersSource.find("if (isStructDefinition(def, semanticProductTargets)) {") !=
+        std::string::npos);
+  CHECK(structFieldBindingHelpersHeader.find("const SemanticProductTargetAdapter *semanticProductTargets,") !=
+        std::string::npos);
+  CHECK(structFieldBindingHelpersSource.find("if (!isStructDefinition(def, semanticProductTargets)) {") !=
+        std::string::npos);
+  CHECK(structLayoutHelpersHeader.find("const SemanticProgramTypeMetadata *typeMetadata,") !=
+        std::string::npos);
+  CHECK(structLayoutHelpersHeader.find("const SemanticProductTargetAdapter *semanticProductTargets,") !=
+        std::string::npos);
+  CHECK(structLayoutHelpersSource.find("typeMetadata != nullptr && typeMetadata->hasExplicitAlignment") !=
+        std::string::npos);
+  CHECK(structLayoutHelpersSource.find("findSemanticProductTypeMetadata(*semanticProductTargets, def.fullPath)") !=
+        std::string::npos);
+  CHECK(structLayoutHelpersSource.find("if (!isStructDefinition(def, semanticProductTargets)) {") !=
         std::string::npos);
   CHECK(bindingTypeHelpersHeader.find("BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgram = nullptr);") !=
         std::string::npos);
