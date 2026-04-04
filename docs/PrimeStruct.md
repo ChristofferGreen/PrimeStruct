@@ -459,7 +459,7 @@ Planned lowerer entrypoint cutover:
 - The remaining `IrLowerer::lower(...)` work is not one monolithic seam anymore:
   - top-level lowerer entry/effect validation now prefers semantic-product callable summaries, while nested expression-transform checks remain syntax-owned
   - native-backend software-numeric and runtime-reflection rejection still run as separate backend policy scans
-  - import/layout setup still keeps separate raw-`Program` seams for definition/struct inventories, syntax-owned import aliases, and struct-layout iteration
+  - import/layout setup still keeps separate raw-`Program` seams for AST-owned definition provenance/body inventories, syntax-owned import aliases, and struct-layout iteration
   - helper/local setup still keeps a raw-`Program` path for `on_error`, uninitialized, and statement-call support
 - The entrypoint boundary should make ownership explicit:
   - lowering-facing meaning comes from the semantic product
@@ -519,10 +519,11 @@ Planned lowerer effect/struct-layout handoff:
 - Current status: entry return/result setup, entry effect/capability mask setup, and lowered
   callable effect/capability setup now consume published semantic-product return facts and
   callable summaries. Lowerer import/layout setup now also prefers semantic-product type
-  metadata for struct-like classification, explicit alignment, and ordered struct field
-  name/envelope/type metadata instead of reconstructing `LayoutFieldBinding` order from raw
-  field statements. Enums already rewrite to struct form before lowering, so there is no
-  separate enum-specific lowerer metadata seam left to cut over.
+  metadata for struct-like classification, explicit alignment, struct-name inventory, and
+  ordered struct field name/envelope/type metadata instead of reconstructing
+  `LayoutFieldBinding` order from raw field statements. Enums already rewrite to struct form
+  before lowering, so there is no separate enum-specific lowerer metadata seam left to cut
+  over.
 - After the lowerer consumes semantic-product entry targets and binding metadata, effect/capability setup and
   struct-layout setup should consume published semantic-product facts instead of re-reading AST annotations,
   transform-produced helper state, or struct-shape details directly from canonicalized syntax.

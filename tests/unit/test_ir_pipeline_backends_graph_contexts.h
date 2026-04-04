@@ -492,7 +492,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(structTypeHelpersHeader.find("const SemanticProductTargetAdapter *semanticProductTargets = nullptr") !=
         std::string::npos);
-  CHECK(structTypeHelpersSource.find("if (isStructDefinition(def, semanticProductTargets)) {") !=
+  CHECK(structTypeHelpersSource.find("if (semanticProductTargets != nullptr && !semanticProductTargets->typeMetadataByPath.empty()) {") !=
+        std::string::npos);
+  CHECK(structTypeHelpersSource.find("isStructLikeSemanticProductCategory(typeMetadata->category)") !=
         std::string::npos);
   CHECK(structFieldBindingHelpersHeader.find("const SemanticProductTargetAdapter *semanticProductTargets,") !=
         std::string::npos);

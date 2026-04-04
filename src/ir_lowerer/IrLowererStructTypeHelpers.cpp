@@ -21,6 +21,10 @@ std::string normalizeMapImportAliasPath(const std::string &path) {
   return path;
 }
 
+bool isStructLikeSemanticProductCategory(const std::string &category) {
+  return category == "struct" || category == "pod" || category == "handle" || category == "gpu_lane";
+}
+
 } // namespace
 
 std::string joinTemplateArgsText(const std::vector<std::string> &args) {
@@ -95,9 +99,22 @@ void buildDefinitionMapAndStructNames(
   defMapOut.clear();
   structNamesOut.clear();
   defMapOut.reserve(definitions.size());
-  structNamesOut.reserve(definitions.size());
   for (const auto &def : definitions) {
     defMapOut.emplace(def.fullPath, &def);
+  }
+
+  if (semanticProductTargets != nullptr && !semanticProductTargets->typeMetadataByPath.empty()) {
+    structNamesOut.reserve(semanticProductTargets->typeMetadataByPath.size());
+    for (const auto &[fullPath, typeMetadata] : semanticProductTargets->typeMetadataByPath) {
+      if (typeMetadata != nullptr && isStructLikeSemanticProductCategory(typeMetadata->category)) {
+        structNamesOut.insert(fullPath);
+      }
+    }
+    return;
+  }
+
+  structNamesOut.reserve(definitions.size());
+  for (const auto &def : definitions) {
     if (isStructDefinition(def, semanticProductTargets)) {
       structNamesOut.insert(def.fullPath);
     }
