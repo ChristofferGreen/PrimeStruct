@@ -85,7 +85,10 @@ Lowering cutover:
     - ◐ Replace lowerer-wide entry/effect/runtime-reflection validation scans with semantic-product-backed entry and callable facts. Progress: top-level definition/execution effect validation now prefers semantic-product callable summaries, while the still-separate backend policy scans for software numeric and runtime-reflection rejection remain live.
       - ○ Decide and pin the long-term surface for native-backend software-numeric rejection scans.
       - ○ Decide and pin the long-term surface for native-backend runtime-reflection rejection scans.
-    - ○ Replace lowerer import/layout setup reads of raw `Program` state with semantic-product-backed inventories plus syntax-owned import aliases only.
+    - ◐ Replace lowerer import/layout setup reads of raw `Program` state with semantic-product-backed inventories plus syntax-owned import aliases only. Progress: field ordering/type/envelope metadata plus struct-like classification and explicit alignment already come from the semantic product; the remaining raw-`Program` seams are definition/struct inventories, syntax-owned import aliases, and struct-layout iteration ownership.
+      - ○ Replace lowerer definition/struct inventory scans with semantic-product-backed definition/type inventories.
+      - ○ Decide and pin the long-term syntax-owned import-alias surface used during lowerer setup.
+      - ○ Replace struct-layout iteration over raw definitions with semantic-product-backed type inventories plus AST-owned provenance only.
     - ○ Replace lowerer helper/local setup reads of raw `Program` state with semantic-product-backed callable, binding, return, and `on_error` facts.
   - ○ Retire the raw-`Program` lowering entry path once the temporary adapter is no longer needed.
 

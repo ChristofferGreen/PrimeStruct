@@ -459,7 +459,7 @@ Planned lowerer entrypoint cutover:
 - The remaining `IrLowerer::lower(...)` work is not one monolithic seam anymore:
   - top-level lowerer entry/effect validation now prefers semantic-product callable summaries, while nested expression-transform checks remain syntax-owned
   - native-backend software-numeric and runtime-reflection rejection still run as separate backend policy scans
-  - import/layout setup still rebuilds some inventories from raw definitions/imports
+  - import/layout setup still keeps separate raw-`Program` seams for definition/struct inventories, syntax-owned import aliases, and struct-layout iteration
   - helper/local setup still keeps a raw-`Program` path for `on_error`, uninitialized, and statement-call support
 - The entrypoint boundary should make ownership explicit:
   - lowering-facing meaning comes from the semantic product
