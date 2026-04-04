@@ -1606,8 +1606,8 @@ or a semicolon if you intended to index.
   is rejected on non-struct definitions/executions.
 - **`generate(...)`:** declares reflection helper generation intents for reflected structs. It accepts one or more
   generator names and validates the generator allowlist (`Equal`, `NotEqual`, `Default`, `IsDefault`, `Clone`,
-  `DebugPrint`, `Compare`, `Hash64`, `Clear`, `CopyFrom`, `Validate`, `Serialize`, `Deserialize`) with deterministic
-  diagnostics.
+  `DebugPrint`, `Compare`, `Hash64`, `Clear`, `CopyFrom`, `Validate`, `Serialize`, `Deserialize`, `SoaSchema`) with
+  deterministic diagnostics.
   - **Naming contract:** generated helpers always use `/Type/Helper` paths (`/Type/Equal`, `/Type/Default`, etc.), where
     `Type` is the canonical struct path.
   - **Visibility contract:** generated helpers are emitted with explicit `[public]`, so `import /Type/*` exposes them by
@@ -1651,6 +1651,13 @@ or a semicolon if you intended to index.
     returns `Result.ok()`, `Serialize` returns `array<u64>(1u64)`, `Deserialize` only applies the size/version guards
     then returns `Result.ok()`). `ToString` generation remains deferred; requesting `generate(ToString)` emits a
     deterministic diagnostic directing users to `DebugPrint`.
+  - **v2.1 progress (`SoaSchema`):** `SoaSchema` emits `/Type/SoaSchemaFieldCount() -> i32`,
+    `/Type/SoaSchemaFieldName([i32] index) -> string`, `/Type/SoaSchemaFieldType([i32] index) -> string`, and
+    `/Type/SoaSchemaFieldVisibility([i32] index) -> string` over the non-static fields of `Type` in deterministic
+    source order. These helpers bridge the current constant-index-only `meta.field_*<T>(i)` rule for reflected SoA
+    work: callers can loop from `0` to `/Type/SoaSchemaFieldCount()` and query names/types/visibility through runtime
+    `i32` indices without direct `meta.field_name<T>(...)` / `meta.field_type<T>(...)` /
+    `meta.field_visibility<T>(...)` calls. Out-of-range helper indices currently return the empty string sentinel.
 - **Baseline reflection API scope (v1):** reflection APIs are compile-time-only metadata queries. Runtime reflection
   objects/tables are out of scope and rejected (`/meta/object`, `/meta/table`).
 - **Reserved compile-time metadata query names:** `meta.type_name<T>`, `meta.type_kind<T>`, `meta.is_struct<T>`,
@@ -3452,13 +3459,12 @@ read-only path.
     and matches the existing vector reserve overflow path: oversized reserve requests report
     `vector reserve allocation failed (out of memory)`. Direct borrowed-view coverage for the
     current single-column substrate is now locked through `soaColumnRef<T>(...)`, but the
-    primitives are not yet threaded into reflected arbitrary-width schemas or richer wrapper
-    field-view surfaces. The current blocker for arbitrary-width `.prime` schemas is that
-    `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, and `meta.field_visibility<T>(i)` still
-    require constant indices, so wider reflected schemas need a separate descriptor or generated
-    per-field dispatch substrate before allocation/grow/free can be expressed honestly. Until that
-    substrate exists, reflect-enabled schemas wider than the completed sixteen-column substrate now
-    stop deterministically with `experimental soa storage arbitrary-width schemas pending`.
+    primitives are not yet threaded into reflected arbitrary-width allocation/grow/free or richer
+    wrapper field-view surfaces. Reflected structs can now expose generated `SoaSchema*` helpers
+    that bridge the constant-index metadata boundary, but wider reflected schemas still stop
+    deterministically with `experimental soa storage arbitrary-width schemas pending` until
+    arbitrary-width allocation/grow/free lands on top of that generated descriptor/dispatch
+    substrate.
   - **Current implementation status:** VM/native vector locals use a heap-backed `count/capacity/data_ptr` record
     layout. `push` and dynamic `reserve` growth allocate/reallocate backing storage and report deterministic runtime
     allocation failures (`vector push allocation failed (out of memory)` / `vector reserve allocation failed (out of

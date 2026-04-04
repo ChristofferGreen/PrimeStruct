@@ -149,7 +149,7 @@ bool isSupportedReflectionGeneratorName(const std::string &name) {
   return name == "Equal" || name == "NotEqual" || name == "Default" || name == "IsDefault" ||
          name == "Clone" || name == "DebugPrint" || name == "Compare" || name == "Hash64" ||
          name == "Clear" || name == "CopyFrom" || name == "Validate" || name == "Serialize" ||
-         name == "Deserialize";
+         name == "Deserialize" || name == "SoaSchema";
 }
 
 bool isReflectionMetadataQueryName(const std::string &name) {

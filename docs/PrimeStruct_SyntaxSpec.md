@@ -840,9 +840,10 @@ bindings now also lower through the canonical stdlib shim instead of stopping on
 parameter mismatch, and imported plus no-import root builtin bare/direct/method/slash-method `to_aos` now
 materialize `/std/collections/soa_vector/to_aos__...` before lowering. The bridged native runtime path remains a
 follow-up.
-The fixed-width `.prime` SoA storage substrate now reaches sixteen columns, but arbitrary-width reflected schemas still
-need a separate descriptor or generated per-field dispatch substrate because `meta.field_name<T>(i)`,
-`meta.field_type<T>(i)`, and `meta.field_visibility<T>(i)` still require constant integer indices.
+The fixed-width `.prime` SoA storage substrate now reaches sixteen columns. Reflected structs can now generate
+`SoaSchemaFieldCount`, `SoaSchemaFieldName`, `SoaSchemaFieldType`, and `SoaSchemaFieldVisibility` helpers to bridge the
+current constant-index metadata boundary, but arbitrary-width reflected schema allocation/grow/free remains pending on
+top of that descriptor/dispatch substrate.
 Helper-return builtin bare/method `count/get/ref` reads on global and explicit `/Type/helper` receivers now also clear
 semantics on that same canonical surface instead of degrading to `does not accept template arguments`, and
 helper-return bare/method `push/reserve` local binding plus call-argument and direct-return escapes on those same

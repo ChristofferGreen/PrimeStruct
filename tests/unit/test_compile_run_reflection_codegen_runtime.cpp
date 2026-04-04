@@ -214,4 +214,45 @@ main() {
   CHECK(runCommand(quoteShellArg(nativePath)) == 7);
 }
 
+TEST_CASE("reflection SoaSchema helper runtime stays aligned across backends") {
+  const std::string source = R"(
+[struct reflect generate(SoaSchema)]
+Pair() {
+  [i32] x{0i32}
+  [private bool] ok{true}
+  [static i32] shared{9i32}
+}
+
+[return<int>]
+main() {
+  [i32 mut] score{0i32}
+  [i32 mut] index{0i32}
+  if(equal(/Pair/SoaSchemaFieldCount(), 2i32), then() { assign(score, plus(score, 1i32)) }, else() { })
+  if(equal(/Pair/SoaSchemaFieldName(index), "x"utf8), then() { assign(score, plus(score, 2i32)) }, else() { })
+  increment(index)
+  if(equal(/Pair/SoaSchemaFieldType(index), "bool"utf8), then() { assign(score, plus(score, 4i32)) }, else() { })
+  if(equal(/Pair/SoaSchemaFieldVisibility(index), "private"utf8),
+     then() { assign(score, plus(score, 8i32)) },
+     else() { })
+  return(score)
+}
+)";
+  const std::string srcPath = writeTemp("compile_reflection_soa_schema_runtime.prime", source);
+
+  const std::string vmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
+  CHECK(runCommand(vmCmd) == 15);
+
+  const std::string exePath = (testScratchPath("") / "primec_reflection_soa_schema_exe").string();
+  const std::string exeCompileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(exeCompileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(exePath)) == 15);
+
+  const std::string nativePath = (testScratchPath("") / "primec_reflection_soa_schema_native").string();
+  const std::string nativeCompileCmd =
+      "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(nativePath) + " --entry /main";
+  CHECK(runCommand(nativeCompileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(nativePath)) == 15);
+}
+
 TEST_SUITE_END();

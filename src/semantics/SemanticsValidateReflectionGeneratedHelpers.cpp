@@ -148,6 +148,7 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     bool shouldGenerateValidate = false;
     bool shouldGenerateSerialize = false;
     bool shouldGenerateDeserialize = false;
+    bool shouldGenerateSoaSchema = false;
     if (isStruct && hasTransformNamed(def.transforms, "reflect")) {
       for (const auto &transform : def.transforms) {
         if (transform.name != "generate") {
@@ -166,16 +167,20 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
         shouldGenerateValidate = shouldGenerateValidate || transformHasArgument(transform, "Validate");
         shouldGenerateSerialize = shouldGenerateSerialize || transformHasArgument(transform, "Serialize");
         shouldGenerateDeserialize = shouldGenerateDeserialize || transformHasArgument(transform, "Deserialize");
+        shouldGenerateSoaSchema = shouldGenerateSoaSchema || transformHasArgument(transform, "SoaSchema");
       }
     }
 
     std::vector<std::string> fieldNames;
     std::unordered_map<std::string, std::string> fieldTypeNames;
+    std::unordered_map<std::string, std::string> fieldVisibilityNames;
     if (shouldGenerateEqual || shouldGenerateNotEqual || shouldGenerateIsDefault || shouldGenerateClone ||
         shouldGenerateDebugPrint || shouldGenerateCompare || shouldGenerateHash64 || shouldGenerateClear ||
-        shouldGenerateCopyFrom || shouldGenerateValidate || shouldGenerateSerialize || shouldGenerateDeserialize) {
+        shouldGenerateCopyFrom || shouldGenerateValidate || shouldGenerateSerialize || shouldGenerateDeserialize ||
+        shouldGenerateSoaSchema) {
       fieldNames.reserve(def.statements.size());
       fieldTypeNames.reserve(def.statements.size());
+      fieldVisibilityNames.reserve(def.statements.size());
       for (const auto &stmt : def.statements) {
         if (!stmt.isBinding) {
           continue;
@@ -191,6 +196,17 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
           if (!ambiguousFieldType && !fieldTypeName.empty()) {
             fieldTypeNames.emplace(stmt.name, fieldTypeName);
           }
+          std::string visibilityName = "public";
+          for (const auto &transform : stmt.transforms) {
+            if (transform.name == "private") {
+              visibilityName = "private";
+              break;
+            }
+            if (transform.name == "public") {
+              visibilityName = "public";
+            }
+          }
+          fieldVisibilityNames.emplace(stmt.name, std::move(visibilityName));
         }
       }
     }
@@ -226,92 +242,99 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
 
     if (shouldGenerateEqual) {
       ReflectionGeneratedHelperContext compareContext{
-          def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionComparisonHelper(compareContext, "Equal", "equal", "and", true)) {
         return false;
       }
     }
     if (shouldGenerateNotEqual) {
       ReflectionGeneratedHelperContext compareContext{
-          def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionComparisonHelper(compareContext, "NotEqual", "not_equal", "or", false)) {
         return false;
       }
     }
     if (shouldGenerateCompare) {
       ReflectionGeneratedHelperContext compareContext{
-          def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionCompareHelper(compareContext)) {
         return false;
       }
     }
     if (shouldGenerateHash64) {
       ReflectionGeneratedHelperContext compareContext{
-          def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionHash64Helper(compareContext)) {
         return false;
       }
     }
     if (shouldGenerateClear) {
       ReflectionGeneratedHelperContext stateContext{
-          def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionClearHelper(stateContext)) {
         return false;
       }
     }
     if (shouldGenerateCopyFrom) {
       ReflectionGeneratedHelperContext stateContext{
-          def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionCopyFromHelper(stateContext)) {
         return false;
       }
     }
     if (shouldGenerateValidate) {
       ReflectionGeneratedHelperContext validationContext{
-          def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionValidateHelper(validationContext)) {
         return false;
       }
     }
     if (shouldGenerateSerialize) {
       ReflectionGeneratedHelperContext serializationContext{
-          def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionSerializeHelper(serializationContext)) {
         return false;
       }
     }
     if (shouldGenerateDeserialize) {
       ReflectionGeneratedHelperContext serializationContext{
-          def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionDeserializeHelper(serializationContext)) {
         return false;
       }
     }
     if (shouldGenerateDefault) {
       ReflectionGeneratedHelperContext stateContext{
-          def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionDefaultHelper(stateContext)) {
         return false;
       }
     }
     if (shouldGenerateIsDefault) {
       ReflectionGeneratedHelperContext stateContext{
-          def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionIsDefaultHelper(stateContext)) {
         return false;
       }
     }
     if (shouldGenerateClone) {
       ReflectionGeneratedHelperContext cloneDebugContext{
-          def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionCloneHelper(cloneDebugContext)) {
         return false;
       }
     }
     if (shouldGenerateDebugPrint) {
       ReflectionGeneratedHelperContext cloneDebugContext{
-          def, fieldNames, fieldTypeNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionDebugPrintHelper(cloneDebugContext)) {
+        return false;
+      }
+    }
+    if (shouldGenerateSoaSchema) {
+      ReflectionGeneratedHelperContext validationContext{
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
+      if (!emitReflectionSoaSchemaHelpers(validationContext)) {
         return false;
       }
     }

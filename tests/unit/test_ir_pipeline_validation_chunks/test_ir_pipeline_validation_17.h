@@ -200,6 +200,24 @@ TEST_CASE("semantics validate source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("emitReflectionValidateHelper(validationContext)") !=
         std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("transformHasArgument(transform, \"SoaSchema\")") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("emitReflectionSoaSchemaHelpers(validationContext)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSerializationHeaderSource.find(
+            "const std::unordered_map<std::string, std::string> &fieldVisibilityNames;") != std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersValidateHeaderSource.find(
+            "bool emitReflectionSoaSchemaHelpers(ReflectionGeneratedHelperContext &context)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find("helper.name = \"SoaSchemaFieldCount\";") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
+            "appendIndexedStringHelper(\"SoaSchemaFieldName\", context.fieldNames)") != std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
+            "appendIndexedStringHelper(\"SoaSchemaFieldType\", context.fieldTypeNames)") != std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
+            "appendIndexedStringHelper(\"SoaSchemaFieldVisibility\", context.fieldVisibilityNames)") !=
+        std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("auto emitComparisonHelper = [&](const std::string &helperName,") ==
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("auto emitCompareHelper = [&]() -> bool {") ==
@@ -331,4 +349,3 @@ TEST_CASE("semantics validate source delegation stays stable") {
   CHECK(semanticsValidateTransformsSource.find("bool applySingleTypeToReturn(std::vector<Transform> &transforms,") !=
         std::string::npos);
 }
-

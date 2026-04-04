@@ -70,6 +70,13 @@ Expr makeI32LiteralExpr(uint64_t value) {
   return expr;
 }
 
+Expr makeStringLiteralExpr(const std::string &value) {
+  Expr expr;
+  expr.kind = Expr::Kind::StringLiteral;
+  expr.stringValue = escapeStringLiteral(value);
+  return expr;
+}
+
 Expr makeReturnStatementExpr(Expr valueExpr) {
   Expr returnCall;
   returnCall.kind = Expr::Kind::Call;
@@ -99,6 +106,17 @@ Expr makeIfStatementExpr(Expr conditionExpr, Expr thenEnvelopeExpr, Expr elseEnv
   ifCall.args.push_back(std::move(elseEnvelopeExpr));
   ifCall.argNames.push_back(std::nullopt);
   return ifCall;
+}
+
+Expr makeEqualExpr(Expr leftExpr, Expr rightExpr) {
+  Expr equalCall;
+  equalCall.kind = Expr::Kind::Call;
+  equalCall.name = "equal";
+  equalCall.args.push_back(std::move(leftExpr));
+  equalCall.argNames.push_back(std::nullopt);
+  equalCall.args.push_back(std::move(rightExpr));
+  equalCall.argNames.push_back(std::nullopt);
+  return equalCall;
 }
 
 Expr makeOkResultExpr() {
@@ -194,6 +212,81 @@ bool emitReflectionValidateHelper(ReflectionGeneratedHelperContext &context) {
 
   context.rewrittenDefinitions.push_back(std::move(helper));
   context.definitionPaths.insert(helperPath);
+  return true;
+}
+
+bool emitReflectionSoaSchemaHelpers(ReflectionGeneratedHelperContext &context) {
+  const std::string countHelperPath = context.def.fullPath + "/SoaSchemaFieldCount";
+  const std::string nameHelperPath = context.def.fullPath + "/SoaSchemaFieldName";
+  const std::string typeHelperPath = context.def.fullPath + "/SoaSchemaFieldType";
+  const std::string visibilityHelperPath = context.def.fullPath + "/SoaSchemaFieldVisibility";
+
+  for (const auto *helperPath : {&countHelperPath, &nameHelperPath, &typeHelperPath, &visibilityHelperPath}) {
+    if (context.definitionPaths.count(*helperPath) > 0) {
+      context.error = "generated reflection helper already exists: " + *helperPath;
+      return false;
+    }
+  }
+
+  auto makeHelper = [&](const std::string &name,
+                        const std::string &fullPath,
+                        const std::string &returnType,
+                        bool takesIndex) {
+    Definition helper;
+    helper.name = name;
+    helper.fullPath = fullPath;
+    helper.namespacePrefix = context.def.fullPath;
+    helper.sourceLine = context.def.sourceLine;
+    helper.sourceColumn = context.def.sourceColumn;
+    appendPublicVisibility(helper);
+    Transform returnTransform;
+    returnTransform.name = "return";
+    returnTransform.templateArgs.push_back(returnType);
+    helper.transforms.push_back(std::move(returnTransform));
+    if (takesIndex) {
+      helper.parameters.push_back(makeTypeBinding("index", "i32", helper.namespacePrefix));
+    }
+    return helper;
+  };
+
+  Definition countHelper = makeHelper("SoaSchemaFieldCount", countHelperPath, "i32", false);
+  countHelper.returnExpr = makeI32LiteralExpr(context.fieldNames.size());
+  countHelper.hasReturnStatement = true;
+  context.rewrittenDefinitions.push_back(std::move(countHelper));
+  context.definitionPaths.insert(countHelperPath);
+
+  auto appendIndexedStringHelper = [&](const std::string &name,
+                                       const std::string &fullPath,
+                                       const std::vector<std::string> &values) {
+    Definition helper = makeHelper(name, fullPath, "string", true);
+    for (size_t fieldIndex = 0; fieldIndex < values.size(); ++fieldIndex) {
+      std::vector<Expr> thenBody;
+      thenBody.push_back(makeReturnStatementExpr(makeStringLiteralExpr(values[fieldIndex])));
+      helper.statements.push_back(makeIfStatementExpr(
+          makeEqualExpr(makeNameExpr("index"), makeI32LiteralExpr(fieldIndex)),
+          makeEnvelopeExpr("then", std::move(thenBody)),
+          makeEnvelopeExpr("else", {})));
+    }
+    helper.returnExpr = makeStringLiteralExpr("");
+    helper.hasReturnStatement = true;
+    context.rewrittenDefinitions.push_back(std::move(helper));
+    context.definitionPaths.insert(fullPath);
+  };
+
+  std::vector<std::string> fieldTypes;
+  std::vector<std::string> fieldVisibilities;
+  fieldTypes.reserve(context.fieldNames.size());
+  fieldVisibilities.reserve(context.fieldNames.size());
+  for (const auto &fieldName : context.fieldNames) {
+    const auto typeIt = context.fieldTypeNames.find(fieldName);
+    fieldTypes.push_back(typeIt == context.fieldTypeNames.end() ? "" : typeIt->second);
+    const auto visibilityIt = context.fieldVisibilityNames.find(fieldName);
+    fieldVisibilities.push_back(visibilityIt == context.fieldVisibilityNames.end() ? "public" : visibilityIt->second);
+  }
+
+  appendIndexedStringHelper("SoaSchemaFieldName", nameHelperPath, context.fieldNames);
+  appendIndexedStringHelper("SoaSchemaFieldType", typeHelperPath, fieldTypes);
+  appendIndexedStringHelper("SoaSchemaFieldVisibility", visibilityHelperPath, fieldVisibilities);
   return true;
 }
 

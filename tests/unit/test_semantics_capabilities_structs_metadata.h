@@ -159,6 +159,110 @@ main() {
   CHECK(error.find("meta.field_name requires reflect-enabled struct type argument: /Item") != std::string::npos);
 }
 
+TEST_CASE("generate SoaSchema emits reflected dynamic field-dispatch helpers") {
+  const std::string source = R"(
+[struct reflect generate(SoaSchema)]
+Item() {
+  [i32] x{1i32}
+  [private string] label{"a"utf8}
+  [static i32] shared{7i32}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  CHECK(error.empty());
+
+  const primec::Definition *countHelper = nullptr;
+  const primec::Definition *nameHelper = nullptr;
+  const primec::Definition *typeHelper = nullptr;
+  const primec::Definition *visibilityHelper = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == "/Item/SoaSchemaFieldCount") {
+      countHelper = &def;
+    } else if (def.fullPath == "/Item/SoaSchemaFieldName") {
+      nameHelper = &def;
+    } else if (def.fullPath == "/Item/SoaSchemaFieldType") {
+      typeHelper = &def;
+    } else if (def.fullPath == "/Item/SoaSchemaFieldVisibility") {
+      visibilityHelper = &def;
+    }
+  }
+
+  REQUIRE(countHelper != nullptr);
+  REQUIRE(nameHelper != nullptr);
+  REQUIRE(typeHelper != nullptr);
+  REQUIRE(visibilityHelper != nullptr);
+
+  CHECK(countHelper->parameters.empty());
+  REQUIRE(countHelper->returnExpr.has_value());
+  CHECK(countHelper->returnExpr->kind == primec::Expr::Kind::Literal);
+  CHECK(countHelper->returnExpr->literalValue == 2);
+
+  const auto assertIndexedStringHelper = [](const primec::Definition &helperDef,
+                                            const std::string &expectedFirst,
+                                            const std::string &expectedSecond) {
+    REQUIRE(helperDef.parameters.size() == 1);
+    CHECK(helperDef.parameters.front().name == "index");
+    REQUIRE(helperDef.statements.size() == 2);
+    for (size_t i = 0; i < helperDef.statements.size(); ++i) {
+      const primec::Expr &guardStmt = helperDef.statements[i];
+      REQUIRE(guardStmt.kind == primec::Expr::Kind::Call);
+      CHECK(guardStmt.name == "if");
+      REQUIRE(guardStmt.args.size() == 3);
+      const primec::Expr &condition = guardStmt.args[0];
+      REQUIRE(condition.kind == primec::Expr::Kind::Call);
+      CHECK(condition.name == "equal");
+      REQUIRE(condition.args.size() == 2);
+      CHECK(condition.args[0].kind == primec::Expr::Kind::Name);
+      CHECK(condition.args[0].name == "index");
+      CHECK(condition.args[1].kind == primec::Expr::Kind::Literal);
+      CHECK(condition.args[1].literalValue == i);
+      const primec::Expr &thenEnvelope = guardStmt.args[1];
+      REQUIRE(thenEnvelope.kind == primec::Expr::Kind::Call);
+      CHECK(thenEnvelope.name == "then");
+      REQUIRE(thenEnvelope.bodyArguments.size() == 1);
+      const primec::Expr &returnCall = thenEnvelope.bodyArguments.front();
+      REQUIRE(returnCall.kind == primec::Expr::Kind::Call);
+      CHECK(returnCall.name == "return");
+      REQUIRE(returnCall.args.size() == 1);
+      REQUIRE(returnCall.args[0].kind == primec::Expr::Kind::StringLiteral);
+      CHECK(returnCall.args[0].stringValue == (i == 0 ? expectedFirst : expectedSecond));
+    }
+    REQUIRE(helperDef.returnExpr.has_value());
+    CHECK(helperDef.returnExpr->kind == primec::Expr::Kind::StringLiteral);
+    CHECK(helperDef.returnExpr->stringValue == "\"\"utf8");
+  };
+
+  assertIndexedStringHelper(*nameHelper, "\"x\"utf8", "\"label\"utf8");
+  assertIndexedStringHelper(*typeHelper, "\"i32\"utf8", "\"string\"utf8");
+  assertIndexedStringHelper(*visibilityHelper, "\"public\"utf8", "\"private\"utf8");
+}
+
+TEST_CASE("generate SoaSchema rejects helper collisions deterministically") {
+  const std::string source = R"(
+[struct reflect generate(SoaSchema)]
+Item() {
+  [i32] x{1i32}
+}
+
+[public return<string>]
+/Item/SoaSchemaFieldName([i32] index) {
+  return(""utf8)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/Item/SoaSchemaFieldName", error));
+  CHECK(error.find("generated reflection helper already exists: /Item/SoaSchemaFieldName") != std::string::npos);
+}
+
 TEST_CASE("has_transform query validates") {
   const std::string source = R"(
 [struct reflect]
@@ -515,4 +619,3 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("recursive struct layout not supported") != std::string::npos);
 }
-

@@ -13,6 +13,7 @@ struct ReflectionGeneratedHelperContext {
   const Definition &def;
   const std::vector<std::string> &fieldNames;
   const std::unordered_map<std::string, std::string> &fieldTypeNames;
+  const std::unordered_map<std::string, std::string> &fieldVisibilityNames;
   std::unordered_set<std::string> &definitionPaths;
   std::vector<Definition> &rewrittenDefinitions;
   std::string &error;
