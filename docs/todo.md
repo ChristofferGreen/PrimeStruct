@@ -11,7 +11,7 @@ Finished items are periodically moved to `docs/todo_finished.md`.
 Roadmap note: completed map/vector migration and compatibility-cleanup slices now live in `docs/todo_finished.md`. Keep this live file focused on unfinished ownership/runtime substrate work, SoA bring-up, and the remaining graph/boundary items.
 
 **Group 8 - SoA de-builtinization**
-- ◐ Extend the SoA storage substrate from the completed fixed-width single/two/three/four/five/six/seven/eight/nine/ten/eleven/twelve/thirteen/fourteen/fifteen-column primitives to reflected arbitrary-width schema allocation/grow/free. Progress: the remaining work is now split into explicit allocation, grow/realloc, and free/drop slices instead of one catch-all item.
+- ◐ Extend the SoA storage substrate from the completed fixed-width single/two/three/four/five/six/seven/eight/nine/ten/eleven/twelve/thirteen/fourteen/fifteen/sixteen-column primitives to reflected arbitrary-width schema allocation/grow/free. Progress: the fixed-width reusable `.prime` substrate now extends through sixteen columns, and reflect-enabled schemas wider than sixteen fields still stop deterministically on the pending-width gate. The remaining work is now split into explicit allocation, grow/realloc, and free/drop slices instead of one catch-all item.
   - ○ Add reflected arbitrary-width schema allocation on top of the fixed-width substrate and the existing deterministic pending-width gate.
   - ○ Add reflected arbitrary-width schema grow/realloc over that allocation path.
   - ○ Add reflected arbitrary-width schema free/drop cleanup over that allocation path.

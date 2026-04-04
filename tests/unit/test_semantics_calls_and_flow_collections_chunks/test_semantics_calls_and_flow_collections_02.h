@@ -795,7 +795,7 @@ TEST_CASE("experimental soa_vector stdlib wide reflect-enabled structs validate 
 import /std/collections/experimental_soa_vector/*
 
 [struct reflect]
-Particle16() {
+Particle17() {
   [i32] a0{0i32}
   [i32] a1{0i32}
   [i32] a2{0i32}
@@ -812,12 +812,13 @@ Particle16() {
   [i32] a13{0i32}
   [i32] a14{0i32}
   [i32] a15{0i32}
+  [i32] a16{0i32}
 }
 
 [return<int>]
 main() {
-  [SoaVector<Particle16>] values{soaVectorNew<Particle16>()}
-  return(soaVectorCount<Particle16>(values))
+  [SoaVector<Particle17>] values{soaVectorNew<Particle17>()}
+  return(soaVectorCount<Particle17>(values))
 }
 )";
   std::string error;
@@ -2988,6 +2989,52 @@ main() {
   soaColumns15Write<Mover, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>(values, 0i32, Mover(8i32), 9i32, 59i32, 61i32, 67i32, 71i32, 73i32, 79i32, 83i32, 89i32, 97i32, 101i32, 103i32, 107i32, 109i32)
   soaColumns15Clear<Mover, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>(values)
   return(soaColumns15Count<Mover, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+
+TEST_CASE("experimental sixteen-column soa storage helpers validate on explicit column bindings") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumns16<i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32> mut] values{soaColumns16New<i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>()}
+  soaColumns16Reserve<i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>(values, 4i32)
+  soaColumns16Push<i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>(values, 2i32, 3i32, 5i32, 7i32, 11i32, 13i32, 17i32, 19i32, 23i32, 29i32, 31i32, 37i32, 41i32, 43i32, 47i32, 53i32)
+  soaColumns16Push<i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>(values, 59i32, 61i32, 67i32, 71i32, 73i32, 79i32, 83i32, 89i32, 97i32, 101i32, 103i32, 107i32, 109i32, 113i32, 127i32, 131i32)
+  soaColumns16Write<i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>(values, 1i32, 3i32, 6i32, 5i32, 7i32, 11i32, 13i32, 17i32, 19i32, 23i32, 29i32, 31i32, 41i32, 43i32, 47i32, 53i32, 137i32)
+  soaColumns16Clear<i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>(values)
+  return(soaColumns16Count<i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("experimental sixteen-column soa storage helpers validate ownership-sensitive elements") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
+Mover() {
+  [i32] value{0i32}
+
+  Destroy() {
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumns16<Mover, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32> mut] values{soaColumns16New<Mover, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>()}
+  soaColumns16Push<Mover, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>(values, Mover(3i32), 5i32, 7i32, 11i32, 13i32, 17i32, 19i32, 23i32, 29i32, 31i32, 37i32, 41i32, 43i32, 47i32, 53i32, 59i32)
+  soaColumns16Write<Mover, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>(values, 0i32, Mover(8i32), 9i32, 61i32, 67i32, 71i32, 73i32, 79i32, 83i32, 89i32, 97i32, 101i32, 103i32, 107i32, 109i32, 113i32, 127i32)
+  soaColumns16Clear<Mover, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>(values)
+  return(soaColumns16Count<Mover, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>(values))
 }
 )";
   std::string error;

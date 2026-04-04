@@ -439,7 +439,7 @@ TEST_CASE("rejects experimental soa_vector stdlib wide structs on pending width 
 import /std/collections/experimental_soa_vector/*
 
 [struct reflect]
-Particle16() {
+Particle17() {
   [i32] a0{0i32}
   [i32] a1{0i32}
   [i32] a2{0i32}
@@ -456,12 +456,13 @@ Particle16() {
   [i32] a13{0i32}
   [i32] a14{0i32}
   [i32] a15{0i32}
+  [i32] a16{0i32}
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle16>] values{soaVectorNew<Particle16>()}
-  return(soaVectorCount<Particle16>(values))
+  [SoaVector<Particle17>] values{soaVectorNew<Particle17>()}
+  return(soaVectorCount<Particle17>(values))
 }
 )";
   const std::string srcPath =
@@ -2650,6 +2651,31 @@ main() {
   const std::string srcPath = writeTemp("emit_experimental_soa_storage_fifteen_columns_cpp.prime", source);
   const std::string cppPath =
       (testScratchPath("") / "primec_experimental_soa_storage_fifteen_columns.cpp").string();
+
+  const std::string emitCmd = "./primec --emit=cpp " + srcPath + " -o " + cppPath + " --entry /main";
+  CHECK(runCommand(emitCmd) == 0);
+}
+
+
+TEST_CASE("emits experimental sixteen-column soa storage helpers in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumns16<i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32> mut] values{soaColumns16New<i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>()}
+  soaColumns16Reserve<i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>(values, 4i32)
+  soaColumns16Push<i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>(values, 2i32, 3i32, 5i32, 7i32, 11i32, 13i32, 17i32, 19i32, 23i32, 29i32, 31i32, 37i32, 41i32, 43i32, 47i32, 53i32)
+  soaColumns16Push<i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>(values, 59i32, 61i32, 67i32, 71i32, 73i32, 79i32, 83i32, 89i32, 97i32, 101i32, 103i32, 107i32, 109i32, 113i32, 127i32, 131i32)
+  soaColumns16Write<i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>(values, 1i32, 3i32, 6i32, 5i32, 7i32, 11i32, 13i32, 17i32, 19i32, 23i32, 29i32, 31i32, 41i32, 43i32, 47i32, 53i32, 137i32)
+  [i32 mut] total{soaColumns16ReadSecond<i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>(values, 1i32)}
+  assign(total, plus(total, soaColumns16ReadSixteenth<i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>(values, 1i32)))
+  return(total)
+}
+)";
+  const std::string srcPath = writeTemp("emit_experimental_soa_storage_sixteen_columns_cpp.prime", source);
+  const std::string cppPath =
+      (testScratchPath("") / "primec_experimental_soa_storage_sixteen_columns.cpp").string();
 
   const std::string emitCmd = "./primec --emit=cpp " + srcPath + " -o " + cppPath + " --entry /main";
   CHECK(runCommand(emitCmd) == 0);

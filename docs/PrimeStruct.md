@@ -3440,8 +3440,9 @@ read-only path.
     `SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>`,
     `SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>`, and
     `SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>`, and
-    `SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>`, and
-    `SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>` with matching `New` /
+    `SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>`,
+    `SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>`, and
+    `SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>` with matching `New` /
     `Count` / `Capacity` / `Reserve` / `Push` / `Read*` / `Write` / `Clear` helpers. These
     primitives are backed by checked buffer alloc/grow/free plus explicit `init(...)`, `drop(...)`,
     `take(...)`, and `borrow(...)` flows. Their current allocation-failure contract is deterministic
@@ -3449,7 +3450,7 @@ read-only path.
     `vector reserve allocation failed (out of memory)`. Direct borrowed-view coverage for the
     current single-column substrate is now locked through `soaColumnRef<T>(...)`, but the
     primitives are not yet threaded into reflected arbitrary-width schemas or richer wrapper
-    field-view surfaces. Reflect-enabled schemas wider than the completed fifteen-column substrate
+    field-view surfaces. Reflect-enabled schemas wider than the completed sixteen-column substrate
     now stop deterministically with `experimental soa storage arbitrary-width schemas pending`
     until the separate arbitrary-width allocation, grow/realloc, and free/drop slices land.
   - **Current implementation status:** VM/native vector locals use a heap-backed `count/capacity/data_ptr` record
