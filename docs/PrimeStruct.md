@@ -378,10 +378,9 @@ Temporary migration adapter contract:
   intended temporary consumers.
 - Current status: the adapter now feeds lowering entry/setup with semantic-product direct-call targets,
   receiver/method-call targets, helper-routing choices, source-owned binding/result facts, and the current
-  callable-summary/type-metadata effect-layout surfaces. Remaining adapter work is limited to the richer layout facts
-  that still derive from field bindings. The published graph-backed local/query/`try(...)`/`on_error` facts are
-  currently inspection-surface facts, not lowerer-adapter inputs; `on_error` bound-arg expressions remain syntax-owned
-  and are still parsed from transforms when lowering needs executable handler arguments.
+  callable-summary/type-metadata effect-layout surfaces. The published graph-backed local/query/`try(...)`/`on_error`
+  facts are currently inspection-surface facts, not lowerer-adapter inputs; `on_error` bound-arg expressions remain
+  syntax-owned and are still parsed from transforms when lowering needs executable handler arguments.
 - Removal criteria:
   - `CompilePipelineOutput` publishes the semantic product on the success path.
   - `prepareIrModule` and `IrLowerer::lower` consume the semantic product directly in production codepaths.
@@ -410,6 +409,10 @@ Compile-pipeline publication contract:
   struct/enum/layout metadata (category, visibility, layout-policy flags, explicit alignment, and field/item counts),
   final binding/result facts for parameters/locals/temporary call results/returns, and graph-backed local-auto,
   query, `try(...)`, and `on_error` facts are also published now.
+- The first semantic-product builder slice, second graph-backed builder slice, CLI/runtime plumbing cutover,
+  temporary migration adapter, and deterministic semantic-product dump/formatter are therefore all complete. The
+  remaining live Group 12 work is now entrypoint retirement, provenance/ownership coverage, backend conformance, and
+  later cleanup/removal passes.
 - Dump-stage handling should be able to read either the syntax-facing canonical AST dump or the future semantic-product
   dump from the same compile-pipeline success result without re-running semantics.
 - Backend/runtime entrypoints should consume the semantic product from compile-pipeline output once available rather
