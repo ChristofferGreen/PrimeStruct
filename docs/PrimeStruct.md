@@ -3420,9 +3420,10 @@ read-only path.
     `location(...)`, helper-return receivers, and method-like helper-return receivers. The
     implementation target is explicit validation and runtime/provenance rules for that
     invalidation boundary, not another compiler-owned pending-diagnostic special case. The
-    remaining implementation work naturally splits into structural mutation invalidation,
-    storage-replacement/destruction invalidation, and provenance/escape rules for
-    helper-derived borrowed views.
+    remaining implementation work naturally splits into current growth invalidation
+    (`push`, `reserve`), later shrink/motion invalidation (`remove_*`, `clear`, and later
+    size-changing helpers), storage-replacement/destruction invalidation, and
+    provenance/escape rules for helper-derived borrowed views.
   - **Richer borrowed field-view contract:** the next borrowed-view slice should treat
     standalone field-view expressions as first-class non-owning column views rather than
     keeping `borrowed.field()` / `field(borrowed)` on the compiler-owned pending-diagnostic
