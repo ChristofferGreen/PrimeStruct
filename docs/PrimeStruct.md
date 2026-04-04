@@ -377,8 +377,9 @@ Temporary migration adapter contract:
 - The adapter boundary should stay narrow: compile-pipeline handoff, `prepareIrModule`, and `IrLowerer::lower` are the
   intended temporary consumers.
 - Current status: the adapter now feeds lowering entry/setup with semantic-product direct-call targets,
-  receiver/method-call targets, and helper-routing choices. Remaining adapter work is limited to binding/result,
-  effect/capability, and layout fact families plus the graph-backed query/local-auto/`try(...)`/`on_error` seams.
+  receiver/method-call targets, helper-routing choices, source-owned binding/result facts, and the current
+  callable-summary/type-metadata effect-layout surfaces. Remaining adapter work is limited to the graph-backed
+  query/local-auto/`try(...)`/`on_error` seams plus the richer layout facts that still derive from field bindings.
 - Removal criteria:
   - `CompilePipelineOutput` publishes the semantic product on the success path.
   - `prepareIrModule` and `IrLowerer::lower` consume the semantic product directly in production codepaths.
@@ -503,7 +504,9 @@ Planned lowerer effect/struct-layout handoff:
   callable effect/capability setup now consume published semantic-product return facts and
   callable summaries. Lowerer import/layout setup now also prefers semantic-product type
   metadata for struct-like classification and explicit alignment. The remaining cutover
-  work is enum lowering plus richer layout facts that still derive from field bindings.
+  work is the richer layout facts that still derive from field bindings. Enums already
+  rewrite to struct form before lowering, so there is no separate enum-specific lowerer
+  metadata seam left to cut over.
 - After the lowerer consumes semantic-product entry targets and binding metadata, effect/capability setup and
   struct-layout setup should consume published semantic-product facts instead of re-reading AST annotations,
   transform-produced helper state, or struct-shape details directly from canonicalized syntax.
