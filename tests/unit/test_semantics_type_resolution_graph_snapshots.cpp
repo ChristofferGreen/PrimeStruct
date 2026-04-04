@@ -693,4 +693,190 @@ TEST_CASE("semantic product formatter emits deterministic lowering-facing sectio
   CHECK(dump.find("return_facts[") != std::string::npos);
 }
 
+TEST_CASE("semantic product formatter exact golden is stable") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.sourceImports = {"/std/collections/*"};
+  semanticProgram.imports = {"/id", "/main"};
+  semanticProgram.definitions.push_back(primec::SemanticProgramDefinition{
+      "id",
+      "/id",
+      "/",
+      2,
+      3,
+  });
+  semanticProgram.executions.push_back(primec::SemanticProgramExecution{
+      "main",
+      "/main",
+      "/",
+      7,
+      1,
+  });
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      "/main",
+      "id",
+      "/id",
+      9,
+      10,
+  });
+  semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
+      "/main",
+      "count",
+      "vector<i32>",
+      "/std/collections/vector/count",
+      9,
+      13,
+  });
+  semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
+      "/main",
+      "vector",
+      "count",
+      "/std/collections/vector/count",
+      9,
+      13,
+  });
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      "/main",
+      true,
+      "return",
+      false,
+      false,
+      {"io_out"},
+      {"gpu"},
+      true,
+      true,
+      "i32",
+      "MyError",
+      true,
+      "/unexpectedError",
+      "MyError",
+      1,
+  });
+  semanticProgram.typeMetadata.push_back(primec::SemanticProgramTypeMetadata{
+      "/Particle",
+      "struct",
+      true,
+      false,
+      true,
+      true,
+      16,
+      2,
+      0,
+      11,
+      5,
+  });
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      "/main",
+      "local",
+      "value",
+      "/main/value",
+      "i32",
+      true,
+      false,
+      false,
+      "",
+      12,
+      7,
+  });
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      "/main",
+      "return",
+      "/i32",
+      "i32",
+      false,
+      false,
+      false,
+      "",
+      13,
+      3,
+  });
+  semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
+      "/main",
+      "selected",
+      "i32",
+      "/id",
+      "i32",
+      "",
+      "i32",
+      false,
+      "",
+      "",
+      false,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "return",
+      "",
+      "",
+      0,
+      14,
+      9,
+  });
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      "/main",
+      "lookup",
+      "/lookup",
+      "Result<i32, MyError>",
+      "Result<i32, MyError>",
+      "",
+      true,
+      true,
+      "i32",
+      "MyError",
+      15,
+      4,
+  });
+  semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
+      "/main",
+      "/lookup",
+      "Result<i32, MyError>",
+      "",
+      "Result<i32, MyError>",
+      "i32",
+      "MyError",
+      "return",
+      "/unexpectedError",
+      "MyError",
+      1,
+      16,
+      8,
+  });
+  semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
+      "/main",
+      "return",
+      "/unexpectedError",
+      "MyError",
+      1,
+      true,
+      "i32",
+      "MyError",
+  });
+
+  const std::string expected = R"(semantic_product {
+  entry_path: "/main"
+  source_imports[0]: "/std/collections/*"
+  imports[0]: "/id"
+  imports[1]: "/main"
+  definitions[0]: full_path="/id" name="id" namespace_prefix="/" source="2:3"
+  executions[0]: full_path="/main" name="main" namespace_prefix="/" source="7:1"
+  direct_call_targets[0]: scope_path="/main" call_name="id" resolved_path="/id" source="9:10"
+  method_call_targets[0]: scope_path="/main" method_name="count" receiver_type_text="vector<i32>" resolved_path="/std/collections/vector/count" source="9:13"
+  bridge_path_choices[0]: scope_path="/main" collection_family="vector" helper_name="count" chosen_path="/std/collections/vector/count" source="9:13"
+  callable_summaries[0]: full_path="/main" is_execution=true return_kind="return" is_compute=false is_unsafe=false active_effects=["io_out"] active_capabilities=["gpu"] has_result_type=true result_type_has_value=true result_value_type="i32" result_error_type="MyError" has_on_error=true on_error_handler_path="/unexpectedError" on_error_error_type="MyError" on_error_bound_arg_count=1
+  type_metadata[0]: full_path="/Particle" category="struct" is_public=true has_no_padding=false has_platform_independent_padding=true has_explicit_alignment=true explicit_alignment_bytes=16 field_count=2 enum_value_count=0 source="11:5"
+  binding_facts[0]: scope_path="/main" site_kind="local" name="value" resolved_path="/main/value" binding_type_text="i32" is_mutable=true is_entry_arg_string=false is_unsafe_reference=false reference_root="" source="12:7"
+  return_facts[0]: definition_path="/main" return_kind="return" struct_path="/i32" binding_type_text="i32" is_mutable=false is_entry_arg_string=false is_unsafe_reference=false reference_root="" source="13:3"
+  local_auto_facts[0]: scope_path="/main" binding_name="selected" binding_type_text="i32" initializer_resolved_path="/id" initializer_binding_type_text="i32" initializer_receiver_binding_type_text="" initializer_query_type_text="i32" initializer_result_has_value=false initializer_result_value_type="" initializer_result_error_type="" initializer_has_try=false initializer_try_operand_resolved_path="" initializer_try_operand_binding_type_text="" initializer_try_operand_receiver_binding_type_text="" initializer_try_operand_query_type_text="" initializer_try_value_type="" initializer_try_error_type="" initializer_try_context_return_kind="return" initializer_try_on_error_handler_path="" initializer_try_on_error_error_type="" initializer_try_on_error_bound_arg_count=0 source="14:9"
+  query_facts[0]: scope_path="/main" call_name="lookup" resolved_path="/lookup" query_type_text="Result<i32, MyError>" binding_type_text="Result<i32, MyError>" receiver_binding_type_text="" has_result_type=true result_type_has_value=true result_value_type="i32" result_error_type="MyError" source="15:4"
+  try_facts[0]: scope_path="/main" operand_resolved_path="/lookup" operand_binding_type_text="Result<i32, MyError>" operand_receiver_binding_type_text="" operand_query_type_text="Result<i32, MyError>" value_type="i32" error_type="MyError" context_return_kind="return" on_error_handler_path="/unexpectedError" on_error_error_type="MyError" on_error_bound_arg_count=1 source="16:8"
+  on_error_facts[0]: definition_path="/main" return_kind="return" handler_path="/unexpectedError" error_type="MyError" bound_arg_count=1 return_result_has_value=true return_result_value_type="i32" return_result_error_type="MyError"
+}
+)";
+
+  CHECK(primec::formatSemanticProgram(semanticProgram) == expected);
+}
+
 TEST_SUITE_END();

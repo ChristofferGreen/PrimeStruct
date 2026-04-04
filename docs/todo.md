@@ -104,7 +104,7 @@ Pipeline plumbing:
     - ○ Implement the migration adapter for graph-backed `on_error` facts.
 - ◐ Implement the deterministic semantic-product dump/formatter plus golden coverage now that its inspection contract is documented. Progress: the inspection-surface work is now split into formatter and coverage slices instead of one mixed dump item.
   - ✓ Implement the deterministic semantic-product dump stage and text formatter. Completed: `semantic-product` is now a real dump stage for `primec` and `primevm`, backed by a deterministic text formatter over the published `SemanticProgram` fact inventories.
-  - ○ Add golden coverage for the semantic-product dump surface.
+  - ✓ Add golden coverage for the semantic-product dump surface. Completed: the semantic-product formatter now has an exact text golden that pins the full lowering-facing dump layout and field spelling, while the existing `primec`/`primevm` dump-stage tests continue to lock the runtime dump entrypoints and alias behavior against that formatter surface.
 - ◐ Implement ownership-split tests for source spans, debug/source-map provenance, and syntax-faithful data using the documented test matrix. Progress: the documented matrix is now split into explicit ownership/parity slices so provenance coverage can land incrementally.
   - ○ Add source-span parity tests for semantic-product entries that feed lowering-facing facts.
   - ○ Add debug/source-map provenance parity tests for semantic-product-backed lowering/debug entrypoints.
