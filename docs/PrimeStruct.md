@@ -459,7 +459,7 @@ Planned lowerer entrypoint cutover:
 - The remaining `IrLowerer::lower(...)` work is not one monolithic seam anymore:
   - top-level lowerer entry/effect validation now prefers semantic-product callable summaries, while nested expression-transform checks remain syntax-owned
   - native-backend software-numeric and runtime-reflection rejection still run as separate backend policy scans
-  - import/layout setup still keeps separate raw-`Program` seams for AST-owned definition provenance/body inventories, syntax-owned import aliases, and struct-layout iteration
+  - import/layout setup now treats its remaining `Definition*` map as an explicitly AST-owned provenance/body inventory for field statements, namespace prefixes, and recursive layout traversal; the live raw-`Program` seams left to cut over are syntax-owned import aliases and struct-layout iteration ownership
   - helper/local setup still keeps a raw-`Program` path for `on_error`, uninitialized, and statement-call support
 - The entrypoint boundary should make ownership explicit:
   - lowering-facing meaning comes from the semantic product
@@ -524,6 +524,13 @@ Planned lowerer effect/struct-layout handoff:
   `LayoutFieldBinding` order from raw field statements. Enums already rewrite to struct form
   before lowering, so there is no separate enum-specific lowerer metadata seam left to cut
   over.
+- The remaining lowerer-owned `Definition*` inventory in import/layout setup is now pinned as
+  AST-owned provenance/body access only:
+  - walking original field statements for syntax-owned qualifiers, visibility, and field-local alignment
+  - reading namespace prefixes and other source-owned context needed by recursive layout traversal
+  - preserving one direct path back to source spans/debug provenance while layout planning is still partly AST-owned
+- That map is not a missing semantic-product inventory anymore; future cutover work should track only the
+  syntax-owned import-alias surface and the remaining struct-layout iteration/provenance seam.
 - After the lowerer consumes semantic-product entry targets and binding metadata, effect/capability setup and
   struct-layout setup should consume published semantic-product facts instead of re-reading AST annotations,
   transform-produced helper state, or struct-shape details directly from canonicalized syntax.
