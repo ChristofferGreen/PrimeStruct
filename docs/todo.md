@@ -82,7 +82,10 @@ Boundary note: this group is now split into semantic-product creation, pipeline 
 Lowering cutover:
 - ◐ Implement the `prepareIrModule` / `IrLowerer::lower` entrypoint cutover now that the handoff contract is documented. Progress: this entrypoint cutover is now split into IR preparation, lowerer entry, and raw-`Program` retirement seams instead of one umbrella handoff bullet.
   - ◐ Make `IrLowerer::lower` consume the semantic product directly at its main lowering entrypoint. Progress: this lowerer entry seam is now split into lowerer-wide validation/effect scans, import/layout setup, and helper/local setup instead of one broad cutover item.
-    - ○ Replace lowerer-wide entry/effect/runtime-reflection validation scans with semantic-product-backed entry and callable facts.
+    - ◐ Replace lowerer-wide entry/effect/runtime-reflection validation scans with semantic-product-backed entry and callable facts. Progress: this validation seam is now split into effect-summary consumption plus the still-separate backend policy scans for software numeric and runtime-reflection rejection.
+      - ○ Replace lowerer-wide entry/effect validation scans with semantic-product-backed callable summaries.
+      - ○ Decide and pin the long-term surface for native-backend software-numeric rejection scans.
+      - ○ Decide and pin the long-term surface for native-backend runtime-reflection rejection scans.
     - ○ Replace lowerer import/layout setup reads of raw `Program` state with semantic-product-backed inventories plus syntax-owned import aliases only.
     - ○ Replace lowerer helper/local setup reads of raw `Program` state with semantic-product-backed callable, binding, return, and `on_error` facts.
   - ○ Retire the raw-`Program` lowering entry path once the temporary adapter is no longer needed.
