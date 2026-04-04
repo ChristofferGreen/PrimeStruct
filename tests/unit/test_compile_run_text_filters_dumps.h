@@ -2294,6 +2294,54 @@ main() {
   CHECK(readFile(primecOut) == readFile(primevmOut));
 }
 
+TEST_CASE("semantic-product dump keeps provenance handles while ast-semantic keeps syntax") {
+  const std::string source =
+      "Packet {\n"
+      "  [i32] left{1i32}\n"
+      "  [i32] right{2i32}\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "pick([i32] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [Packet] packet{Packet(3i32, 4i32)}\n"
+      "  [i32] selected{pick(packet.left)}\n"
+      "  return(selected)\n"
+      "}\n";
+  const std::string srcPath = writeTemp("compile_dump_semantic_product_syntax_boundary.prime", source);
+  const std::string astSemanticOut =
+      (testScratchPath("") / "primec_dump_semantic_product_boundary_ast_semantic.txt").string();
+  const std::string semanticProductOut =
+      (testScratchPath("") / "primec_dump_semantic_product_boundary_semantic_product.txt").string();
+
+  const std::string astSemanticCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(astSemanticOut);
+  const std::string semanticProductCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage semantic-product > " +
+      quoteShellArg(semanticProductOut);
+  CHECK(runCommand(astSemanticCmd) == 0);
+  CHECK(runCommand(semanticProductCmd) == 0);
+
+  const std::string astSemantic = readFile(astSemanticOut);
+  const std::string semanticProduct = readFile(semanticProductOut);
+
+  CHECK(astSemantic.find("left{1}") != std::string::npos);
+  CHECK(astSemantic.find("return(selected)") != std::string::npos);
+
+  CHECK(semanticProduct.find("semantic_product {") != std::string::npos);
+  CHECK(semanticProduct.find("struct_field_metadata[0]: struct_path=\"/Packet\" field_name=\"left\"") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("binding_facts[0]: scope_path=\"/main\" site_kind=\"local\" name=\"packet\"") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("source=\"2:") != std::string::npos);
+  CHECK(semanticProduct.find("left{1}") == std::string::npos);
+  CHECK(semanticProduct.find("return(selected)") == std::string::npos);
+}
+
 TEST_CASE("primevm dump stage rejects unknown value") {
   const std::string source = R"(
 [return<int>]

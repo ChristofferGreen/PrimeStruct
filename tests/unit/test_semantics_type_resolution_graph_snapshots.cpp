@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <string_view>
 
+#include "primec/IrLowerer.h"
 #include "primec/testing/SemanticsValidationHelpers.h"
 
 #include "third_party/doctest.h"
@@ -66,6 +67,16 @@ template <typename Entry, typename Predicate>
 const Entry *findSemanticEntry(const std::vector<Entry> &entries, const Predicate &predicate) {
   const auto it = std::find_if(entries.begin(), entries.end(), predicate);
   return it == entries.end() ? nullptr : &*it;
+}
+
+bool hasCanonicalSourceMapEntry(const primec::IrModule &module, int sourceLine, int sourceColumn) {
+  return std::any_of(module.instructionSourceMap.begin(),
+                     module.instructionSourceMap.end(),
+                     [sourceLine, sourceColumn](const primec::IrInstructionSourceMapEntry &entry) {
+                       return entry.provenance == primec::IrSourceMapProvenance::CanonicalAst &&
+                              entry.line == static_cast<uint32_t>(sourceLine) &&
+                              entry.column == static_cast<uint32_t>(sourceColumn);
+                     });
 }
 
 } // namespace
@@ -935,6 +946,84 @@ TEST_CASE("semantic product ownership surfaces keep deterministic source order")
   REQUIRE(zetaFieldPos != std::string::npos);
   REQUIRE(alphaFieldPos != std::string::npos);
   CHECK(zetaFieldPos < alphaFieldPos);
+}
+
+TEST_CASE("semantic product lowering preserves debug source-map provenance") {
+  const std::string source =
+      "[return<i32>]\n"
+      "pick([i32] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "/vector/count([vector<i32>] self) {\n"
+      "  return(17i32)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [vector<i32>] values{vector<i32>()}\n"
+      "  [i32] direct{pick(1i32)}\n"
+      "  [i32] method{values.count()}\n"
+      "  [i32] bridge{count(values)}\n"
+      "  return(bridge)\n"
+      "}\n";
+
+  auto semanticAst = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(semanticAst, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *directCallEntry =
+      findSemanticEntry(semanticProgram.directCallTargets,
+                        [](const primec::SemanticProgramDirectCallTarget &entry) {
+                          return entry.scopePath == "/main" && entry.callName == "pick";
+                        });
+  const auto *methodCallEntry =
+      findSemanticEntry(semanticProgram.methodCallTargets,
+                        [](const primec::SemanticProgramMethodCallTarget &entry) {
+                          return entry.scopePath == "/main" && entry.methodName == "count";
+                        });
+  const auto *bridgeEntry =
+      findSemanticEntry(semanticProgram.bridgePathChoices,
+                        [](const primec::SemanticProgramBridgePathChoice &entry) {
+                          return entry.scopePath == "/main" && entry.helperName == "count";
+                        });
+  const auto *returnEntry =
+      findSemanticEntry(semanticProgram.returnFacts,
+                        [](const primec::SemanticProgramReturnFact &entry) {
+                          return entry.definitionPath == "/main";
+                        });
+  REQUIRE(directCallEntry != nullptr);
+  REQUIRE(methodCallEntry != nullptr);
+  REQUIRE(bridgeEntry != nullptr);
+  REQUIRE(returnEntry != nullptr);
+
+  primec::IrLowerer lowerer;
+  primec::IrModule semanticModule;
+  primec::IrModule fallbackModule;
+  REQUIRE(lowerer.lower(semanticAst, &semanticProgram, "/main", defaults, defaults, semanticModule, error));
+  CHECK(error.empty());
+  REQUIRE(lowerer.lower(semanticAst, "/main", defaults, defaults, fallbackModule, error));
+  CHECK(error.empty());
+
+  REQUIRE(semanticModule.instructionSourceMap.size() == fallbackModule.instructionSourceMap.size());
+  for (size_t i = 0; i < semanticModule.instructionSourceMap.size(); ++i) {
+    const auto &semanticEntry = semanticModule.instructionSourceMap[i];
+    const auto &fallbackEntry = fallbackModule.instructionSourceMap[i];
+    CHECK(semanticEntry.debugId == fallbackEntry.debugId);
+    CHECK(semanticEntry.line == fallbackEntry.line);
+    CHECK(semanticEntry.column == fallbackEntry.column);
+    CHECK(semanticEntry.provenance == fallbackEntry.provenance);
+  }
+
+  CHECK(hasCanonicalSourceMapEntry(semanticModule, directCallEntry->sourceLine, directCallEntry->sourceColumn));
+  CHECK(hasCanonicalSourceMapEntry(semanticModule, methodCallEntry->sourceLine, methodCallEntry->sourceColumn));
+  CHECK(hasCanonicalSourceMapEntry(semanticModule, bridgeEntry->sourceLine, bridgeEntry->sourceColumn));
+  CHECK(hasCanonicalSourceMapEntry(semanticModule, returnEntry->sourceLine, returnEntry->sourceColumn));
 }
 
 TEST_CASE("type resolution local Result.ok metadata stays aligned with wrapped call snapshots") {

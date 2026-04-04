@@ -358,9 +358,9 @@ Planned ownership-split test matrix:
   semantic-product ownership/provenance tests should be able to use golden files without incidental ordering noise
   from modules, definitions, bindings, or diagnostics.
 - Current status:
-  source-span parity tests and deterministic ownership-order coverage now pin the lowering-facing semantic-product
-  surfaces that currently publish source handles; remaining ownership/provenance work is debug/source-map parity plus
-  syntax-boundary coverage.
+  source-span parity tests, debug/source-map parity coverage, syntax-boundary coverage, and deterministic
+  ownership-order coverage now pin the lowering-facing semantic-product surfaces that currently publish provenance
+  handles.
 
 Migration stages:
 1. Define the semantic-product type and its ownership contract.

@@ -79,10 +79,6 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
 **Group 12 - Semantics/lowering boundary**
 Boundary note: this group is now split into semantic-product creation, pipeline plumbing, lowering cutover, and cleanup so it can be worked incrementally instead of as one flat migration queue.
 
-- ◐ Implement ownership-split tests for source spans, debug/source-map provenance, and syntax-faithful data using the documented test matrix. Progress: source-span parity and deterministic ownership-order coverage now pin the lowering-facing semantic-product surfaces that publish source handles today; remaining work is the debug/source-map parity boundary plus syntax-reproduction boundary coverage.
-  - ○ Add debug/source-map provenance parity tests for semantic-product-backed lowering/debug entrypoints.
-  - ○ Add syntax-reproduction boundary tests that keep syntax-owned data on AST dumps and lowering-owned data on the semantic-product surface.
-
 Lowering cutover:
 - ◐ Implement the `prepareIrModule` / `IrLowerer::lower` entrypoint cutover now that the handoff contract is documented. Progress: this entrypoint cutover is now split into IR preparation, lowerer entry, and raw-`Program` retirement seams instead of one umbrella handoff bullet.
   - ○ Make `prepareIrModule` consume the semantic product directly instead of re-reading lowering facts from raw `Program` state.
