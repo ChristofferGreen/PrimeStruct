@@ -9,6 +9,7 @@ TEST_CASE("ir lowerer entry setup step resolves entry metadata") {
   uint64_t entryCapabilityMask = 0;
   std::string error;
   CHECK(primec::ir_lowerer::runLowerEntrySetup(program,
+                                               nullptr,
                                                "/main",
                                                {"io_out"},
                                                {"io_err"},
@@ -34,6 +35,7 @@ TEST_CASE("ir lowerer entry setup step rejects missing entry") {
   uint64_t entryCapabilityMask = 456;
   std::string error;
   CHECK_FALSE(primec::ir_lowerer::runLowerEntrySetup(program,
+                                                     nullptr,
                                                      "/main",
                                                      {"io_out"},
                                                      {"io_err"},
@@ -627,4 +629,3 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup wires callback") {
   CHECK(state.inferCallExprBaseKind(fileCall, locals, kindOut));
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
-

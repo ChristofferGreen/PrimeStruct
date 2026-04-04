@@ -3,6 +3,7 @@
 #include "primec/Ast.h"
 #include "primec/Diagnostics.h"
 #include "primec/Ir.h"
+#include "primec/SemanticProduct.h"
 #include "primec/IrValidation.h"
 #include "primec/Options.h"
 
@@ -24,6 +25,7 @@ struct IrPreparationFailure {
 };
 
 bool prepareIrModule(Program &program,
+                     const SemanticProgram *semanticProgram,
                      const Options &options,
                      IrValidationTarget validationTarget,
                      IrModule &ir,

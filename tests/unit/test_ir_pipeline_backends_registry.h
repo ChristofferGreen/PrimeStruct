@@ -67,7 +67,7 @@ TEST_CASE("ir preparation helper reports lowering-stage failure for unresolved e
 
   primec::IrModule ir;
   primec::IrPreparationFailure failure;
-  CHECK_FALSE(primec::prepareIrModule(program, options, primec::IrValidationTarget::Vm, ir, failure));
+  CHECK_FALSE(primec::prepareIrModule(program, nullptr, options, primec::IrValidationTarget::Vm, ir, failure));
   CHECK(failure.stage == primec::IrPreparationFailureStage::Lowering);
   CHECK(!failure.message.empty());
 }
@@ -154,7 +154,10 @@ TEST_CASE("main routes cpp and exe through ir backend alias lookup") {
   CHECK(source.find("findIrBackend(irBackendKind)") != std::string::npos);
   CHECK(source.find("describeCompilePipelineFailure(") != std::string::npos);
   CHECK(source.find("describeIrPreparationFailure(") != std::string::npos);
-  CHECK(source.find("prepareIrModule(program, options, validationTarget, ir, prepFailure)") != std::string::npos);
+  CHECK(source.find("pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr") !=
+        std::string::npos);
+  CHECK(source.find("prepareIrModule(program, semanticProgram, options, validationTarget, ir, prepFailure)") !=
+        std::string::npos);
   CHECK(source.find("IrLowerer lowerer") == std::string::npos);
   CHECK(source.find("inlineIrModuleCalls(ir, error)") == std::string::npos);
   CHECK(source.find("validateIrModule(ir, validationTarget, error)") == std::string::npos);
@@ -182,7 +185,9 @@ TEST_CASE("primevm uses shared ir preparation helper") {
   CHECK(source.find("normalizeVmLoweringError") != std::string::npos);
   CHECK(source.find("describeCompilePipelineFailure(") != std::string::npos);
   CHECK(source.find("describeIrPreparationFailure(") != std::string::npos);
-  CHECK(source.find("prepareIrModule(program, options, primec::IrValidationTarget::Vm, ir, irFailure)") !=
+  CHECK(source.find("pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr") !=
+        std::string::npos);
+  CHECK(source.find("prepareIrModule(program, semanticProgram, options, primec::IrValidationTarget::Vm, ir, irFailure)") !=
         std::string::npos);
   CHECK(source.find("findIrBackend(\"vm\")") == std::string::npos);
   CHECK(source.find("CompilePipelineErrorStage::Import") == std::string::npos);

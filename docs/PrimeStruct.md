@@ -405,6 +405,9 @@ Compile-pipeline publication contract:
   dump from the same compile-pipeline success result without re-running semantics.
 - Backend/runtime entrypoints should consume the semantic product from compile-pipeline output once available rather
   than rebuilding semantic facts ad hoc from the raw `Program`.
+- That success-path handoff is now live for `primec` compile/emit entrypoints, `primevm`, backend registry dispatch,
+  and the shared `prepareIrModule(...)` / `IrLowerer::lower(...)` seam. Remaining CLI/runtime plumbing work is now
+  limited to semantic-product dump/report surfaces and failure/report ordering, not the success-path lowering handoff.
 
 CLI/runtime plumbing contract:
 - `primec` and `primevm` should receive the semantic product only through compile-pipeline success artifacts, not

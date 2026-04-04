@@ -411,11 +411,13 @@ int main(int argc, char **argv) {
   }
 
   primec::Program &program = pipelineOutput.program;
+  const primec::SemanticProgram *semanticProgram =
+      pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr;
   const primec::IrBackendDiagnostics &vmDiagnostics = primec::vmIrBackendDiagnostics();
 
   primec::IrModule ir;
   primec::IrPreparationFailure irFailure;
-  if (!primec::prepareIrModule(program, options, primec::IrValidationTarget::Vm, ir, irFailure)) {
+  if (!primec::prepareIrModule(program, semanticProgram, options, primec::IrValidationTarget::Vm, ir, irFailure)) {
     return primec::emitCliFailure(
         std::cerr,
         options,

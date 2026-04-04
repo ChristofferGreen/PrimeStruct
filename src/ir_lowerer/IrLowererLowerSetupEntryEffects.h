@@ -1,4 +1,5 @@
 bool IrLowerer::lower(const Program &program,
+                      const SemanticProgram *semanticProgram,
                       const std::string &entryPath,
                       const std::vector<std::string> &defaultEffects,
                       const std::vector<std::string> &entryDefaultEffects,
@@ -26,6 +27,7 @@ bool IrLowerer::lower(const Program &program,
   uint64_t entryEffectMask = 0;
   uint64_t entryCapabilityMask = 0;
   if (!ir_lowerer::runLowerEntrySetup(program,
+                                      semanticProgram,
                                       entryPath,
                                       defaultEffects,
                                       entryDefaultEffects,

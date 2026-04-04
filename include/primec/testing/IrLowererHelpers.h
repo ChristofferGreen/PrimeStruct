@@ -11,6 +11,7 @@
 
 #include "primec/Ast.h"
 #include "primec/Ir.h"
+#include "primec/SemanticProduct.h"
 
 namespace primec::ir_lowerer {
 

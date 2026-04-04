@@ -116,26 +116,58 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   std::filesystem::path semanticProductPath = cwd / "include" / "primec" / "SemanticProduct.h";
   std::filesystem::path compilePipelineHeaderPath = cwd / "include" / "primec" / "CompilePipeline.h";
   std::filesystem::path semanticsHeaderPath = cwd / "include" / "primec" / "Semantics.h";
+  std::filesystem::path irPreparationHeaderPath = cwd / "include" / "primec" / "IrPreparation.h";
+  std::filesystem::path irLowererHeaderPath = cwd / "include" / "primec" / "IrLowerer.h";
   std::filesystem::path compilePipelineSourcePath = cwd / "src" / "CompilePipeline.cpp";
   std::filesystem::path semanticsValidatePath = cwd / "src" / "semantics" / "SemanticsValidate.cpp";
+  std::filesystem::path irPreparationSourcePath = cwd / "src" / "IrPreparation.cpp";
+  std::filesystem::path irEntrySetupHeaderPath = cwd / "src" / "ir_lowerer" / "IrLowererLowerEntrySetup.h";
+  std::filesystem::path irEntrySetupSourcePath = cwd / "src" / "ir_lowerer" / "IrLowererLowerEntrySetup.cpp";
+  std::filesystem::path irLowererEntryPath = cwd / "src" / "ir_lowerer" / "IrLowererLowerSetupEntryEffects.h";
+  std::filesystem::path primecMainPath = cwd / "src" / "main.cpp";
+  std::filesystem::path primevmMainPath = cwd / "src" / "primevm_main.cpp";
   if (!std::filesystem::exists(semanticProductPath)) {
     semanticProductPath = cwd.parent_path() / "include" / "primec" / "SemanticProduct.h";
     compilePipelineHeaderPath = cwd.parent_path() / "include" / "primec" / "CompilePipeline.h";
     semanticsHeaderPath = cwd.parent_path() / "include" / "primec" / "Semantics.h";
+    irPreparationHeaderPath = cwd.parent_path() / "include" / "primec" / "IrPreparation.h";
+    irLowererHeaderPath = cwd.parent_path() / "include" / "primec" / "IrLowerer.h";
     compilePipelineSourcePath = cwd.parent_path() / "src" / "CompilePipeline.cpp";
     semanticsValidatePath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidate.cpp";
+    irPreparationSourcePath = cwd.parent_path() / "src" / "IrPreparation.cpp";
+    irEntrySetupHeaderPath = cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerEntrySetup.h";
+    irEntrySetupSourcePath = cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerEntrySetup.cpp";
+    irLowererEntryPath = cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerSetupEntryEffects.h";
+    primecMainPath = cwd.parent_path() / "src" / "main.cpp";
+    primevmMainPath = cwd.parent_path() / "src" / "primevm_main.cpp";
   }
   REQUIRE(std::filesystem::exists(semanticProductPath));
   REQUIRE(std::filesystem::exists(compilePipelineHeaderPath));
   REQUIRE(std::filesystem::exists(semanticsHeaderPath));
+  REQUIRE(std::filesystem::exists(irPreparationHeaderPath));
+  REQUIRE(std::filesystem::exists(irLowererHeaderPath));
   REQUIRE(std::filesystem::exists(compilePipelineSourcePath));
   REQUIRE(std::filesystem::exists(semanticsValidatePath));
+  REQUIRE(std::filesystem::exists(irPreparationSourcePath));
+  REQUIRE(std::filesystem::exists(irEntrySetupHeaderPath));
+  REQUIRE(std::filesystem::exists(irEntrySetupSourcePath));
+  REQUIRE(std::filesystem::exists(irLowererEntryPath));
+  REQUIRE(std::filesystem::exists(primecMainPath));
+  REQUIRE(std::filesystem::exists(primevmMainPath));
 
   const std::string semanticProduct = readTextFile(semanticProductPath);
   const std::string compilePipelineHeader = readTextFile(compilePipelineHeaderPath);
   const std::string semanticsHeader = readTextFile(semanticsHeaderPath);
+  const std::string irPreparationHeader = readTextFile(irPreparationHeaderPath);
+  const std::string irLowererHeader = readTextFile(irLowererHeaderPath);
   const std::string compilePipelineSource = readTextFile(compilePipelineSourcePath);
   const std::string semanticsValidate = readTextFile(semanticsValidatePath);
+  const std::string irPreparationSource = readTextFile(irPreparationSourcePath);
+  const std::string irEntrySetupHeader = readTextFile(irEntrySetupHeaderPath);
+  const std::string irEntrySetupSource = readTextFile(irEntrySetupSourcePath);
+  const std::string irLowererEntry = readTextFile(irLowererEntryPath);
+  const std::string primecMain = readTextFile(primecMainPath);
+  const std::string primevmMain = readTextFile(primevmMainPath);
   CHECK(semanticProduct.find("struct SemanticProgramDirectCallTarget") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramMethodCallTarget") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramBridgePathChoice") != std::string::npos);
@@ -175,10 +207,28 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(compilePipelineHeader.find("SemanticProgram semanticProgram;") != std::string::npos);
   CHECK(compilePipelineHeader.find("bool hasSemanticProgram = false;") != std::string::npos);
   CHECK(semanticsHeader.find("SemanticProgram *semanticProgramOut = nullptr") != std::string::npos);
+  CHECK(irPreparationHeader.find("const SemanticProgram *semanticProgram,") != std::string::npos);
+  CHECK(irLowererHeader.find("const SemanticProgram *semanticProgram,") != std::string::npos);
   CHECK(compilePipelineSource.find("SemanticProgram semanticProgram;") != std::string::npos);
   CHECK(compilePipelineSource.find("&semanticProgram") != std::string::npos);
   CHECK(compilePipelineSource.find("output.semanticProgram = std::move(semanticProgram);") != std::string::npos);
   CHECK(compilePipelineSource.find("output.hasSemanticProgram = true;") != std::string::npos);
+  CHECK(irPreparationSource.find("bool prepareIrModule(Program &program,") != std::string::npos);
+  CHECK(irPreparationSource.find("const SemanticProgram *semanticProgram,") != std::string::npos);
+  CHECK(irPreparationSource.find("lowerer.lower(program,") != std::string::npos);
+  CHECK(irPreparationSource.find("semanticProgram,") != std::string::npos);
+  CHECK(irEntrySetupHeader.find("const SemanticProgram *semanticProgram,") != std::string::npos);
+  CHECK(irEntrySetupSource.find("(void)semanticProgram;") != std::string::npos);
+  CHECK(irLowererEntry.find("runLowerEntrySetup(program,") != std::string::npos);
+  CHECK(irLowererEntry.find("semanticProgram,") != std::string::npos);
+  CHECK(primecMain.find("pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr") !=
+        std::string::npos);
+  CHECK(primecMain.find("prepareIrModule(program, semanticProgram, options, validationTarget, ir, prepFailure)") !=
+        std::string::npos);
+  CHECK(primevmMain.find("pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr") !=
+        std::string::npos);
+  CHECK(primevmMain.find("prepareIrModule(program, semanticProgram, options, primec::IrValidationTarget::Vm, ir, irFailure)") !=
+        std::string::npos);
   CHECK(semanticsValidate.find("SemanticProgram buildSemanticProgram(const Program &program,") !=
         std::string::npos);
   CHECK(semanticsValidate.find("validator.directCallTargetSnapshotForSemanticProduct()") != std::string::npos);

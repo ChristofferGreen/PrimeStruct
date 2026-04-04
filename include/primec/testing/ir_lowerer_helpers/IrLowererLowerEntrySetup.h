@@ -3,6 +3,7 @@
 
 
 bool runLowerEntrySetup(const Program &program,
+                        const SemanticProgram *semanticProgram,
                         const std::string &entryPath,
                         const std::vector<std::string> &defaultEffects,
                         const std::vector<std::string> &entryDefaultEffects,
@@ -10,4 +11,3 @@ bool runLowerEntrySetup(const Program &program,
                         uint64_t &entryEffectMaskOut,
                         uint64_t &entryCapabilityMaskOut,
                         std::string &error);
-

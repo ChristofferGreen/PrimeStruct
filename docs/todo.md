@@ -86,14 +86,10 @@ Semantic product creation:
 
 Pipeline plumbing:
 - ◐ Implement the CLI/runtime plumbing cutover for the semantic product now that the end-to-end handoff contract is documented. Progress: this plumbing cut is now split into explicit CLI, runtime/backend, and failure/report seams instead of one umbrella handoff item.
-  - ◐ Thread the semantic product through `primec` CLI and dump-stage entrypoints. Progress: this CLI surface is now split into parse/validate success handling, dump-stage selection, and CLI-facing reporting seams so the user-facing handoff can land incrementally.
-    - ○ Thread semantic-product success results through `primec` compile/emit entrypoints.
+  - ◐ Thread the semantic product through `primec` CLI and dump-stage entrypoints. Progress: successful `primec` compile/emit entrypoints now thread the published semantic product through the shared IR preparation handoff, while dump-stage selection/emission and CLI-facing reporting still remain live.
     - ○ Thread semantic-product success results through `primec` dump-stage selection and emission entrypoints.
     - ○ Thread semantic-product-aware reporting through `primec` user-facing CLI diagnostics/help text where needed.
-  - ◐ Thread the semantic product through runtime/backend consumer entrypoints (`primevm`, backend dispatch, and related handoff glue). Progress: this consumer surface is now split into `primevm`, backend registry/dispatch, and shared runtime/backend handoff seams.
-    - ○ Thread semantic-product success results through `primevm` entrypoints.
-    - ○ Thread semantic-product success results through backend registry/dispatch glue.
-    - ○ Thread semantic-product success results through shared runtime/backend handoff glue used by both CLI consumers.
+  - ✓ Thread the semantic product through runtime/backend consumer entrypoints (`primevm`, backend dispatch, and related handoff glue). Completed: `primevm`, backend dispatch, and the shared runtime/backend handoff path now thread published semantic-product success artifacts through `prepareIrModule(...)` / `IrLowerer::lower(...)` instead of dropping back to raw AST-only lowering entrypoints.
   - ◐ Thread the semantic product through failure/report plumbing without creating parallel semantic state. Progress: this reporting surface is now split into pipeline failure objects, dump/report surfaces, and user-visible diagnostic ordering/reporting seams.
     - ○ Thread semantic-product-aware failure objects through compile-pipeline result plumbing.
     - ○ Thread semantic-product-aware dump/report plumbing without duplicating semantic state.

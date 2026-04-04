@@ -78,8 +78,9 @@ inline TypeResolverPipelineSnapshot runTypeResolverPipelineSnapshot(const std::s
   if (snapshot.ok) {
     primec::IrModule ir;
     primec::IrPreparationFailure irFailure;
+    const primec::SemanticProgram *semanticProgram = output.hasSemanticProgram ? &output.semanticProgram : nullptr;
     const bool prepared =
-        primec::prepareIrModule(output.program, options, primec::IrValidationTarget::Vm, ir, irFailure);
+        primec::prepareIrModule(output.program, semanticProgram, options, primec::IrValidationTarget::Vm, ir, irFailure);
     if (prepared) {
       std::string serializeError;
       const bool serialized = primec::serializeIr(ir, snapshot.serializedIr, serializeError);

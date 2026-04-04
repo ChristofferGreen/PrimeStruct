@@ -7,6 +7,7 @@
 namespace primec {
 
 bool prepareIrModule(Program &program,
+                     const SemanticProgram *semanticProgram,
                      const Options &options,
                      IrValidationTarget validationTarget,
                      IrModule &ir,
@@ -18,6 +19,7 @@ bool prepareIrModule(Program &program,
 
   IrLowerer lowerer;
   if (!lowerer.lower(program,
+                     semanticProgram,
                      options.entryPath,
                      options.defaultEffects,
                      options.entryDefaultEffects,

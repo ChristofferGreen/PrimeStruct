@@ -68,6 +68,7 @@ struct IrBackendRunFailure {
 
 bool runIrBackend(const primec::IrBackend &backend,
                   primec::Program &program,
+                  const primec::SemanticProgram *semanticProgram,
                   const primec::Options &options,
                   primec::IrBackendEmitResult &result,
                   IrBackendRunFailure &failure) {
@@ -77,7 +78,7 @@ bool runIrBackend(const primec::IrBackend &backend,
   const primec::IrValidationTarget validationTarget = backend.validationTarget(options);
   primec::IrModule ir;
   primec::IrPreparationFailure prepFailure;
-  if (!primec::prepareIrModule(program, options, validationTarget, ir, prepFailure)) {
+  if (!primec::prepareIrModule(program, semanticProgram, options, validationTarget, ir, prepFailure)) {
     failure.cliFailure = primec::describeIrPreparationFailure(prepFailure, backend);
     return false;
   }
@@ -172,7 +173,9 @@ int main(int argc, char **argv) {
     const primec::IrBackendDiagnostics &diagnostics = irBackend->diagnostics();
     primec::IrBackendEmitResult emitResult;
     IrBackendRunFailure failure;
-    if (!runIrBackend(*irBackend, program, options, emitResult, failure)) {
+    const primec::SemanticProgram *semanticProgram =
+        pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr;
+    if (!runIrBackend(*irBackend, program, semanticProgram, options, emitResult, failure)) {
       if (failure.cliFailure.has_value()) {
         return primec::emitCliFailure(std::cerr, options, *failure.cliFailure);
       }
