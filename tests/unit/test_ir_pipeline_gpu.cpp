@@ -1,6 +1,5 @@
 #include "third_party/doctest.h"
 
-#include "primec/IrLowerer.h"
 #include "test_ir_pipeline_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.gpu");
@@ -31,13 +30,9 @@ main() {
   return(plus(plus(result[0i32], result[1i32]), plus(result[2i32], result[3i32])))
 }
 )";
-  primec::Program program;
   std::string error;
-  CHECK(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-  primec::IrLowerer lowerer;
   primec::IrModule ir;
-  CHECK(lowerer.lower(program, "/main", {}, {}, ir, error));
+  CHECK(parseValidateAndLower(source, ir, error));
   CHECK(error.empty());
 }
 
@@ -63,13 +58,9 @@ main() {
   return(plus(result[0i32], result[1i32]))
 }
 )";
-  primec::Program program;
   std::string error;
-  CHECK(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-  primec::IrLowerer lowerer;
   primec::IrModule ir;
-  CHECK(lowerer.lower(program, "/main", {}, {}, ir, error));
+  CHECK(parseValidateAndLower(source, ir, error));
   CHECK(error.empty());
 }
 
@@ -95,13 +86,9 @@ main() {
   return(plus(result[0i32], result[1i32]))
 }
 )";
-  primec::Program program;
   std::string error;
-  CHECK(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-  primec::IrLowerer lowerer;
   primec::IrModule ir;
-  CHECK(lowerer.lower(program, "/main", {}, {}, ir, error));
+  CHECK(parseValidateAndLower(source, ir, error));
   CHECK(error.empty());
 }
 
@@ -163,13 +150,9 @@ main() {
   return(plus(r0[0i32], plus(r1[0i32], r2[0i32])))
 }
 )";
-  primec::Program program;
   std::string error;
-  CHECK(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-  primec::IrLowerer lowerer;
   primec::IrModule ir;
-  CHECK(lowerer.lower(program, "/main", {}, {}, ir, error));
+  CHECK(parseValidateAndLower(source, ir, error));
   CHECK(error.empty());
 }
 
@@ -240,13 +223,9 @@ main() {
   return(plus(r_out0[0i32], plus(r_out1[0i32], r_out2[0i32])))
 }
 )";
-  primec::Program program;
   std::string error;
-  CHECK(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-  primec::IrLowerer lowerer;
   primec::IrModule ir;
-  CHECK(lowerer.lower(program, "/main", {}, {}, ir, error));
+  CHECK(parseValidateAndLower(source, ir, error));
   CHECK(error.empty());
 }
 
@@ -317,13 +296,9 @@ main() {
   return(plus(r_out0[0i32], plus(r_out1[0i32], r_out2[0i32])))
 }
 )";
-  primec::Program program;
   std::string error;
-  CHECK(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-  primec::IrLowerer lowerer;
   primec::IrModule ir;
-  CHECK(lowerer.lower(program, "/main", {}, {}, ir, error));
+  CHECK(parseValidateAndLower(source, ir, error));
   CHECK(error.empty());
 }
 
@@ -391,13 +366,9 @@ main() {
   return(plus(out0[0i32], plus(out1[0i32], out2[0i32])))
 }
 )";
-  primec::Program program;
   std::string error;
-  CHECK(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-  primec::IrLowerer lowerer;
   primec::IrModule ir;
-  CHECK(lowerer.lower(program, "/main", {}, {}, ir, error));
+  CHECK(parseValidateAndLower(source, ir, error));
   CHECK(error.empty());
 }
 

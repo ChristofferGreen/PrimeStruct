@@ -11,14 +11,9 @@ main() {
   Thing()
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
   auto layoutIt = std::find_if(module.structLayouts.begin(),
                                module.structLayouts.end(),
@@ -58,14 +53,9 @@ main() {
   return(convert<int>(value.m10))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   auto layoutIt = std::find_if(module.structLayouts.begin(),
@@ -108,14 +98,9 @@ main() {
   return(convert<int>(normalized.w))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   auto layoutIt = std::find_if(module.structLayouts.begin(),
@@ -172,14 +157,9 @@ main() {
   Sphere()
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   auto layoutIt = std::find_if(module.structLayouts.begin(),
@@ -210,14 +190,9 @@ main() {
   Widget()
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
   auto layoutIt = std::find_if(module.structLayouts.begin(),
                                module.structLayouts.end(),
@@ -281,14 +256,9 @@ main() {
   Payload()
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
   auto layoutIt = std::find_if(module.structLayouts.begin(),
                                module.structLayouts.end(),
@@ -347,14 +317,9 @@ main() {
   return(0i32)
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
   auto layoutIt = std::find_if(module.structLayouts.begin(),
                                module.structLayouts.end(),

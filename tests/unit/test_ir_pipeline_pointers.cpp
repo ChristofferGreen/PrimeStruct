@@ -2,7 +2,6 @@
 
 #include "third_party/doctest.h"
 
-#include "primec/IrLowerer.h"
 #include "primec/Vm.h"
 #include "test_ir_pipeline_helpers.h"
 
@@ -18,14 +17,9 @@ main() {
   return(dereference(ptr))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   int addressCount = 0;
@@ -56,14 +50,9 @@ main() {
   return(dereference(plus(location(value), 0i32)))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   bool sawAdd = false;
@@ -94,14 +83,9 @@ main() {
   return(dereference(plus(location(ref), 16i32)))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   bool sawAdd = false;
@@ -131,14 +115,9 @@ main() {
   return(assign(ref, 7i32))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -157,14 +136,9 @@ main() {
   return(at(ref, 1i32))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -187,14 +161,9 @@ main() {
   return(read(11i32))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -213,14 +182,9 @@ main() {
   return(assign(dereference(ptr), 9i32))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -239,14 +203,9 @@ main() {
   return(dereference(minus(location(second), 16i32)))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   bool sawSub = false;
@@ -276,14 +235,9 @@ main() {
   return(dereference(minus(location(second), 16u64)))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   bool sawSub = false;
@@ -313,14 +267,9 @@ main() {
   return(dereference(minus(location(first), -16i64)))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   bool sawSub = false;
@@ -350,14 +299,9 @@ main() {
   return(dereference(plus(location(first), 16i32)))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -378,14 +322,9 @@ main() {
   return(dereference(minus(location(second), 16i32)))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -406,14 +345,9 @@ main() {
   return(dereference(plus(location(second), -16i64)))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -434,14 +368,9 @@ main() {
   return(dereference(plus(location(first), 16i64)))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   bool sawPushI64 = false;
@@ -471,14 +400,9 @@ main() {
   return(dereference(plus(location(first), 16u64)))
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
 
   bool sawPushI64 = false;
@@ -509,14 +433,10 @@ main() {
   return(ref)
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
+  CHECK(error.empty());
   CHECK(error.empty());
 
   bool sawStoreIndirect = false;
