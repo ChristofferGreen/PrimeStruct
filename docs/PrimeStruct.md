@@ -1659,14 +1659,18 @@ or a semicolon if you intended to index.
     so wide reflected schemas can be grouped into deterministic sixteen-column storage chunks. `SoaSchema` now also
     emits `/Type/SoaSchemaStorage` and `/Type/SoaSchemaStorageNew()` on top of that chunk layer, where each chunk
     field is backed by `SoaColumn<T>` or `SoaColumnsN<...>` (`N <= 16`) over the reflected source-order fields.
+    `SoaSchema` now also emits `/Type/SoaSchemaStorageCount([/Type/SoaSchemaStorage] value) -> i32`,
+    `/Type/SoaSchemaStorageCapacity([/Type/SoaSchemaStorage] value) -> i32`,
+    `/Type/SoaSchemaStorageReserve([/Type/SoaSchemaStorage mut] value, [i32] capacity) -> void`, and
+    `/Type/SoaSchemaStorageClear([/Type/SoaSchemaStorage mut] value) -> void`, routing chunk-wise
+    count/capacity/reserve/clear through the existing fixed-width `SoaColumn<T>` / `SoaColumnsN<...>` substrate.
     These helpers bridge the current constant-index-only `meta.field_*<T>(i)` rule for reflected SoA work: callers can loop from `0` to
     `/Type/SoaSchemaFieldCount()` and query names/types/visibility through runtime
     `i32` indices without direct `meta.field_name<T>(...)` / `meta.field_type<T>(...)` /
     `meta.field_visibility<T>(...)` calls. Out-of-range string helper indices currently return the empty string
-    sentinel, while out-of-range chunk helper indices return `0i32`. The next follow-ups for arbitrary-width SoA are
-    wiring grow/realloc and free/drop onto this chunked storage layer so schemas wider than the fixed sixteen-column
-    substrate can keep using multiple deterministic chunks instead of stopping at the pending-width gate for those
-    later operations.
+    sentinel, while out-of-range chunk helper indices return `0i32`. The next follow-up for arbitrary-width SoA is
+    implicit drop/lifecycle cleanup on top of this chunked storage layer so schemas wider than the fixed
+    sixteen-column substrate can reclaim chunk storage without requiring callers to invoke `Clear(...)` manually.
 - **Baseline reflection API scope (v1):** reflection APIs are compile-time-only metadata queries. Runtime reflection
   objects/tables are out of scope and rejected (`/meta/object`, `/meta/table`).
 - **Reserved compile-time metadata query names:** `meta.type_name<T>`, `meta.type_kind<T>`, `meta.is_struct<T>`,

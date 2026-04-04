@@ -223,6 +223,14 @@ TEST_CASE("semantics validate source delegation stays stable") {
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
             "storageNewHelper.name = \"SoaSchemaStorageNew\";") != std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
+            "Definition storageCountHelper = makeHelper(\"SoaSchemaStorageCount\"") != std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
+            "Definition storageCapacityHelper = makeHelper(\"SoaSchemaStorageCapacity\"") != std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
+            "Definition storageReserveHelper = makeHelper(\"SoaSchemaStorageReserve\"") != std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
+            "Definition storageClearHelper = makeHelper(\"SoaSchemaStorageClear\"") != std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
             "appendIndexedStringHelper(\"SoaSchemaFieldName\", context.fieldNames)") != std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
             "appendIndexedStringHelper(\"SoaSchemaFieldType\", context.fieldTypeNames)") != std::string::npos);
@@ -237,6 +245,10 @@ TEST_CASE("semantics validate source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
             "chunkBinding = makeTypeBinding(\"chunk\" + std::to_string(chunkIndex),") != std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
+            "makeChunkHelperBasePath(\"Reserve\", chunkTemplateArgs[chunkIndex].size())") != std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
+            "makeChunkHelperBasePath(\"Clear\", chunkTemplateArgs[chunkIndex].size())") != std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("auto emitComparisonHelper = [&](const std::string &helperName,") ==
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("auto emitCompareHelper = [&]() -> bool {") ==

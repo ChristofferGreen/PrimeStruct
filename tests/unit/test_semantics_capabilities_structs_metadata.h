@@ -189,6 +189,10 @@ main() {
   const primec::Definition *chunkFieldCountHelper = nullptr;
   const primec::Definition *storageStruct = nullptr;
   const primec::Definition *storageNewHelper = nullptr;
+  const primec::Definition *storageCountHelper = nullptr;
+  const primec::Definition *storageCapacityHelper = nullptr;
+  const primec::Definition *storageReserveHelper = nullptr;
+  const primec::Definition *storageClearHelper = nullptr;
   for (const auto &def : program.definitions) {
     if (def.fullPath == "/Item/SoaSchemaFieldCount") {
       countHelper = &def;
@@ -208,6 +212,14 @@ main() {
       storageStruct = &def;
     } else if (def.fullPath == "/Item/SoaSchemaStorageNew") {
       storageNewHelper = &def;
+    } else if (def.fullPath == "/Item/SoaSchemaStorageCount") {
+      storageCountHelper = &def;
+    } else if (def.fullPath == "/Item/SoaSchemaStorageCapacity") {
+      storageCapacityHelper = &def;
+    } else if (def.fullPath == "/Item/SoaSchemaStorageReserve") {
+      storageReserveHelper = &def;
+    } else if (def.fullPath == "/Item/SoaSchemaStorageClear") {
+      storageClearHelper = &def;
     }
   }
 
@@ -220,6 +232,10 @@ main() {
   REQUIRE(chunkFieldCountHelper != nullptr);
   REQUIRE(storageStruct != nullptr);
   REQUIRE(storageNewHelper != nullptr);
+  REQUIRE(storageCountHelper != nullptr);
+  REQUIRE(storageCapacityHelper != nullptr);
+  REQUIRE(storageReserveHelper != nullptr);
+  REQUIRE(storageClearHelper != nullptr);
 
   CHECK(countHelper->parameters.empty());
   REQUIRE(countHelper->returnExpr.has_value());
@@ -319,6 +335,20 @@ main() {
   REQUIRE(storageNewHelper->returnExpr.has_value());
   CHECK(storageNewHelper->returnExpr->kind == primec::Expr::Kind::Call);
   CHECK(storageNewHelper->returnExpr->name == "/Item/SoaSchemaStorage");
+  REQUIRE(storageCountHelper->parameters.size() == 1);
+  REQUIRE(storageCountHelper->returnExpr.has_value());
+  CHECK(storageCountHelper->returnExpr->kind == primec::Expr::Kind::Call);
+  CHECK(storageCountHelper->returnExpr->name ==
+        "/std/collections/experimental_soa_storage/soaColumns2Count");
+  REQUIRE(storageCapacityHelper->parameters.size() == 1);
+  REQUIRE(storageCapacityHelper->returnExpr.has_value());
+  CHECK(storageCapacityHelper->returnExpr->kind == primec::Expr::Kind::Call);
+  CHECK(storageCapacityHelper->returnExpr->name ==
+        "/std/collections/experimental_soa_storage/soaColumns2Capacity");
+  REQUIRE(storageReserveHelper->parameters.size() == 2);
+  CHECK(storageReserveHelper->statements.size() == 3);
+  REQUIRE(storageClearHelper->parameters.size() == 1);
+  CHECK(storageClearHelper->statements.size() == 3);
 }
 
 TEST_CASE("generate SoaSchema chunk helpers split wide reflected schemas deterministically") {
@@ -361,6 +391,10 @@ main() {
   const primec::Definition *chunkFieldCountHelper = nullptr;
   const primec::Definition *storageStruct = nullptr;
   const primec::Definition *storageNewHelper = nullptr;
+  const primec::Definition *storageCountHelper = nullptr;
+  const primec::Definition *storageCapacityHelper = nullptr;
+  const primec::Definition *storageReserveHelper = nullptr;
+  const primec::Definition *storageClearHelper = nullptr;
   for (const auto &def : program.definitions) {
     if (def.fullPath == "/Item/SoaSchemaChunkCount") {
       chunkCountHelper = &def;
@@ -372,6 +406,14 @@ main() {
       storageStruct = &def;
     } else if (def.fullPath == "/Item/SoaSchemaStorageNew") {
       storageNewHelper = &def;
+    } else if (def.fullPath == "/Item/SoaSchemaStorageCount") {
+      storageCountHelper = &def;
+    } else if (def.fullPath == "/Item/SoaSchemaStorageCapacity") {
+      storageCapacityHelper = &def;
+    } else if (def.fullPath == "/Item/SoaSchemaStorageReserve") {
+      storageReserveHelper = &def;
+    } else if (def.fullPath == "/Item/SoaSchemaStorageClear") {
+      storageClearHelper = &def;
     }
   }
 
@@ -380,6 +422,10 @@ main() {
   REQUIRE(chunkFieldCountHelper != nullptr);
   REQUIRE(storageStruct != nullptr);
   REQUIRE(storageNewHelper != nullptr);
+  REQUIRE(storageCountHelper != nullptr);
+  REQUIRE(storageCapacityHelper != nullptr);
+  REQUIRE(storageReserveHelper != nullptr);
+  REQUIRE(storageClearHelper != nullptr);
   REQUIRE(chunkCountHelper->returnExpr.has_value());
   CHECK(chunkCountHelper->returnExpr->kind == primec::Expr::Kind::Literal);
   CHECK(chunkCountHelper->returnExpr->literalValue == 2);
@@ -405,6 +451,14 @@ main() {
   REQUIRE(storageNewHelper->returnExpr.has_value());
   CHECK(storageNewHelper->returnExpr->kind == primec::Expr::Kind::Call);
   CHECK(storageNewHelper->returnExpr->name == "/Item/SoaSchemaStorage");
+  REQUIRE(storageCountHelper->returnExpr.has_value());
+  CHECK(storageCountHelper->returnExpr->name ==
+        "/std/collections/experimental_soa_storage/soaColumns16Count");
+  REQUIRE(storageCapacityHelper->returnExpr.has_value());
+  CHECK(storageCapacityHelper->returnExpr->name ==
+        "/std/collections/experimental_soa_storage/soaColumns16Capacity");
+  CHECK(storageReserveHelper->statements.size() == 6);
+  CHECK(storageClearHelper->statements.size() == 6);
 }
 
 TEST_CASE("generate SoaSchema rejects helper collisions deterministically") {

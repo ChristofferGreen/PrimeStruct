@@ -136,6 +136,37 @@ Expr makeConstructorCall(const std::string &typeName) {
   return call;
 }
 
+Expr makeFieldAccessExpr(const std::string &receiverName, const std::string &fieldName) {
+  Expr fieldAccess;
+  fieldAccess.kind = Expr::Kind::Call;
+  fieldAccess.isFieldAccess = true;
+  fieldAccess.name = fieldName;
+  fieldAccess.args.push_back(makeNameExpr(receiverName));
+  fieldAccess.argNames.push_back(std::nullopt);
+  return fieldAccess;
+}
+
+Expr makeHelperCallExpr(const std::string &name, std::vector<std::string> templateArgs, std::vector<Expr> args) {
+  Expr call;
+  call.kind = Expr::Kind::Call;
+  call.name = name;
+  call.templateArgs = std::move(templateArgs);
+  call.args = std::move(args);
+  call.argNames.resize(call.args.size(), std::nullopt);
+  return call;
+}
+
+Expr makeAssignExpr(Expr lhs, Expr rhs) {
+  Expr assignCall;
+  assignCall.kind = Expr::Kind::Call;
+  assignCall.name = "assign";
+  assignCall.args.push_back(std::move(lhs));
+  assignCall.argNames.push_back(std::nullopt);
+  assignCall.args.push_back(std::move(rhs));
+  assignCall.argNames.push_back(std::nullopt);
+  return assignCall;
+}
+
 Expr makeEnvelopeExpr(const std::string &name, std::vector<Expr> bodyArguments) {
   Expr envelope;
   envelope.kind = Expr::Kind::Call;
@@ -390,7 +421,16 @@ bool emitReflectionSoaSchemaHelpers(ReflectionGeneratedHelperContext &context) {
 bool emitReflectionSoaSchemaStorageHelpers(ReflectionGeneratedHelperContext &context) {
   const std::string storageStructPath = context.def.fullPath + "/SoaSchemaStorage";
   const std::string storageNewHelperPath = context.def.fullPath + "/SoaSchemaStorageNew";
-  for (const auto *helperPath : {&storageStructPath, &storageNewHelperPath}) {
+  const std::string storageCountHelperPath = context.def.fullPath + "/SoaSchemaStorageCount";
+  const std::string storageCapacityHelperPath = context.def.fullPath + "/SoaSchemaStorageCapacity";
+  const std::string storageReserveHelperPath = context.def.fullPath + "/SoaSchemaStorageReserve";
+  const std::string storageClearHelperPath = context.def.fullPath + "/SoaSchemaStorageClear";
+  for (const auto *helperPath : {&storageStructPath,
+                                 &storageNewHelperPath,
+                                 &storageCountHelperPath,
+                                 &storageCapacityHelperPath,
+                                 &storageReserveHelperPath,
+                                 &storageClearHelperPath}) {
     if (context.definitionPaths.count(*helperPath) > 0) {
       context.error = "generated reflection helper already exists: " + *helperPath;
       return false;
@@ -406,7 +446,16 @@ bool emitReflectionSoaSchemaStorageHelpers(ReflectionGeneratedHelperContext &con
            std::to_string(fieldTypes.size()) + "<" + formatTemplateArgs(fieldTypes) + ">";
   };
 
+  auto makeChunkHelperBasePath = [](const std::string &suffix, size_t fieldCount) {
+    if (fieldCount == 1) {
+      return std::string("/std/collections/experimental_soa_storage/soaColumn") + suffix;
+    }
+    return std::string("/std/collections/experimental_soa_storage/soaColumns") + std::to_string(fieldCount) +
+           suffix;
+  };
+
   std::vector<std::string> chunkTypeNames;
+  std::vector<std::vector<std::string>> chunkTemplateArgs;
   const size_t chunkWidth = 16;
   for (size_t start = 0; start < context.fieldNames.size(); start += chunkWidth) {
     std::vector<std::string> chunkFieldTypes;
@@ -422,6 +471,7 @@ bool emitReflectionSoaSchemaStorageHelpers(ReflectionGeneratedHelperContext &con
       }
       chunkFieldTypes.push_back(typeIt->second);
     }
+    chunkTemplateArgs.push_back(chunkFieldTypes);
     chunkTypeNames.push_back(makeChunkTypeName(chunkFieldTypes));
   }
 
@@ -474,6 +524,76 @@ bool emitReflectionSoaSchemaStorageHelpers(ReflectionGeneratedHelperContext &con
   storageNewHelper.hasReturnStatement = true;
   context.rewrittenDefinitions.push_back(std::move(storageNewHelper));
   context.definitionPaths.insert(storageNewHelperPath);
+
+  Definition storageCountHelper = makeHelper("SoaSchemaStorageCount", storageCountHelperPath, "i32", false);
+  storageCountHelper.parameters.push_back(makeTypeBinding("value", storageStructPath, storageCountHelper.namespacePrefix));
+  if (!chunkTemplateArgs.empty()) {
+    storageCountHelper.returnExpr = makeHelperCallExpr(
+        makeChunkHelperBasePath("Count", chunkTemplateArgs.front().size()),
+        chunkTemplateArgs.front(),
+        {makeFieldAccessExpr("value", "chunk0")});
+  } else {
+    storageCountHelper.returnExpr = makeI32LiteralExpr(0);
+  }
+  storageCountHelper.hasReturnStatement = true;
+  context.rewrittenDefinitions.push_back(std::move(storageCountHelper));
+  context.definitionPaths.insert(storageCountHelperPath);
+
+  Definition storageCapacityHelper = makeHelper("SoaSchemaStorageCapacity", storageCapacityHelperPath, "i32", false);
+  storageCapacityHelper.parameters.push_back(makeTypeBinding("value", storageStructPath, storageCapacityHelper.namespacePrefix));
+  if (!chunkTemplateArgs.empty()) {
+    storageCapacityHelper.returnExpr = makeHelperCallExpr(
+        makeChunkHelperBasePath("Capacity", chunkTemplateArgs.front().size()),
+        chunkTemplateArgs.front(),
+        {makeFieldAccessExpr("value", "chunk0")});
+  } else {
+    storageCapacityHelper.returnExpr = makeI32LiteralExpr(0);
+  }
+  storageCapacityHelper.hasReturnStatement = true;
+  context.rewrittenDefinitions.push_back(std::move(storageCapacityHelper));
+  context.definitionPaths.insert(storageCapacityHelperPath);
+
+  Definition storageReserveHelper = makeHelper("SoaSchemaStorageReserve", storageReserveHelperPath, "void", false);
+  Transform reserveEffects;
+  reserveEffects.name = "effects";
+  reserveEffects.arguments.push_back("heap_alloc");
+  storageReserveHelper.transforms.push_back(std::move(reserveEffects));
+  storageReserveHelper.parameters.push_back(
+      makeTypeBinding("value", storageStructPath, storageReserveHelper.namespacePrefix, true));
+  storageReserveHelper.parameters.push_back(makeTypeBinding("capacity", "i32", storageReserveHelper.namespacePrefix));
+  for (size_t chunkIndex = 0; chunkIndex < chunkTemplateArgs.size(); ++chunkIndex) {
+    const std::string localName = "chunk" + std::to_string(chunkIndex) + "Value";
+    Expr chunkBinding = makeTypeBinding(localName, chunkTypeNames[chunkIndex], storageReserveHelper.namespacePrefix, true);
+    chunkBinding.args.push_back(makeFieldAccessExpr("value", "chunk" + std::to_string(chunkIndex)));
+    chunkBinding.argNames.push_back(std::nullopt);
+    storageReserveHelper.statements.push_back(std::move(chunkBinding));
+    storageReserveHelper.statements.push_back(makeHelperCallExpr(
+        makeChunkHelperBasePath("Reserve", chunkTemplateArgs[chunkIndex].size()),
+        chunkTemplateArgs[chunkIndex],
+        {makeNameExpr(localName), makeNameExpr("capacity")}));
+    storageReserveHelper.statements.push_back(
+        makeAssignExpr(makeFieldAccessExpr("value", "chunk" + std::to_string(chunkIndex)), makeNameExpr(localName)));
+  }
+  context.rewrittenDefinitions.push_back(std::move(storageReserveHelper));
+  context.definitionPaths.insert(storageReserveHelperPath);
+
+  Definition storageClearHelper = makeHelper("SoaSchemaStorageClear", storageClearHelperPath, "void", false);
+  storageClearHelper.parameters.push_back(makeTypeBinding("value", storageStructPath, storageClearHelper.namespacePrefix, true));
+  for (size_t chunkIndex = 0; chunkIndex < chunkTemplateArgs.size(); ++chunkIndex) {
+    const std::string localName = "chunk" + std::to_string(chunkIndex) + "Value";
+    Expr chunkBinding = makeTypeBinding(localName, chunkTypeNames[chunkIndex], storageClearHelper.namespacePrefix, true);
+    chunkBinding.args.push_back(makeFieldAccessExpr("value", "chunk" + std::to_string(chunkIndex)));
+    chunkBinding.argNames.push_back(std::nullopt);
+    storageClearHelper.statements.push_back(std::move(chunkBinding));
+    storageClearHelper.statements.push_back(makeHelperCallExpr(
+        makeChunkHelperBasePath("Clear", chunkTemplateArgs[chunkIndex].size()),
+        chunkTemplateArgs[chunkIndex],
+        {makeNameExpr(localName)}));
+    storageClearHelper.statements.push_back(
+        makeAssignExpr(makeFieldAccessExpr("value", "chunk" + std::to_string(chunkIndex)), makeNameExpr(localName)));
+  }
+  context.rewrittenDefinitions.push_back(std::move(storageClearHelper));
+  context.definitionPaths.insert(storageClearHelperPath);
   return true;
 }
 
