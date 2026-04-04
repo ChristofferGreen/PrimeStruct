@@ -77,12 +77,12 @@ TEST_CASE("ir preparation helper reports lowering-stage failure for unresolved e
 TEST_CASE("cli driver preserves parse-stage diagnostic context") {
   primec::CompilePipelineOutput output;
   output.filteredSource = "main() { return(1i32) }";
+  output.failure.stage = primec::CompilePipelineErrorStage::Parse;
+  output.failure.message = "raw parse failure";
+  output.failure.diagnosticInfo.message = "expected token";
+  output.hasFailure = true;
 
-  primec::CompilePipelineDiagnosticInfo diagnosticInfo;
-  diagnosticInfo.message = "expected token";
-
-  const primec::CliFailure failure = primec::describeCompilePipelineFailure(
-      primec::CompilePipelineErrorStage::Parse, "raw parse failure", output, diagnosticInfo);
+  const primec::CliFailure failure = primec::describeCompilePipelineFailure(output);
 
   CHECK(failure.code == primec::DiagnosticCode::ParseError);
   CHECK(failure.plainPrefix == "Parse error: ");
@@ -90,7 +90,29 @@ TEST_CASE("cli driver preserves parse-stage diagnostic context") {
   CHECK(failure.exitCode == 2);
   CHECK(failure.notes == std::vector<std::string>{"stage: parse"});
   REQUIRE(failure.diagnosticInfo.has_value());
-  CHECK(failure.diagnosticInfo->message == diagnosticInfo.message);
+  CHECK(failure.diagnosticInfo->message == output.failure.diagnosticInfo.message);
+  REQUIRE(failure.sourceText.has_value());
+  CHECK(*failure.sourceText == output.filteredSource);
+}
+
+TEST_CASE("cli driver reports semantic-product availability on post-semantics failures") {
+  primec::CompilePipelineOutput output;
+  output.filteredSource = "import /std/gfx/*\n[return<int>]\nmain(){ return(0i32) }\n";
+  output.semanticProgram.entryPath = "/main";
+  output.hasSemanticProgram = true;
+  output.failure.stage = primec::CompilePipelineErrorStage::Semantic;
+  output.failure.message = "graphics stdlib runtime substrate unavailable for glsl target: /std/gfx/*";
+  output.failure.diagnosticInfo.message = output.failure.message;
+  output.hasFailure = true;
+
+  const primec::CliFailure failure = primec::describeCompilePipelineFailure(output);
+
+  CHECK(failure.code == primec::DiagnosticCode::SemanticError);
+  CHECK(failure.plainPrefix == "Semantic error: ");
+  CHECK(failure.message == output.failure.message);
+  CHECK(failure.notes == std::vector<std::string>({"stage: semantic", "semantic-product: available"}));
+  REQUIRE(failure.diagnosticInfo.has_value());
+  CHECK(failure.diagnosticInfo->message == output.failure.message);
   REQUIRE(failure.sourceText.has_value());
   CHECK(*failure.sourceText == output.filteredSource);
 }
@@ -202,11 +224,7 @@ TEST_CASE("main routes cpp and exe through ir backend alias lookup") {
   const std::string source = readTextFile(mainPath);
   CHECK(source.find("resolveIrBackendEmitKind(options.emitKind)") != std::string::npos);
   CHECK(source.find("findIrBackend(irBackendKind)") != std::string::npos);
-  CHECK(source.find("describeCompilePipelineFailure(") != std::string::npos);
-  CHECK(source.find("pipelineOutput.hasFailure ? pipelineOutput.failure.stage : pipelineError") !=
-        std::string::npos);
-  CHECK(source.find("pipelineOutput.hasFailure ? pipelineOutput.failure.message : error") !=
-        std::string::npos);
+  CHECK(source.find("describeCompilePipelineFailure(pipelineOutput)") != std::string::npos);
   CHECK(source.find("describeIrPreparationFailure(") != std::string::npos);
   CHECK(source.find("pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr") !=
         std::string::npos);
@@ -237,11 +255,7 @@ TEST_CASE("primevm uses shared ir preparation helper") {
   const std::string source = readTextFile(mainPath);
   CHECK(source.find("vmIrBackendDiagnostics()") != std::string::npos);
   CHECK(source.find("normalizeVmLoweringError") != std::string::npos);
-  CHECK(source.find("describeCompilePipelineFailure(") != std::string::npos);
-  CHECK(source.find("pipelineOutput.hasFailure ? pipelineOutput.failure.stage : pipelineError") !=
-        std::string::npos);
-  CHECK(source.find("pipelineOutput.hasFailure ? pipelineOutput.failure.message : error") !=
-        std::string::npos);
+  CHECK(source.find("describeCompilePipelineFailure(pipelineOutput)") != std::string::npos);
   CHECK(source.find("describeIrPreparationFailure(") != std::string::npos);
   CHECK(source.find("pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr") !=
         std::string::npos);

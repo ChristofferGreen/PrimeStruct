@@ -107,13 +107,17 @@ int emitCliFailure(std::ostream &err, const Options &options, const CliFailure &
   return failure.exitCode;
 }
 
-CliFailure describeCompilePipelineFailure(const CompilePipelineErrorStage errorStage,
-                                          const std::string &message,
-                                          const CompilePipelineOutput &output,
-                                          const DiagnosticSinkReport &diagnosticInfo) {
+CliFailure describeCompilePipelineFailure(const CompilePipelineOutput &output) {
   CliFailure failure;
-  failure.message = message;
-  switch (errorStage) {
+  if (!output.hasFailure) {
+    failure.code = DiagnosticCode::EmitError;
+    failure.plainPrefix = "Compile pipeline error: ";
+    failure.notes = {"stage: compile-pipeline"};
+    return failure;
+  }
+
+  failure.message = output.failure.message;
+  switch (output.failure.stage) {
     case CompilePipelineErrorStage::Import:
       failure.code = DiagnosticCode::ImportError;
       failure.plainPrefix = "Import error: ";
@@ -128,7 +132,7 @@ CliFailure describeCompilePipelineFailure(const CompilePipelineErrorStage errorS
       failure.code = DiagnosticCode::ParseError;
       failure.plainPrefix = "Parse error: ";
       failure.notes = {"stage: parse"};
-      failure.diagnosticInfo = diagnosticInfo;
+      failure.diagnosticInfo = output.failure.diagnosticInfo;
       failure.sourceText = output.filteredSource;
       break;
     case CompilePipelineErrorStage::UnsupportedDumpStage:
@@ -140,7 +144,10 @@ CliFailure describeCompilePipelineFailure(const CompilePipelineErrorStage errorS
       failure.code = DiagnosticCode::SemanticError;
       failure.plainPrefix = "Semantic error: ";
       failure.notes = {"stage: semantic"};
-      failure.diagnosticInfo = diagnosticInfo;
+      if (output.hasSemanticProgram) {
+        failure.notes.push_back("semantic-product: available");
+      }
+      failure.diagnosticInfo = output.failure.diagnosticInfo;
       failure.sourceText = output.filteredSource;
       break;
     case CompilePipelineErrorStage::None:

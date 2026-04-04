@@ -30,10 +30,7 @@ void printTransformList(std::ostream &out);
 
 int emitCliFailure(std::ostream &err, const Options &options, const CliFailure &failure);
 
-CliFailure describeCompilePipelineFailure(CompilePipelineErrorStage errorStage,
-                                          const std::string &message,
-                                          const CompilePipelineOutput &output,
-                                          const DiagnosticSinkReport &diagnosticInfo);
+CliFailure describeCompilePipelineFailure(const CompilePipelineOutput &output);
 
 CliFailure describeIrPreparationFailure(const IrPreparationFailure &failure,
                                         const IrBackendDiagnostics &diagnostics,

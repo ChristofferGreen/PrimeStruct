@@ -394,6 +394,8 @@ Compile-pipeline publication contract:
 - Failure paths should continue to report diagnostics against AST-backed provenance, but post-semantics compile-pipeline
   failures should still preserve the published semantic product plus a first-class failure object rather than dropping
   back to raw string/error-stage side channels.
+- User-visible CLI/runtime reporting now reads that preserved failure object directly, and post-semantics diagnostics
+  may explicitly note that a semantic product is already available even though later target validation failed.
 - The current published shell is still intentionally narrow, but it now includes the resolved call-target surface:
   entry path, import inventories, deterministic definition/execution inventories, resolved direct-call targets with
   canonical callee paths, resolved receiver/method-call targets with receiver-side helper-family choices, and direct

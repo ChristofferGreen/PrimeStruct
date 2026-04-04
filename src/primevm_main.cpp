@@ -401,15 +401,7 @@ int main(int argc, char **argv) {
   primec::CompilePipelineDiagnosticInfo pipelineDiagnosticInfo;
   primec::CompilePipelineErrorStage pipelineError = primec::CompilePipelineErrorStage::None;
   if (!primec::runCompilePipeline(options, pipelineOutput, pipelineError, error, &pipelineDiagnosticInfo)) {
-    const primec::CompilePipelineErrorStage failureStage =
-        pipelineOutput.hasFailure ? pipelineOutput.failure.stage : pipelineError;
-    const std::string &failureMessage = pipelineOutput.hasFailure ? pipelineOutput.failure.message : error;
-    const primec::CompilePipelineDiagnosticInfo &failureDiagnosticInfo =
-        pipelineOutput.hasFailure ? pipelineOutput.failure.diagnosticInfo : pipelineDiagnosticInfo;
-    return primec::emitCliFailure(std::cerr,
-                                  options,
-                                  primec::describeCompilePipelineFailure(
-                                      failureStage, failureMessage, pipelineOutput, failureDiagnosticInfo));
+    return primec::emitCliFailure(std::cerr, options, primec::describeCompilePipelineFailure(pipelineOutput));
   }
   if (pipelineOutput.hasDumpOutput) {
     std::cout << pipelineOutput.dumpOutput;

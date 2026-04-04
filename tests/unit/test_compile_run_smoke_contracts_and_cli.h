@@ -377,6 +377,8 @@ main() {
     const std::string diagnostics = readFile(errPath);
     CHECK(diagnostics.find("graphics stdlib runtime substrate unavailable for glsl target: /std/gfx/*") !=
           std::string::npos);
+    CHECK(diagnostics.find("\"notes\":[\"stage: semantic\",\"semantic-product: available\"]") !=
+          std::string::npos);
   }
 }
 
@@ -599,4 +601,3 @@ main() {
   CHECK(lines.back().find("\"snapshot\":{") != std::string::npos);
   CHECK(lines.back().find("\"result\":9") != std::string::npos);
 }
-
