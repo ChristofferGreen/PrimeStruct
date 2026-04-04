@@ -685,8 +685,10 @@ Planned testing-helper migration contract:
 - Current status: `primec/testing/CompilePipelineDumpHelpers.h` now provides the semantic-product-aware dump helper for
   compile-pipeline tests plus the first semantic-product-aware pipeline conformance helper for prepared IR, and
   lowering-facing dump/compile-pipeline assertions now route through that helper surface rather than direct CLI shell
-  dumps or ad hoc test-local compile-pipeline wiring. The remaining helper migration work is moving the rest of the
-  backend-facing assertions onto those same semantic-product-aware conformance surfaces.
+  dumps or ad hoc test-local compile-pipeline wiring. Backend-facing assertions for C++/VM/native now also route
+  through the same helper surface via shared backend conformance helpers. The remaining helper migration work is
+  narrowing `primec/testing/SemanticsValidationHelpers.h` to syntax/provenance-only assertions and deleting redundant
+  legacy helper entrypoints.
 - `primec/testing/SemanticsValidationHelpers.h` and related helpers should migrate in this order:
   - move lowering-facing assertions onto semantic-product dump helpers or pipeline-facing conformance helpers
   - retain AST-facing helpers only for syntax-owned, provenance-owned, parser-facing, or canonicalization-facing checks

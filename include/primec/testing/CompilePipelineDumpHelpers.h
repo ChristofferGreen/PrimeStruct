@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <filesystem>
@@ -28,6 +29,40 @@ struct CompilePipelinePreparedIr {
   CompilePipelineErrorStage errorStage = CompilePipelineErrorStage::None;
   IrModule ir;
   std::string backendKind;
+};
+
+struct CompilePipelineBackendConformance {
+  CompilePipelinePreparedIr prepared;
+  IrBackendEmitResult emitResult;
+  std::filesystem::path outputPath;
+
+  const SemanticProgramDirectCallTarget *findDirectCallTarget(std::string_view scopePath,
+                                                              std::string_view callName) const {
+    const auto it =
+        std::find_if(prepared.output.semanticProgram.directCallTargets.begin(),
+                     prepared.output.semanticProgram.directCallTargets.end(),
+                     [&](const SemanticProgramDirectCallTarget &entry) {
+                       return entry.scopePath == scopePath && entry.callName == callName;
+                     });
+    if (it == prepared.output.semanticProgram.directCallTargets.end()) {
+      return nullptr;
+    }
+    return &*it;
+  }
+
+  const SemanticProgramMethodCallTarget *findMethodCallTarget(std::string_view scopePath,
+                                                              std::string_view methodName) const {
+    const auto it =
+        std::find_if(prepared.output.semanticProgram.methodCallTargets.begin(),
+                     prepared.output.semanticProgram.methodCallTargets.end(),
+                     [&](const SemanticProgramMethodCallTarget &entry) {
+                       return entry.scopePath == scopePath && entry.methodName == methodName;
+                     });
+    if (it == prepared.output.semanticProgram.methodCallTargets.end()) {
+      return nullptr;
+    }
+    return &*it;
+  }
 };
 
 namespace detail {
@@ -189,6 +224,42 @@ inline bool prepareCompilePipelineIrForTesting(const std::string &source,
   std::error_code ec;
   std::filesystem::remove(sourcePath, ec);
   return true;
+}
+
+inline bool runCompilePipelineBackendConformanceForTesting(const std::string &source,
+                                                           const std::string &entryPath,
+                                                           std::string_view emitKind,
+                                                           CompilePipelineBackendConformance &conformance,
+                                                           std::string &error,
+                                                           CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr) {
+  conformance = {};
+  if (!prepareCompilePipelineIrForTesting(
+          source, entryPath, emitKind, conformance.prepared, error, diagnosticInfo)) {
+    return false;
+  }
+
+  const IrBackend *backend = findIrBackend(conformance.prepared.backendKind);
+  if (backend == nullptr) {
+    error = "unknown IR backend for compile-pipeline backend conformance test: " + std::string(emitKind);
+    return false;
+  }
+
+  IrBackendEmitOptions options;
+  options.inputPath = "semantic_product_" + conformance.prepared.backendKind + "_boundary.prime";
+  if (backend->requiresOutputPath()) {
+    conformance.outputPath = testScratchPath("compile_pipeline_backend_conformance/" +
+                                             conformance.prepared.backendKind + "_boundary");
+    std::error_code ec;
+    std::filesystem::create_directories(conformance.outputPath.parent_path(), ec);
+    if (ec) {
+      error = "failed to create backend conformance output directory";
+      return false;
+    }
+    std::filesystem::remove(conformance.outputPath, ec);
+    options.outputPath = conformance.outputPath.string();
+  }
+
+  return backend->emit(conformance.prepared.ir, options, conformance.emitResult, error);
 }
 
 } // namespace primec::testing

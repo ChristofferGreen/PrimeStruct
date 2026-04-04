@@ -137,52 +137,22 @@ TEST_CASE("cpp-ir backend accepts semantic-product prepared IR from compile pipe
       "  return(selected + values.count())\n"
       "}\n";
 
-  primec::testing::CompilePipelinePreparedIr prepared;
+  primec::testing::CompilePipelineBackendConformance conformance;
   std::string error;
-  REQUIRE(primec::testing::prepareCompilePipelineIrForTesting(source, "/main", "cpp-ir", prepared, error));
+  REQUIRE(primec::testing::runCompilePipelineBackendConformanceForTesting(
+      source, "/main", "cpp-ir", conformance, error));
   CHECK(error.empty());
-  CHECK(prepared.output.hasSemanticProgram);
-  CHECK(prepared.backendKind == "cpp-ir");
+  CHECK(conformance.prepared.output.hasSemanticProgram);
+  CHECK(conformance.prepared.backendKind == "cpp-ir");
+  const auto *directCall = conformance.findDirectCallTarget("/main", "id");
+  REQUIRE(directCall != nullptr);
+  CHECK(directCall->resolvedPath.rfind("/id__t", 0) == 0);
+  const auto *methodCall = conformance.findMethodCallTarget("/main", "count");
+  REQUIRE(methodCall != nullptr);
+  CHECK(methodCall->resolvedPath == "/vector/count");
+  CHECK(conformance.emitResult.exitCode == 0);
 
-  const auto directCallIt =
-      std::find_if(prepared.output.semanticProgram.directCallTargets.begin(),
-                   prepared.output.semanticProgram.directCallTargets.end(),
-                   [](const primec::SemanticProgramDirectCallTarget &entry) {
-                     return entry.scopePath == "/main" &&
-                            entry.callName == "id" &&
-                            entry.resolvedPath.rfind("/id__t", 0) == 0;
-                   });
-  REQUIRE(directCallIt != prepared.output.semanticProgram.directCallTargets.end());
-
-  const auto methodCallIt =
-      std::find_if(prepared.output.semanticProgram.methodCallTargets.begin(),
-                   prepared.output.semanticProgram.methodCallTargets.end(),
-                   [](const primec::SemanticProgramMethodCallTarget &entry) {
-                     return entry.scopePath == "/main" &&
-                            entry.methodName == "count" &&
-                            entry.resolvedPath == "/vector/count";
-                   });
-  REQUIRE(methodCallIt != prepared.output.semanticProgram.methodCallTargets.end());
-
-  const primec::IrBackend *backend = primec::findIrBackend(prepared.backendKind);
-  REQUIRE(backend != nullptr);
-
-  const std::filesystem::path dir = std::filesystem::current_path() / "primec_tests";
-  std::error_code ec;
-  std::filesystem::create_directories(dir, ec);
-  CHECK_FALSE(static_cast<bool>(ec));
-  const std::filesystem::path outputPath = dir / "semantic_product_cpp_boundary.cpp";
-  std::filesystem::remove(outputPath, ec);
-
-  primec::IrBackendEmitOptions options;
-  options.outputPath = outputPath.string();
-  options.inputPath = "semantic_product_cpp_boundary.prime";
-  primec::IrBackendEmitResult result;
-  REQUIRE(backend->emit(prepared.ir, options, result, error));
-  CHECK(error.empty());
-  CHECK(result.exitCode == 0);
-
-  const std::string cpp = readTextFile(outputPath);
+  const std::string cpp = readTextFile(conformance.outputPath);
   CHECK(cpp.find("static int64_t ps_fn_0") != std::string::npos);
   CHECK(cpp.find("return static_cast<int>(ps_entry_0(argc, argv));") != std::string::npos);
 }
@@ -206,43 +176,20 @@ TEST_CASE("vm backend executes semantic-product prepared IR from compile pipelin
       "  return(selected + values.count())\n"
       "}\n";
 
-  primec::testing::CompilePipelinePreparedIr prepared;
+  primec::testing::CompilePipelineBackendConformance conformance;
   std::string error;
-  REQUIRE(primec::testing::prepareCompilePipelineIrForTesting(source, "/main", "vm", prepared, error));
+  REQUIRE(primec::testing::runCompilePipelineBackendConformanceForTesting(
+      source, "/main", "vm", conformance, error));
   CHECK(error.empty());
-  CHECK(prepared.output.hasSemanticProgram);
-  CHECK(prepared.backendKind == "vm");
-
-  const auto directCallIt =
-      std::find_if(prepared.output.semanticProgram.directCallTargets.begin(),
-                   prepared.output.semanticProgram.directCallTargets.end(),
-                   [](const primec::SemanticProgramDirectCallTarget &entry) {
-                     return entry.scopePath == "/main" &&
-                            entry.callName == "id" &&
-                            entry.resolvedPath.rfind("/id__t", 0) == 0;
-                   });
-  REQUIRE(directCallIt != prepared.output.semanticProgram.directCallTargets.end());
-
-  const auto methodCallIt =
-      std::find_if(prepared.output.semanticProgram.methodCallTargets.begin(),
-                   prepared.output.semanticProgram.methodCallTargets.end(),
-                   [](const primec::SemanticProgramMethodCallTarget &entry) {
-                     return entry.scopePath == "/main" &&
-                            entry.methodName == "count" &&
-                            entry.resolvedPath == "/vector/count";
-                   });
-  REQUIRE(methodCallIt != prepared.output.semanticProgram.methodCallTargets.end());
-
-  const primec::IrBackend *backend = primec::findIrBackend(prepared.backendKind);
-  REQUIRE(backend != nullptr);
-  CHECK_FALSE(backend->requiresOutputPath());
-
-  primec::IrBackendEmitOptions options;
-  options.inputPath = "semantic_product_vm_boundary.prime";
-  primec::IrBackendEmitResult result;
-  REQUIRE(backend->emit(prepared.ir, options, result, error));
-  CHECK(error.empty());
-  CHECK(result.exitCode == 18);
+  CHECK(conformance.prepared.output.hasSemanticProgram);
+  CHECK(conformance.prepared.backendKind == "vm");
+  const auto *directCall = conformance.findDirectCallTarget("/main", "id");
+  REQUIRE(directCall != nullptr);
+  CHECK(directCall->resolvedPath.rfind("/id__t", 0) == 0);
+  const auto *methodCall = conformance.findMethodCallTarget("/main", "count");
+  REQUIRE(methodCall != nullptr);
+  CHECK(methodCall->resolvedPath == "/vector/count");
+  CHECK(conformance.emitResult.exitCode == 18);
 }
 
 TEST_CASE("native backend emits semantic-product prepared IR from compile pipeline helper") {
@@ -264,54 +211,23 @@ TEST_CASE("native backend emits semantic-product prepared IR from compile pipeli
       "  return(selected + values.count())\n"
       "}\n";
 
-  primec::testing::CompilePipelinePreparedIr prepared;
+  primec::testing::CompilePipelineBackendConformance conformance;
   std::string error;
-  REQUIRE(primec::testing::prepareCompilePipelineIrForTesting(source, "/main", "native", prepared, error));
+  REQUIRE(primec::testing::runCompilePipelineBackendConformanceForTesting(
+      source, "/main", "native", conformance, error));
   CHECK(error.empty());
-  CHECK(prepared.output.hasSemanticProgram);
-  CHECK(prepared.backendKind == "native");
-
-  const auto directCallIt =
-      std::find_if(prepared.output.semanticProgram.directCallTargets.begin(),
-                   prepared.output.semanticProgram.directCallTargets.end(),
-                   [](const primec::SemanticProgramDirectCallTarget &entry) {
-                     return entry.scopePath == "/main" &&
-                            entry.callName == "id" &&
-                            entry.resolvedPath.rfind("/id__t", 0) == 0;
-                   });
-  REQUIRE(directCallIt != prepared.output.semanticProgram.directCallTargets.end());
-
-  const auto methodCallIt =
-      std::find_if(prepared.output.semanticProgram.methodCallTargets.begin(),
-                   prepared.output.semanticProgram.methodCallTargets.end(),
-                   [](const primec::SemanticProgramMethodCallTarget &entry) {
-                     return entry.scopePath == "/main" &&
-                            entry.methodName == "count" &&
-                            entry.resolvedPath == "/vector/count";
-                   });
-  REQUIRE(methodCallIt != prepared.output.semanticProgram.methodCallTargets.end());
-
-  const primec::IrBackend *backend = primec::findIrBackend(prepared.backendKind);
-  REQUIRE(backend != nullptr);
-  CHECK(backend->requiresOutputPath());
-
-  const std::filesystem::path dir = std::filesystem::current_path() / "primec_tests";
-  std::error_code ec;
-  std::filesystem::create_directories(dir, ec);
-  CHECK_FALSE(static_cast<bool>(ec));
-  const std::filesystem::path outputPath = dir / "semantic_product_native_boundary";
-  std::filesystem::remove(outputPath, ec);
-
-  primec::IrBackendEmitOptions options;
-  options.outputPath = outputPath.string();
-  options.inputPath = "semantic_product_native_boundary.prime";
-  primec::IrBackendEmitResult result;
-  REQUIRE(backend->emit(prepared.ir, options, result, error));
-  CHECK(error.empty());
-  CHECK(result.exitCode == 0);
-  CHECK(std::filesystem::exists(outputPath));
-  CHECK(std::filesystem::is_regular_file(outputPath));
-  CHECK(std::filesystem::file_size(outputPath) > 0);
+  CHECK(conformance.prepared.output.hasSemanticProgram);
+  CHECK(conformance.prepared.backendKind == "native");
+  const auto *directCall = conformance.findDirectCallTarget("/main", "id");
+  REQUIRE(directCall != nullptr);
+  CHECK(directCall->resolvedPath.rfind("/id__t", 0) == 0);
+  const auto *methodCall = conformance.findMethodCallTarget("/main", "count");
+  REQUIRE(methodCall != nullptr);
+  CHECK(methodCall->resolvedPath == "/vector/count");
+  CHECK(conformance.emitResult.exitCode == 0);
+  CHECK(std::filesystem::exists(conformance.outputPath));
+  CHECK(std::filesystem::is_regular_file(conformance.outputPath));
+  CHECK(std::filesystem::file_size(conformance.outputPath) > 0);
 }
 
 TEST_CASE("compile pipeline preserves semantic product on post-semantics failure") {
