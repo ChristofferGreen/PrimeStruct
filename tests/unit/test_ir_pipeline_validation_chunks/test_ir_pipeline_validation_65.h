@@ -522,6 +522,35 @@ TEST_CASE("ir lowerer setup math helper builds bundled setup math and binding ad
         primec::ir_lowerer::LocalInfo::ValueKind::Float64);
 }
 
+TEST_CASE("ir lowerer setup math helpers thread semantic product binding facts") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      "/main",
+      "temporary",
+      "readFile",
+      "/readFile",
+      "FileError",
+      false,
+      false,
+      false,
+      "",
+      21,
+      4,
+  });
+
+  const auto adapters = primec::ir_lowerer::makeSetupMathAndBindingAdapters(true, &semanticProgram);
+
+  primec::Expr helperResultCall;
+  helperResultCall.kind = primec::Expr::Kind::Call;
+  helperResultCall.name = "readFile";
+  helperResultCall.sourceLine = 21;
+  helperResultCall.sourceColumn = 4;
+
+  CHECK(adapters.bindingTypeAdapters.isFileErrorBinding(helperResultCall));
+  CHECK(adapters.bindingTypeAdapters.bindingKind(helperResultCall) ==
+        primec::ir_lowerer::LocalInfo::Kind::Value);
+}
+
 TEST_CASE("ir lowerer setup inference helper infers pointer target kinds") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo pointerInfo;

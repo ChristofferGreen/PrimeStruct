@@ -461,6 +461,60 @@ TEST_CASE("ir lowerer binding type helpers build bundled setup adapters") {
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
+TEST_CASE("ir lowerer binding type helpers prefer semantic product temporary facts") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      "/main",
+      "temporary",
+      "makeVec",
+      "/makeVec",
+      "vector<i64>",
+      false,
+      false,
+      false,
+      "",
+      12,
+      7,
+  });
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      "/main",
+      "temporary",
+      "loadArrayRef",
+      "/loadArrayRef",
+      "Reference<array<i64>>",
+      false,
+      false,
+      false,
+      "",
+      13,
+      9,
+  });
+
+  auto adapters = primec::ir_lowerer::makeBindingTypeAdapters(&semanticProgram);
+
+  primec::Expr tempVectorCall;
+  tempVectorCall.kind = primec::Expr::Kind::Call;
+  tempVectorCall.name = "makeVec";
+  tempVectorCall.sourceLine = 12;
+  tempVectorCall.sourceColumn = 7;
+  CHECK(adapters.bindingKind(tempVectorCall) == primec::ir_lowerer::LocalInfo::Kind::Vector);
+  CHECK(adapters.bindingValueKind(tempVectorCall, primec::ir_lowerer::LocalInfo::Kind::Vector) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  primec::Expr tempRefCall;
+  tempRefCall.kind = primec::Expr::Kind::Call;
+  tempRefCall.name = "loadArrayRef";
+  tempRefCall.sourceLine = 13;
+  tempRefCall.sourceColumn = 9;
+  primec::ir_lowerer::LocalInfo info;
+  info.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  info.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  adapters.setReferenceArrayInfo(tempRefCall, info);
+  CHECK(adapters.bindingKind(tempRefCall) == primec::ir_lowerer::LocalInfo::Kind::Reference);
+  CHECK(info.referenceToArray);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+}
+
 TEST_CASE("ir lowerer count access helpers classify entry args and count calls") {
   primec::Definition entryDef;
   bool hasEntryArgs = true;
@@ -647,4 +701,3 @@ TEST_CASE("ir lowerer count access helpers classify entry args and count calls")
   countEntry.args = {bufferPtrDeref};
   CHECK(primec::ir_lowerer::isArrayCountCall(countEntry, locals, false, "argv"));
 }
-
