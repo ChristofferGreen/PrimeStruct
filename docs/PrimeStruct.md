@@ -459,7 +459,7 @@ Planned lowerer entrypoint cutover:
 - The remaining `IrLowerer::lower(...)` work is not one monolithic seam anymore:
   - top-level lowerer entry/effect validation now prefers semantic-product callable summaries, while nested expression-transform checks remain syntax-owned
   - native-backend software-numeric and runtime-reflection rejection still run as separate backend policy scans
-  - import/layout setup now treats its remaining `Definition*` map as an explicitly AST-owned provenance/body inventory for field statements, namespace prefixes, and recursive layout traversal; the import-alias table is pinned as a syntax-owned shorthand layer derived from spelled `import` directives plus wildcard expansion; the only live raw-`Program` seam left there is struct-layout iteration ownership
+  - import/layout setup now treats its remaining `Definition*` map as an explicitly AST-owned provenance/body inventory for field statements, namespace prefixes, and recursive layout traversal; the import-alias table is pinned as a syntax-owned shorthand layer derived from spelled `import` directives plus wildcard expansion; top-level struct layout enumeration already prefers semantic-product type inventories, so the only live raw-`Program` seam left there is AST-owned field/provenance traversal inside layout computation
   - helper/local setup still keeps a raw-`Program` path for `on_error`, uninitialized, and statement-call support
 - The entrypoint boundary should make ownership explicit:
   - lowering-facing meaning comes from the semantic product
@@ -521,9 +521,10 @@ Planned lowerer effect/struct-layout handoff:
   callable summaries. Lowerer import/layout setup now also prefers semantic-product type
   metadata for struct-like classification, explicit alignment, struct-name inventory, and
   ordered struct field name/envelope/type metadata instead of reconstructing
-  `LayoutFieldBinding` order from raw field statements. Enums already rewrite to struct form
-  before lowering, so there is no separate enum-specific lowerer metadata seam left to cut
-  over.
+  `LayoutFieldBinding` order from raw field statements. Top-level struct layout enumeration
+  also now prefers semantic-product type inventories instead of scanning raw definition order.
+  Enums already rewrite to struct form before lowering, so there is no separate enum-specific
+  lowerer metadata seam left to cut over.
 - The remaining lowerer-owned `Definition*` inventory in import/layout setup is now pinned as
   AST-owned provenance/body access only:
   - walking original field statements for syntax-owned qualifiers, visibility, and field-local alignment
@@ -536,7 +537,7 @@ Planned lowerer effect/struct-layout handoff:
   - lowerer/import-layout consumers should keep using canonical semantic-product full paths for lowering facts and
     consult the alias table only when resolving source-spelled type names that have not yet been canonicalized
 - With those ownership decisions pinned, future cutover work should track only the remaining
-  struct-layout iteration/provenance seam in import/layout setup.
+  AST-owned field/provenance traversal seam in import/layout setup.
 - After the lowerer consumes semantic-product entry targets and binding metadata, effect/capability setup and
   struct-layout setup should consume published semantic-product facts instead of re-reading AST annotations,
   transform-produced helper state, or struct-shape details directly from canonicalized syntax.

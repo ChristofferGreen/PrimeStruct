@@ -72,16 +72,30 @@ inline bool computeStructLayoutFromFieldInfo(
 }
 bool appendProgramStructLayouts(
     const Program &program,
+    const std::unordered_map<std::string, const Definition *> &defMap,
     const SemanticProductTargetAdapter *semanticProductTargets,
     const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
     std::vector<IrStructLayout> &layoutsOut,
     std::string &errorOut);
 inline bool appendProgramStructLayouts(
     const Program &program,
+    const std::unordered_map<std::string, const Definition *> &defMap,
     const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
     std::vector<IrStructLayout> &layoutsOut,
     std::string &errorOut) {
-  return appendProgramStructLayouts(program, nullptr, computeStructLayout, layoutsOut, errorOut);
+  return appendProgramStructLayouts(program, defMap, nullptr, computeStructLayout, layoutsOut, errorOut);
+}
+inline bool appendProgramStructLayouts(
+    const Program &program,
+    const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
+    std::vector<IrStructLayout> &layoutsOut,
+    std::string &errorOut) {
+  std::unordered_map<std::string, const Definition *> defMap;
+  defMap.reserve(program.definitions.size());
+  for (const auto &def : program.definitions) {
+    defMap.emplace(def.fullPath, &def);
+  }
+  return appendProgramStructLayouts(program, defMap, nullptr, computeStructLayout, layoutsOut, errorOut);
 }
 bool appendStructLayoutField(const std::string &structPath,
                              const Expr &fieldExpr,

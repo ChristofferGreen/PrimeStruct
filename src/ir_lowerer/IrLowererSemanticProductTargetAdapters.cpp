@@ -95,9 +95,14 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
   }
 
   adapter.typeMetadataByPath.reserve(semanticProgram->typeMetadata.size());
+  adapter.orderedStructTypeMetadata.reserve(semanticProgram->typeMetadata.size());
   for (const auto &entry : semanticProgram->typeMetadata) {
     if (!entry.fullPath.empty()) {
       adapter.typeMetadataByPath[entry.fullPath] = &entry;
+      if (entry.category == "struct" || entry.category == "pod" || entry.category == "handle" ||
+          entry.category == "gpu_lane") {
+        adapter.orderedStructTypeMetadata.push_back(&entry);
+      }
     }
   }
 

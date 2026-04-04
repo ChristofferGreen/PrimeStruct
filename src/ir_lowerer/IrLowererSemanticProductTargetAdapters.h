@@ -15,6 +15,7 @@ struct SemanticProductTargetAdapter {
   std::unordered_map<std::string, std::string> bridgePathChoicesByExpr;
   std::unordered_map<std::string, const SemanticProgramCallableSummary *> callableSummariesByPath;
   std::unordered_map<std::string, const SemanticProgramTypeMetadata *> typeMetadataByPath;
+  std::vector<const SemanticProgramTypeMetadata *> orderedStructTypeMetadata;
   std::unordered_map<std::string, std::vector<const SemanticProgramStructFieldMetadata *>>
       structFieldMetadataByStructPath;
   std::unordered_map<std::string, const SemanticProgramReturnFact *> returnFactsByDefinitionPath;

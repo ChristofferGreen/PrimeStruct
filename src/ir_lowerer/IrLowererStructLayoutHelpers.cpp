@@ -357,10 +357,33 @@ bool computeStructLayoutFromFieldInfo(
 
 bool appendProgramStructLayouts(
     const Program &program,
+    const std::unordered_map<std::string, const Definition *> &defMap,
     const SemanticProductTargetAdapter *semanticProductTargets,
     const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
     std::vector<IrStructLayout> &layoutsOut,
     std::string &errorOut) {
+  if (semanticProductTargets != nullptr && !semanticProductTargets->orderedStructTypeMetadata.empty()) {
+    for (const SemanticProgramTypeMetadata *typeMetadata : semanticProductTargets->orderedStructTypeMetadata) {
+      if (typeMetadata == nullptr || typeMetadata->fullPath.empty()) {
+        continue;
+      }
+      const auto defIt = defMap.find(typeMetadata->fullPath);
+      if (defIt == defMap.end() || defIt->second == nullptr) {
+        errorOut = "internal error: missing struct provenance for " + typeMetadata->fullPath;
+        return false;
+      }
+      IrStructLayout layout;
+      if (!computeStructLayout(*defIt->second, layout)) {
+        if (errorOut.empty()) {
+          errorOut = "failed to compute struct layout: " + typeMetadata->fullPath;
+        }
+        return false;
+      }
+      layoutsOut.push_back(std::move(layout));
+    }
+    return true;
+  }
+
   for (const auto &def : program.definitions) {
     if (!isStructDefinition(def, semanticProductTargets)) {
       continue;

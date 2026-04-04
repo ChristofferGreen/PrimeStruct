@@ -68,6 +68,7 @@ bool computeStructLayoutFromFieldInfo(
     std::string &errorOut);
 bool appendProgramStructLayouts(
     const Program &program,
+    const std::unordered_map<std::string, const Definition *> &defMap,
     const SemanticProductTargetAdapter *semanticProductTargets,
     const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
     std::vector<IrStructLayout> &layoutsOut,

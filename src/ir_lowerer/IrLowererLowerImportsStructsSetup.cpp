@@ -64,7 +64,7 @@ bool runLowerImportsStructsSetup(
   };
 
   if (!appendProgramStructLayouts(
-          program, &semanticProductTargets, computeStructLayout, outModule.structLayouts, errorOut)) {
+          program, defMapOut, &semanticProductTargets, computeStructLayout, outModule.structLayouts, errorOut)) {
     return false;
   }
 

@@ -455,6 +455,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<std::string, const SemanticProgramTypeMetadata *> typeMetadataByPath;") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("std::vector<const SemanticProgramTypeMetadata *> orderedStructTypeMetadata;") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<std::string, std::vector<const SemanticProgramStructFieldMetadata *>>") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramTypeMetadata *findSemanticProductTypeMetadata(") !=
@@ -472,6 +474,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterSource.find("adapter.callableSummariesByPath.reserve(") != std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.typeMetadataByPath.reserve(semanticProgram->typeMetadata.size())") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.orderedStructTypeMetadata.reserve(semanticProgram->typeMetadata.size())") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.orderedStructTypeMetadata.push_back(&entry);") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.structFieldMetadataByStructPath.reserve(semanticProgram->structFieldMetadata.size())") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("std::stable_sort(entries.begin(),") != std::string::npos);
@@ -486,6 +492,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(lowerImportsStructsSetupSource.find("buildSemanticProductTargetAdapter(semanticProgram)") !=
         std::string::npos);
   CHECK(lowerImportsStructsSetupSource.find("buildDefinitionMapAndStructNames(program.definitions, defMapOut, structNamesOut, &semanticProductTargets);") !=
+        std::string::npos);
+  CHECK(lowerImportsStructsSetupSource.find("program, defMapOut, &semanticProductTargets, computeStructLayout, outModule.structLayouts, errorOut") !=
         std::string::npos);
   CHECK(lowerImportsStructsSetupSource.find("&semanticProductTargets,") != std::string::npos);
   CHECK(lowerSetupImportsStructs.find("program, semanticProgram, out, defMap, structNames, importAliases, structFieldInfoByName, error") !=
@@ -506,11 +514,17 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(structLayoutHelpersHeader.find("const SemanticProgramTypeMetadata *typeMetadata,") !=
         std::string::npos);
+  CHECK(structLayoutHelpersHeader.find("const std::unordered_map<std::string, const Definition *> &defMap,") !=
+        std::string::npos);
   CHECK(structLayoutHelpersHeader.find("const SemanticProductTargetAdapter *semanticProductTargets,") !=
         std::string::npos);
   CHECK(structLayoutHelpersSource.find("typeMetadata != nullptr && typeMetadata->hasExplicitAlignment") !=
         std::string::npos);
   CHECK(structLayoutHelpersSource.find("findSemanticProductTypeMetadata(*semanticProductTargets, def.fullPath)") !=
+        std::string::npos);
+  CHECK(structLayoutHelpersSource.find("if (semanticProductTargets != nullptr && !semanticProductTargets->orderedStructTypeMetadata.empty()) {") !=
+        std::string::npos);
+  CHECK(structLayoutHelpersSource.find("const auto defIt = defMap.find(typeMetadata->fullPath);") !=
         std::string::npos);
   CHECK(structLayoutHelpersSource.find("if (!isStructDefinition(def, semanticProductTargets)) {") !=
         std::string::npos);
