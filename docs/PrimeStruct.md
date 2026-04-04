@@ -3395,9 +3395,12 @@ compiler-owned code is therefore narrowed to that shared helper plus invalid-tar
 path. The remaining raw-builtin conversion-specific compiler-owned code is now reduced to the
 shared canonical `to_aos` matcher plus invalid-target/user-shadow fallbacks rather than any native
 runtime trap on already-canonicalized bare/direct/method/slash-method calls.
-That single-column borrowed-slot substrate is the current completed foothold; the remaining
-borrowed-view work is now tracked as two explicit follow-ups: language-level invalidation rules,
-then richer borrowed field-view semantics on top of that substrate. Successful experimental
+That single-column borrowed-slot substrate is the current completed foothold, but today that
+foothold is the indexed/field-level borrowed projection surface (`ref(...).field`,
+`.ref(i).field`, and `value.field()[i]`-style reads/writes) rather than standalone
+`ref(...)` values. The remaining borrowed-view work is now tracked as language-level
+invalidation on top of that projection substrate first, then richer standalone borrowed
+field-view semantics on top of the same substrate. Successful experimental
 `value.field()[i]` indexing now has its first completed read-only reflected slices on top of
 the current substrate for direct wrapper receivers, borrowed local shorthand, inline
 `location(...)` borrow expressions, explicitly dereferenced borrowed local receivers, borrowed
@@ -3420,13 +3423,15 @@ read-only path.
     `location(...)`, helper-return receivers, and method-like helper-return receivers. The
     implementation target is explicit validation and runtime/provenance rules for that
     invalidation boundary, not another compiler-owned pending-diagnostic special case. The
-    current completed foothold is `ref(...)` plus indexed borrowed-slot read/write
-    projections; standalone borrowed field-view values are still a later surface. The
-    remaining implementation work therefore naturally splits into current `ref(...)`
-    growth invalidation (`push`, `reserve`), later shrink/motion invalidation
-    (`remove_*`, `clear`, and later size-changing helpers), storage-replacement/destruction
-    invalidation, later standalone field-view invalidation on those same families, and
-    provenance/escape rules for helper-derived borrowed views.
+    current completed foothold is indexed borrowed-slot read/write projections
+    (`ref(...).field`, `.ref(i).field`, and `value.field()[i]`-style reads/writes);
+    standalone `ref(...)` values plus standalone borrowed field-view values are still later
+    surfaces. The remaining implementation work therefore naturally splits into current
+    projection-surface growth invalidation (`push`, `reserve`), later shrink/motion
+    invalidation (`remove_*`, `clear`, and later size-changing helpers), storage-
+    replacement/destruction invalidation, later standalone `ref(...)` invalidation,
+    later standalone field-view invalidation on those same families, and provenance/escape
+    rules for helper-derived borrowed views.
   - **Richer borrowed field-view contract:** the next borrowed-view slice should treat
     standalone field-view expressions as first-class non-owning column views rather than
     keeping `borrowed.field()` / `field(borrowed)` on the compiler-owned pending-diagnostic

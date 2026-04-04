@@ -1066,8 +1066,10 @@ or same-path `/soa_vector/<field>` path instead of a dedicated
 `SemanticsValidatorExprMapSoaBuiltins.cpp` fallback, and resolved helper-form
 field-view rejects now reuse the shared unavailable-method helper path there
 instead of an inline pending branch. The remaining live
-follow-ups are now reduced to richer borrowed-view semantics on top of that
-substrate.
+follow-ups are now reduced to invalidation plus richer borrowed-view semantics on top of that
+substrate. The current completed borrowed foothold is the indexed/field-level borrowed
+projection surface (`ref(...).field`, `.ref(i).field`, and `value.field()[i]`-style
+reads/writes) rather than standalone `ref(...)` values.
 Read-only wrapper field-view indexing now routes both method-form `values.field()[i]`
 and call-form `field(values)[i]` reflected reads, plus borrowed local `borrowed.field()[i]`,
 inline `location(values).field()[i]` / `field(dereference(location(values)))[i]`,
@@ -1122,10 +1124,11 @@ should not reintroduce builtin-only mutation branches outside the experimental h
 The remaining implementation work naturally splits into direct/borrowed-local receivers,
 helper-return and method-like helper-return receivers, and inline `location(...)`-wrapped
 receivers. The same invalidation boundary also still needs its own implementation slices:
-current `ref(...)` growth invalidation (`push`, `reserve`), later shrink/motion
+current borrowed-slot projection growth invalidation (`push`, `reserve`), later shrink/motion
 invalidation (`remove_*`, `clear`, and later size-changing helpers), storage-
-replacement/destruction invalidation, later standalone field-view invalidation on those
-same families, and provenance/escape rules for helper-derived borrowed views.
+replacement/destruction invalidation, later standalone `ref(...)` invalidation, later
+standalone field-view invalidation on those same families, and provenance/escape rules for
+helper-derived borrowed views.
 Non-empty literals still emit the deterministic unsupported diagnostic
 `native backend does not support non-empty soa_vector literals`.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the
