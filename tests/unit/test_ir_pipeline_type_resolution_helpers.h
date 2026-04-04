@@ -1,14 +1,11 @@
 #pragma once
 
 #include <cstdint>
-#include <filesystem>
-#include <fstream>
 #include <string>
 #include <vector>
 
-#include "primec/CompilePipeline.h"
-#include "primec/IrPreparation.h"
 #include "primec/IrSerializer.h"
+#include "primec/testing/CompilePipelineDumpHelpers.h"
 #include "test_ir_pipeline_helpers.h"
 
 namespace {
@@ -52,50 +49,20 @@ struct TypeResolverPipelineSnapshot {
 inline TypeResolverPipelineSnapshot runTypeResolverPipelineSnapshot(const std::string &source,
                                                                    const std::string &entry = "/main") {
   TypeResolverPipelineSnapshot snapshot;
-  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
-  {
-    std::ofstream file(tempPath);
-    if (!file.good()) {
-      snapshot.error = "failed to write parity source";
-      return snapshot;
-    }
-    file << source;
-  }
-
-  primec::Options options;
-  options.inputPath = tempPath.string();
-  options.entryPath = entry;
-  options.emitKind = "vm";
-  options.collectDiagnostics = true;
-  options.defaultEffects = {"io_out", "io_err"};
-  options.entryDefaultEffects = options.defaultEffects;
-  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
-
-  primec::CompilePipelineOutput output;
+  primec::testing::CompilePipelinePreparedIr prepared;
   primec::CompilePipelineDiagnosticInfo diagnosticInfo;
-  snapshot.ok = primec::runCompilePipeline(options, output, snapshot.errorStage, snapshot.error, &diagnosticInfo);
+  snapshot.ok = primec::testing::prepareCompilePipelineIrForTesting(
+      source, entry, "vm", prepared, snapshot.error, &diagnosticInfo);
+  snapshot.errorStage = prepared.errorStage;
   snapshot.diagnosticSnapshot = snapshotDiagnosticReport(diagnosticInfo);
   if (snapshot.ok) {
-    primec::IrModule ir;
-    primec::IrPreparationFailure irFailure;
-    const primec::SemanticProgram *semanticProgram = output.hasSemanticProgram ? &output.semanticProgram : nullptr;
-    const bool prepared =
-        primec::prepareIrModule(output.program, semanticProgram, options, primec::IrValidationTarget::Vm, ir, irFailure);
-    if (prepared) {
-      std::string serializeError;
-      const bool serialized = primec::serializeIr(ir, snapshot.serializedIr, serializeError);
-      if (!serialized) {
-        snapshot.ok = false;
-        snapshot.error = serializeError;
-      }
-    } else {
+    std::string serializeError;
+    const bool serialized = primec::serializeIr(prepared.ir, snapshot.serializedIr, serializeError);
+    if (!serialized) {
       snapshot.ok = false;
-      snapshot.error = irFailure.message;
+      snapshot.error = serializeError;
     }
   }
-
-  std::error_code ec;
-  std::filesystem::remove(tempPath, ec);
   return snapshot;
 }
 

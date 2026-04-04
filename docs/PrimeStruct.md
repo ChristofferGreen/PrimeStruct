@@ -635,8 +635,8 @@ Planned pipeline-facing semantic-product conformance matrix:
   the narrow semantic-product golden suite to cover full backend behavior.
 - Current status: pipeline-facing inspection-order coverage now captures `ast-semantic`, `semantic-product`, and `ir`
   from the same compile-pipeline source and pins that the semantic-product dump is the lowering-facing boundary between
-  syntax-shaped AST output and backend-facing IR output. The remaining live conformance work is per-backend lowering
-  consumption.
+  syntax-shaped AST output and backend-facing IR output. The public pipeline helper now also covers the C++ lowering
+  path end to end; the remaining live conformance work is VM/native lowering consumption.
 - The first pipeline-facing cases should prove inspection-surface order and consistency:
   - `ast-semantic` remains syntax-shaped.
   - the semantic-product dump exposes lowering-facing facts directly.
@@ -682,9 +682,10 @@ Planned testing-only snapshot removal contract:
 Planned testing-helper migration contract:
 - Public testing helpers should be split by ownership boundary rather than by current implementation history.
 - Current status: `primec/testing/CompilePipelineDumpHelpers.h` now provides the semantic-product-aware dump helper for
-  compile-pipeline tests, and lowering-facing dump assertions now route through that helper rather than direct CLI
-  shell dumps. The remaining helper migration work is moving compile-pipeline and backend-facing assertions onto the
-  semantic-product-aware conformance surfaces.
+  compile-pipeline tests plus the first semantic-product-aware pipeline conformance helper for prepared IR, and
+  lowering-facing dump/compile-pipeline assertions now route through that helper surface rather than direct CLI shell
+  dumps or ad hoc test-local compile-pipeline wiring. The remaining helper migration work is moving backend-facing
+  assertions and VM/native pipeline conformance onto the same semantic-product-aware surfaces.
 - `primec/testing/SemanticsValidationHelpers.h` and related helpers should migrate in this order:
   - move lowering-facing assertions onto semantic-product dump helpers or pipeline-facing conformance helpers
   - retain AST-facing helpers only for syntax-owned, provenance-owned, parser-facing, or canonicalization-facing checks

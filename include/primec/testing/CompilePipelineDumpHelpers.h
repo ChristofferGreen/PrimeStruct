@@ -9,6 +9,9 @@
 #include <vector>
 
 #include "primec/CompilePipeline.h"
+#include "primec/EmitKind.h"
+#include "primec/IrBackends.h"
+#include "primec/IrPreparation.h"
 #include "primec/testing/TestScratch.h"
 
 namespace primec::testing {
@@ -17,6 +20,14 @@ struct CompilePipelineBoundaryDumps {
   std::string astSemantic;
   std::string semanticProduct;
   std::string ir;
+};
+
+struct CompilePipelinePreparedIr {
+  Options options;
+  CompilePipelineOutput output;
+  CompilePipelineErrorStage errorStage = CompilePipelineErrorStage::None;
+  IrModule ir;
+  std::string backendKind;
 };
 
 namespace detail {
@@ -110,6 +121,74 @@ inline bool captureSemanticBoundaryDumpsForTesting(const std::string &source,
   std::error_code ec;
   std::filesystem::remove(sourcePath, ec);
   return ok;
+}
+
+inline bool prepareCompilePipelineIrForTesting(const std::string &source,
+                                               const std::string &entryPath,
+                                               std::string_view emitKind,
+                                               CompilePipelinePreparedIr &prepared,
+                                               std::string &error,
+                                               CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr) {
+  const std::filesystem::path sourcePath = detail::makeCompilePipelineDumpSourcePath();
+  {
+    std::ofstream file(sourcePath);
+    if (!file) {
+      error = "failed to write compile-pipeline IR test source";
+      return false;
+    }
+    file << source;
+  }
+
+  prepared = {};
+  prepared.options.inputPath = sourcePath.string();
+  prepared.options.entryPath = entryPath;
+  prepared.options.emitKind = std::string(emitKind);
+  prepared.options.wasmProfile = "wasi";
+  prepared.options.defaultEffects = {"io_out", "io_err"};
+  prepared.options.entryDefaultEffects = prepared.options.defaultEffects;
+  prepared.options.collectDiagnostics = diagnosticInfo != nullptr;
+  primec::addDefaultStdlibInclude(prepared.options.inputPath, prepared.options.importPaths);
+
+  const bool ok = primec::runCompilePipeline(
+      prepared.options, prepared.output, prepared.errorStage, error, diagnosticInfo);
+  if (!ok) {
+    std::error_code ec;
+    std::filesystem::remove(sourcePath, ec);
+    return false;
+  }
+
+  if (!prepared.output.hasSemanticProgram) {
+    error = "compile pipeline did not publish semantic product";
+    std::error_code ec;
+    std::filesystem::remove(sourcePath, ec);
+    return false;
+  }
+
+  prepared.backendKind = std::string(primec::resolveIrBackendEmitKind(emitKind));
+  const primec::IrBackend *backend = primec::findIrBackend(prepared.backendKind);
+  if (backend == nullptr) {
+    error = "unknown IR backend for compile-pipeline IR test: " + std::string(emitKind);
+    std::error_code ec;
+    std::filesystem::remove(sourcePath, ec);
+    return false;
+  }
+
+  primec::IrPreparationFailure failure;
+  if (!primec::prepareIrModule(prepared.output.program,
+                               &prepared.output.semanticProgram,
+                               prepared.options,
+                               backend->validationTarget(prepared.options),
+                               prepared.ir,
+                               failure)) {
+    error = failure.message;
+    std::error_code ec;
+    std::filesystem::remove(sourcePath, ec);
+    return false;
+  }
+
+  std::error_code ec;
+  std::filesystem::remove(sourcePath, ec);
+  return true;
 }
 
 } // namespace primec::testing
