@@ -37,6 +37,7 @@ bool runLowerEntrySetup(const Program &program,
     return false;
   }
   if (!resolveEntryMetadataMasks(*entryDefOut,
+                                 semanticProgram,
                                  entryPath,
                                  defaultEffects,
                                  entryDefaultEffects,

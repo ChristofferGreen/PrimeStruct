@@ -4,6 +4,7 @@
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererResultHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
@@ -41,8 +42,46 @@ bool analyzeEntryReturnTransforms(const Definition &entryDef,
                                   const std::string &entryPath,
                                   EntryReturnConfig &out,
                                   std::string &error) {
+  return analyzeEntryReturnTransforms(entryDef, nullptr, entryPath, out, error);
+}
+
+bool analyzeEntryReturnTransforms(const Definition &entryDef,
+                                  const SemanticProgram *semanticProgram,
+                                  const std::string &entryPath,
+                                  EntryReturnConfig &out,
+                                  std::string &error) {
   std::destroy_at(&out);
   std::construct_at(&out);
+  if (semanticProgram != nullptr) {
+    const SemanticProductTargetAdapter semanticProductTargets =
+        buildSemanticProductTargetAdapter(semanticProgram);
+    if (const auto *callableSummary = findSemanticProductCallableSummary(semanticProductTargets, entryPath);
+        callableSummary != nullptr) {
+      out.hasReturnTransform = true;
+      out.returnsVoid = callableSummary->returnKind == "void";
+      out.hasResultInfo = callableSummary->hasResultType;
+      if (callableSummary->hasResultType) {
+        out.resultInfo.isResult = true;
+        out.resultInfo.hasValue = callableSummary->resultTypeHasValue;
+      }
+    }
+    if (const auto *returnFact = findSemanticProductReturnFact(semanticProductTargets, entryPath);
+        returnFact != nullptr) {
+      out.hasReturnTransform = true;
+      out.returnsVoid = returnFact->returnKind == "void";
+      std::string base;
+      std::string arg;
+      if (splitTemplateTypeName(returnFact->bindingTypeText, base, arg) && base == "array" &&
+          valueKindFromTypeName(trimTemplateTypeText(arg)) == LocalInfo::ValueKind::String) {
+        error = "native backend does not support string array return types on " + entryPath;
+        return false;
+      }
+    }
+    if (out.hasReturnTransform) {
+      return true;
+    }
+  }
+
   for (const auto &transform : entryDef.transforms) {
     if (transform.name != "return") {
       continue;

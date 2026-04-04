@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "primec/Ast.h"
+#include "primec/SemanticProduct.h"
 
 namespace primec::ir_lowerer {
 
@@ -43,6 +44,14 @@ bool validateProgramEffects(const Program &program,
                             std::string &error);
 
 bool resolveEntryMetadataMasks(const Definition &entryDef,
+                               const std::string &entryPath,
+                               const std::vector<std::string> &defaultEffects,
+                               const std::vector<std::string> &entryDefaultEffects,
+                               uint64_t &entryEffectMaskOut,
+                               uint64_t &entryCapabilityMaskOut,
+                               std::string &error);
+bool resolveEntryMetadataMasks(const Definition &entryDef,
+                               const SemanticProgram *semanticProgram,
                                const std::string &entryPath,
                                const std::vector<std::string> &defaultEffects,
                                const std::vector<std::string> &entryDefaultEffects,

@@ -5,6 +5,7 @@
 #include <string_view>
 
 #include "IrLowererHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "primec/Ir.h"
 
 namespace primec::ir_lowerer {
@@ -493,6 +494,52 @@ bool resolveEntryMetadataMasks(const Definition &entryDef,
                                uint64_t &entryEffectMaskOut,
                                uint64_t &entryCapabilityMaskOut,
                                std::string &error) {
+  return resolveEntryMetadataMasks(entryDef,
+                                   nullptr,
+                                   entryPath,
+                                   defaultEffects,
+                                   entryDefaultEffects,
+                                   entryEffectMaskOut,
+                                   entryCapabilityMaskOut,
+                                   error);
+}
+
+bool resolveEntryMetadataMasks(const Definition &entryDef,
+                               const SemanticProgram *semanticProgram,
+                               const std::string &entryPath,
+                               const std::vector<std::string> &defaultEffects,
+                               const std::vector<std::string> &entryDefaultEffects,
+                               uint64_t &entryEffectMaskOut,
+                               uint64_t &entryCapabilityMaskOut,
+                               std::string &error) {
+  if (semanticProgram != nullptr) {
+    const SemanticProductTargetAdapter semanticProductTargets =
+        buildSemanticProductTargetAdapter(semanticProgram);
+    if (const auto *callableSummary = findSemanticProductCallableSummary(semanticProductTargets, entryPath);
+        callableSummary != nullptr) {
+      entryEffectMaskOut = 0;
+      for (const auto &effect : callableSummary->activeEffects) {
+        uint64_t bit = 0;
+        if (!effectBitForName(effect, bit)) {
+          error = "unsupported effect in metadata: " + effect;
+          return false;
+        }
+        entryEffectMaskOut |= bit;
+      }
+
+      entryCapabilityMaskOut = 0;
+      for (const auto &capability : callableSummary->activeCapabilities) {
+        uint64_t bit = 0;
+        if (!effectBitForName(capability, bit)) {
+          error = "unsupported capability in metadata: " + capability;
+          return false;
+        }
+        entryCapabilityMaskOut |= bit;
+      }
+      return true;
+    }
+  }
+
   const auto entryEffects = resolveActiveEffects(entryDef.transforms, true, defaultEffects, entryDefaultEffects);
   if (!resolveEffectMask(entryDef.transforms, true, defaultEffects, entryDefaultEffects, entryEffectMaskOut, error)) {
     return false;

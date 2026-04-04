@@ -86,6 +86,20 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
     }
   }
 
+  adapter.callableSummariesByPath.reserve(semanticProgram->callableSummaries.size());
+  for (const auto &entry : semanticProgram->callableSummaries) {
+    if (!entry.fullPath.empty()) {
+      adapter.callableSummariesByPath[entry.fullPath] = &entry;
+    }
+  }
+
+  adapter.returnFactsByDefinitionPath.reserve(semanticProgram->returnFacts.size());
+  for (const auto &entry : semanticProgram->returnFacts) {
+    if (!entry.definitionPath.empty()) {
+      adapter.returnFactsByDefinitionPath[entry.definitionPath] = &entry;
+    }
+  }
+
   return adapter;
 }
 
@@ -124,6 +138,29 @@ std::string findSemanticProductBridgePathChoice(const SemanticProductTargetAdapt
     return it->second;
   }
   return {};
+}
+
+const SemanticProgramCallableSummary *findSemanticProductCallableSummary(const SemanticProductTargetAdapter &adapter,
+                                                                        const std::string &fullPath) {
+  if (fullPath.empty()) {
+    return nullptr;
+  }
+  if (const auto it = adapter.callableSummariesByPath.find(fullPath); it != adapter.callableSummariesByPath.end()) {
+    return it->second;
+  }
+  return nullptr;
+}
+
+const SemanticProgramReturnFact *findSemanticProductReturnFact(const SemanticProductTargetAdapter &adapter,
+                                                              const std::string &definitionPath) {
+  if (definitionPath.empty()) {
+    return nullptr;
+  }
+  if (const auto it = adapter.returnFactsByDefinitionPath.find(definitionPath);
+      it != adapter.returnFactsByDefinitionPath.end()) {
+    return it->second;
+  }
+  return nullptr;
 }
 
 } // namespace primec::ir_lowerer

@@ -42,6 +42,14 @@ bool resolveEntryMetadataMasks(const Definition &entryDef,
                                uint64_t &entryEffectMaskOut,
                                uint64_t &entryCapabilityMaskOut,
                                std::string &error);
+bool resolveEntryMetadataMasks(const Definition &entryDef,
+                               const SemanticProgram *semanticProgram,
+                               const std::string &entryPath,
+                               const std::vector<std::string> &defaultEffects,
+                               const std::vector<std::string> &entryDefaultEffects,
+                               uint64_t &entryEffectMaskOut,
+                               uint64_t &entryCapabilityMaskOut,
+                               std::string &error);
 
 bool resolveEffectMask(const std::vector<Transform> &transforms,
                        bool isEntry,
@@ -55,4 +63,3 @@ bool resolveCapabilityMask(const std::vector<Transform> &transforms,
                            const std::string &duplicateContext,
                            uint64_t &maskOut,
                            std::string &error);
-

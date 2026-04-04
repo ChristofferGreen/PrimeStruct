@@ -7,6 +7,7 @@
 #include "IrLowererSharedTypes.h"
 #include "IrLowererStructTypeHelpers.h"
 #include "primec/Ast.h"
+#include "primec/SemanticProduct.h"
 
 namespace primec::ir_lowerer {
 
@@ -41,6 +42,11 @@ using ResolveStructTypeNameForReturnFn = std::function<bool(const std::string &,
 using ResolveStructArrayInfoForReturnFn = std::function<bool(const std::string &, StructArrayTypeInfo &)>;
 
 bool analyzeEntryReturnTransforms(const Definition &entryDef,
+                                  const std::string &entryPath,
+                                  EntryReturnConfig &out,
+                                  std::string &error);
+bool analyzeEntryReturnTransforms(const Definition &entryDef,
+                                  const SemanticProgram *semanticProgram,
                                   const std::string &entryPath,
                                   EntryReturnConfig &out,
                                   std::string &error);

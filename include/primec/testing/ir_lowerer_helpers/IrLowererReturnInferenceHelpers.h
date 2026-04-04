@@ -36,6 +36,11 @@ bool analyzeEntryReturnTransforms(const Definition &entryDef,
                                   const std::string &entryPath,
                                   EntryReturnConfig &out,
                                   std::string &error);
+bool analyzeEntryReturnTransforms(const Definition &entryDef,
+                                  const SemanticProgram *semanticProgram,
+                                  const std::string &entryPath,
+                                  EntryReturnConfig &out,
+                                  std::string &error);
 void analyzeDeclaredReturnTransforms(const Definition &def,
                                      const ResolveStructTypeNameForReturnFn &resolveStructTypeName,
                                      const ResolveStructArrayInfoForReturnFn &resolveStructArrayInfoFromPath,

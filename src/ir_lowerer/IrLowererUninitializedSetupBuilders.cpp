@@ -121,7 +121,7 @@ bool buildEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSe
     std::string &error) {
   std::destroy_at(&out);
   std::construct_at(&out);
-  if (!analyzeEntryReturnTransforms(entryDef, entryPath, out.entryReturnConfig, error)) {
+  if (!analyzeEntryReturnTransforms(entryDef, semanticProgram, entryPath, out.entryReturnConfig, error)) {
     return false;
   }
   if (!buildRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(

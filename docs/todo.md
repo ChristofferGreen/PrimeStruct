@@ -120,18 +120,15 @@ Lowering cutover:
     - ○ Consume semantic-product parameter binding metadata in lowerer setup.
     - ○ Consume semantic-product local binding metadata in lowerer setup.
     - ○ Consume semantic-product lowered entry-argument binding metadata in lowerer setup.
-  - ◐ Consume semantic-product temporary and return binding metadata in lowerer setup. Progress: this binding family is now split into temporaries, implicit helper temporaries, and returns instead of one broad temporary/return bucket.
+  - ◐ Consume semantic-product temporary and return binding metadata in lowerer setup. Progress: entry return/result setup now consumes semantic-product return facts and callable summaries; remaining work is temporaries and implicit helper temporaries.
     - ○ Consume semantic-product temporary binding metadata in lowerer setup.
     - ○ Consume semantic-product implicit helper-temporary metadata in lowerer setup.
-    - ○ Consume semantic-product return binding/result metadata in lowerer setup.
   - ◐ Consume semantic-product helper-owned binding/type metadata in lowerer setup. Progress: this helper-owned family is now split into helper parameters, helper results, and helper-local synthetic metadata instead of one broad helper-owned bucket.
     - ○ Consume semantic-product helper parameter/type metadata in lowerer setup.
     - ○ Consume semantic-product helper result/type metadata in lowerer setup.
     - ○ Consume semantic-product helper-local synthetic binding/type metadata in lowerer setup.
 - ◐ Implement the lowerer effect/capability and struct-layout setup cutover now that the handoff contract is documented. Progress: the remaining lowerer metadata handoff is now split into effect/capability facts and struct/layout facts instead of one umbrella setup item.
-  - ◐ Consume semantic-product effect/capability summaries in lowerer setup. Progress: this metadata family is now split into effect summaries, capability summaries, and execution-boundary metadata instead of one broad effect/capability bucket.
-    - ○ Consume semantic-product effect summaries in lowerer setup.
-    - ○ Consume semantic-product capability summaries in lowerer setup.
+  - ◐ Consume semantic-product effect/capability summaries in lowerer setup. Progress: entry effect/capability masks now consume semantic-product callable summaries; remaining work is execution-boundary metadata that still re-derives effect/capability facts from AST state.
     - ○ Consume semantic-product execution-boundary metadata that still re-derives effect/capability facts from AST state.
   - ◐ Consume semantic-product struct/enum/layout metadata in lowerer setup. Progress: this metadata family is now split into struct layout, enum metadata, and helper-owned layout classification seams instead of one broad layout bucket.
     - ○ Consume semantic-product struct/layout metadata in lowerer setup.
@@ -139,10 +136,7 @@ Lowering cutover:
     - ○ Consume semantic-product helper-owned layout/classification metadata in lowerer setup.
 
 Coverage and migration cleanup:
-- ◐ Implement the narrow semantic-product unit/golden suite now that its fact coverage and scope are documented. Progress: the documented fact families are now split into explicit suite slices so the semantic-product inspection surface can be pinned incrementally.
-  - ○ Add narrow semantic-product golden coverage for resolved call/helper targets.
-  - ○ Add narrow semantic-product golden coverage for binding/result type facts.
-  - ○ Add narrow semantic-product golden coverage for effect/capability summaries and struct/layout metadata.
+- ◐ Implement the narrow semantic-product unit/golden suite now that its fact coverage and scope are documented. Progress: the exact semantic-product formatter golden now covers resolved call/helper targets, binding/result type facts, and effect/capability plus struct/layout metadata; remaining work is provenance-handle coverage.
   - ○ Add narrow semantic-product golden coverage for provenance handles back to AST-owned ids/spans.
 - ◐ Add end-to-end compile-pipeline conformance cases that exercise the semantic-product boundary through C++/VM/native lowering paths. Progress: this conformance surface is now split into per-backend lowering consumers instead of one umbrella pipeline item.
   - ○ Add end-to-end semantic-product boundary conformance for the C++ lowering path.

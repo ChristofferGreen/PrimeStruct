@@ -1178,3 +1178,37 @@ TEST_CASE("ir lowerer effects unit resolves entry metadata masks") {
   CHECK(entryEffectMask == (primec::EffectIoOut | primec::EffectHeapAlloc));
   CHECK(entryCapabilityMask == (primec::EffectIoOut | primec::EffectHeapAlloc));
 }
+
+TEST_CASE("ir lowerer effects unit resolves entry metadata masks from semantic product") {
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      "/main",
+      false,
+      "i32",
+      false,
+      false,
+      {"io_out", "heap_alloc"},
+      {"io_out"},
+      false,
+      false,
+      "",
+      "",
+      false,
+      "",
+      "",
+      0,
+  });
+
+  uint64_t entryEffectMask = 0;
+  uint64_t entryCapabilityMask = 0;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveEntryMetadataMasks(
+      entryDef, &semanticProgram, "/main", {"io_err"}, {"io_out"}, entryEffectMask, entryCapabilityMask, error));
+  CHECK(error.empty());
+  CHECK(entryEffectMask == (primec::EffectIoOut | primec::EffectHeapAlloc));
+  CHECK(entryCapabilityMask == primec::EffectIoOut);
+}

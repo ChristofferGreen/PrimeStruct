@@ -249,6 +249,53 @@ TEST_CASE("ir lowerer return inference helper handles void and diagnostics") {
   CHECK(error == "native backend does not support string array return types on /main");
 }
 
+TEST_CASE("ir lowerer return inference helper reads semantic product return facts") {
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      "/main",
+      false,
+      "i32",
+      false,
+      false,
+      {"io_out"},
+      {"io_out"},
+      true,
+      true,
+      "i64",
+      "FileError",
+      false,
+      "",
+      "",
+      0,
+  });
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      "/main",
+      "i32",
+      "",
+      "Result<i64, FileError>",
+      false,
+      false,
+      false,
+      "",
+      4,
+      2,
+  });
+
+  primec::ir_lowerer::EntryReturnConfig out;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::analyzeEntryReturnTransforms(entryDef, &semanticProgram, "/main", out, error));
+  CHECK(error.empty());
+  CHECK(out.hasReturnTransform);
+  CHECK_FALSE(out.returnsVoid);
+  CHECK(out.hasResultInfo);
+  CHECK(out.resultInfo.isResult);
+  CHECK(out.resultInfo.hasValue);
+}
+
 TEST_CASE("ir lowerer return inference helper analyzes declared return transforms") {
   primec::Definition def;
   def.fullPath = "/pkg/main";
