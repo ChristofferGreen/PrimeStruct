@@ -777,7 +777,9 @@ Helpers:
 - `value.at_unsafe(key)` (canonical equivalent: `at_unsafe(value, key)`)
 
 Map IR lowering is currently limited in VM/native backends: numeric/bool values only, with string keys allowed when they
-come from string literals or bindings backed by literals.
+come from string literals or bindings backed by literals. Within that numeric-key/value envelope, builtin canonical
+`map<K, V>` insert growth now covers local bindings, borrowed/pointer mutation surfaces, and non-local field/lvalue
+receivers through one shared grow/copy/repoint plus write-back path instead of the older local-only runtime special case.
 
 ### 8.4 SoA Vectors (Draft)
 

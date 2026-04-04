@@ -2879,6 +2879,10 @@ TEST_CASE("compiles and runs builtin canonical map insert overwrites in C++ emit
   expectBuiltinCanonicalMapInsertOverwriteConformance("exe");
 }
 
+TEST_CASE("compiles and runs builtin canonical map non-local growth in C++ emitter") {
+  expectBuiltinCanonicalMapInsertNonLocalGrowthConformance("exe");
+}
+
 TEST_CASE("rejects canonical map constructor ownership growth in C++ emitter") {
   expectCanonicalMapNamespaceOwnershipReject("exe");
 }

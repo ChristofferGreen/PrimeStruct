@@ -1921,8 +1921,8 @@ for(
     `/std/collections/map/insert(...)` on that same overwrite/update path, builtin canonical `map<K, V>` bindings now
     route both `.insert(...)` method sugar and direct canonical `/std/collections/map/insert(...)` calls through a
     helper that performs the real in-place overwrite path when the numeric key already exists and otherwise grows
-    through one generic arbitrary-`n` grow/copy/repoint path for owning local numeric maps without retaining the old
-    count-by-count lowerer staircase, borrowed
+    through one generic arbitrary-`n` grow/copy/repoint path for owning local, borrowed/pointer, and non-local
+    field/lvalue numeric map receivers without retaining the old count-by-count lowerer staircase, borrowed
     references also support canonical `/std/collections/map/insert_ref(...)`, and overwrite/update plus scope-exit cleanup now run through
     the same pointer-backed uninitialized-slot ownership flow as experimental vectors by explicitly `drop(...)`ing and
     `init(...)`ing payload slots. Borrowed

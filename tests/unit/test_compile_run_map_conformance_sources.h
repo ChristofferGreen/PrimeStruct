@@ -751,6 +751,26 @@ inline std::string makeBuiltinCanonicalMapInsertOverwriteConformanceSource() {
   return source;
 }
 
+inline std::string makeBuiltinCanonicalMapInsertNonLocalGrowthConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[struct]\n";
+  source += "Holder() {\n";
+  source += "  [map<i32, i32> mut] values{map<i32, i32>()}\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Holder mut] holder{Holder()}\n";
+  source += "  /std/collections/map/insert<i32, i32>(holder.values, 1i32, 4i32)\n";
+  source += "  holder.values.insert(2i32, 7i32)\n";
+  source += "  [Reference<map<i32, i32>> mut] ref{location(holder.values)}\n";
+  source += "  /std/collections/map/insert_ref<i32, i32>(ref, 3i32, 11i32)\n";
+  source += "  /std/collections/map/insert_ref<i32, i32>(ref, 2i32, 13i32)\n";
+  source += "  return(plus(holder.values.count(), plus(holder.values.at(1i32), plus(holder.values.at_unsafe(2i32), holder.values.at(3i32)))))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeExperimentalMapOwnershipMethodConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";

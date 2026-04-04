@@ -3667,11 +3667,7 @@ bool rewriteExperimentalMapValueMethods(Program &program, std::string &error) {
   return true;
 }
 
-bool isBuiltinMapBinding(const semantics::BindingInfo &binding) {
-  const std::string normalizedType = semantics::normalizeBindingTypeName(binding.typeName);
-  if (normalizedType == "Reference" || normalizedType == "Pointer") {
-    return false;
-  }
+bool isBuiltinMapMutationBinding(const semantics::BindingInfo &binding) {
   if (isExperimentalMapTypeText(bindingTypeText(binding))) {
     return false;
   }
@@ -3681,29 +3677,110 @@ bool isBuiltinMapBinding(const semantics::BindingInfo &binding) {
       bindingTypeText(binding), keyType, valueType);
 }
 
-std::optional<semantics::BindingInfo> extractBuiltinMapBinding(const Expr &expr) {
-  semantics::BindingInfo binding;
-  std::optional<std::string> restrictType;
-  std::string parseError;
-  static const std::unordered_set<std::string> emptyStructTypes;
-  static const std::unordered_map<std::string, std::string> emptyImportAliases;
-  if (!semantics::parseBindingInfo(
-          expr, expr.namespacePrefix, emptyStructTypes, emptyImportAliases, binding, restrictType, parseError)) {
-    return std::nullopt;
+bool isBuiltinMapReferenceBinding(const semantics::BindingInfo &binding) {
+  if (!isBuiltinMapMutationBinding(binding)) {
+    return false;
   }
-  return isBuiltinMapBinding(binding) ? std::optional<semantics::BindingInfo>(binding)
-                                      : std::nullopt;
+  const std::string normalizedType = semantics::normalizeBindingTypeName(binding.typeName);
+  return normalizedType == "Reference" || normalizedType == "Pointer";
+}
+
+semantics::BindingInfo bindingInfoFromTypeText(const std::string &typeText) {
+  semantics::BindingInfo binding;
+  const std::string normalizedType = semantics::normalizeBindingTypeName(typeText);
+  std::string base;
+  std::string argText;
+  if (semantics::splitTemplateTypeName(normalizedType, base, argText)) {
+    binding.typeName = semantics::normalizeBindingTypeName(base);
+    binding.typeTemplateArg = argText;
+  } else {
+    binding.typeName = normalizedType;
+  }
+  return binding;
 }
 
 constexpr std::string_view kBuiltinCanonicalMapInsertPath = "/std/collections/map/insert";
+constexpr std::string_view kBuiltinCanonicalMapInsertRefPath = "/std/collections/map/insert_ref";
 constexpr std::string_view kBuiltinCanonicalMapInsertPendingPath =
     "/std/collections/map/insert_builtin_pending";
 
+std::optional<semantics::BindingInfo> resolveBuiltinMapInsertReceiverBinding(
+    const Expr &expr,
+    const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
+    const std::unordered_map<std::string, const Definition *> &definitionMap,
+    const std::unordered_set<std::string> &structPaths,
+    const std::string &definitionNamespace) {
+  if (expr.kind == Expr::Kind::Name) {
+    auto bindingIt = bindings.find(expr.name);
+    if (bindingIt == bindings.end()) {
+      return std::nullopt;
+    }
+    return bindingIt->second;
+  }
+
+  if (expr.isFieldAccess && expr.args.size() == 1) {
+    auto receiverBinding = resolveBuiltinMapInsertReceiverBinding(
+        expr.args.front(), bindings, definitionMap, structPaths, definitionNamespace);
+    if (!receiverBinding.has_value()) {
+      return std::nullopt;
+    }
+    const std::string receiverNamespace =
+        !expr.args.front().namespacePrefix.empty() ? expr.args.front().namespacePrefix : definitionNamespace;
+    const std::string receiverStructPath = resolveStructReceiverPathFromBinding(
+        *receiverBinding, receiverNamespace, structPaths);
+    if (receiverStructPath.empty()) {
+      return std::nullopt;
+    }
+    auto defIt = definitionMap.find(receiverStructPath);
+    if (defIt == definitionMap.end() || defIt->second == nullptr) {
+      return std::nullopt;
+    }
+    for (const Expr &fieldExpr : defIt->second->statements) {
+      if (!fieldExpr.isBinding || fieldExpr.name != expr.name) {
+        continue;
+      }
+      return extractParsedBindingInfo(fieldExpr, &structPaths);
+    }
+    return std::nullopt;
+  }
+
+  if (semantics::isSimpleCallName(expr, "location") && expr.args.size() == 1) {
+    auto pointeeBinding = resolveBuiltinMapInsertReceiverBinding(
+        expr.args.front(), bindings, definitionMap, structPaths, definitionNamespace);
+    if (!pointeeBinding.has_value()) {
+      return std::nullopt;
+    }
+    semantics::BindingInfo binding;
+    binding.typeName = "Reference";
+    binding.typeTemplateArg = bindingTypeText(*pointeeBinding);
+    return binding;
+  }
+
+  if (semantics::isSimpleCallName(expr, "dereference") && expr.args.size() == 1) {
+    auto borrowedBinding = resolveBuiltinMapInsertReceiverBinding(
+        expr.args.front(), bindings, definitionMap, structPaths, definitionNamespace);
+    if (!borrowedBinding.has_value()) {
+      return std::nullopt;
+    }
+    const std::string normalizedType = semantics::normalizeBindingTypeName(borrowedBinding->typeName);
+    if ((normalizedType != "Reference" && normalizedType != "Pointer") ||
+        borrowedBinding->typeTemplateArg.empty()) {
+      return std::nullopt;
+    }
+    return bindingInfoFromTypeText(borrowedBinding->typeTemplateArg);
+  }
+
+  return std::nullopt;
+}
+
 void rewriteBuiltinMapInsertExpr(
     Expr &expr,
-    const std::unordered_map<std::string, semantics::BindingInfo> &bindings) {
+    const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
+    const std::unordered_map<std::string, const Definition *> &definitionMap,
+    const std::unordered_set<std::string> &structPaths,
+    const std::string &definitionNamespace) {
   for (Expr &arg : expr.args) {
-    rewriteBuiltinMapInsertExpr(arg, bindings);
+    rewriteBuiltinMapInsertExpr(arg, bindings, definitionMap, structPaths, definitionNamespace);
   }
   if (expr.kind != Expr::Kind::Call || expr.args.empty()) {
     return;
@@ -3711,26 +3788,42 @@ void rewriteBuiltinMapInsertExpr(
 
   const bool matchesBuiltinInsertMethod =
       expr.isMethodCall &&
-      (expr.name == "insert" || expr.name == kBuiltinCanonicalMapInsertPath);
+      (expr.name == "insert" || expr.name == kBuiltinCanonicalMapInsertPath ||
+       expr.name == kBuiltinCanonicalMapInsertRefPath);
   const bool matchesBuiltinInsertCall =
-      !expr.isMethodCall && expr.name == kBuiltinCanonicalMapInsertPath;
+      !expr.isMethodCall &&
+      (semantics::isSimpleCallName(expr, "insert") ||
+       semantics::isSimpleCallName(expr, "insert_ref") ||
+       expr.name == kBuiltinCanonicalMapInsertPath ||
+       expr.name == kBuiltinCanonicalMapInsertRefPath);
   if (!matchesBuiltinInsertMethod && !matchesBuiltinInsertCall) {
     return;
   }
 
   const Expr &receiver = expr.args.front();
-  if (receiver.kind != Expr::Kind::Name) {
+  auto receiverBinding = resolveBuiltinMapInsertReceiverBinding(
+      receiver, bindings, definitionMap, structPaths, definitionNamespace);
+  if (!receiverBinding.has_value() || !isBuiltinMapMutationBinding(*receiverBinding)) {
     return;
   }
-  auto bindingIt = bindings.find(receiver.name);
-  if (bindingIt == bindings.end() || !isBuiltinMapBinding(bindingIt->second)) {
+  const bool receiverIsReference = isBuiltinMapReferenceBinding(*receiverBinding);
+  const bool expectsReferenceSurface =
+      !expr.isMethodCall &&
+      (semantics::isSimpleCallName(expr, "insert_ref") ||
+       expr.name == kBuiltinCanonicalMapInsertRefPath);
+  const bool expectsValueSurface =
+      !expr.isMethodCall &&
+      (semantics::isSimpleCallName(expr, "insert") ||
+       expr.name == kBuiltinCanonicalMapInsertPath);
+  if ((expectsReferenceSurface && !receiverIsReference) ||
+      (expectsValueSurface && receiverIsReference)) {
     return;
   }
   std::string keyType;
   std::string valueType;
   if (expr.templateArgs.empty() &&
       !semantics::extractMapKeyValueTypesFromTypeText(
-          bindingTypeText(bindingIt->second), keyType, valueType)) {
+          bindingTypeText(*receiverBinding), keyType, valueType)) {
     return;
   }
   expr.isMethodCall = false;
@@ -3745,15 +3838,19 @@ void rewriteBuiltinMapInsertExpr(
 
 void rewriteBuiltinMapInsertStatements(
     std::vector<Expr> &statements,
-    std::unordered_map<std::string, semantics::BindingInfo> bindings) {
+    std::unordered_map<std::string, semantics::BindingInfo> bindings,
+    const std::unordered_map<std::string, const Definition *> &definitionMap,
+    const std::unordered_set<std::string> &structPaths,
+    const std::string &definitionNamespace) {
   for (Expr &stmt : statements) {
-    rewriteBuiltinMapInsertExpr(stmt, bindings);
+    rewriteBuiltinMapInsertExpr(stmt, bindings, definitionMap, structPaths, definitionNamespace);
     if (!stmt.bodyArguments.empty()) {
       auto bodyBindings = bindings;
-      rewriteBuiltinMapInsertStatements(stmt.bodyArguments, bodyBindings);
+      rewriteBuiltinMapInsertStatements(
+          stmt.bodyArguments, bodyBindings, definitionMap, structPaths, definitionNamespace);
     }
     if (stmt.isBinding) {
-      if (auto binding = extractBuiltinMapBinding(stmt); binding.has_value()) {
+      if (auto binding = extractParsedBindingInfo(stmt, &structPaths); binding.has_value()) {
         bindings[stmt.name] = *binding;
       }
     }
@@ -3762,16 +3859,37 @@ void rewriteBuiltinMapInsertStatements(
 
 bool rewriteBuiltinMapInsertMethods(Program &program, std::string &error) {
   error.clear();
+  std::unordered_map<std::string, const Definition *> definitionMap;
+  std::unordered_set<std::string> structPaths;
+  for (const Definition &def : program.definitions) {
+    definitionMap[def.fullPath] = &def;
+    if (isStructLikeDefinition(def)) {
+      structPaths.insert(def.fullPath);
+    }
+  }
   for (Definition &def : program.definitions) {
     std::unordered_map<std::string, semantics::BindingInfo> bindings;
     for (const Expr &param : def.parameters) {
-      if (auto binding = extractBuiltinMapBinding(param); binding.has_value()) {
+      if (auto binding = extractParsedBindingInfo(param, &structPaths); binding.has_value()) {
         bindings[param.name] = *binding;
       }
     }
-    rewriteBuiltinMapInsertStatements(def.statements, bindings);
+    std::string definitionNamespace;
+    const size_t slash = def.fullPath.find_last_of('/');
+    if (slash != std::string::npos && slash > 0) {
+      definitionNamespace = def.fullPath.substr(0, slash);
+    }
+    rewriteBuiltinMapInsertStatements(
+        def.statements, bindings, definitionMap, structPaths, definitionNamespace);
     if (def.returnExpr.has_value()) {
-      rewriteBuiltinMapInsertExpr(*def.returnExpr, bindings);
+      auto returnBindings = bindings;
+      for (const Expr &stmt : def.statements) {
+        if (auto binding = extractParsedBindingInfo(stmt, &structPaths); binding.has_value()) {
+          returnBindings[stmt.name] = *binding;
+        }
+      }
+      rewriteBuiltinMapInsertExpr(
+          *def.returnExpr, returnBindings, definitionMap, structPaths, definitionNamespace);
     }
   }
   return true;
