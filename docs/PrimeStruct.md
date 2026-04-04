@@ -391,8 +391,9 @@ Compile-pipeline publication contract:
   backend, and runtime entrypoints do not need private validator access to recover it.
 - The published semantic product should remain paired with the raw AST rather than replacing it outright; syntax-facing
   consumers still need the AST for spans, source reproduction, and surface-shaped dumps.
-- Failure paths should continue to report diagnostics against AST-backed provenance, but success paths should treat the
-  semantic product as the authoritative lowering-facing artifact.
+- Failure paths should continue to report diagnostics against AST-backed provenance, but post-semantics compile-pipeline
+  failures should still preserve the published semantic product plus a first-class failure object rather than dropping
+  back to raw string/error-stage side channels.
 - The current published shell is still intentionally narrow, but it now includes the resolved call-target surface:
   entry path, import inventories, deterministic definition/execution inventories, resolved direct-call targets with
   canonical callee paths, resolved receiver/method-call targets with receiver-side helper-family choices, and direct

@@ -215,6 +215,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(compilePipelineHeader.find("SemanticProgram semanticProgram;") != std::string::npos);
   CHECK(compilePipelineHeader.find("bool hasSemanticProgram = false;") != std::string::npos);
+  CHECK(compilePipelineHeader.find("struct CompilePipelineFailure") != std::string::npos);
+  CHECK(compilePipelineHeader.find("CompilePipelineFailure failure;") != std::string::npos);
+  CHECK(compilePipelineHeader.find("bool hasFailure = false;") != std::string::npos);
   CHECK(semanticsHeader.find("SemanticProgram *semanticProgramOut = nullptr") != std::string::npos);
   CHECK(irPreparationHeader.find("const SemanticProgram *semanticProgram,") != std::string::npos);
   CHECK(irLowererHeader.find("const SemanticProgram *semanticProgram,") != std::string::npos);
@@ -222,6 +225,16 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(compilePipelineSource.find("&semanticProgram") != std::string::npos);
   CHECK(compilePipelineSource.find("output.semanticProgram = std::move(semanticProgram);") != std::string::npos);
   CHECK(compilePipelineSource.find("output.hasSemanticProgram = true;") != std::string::npos);
+  CHECK(compilePipelineSource.find("output.failure.stage = stage;") != std::string::npos);
+  CHECK(compilePipelineSource.find("output.failure.message = message;") != std::string::npos);
+  CHECK(compilePipelineSource.find("output.hasFailure = true;") != std::string::npos);
+  const size_t semanticProductPublishPos =
+      compilePipelineSource.find("output.semanticProgram = std::move(semanticProgram);");
+  const size_t graphicsValidationPos =
+      compilePipelineSource.find("if (!validateGraphicsBackendSupport(output.program, options, error, &capturedDiagnosticInfo)) {");
+  REQUIRE(semanticProductPublishPos != std::string::npos);
+  REQUIRE(graphicsValidationPos != std::string::npos);
+  CHECK(semanticProductPublishPos < graphicsValidationPos);
   CHECK(irPreparationSource.find("bool prepareIrModule(Program &program,") != std::string::npos);
   CHECK(irPreparationSource.find("const SemanticProgram *semanticProgram,") != std::string::npos);
   CHECK(irPreparationSource.find("lowerer.lower(program,") != std::string::npos);
@@ -232,9 +245,17 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(irLowererEntry.find("semanticProgram,") != std::string::npos);
   CHECK(primecMain.find("pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr") !=
         std::string::npos);
+  CHECK(primecMain.find("pipelineOutput.hasFailure ? pipelineOutput.failure.stage : pipelineError") !=
+        std::string::npos);
+  CHECK(primecMain.find("pipelineOutput.hasFailure ? pipelineOutput.failure.message : error") !=
+        std::string::npos);
   CHECK(primecMain.find("prepareIrModule(program, semanticProgram, options, validationTarget, ir, prepFailure)") !=
         std::string::npos);
   CHECK(primevmMain.find("pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr") !=
+        std::string::npos);
+  CHECK(primevmMain.find("pipelineOutput.hasFailure ? pipelineOutput.failure.stage : pipelineError") !=
+        std::string::npos);
+  CHECK(primevmMain.find("pipelineOutput.hasFailure ? pipelineOutput.failure.message : error") !=
         std::string::npos);
   CHECK(primevmMain.find("prepareIrModule(program, semanticProgram, options, primec::IrValidationTarget::Vm, ir, irFailure)") !=
         std::string::npos);

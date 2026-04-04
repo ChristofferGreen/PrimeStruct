@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -9,6 +10,7 @@
 #include "primec/IrPreparation.h"
 
 #include "test_ir_pipeline_backends_helpers.h"
+#include "test_ir_pipeline_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.backends");
 
@@ -93,6 +95,54 @@ TEST_CASE("cli driver preserves parse-stage diagnostic context") {
   CHECK(*failure.sourceText == output.filteredSource);
 }
 
+TEST_CASE("compile pipeline preserves semantic product on post-semantics failure") {
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << R"(import /std/gfx/experimental/*
+
+main() -> i32 {
+  return(0i32)
+}
+)";
+  }
+
+  primec::Options options;
+  options.inputPath = tempPath.string();
+  options.entryPath = "/main";
+  options.emitKind = "glsl";
+  options.collectDiagnostics = true;
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineDiagnosticInfo diagnosticInfo;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  const bool ok = primec::runCompilePipeline(options, output, errorStage, error, &diagnosticInfo);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  CHECK_FALSE(ok);
+  CHECK(errorStage == primec::CompilePipelineErrorStage::Semantic);
+  REQUIRE(output.hasFailure);
+  CHECK(output.failure.stage == primec::CompilePipelineErrorStage::Semantic);
+  CHECK(output.failure.message.find("graphics stdlib runtime substrate unavailable for glsl target") !=
+        std::string::npos);
+  CHECK(output.failure.message == error);
+  REQUIRE(!output.failure.diagnosticInfo.records.empty());
+  CHECK(output.failure.diagnosticInfo.records.front().message == output.failure.message);
+  REQUIRE(output.hasSemanticProgram);
+  CHECK(output.semanticProgram.entryPath == "/main");
+  CHECK(std::find(output.semanticProgram.imports.begin(),
+                  output.semanticProgram.imports.end(),
+                  "/std/gfx/experimental/*") != output.semanticProgram.imports.end());
+  CHECK(diagnosticInfo.message == output.failure.diagnosticInfo.message);
+  REQUIRE(!diagnosticInfo.records.empty());
+  CHECK(diagnosticInfo.records.front().message == output.failure.message);
+}
+
 TEST_CASE("cli driver maps ir preparation failures through backend diagnostics") {
   const primec::IrBackend *vmBackend = primec::findIrBackend("vm");
   REQUIRE(vmBackend != nullptr);
@@ -153,6 +203,10 @@ TEST_CASE("main routes cpp and exe through ir backend alias lookup") {
   CHECK(source.find("resolveIrBackendEmitKind(options.emitKind)") != std::string::npos);
   CHECK(source.find("findIrBackend(irBackendKind)") != std::string::npos);
   CHECK(source.find("describeCompilePipelineFailure(") != std::string::npos);
+  CHECK(source.find("pipelineOutput.hasFailure ? pipelineOutput.failure.stage : pipelineError") !=
+        std::string::npos);
+  CHECK(source.find("pipelineOutput.hasFailure ? pipelineOutput.failure.message : error") !=
+        std::string::npos);
   CHECK(source.find("describeIrPreparationFailure(") != std::string::npos);
   CHECK(source.find("pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr") !=
         std::string::npos);
@@ -184,6 +238,10 @@ TEST_CASE("primevm uses shared ir preparation helper") {
   CHECK(source.find("vmIrBackendDiagnostics()") != std::string::npos);
   CHECK(source.find("normalizeVmLoweringError") != std::string::npos);
   CHECK(source.find("describeCompilePipelineFailure(") != std::string::npos);
+  CHECK(source.find("pipelineOutput.hasFailure ? pipelineOutput.failure.stage : pipelineError") !=
+        std::string::npos);
+  CHECK(source.find("pipelineOutput.hasFailure ? pipelineOutput.failure.message : error") !=
+        std::string::npos);
   CHECK(source.find("describeIrPreparationFailure(") != std::string::npos);
   CHECK(source.find("pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr") !=
         std::string::npos);

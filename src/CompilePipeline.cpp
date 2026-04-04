@@ -439,15 +439,32 @@ bool runCompilePipeline(const Options &options,
   errorStage = CompilePipelineErrorStage::None;
   output = {};
   error.clear();
-  DiagnosticSink diagnosticSink(diagnosticInfo);
+  CompilePipelineDiagnosticInfo capturedDiagnosticInfo;
+  DiagnosticSink diagnosticSink(&capturedDiagnosticInfo);
   diagnosticSink.reset();
+  if (diagnosticInfo != nullptr) {
+    *diagnosticInfo = {};
+  }
+
+  auto failPipeline = [&](CompilePipelineErrorStage stage,
+                          const std::string &message,
+                          const CompilePipelineDiagnosticInfo &info) -> bool {
+    errorStage = stage;
+    output.failure.stage = stage;
+    output.failure.message = message;
+    output.failure.diagnosticInfo = info;
+    output.hasFailure = true;
+    if (diagnosticInfo != nullptr) {
+      *diagnosticInfo = info;
+    }
+    return false;
+  };
 
   std::string source;
   ImportResolver importResolver;
   if (!importResolver.expandImports(options.inputPath, source, error, options.importPaths)) {
-    errorStage = CompilePipelineErrorStage::Import;
     diagnosticSink.setSummary(error);
-    return false;
+    return failPipeline(CompilePipelineErrorStage::Import, error, capturedDiagnosticInfo);
   }
 
   const std::vector<std::string> sourceImports = collectSourceImportPaths(source);
@@ -457,9 +474,8 @@ bool runCompilePipeline(const Options &options,
 
   if (shouldAutoIncludeStdlib(source) || !implicitStdlibKeys.empty()) {
     if (!appendStdlibModuleSources(options.importPaths, sourceStdImports, implicitStdlibKeys, source, error)) {
-      errorStage = CompilePipelineErrorStage::Import;
       diagnosticSink.setSummary(error);
-      return false;
+      return failPipeline(CompilePipelineErrorStage::Import, error, capturedDiagnosticInfo);
     }
   }
 
@@ -470,9 +486,8 @@ bool runCompilePipeline(const Options &options,
   textOptions.allowEnvelopeTransforms = options.allowEnvelopeTextTransforms;
 
   if (!textPipeline.apply(source, output.filteredSource, error, textOptions)) {
-    errorStage = CompilePipelineErrorStage::Transform;
     diagnosticSink.setSummary(error);
-    return false;
+    return failPipeline(CompilePipelineErrorStage::Transform, error, capturedDiagnosticInfo);
   }
 
   const DumpStage dumpStage = parseDumpStage(options.dumpStage);
@@ -489,7 +504,6 @@ bool runCompilePipeline(const Options &options,
   std::vector<Parser::ErrorInfo> parserErrors;
   if (!parser.parse(
           output.program, error, &parserErrorInfo, options.collectDiagnostics ? &parserErrors : nullptr)) {
-    errorStage = CompilePipelineErrorStage::Parse;
     if (options.collectDiagnostics) {
       if (parserErrors.empty() && !parserErrorInfo.message.empty()) {
         parserErrors.push_back(parserErrorInfo);
@@ -506,31 +520,29 @@ bool runCompilePipeline(const Options &options,
         }
       }
     }
-    if (diagnosticInfo != nullptr) {
-      if (!parserErrors.empty()) {
-        std::vector<DiagnosticSinkRecord> records;
-        records.reserve(parserErrors.size());
-        for (const auto &item : parserErrors) {
-          DiagnosticSinkRecord record;
-          record.message = item.message;
-          if (item.line > 0 && item.column > 0) {
-            record.primarySpan.line = item.line;
-            record.primarySpan.column = item.column;
-            record.primarySpan.endLine = item.line;
-            record.primarySpan.endColumn = item.column;
-            record.hasPrimarySpan = true;
-          }
-          records.push_back(std::move(record));
+    if (!parserErrors.empty()) {
+      std::vector<DiagnosticSinkRecord> records;
+      records.reserve(parserErrors.size());
+      for (const auto &item : parserErrors) {
+        DiagnosticSinkRecord record;
+        record.message = item.message;
+        if (item.line > 0 && item.column > 0) {
+          record.primarySpan.line = item.line;
+          record.primarySpan.column = item.column;
+          record.primarySpan.endLine = item.line;
+          record.primarySpan.endColumn = item.column;
+          record.hasPrimarySpan = true;
         }
-        diagnosticSink.setRecords(std::move(records));
-      } else {
-        diagnosticSink.setSummary(parserErrorInfo.message);
-        if (parserErrorInfo.line > 0 && parserErrorInfo.column > 0) {
-          diagnosticSink.capturePrimarySpanIfUnset(parserErrorInfo.line, parserErrorInfo.column);
-        }
+        records.push_back(std::move(record));
+      }
+      diagnosticSink.setRecords(std::move(records));
+    } else {
+      diagnosticSink.setSummary(parserErrorInfo.message);
+      if (parserErrorInfo.line > 0 && parserErrorInfo.column > 0) {
+        diagnosticSink.capturePrimarySpanIfUnset(parserErrorInfo.line, parserErrorInfo.column);
       }
     }
-    return false;
+    return failPipeline(CompilePipelineErrorStage::Parse, error, capturedDiagnosticInfo);
   }
   output.program.sourceImports = sourceImports;
 
@@ -548,10 +560,9 @@ bool runCompilePipeline(const Options &options,
       output.hasDumpOutput = true;
       return true;
     }
-    errorStage = CompilePipelineErrorStage::UnsupportedDumpStage;
     error = options.dumpStage;
     diagnosticSink.setSummary(error);
-    return false;
+    return failPipeline(CompilePipelineErrorStage::UnsupportedDumpStage, error, capturedDiagnosticInfo);
   }
 
   if (!options.semanticTransformRules.empty()) {
@@ -562,9 +573,8 @@ bool runCompilePipeline(const Options &options,
     semantics::TypeResolutionGraph graph;
     if (!semantics::buildTypeResolutionGraphForProgram(
             output.program, options.entryPath, options.semanticTransforms, error, graph)) {
-      errorStage = CompilePipelineErrorStage::Semantic;
       diagnosticSink.setSummary(error);
-      return false;
+      return failPipeline(CompilePipelineErrorStage::Semantic, error, capturedDiagnosticInfo);
     }
     output.dumpOutput = semantics::formatTypeResolutionGraph(graph);
     output.hasDumpOutput = true;
@@ -583,23 +593,18 @@ bool runCompilePipeline(const Options &options,
                           &semanticDiagnosticInfo,
                           options.collectDiagnostics,
                           &semanticProgram)) {
-    errorStage = CompilePipelineErrorStage::Semantic;
-    if (diagnosticInfo != nullptr) {
-      *diagnosticInfo = semanticDiagnosticInfo;
-      if (diagnosticInfo->message.empty()) {
-        diagnosticSink.setSummary(error);
-      }
+    if (semanticDiagnosticInfo.message.empty()) {
+      semanticDiagnosticInfo.message = error;
     }
-    return false;
-  }
-
-  if (!validateGraphicsBackendSupport(output.program, options, error, diagnosticInfo)) {
-    errorStage = CompilePipelineErrorStage::Semantic;
-    return false;
+    return failPipeline(CompilePipelineErrorStage::Semantic, error, semanticDiagnosticInfo);
   }
 
   output.semanticProgram = std::move(semanticProgram);
   output.hasSemanticProgram = true;
+
+  if (!validateGraphicsBackendSupport(output.program, options, error, &capturedDiagnosticInfo)) {
+    return failPipeline(CompilePipelineErrorStage::Semantic, error, capturedDiagnosticInfo);
+  }
 
   if (dumpStage == DumpStage::SemanticProduct) {
     output.dumpOutput = formatSemanticProgram(output.semanticProgram);

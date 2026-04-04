@@ -18,6 +18,14 @@ enum class CompilePipelineErrorStage {
   Semantic,
 };
 
+using CompilePipelineDiagnosticInfo = DiagnosticSinkReport;
+
+struct CompilePipelineFailure {
+  CompilePipelineErrorStage stage = CompilePipelineErrorStage::None;
+  std::string message;
+  CompilePipelineDiagnosticInfo diagnosticInfo;
+};
+
 struct CompilePipelineOutput {
   Program program;
   SemanticProgram semanticProgram;
@@ -25,9 +33,9 @@ struct CompilePipelineOutput {
   std::string filteredSource;
   std::string dumpOutput;
   bool hasDumpOutput = false;
+  CompilePipelineFailure failure;
+  bool hasFailure = false;
 };
-
-using CompilePipelineDiagnosticInfo = DiagnosticSinkReport;
 
 void addDefaultStdlibInclude(const std::string &inputPath, std::vector<std::string> &importPaths);
 
