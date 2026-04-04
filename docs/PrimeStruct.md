@@ -1658,6 +1658,9 @@ or a semicolon if you intended to index.
     work: callers can loop from `0` to `/Type/SoaSchemaFieldCount()` and query names/types/visibility through runtime
     `i32` indices without direct `meta.field_name<T>(...)` / `meta.field_type<T>(...)` /
     `meta.field_visibility<T>(...)` calls. Out-of-range helper indices currently return the empty string sentinel.
+    The next follow-up for arbitrary-width SoA is a chunk-aware descriptor layer on top of this flat field list, so
+    schemas wider than the fixed sixteen-column substrate can be grouped into deterministic storage chunks before
+    allocation/grow/free is attempted.
 - **Baseline reflection API scope (v1):** reflection APIs are compile-time-only metadata queries. Runtime reflection
   objects/tables are out of scope and rejected (`/meta/object`, `/meta/table`).
 - **Reserved compile-time metadata query names:** `meta.type_name<T>`, `meta.type_kind<T>`, `meta.is_struct<T>`,

@@ -843,7 +843,8 @@ follow-up.
 The fixed-width `.prime` SoA storage substrate now reaches sixteen columns. Reflected structs can now generate
 `SoaSchemaFieldCount`, `SoaSchemaFieldName`, `SoaSchemaFieldType`, and `SoaSchemaFieldVisibility` helpers to bridge the
 current constant-index metadata boundary, but arbitrary-width reflected schema allocation/grow/free remains pending on
-top of that descriptor/dispatch substrate.
+top of a still-missing chunk-aware descriptor layer that groups those flat field lists into deterministic
+sixteen-column storage chunks.
 Helper-return builtin bare/method `count/get/ref` reads on global and explicit `/Type/helper` receivers now also clear
 semantics on that same canonical surface instead of degrading to `does not accept template arguments`, and
 helper-return bare/method `push/reserve` local binding plus call-argument and direct-return escapes on those same
