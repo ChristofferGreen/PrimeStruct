@@ -1663,6 +1663,9 @@ or a semicolon if you intended to index.
   field-metadata targets, invalid indices, and unsupported metadata query names are deterministic.
 - **Field metadata target rule:** `meta.field_count<T>`, `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, and
   `meta.field_visibility<T>(i)` require `T` to be a `reflect`-enabled struct.
+- **Field metadata index rule:** `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, and
+  `meta.field_visibility<T>(i)` currently require constant integer indices, so `.prime`
+  code cannot yet iterate arbitrary reflected field lists dynamically.
 - **IR elimination rule:** reflection metadata queries must be eliminated before IR emission; the IR lowerer rejects
   non-eliminated reserved `/meta/*` reflection query paths.
 - **`stack`, `heap`, `buffer`:** placement transforms reserved for future backends; currently rejected in validation.
@@ -3450,9 +3453,12 @@ read-only path.
     `vector reserve allocation failed (out of memory)`. Direct borrowed-view coverage for the
     current single-column substrate is now locked through `soaColumnRef<T>(...)`, but the
     primitives are not yet threaded into reflected arbitrary-width schemas or richer wrapper
-    field-view surfaces. Reflect-enabled schemas wider than the completed sixteen-column substrate
-    now stop deterministically with `experimental soa storage arbitrary-width schemas pending`
-    until the separate arbitrary-width allocation, grow/realloc, and free/drop slices land.
+    field-view surfaces. The current blocker for arbitrary-width `.prime` schemas is that
+    `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, and `meta.field_visibility<T>(i)` still
+    require constant indices, so wider reflected schemas need a separate descriptor or generated
+    per-field dispatch substrate before allocation/grow/free can be expressed honestly. Until that
+    substrate exists, reflect-enabled schemas wider than the completed sixteen-column substrate now
+    stop deterministically with `experimental soa storage arbitrary-width schemas pending`.
   - **Current implementation status:** VM/native vector locals use a heap-backed `count/capacity/data_ptr` record
     layout. `push` and dynamic `reserve` growth allocate/reallocate backing storage and report deterministic runtime
     allocation failures (`vector push allocation failed (out of memory)` / `vector reserve allocation failed (out of
