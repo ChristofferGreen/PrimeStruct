@@ -68,6 +68,7 @@ bool runLowerStatementsFunctionTableStep(const LowerStatementsFunctionTableStepI
   const auto functionTableResult = finalizeEntryFunctionTableAndLowerCallables(
       *input.program,
       *input.entryDef,
+      input.semanticProgram,
       *input.function,
       *input.loweredCallTargets,
       input.isStructDefinition,

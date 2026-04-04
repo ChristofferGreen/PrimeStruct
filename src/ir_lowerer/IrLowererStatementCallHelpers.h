@@ -11,6 +11,7 @@
 #include "IrLowererSharedTypes.h"
 #include "primec/Ast.h"
 #include "primec/Ir.h"
+#include "primec/SemanticProduct.h"
 
 namespace primec::ir_lowerer {
 
@@ -111,6 +112,24 @@ CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
     int32_t &nextLocal,
     std::vector<IrFunction> &outFunctions,
     std::string &error);
+CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
+    const Program &program,
+    const Definition &entryDef,
+    const SemanticProgram *semanticProgram,
+    const std::unordered_set<std::string> &loweredCallTargets,
+    const std::function<bool(const Definition &)> &isStructDefinition,
+    const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
+    const std::vector<std::string> &defaultEffects,
+    const std::vector<std::string> &entryDefaultEffects,
+    const std::function<bool(const Expr &)> &isTailCallCandidate,
+    const std::function<void()> &resetDefinitionLoweringState,
+    const std::function<bool(const Definition &, int32_t &, LocalMap &, Expr &, std::string &)> &buildDefinitionCallContext,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    const std::function<bool(const std::string &, const ReturnInfo &)> &appendReturnForDefinition,
+    IrFunction &function,
+    int32_t &nextLocal,
+    std::vector<IrFunction> &outFunctions,
+    std::string &error);
 EntryCallableExecutionResult emitEntryCallableExecutionWithCleanup(
     const Definition &entryDef,
     bool definitionReturnsVoid,
@@ -128,6 +147,24 @@ EntryCallableExecutionResult emitEntryCallableExecutionWithCleanup(
 FunctionTableFinalizationResult finalizeEntryFunctionTableAndLowerCallables(
     const Program &program,
     const Definition &entryDef,
+    IrFunction &entryFunction,
+    const std::unordered_set<std::string> &loweredCallTargets,
+    const std::function<bool(const Definition &)> &isStructDefinition,
+    const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
+    const std::vector<std::string> &defaultEffects,
+    const std::vector<std::string> &entryDefaultEffects,
+    const std::function<bool(const Expr &)> &isTailCallCandidate,
+    const std::function<void()> &resetDefinitionLoweringState,
+    const std::function<bool(const Definition &, int32_t &, LocalMap &, Expr &, std::string &)> &buildDefinitionCallContext,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    int32_t &nextLocal,
+    std::vector<IrFunction> &outFunctions,
+    int32_t &entryIndex,
+    std::string &error);
+FunctionTableFinalizationResult finalizeEntryFunctionTableAndLowerCallables(
+    const Program &program,
+    const Definition &entryDef,
+    const SemanticProgram *semanticProgram,
     IrFunction &entryFunction,
     const std::unordered_set<std::string> &loweredCallTargets,
     const std::function<bool(const Definition &)> &isStructDefinition,

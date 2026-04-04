@@ -158,6 +158,16 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
       cwd / "src" / "ir_lowerer" / "IrLowererCountAccessHelpers.cpp";
   std::filesystem::path onErrorHelpersSourcePath =
       cwd / "src" / "ir_lowerer" / "IrLowererOnErrorHelpers.cpp";
+  std::filesystem::path statementCallHelpersHeaderPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererStatementCallHelpers.h";
+  std::filesystem::path statementCallHelpersSourcePath =
+      cwd / "src" / "ir_lowerer" / "IrLowererStatementCallHelpers.cpp";
+  std::filesystem::path functionTableStepHeaderPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerStatementsFunctionTableStep.h";
+  std::filesystem::path functionTableStepSourcePath =
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerStatementsFunctionTableStep.cpp";
+  std::filesystem::path lowerStatementsCallsPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerStatementsCalls.h";
   std::filesystem::path uninitializedTypeHelpersPath =
       cwd / "src" / "ir_lowerer" / "IrLowererUninitializedTypeHelpers.h";
   std::filesystem::path uninitializedSetupBuildersPath =
@@ -202,6 +212,16 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererCountAccessHelpers.cpp";
     onErrorHelpersSourcePath =
         cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererOnErrorHelpers.cpp";
+    statementCallHelpersHeaderPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererStatementCallHelpers.h";
+    statementCallHelpersSourcePath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererStatementCallHelpers.cpp";
+    functionTableStepHeaderPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerStatementsFunctionTableStep.h";
+    functionTableStepSourcePath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerStatementsFunctionTableStep.cpp";
+    lowerStatementsCallsPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerStatementsCalls.h";
     uninitializedTypeHelpersPath =
         cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererUninitializedTypeHelpers.h";
     uninitializedSetupBuildersPath =
@@ -235,6 +255,11 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   REQUIRE(std::filesystem::exists(countAccessHelpersHeaderPath));
   REQUIRE(std::filesystem::exists(countAccessHelpersSourcePath));
   REQUIRE(std::filesystem::exists(onErrorHelpersSourcePath));
+  REQUIRE(std::filesystem::exists(statementCallHelpersHeaderPath));
+  REQUIRE(std::filesystem::exists(statementCallHelpersSourcePath));
+  REQUIRE(std::filesystem::exists(functionTableStepHeaderPath));
+  REQUIRE(std::filesystem::exists(functionTableStepSourcePath));
+  REQUIRE(std::filesystem::exists(lowerStatementsCallsPath));
   REQUIRE(std::filesystem::exists(uninitializedTypeHelpersPath));
   REQUIRE(std::filesystem::exists(uninitializedSetupBuildersPath));
   REQUIRE(std::filesystem::exists(primecMainPath));
@@ -266,6 +291,11 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::string countAccessHelpersHeader = readTextFile(countAccessHelpersHeaderPath);
   const std::string countAccessHelpersSource = readTextFile(countAccessHelpersSourcePath);
   const std::string onErrorHelpersSource = readTextFile(onErrorHelpersSourcePath);
+  const std::string statementCallHelpersHeader = readTextFile(statementCallHelpersHeaderPath);
+  const std::string statementCallHelpersSource = readTextFile(statementCallHelpersSourcePath);
+  const std::string functionTableStepHeader = readTextFile(functionTableStepHeaderPath);
+  const std::string functionTableStepSource = readTextFile(functionTableStepSourcePath);
+  const std::string lowerStatementsCalls = readTextFile(lowerStatementsCallsPath);
   const std::string uninitializedTypeHelpers = readTextFile(uninitializedTypeHelpersPath);
   const std::string uninitializedSetupBuilders = readTextFile(uninitializedSetupBuildersPath);
   const std::string primecMain = readTextFile(primecMainPath);
@@ -378,6 +408,16 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(onErrorHelpersSource.find("buildEntryCountAccessSetup(entryDef, semanticProgram, out.countAccessSetup, error)") !=
         std::string::npos);
+  CHECK(statementCallHelpersHeader.find("const SemanticProgram *semanticProgram,") !=
+        std::string::npos);
+  CHECK(statementCallHelpersSource.find("buildSemanticProductTargetAdapter(semanticProgram)") !=
+        std::string::npos);
+  CHECK(statementCallHelpersSource.find("findSemanticProductCallableSummary(semanticProductTargets, def.fullPath)") !=
+        std::string::npos);
+  CHECK(functionTableStepHeader.find("const SemanticProgram *semanticProgram = nullptr;") !=
+        std::string::npos);
+  CHECK(functionTableStepSource.find("input.semanticProgram,") != std::string::npos);
+  CHECK(lowerStatementsCalls.find(".semanticProgram = semanticProgram,") != std::string::npos);
   CHECK(setupMathHelpersHeader.find("SetupMathAndBindingAdapters makeSetupMathAndBindingAdapters(bool hasMathImport,") !=
         std::string::npos);
   CHECK(setupMathHelpersHeader.find("const SemanticProgram *semanticProgram = nullptr);") !=

@@ -4,6 +4,7 @@
 #include "IrLowererHelpers.h"
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererLowerEffects.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
 
@@ -126,6 +127,46 @@ CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
     int32_t &nextLocal,
     std::vector<IrFunction> &outFunctions,
     std::string &error) {
+  return lowerCallableDefinitionOrchestration(
+      program,
+      entryDef,
+      nullptr,
+      loweredCallTargets,
+      isStructDefinition,
+      getReturnInfo,
+      defaultEffects,
+      entryDefaultEffects,
+      isTailCallCandidate,
+      resetDefinitionLoweringState,
+      buildDefinitionCallContext,
+      emitInlineDefinitionCall,
+      appendReturnForDefinition,
+      function,
+      nextLocal,
+      outFunctions,
+      error);
+}
+
+CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
+    const Program &program,
+    const Definition &entryDef,
+    const SemanticProgram *semanticProgram,
+    const std::unordered_set<std::string> &loweredCallTargets,
+    const std::function<bool(const Definition &)> &isStructDefinition,
+    const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
+    const std::vector<std::string> &defaultEffects,
+    const std::vector<std::string> &entryDefaultEffects,
+    const std::function<bool(const Expr &)> &isTailCallCandidate,
+    const std::function<void()> &resetDefinitionLoweringState,
+    const std::function<bool(const Definition &, int32_t &, LocalMap &, Expr &, std::string &)> &buildDefinitionCallContext,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    const std::function<bool(const std::string &, const ReturnInfo &)> &appendReturnForDefinition,
+    IrFunction &function,
+    int32_t &nextLocal,
+    std::vector<IrFunction> &outFunctions,
+    std::string &error) {
+  const SemanticProductTargetAdapter semanticProductTargets =
+      buildSemanticProductTargetAdapter(semanticProgram);
   for (const auto &def : program.definitions) {
     if (def.fullPath == entryDef.fullPath || isStructDefinition(def) ||
         loweredCallTargets.find(def.fullPath) == loweredCallTargets.end()) {
@@ -149,16 +190,40 @@ CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
 
     function = IrFunction{};
     function.name = def.fullPath;
-    if (!resolveEffectMask(
-            def.transforms, false, defaultEffects, entryDefaultEffects, function.metadata.effectMask, error)) {
-      return CallableDefinitionOrchestrationResult::Error;
-    }
-    if (!resolveCapabilityMask(def.transforms,
-                               resolveActiveEffects(def.transforms, false, defaultEffects, entryDefaultEffects),
-                               def.fullPath,
-                               function.metadata.capabilityMask,
-                               error)) {
-      return CallableDefinitionOrchestrationResult::Error;
+    if (const auto *callableSummary =
+            findSemanticProductCallableSummary(semanticProductTargets, def.fullPath);
+        callableSummary != nullptr) {
+      function.metadata.effectMask = 0;
+      for (const auto &effect : callableSummary->activeEffects) {
+        uint64_t bit = 0;
+        if (!effectBitForName(effect, bit)) {
+          error = "unsupported effect in metadata: " + effect;
+          return CallableDefinitionOrchestrationResult::Error;
+        }
+        function.metadata.effectMask |= bit;
+      }
+
+      function.metadata.capabilityMask = 0;
+      for (const auto &capability : callableSummary->activeCapabilities) {
+        uint64_t bit = 0;
+        if (!effectBitForName(capability, bit)) {
+          error = "unsupported capability in metadata: " + capability;
+          return CallableDefinitionOrchestrationResult::Error;
+        }
+        function.metadata.capabilityMask |= bit;
+      }
+    } else {
+      if (!resolveEffectMask(
+              def.transforms, false, defaultEffects, entryDefaultEffects, function.metadata.effectMask, error)) {
+        return CallableDefinitionOrchestrationResult::Error;
+      }
+      if (!resolveCapabilityMask(def.transforms,
+                                 resolveActiveEffects(def.transforms, false, defaultEffects, entryDefaultEffects),
+                                 def.fullPath,
+                                 function.metadata.capabilityMask,
+                                 error)) {
+        return CallableDefinitionOrchestrationResult::Error;
+      }
     }
     function.metadata.schedulingScope = IrSchedulingScope::Default;
     function.metadata.instrumentationFlags = 0;
@@ -252,6 +317,44 @@ FunctionTableFinalizationResult finalizeEntryFunctionTableAndLowerCallables(
     std::vector<IrFunction> &outFunctions,
     int32_t &entryIndex,
     std::string &error) {
+  return finalizeEntryFunctionTableAndLowerCallables(
+      program,
+      entryDef,
+      nullptr,
+      entryFunction,
+      loweredCallTargets,
+      isStructDefinition,
+      getReturnInfo,
+      defaultEffects,
+      entryDefaultEffects,
+      isTailCallCandidate,
+      resetDefinitionLoweringState,
+      buildDefinitionCallContext,
+      emitInlineDefinitionCall,
+      nextLocal,
+      outFunctions,
+      entryIndex,
+      error);
+}
+
+FunctionTableFinalizationResult finalizeEntryFunctionTableAndLowerCallables(
+    const Program &program,
+    const Definition &entryDef,
+    const SemanticProgram *semanticProgram,
+    IrFunction &entryFunction,
+    const std::unordered_set<std::string> &loweredCallTargets,
+    const std::function<bool(const Definition &)> &isStructDefinition,
+    const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
+    const std::vector<std::string> &defaultEffects,
+    const std::vector<std::string> &entryDefaultEffects,
+    const std::function<bool(const Expr &)> &isTailCallCandidate,
+    const std::function<void()> &resetDefinitionLoweringState,
+    const std::function<bool(const Definition &, int32_t &, LocalMap &, Expr &, std::string &)> &buildDefinitionCallContext,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    int32_t &nextLocal,
+    std::vector<IrFunction> &outFunctions,
+    int32_t &entryIndex,
+    std::string &error) {
   outFunctions.push_back(std::move(entryFunction));
   entryIndex = 0;
 
@@ -259,6 +362,7 @@ FunctionTableFinalizationResult finalizeEntryFunctionTableAndLowerCallables(
   const auto callableLoweringResult = lowerCallableDefinitionOrchestration(
       program,
       entryDef,
+      semanticProgram,
       loweredCallTargets,
       isStructDefinition,
       getReturnInfo,

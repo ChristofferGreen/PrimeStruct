@@ -499,9 +499,9 @@ Planned lowerer type/binding handoff:
     dump or conformance surface instead
 
 Planned lowerer effect/struct-layout handoff:
-- Current status: entry return/result setup plus entry effect/capability mask setup now consume
-  published semantic-product return facts and callable summaries. The remaining cutover work is
-  execution-boundary metadata plus the broader struct/layout family.
+- Current status: entry return/result setup, entry effect/capability mask setup, and lowered
+  callable effect/capability setup now consume published semantic-product return facts and
+  callable summaries. The remaining cutover work is the broader struct/layout family.
 - After the lowerer consumes semantic-product entry targets and binding metadata, effect/capability setup and
   struct-layout setup should consume published semantic-product facts instead of re-reading AST annotations,
   transform-produced helper state, or struct-shape details directly from canonicalized syntax.

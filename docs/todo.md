@@ -115,9 +115,7 @@ Lowering cutover:
   - ○ Make `prepareIrModule` consume the semantic product directly instead of re-reading lowering facts from raw `Program` state.
   - ○ Make `IrLowerer::lower` consume the semantic product directly at its main lowering entrypoint.
   - ○ Retire the raw-`Program` lowering entry path once the temporary adapter is no longer needed.
-- ◐ Implement the lowerer effect/capability and struct-layout setup cutover now that the handoff contract is documented. Progress: the remaining lowerer metadata handoff is now split into effect/capability facts and struct/layout facts instead of one umbrella setup item.
-  - ◐ Consume semantic-product effect/capability summaries in lowerer setup. Progress: entry effect/capability masks now consume semantic-product callable summaries; remaining work is execution-boundary metadata that still re-derives effect/capability facts from AST state.
-    - ○ Consume semantic-product execution-boundary metadata that still re-derives effect/capability facts from AST state.
+- ◐ Implement the lowerer effect/capability and struct-layout setup cutover now that the handoff contract is documented. Progress: entry and lowered-callable effect/capability setup now consume semantic-product callable summaries; remaining work is the broader struct/layout family.
   - ◐ Consume semantic-product struct/enum/layout metadata in lowerer setup. Progress: this metadata family is now split into struct layout, enum metadata, and helper-owned layout classification seams instead of one broad layout bucket.
     - ○ Consume semantic-product struct/layout metadata in lowerer setup.
     - ○ Consume semantic-product enum metadata in lowerer setup.

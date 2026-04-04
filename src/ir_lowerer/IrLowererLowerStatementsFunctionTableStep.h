@@ -12,6 +12,7 @@ namespace primec::ir_lowerer {
 struct LowerStatementsFunctionTableStepInput {
   const Program *program = nullptr;
   const Definition *entryDef = nullptr;
+  const SemanticProgram *semanticProgram = nullptr;
   IrFunction *function = nullptr;
   const std::unordered_set<std::string> *loweredCallTargets = nullptr;
 

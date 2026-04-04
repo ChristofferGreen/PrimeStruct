@@ -74,6 +74,7 @@
           {
               .program = &program,
               .entryDef = entryDef,
+              .semanticProgram = semanticProgram,
               .function = &function,
               .loweredCallTargets = &loweredCallTargets,
               .isStructDefinition = [&](const Definition &def) { return isStructDefinition(def); },
