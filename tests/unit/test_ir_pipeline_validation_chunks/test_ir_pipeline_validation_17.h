@@ -231,6 +231,13 @@ TEST_CASE("semantics validate source delegation stays stable") {
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
             "Definition storageClearHelper = makeHelper(\"SoaSchemaStorageClear\"") != std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
+            "const std::string storageDestroyHelperPath = storageStructPath + \"/Destroy\";") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
+            "storageDestroyHelper.name = \"Destroy\";") != std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
+            "dropCall.name = \"drop\";") != std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
             "appendIndexedStringHelper(\"SoaSchemaFieldName\", context.fieldNames)") != std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
             "appendIndexedStringHelper(\"SoaSchemaFieldType\", context.fieldTypeNames)") != std::string::npos);

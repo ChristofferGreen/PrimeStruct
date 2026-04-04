@@ -846,9 +846,9 @@ current constant-index metadata boundary, and can now also generate `SoaSchemaCh
 `SoaSchemaChunkFieldStart`, and `SoaSchemaChunkFieldCount` helpers that group those flat field lists into deterministic
 sixteen-column storage chunks. They can now also generate `/Type/SoaSchemaStorage`,
 `/Type/SoaSchemaStorageNew()`, `/Type/SoaSchemaStorageCount(...)`, `/Type/SoaSchemaStorageCapacity(...)`,
-`/Type/SoaSchemaStorageReserve(...)`, and `/Type/SoaSchemaStorageClear(...)` so reflected schemas have deterministic
-chunked allocation plus explicit reserve/clear scaffolding on top of that fixed-width substrate.
-Arbitrary-width reflected schema implicit free/drop cleanup remains pending on top of that chunked storage layer.
+`/Type/SoaSchemaStorageReserve(...)`, `/Type/SoaSchemaStorageClear(...)`, and `/Type/SoaSchemaStorage/Destroy()`
+so reflected schemas have deterministic chunked allocation, grow/realloc, explicit clear, and implicit free/drop
+cleanup on top of that fixed-width substrate.
 Helper-return builtin bare/method `count/get/ref` reads on global and explicit `/Type/helper` receivers now also clear
 semantics on that same canonical surface instead of degrading to `does not accept template arguments`, and
 helper-return bare/method `push/reserve` local binding plus call-argument and direct-return escapes on those same

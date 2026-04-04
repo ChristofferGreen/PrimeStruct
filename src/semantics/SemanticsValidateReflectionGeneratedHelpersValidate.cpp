@@ -425,12 +425,14 @@ bool emitReflectionSoaSchemaStorageHelpers(ReflectionGeneratedHelperContext &con
   const std::string storageCapacityHelperPath = context.def.fullPath + "/SoaSchemaStorageCapacity";
   const std::string storageReserveHelperPath = context.def.fullPath + "/SoaSchemaStorageReserve";
   const std::string storageClearHelperPath = context.def.fullPath + "/SoaSchemaStorageClear";
+  const std::string storageDestroyHelperPath = storageStructPath + "/Destroy";
   for (const auto *helperPath : {&storageStructPath,
                                  &storageNewHelperPath,
                                  &storageCountHelperPath,
                                  &storageCapacityHelperPath,
                                  &storageReserveHelperPath,
-                                 &storageClearHelperPath}) {
+                                 &storageClearHelperPath,
+                                 &storageDestroyHelperPath}) {
     if (context.definitionPaths.count(*helperPath) > 0) {
       context.error = "generated reflection helper already exists: " + *helperPath;
       return false;
@@ -594,6 +596,35 @@ bool emitReflectionSoaSchemaStorageHelpers(ReflectionGeneratedHelperContext &con
   }
   context.rewrittenDefinitions.push_back(std::move(storageClearHelper));
   context.definitionPaths.insert(storageClearHelperPath);
+
+  Definition storageDestroyHelper;
+  storageDestroyHelper.name = "Destroy";
+  storageDestroyHelper.fullPath = storageDestroyHelperPath;
+  storageDestroyHelper.namespacePrefix = storageStructPath;
+  storageDestroyHelper.sourceLine = context.def.sourceLine;
+  storageDestroyHelper.sourceColumn = context.def.sourceColumn;
+  appendPublicVisibility(storageDestroyHelper);
+  Transform destroyMut;
+  destroyMut.name = "mut";
+  storageDestroyHelper.transforms.push_back(std::move(destroyMut));
+  Transform destroyEffects;
+  destroyEffects.name = "effects";
+  destroyEffects.arguments.push_back("heap_alloc");
+  storageDestroyHelper.transforms.push_back(std::move(destroyEffects));
+  Transform destroyReturn;
+  destroyReturn.name = "return";
+  destroyReturn.templateArgs.push_back("void");
+  storageDestroyHelper.transforms.push_back(std::move(destroyReturn));
+  for (size_t chunkIndex = 0; chunkIndex < chunkTemplateArgs.size(); ++chunkIndex) {
+    Expr dropCall;
+    dropCall.kind = Expr::Kind::Call;
+    dropCall.name = "drop";
+    dropCall.args.push_back(makeFieldAccessExpr("this", "chunk" + std::to_string(chunkIndex)));
+    dropCall.argNames.push_back(std::nullopt);
+    storageDestroyHelper.statements.push_back(std::move(dropCall));
+  }
+  context.rewrittenDefinitions.push_back(std::move(storageDestroyHelper));
+  context.definitionPaths.insert(storageDestroyHelperPath);
   return true;
 }
 

@@ -193,6 +193,7 @@ main() {
   const primec::Definition *storageCapacityHelper = nullptr;
   const primec::Definition *storageReserveHelper = nullptr;
   const primec::Definition *storageClearHelper = nullptr;
+  const primec::Definition *storageDestroyHelper = nullptr;
   for (const auto &def : program.definitions) {
     if (def.fullPath == "/Item/SoaSchemaFieldCount") {
       countHelper = &def;
@@ -220,6 +221,8 @@ main() {
       storageReserveHelper = &def;
     } else if (def.fullPath == "/Item/SoaSchemaStorageClear") {
       storageClearHelper = &def;
+    } else if (def.fullPath == "/Item/SoaSchemaStorage/Destroy") {
+      storageDestroyHelper = &def;
     }
   }
 
@@ -236,6 +239,7 @@ main() {
   REQUIRE(storageCapacityHelper != nullptr);
   REQUIRE(storageReserveHelper != nullptr);
   REQUIRE(storageClearHelper != nullptr);
+  REQUIRE(storageDestroyHelper != nullptr);
 
   CHECK(countHelper->parameters.empty());
   REQUIRE(countHelper->returnExpr.has_value());
@@ -349,6 +353,9 @@ main() {
   CHECK(storageReserveHelper->statements.size() == 3);
   REQUIRE(storageClearHelper->parameters.size() == 1);
   CHECK(storageClearHelper->statements.size() == 3);
+  CHECK(storageDestroyHelper->parameters.empty());
+  CHECK(storageDestroyHelper->statements.size() == 1);
+  CHECK(storageDestroyHelper->statements[0].name == "drop");
 }
 
 TEST_CASE("generate SoaSchema chunk helpers split wide reflected schemas deterministically") {
@@ -395,6 +402,7 @@ main() {
   const primec::Definition *storageCapacityHelper = nullptr;
   const primec::Definition *storageReserveHelper = nullptr;
   const primec::Definition *storageClearHelper = nullptr;
+  const primec::Definition *storageDestroyHelper = nullptr;
   for (const auto &def : program.definitions) {
     if (def.fullPath == "/Item/SoaSchemaChunkCount") {
       chunkCountHelper = &def;
@@ -414,6 +422,8 @@ main() {
       storageReserveHelper = &def;
     } else if (def.fullPath == "/Item/SoaSchemaStorageClear") {
       storageClearHelper = &def;
+    } else if (def.fullPath == "/Item/SoaSchemaStorage/Destroy") {
+      storageDestroyHelper = &def;
     }
   }
 
@@ -426,6 +436,7 @@ main() {
   REQUIRE(storageCapacityHelper != nullptr);
   REQUIRE(storageReserveHelper != nullptr);
   REQUIRE(storageClearHelper != nullptr);
+  REQUIRE(storageDestroyHelper != nullptr);
   REQUIRE(chunkCountHelper->returnExpr.has_value());
   CHECK(chunkCountHelper->returnExpr->kind == primec::Expr::Kind::Literal);
   CHECK(chunkCountHelper->returnExpr->literalValue == 2);
@@ -459,6 +470,10 @@ main() {
         "/std/collections/experimental_soa_storage/soaColumns16Capacity");
   CHECK(storageReserveHelper->statements.size() == 6);
   CHECK(storageClearHelper->statements.size() == 6);
+  CHECK(storageDestroyHelper->parameters.empty());
+  CHECK(storageDestroyHelper->statements.size() == 2);
+  CHECK(storageDestroyHelper->statements[0].name == "drop");
+  CHECK(storageDestroyHelper->statements[1].name == "drop");
 }
 
 TEST_CASE("generate SoaSchema rejects helper collisions deterministically") {

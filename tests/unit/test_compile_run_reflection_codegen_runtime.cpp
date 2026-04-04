@@ -344,6 +344,7 @@ main() {
   if(equal(storage.chunk1.field_capacity(), 5i32), then() { assign(score, plus(score, 32i32)) }, else() { })
   /Wide/SoaSchemaStorageClear(storage)
   if(equal(/Wide/SoaSchemaStorageCount(storage), 0i32), then() { assign(score, plus(score, 64i32)) }, else() { })
+  drop(storage)
   return(score)
 }
 )";
