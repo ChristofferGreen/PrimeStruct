@@ -10,9 +10,11 @@
 #include <vector>
 
 #include "primec/CompilePipeline.h"
+#include "primec/IrLowerer.h"
 #include "primec/Lexer.h"
 #include "primec/Parser.h"
 #include "primec/Semantics.h"
+#include "primec/testing/CompilePipelineDumpHelpers.h"
 #include "primec/testing/TestScratch.h"
 
 namespace {
@@ -108,6 +110,45 @@ inline bool validateProgram(primec::Program &program,
                             std::vector<std::string> defaultEffects = {}) {
   primec::Semantics semantics;
   return semantics.validate(program, entry, error, defaultEffects, defaultEffects);
+}
+
+inline bool parseValidateAndLower(const std::string &source,
+                                  primec::IrModule &module,
+                                  std::string &error,
+                                  const std::vector<std::string> &defaultEffects,
+                                  const std::vector<std::string> &entryDefaultEffects) {
+  if (usesStdImportPipeline(source)) {
+    primec::testing::CompilePipelinePreparedIr prepared;
+    if (!primec::testing::prepareCompilePipelineIrForTesting(
+            source, "/main", "vm", prepared, error)) {
+      return false;
+    }
+    module = std::move(prepared.ir);
+    return true;
+  }
+
+  primec::Program program;
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  if (!parser.parse(program, error)) {
+    return false;
+  }
+
+  primec::SemanticProgram semanticProgram;
+  primec::Semantics semantics;
+  if (!semantics.validate(program, "/main", error, defaultEffects, entryDefaultEffects, &semanticProgram)) {
+    return false;
+  }
+
+  primec::IrLowerer lowerer;
+  return lowerer.lower(program, &semanticProgram, "/main", defaultEffects, entryDefaultEffects, module, error);
+}
+
+inline bool parseValidateAndLower(const std::string &source,
+                                  primec::IrModule &module,
+                                  std::string &error,
+                                  std::vector<std::string> defaultEffects = {}) {
+  return parseValidateAndLower(source, module, error, defaultEffects, defaultEffects);
 }
 
 } // namespace

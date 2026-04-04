@@ -3,8 +3,6 @@
 
 #include "third_party/doctest.h"
 
-#include "primec/IrLowerer.h"
-#include "primec/IrSerializer.h"
 #include "primec/Vm.h"
 #include "test_ir_pipeline_helpers.h"
 
@@ -18,14 +16,9 @@ main([array<string>] args) {
   return(0i32)
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 1);
   bool sawPrintArgv = false;
@@ -46,14 +39,9 @@ main([array<string>] args) {
   return(0i32)
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 1);
   bool sawPrintArgvUnsafe = false;
@@ -74,14 +62,9 @@ main([array<string>] args) {
   return(0i32)
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 1);
   bool sawPrintArgvUnsafe = false;
@@ -103,14 +86,9 @@ main([array<string>] args) {
   return(0i32)
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 1);
   bool sawPrintArgvUnsafe = false;
@@ -131,14 +109,9 @@ main([array<string>] args) {
   return(0i32)
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 1);
   bool sawUnsafe = false;
@@ -177,14 +150,9 @@ main() {
   return(value)
 }
 )";
-  primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 1);
 

@@ -136,6 +136,22 @@ TEST_CASE("public semantic-product dump helper is available for pipeline tests")
   CHECK(helper.find("runCompilePipelineBackendConformanceForTesting(") != std::string::npos);
 }
 
+TEST_CASE("core IR test helpers expose semantic-product-aware lowering") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path helperPath = cwd / "tests" / "unit" / "test_ir_pipeline_helpers.h";
+  if (!std::filesystem::exists(helperPath)) {
+    helperPath = cwd.parent_path() / "tests" / "unit" / "test_ir_pipeline_helpers.h";
+  }
+  REQUIRE(std::filesystem::exists(helperPath));
+
+  const std::string helper = readTextFile(helperPath);
+  CHECK(helper.find("parseValidateAndLower(const std::string &source,") != std::string::npos);
+  CHECK(helper.find("prepareCompilePipelineIrForTesting(") != std::string::npos);
+  CHECK(helper.find("SemanticProgram semanticProgram;") != std::string::npos);
+  CHECK(helper.find("return lowerer.lower(program, &semanticProgram, \"/main\", defaultEffects, entryDefaultEffects, module, error);") !=
+        std::string::npos);
+}
+
 TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path semanticProductPath = cwd / "include" / "primec" / "SemanticProduct.h";
