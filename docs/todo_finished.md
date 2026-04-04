@@ -7,6 +7,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Added reflected `SoaSchemaChunkCount`, `SoaSchemaChunkFieldStart`, and `SoaSchemaChunkFieldCount` helpers on top of the flat `SoaSchema*` surface, so arbitrary-width reflected schemas can now be grouped into deterministic sixteen-column chunks before allocation/grow/free wiring lands.
 - ✓ Split the remaining arbitrary-width SoA storage umbrella again into a real chunk-descriptor prerequisite plus the later allocation/grow/free wiring slices, because the new `SoaSchema*` helpers only expose a flat reflected field list and do not yet group fields into deterministic sixteen-column storage chunks.
 - ✓ Added a generated reflected `SoaSchema*` helper family (`SoaSchemaFieldCount`, `SoaSchemaFieldName`, `SoaSchemaFieldType`, `SoaSchemaFieldVisibility`) so `.prime` code can iterate reflected field metadata through runtime indices instead of direct constant-index `meta.field_*<T>(i)` queries, finishing the arbitrary-width SoA descriptor/dispatch prerequisite.
 - ✓ Split the remaining oversized Group 11 and Group 12 graph/semantic-product umbrella items in `docs/todo.md` into explicit compile-pipeline/backend, invalidation, inference, CT-eval, template, widening, perf, parallel-solve, plumbing, adapter, lowerer-cutover, and backend-conformance slices, so the live queue now tracks concrete implementable seams instead of broad multi-surface bullets.

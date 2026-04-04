@@ -220,8 +220,17 @@ bool emitReflectionSoaSchemaHelpers(ReflectionGeneratedHelperContext &context) {
   const std::string nameHelperPath = context.def.fullPath + "/SoaSchemaFieldName";
   const std::string typeHelperPath = context.def.fullPath + "/SoaSchemaFieldType";
   const std::string visibilityHelperPath = context.def.fullPath + "/SoaSchemaFieldVisibility";
+  const std::string chunkCountHelperPath = context.def.fullPath + "/SoaSchemaChunkCount";
+  const std::string chunkStartHelperPath = context.def.fullPath + "/SoaSchemaChunkFieldStart";
+  const std::string chunkFieldCountHelperPath = context.def.fullPath + "/SoaSchemaChunkFieldCount";
 
-  for (const auto *helperPath : {&countHelperPath, &nameHelperPath, &typeHelperPath, &visibilityHelperPath}) {
+  for (const auto *helperPath : {&countHelperPath,
+                                 &nameHelperPath,
+                                 &typeHelperPath,
+                                 &visibilityHelperPath,
+                                 &chunkCountHelperPath,
+                                 &chunkStartHelperPath,
+                                 &chunkFieldCountHelperPath}) {
     if (context.definitionPaths.count(*helperPath) > 0) {
       context.error = "generated reflection helper already exists: " + *helperPath;
       return false;
@@ -255,6 +264,22 @@ bool emitReflectionSoaSchemaHelpers(ReflectionGeneratedHelperContext &context) {
   context.rewrittenDefinitions.push_back(std::move(countHelper));
   context.definitionPaths.insert(countHelperPath);
 
+  auto appendIndexedI32Helper = [&](const std::string &name, const std::string &fullPath, const std::vector<uint64_t> &values) {
+    Definition helper = makeHelper(name, fullPath, "i32", true);
+    for (size_t fieldIndex = 0; fieldIndex < values.size(); ++fieldIndex) {
+      std::vector<Expr> thenBody;
+      thenBody.push_back(makeReturnStatementExpr(makeI32LiteralExpr(values[fieldIndex])));
+      helper.statements.push_back(makeIfStatementExpr(
+          makeEqualExpr(makeNameExpr("index"), makeI32LiteralExpr(fieldIndex)),
+          makeEnvelopeExpr("then", std::move(thenBody)),
+          makeEnvelopeExpr("else", {})));
+    }
+    helper.returnExpr = makeI32LiteralExpr(0);
+    helper.hasReturnStatement = true;
+    context.rewrittenDefinitions.push_back(std::move(helper));
+    context.definitionPaths.insert(fullPath);
+  };
+
   auto appendIndexedStringHelper = [&](const std::string &name,
                                        const std::string &fullPath,
                                        const std::vector<std::string> &values) {
@@ -287,6 +312,28 @@ bool emitReflectionSoaSchemaHelpers(ReflectionGeneratedHelperContext &context) {
   appendIndexedStringHelper("SoaSchemaFieldName", nameHelperPath, context.fieldNames);
   appendIndexedStringHelper("SoaSchemaFieldType", typeHelperPath, fieldTypes);
   appendIndexedStringHelper("SoaSchemaFieldVisibility", visibilityHelperPath, fieldVisibilities);
+
+  const size_t chunkWidth = 16;
+  const size_t chunkCount = (context.fieldNames.size() + chunkWidth - 1) / chunkWidth;
+  Definition chunkCountHelper = makeHelper("SoaSchemaChunkCount", chunkCountHelperPath, "i32", false);
+  chunkCountHelper.returnExpr = makeI32LiteralExpr(chunkCount);
+  chunkCountHelper.hasReturnStatement = true;
+  context.rewrittenDefinitions.push_back(std::move(chunkCountHelper));
+  context.definitionPaths.insert(chunkCountHelperPath);
+
+  std::vector<uint64_t> chunkStarts;
+  std::vector<uint64_t> chunkFieldCounts;
+  chunkStarts.reserve(chunkCount);
+  chunkFieldCounts.reserve(chunkCount);
+  for (size_t chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex) {
+    const size_t start = chunkIndex * chunkWidth;
+    const size_t remaining = context.fieldNames.size() > start ? context.fieldNames.size() - start : 0;
+    chunkStarts.push_back(start);
+    chunkFieldCounts.push_back(std::min(chunkWidth, remaining));
+  }
+
+  appendIndexedI32Helper("SoaSchemaChunkFieldStart", chunkStartHelperPath, chunkStarts);
+  appendIndexedI32Helper("SoaSchemaChunkFieldCount", chunkFieldCountHelperPath, chunkFieldCounts);
   return true;
 }
 

@@ -211,12 +211,20 @@ TEST_CASE("semantics validate source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find("helper.name = \"SoaSchemaFieldCount\";") !=
         std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find("helper.name = \"SoaSchemaChunkCount\";") !=
+        std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
             "appendIndexedStringHelper(\"SoaSchemaFieldName\", context.fieldNames)") != std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
             "appendIndexedStringHelper(\"SoaSchemaFieldType\", context.fieldTypeNames)") != std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
             "appendIndexedStringHelper(\"SoaSchemaFieldVisibility\", context.fieldVisibilityNames)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
+            "appendIndexedI32Helper(\"SoaSchemaChunkFieldStart\", chunkStartHelperPath, chunkStarts)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
+            "appendIndexedI32Helper(\"SoaSchemaChunkFieldCount\", chunkFieldCountHelperPath, chunkFieldCounts)") !=
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersSource.find("auto emitComparisonHelper = [&](const std::string &helperName,") ==
         std::string::npos);

@@ -184,6 +184,9 @@ main() {
   const primec::Definition *nameHelper = nullptr;
   const primec::Definition *typeHelper = nullptr;
   const primec::Definition *visibilityHelper = nullptr;
+  const primec::Definition *chunkCountHelper = nullptr;
+  const primec::Definition *chunkStartHelper = nullptr;
+  const primec::Definition *chunkFieldCountHelper = nullptr;
   for (const auto &def : program.definitions) {
     if (def.fullPath == "/Item/SoaSchemaFieldCount") {
       countHelper = &def;
@@ -193,6 +196,12 @@ main() {
       typeHelper = &def;
     } else if (def.fullPath == "/Item/SoaSchemaFieldVisibility") {
       visibilityHelper = &def;
+    } else if (def.fullPath == "/Item/SoaSchemaChunkCount") {
+      chunkCountHelper = &def;
+    } else if (def.fullPath == "/Item/SoaSchemaChunkFieldStart") {
+      chunkStartHelper = &def;
+    } else if (def.fullPath == "/Item/SoaSchemaChunkFieldCount") {
+      chunkFieldCountHelper = &def;
     }
   }
 
@@ -200,11 +209,17 @@ main() {
   REQUIRE(nameHelper != nullptr);
   REQUIRE(typeHelper != nullptr);
   REQUIRE(visibilityHelper != nullptr);
+  REQUIRE(chunkCountHelper != nullptr);
+  REQUIRE(chunkStartHelper != nullptr);
+  REQUIRE(chunkFieldCountHelper != nullptr);
 
   CHECK(countHelper->parameters.empty());
   REQUIRE(countHelper->returnExpr.has_value());
   CHECK(countHelper->returnExpr->kind == primec::Expr::Kind::Literal);
   CHECK(countHelper->returnExpr->literalValue == 2);
+  REQUIRE(chunkCountHelper->returnExpr.has_value());
+  CHECK(chunkCountHelper->returnExpr->kind == primec::Expr::Kind::Literal);
+  CHECK(chunkCountHelper->returnExpr->literalValue == 1);
 
   const auto assertIndexedStringHelper = [](const primec::Definition &helperDef,
                                             const std::string &expectedFirst,
@@ -241,9 +256,108 @@ main() {
     CHECK(helperDef.returnExpr->stringValue == "\"\"utf8");
   };
 
+  const auto assertIndexedI32Helper = [](const primec::Definition &helperDef,
+                                         uint64_t expectedFirst,
+                                         std::optional<uint64_t> expectedSecond = std::nullopt) {
+    REQUIRE(helperDef.parameters.size() == 1);
+    CHECK(helperDef.parameters.front().name == "index");
+    REQUIRE(helperDef.statements.size() == (expectedSecond.has_value() ? 2 : 1));
+    for (size_t i = 0; i < helperDef.statements.size(); ++i) {
+      const primec::Expr &guardStmt = helperDef.statements[i];
+      REQUIRE(guardStmt.kind == primec::Expr::Kind::Call);
+      CHECK(guardStmt.name == "if");
+      REQUIRE(guardStmt.args.size() == 3);
+      const primec::Expr &condition = guardStmt.args[0];
+      REQUIRE(condition.kind == primec::Expr::Kind::Call);
+      CHECK(condition.name == "equal");
+      REQUIRE(condition.args.size() == 2);
+      CHECK(condition.args[0].kind == primec::Expr::Kind::Name);
+      CHECK(condition.args[0].name == "index");
+      CHECK(condition.args[1].kind == primec::Expr::Kind::Literal);
+      CHECK(condition.args[1].literalValue == i);
+      const primec::Expr &thenEnvelope = guardStmt.args[1];
+      REQUIRE(thenEnvelope.kind == primec::Expr::Kind::Call);
+      CHECK(thenEnvelope.name == "then");
+      REQUIRE(thenEnvelope.bodyArguments.size() == 1);
+      const primec::Expr &returnCall = thenEnvelope.bodyArguments.front();
+      REQUIRE(returnCall.kind == primec::Expr::Kind::Call);
+      CHECK(returnCall.name == "return");
+      REQUIRE(returnCall.args.size() == 1);
+      REQUIRE(returnCall.args[0].kind == primec::Expr::Kind::Literal);
+      CHECK(returnCall.args[0].literalValue == (i == 0 ? expectedFirst : *expectedSecond));
+    }
+    REQUIRE(helperDef.returnExpr.has_value());
+    CHECK(helperDef.returnExpr->kind == primec::Expr::Kind::Literal);
+    CHECK(helperDef.returnExpr->literalValue == 0);
+  };
+
   assertIndexedStringHelper(*nameHelper, "\"x\"utf8", "\"label\"utf8");
   assertIndexedStringHelper(*typeHelper, "\"i32\"utf8", "\"string\"utf8");
   assertIndexedStringHelper(*visibilityHelper, "\"public\"utf8", "\"private\"utf8");
+  assertIndexedI32Helper(*chunkStartHelper, 0);
+  assertIndexedI32Helper(*chunkFieldCountHelper, 2);
+}
+
+TEST_CASE("generate SoaSchema chunk helpers split wide reflected schemas deterministically") {
+  const std::string source = R"(
+[struct reflect generate(SoaSchema)]
+Item() {
+  [i32] f0{0i32}
+  [i32] f1{0i32}
+  [i32] f2{0i32}
+  [i32] f3{0i32}
+  [i32] f4{0i32}
+  [i32] f5{0i32}
+  [i32] f6{0i32}
+  [i32] f7{0i32}
+  [i32] f8{0i32}
+  [i32] f9{0i32}
+  [i32] f10{0i32}
+  [i32] f11{0i32}
+  [i32] f12{0i32}
+  [i32] f13{0i32}
+  [i32] f14{0i32}
+  [i32] f15{0i32}
+  [i32] f16{0i32}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  CHECK(error.empty());
+
+  const primec::Definition *chunkCountHelper = nullptr;
+  const primec::Definition *chunkStartHelper = nullptr;
+  const primec::Definition *chunkFieldCountHelper = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == "/Item/SoaSchemaChunkCount") {
+      chunkCountHelper = &def;
+    } else if (def.fullPath == "/Item/SoaSchemaChunkFieldStart") {
+      chunkStartHelper = &def;
+    } else if (def.fullPath == "/Item/SoaSchemaChunkFieldCount") {
+      chunkFieldCountHelper = &def;
+    }
+  }
+
+  REQUIRE(chunkCountHelper != nullptr);
+  REQUIRE(chunkStartHelper != nullptr);
+  REQUIRE(chunkFieldCountHelper != nullptr);
+  REQUIRE(chunkCountHelper->returnExpr.has_value());
+  CHECK(chunkCountHelper->returnExpr->kind == primec::Expr::Kind::Literal);
+  CHECK(chunkCountHelper->returnExpr->literalValue == 2);
+  REQUIRE(chunkStartHelper->statements.size() == 2);
+  REQUIRE(chunkFieldCountHelper->statements.size() == 2);
+  CHECK(chunkStartHelper->statements[0].args[1].bodyArguments[0].args[0].literalValue == 0);
+  CHECK(chunkStartHelper->statements[1].args[1].bodyArguments[0].args[0].literalValue == 16);
+  CHECK(chunkFieldCountHelper->statements[0].args[1].bodyArguments[0].args[0].literalValue == 16);
+  CHECK(chunkFieldCountHelper->statements[1].args[1].bodyArguments[0].args[0].literalValue == 1);
 }
 
 TEST_CASE("generate SoaSchema rejects helper collisions deterministically") {
