@@ -28,6 +28,7 @@ enum class DumpStage {
   Ast,
   Ir,
   AstSemantic,
+  SemanticProduct,
   TypeGraph,
   Unsupported,
 };
@@ -47,6 +48,9 @@ DumpStage parseDumpStage(const std::string &dumpStage) {
   }
   if (dumpStage == "ast_semantic" || dumpStage == "ast-semantic") {
     return DumpStage::AstSemantic;
+  }
+  if (dumpStage == "semantic_product" || dumpStage == "semantic-product") {
+    return DumpStage::SemanticProduct;
   }
   if (dumpStage == "type_graph" || dumpStage == "type-graph") {
     return DumpStage::TypeGraph;
@@ -530,7 +534,8 @@ bool runCompilePipeline(const Options &options,
   }
   output.program.sourceImports = sourceImports;
 
-  if (dumpStage != DumpStage::None && dumpStage != DumpStage::AstSemantic && dumpStage != DumpStage::TypeGraph) {
+  if (dumpStage != DumpStage::None && dumpStage != DumpStage::AstSemantic &&
+      dumpStage != DumpStage::SemanticProduct && dumpStage != DumpStage::TypeGraph) {
     if (dumpStage == DumpStage::Ast) {
       AstPrinter printer;
       output.dumpOutput = printer.print(output.program);
@@ -595,6 +600,12 @@ bool runCompilePipeline(const Options &options,
 
   output.semanticProgram = std::move(semanticProgram);
   output.hasSemanticProgram = true;
+
+  if (dumpStage == DumpStage::SemanticProduct) {
+    output.dumpOutput = formatSemanticProgram(output.semanticProgram);
+    output.hasDumpOutput = true;
+    return true;
+  }
 
   if (dumpStage == DumpStage::AstSemantic) {
     AstPrinter printer;

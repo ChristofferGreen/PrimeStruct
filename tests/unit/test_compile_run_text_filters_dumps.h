@@ -2114,6 +2114,43 @@ main() {
   CHECK(dump.find("path=\"/leaf\"") != std::string::npos);
 }
 
+TEST_CASE("dump semantic_product alias works and prints semantic output") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<T>]
+id<T>([T] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>()}
+  return(id(values.count()))
+}
+)";
+  const std::string srcPath = writeTemp("compile_dump_semantic_product_alias.prime", source);
+  const std::string hyphenOut =
+      (testScratchPath("") / "primec_dump_semantic_product_hyphen.txt").string();
+  const std::string underscoreOut =
+      (testScratchPath("") / "primec_dump_semantic_product_underscore.txt").string();
+
+  const std::string hyphenCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage semantic-product > " + quoteShellArg(hyphenOut);
+  const std::string underscoreCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage semantic_product > " + quoteShellArg(underscoreOut);
+  CHECK(runCommand(hyphenCmd) == 0);
+  CHECK(runCommand(underscoreCmd) == 0);
+
+  const std::string dump = readFile(hyphenOut);
+  CHECK(dump == readFile(underscoreOut));
+  CHECK(dump.find("semantic_product {") != std::string::npos);
+  CHECK(dump.find("entry_path: \"/main\"") != std::string::npos);
+  CHECK(dump.find("direct_call_targets[") != std::string::npos);
+  CHECK(dump.find("method_call_targets[") != std::string::npos);
+  CHECK(dump.find("bridge_path_choices[") != std::string::npos);
+}
+
 TEST_CASE("dump ast-semantic reports semantic errors") {
   const std::string source = R"(
 [return<int>]
@@ -2222,6 +2259,36 @@ main() {
       "./primec " + quoteShellArg(srcPath) + " --dump-stage type-graph > " + quoteShellArg(primecOut);
   const std::string primevmCmd =
       "./primevm " + quoteShellArg(srcPath) + " --dump-stage type-graph > " + quoteShellArg(primevmOut);
+  CHECK(runCommand(primecCmd) == 0);
+  CHECK(runCommand(primevmCmd) == 0);
+  CHECK(readFile(primecOut) == readFile(primevmOut));
+}
+
+TEST_CASE("primec and primevm dump semantic-product match") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<T>]
+id<T>([T] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>()}
+  return(id(values.count()))
+}
+)";
+  const std::string srcPath = writeTemp("compile_dump_shared_semantic_product.prime", source);
+  const std::string primecOut =
+      (testScratchPath("") / "primec_dump_shared_semantic_product.txt").string();
+  const std::string primevmOut =
+      (testScratchPath("") / "primevm_dump_shared_semantic_product.txt").string();
+
+  const std::string primecCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage semantic-product > " + quoteShellArg(primecOut);
+  const std::string primevmCmd =
+      "./primevm " + quoteShellArg(srcPath) + " --dump-stage semantic-product > " + quoteShellArg(primevmOut);
   CHECK(runCommand(primecCmd) == 0);
   CHECK(runCommand(primevmCmd) == 0);
   CHECK(readFile(primecOut) == readFile(primevmOut));

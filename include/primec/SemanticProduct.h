@@ -195,4 +195,6 @@ struct SemanticProgram {
   std::vector<SemanticProgramOnErrorFact> onErrorFacts;
 };
 
+std::string formatSemanticProgram(const SemanticProgram &semanticProgram);
+
 } // namespace primec

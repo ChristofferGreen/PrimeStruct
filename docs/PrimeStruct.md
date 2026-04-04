@@ -27,9 +27,9 @@ At a glance:
 Pipeline operating rules:
 - Each stage halts on error and exposes `--dump-stage=<name>` so tooling/tests can capture the text/tree output just
   before failure.
-- The current dump surface is syntax-first: `pre_ast`, `ast`, `ast-semantic`, and `ir`. The planned semantic-product
-  boundary adds one more lowering-facing inspection surface between `ast-semantic` and `ir`, so future tooling can
-  inspect resolved semantic facts without forcing users to infer them from the canonicalized AST or from lowered IR.
+- The current dump surface is `pre_ast`, `ast`, `ast-semantic`, `semantic-product`, and `ir`. `semantic-product`
+  is the lowering-facing inspection surface between `ast-semantic` and `ir`, so tooling can inspect resolved semantic
+  facts without forcing users to infer them from the canonicalized AST or from lowered IR.
 - `--collect-diagnostics` enables stable multi-error reporting for parse-stage failures, semantic build-map failures
   (duplicate-definition/import/invalid-transform/return-kind), semantic definition/execution pass failures across
   independent definitions/executions, and multiple intra-body call diagnostics inside a single definition/execution
@@ -349,7 +349,7 @@ Planned ownership-split test matrix:
   lowering and VM/debug entrypoints should be able to recover syntax-faithful provenance from semantic-product
   ids/handles without reading semantic facts back out of the raw AST.
 - Syntax-reproduction boundary:
-  `ast` and `ast-semantic` remain the syntax-shaped inspection surfaces, while the future semantic-product dump should
+  `ast` and `ast-semantic` remain the syntax-shaped inspection surfaces, while the semantic-product dump should
   expose only lowering-facing facts plus provenance handles.
 - Ownership isolation:
   semantic-product facts should remain valid even if AST-side semantic caches are removed or reorganized, as long as
@@ -530,17 +530,14 @@ Planned lowerer alias-fallback removal:
   - same-path helper-shadow behavior is preserved by semantic-product targets rather than lowerer-local recovery
   - backend-facing tests prove canonical helper routing without relying on AST-side or lowerer-side alias heuristics
 
-Planned inspection-surface relationship:
+Current inspection-surface relationship:
 - `pre_ast`: post-import, post-text-transform source text
 - `ast`: parser-owned syntax tree before semantic canonicalization
 - `ast-semantic`: canonicalized AST after semantic rewrites/inference, still syntax-oriented
-- `semantic-product` (planned): lowering-facing resolved facts, types, targets, effects, and provenance handles
+- `semantic-product`: lowering-facing resolved facts, types, targets, effects, and provenance handles
 - `ir`: canonical lowered IR after semantic-product consumption
 
-Until the semantic-product dump lands, `ast-semantic` remains the nearest public inspection surface for post-semantics
-state, but it should be treated as a syntax-faithful canonical tree rather than the long-term lowering contract.
-
-Planned semantic-product dump contract:
+Current semantic-product dump contract:
 - One deterministic module/program view per compile pipeline success, positioned after `ast-semantic` and before `ir`.
 - The dump should expose lowering-facing facts directly: resolved call targets, binding/result types, effects or
   capability summaries, struct/layout metadata, and stable provenance handles back to AST-owned spans/ids.
@@ -573,7 +570,7 @@ Planned pipeline-facing semantic-product conformance matrix:
   the narrow semantic-product golden suite to cover full backend behavior.
 - The first pipeline-facing cases should prove inspection-surface order and consistency:
   - `ast-semantic` remains syntax-shaped.
-  - the future semantic-product dump exposes lowering-facing facts directly.
+  - the semantic-product dump exposes lowering-facing facts directly.
   - `ir` remains the first backend-facing dump after semantic-product consumption.
 - Initial end-to-end cases should pin one lowering-facing fact family at a time across the normal compile pipeline:
   - resolved helper/call targets

@@ -104,11 +104,18 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   CHECK(graphSource.find("out = formatTypeResolutionGraph(graph);") != std::string::npos);
   CHECK(cmake.find("src/semantics/TypeResolutionGraphPreparation.cpp") != std::string::npos);
   CHECK(pipeline.find("DumpStage::TypeGraph") != std::string::npos);
+  CHECK(pipeline.find("DumpStage::SemanticProduct") != std::string::npos);
+  CHECK(pipeline.find("dumpStage == \"semantic_product\" || dumpStage == \"semantic-product\"") !=
+        std::string::npos);
   CHECK(pipeline.find("dumpStage == \"type_graph\" || dumpStage == \"type-graph\"") != std::string::npos);
   CHECK(pipeline.find("semantics::buildTypeResolutionGraphForProgram(") != std::string::npos);
   CHECK(pipeline.find("output.dumpOutput = semantics::formatTypeResolutionGraph(graph);") != std::string::npos);
-  CHECK(primecMain.find("[--dump-stage pre_ast|ast|ast-semantic|type-graph|ir]") != std::string::npos);
-  CHECK(primevmMain.find("[--dump-stage pre_ast|ast|ast-semantic|type-graph|ir]") != std::string::npos);
+  CHECK(pipeline.find("output.dumpOutput = formatSemanticProgram(output.semanticProgram);") !=
+        std::string::npos);
+  CHECK(primecMain.find("[--dump-stage pre_ast|ast|ast-semantic|semantic-product|type-graph|ir]") !=
+        std::string::npos);
+  CHECK(primevmMain.find("[--dump-stage pre_ast|ast|ast-semantic|semantic-product|type-graph|ir]") !=
+        std::string::npos);
 }
 
 TEST_CASE("compile pipeline publishes an initial semantic product shell") {
@@ -182,6 +189,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticProduct.find("struct SemanticProgramDefinition") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramExecution") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgram") != std::string::npos);
+  CHECK(semanticProduct.find("std::string formatSemanticProgram(const SemanticProgram &semanticProgram);") !=
+        std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramDirectCallTarget> directCallTargets;") !=
         std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramMethodCallTarget> methodCallTargets;") !=

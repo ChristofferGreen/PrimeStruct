@@ -659,4 +659,38 @@ TEST_CASE("type resolution local Result.ok metadata stays aligned with wrapped c
   CHECK(queryBindingEntry.bindingTypeText == callEntry.bindingTypeText);
 }
 
+TEST_CASE("semantic product formatter emits deterministic lowering-facing sections") {
+  const std::string source =
+      "import /std/collections/*\n"
+      "\n"
+      "[return<T>]\n"
+      "id<T>([T] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [vector<i32>] values{vector<i32>()}\n"
+      "  return(id(values.count()))\n"
+      "}\n";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const std::string dump = primec::formatSemanticProgram(semanticProgram);
+  CHECK(dump.find("semantic_product {") != std::string::npos);
+  CHECK(dump.find("entry_path: \"/main\"") != std::string::npos);
+  CHECK(dump.find("direct_call_targets[") != std::string::npos);
+  CHECK(dump.find("method_call_targets[") != std::string::npos);
+  CHECK(dump.find("bridge_path_choices[") != std::string::npos);
+  CHECK(dump.find("callable_summaries[") != std::string::npos);
+  CHECK(dump.find("binding_facts[") != std::string::npos);
+  CHECK(dump.find("return_facts[") != std::string::npos);
+}
+
 TEST_SUITE_END();

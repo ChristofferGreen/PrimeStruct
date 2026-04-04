@@ -89,23 +89,23 @@ disable transforms.
 
 Planned dump-stage evolution for the semantics/lowering boundary:
 - `ast-semantic` remains the current post-semantics public dump and is still AST-shaped.
-- A future semantic-product dump stage is expected to sit between `ast-semantic` and `ir`, exposing lowering-facing
-  resolved facts without requiring tooling to infer them from the canonicalized AST.
-- `ir` remains the first backend-facing dump after that future semantic-product boundary.
+- `semantic-product` now sits between `ast-semantic` and `ir`, exposing lowering-facing resolved facts without
+  requiring tooling to infer them from the canonicalized AST.
+- `ir` remains the first backend-facing dump after that semantic-product boundary.
 
-Planned semantic-product dump requirements:
+Current semantic-product dump requirements:
 - Deterministic ordering for modules, definitions, bindings, and diagnostics.
 - Direct exposure of lowering-facing facts such as resolved call targets, binding/result types, effects/capabilities,
   struct/layout metadata, and provenance handles.
 - No attempt to replace syntax-oriented dumps; syntax-faithful structure remains owned by `ast` / `ast-semantic`.
 
 Planned pipeline-facing semantic-product conformance requirements:
-- Pipeline-facing tests should verify the relationship between `ast-semantic`, the future semantic-product stage, and
+- Pipeline-facing tests should verify the relationship between `ast-semantic`, the semantic-product stage, and
   `ir`, rather than treating any one of them as a substitute for the others.
 - Semantic-product golden tests should stay narrow and formatter-focused; broader compile-pipeline C++/VM/native cases
   should prove that lowering consumes published semantic-product facts.
 - Lowering-facing snapshot assertions that are currently expressed through AST-shaped helpers should migrate either to
-  the semantic-product dump or to those pipeline-facing conformance cases once the semantic-product stage exists.
+  the semantic-product dump or to those pipeline-facing conformance cases.
 
 Use `--emit=ir` to write serialized PSIR bytecode to the output path after semantic validation.
 

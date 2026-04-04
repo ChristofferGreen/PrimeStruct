@@ -86,13 +86,11 @@ Semantic product creation:
 
 Pipeline plumbing:
 - ◐ Implement the CLI/runtime plumbing cutover for the semantic product now that the end-to-end handoff contract is documented. Progress: this plumbing cut is now split into explicit CLI, runtime/backend, and failure/report seams instead of one umbrella handoff item.
-  - ◐ Thread the semantic product through `primec` CLI and dump-stage entrypoints. Progress: successful `primec` compile/emit entrypoints now thread the published semantic product through the shared IR preparation handoff, while dump-stage selection/emission and CLI-facing reporting still remain live.
-    - ○ Thread semantic-product success results through `primec` dump-stage selection and emission entrypoints.
-    - ○ Thread semantic-product-aware reporting through `primec` user-facing CLI diagnostics/help text where needed.
+  - ✓ Thread the semantic product through `primec` CLI and dump-stage entrypoints. Completed: successful `primec` compile/emit entrypoints now thread the published semantic product through the shared IR preparation handoff, the `semantic-product` dump stage is available from both `primec` and `primevm`, and the CLI help text documents that lowering-facing stage between `ast-semantic` and `ir`.
   - ✓ Thread the semantic product through runtime/backend consumer entrypoints (`primevm`, backend dispatch, and related handoff glue). Completed: `primevm`, backend dispatch, and the shared runtime/backend handoff path now thread published semantic-product success artifacts through `prepareIrModule(...)` / `IrLowerer::lower(...)` instead of dropping back to raw AST-only lowering entrypoints.
   - ◐ Thread the semantic product through failure/report plumbing without creating parallel semantic state. Progress: this reporting surface is now split into pipeline failure objects, dump/report surfaces, and user-visible diagnostic ordering/reporting seams.
     - ○ Thread semantic-product-aware failure objects through compile-pipeline result plumbing.
-    - ○ Thread semantic-product-aware dump/report plumbing without duplicating semantic state.
+    - ✓ Thread semantic-product-aware dump/report plumbing without duplicating semantic state. Completed: the compile pipeline now emits `semantic-product` dump output directly from the already-published `CompilePipelineOutput.semanticProgram` surface instead of constructing any parallel semantic-report state.
     - ○ Thread semantic-product-aware user-visible diagnostic ordering/reporting through the remaining CLI/runtime consumers.
 - ◐ Implement the temporary migration adapter now that its cutover/removal contract is documented. Progress: the remaining adapter work is now split into lowering-facing fact families instead of one umbrella shim item.
   - ◐ Implement the migration adapter for lowering-facing resolved target, binding, effect, and layout facts. Progress: this lowering-facing adapter is now split into direct target, binding/type, and effect/layout seams instead of one broad fact-family bucket.
@@ -105,7 +103,7 @@ Pipeline plumbing:
     - ○ Implement the migration adapter for graph-backed `try(...)` facts.
     - ○ Implement the migration adapter for graph-backed `on_error` facts.
 - ◐ Implement the deterministic semantic-product dump/formatter plus golden coverage now that its inspection contract is documented. Progress: the inspection-surface work is now split into formatter and coverage slices instead of one mixed dump item.
-  - ○ Implement the deterministic semantic-product dump stage and text formatter.
+  - ✓ Implement the deterministic semantic-product dump stage and text formatter. Completed: `semantic-product` is now a real dump stage for `primec` and `primevm`, backed by a deterministic text formatter over the published `SemanticProgram` fact inventories.
   - ○ Add golden coverage for the semantic-product dump surface.
 - ◐ Implement ownership-split tests for source spans, debug/source-map provenance, and syntax-faithful data using the documented test matrix. Progress: the documented matrix is now split into explicit ownership/parity slices so provenance coverage can land incrementally.
   - ○ Add source-span parity tests for semantic-product entries that feed lowering-facing facts.

@@ -39,6 +39,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/ImportResolver.cpp
   src/ImportResolverHelpers.cpp
   src/Lexer.cpp
+  src/SemanticProduct.cpp
   src/parser/ParserCore.cpp
   src/parser/ParserCoreBodyStatements.cpp
   src/parser/ParserCoreDefinitionBodies.cpp
