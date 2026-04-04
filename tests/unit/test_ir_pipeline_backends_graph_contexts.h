@@ -144,6 +144,18 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
       cwd / "src" / "ir_lowerer" / "IrLowererSemanticProductTargetAdapters.h";
   std::filesystem::path semanticTargetAdapterSourcePath =
       cwd / "src" / "ir_lowerer" / "IrLowererSemanticProductTargetAdapters.cpp";
+  std::filesystem::path bindingTypeHelpersHeaderPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererBindingTypeHelpers.h";
+  std::filesystem::path bindingTypeHelpersSourcePath =
+      cwd / "src" / "ir_lowerer" / "IrLowererBindingTypeHelpers.cpp";
+  std::filesystem::path setupMathHelpersHeaderPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererSetupMathHelpers.h";
+  std::filesystem::path setupMathHelpersSourcePath =
+      cwd / "src" / "ir_lowerer" / "IrLowererSetupMathHelpers.cpp";
+  std::filesystem::path uninitializedTypeHelpersPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererUninitializedTypeHelpers.h";
+  std::filesystem::path uninitializedSetupBuildersPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererUninitializedSetupBuilders.cpp";
   std::filesystem::path primecMainPath = cwd / "src" / "main.cpp";
   std::filesystem::path primevmMainPath = cwd / "src" / "primevm_main.cpp";
   if (!std::filesystem::exists(semanticProductPath)) {
@@ -170,6 +182,18 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererSemanticProductTargetAdapters.h";
     semanticTargetAdapterSourcePath =
         cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererSemanticProductTargetAdapters.cpp";
+    bindingTypeHelpersHeaderPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererBindingTypeHelpers.h";
+    bindingTypeHelpersSourcePath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererBindingTypeHelpers.cpp";
+    setupMathHelpersHeaderPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererSetupMathHelpers.h";
+    setupMathHelpersSourcePath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererSetupMathHelpers.cpp";
+    uninitializedTypeHelpersPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererUninitializedTypeHelpers.h";
+    uninitializedSetupBuildersPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererUninitializedSetupBuilders.cpp";
     primecMainPath = cwd.parent_path() / "src" / "main.cpp";
     primevmMainPath = cwd.parent_path() / "src" / "primevm_main.cpp";
   }
@@ -192,6 +216,12 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   REQUIRE(std::filesystem::exists(irReturnInferencePath));
   REQUIRE(std::filesystem::exists(semanticTargetAdapterHeaderPath));
   REQUIRE(std::filesystem::exists(semanticTargetAdapterSourcePath));
+  REQUIRE(std::filesystem::exists(bindingTypeHelpersHeaderPath));
+  REQUIRE(std::filesystem::exists(bindingTypeHelpersSourcePath));
+  REQUIRE(std::filesystem::exists(setupMathHelpersHeaderPath));
+  REQUIRE(std::filesystem::exists(setupMathHelpersSourcePath));
+  REQUIRE(std::filesystem::exists(uninitializedTypeHelpersPath));
+  REQUIRE(std::filesystem::exists(uninitializedSetupBuildersPath));
   REQUIRE(std::filesystem::exists(primecMainPath));
   REQUIRE(std::filesystem::exists(primevmMainPath));
 
@@ -214,6 +244,12 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::string irReturnInference = readTextFile(irReturnInferencePath);
   const std::string semanticTargetAdapterHeader = readTextFile(semanticTargetAdapterHeaderPath);
   const std::string semanticTargetAdapterSource = readTextFile(semanticTargetAdapterSourcePath);
+  const std::string bindingTypeHelpersHeader = readTextFile(bindingTypeHelpersHeaderPath);
+  const std::string bindingTypeHelpersSource = readTextFile(bindingTypeHelpersSourcePath);
+  const std::string setupMathHelpersHeader = readTextFile(setupMathHelpersHeaderPath);
+  const std::string setupMathHelpersSource = readTextFile(setupMathHelpersSourcePath);
+  const std::string uninitializedTypeHelpers = readTextFile(uninitializedTypeHelpersPath);
+  const std::string uninitializedSetupBuilders = readTextFile(uninitializedSetupBuildersPath);
   const std::string primecMain = readTextFile(primecMainPath);
   const std::string primevmMain = readTextFile(primevmMainPath);
   CHECK(semanticProduct.find("struct SemanticProgramDirectCallTarget") != std::string::npos);
@@ -300,10 +336,31 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramReturnFact *findSemanticProductReturnFact(") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("std::unordered_map<std::string, const SemanticProgramBindingFact *> bindingFactsByExpr;") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("const SemanticProgramBindingFact *findSemanticProductBindingFact(") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterSource.find("buildSemanticProductTargetAdapter(const SemanticProgram *semanticProgram)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.callableSummariesByPath.reserve(") != std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.returnFactsByDefinitionPath.reserve(") != std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.bindingFactsByExpr.reserve(semanticProgram->bindingFacts.size())") !=
+        std::string::npos);
+  CHECK(bindingTypeHelpersHeader.find("BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgram = nullptr);") !=
+        std::string::npos);
+  CHECK(bindingTypeHelpersSource.find("findSemanticProductBindingFact(semanticProductTargets, expr)") !=
+        std::string::npos);
+  CHECK(setupMathHelpersHeader.find("SetupMathAndBindingAdapters makeSetupMathAndBindingAdapters(bool hasMathImport,") !=
+        std::string::npos);
+  CHECK(setupMathHelpersHeader.find("const SemanticProgram *semanticProgram = nullptr);") !=
+        std::string::npos);
+  CHECK(setupMathHelpersSource.find("adapters.bindingTypeAdapters = makeBindingTypeAdapters(semanticProgram);") !=
+        std::string::npos);
+  CHECK(uninitializedTypeHelpers.find("bool buildSetupMathTypeStructAndUninitializedResolutionSetup(") !=
+        std::string::npos);
+  CHECK(uninitializedTypeHelpers.find("const SemanticProgram *semanticProgram,") != std::string::npos);
+  CHECK(uninitializedSetupBuilders.find("makeSetupMathAndBindingAdapters(hasMathImport, semanticProgram)") !=
+        std::string::npos);
   CHECK(irLowerEffects.find("findSemanticProductCallableSummary(semanticProductTargets, entryPath)") !=
         std::string::npos);
   CHECK(irReturnInference.find("findSemanticProductCallableSummary(semanticProductTargets, entryPath)") !=

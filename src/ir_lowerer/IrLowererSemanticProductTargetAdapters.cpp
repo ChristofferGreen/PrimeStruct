@@ -100,6 +100,14 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
     }
   }
 
+  adapter.bindingFactsByExpr.reserve(semanticProgram->bindingFacts.size());
+  for (const auto &entry : semanticProgram->bindingFacts) {
+    if (std::string key = makeTargetLookupKey(entry.sourceLine, entry.sourceColumn, entry.name);
+        !key.empty()) {
+      adapter.bindingFactsByExpr[key] = &entry;
+    }
+  }
+
   return adapter;
 }
 
@@ -158,6 +166,18 @@ const SemanticProgramReturnFact *findSemanticProductReturnFact(const SemanticPro
   }
   if (const auto it = adapter.returnFactsByDefinitionPath.find(definitionPath);
       it != adapter.returnFactsByDefinitionPath.end()) {
+    return it->second;
+  }
+  return nullptr;
+}
+
+const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticProductTargetAdapter &adapter,
+                                                                const Expr &expr) {
+  const std::string key = makeTargetLookupKey(expr, expr.name);
+  if (key.empty()) {
+    return nullptr;
+  }
+  if (const auto it = adapter.bindingFactsByExpr.find(key); it != adapter.bindingFactsByExpr.end()) {
     return it->second;
   }
   return nullptr;

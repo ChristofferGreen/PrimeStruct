@@ -5,6 +5,7 @@
 
 #include "IrLowererSharedTypes.h"
 #include "primec/Ast.h"
+#include "primec/SemanticProduct.h"
 
 namespace primec::ir_lowerer {
 
@@ -22,7 +23,7 @@ struct BindingTypeAdapters {
   SetReferenceArrayInfoFn setReferenceArrayInfo{};
 };
 
-BindingTypeAdapters makeBindingTypeAdapters();
+BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgram = nullptr);
 BindingKindFromTransformsFn makeBindingKindFromTransforms();
 IsBindingTypeFn makeIsStringBindingType();
 IsBindingTypeFn makeIsFileErrorBindingType();

@@ -266,6 +266,7 @@ bool buildEntrySetupMathTypeStructAndUninitializedResolutionSetup(
   const auto &entryCallOnErrorSetup = out.entryCountCallOnErrorSetup.callOnErrorSetup;
   if (!buildSetupMathTypeStructAndUninitializedResolutionSetup(
           hasMathImport,
+          semanticProgram,
           structNames,
           importAliases,
           structReserveHint,
@@ -281,6 +282,7 @@ bool buildEntrySetupMathTypeStructAndUninitializedResolutionSetup(
 
 bool buildSetupMathTypeStructAndUninitializedResolutionSetup(
     bool hasMathImport,
+    const SemanticProgram *semanticProgram,
     const std::unordered_set<std::string> &structNames,
     const std::unordered_map<std::string, std::string> &importAliases,
     std::size_t structReserveHint,
@@ -291,7 +293,7 @@ bool buildSetupMathTypeStructAndUninitializedResolutionSetup(
     std::string &error) {
   std::destroy_at(&out);
   std::construct_at(&out);
-  out.setupMathAndBindingAdapters = makeSetupMathAndBindingAdapters(hasMathImport);
+  out.setupMathAndBindingAdapters = makeSetupMathAndBindingAdapters(hasMathImport, semanticProgram);
   if (!buildSetupTypeStructAndUninitializedResolutionSetup(structNames,
                                                            importAliases,
                                                            structReserveHint,

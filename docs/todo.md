@@ -115,16 +115,13 @@ Lowering cutover:
   - ○ Make `prepareIrModule` consume the semantic product directly instead of re-reading lowering facts from raw `Program` state.
   - ○ Make `IrLowerer::lower` consume the semantic product directly at its main lowering entrypoint.
   - ○ Retire the raw-`Program` lowering entry path once the temporary adapter is no longer needed.
-- ◐ Implement the lowerer type/binding setup cutover now that the handoff contract is documented. Progress: the lowerer binding cutover is now split into parameters/locals, temporaries/returns, and helper-owned binding metadata instead of one umbrella type handoff item.
-  - ◐ Consume semantic-product parameter and local binding metadata in lowerer setup. Progress: this binding family is now split into parameter, local, and lowered entry-argument seams instead of one broad parameter/local bucket.
-    - ○ Consume semantic-product parameter binding metadata in lowerer setup.
-    - ○ Consume semantic-product local binding metadata in lowerer setup.
+- ◐ Implement the lowerer type/binding setup cutover now that the handoff contract is documented. Progress: semantic-product binding facts now cover lowerer parameter/local setup plus helper-parameter setup; remaining work is lowered entry-argument seams, temporaries, returns that still derive helper temporaries, and helper-owned result/synthetic metadata.
+  - ◐ Consume semantic-product parameter and local binding metadata in lowerer setup. Progress: semantic-product binding facts now drive parameter and local binding classification; remaining work in this family is lowered entry-argument seams.
     - ○ Consume semantic-product lowered entry-argument binding metadata in lowerer setup.
   - ◐ Consume semantic-product temporary and return binding metadata in lowerer setup. Progress: entry return/result setup now consumes semantic-product return facts and callable summaries; remaining work is temporaries and implicit helper temporaries.
     - ○ Consume semantic-product temporary binding metadata in lowerer setup.
     - ○ Consume semantic-product implicit helper-temporary metadata in lowerer setup.
-  - ◐ Consume semantic-product helper-owned binding/type metadata in lowerer setup. Progress: this helper-owned family is now split into helper parameters, helper results, and helper-local synthetic metadata instead of one broad helper-owned bucket.
-    - ○ Consume semantic-product helper parameter/type metadata in lowerer setup.
+  - ◐ Consume semantic-product helper-owned binding/type metadata in lowerer setup. Progress: semantic-product binding facts now cover helper parameters; remaining work in this helper-owned family is helper results and helper-local synthetic metadata.
     - ○ Consume semantic-product helper result/type metadata in lowerer setup.
     - ○ Consume semantic-product helper-local synthetic binding/type metadata in lowerer setup.
 - ◐ Implement the lowerer effect/capability and struct-layout setup cutover now that the handoff contract is documented. Progress: the remaining lowerer metadata handoff is now split into effect/capability facts and struct/layout facts instead of one umbrella setup item.

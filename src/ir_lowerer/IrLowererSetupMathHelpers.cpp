@@ -63,10 +63,11 @@ SetupMathResolvers makeSetupMathResolvers(bool hasMathImport) {
   return resolvers;
 }
 
-SetupMathAndBindingAdapters makeSetupMathAndBindingAdapters(bool hasMathImport) {
+SetupMathAndBindingAdapters makeSetupMathAndBindingAdapters(bool hasMathImport,
+                                                           const SemanticProgram *semanticProgram) {
   SetupMathAndBindingAdapters adapters;
   adapters.setupMathResolvers = makeSetupMathResolvers(hasMathImport);
-  adapters.bindingTypeAdapters = makeBindingTypeAdapters();
+  adapters.bindingTypeAdapters = makeBindingTypeAdapters(semanticProgram);
   return adapters;
 }
 

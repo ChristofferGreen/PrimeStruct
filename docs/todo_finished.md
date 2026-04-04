@@ -7,6 +7,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Consumed semantic-product parameter, local, and helper-parameter binding metadata in lowerer setup. Completed: the lowerer binding adapters now prefer published `SemanticProgramBindingFact` entries for binding kind, value kind, string/file-error classification, and reference/array/container metadata, so parameter/local setup plus helper-parameter setup no longer have to re-derive those facts only from AST transforms.
 - ✓ Materialized semantic-product callable summaries for effect/capability setup. Completed: `SemanticProgram` now publishes deterministic callable summaries for definitions and executions, including return kind, compute/unsafe flags, active effects, capabilities, and result/on_error summary data needed by later IR-preparation cutover work.
 - ✓ Materialized semantic-product struct/enum/layout metadata shell. Completed: `SemanticProgram` now publishes deterministic definition-level type metadata covering struct/enum category, public visibility, layout-policy flags, explicit alignment, and field/enum-item counts so later lowerer metadata cutover work can consume a stable shell instead of re-reading only raw transforms.
 - ✓ Consumed semantic-product return binding/result metadata in lowerer setup. Completed: entry-return setup now builds `EntryReturnConfig` from published semantic-product return facts plus callable result summaries instead of re-deriving that state only from AST return transforms.

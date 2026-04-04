@@ -503,6 +503,17 @@ TEST_CASE("semantic product publishes binding and return facts") {
   REQUIRE(localIt != semanticProgram.bindingFacts.end());
   CHECK(localIt->bindingTypeText == "i64");
 
+  const auto helperParameterIt =
+      std::find_if(semanticProgram.bindingFacts.begin(),
+                   semanticProgram.bindingFacts.end(),
+                   [](const primec::SemanticProgramBindingFact &entry) {
+                     return entry.siteKind == "parameter" &&
+                            entry.name == "value" &&
+                            entry.scopePath.rfind("/id", 0) == 0;
+                   });
+  REQUIRE(helperParameterIt != semanticProgram.bindingFacts.end());
+  CHECK(helperParameterIt->bindingTypeText == "i32");
+
   const auto tempIt =
       std::find_if(semanticProgram.bindingFacts.begin(),
                    semanticProgram.bindingFacts.end(),

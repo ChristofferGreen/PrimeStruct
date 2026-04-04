@@ -18,7 +18,8 @@ bool isMathImportPath(const std::string &path);
 bool hasProgramMathImport(const std::vector<std::string> &imports);
 bool isSupportedMathBuiltinName(const std::string &name);
 SetupMathResolvers makeSetupMathResolvers(bool hasMathImport);
-SetupMathAndBindingAdapters makeSetupMathAndBindingAdapters(bool hasMathImport);
+SetupMathAndBindingAdapters makeSetupMathAndBindingAdapters(bool hasMathImport,
+                                                           const SemanticProgram *semanticProgram = nullptr);
 GetSetupMathBuiltinNameFn makeGetSetupMathBuiltinName(bool hasMathImport);
 GetSetupMathConstantNameFn makeGetSetupMathConstantName(bool hasMathImport);
 bool getSetupMathBuiltinName(const Expr &expr, bool hasMathImport, std::string &out);

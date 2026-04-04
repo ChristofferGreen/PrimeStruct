@@ -14,6 +14,7 @@ struct SemanticProductTargetAdapter {
   std::unordered_map<std::string, std::string> bridgePathChoicesByExpr;
   std::unordered_map<std::string, const SemanticProgramCallableSummary *> callableSummariesByPath;
   std::unordered_map<std::string, const SemanticProgramReturnFact *> returnFactsByDefinitionPath;
+  std::unordered_map<std::string, const SemanticProgramBindingFact *> bindingFactsByExpr;
 };
 
 SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticProgram *semanticProgram);
@@ -26,5 +27,7 @@ const SemanticProgramCallableSummary *findSemanticProductCallableSummary(
     const std::string &fullPath);
 const SemanticProgramReturnFact *findSemanticProductReturnFact(const SemanticProductTargetAdapter &adapter,
                                                               const std::string &definitionPath);
+const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticProductTargetAdapter &adapter,
+                                                                const Expr &expr);
 
 } // namespace primec::ir_lowerer

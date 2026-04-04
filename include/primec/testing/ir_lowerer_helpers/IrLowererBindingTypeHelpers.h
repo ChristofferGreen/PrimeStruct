@@ -16,7 +16,7 @@ struct BindingTypeAdapters {
   SetReferenceArrayInfoFn setReferenceArrayInfo{};
 };
 
-BindingTypeAdapters makeBindingTypeAdapters();
+BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgram = nullptr);
 BindingKindFromTransformsFn makeBindingKindFromTransforms();
 IsBindingTypeFn makeIsStringBindingType();
 IsBindingTypeFn makeIsFileErrorBindingType();
