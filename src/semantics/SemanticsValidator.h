@@ -192,6 +192,15 @@ public:
     BindingInfo receiverBinding;
   };
 
+  struct BridgePathChoiceSnapshotEntry {
+    std::string scopePath;
+    std::string collectionFamily;
+    std::string helperName;
+    std::string chosenPath;
+    int sourceLine = 0;
+    int sourceColumn = 0;
+  };
+
   SemanticsValidator(const Program &program,
                      const std::string &entryPath,
                      std::string &error,
@@ -210,6 +219,7 @@ public:
   std::vector<CallBindingSnapshotEntry> callBindingSnapshotForTesting();
   std::vector<DirectCallTargetSnapshotEntry> directCallTargetSnapshotForSemanticProduct() const;
   std::vector<MethodCallTargetSnapshotEntry> methodCallTargetSnapshotForSemanticProduct();
+  std::vector<BridgePathChoiceSnapshotEntry> bridgePathChoiceSnapshotForSemanticProduct() const;
   std::vector<QueryReceiverBindingSnapshotEntry> queryReceiverBindingSnapshotForTesting();
   std::vector<OnErrorSnapshotEntry> onErrorSnapshotForTesting();
   std::vector<ValidationContextSnapshotEntry> validationContextSnapshotForTesting() const;

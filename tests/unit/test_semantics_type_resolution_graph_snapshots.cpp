@@ -284,6 +284,71 @@ TEST_CASE("semantic product publishes resolved method-call targets") {
   CHECK(targetIt->sourceColumn > 0);
 }
 
+TEST_CASE("semantic product publishes same-path collection bridge routing choices") {
+  const std::string source =
+      "[return<i32>]\n"
+      "/vector/count([vector<i32>] values) {\n"
+      "  return(17i32)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [auto] values{vector(1i32)}\n"
+      "  return(count(values))\n"
+      "}\n";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto choiceIt =
+      std::find_if(semanticProgram.bridgePathChoices.begin(),
+                   semanticProgram.bridgePathChoices.end(),
+                   [](const primec::SemanticProgramBridgePathChoice &entry) {
+                     return entry.scopePath == "/main" &&
+                            entry.collectionFamily == "vector" &&
+                            entry.helperName == "count" &&
+                            entry.chosenPath == "/vector/count";
+                   });
+  REQUIRE(choiceIt != semanticProgram.bridgePathChoices.end());
+  CHECK(choiceIt->sourceLine > 0);
+  CHECK(choiceIt->sourceColumn > 0);
+}
+
+TEST_CASE("semantic product publishes canonical collection bridge routing choices") {
+  const std::string source =
+      "[effects(heap_alloc), return<int>]\n"
+      "main() {\n"
+      "  [map<string, i32>] values{map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n"
+      "  return(count(values))\n"
+      "}\n";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto choiceIt =
+      std::find_if(semanticProgram.bridgePathChoices.begin(),
+                   semanticProgram.bridgePathChoices.end(),
+                   [](const primec::SemanticProgramBridgePathChoice &entry) {
+                     return entry.scopePath == "/main" &&
+                            entry.collectionFamily == "map" &&
+                            entry.helperName == "count" &&
+                            entry.chosenPath == "/std/collections/map/count";
+                   });
+  REQUIRE(choiceIt != semanticProgram.bridgePathChoices.end());
+  CHECK(choiceIt->sourceLine > 0);
+  CHECK(choiceIt->sourceColumn > 0);
+}
+
 TEST_CASE("type resolution local Result.ok metadata stays aligned with wrapped call snapshots") {
   const std::string source =
       "MyError {\n"

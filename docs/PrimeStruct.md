@@ -395,9 +395,9 @@ Compile-pipeline publication contract:
   semantic product as the authoritative lowering-facing artifact.
 - The current published shell is still intentionally narrow, but it now includes the resolved call-target surface:
   entry path, import inventories, deterministic definition/execution inventories, resolved direct-call targets with
-  canonical callee paths, and resolved receiver/method-call targets with receiver-side helper-family choices are
-  available now, while collection/builtin bridge routing facts, binding/result types, effect/capability facts, and
-  layout metadata remain separate live builder items.
+  canonical callee paths, resolved receiver/method-call targets with receiver-side helper-family choices, and direct
+  collection/builtin bridge routing choices are available now, while binding/result types, effect/capability facts,
+  and layout metadata remain separate live builder items.
 - Dump-stage handling should be able to read either the syntax-facing canonical AST dump or the future semantic-product
   dump from the same compile-pipeline success result without re-running semantics.
 - Backend/runtime entrypoints should consume the semantic product from compile-pipeline output once available rather

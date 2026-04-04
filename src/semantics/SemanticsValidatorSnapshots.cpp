@@ -2,8 +2,77 @@
 
 #include <algorithm>
 #include <functional>
+#include <optional>
 
 namespace primec::semantics {
+namespace {
+
+bool isBridgeHelperName(std::string_view collectionFamily, std::string_view helperName) {
+  if (collectionFamily == "vector") {
+    return helperName == "count" || helperName == "capacity" || helperName == "at" ||
+           helperName == "at_unsafe" || helperName == "push" || helperName == "pop" ||
+           helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
+           helperName == "remove_swap";
+  }
+  if (collectionFamily == "map") {
+    return helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
+           helperName == "at" || helperName == "at_unsafe" || helperName == "insert" ||
+           helperName == "mapInsertRef";
+  }
+  if (collectionFamily == "soa_vector") {
+    return helperName == "count" || helperName == "get" || helperName == "ref" ||
+           helperName == "to_aos" || helperName == "push" || helperName == "reserve";
+  }
+  return false;
+}
+
+std::optional<std::pair<std::string, std::string>>
+collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
+  auto parsePrefixedHelper = [&](std::string_view prefix,
+                                std::string_view collectionFamily)
+      -> std::optional<std::pair<std::string, std::string>> {
+    if (resolvedPath.rfind(prefix, 0) != 0) {
+      return std::nullopt;
+    }
+    std::string helperName = resolvedPath.substr(prefix.size());
+    const size_t specializationSuffix = helperName.find("__t");
+    if (specializationSuffix != std::string::npos) {
+      helperName.erase(specializationSuffix);
+    }
+    if (!isBridgeHelperName(collectionFamily, helperName)) {
+      return std::nullopt;
+    }
+    return std::pair<std::string, std::string>(std::string(collectionFamily), std::move(helperName));
+  };
+
+  if (auto parsed = parsePrefixedHelper("/vector/", "vector")) {
+    return parsed;
+  }
+  if (auto parsed = parsePrefixedHelper("/std/collections/vector/", "vector")) {
+    return parsed;
+  }
+  if (auto parsed = parsePrefixedHelper("/std/collections/experimental_vector/", "vector")) {
+    return parsed;
+  }
+  if (auto parsed = parsePrefixedHelper("/map/", "map")) {
+    return parsed;
+  }
+  if (auto parsed = parsePrefixedHelper("/std/collections/map/", "map")) {
+    return parsed;
+  }
+  if (auto parsed = parsePrefixedHelper("/std/collections/experimental_map/", "map")) {
+    return parsed;
+  }
+  if (auto parsed = parsePrefixedHelper("/soa_vector/", "soa_vector")) {
+    return parsed;
+  }
+  if (auto parsed = parsePrefixedHelper("/std/collections/soa_vector/", "soa_vector")) {
+    return parsed;
+  }
+  return std::nullopt;
+}
+
+} // namespace
 
 std::vector<SemanticsValidator::ReturnResolutionSnapshotEntry>
 SemanticsValidator::returnResolutionSnapshotForTesting() const {
@@ -504,6 +573,69 @@ SemanticsValidator::methodCallTargetSnapshotForSemanticProduct() {
       return left.methodName < right.methodName;
     }
     return left.resolvedPath < right.resolvedPath;
+  });
+  return entries;
+}
+
+std::vector<SemanticsValidator::BridgePathChoiceSnapshotEntry>
+SemanticsValidator::bridgePathChoiceSnapshotForSemanticProduct() const {
+  std::vector<BridgePathChoiceSnapshotEntry> entries;
+  std::function<void(const std::string &, const Expr &)> visitExpr;
+  auto visitExprs = [&](const std::string &scopePath, const std::vector<Expr> &exprs) {
+    for (const auto &expr : exprs) {
+      visitExpr(scopePath, expr);
+    }
+  };
+
+  visitExpr = [&](const std::string &scopePath, const Expr &expr) {
+    if (expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
+      const std::string resolvedPath = resolveCalleePath(expr);
+      if (const auto bridgeChoice = collectionBridgeChoiceFromResolvedPath(resolvedPath);
+          bridgeChoice.has_value()) {
+        entries.push_back(BridgePathChoiceSnapshotEntry{
+            scopePath,
+            bridgeChoice->first,
+            bridgeChoice->second,
+            resolvedPath,
+            expr.sourceLine,
+            expr.sourceColumn,
+        });
+      }
+    }
+    visitExprs(scopePath, expr.args);
+    visitExprs(scopePath, expr.bodyArguments);
+  };
+
+  for (const auto &def : program_.definitions) {
+    visitExprs(def.fullPath, def.parameters);
+    visitExprs(def.fullPath, def.statements);
+    if (def.returnExpr.has_value()) {
+      visitExpr(def.fullPath, *def.returnExpr);
+    }
+  }
+
+  for (const auto &exec : program_.executions) {
+    visitExprs(exec.fullPath, exec.arguments);
+    visitExprs(exec.fullPath, exec.bodyArguments);
+  }
+
+  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+    if (left.scopePath != right.scopePath) {
+      return left.scopePath < right.scopePath;
+    }
+    if (left.sourceLine != right.sourceLine) {
+      return left.sourceLine < right.sourceLine;
+    }
+    if (left.sourceColumn != right.sourceColumn) {
+      return left.sourceColumn < right.sourceColumn;
+    }
+    if (left.collectionFamily != right.collectionFamily) {
+      return left.collectionFamily < right.collectionFamily;
+    }
+    if (left.helperName != right.helperName) {
+      return left.helperName < right.helperName;
+    }
+    return left.chosenPath < right.chosenPath;
   });
   return entries;
 }

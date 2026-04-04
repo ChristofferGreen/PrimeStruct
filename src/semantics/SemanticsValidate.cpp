@@ -158,6 +158,18 @@ SemanticProgram buildSemanticProgram(const Program &program,
         entry.sourceColumn,
     });
   }
+  const auto bridgePathChoices = validator.bridgePathChoiceSnapshotForSemanticProduct();
+  semanticProgram.bridgePathChoices.reserve(bridgePathChoices.size());
+  for (const auto &entry : bridgePathChoices) {
+    semanticProgram.bridgePathChoices.push_back(SemanticProgramBridgePathChoice{
+        entry.scopePath,
+        entry.collectionFamily,
+        entry.helperName,
+        entry.chosenPath,
+        entry.sourceLine,
+        entry.sourceColumn,
+    });
+  }
   return semanticProgram;
 }
 
