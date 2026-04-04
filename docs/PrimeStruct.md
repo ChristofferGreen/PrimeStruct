@@ -530,14 +530,19 @@ Planned lowerer effect/struct-layout handoff:
   - walking original field statements for syntax-owned qualifiers, visibility, and field-local alignment
   - reading namespace prefixes and other source-owned context needed by recursive layout traversal
   - preserving one direct path back to source spans/debug provenance while layout planning is still partly AST-owned
-- That map is not a missing semantic-product inventory anymore; future cutover work should track only the
+- That residual field/provenance traversal is now explicitly the intended long-term boundary for
+  layout planning rather than a deferred semantic-product seam:
+  - `public/private`, `static`, `pod/handle/gpu_lane`, and field-local alignment remain syntax-owned
+  - top-level struct inventories, explicit struct alignment, and field type/envelope facts remain semantic-product-owned
+  - lowerer layout code should keep consulting AST field statements only for those syntax-owned qualifiers and
+    provenance handles, not to re-derive lowering-facing type/layout facts
 - Import aliases are also pinned as syntax-owned rather than semantic-product-owned:
   - the alias table is a short-name convenience layer built from spelled `import` directives
   - wildcard imports still expand against raw definition names to produce that shorthand map
   - lowerer/import-layout consumers should keep using canonical semantic-product full paths for lowering facts and
     consult the alias table only when resolving source-spelled type names that have not yet been canonicalized
-- With those ownership decisions pinned, future cutover work should track only the remaining
-  AST-owned field/provenance traversal seam in import/layout setup.
+- With those ownership decisions pinned, there is no remaining semantic-product import/layout inventory seam; the
+  residual AST reads are intentional syntax/provenance inputs to layout planning.
 - After the lowerer consumes semantic-product entry targets and binding metadata, effect/capability setup and
   struct-layout setup should consume published semantic-product facts instead of re-reading AST annotations,
   transform-produced helper state, or struct-shape details directly from canonicalized syntax.
