@@ -7,6 +7,12 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Retired the stale lowerer type/binding setup cutover TODO tail after auditing the
+  remaining helper-local synthetic and implicit helper-temporary paths. Completed: the
+  semantic-product cutover already covers all source-owned binding/result sites that the
+  lowerer can key by stable semantic identity, while the leftover helper-local synthetic
+  locals and raw IR temporaries are lowerer-internal constructs that do not belong on the
+  semantic-product surface.
 - ✓ Consumed semantic-product lowered entry-argument binding metadata in lowerer setup. Completed: `buildEntryCountAccessSetup(...)` now prefers published semantic-product parameter binding facts for `array<string>` entry parameters, so lowered entry-count setup no longer has to re-derive that binding only from raw AST parameter state.
 - ✓ Consumed semantic-product temporary binding metadata and helper-result binding/type metadata in lowerer setup. Completed: lowerer binding adapters now prefer published `SemanticProgramBindingFact` entries for call-expression temporaries, so temporary call results and helper call result classification no longer have to be re-derived only from AST transforms during lowerer setup.
 - ✓ Consumed semantic-product parameter, local, and helper-parameter binding metadata in lowerer setup. Completed: the lowerer binding adapters now prefer published `SemanticProgramBindingFact` entries for binding kind, value kind, string/file-error classification, and reference/array/container metadata, so parameter/local setup plus helper-parameter setup no longer have to re-derive those facts only from AST transforms.

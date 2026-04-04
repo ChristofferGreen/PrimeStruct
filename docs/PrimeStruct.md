@@ -472,10 +472,11 @@ Planned lowerer entry-setup handoff:
   - the old AST-derived entry target path is removed or reduced to a temporary adapter boundary only
 
 Planned lowerer type/binding handoff:
-- Current status: lowerer parameter/local setup, helper-parameter setup, temporary call binding
-  setup, helper-result binding setup, and lowered entry-count setup now prefer published
-  semantic-product binding facts; remaining work is helper-local synthetic and implicit
-  helper-temporary metadata.
+- Current status: lowerer parameter/local setup, helper-parameter setup, temporary call
+  binding setup, helper-result binding setup, lowered entry-count setup, and entry
+  return/result setup now prefer published semantic-product binding and return facts. The
+  remaining lowerer-generated synthetic locals and raw IR temporaries stay outside the
+  semantic-product surface because they have no stable source-owned semantic identity.
 - After entry setup is cut over, lowering should consume binding metadata from the semantic product instead of
   re-running helper-family checks, fallback type inference, or binding-shape recovery against the AST.
 - The semantic product should publish, per lowered binding/expression site:
