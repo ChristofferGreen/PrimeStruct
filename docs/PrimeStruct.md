@@ -506,9 +506,12 @@ Planned lowerer effect/struct-layout handoff:
   callable effect/capability setup now consume published semantic-product return facts and
   callable summaries. Lowerer import/layout setup now also prefers semantic-product type
   metadata for struct-like classification and explicit alignment. The remaining cutover
-  work is the richer layout facts that still derive from field bindings. Enums already
-  rewrite to struct form before lowering, so there is no separate enum-specific lowerer
-  metadata seam left to cut over.
+  work is the richer layout facts that still derive from field bindings. Concretely, the
+  lowerer still rebuilds field ordering plus `LayoutFieldBinding` envelopes/types from raw
+  binding statements, and field-level qualifiers such as visibility/category/static/alignment
+  still remain syntax-owned during layout planning. Enums already rewrite to struct form
+  before lowering, so there is no separate enum-specific lowerer metadata seam left to cut
+  over.
 - After the lowerer consumes semantic-product entry targets and binding metadata, effect/capability setup and
   struct-layout setup should consume published semantic-product facts instead of re-reading AST annotations,
   transform-produced helper state, or struct-shape details directly from canonicalized syntax.
@@ -525,6 +528,13 @@ Planned lowerer effect/struct-layout handoff:
   - field ordering, offsets, and size/alignment facts used during IR storage planning
   - aggregate classification for structs, collections, and wrapper-owned runtime shapes
   - backend-facing layout facts that should no longer depend on AST transform order
+- The next concrete migration seam is therefore:
+  - publish semantic-product struct field ordering/name/envelope/type metadata
+  - consume that published field metadata in lowerer layout planning instead of rebuilding
+    `LayoutFieldBinding` vectors from AST bindings
+  - explicitly leave syntax-owned field qualifiers (`public/private`, `static`,
+    `pod/handle/gpu_lane`, field-local alignment) on the AST until there is a separate reason
+    to publish them
 - Temporary adapter code may still translate semantic-product layout/effect facts into existing lowerer inputs during
   migration, but the target state is that lowering no longer recomputes those facts from AST/transforms.
 - Completion criteria:
