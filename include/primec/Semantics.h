@@ -2,6 +2,7 @@
 
 #include "primec/Ast.h"
 #include "primec/Diagnostics.h"
+#include "primec/SemanticProduct.h"
 
 namespace primec {
 
@@ -18,7 +19,8 @@ public:
                 const std::vector<std::string> &entryDefaultEffects,
                 const std::vector<std::string> &semanticTransforms = {},
                 SemanticDiagnosticInfo *diagnosticInfo = nullptr,
-                bool collectDiagnostics = false) const;
+                bool collectDiagnostics = false,
+                SemanticProgram *semanticProgramOut = nullptr) const;
 };
 
 } // namespace primec

@@ -568,6 +568,7 @@ bool runCompilePipeline(const Options &options,
 
   Semantics semantics;
   SemanticDiagnosticInfo semanticDiagnosticInfo;
+  SemanticProgram semanticProgram;
   if (!semantics.validate(output.program,
                           options.entryPath,
                           error,
@@ -575,7 +576,8 @@ bool runCompilePipeline(const Options &options,
                           options.entryDefaultEffects,
                           options.semanticTransforms,
                           &semanticDiagnosticInfo,
-                          options.collectDiagnostics)) {
+                          options.collectDiagnostics,
+                          &semanticProgram)) {
     errorStage = CompilePipelineErrorStage::Semantic;
     if (diagnosticInfo != nullptr) {
       *diagnosticInfo = semanticDiagnosticInfo;
@@ -590,6 +592,9 @@ bool runCompilePipeline(const Options &options,
     errorStage = CompilePipelineErrorStage::Semantic;
     return false;
   }
+
+  output.semanticProgram = std::move(semanticProgram);
+  output.hasSemanticProgram = true;
 
   if (dumpStage == DumpStage::AstSemantic) {
     AstPrinter printer;

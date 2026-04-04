@@ -98,6 +98,34 @@ bool runTypeResolutionSnapshot(
 
 namespace {
 
+SemanticProgram buildSemanticProgram(const Program &program, const std::string &entryPath) {
+  SemanticProgram semanticProgram;
+  semanticProgram.entryPath = entryPath;
+  semanticProgram.sourceImports = program.sourceImports;
+  semanticProgram.imports = program.imports;
+  semanticProgram.definitions.reserve(program.definitions.size());
+  for (const Definition &def : program.definitions) {
+    SemanticProgramDefinition definition;
+    definition.name = def.name;
+    definition.fullPath = def.fullPath;
+    definition.namespacePrefix = def.namespacePrefix;
+    definition.sourceLine = def.sourceLine;
+    definition.sourceColumn = def.sourceColumn;
+    semanticProgram.definitions.push_back(std::move(definition));
+  }
+  semanticProgram.executions.reserve(program.executions.size());
+  for (const Execution &exec : program.executions) {
+    SemanticProgramExecution execution;
+    execution.name = exec.name;
+    execution.fullPath = exec.fullPath;
+    execution.namespacePrefix = exec.namespacePrefix;
+    execution.sourceLine = exec.sourceLine;
+    execution.sourceColumn = exec.sourceColumn;
+    semanticProgram.executions.push_back(std::move(execution));
+  }
+  return semanticProgram;
+}
+
 bool isExperimentalMapTypeText(const std::string &typeText) {
   std::string keyType;
   std::string valueType;
@@ -4099,7 +4127,8 @@ bool Semantics::validate(Program &program,
                          const std::vector<std::string> &entryDefaultEffects,
                          const std::vector<std::string> &semanticTransforms,
                          SemanticDiagnosticInfo *diagnosticInfo,
-                         bool collectDiagnostics) const {
+                         bool collectDiagnostics,
+                         SemanticProgram *semanticProgramOut) const {
   error.clear();
   DiagnosticSink diagnosticSink(diagnosticInfo);
   diagnosticSink.reset();
@@ -4189,6 +4218,9 @@ bool Semantics::validate(Program &program,
   }
   if (!rewriteOmittedStructInitializers(program, error)) {
     return false;
+  }
+  if (semanticProgramOut != nullptr) {
+    *semanticProgramOut = buildSemanticProgram(program, entryPath);
   }
   error.clear();
   validationSucceeded = true;

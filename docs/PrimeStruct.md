@@ -385,14 +385,17 @@ Temporary migration adapter contract:
     fallback.
 
 Compile-pipeline publication contract:
-- `Semantics::validate` should produce a semantic product as its canonical post-semantics success result, not only a
-  mutated AST.
-- `CompilePipelineOutput` should publish that semantic product on successful semantic validation so later dump, backend,
-  and runtime entrypoints do not need private validator access to recover it.
+- `Semantics::validate` now produces an initial semantic product shell as its canonical post-semantics success result,
+  not only a mutated AST.
+- `CompilePipelineOutput` now publishes that semantic product shell on successful semantic validation so later dump,
+  backend, and runtime entrypoints do not need private validator access to recover it.
 - The published semantic product should remain paired with the raw AST rather than replacing it outright; syntax-facing
   consumers still need the AST for spans, source reproduction, and surface-shaped dumps.
 - Failure paths should continue to report diagnostics against AST-backed provenance, but success paths should treat the
   semantic product as the authoritative lowering-facing artifact.
+- The current published shell is intentionally narrow: entry path, import inventories, and deterministic
+  definition/execution inventories are available now, while resolved targets, binding/result types, effect/capability
+  facts, and layout metadata remain separate live builder items.
 - Dump-stage handling should be able to read either the syntax-facing canonical AST dump or the future semantic-product
   dump from the same compile-pipeline success result without re-running semantics.
 - Backend/runtime entrypoints should consume the semantic product from compile-pipeline output once available rather

@@ -3,6 +3,7 @@
 #include "primec/Ast.h"
 #include "primec/Diagnostics.h"
 #include "primec/Options.h"
+#include "primec/SemanticProduct.h"
 
 #include <string>
 
@@ -19,6 +20,8 @@ enum class CompilePipelineErrorStage {
 
 struct CompilePipelineOutput {
   Program program;
+  SemanticProgram semanticProgram;
+  bool hasSemanticProgram = false;
   std::string filteredSource;
   std::string dumpOutput;
   bool hasDumpOutput = false;

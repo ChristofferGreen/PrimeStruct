@@ -118,9 +118,6 @@ Pipeline plumbing:
     - ○ Implement the migration adapter for graph-backed query facts.
     - ○ Implement the migration adapter for graph-backed `try(...)` facts.
     - ○ Implement the migration adapter for graph-backed `on_error` facts.
-- ◐ Implement semantic-product publication through `CompilePipelineOutput` and `Semantics::validate` now that the success-artifact contract is documented. Progress: this publication cut is now split into explicit producer and pipeline-surface slices instead of one mixed handoff item.
-  - ○ Make `Semantics::validate` produce the semantic product as its canonical successful post-semantics result.
-  - ○ Publish that semantic product on successful compile-pipeline results through `CompilePipelineOutput`.
 - ◐ Implement the deterministic semantic-product dump/formatter plus golden coverage now that its inspection contract is documented. Progress: the inspection-surface work is now split into formatter and coverage slices instead of one mixed dump item.
   - ○ Implement the deterministic semantic-product dump stage and text formatter.
   - ○ Add golden coverage for the semantic-product dump surface.

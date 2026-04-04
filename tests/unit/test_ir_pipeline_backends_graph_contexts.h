@@ -110,3 +110,44 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   CHECK(primecMain.find("[--dump-stage pre_ast|ast|ast-semantic|type-graph|ir]") != std::string::npos);
   CHECK(primevmMain.find("[--dump-stage pre_ast|ast|ast-semantic|type-graph|ir]") != std::string::npos);
 }
+
+TEST_CASE("compile pipeline publishes an initial semantic product shell") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path semanticProductPath = cwd / "include" / "primec" / "SemanticProduct.h";
+  std::filesystem::path compilePipelineHeaderPath = cwd / "include" / "primec" / "CompilePipeline.h";
+  std::filesystem::path semanticsHeaderPath = cwd / "include" / "primec" / "Semantics.h";
+  std::filesystem::path compilePipelineSourcePath = cwd / "src" / "CompilePipeline.cpp";
+  std::filesystem::path semanticsValidatePath = cwd / "src" / "semantics" / "SemanticsValidate.cpp";
+  if (!std::filesystem::exists(semanticProductPath)) {
+    semanticProductPath = cwd.parent_path() / "include" / "primec" / "SemanticProduct.h";
+    compilePipelineHeaderPath = cwd.parent_path() / "include" / "primec" / "CompilePipeline.h";
+    semanticsHeaderPath = cwd.parent_path() / "include" / "primec" / "Semantics.h";
+    compilePipelineSourcePath = cwd.parent_path() / "src" / "CompilePipeline.cpp";
+    semanticsValidatePath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidate.cpp";
+  }
+  REQUIRE(std::filesystem::exists(semanticProductPath));
+  REQUIRE(std::filesystem::exists(compilePipelineHeaderPath));
+  REQUIRE(std::filesystem::exists(semanticsHeaderPath));
+  REQUIRE(std::filesystem::exists(compilePipelineSourcePath));
+  REQUIRE(std::filesystem::exists(semanticsValidatePath));
+
+  const std::string semanticProduct = readTextFile(semanticProductPath);
+  const std::string compilePipelineHeader = readTextFile(compilePipelineHeaderPath);
+  const std::string semanticsHeader = readTextFile(semanticsHeaderPath);
+  const std::string compilePipelineSource = readTextFile(compilePipelineSourcePath);
+  const std::string semanticsValidate = readTextFile(semanticsValidatePath);
+  CHECK(semanticProduct.find("struct SemanticProgramDefinition") != std::string::npos);
+  CHECK(semanticProduct.find("struct SemanticProgramExecution") != std::string::npos);
+  CHECK(semanticProduct.find("struct SemanticProgram") != std::string::npos);
+  CHECK(compilePipelineHeader.find("SemanticProgram semanticProgram;") != std::string::npos);
+  CHECK(compilePipelineHeader.find("bool hasSemanticProgram = false;") != std::string::npos);
+  CHECK(semanticsHeader.find("SemanticProgram *semanticProgramOut = nullptr") != std::string::npos);
+  CHECK(compilePipelineSource.find("SemanticProgram semanticProgram;") != std::string::npos);
+  CHECK(compilePipelineSource.find("&semanticProgram") != std::string::npos);
+  CHECK(compilePipelineSource.find("output.semanticProgram = std::move(semanticProgram);") != std::string::npos);
+  CHECK(compilePipelineSource.find("output.hasSemanticProgram = true;") != std::string::npos);
+  CHECK(semanticsValidate.find("SemanticProgram buildSemanticProgram(const Program &program, const std::string &entryPath)") !=
+        std::string::npos);
+  CHECK(semanticsValidate.find("*semanticProgramOut = buildSemanticProgram(program, entryPath);") !=
+        std::string::npos);
+}
