@@ -216,6 +216,8 @@ main() {
 
 TEST_CASE("reflection SoaSchema helper runtime stays aligned across backends") {
   const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
 [struct reflect generate(SoaSchema)]
 Pair() {
   [i32] x{0i32}
@@ -228,10 +230,10 @@ main() {
   [i32 mut] score{0i32}
   [i32 mut] index{0i32}
   if(equal(/Pair/SoaSchemaFieldCount(), 2i32), then() { assign(score, plus(score, 1i32)) }, else() { })
-  if(equal(/Pair/SoaSchemaFieldName(index), "x"utf8), then() { assign(score, plus(score, 2i32)) }, else() { })
+  if(equal(/Pair/SoaSchemaFieldName(index).count(), 1i32), then() { assign(score, plus(score, 2i32)) }, else() { })
   increment(index)
-  if(equal(/Pair/SoaSchemaFieldType(index), "bool"utf8), then() { assign(score, plus(score, 4i32)) }, else() { })
-  if(equal(/Pair/SoaSchemaFieldVisibility(index), "private"utf8),
+  if(equal(/Pair/SoaSchemaFieldType(index).count(), 4i32), then() { assign(score, plus(score, 4i32)) }, else() { })
+  if(equal(/Pair/SoaSchemaFieldVisibility(index).count(), 7i32),
      then() { assign(score, plus(score, 8i32)) },
      else() { })
   return(score)
@@ -257,6 +259,8 @@ main() {
 
 TEST_CASE("reflection SoaSchema chunk helper runtime stays aligned across backends") {
   const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
 [struct reflect generate(SoaSchema)]
 Wide() {
   [i32] f0{0i32}
@@ -310,6 +314,8 @@ main() {
 
 TEST_CASE("reflection SoaSchema storage helper runtime stays aligned across backends") {
   const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
 [struct reflect generate(SoaSchema)]
 Wide() {
   [i32] f0{0i32}

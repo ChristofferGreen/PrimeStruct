@@ -115,6 +115,49 @@ inline bool validateProgram(const std::string &source, const std::string &entry,
   return semantics.validate(program, entry, error, defaults, defaults);
 }
 
+inline bool validateProgramCapturingProgram(const std::string &source,
+                                            const std::string &entry,
+                                            std::string &error,
+                                            primec::Program &programOut) {
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  if (usesStdImportPipeline(source)) {
+    const std::filesystem::path tempPath = makeTempSemanticSourcePath();
+    {
+      std::ofstream file(tempPath);
+      if (!file) {
+        error = "failed to write semantic test source";
+        return false;
+      }
+      file << source;
+    }
+
+    primec::Options options;
+    options.inputPath = tempPath.string();
+    options.entryPath = entry;
+    options.emitKind = "native";
+    options.wasmProfile = "wasi";
+    options.defaultEffects = defaults;
+    options.entryDefaultEffects = defaults;
+    options.dumpStage = "ast_semantic";
+    primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+    primec::CompilePipelineOutput output;
+    primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+    const bool ok = primec::runCompilePipeline(options, output, errorStage, error, nullptr);
+    if (ok) {
+      programOut = std::move(output.program);
+    }
+
+    std::error_code ec;
+    std::filesystem::remove(tempPath, ec);
+    return ok;
+  }
+
+  programOut = parseProgram(source);
+  primec::Semantics semantics;
+  return semantics.validate(programOut, entry, error, defaults, defaults);
+}
+
 inline bool validateProgramWithDefaults(const std::string &source,
                                         const std::string &entry,
                                         const std::vector<std::string> &defaultEffects,

@@ -214,14 +214,16 @@ TEST_CASE("semantics validate source delegation stays stable") {
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateHeaderSource.find(
             "bool emitReflectionSoaSchemaStorageHelpers(ReflectionGeneratedHelperContext &context)") !=
         std::string::npos);
-  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find("helper.name = \"SoaSchemaFieldCount\";") !=
+  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
+            "Definition countHelper = makeHelper(\"SoaSchemaFieldCount\"") !=
         std::string::npos);
-  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find("helper.name = \"SoaSchemaChunkCount\";") !=
+  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
+            "Definition chunkCountHelper = makeHelper(\"SoaSchemaChunkCount\"") !=
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find("storageStruct.name = \"SoaSchemaStorage\";") !=
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
-            "storageNewHelper.name = \"SoaSchemaStorageNew\";") != std::string::npos);
+            "Definition storageNewHelper = makeHelper(\"SoaSchemaStorageNew\"") != std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
             "Definition storageCountHelper = makeHelper(\"SoaSchemaStorageCount\"") != std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
@@ -236,13 +238,15 @@ TEST_CASE("semantics validate source delegation stays stable") {
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
             "storageDestroyHelper.name = \"Destroy\";") != std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
-            "dropCall.name = \"drop\";") != std::string::npos);
+            "clearCall.name = \"SoaSchemaStorageClear\";") != std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
-            "appendIndexedStringHelper(\"SoaSchemaFieldName\", context.fieldNames)") != std::string::npos);
+            "appendIndexedStringHelper(\"SoaSchemaFieldName\", nameHelperPath, context.fieldNames)") !=
+        std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
-            "appendIndexedStringHelper(\"SoaSchemaFieldType\", context.fieldTypeNames)") != std::string::npos);
+            "appendIndexedStringHelper(\"SoaSchemaFieldType\", typeHelperPath, fieldTypes)") !=
+        std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
-            "appendIndexedStringHelper(\"SoaSchemaFieldVisibility\", context.fieldVisibilityNames)") !=
+            "appendIndexedStringHelper(\"SoaSchemaFieldVisibility\", visibilityHelperPath, fieldVisibilities)") !=
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
             "appendIndexedI32Helper(\"SoaSchemaChunkFieldStart\", chunkStartHelperPath, chunkStarts)") !=
@@ -251,7 +255,8 @@ TEST_CASE("semantics validate source delegation stays stable") {
             "appendIndexedI32Helper(\"SoaSchemaChunkFieldCount\", chunkFieldCountHelperPath, chunkFieldCounts)") !=
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
-            "chunkBinding = makeTypeBinding(\"chunk\" + std::to_string(chunkIndex),") != std::string::npos);
+            "Expr chunkBinding =\n        makeTypeBinding(\"chunk\" + std::to_string(chunkIndex),") !=
+        std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
             "makeChunkHelperBasePath(\"Reserve\", chunkTemplateArgs[chunkIndex].size())") != std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(

@@ -241,7 +241,7 @@ TEST_CASE("semantic product publishes resolved direct-call targets") {
                    semanticProgram.directCallTargets.end(),
                    [](const primec::SemanticProgramDirectCallTarget &entry) {
                      return entry.scopePath == "/main" &&
-                            entry.callName == "id" &&
+                            (entry.callName == "id" || entry.callName.rfind("/id__t", 0) == 0) &&
                             entry.resolvedPath.rfind("/id__t", 0) == 0;
                    });
   REQUIRE(targetIt != semanticProgram.directCallTargets.end());

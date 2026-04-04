@@ -425,20 +425,28 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     std::string builtinName;
     if (getBuiltinPointerName(expr, builtinName) && builtinName == "location" && expr.args.size() == 1) {
       const Expr &target = expr.args.front();
-      if (target.kind != Expr::Kind::Name) {
+      if (target.kind == Expr::Kind::Name) {
+        const BindingInfo *binding = resolveNamedBinding(target.name);
+        if (binding != nullptr) {
+          std::string root = pointerAliasRootForBinding(target.name, *binding);
+          if (!root.empty()) {
+            rootOut = std::move(root);
+          } else {
+            rootOut = target.name;
+          }
+          return true;
+        }
         return false;
       }
-      const BindingInfo *binding = resolveNamedBinding(target.name);
-      if (binding != nullptr) {
-        std::string root = pointerAliasRootForBinding(target.name, *binding);
-        if (!root.empty()) {
-          rootOut = std::move(root);
-        } else {
-          rootOut = target.name;
-        }
-        return true;
+      return resolvePointerRoot(target, rootOut);
+    }
+    if (expr.isFieldAccess && expr.args.size() == 1) {
+      std::string receiverRoot;
+      if (!resolvePointerRoot(expr.args.front(), receiverRoot) || receiverRoot.empty()) {
+        return false;
       }
-      return false;
+      rootOut = receiverRoot + "." + expr.name;
+      return true;
     }
     std::string opName;
     if (getBuiltinOperatorName(expr, opName) && (opName == "plus" || opName == "minus") && expr.args.size() == 2) {
@@ -491,17 +499,26 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       std::string builtinName;
       if (getBuiltinPointerName(expr, builtinName) && builtinName == "location" && expr.args.size() == 1) {
         const Expr &target = expr.args.front();
-        if (target.kind != Expr::Kind::Name) {
+        if (target.kind == Expr::Kind::Name) {
+          const BindingInfo *binding = resolveNamedBinding(target.name);
+          if (binding == nullptr) {
+            return false;
+          }
+          if (binding->typeName == "Reference" && !binding->typeTemplateArg.empty()) {
+            targetOut = binding->typeTemplateArg;
+          } else {
+            targetOut = formatBindingType(*binding);
+          }
+          return true;
+        }
+        BindingInfo inferredBinding;
+        if (!inferBindingTypeFromInitializer(target, params, locals, inferredBinding)) {
           return false;
         }
-        const BindingInfo *binding = resolveNamedBinding(target.name);
-        if (binding == nullptr) {
-          return false;
-        }
-        if (binding->typeName == "Reference" && !binding->typeTemplateArg.empty()) {
-          targetOut = binding->typeTemplateArg;
+        if (inferredBinding.typeName == "Reference" && !inferredBinding.typeTemplateArg.empty()) {
+          targetOut = inferredBinding.typeTemplateArg;
         } else {
-          targetOut = formatBindingType(*binding);
+          targetOut = formatBindingType(inferredBinding);
         }
         return true;
       }
@@ -541,7 +558,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     std::string pointerName;
     const bool initIsLocation =
         init.kind == Expr::Kind::Call && getBuiltinPointerName(init, pointerName) && pointerName == "location" &&
-        init.args.size() == 1 && init.args.front().kind == Expr::Kind::Name;
+        init.args.size() == 1;
     std::string safeTargetType;
     const bool initIsPointerLike = resolvePointerTargetType(init, safeTargetType);
     if (!initIsLocation && !initIsPointerLike && !currentValidationState_.context.definitionIsUnsafe) {
@@ -600,9 +617,24 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       }
       return true;
     };
+    std::function<bool(const Expr &, std::string &)> resolveBorrowRootExpr;
+    resolveBorrowRootExpr = [&](const Expr &targetExpr, std::string &rootOut) -> bool {
+      if (targetExpr.kind == Expr::Kind::Name) {
+        return resolveBorrowRoot(targetExpr.name, rootOut);
+      }
+      if (targetExpr.kind == Expr::Kind::Call && targetExpr.isFieldAccess && targetExpr.args.size() == 1) {
+        std::string receiverRoot;
+        if (!resolveBorrowRootExpr(targetExpr.args.front(), receiverRoot) || receiverRoot.empty()) {
+          return false;
+        }
+        rootOut = receiverRoot + "." + targetExpr.name;
+        return true;
+      }
+      return false;
+    };
 
     std::string borrowRoot;
-    if (!resolveBorrowRoot(target.name, borrowRoot) || borrowRoot.empty()) {
+    if (!resolveBorrowRootExpr(target, borrowRoot) || borrowRoot.empty()) {
       return failBindingDiagnostic("Reference bindings require location(...)");
     }
     bool sawMutableBorrow = false;

@@ -492,7 +492,14 @@ bool emitReflectionSoaSchemaStorageHelpers(ReflectionGeneratedHelperContext &con
     Expr chunkBinding =
         makeTypeBinding("chunk" + std::to_string(chunkIndex), chunkTypeNames[chunkIndex], storageStruct.namespacePrefix, true);
     appendPublicVisibility(chunkBinding);
-    chunkBinding.args.push_back(makeConstructorCall(chunkTypeNames[chunkIndex]));
+    if (chunkTemplateArgs[chunkIndex].size() == 1) {
+      chunkBinding.args.push_back(
+          makeHelperCallExpr(makeChunkHelperBasePath("New", chunkTemplateArgs[chunkIndex].size()),
+                             chunkTemplateArgs[chunkIndex],
+                             {}));
+    } else {
+      chunkBinding.args.push_back(makeConstructorCall(chunkTypeNames[chunkIndex]));
+    }
     chunkBinding.argNames.push_back(std::nullopt);
     storageStruct.statements.push_back(std::move(chunkBinding));
   }
@@ -615,13 +622,13 @@ bool emitReflectionSoaSchemaStorageHelpers(ReflectionGeneratedHelperContext &con
   destroyReturn.name = "return";
   destroyReturn.templateArgs.push_back("void");
   storageDestroyHelper.transforms.push_back(std::move(destroyReturn));
-  for (size_t chunkIndex = 0; chunkIndex < chunkTemplateArgs.size(); ++chunkIndex) {
-    Expr dropCall;
-    dropCall.kind = Expr::Kind::Call;
-    dropCall.name = "drop";
-    dropCall.args.push_back(makeFieldAccessExpr("this", "chunk" + std::to_string(chunkIndex)));
-    dropCall.argNames.push_back(std::nullopt);
-    storageDestroyHelper.statements.push_back(std::move(dropCall));
+  if (!chunkTemplateArgs.empty()) {
+    Expr clearCall;
+    clearCall.kind = Expr::Kind::Call;
+    clearCall.name = "SoaSchemaStorageClear";
+    clearCall.args.push_back(makeNameExpr("this"));
+    clearCall.argNames.push_back(std::nullopt);
+    storageDestroyHelper.statements.push_back(std::move(clearCall));
   }
   context.rewrittenDefinitions.push_back(std::move(storageDestroyHelper));
   context.definitionPaths.insert(storageDestroyHelperPath);
