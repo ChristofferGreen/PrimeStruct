@@ -381,6 +381,12 @@ TEST_CASE("type resolution graph dump stays stable for a simple call chain") {
   CHECK(metricsLine.find("edges_requirement=0") != std::string::npos);
   CHECK(metricsLine.find("scc_count=3") != std::string::npos);
   CHECK(metricsLine.find("scc_max_size=1") != std::string::npos);
+  CHECK(metricsLine.find("invalidation_local_binding=") != std::string::npos);
+  CHECK(metricsLine.find("invalidation_control_flow=") != std::string::npos);
+  CHECK(metricsLine.find("invalidation_initializer_shape=") != std::string::npos);
+  CHECK(metricsLine.find("invalidation_definition_signature=") != std::string::npos);
+  CHECK(metricsLine.find("invalidation_import_alias=") != std::string::npos);
+  CHECK(metricsLine.find("invalidation_receiver_type=") != std::string::npos);
   const std::string stripped = header + dump.substr(metricsEnd + 1);
   CHECK(stripped == expected);
 }

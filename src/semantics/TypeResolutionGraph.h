@@ -46,6 +46,12 @@ struct TypeResolutionGraph {
   uint64_t buildMaxMillis = 0;
   bool prepareOverBudget = false;
   bool buildOverBudget = false;
+  uint64_t invalidationLocalBindingCount = 0;
+  uint64_t invalidationControlFlowCount = 0;
+  uint64_t invalidationInitializerShapeCount = 0;
+  uint64_t invalidationDefinitionSignatureCount = 0;
+  uint64_t invalidationImportAliasCount = 0;
+  uint64_t invalidationReceiverTypeCount = 0;
 };
 
 std::string_view typeResolutionNodeKindName(TypeResolutionNodeKind kind);

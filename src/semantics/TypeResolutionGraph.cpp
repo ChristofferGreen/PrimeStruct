@@ -557,7 +557,13 @@ std::string formatTypeResolutionGraph(const TypeResolutionGraph &graph) {
       << " edges_dependency=" << dependencyEdgeCount
       << " edges_requirement=" << requirementEdgeCount
       << " scc_count=" << dag.nodes.size()
-      << " scc_max_size=" << maxSccSize << "\n";
+      << " scc_max_size=" << maxSccSize
+      << " invalidation_local_binding=" << graph.invalidationLocalBindingCount
+      << " invalidation_control_flow=" << graph.invalidationControlFlowCount
+      << " invalidation_initializer_shape=" << graph.invalidationInitializerShapeCount
+      << " invalidation_definition_signature=" << graph.invalidationDefinitionSignatureCount
+      << " invalidation_import_alias=" << graph.invalidationImportAliasCount
+      << " invalidation_receiver_type=" << graph.invalidationReceiverTypeCount << "\n";
   for (const auto &node : graph.nodes) {
     out << "  node " << node.id << " kind=" << typeResolutionNodeKindName(node.kind)
         << " label=\"" << node.label << "\""
@@ -625,6 +631,12 @@ bool buildTypeResolutionGraphForTesting(Program program,
   out.buildMaxMillis = graph.buildMaxMillis;
   out.prepareOverBudget = graph.prepareOverBudget;
   out.buildOverBudget = graph.buildOverBudget;
+  out.invalidationLocalBindingCount = graph.invalidationLocalBindingCount;
+  out.invalidationControlFlowCount = graph.invalidationControlFlowCount;
+  out.invalidationInitializerShapeCount = graph.invalidationInitializerShapeCount;
+  out.invalidationDefinitionSignatureCount = graph.invalidationDefinitionSignatureCount;
+  out.invalidationImportAliasCount = graph.invalidationImportAliasCount;
+  out.invalidationReceiverTypeCount = graph.invalidationReceiverTypeCount;
   out.nodes.reserve(graph.nodes.size());
   for (const auto &node : graph.nodes) {
     out.nodes.push_back(TypeResolutionGraphSnapshotNode{
