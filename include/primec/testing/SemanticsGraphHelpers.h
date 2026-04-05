@@ -67,6 +67,8 @@ struct TypeResolutionGraphSnapshot {
   size_t localAutoCount = 0;
   size_t dependencyEdgeCount = 0;
   size_t requirementEdgeCount = 0;
+  size_t sccCount = 0;
+  size_t sccMaxSize = 0;
   uint64_t prepareMillis = 0;
   uint64_t buildMillis = 0;
   uint64_t prepareMaxMillis = 0;

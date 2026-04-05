@@ -612,6 +612,8 @@ bool buildTypeResolutionGraphForTesting(Program program,
         break;
     }
   }
+  out.sccCount = dag.nodes.size();
+  out.sccMaxSize = maxSccSize;
   out.prepareMillis = graph.prepareMillis;
   out.buildMillis = graph.buildMillis;
   out.prepareMaxMillis = graph.prepareMaxMillis;
