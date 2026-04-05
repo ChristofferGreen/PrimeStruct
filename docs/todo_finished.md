@@ -7,6 +7,14 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Split the oversized Group 8 stdlib slot-borrow helper exposure item into the real helper-return,
+  slot-provenance, and final helper-contract slices. Completed: the live queue and spec/docs now
+  pin the actual blockers explicitly: helper `return<Reference<T>>` still only accepts direct
+  parameter references, and `soaColumnSlotUnsafe<T>(...)` / `vectorSlotUnsafe<T>(...)` still do
+  not preserve borrowed-root provenance through the local `slot` pointer, so the final
+  `soaColumnBorrowSlot<T>(...)` / `vectorBorrowSlot<T>(...)` retargeting no longer hides those
+  prerequisites inside one oversized TODO.
+
 - ✓ Extended standalone borrowed-value typing across pointer/reference-backed
   `borrow(dereference(slot))` storage. Completed: standalone `[Reference<T>]`
   bindings now validate through dereference-backed `uninitialized<T>` storage in
