@@ -104,8 +104,7 @@ bool buildEntryCountAccessSetup(const Definition &entryDef,
                                 const SemanticProgram *semanticProgram,
                                 EntryCountAccessSetup &out,
                                 std::string &error) {
-  std::destroy_at(&out);
-  std::construct_at(&out);
+  out = {};
   if (!resolveEntryArgsParameter(entryDef, semanticProgram, out.hasEntryArgs, out.entryArgsName, error)) {
     return false;
   }

@@ -2,9 +2,10 @@
 
 namespace primec::ir_lowerer {
 
-SetupLocalsOrchestration unpackSetupLocalsOrchestration(
-    const EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup &setup) {
-  SetupLocalsOrchestration out{};
+void populateSetupLocalsOrchestration(
+    const EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup &setup,
+    SetupLocalsOrchestration &out) {
+  out = {};
   out.entryReturnConfig = setup.entryReturnConfig;
 
   const auto &runtimeEntrySetup =
@@ -36,7 +37,6 @@ SetupLocalsOrchestration unpackSetupLocalsOrchestration(
   out.uninitializedResolutionAdapters =
       structAndUninitializedResolutionSetup.uninitializedResolutionAdapters;
   out.applyStructValueInfo = out.setupTypeAndStructTypeAdapters.structTypeResolutionAdapters.applyStructValueInfo;
-  return out;
 }
 
 } // namespace primec::ir_lowerer

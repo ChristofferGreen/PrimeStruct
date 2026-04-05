@@ -1,7 +1,5 @@
-
-
-
 struct SetupLocalsOrchestration {
+  std::shared_ptr<EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup> ownedSetup{};
   EntryReturnConfig entryReturnConfig{};
   RuntimeErrorAndStringLiteralSetup runtimeErrorAndStringLiteralSetup{};
   EntryCountAccessSetup entryCountAccessSetup{};
@@ -15,5 +13,6 @@ struct SetupLocalsOrchestration {
   ApplyStructValueInfoFn applyStructValueInfo{};
 };
 
-SetupLocalsOrchestration unpackSetupLocalsOrchestration(
-    const EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup &setup);
+void populateSetupLocalsOrchestration(
+    const EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup &setup,
+    SetupLocalsOrchestration &out);

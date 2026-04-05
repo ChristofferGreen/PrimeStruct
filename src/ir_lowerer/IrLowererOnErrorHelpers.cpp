@@ -198,8 +198,7 @@ bool buildEntryCallOnErrorSetup(const Program &program,
                                 const SemanticProgram *semanticProgram,
                                 EntryCallOnErrorSetup &out,
                                 std::string &error) {
-  std::destroy_at(&out);
-  std::construct_at(&out);
+  out = {};
   const EntryCallResolutionSetup entryCallResolutionSetup = buildEntryCallResolutionSetup(
       entryDef, definitionReturnsVoid, defMap, importAliases, semanticProgram);
   out.callResolutionAdapters = entryCallResolutionSetup.adapters;
@@ -230,8 +229,7 @@ bool buildEntryCountCallOnErrorSetup(const Program &program,
                                      const SemanticProgram *semanticProgram,
                                      EntryCountCallOnErrorSetup &out,
                                      std::string &error) {
-  std::destroy_at(&out);
-  std::construct_at(&out);
+  out = {};
   if (!buildEntryCountAccessSetup(entryDef, semanticProgram, out.countAccessSetup, error)) {
     return false;
   }

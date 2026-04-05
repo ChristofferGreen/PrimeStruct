@@ -209,8 +209,8 @@ TEST_CASE("ir lowerer setup locals helper unpacks orchestration adapters") {
       error));
   CHECK(error.empty());
 
-  const primec::ir_lowerer::SetupLocalsOrchestration unpacked =
-      primec::ir_lowerer::unpackSetupLocalsOrchestration(setup);
+  primec::ir_lowerer::SetupLocalsOrchestration unpacked;
+  primec::ir_lowerer::populateSetupLocalsOrchestration(setup, unpacked);
   CHECK(unpacked.entryReturnConfig.returnsVoid);
   CHECK(unpacked.entryCountAccessSetup.hasEntryArgs);
   CHECK(unpacked.entryCountAccessSetup.entryArgsName == "argv");
@@ -569,4 +569,3 @@ TEST_CASE("ir lowerer setup type helper rejects non-struct method receiver call 
             receiverCall, "/pkg/Ctor", importAliases, structNames)
         .empty());
 }
-

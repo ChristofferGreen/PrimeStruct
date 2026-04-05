@@ -21,6 +21,15 @@ bool isSpecializedExperimentalCollectionTypeName(const std::string &typeName) {
          typeName.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
 }
 
+bool isStaticStructBinding(const Expr &stmt) {
+  for (const auto &transform : stmt.transforms) {
+    if (transform.name == "static") {
+      return true;
+    }
+  }
+  return false;
+}
+
 LayoutFieldBinding layoutFieldBindingFromSemanticProduct(
     const SemanticProgramStructFieldMetadata &fieldMetadata) {
   LayoutFieldBinding binding;
@@ -220,7 +229,7 @@ bool collectStructLayoutFieldBindings(
     std::unordered_map<std::string, LayoutFieldBinding> knownFields;
     fields.reserve(def.statements.size());
     for (const auto &stmt : def.statements) {
-      if (!stmt.isBinding) {
+      if (!stmt.isBinding || isStaticStructBinding(stmt)) {
         continue;
       }
       LayoutFieldBinding binding;
@@ -283,7 +292,7 @@ bool resolveStructLayoutFieldBinding(
   const auto &fieldBindings = fieldInfoIt->second;
   size_t fieldIndex = 0;
   for (const auto &stmt : def.statements) {
-    if (!stmt.isBinding) {
+    if (!stmt.isBinding || isStaticStructBinding(stmt)) {
       continue;
     }
     if (fieldIndex >= fieldBindings.size()) {

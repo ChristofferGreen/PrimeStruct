@@ -50,8 +50,7 @@ bool analyzeEntryReturnTransforms(const Definition &entryDef,
                                   const std::string &entryPath,
                                   EntryReturnConfig &out,
                                   std::string &error) {
-  std::destroy_at(&out);
-  std::construct_at(&out);
+  out = {};
   if (semanticProgram != nullptr) {
     const SemanticProductTargetAdapter semanticProductTargets =
         buildSemanticProductTargetAdapter(semanticProgram);

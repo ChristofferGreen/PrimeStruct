@@ -45,11 +45,10 @@ bool runLowerLocalsSetup(
     const std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &structFieldInfoByName,
     SetupLocalsOrchestration &setupLocalsOrchestrationOut,
     std::string &errorOut) {
-  std::destroy_at(&setupLocalsOrchestrationOut);
-  std::construct_at(&setupLocalsOrchestrationOut);
+  setupLocalsOrchestrationOut = {};
 
-  EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup
-      entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup{};
+  auto entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup =
+      std::make_shared<EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup>();
   if (!buildProgramEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
           stringTable,
           function,
@@ -65,13 +64,16 @@ bool runLowerLocalsSetup(
             appendStructLayoutFieldsFromFieldBindings(
                 structFieldInfoByName, defMap, appendStructLayoutField);
           },
-          entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup,
+          *entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup,
           errorOut)) {
     return false;
   }
 
-  setupLocalsOrchestrationOut = unpackSetupLocalsOrchestration(
-      entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup);
+  populateSetupLocalsOrchestration(
+      *entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup,
+      setupLocalsOrchestrationOut);
+  setupLocalsOrchestrationOut.ownedSetup =
+      std::move(entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup);
   return true;
 }
 

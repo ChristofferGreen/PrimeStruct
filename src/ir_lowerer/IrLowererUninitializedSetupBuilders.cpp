@@ -119,8 +119,7 @@ bool buildEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSe
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
     EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
-  std::destroy_at(&out);
-  std::construct_at(&out);
+  out = {};
   if (!analyzeEntryReturnTransforms(entryDef, semanticProgram, entryPath, out.entryReturnConfig, error)) {
     return false;
   }
@@ -190,8 +189,7 @@ bool buildRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
     RuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
-  std::destroy_at(&out);
-  std::construct_at(&out);
+  out = {};
   out.runtimeErrorAndStringLiteralSetup =
       makeRuntimeErrorAndStringLiteralSetup(stringTable, function, error);
   if (!buildEntrySetupMathTypeStructAndUninitializedResolutionSetup(
@@ -251,8 +249,7 @@ bool buildEntrySetupMathTypeStructAndUninitializedResolutionSetup(
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
     EntrySetupMathTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
-  std::destroy_at(&out);
-  std::construct_at(&out);
+  out = {};
   if (!buildEntryCountCallOnErrorSetup(program,
                                         entryDef,
                                         definitionReturnsVoid,
@@ -313,8 +310,7 @@ bool buildSetupMathTypeStructAndUninitializedResolutionSetup(
     const InferStructExprPathFn &resolveExprPath,
     SetupMathTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
-  std::destroy_at(&out);
-  std::construct_at(&out);
+  out = {};
   out.setupMathAndBindingAdapters = makeSetupMathAndBindingAdapters(hasMathImport, semanticProgram);
   if (!buildSetupTypeStructAndUninitializedResolutionSetup(structNames,
                                                            importAliases,
@@ -338,8 +334,7 @@ bool buildSetupTypeStructAndUninitializedResolutionSetup(
     const InferStructExprPathFn &resolveExprPath,
     SetupTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
-  std::destroy_at(&out);
-  std::construct_at(&out);
+  out = {};
   out.setupTypeAndStructTypeAdapters = makeSetupTypeAndStructTypeAdapters(structNames, importAliases);
   const auto &structTypeResolutionAdapters = out.setupTypeAndStructTypeAdapters.structTypeResolutionAdapters;
   if (!buildStructAndUninitializedResolutionSetup(structReserveHint,
@@ -364,8 +359,7 @@ bool buildStructAndUninitializedResolutionSetup(
     const InferStructExprPathFn &resolveExprPath,
     StructAndUninitializedResolutionSetup &out,
     std::string &error) {
-  std::destroy_at(&out);
-  std::construct_at(&out);
+  out = {};
   out.fieldIndexes =
       buildStructAndUninitializedFieldIndexes(structReserveHint, enumerateStructLayoutFields);
   out.structLayoutResolutionAdapters = makeStructLayoutResolutionAdaptersWithOwnedSlotState(
