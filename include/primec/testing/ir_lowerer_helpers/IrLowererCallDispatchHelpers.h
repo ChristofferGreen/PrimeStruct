@@ -56,6 +56,9 @@ std::string resolveCallPathFromScope(
     const Expr &expr,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases);
+std::string resolveCallPathFromScopeWithoutImportAliases(
+    const Expr &expr,
+    const std::unordered_map<std::string, const Definition *> &defMap);
 
 bool isTailCallCandidate(const Expr &expr,
                          const std::unordered_map<std::string, const Definition *> &defMap,
@@ -176,6 +179,11 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
 bool getUnsupportedVectorHelperName(const Expr &expr, std::string &helperName);
 UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
     const Expr &expr,
+    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
+    std::string &error);
+UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
+    const Expr &expr,
+    const LocalMap &localsIn,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
     std::string &error);
 NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(

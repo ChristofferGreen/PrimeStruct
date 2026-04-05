@@ -225,6 +225,25 @@ TEST_CASE("public lowerer testing headers stay in sync with semantic-product hel
   CHECK(resultHelpers.find("resolvePackedResultStructPayloadInfo(") != std::string::npos);
   CHECK(setupType.find("const SemanticProductTargetAdapter *semanticProductTargets,") !=
         std::string::npos);
+  CHECK(setupType.find("resolveMethodCallDefinitionFromExpr(") != std::string::npos);
+}
+
+TEST_CASE("public call dispatch testing header stays in sync with alias-policy helpers") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path callDispatchPath =
+      cwd / "include" / "primec" / "testing" / "ir_lowerer_helpers" / "IrLowererCallDispatchHelpers.h";
+  if (!std::filesystem::exists(callDispatchPath)) {
+    callDispatchPath =
+        cwd.parent_path() / "include" / "primec" / "testing" / "ir_lowerer_helpers" /
+        "IrLowererCallDispatchHelpers.h";
+  }
+  REQUIRE(std::filesystem::exists(callDispatchPath));
+
+  const std::string callDispatch = readTextFile(callDispatchPath);
+  CHECK(callDispatch.find("resolveCallPathFromScopeWithoutImportAliases(") != std::string::npos);
+  CHECK(callDispatch.find("const LocalMap &localsIn,") != std::string::npos);
+  CHECK(callDispatch.find("UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(") !=
+        std::string::npos);
 }
 
 TEST_CASE("graph snapshot suite uses semantic-product-aware lowering only") {
