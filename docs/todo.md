@@ -21,8 +21,14 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
     - ○ Identify the slash-method helper/query path that crosses the branch-compatibility boundary.
     - ○ Add compile-pipeline parity coverage for that slash-method helper/query path.
   - ○ Add C++ backend dispatch conformance for the query-shaped canonical helper/method path once compile-pipeline parity is positive.
+    - ○ Select the C++ backend fixture that exercises the helper/method query path.
+    - ○ Add backend conformance coverage for that fixture.
   - ○ Add VM backend dispatch conformance for the query-shaped canonical helper/method path once compile-pipeline parity is positive.
+    - ○ Select the VM backend fixture that exercises the helper/method query path.
+    - ○ Add backend conformance coverage for that fixture.
   - ○ Add native backend dispatch conformance for the query-shaped canonical helper/method path once compile-pipeline parity is positive.
+    - ○ Select the native backend fixture that exercises the helper/method query path.
+    - ○ Add backend conformance coverage for that fixture.
 - ◐ Implement the next non-template inference-island migrations now that the graph-backed cutover contract is documented. Progress: the remaining non-template cutover is now split into direct-call, receiver-call, and collection bridge inference seams instead of one umbrella migration bullet.
   - ○ Migrate the next direct-call/callee non-template inference island onto the graph path.
     - ○ Select the next direct-call inference island to move onto the graph path.
