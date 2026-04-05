@@ -571,24 +571,11 @@ Planned lowerer effect/struct-layout handoff:
   - lowerer struct-layout setup no longer reclassifies layout-sensitive types from AST spellings or transform output
   - C++/VM/native lowering all consume the same published effect/layout facts through one semantic-product path
 
-Planned lowerer alias-fallback removal:
-- Once entry setup, binding/type setup, and effect/layout setup all consume semantic-product metadata, lowerer-side
-  stdlib/helper alias fallback paths should no longer be responsible for rediscovering canonical helper families or
-  same-path helper-shadow choices.
-- The semantic product should publish resolved call/helper targets in the exact canonical-or-same-path form that
-  lowering needs, so alias-sensitive helper routing is decided during semantics and merely consumed during lowering.
-- Transitional adapter code may still translate published semantic-product targets into existing lowerer entrypoints,
-  but it should not preserve separate lowerer-local alias fallback logic once equivalent canonical resolution is
-  available from the semantic product.
-- Removal should proceed in this order:
-  - cut entry setup over to semantic-product call targets
-  - cut binding/type and effect/layout setup over to semantic-product metadata
-  - replace backend-visible lowerer alias fallback paths with direct semantic-product target consumption
-  - delete the redundant fallback branches once C++/VM/native conformance proves parity
-- Completion criteria:
-  - lowering no longer performs direct-call or receiver/method-call stdlib/helper alias fallback to recover canonical helper targets
-  - same-path helper-shadow behavior is preserved by semantic-product targets rather than lowerer-local recovery
-  - backend-facing tests prove canonical helper routing without relying on AST-side or lowerer-side alias heuristics
+Completed lowerer alias-fallback removal:
+- Lowering no longer performs lowerer-local stdlib/helper alias fallback for direct-call targets, receiver/method-call targets, or collection/builtin bridge routing on the semantic-product-aware path.
+- The semantic product now publishes resolved call/helper targets in the exact canonical-or-same-path form lowering needs, so alias-sensitive helper routing is decided during semantics and merely consumed during lowering.
+- Same-path helper-shadow behavior is preserved by semantic-product targets rather than lowerer-local recovery.
+- Backend-facing conformance and source-lock tests pin that production lowering path, while explicit raw helper tests still keep alias-aware behavior only where they are intentionally exercising non-semantic-product compatibility helpers.
 
 Current inspection-surface relationship:
 - `pre_ast`: post-import, post-text-transform source text
