@@ -60,6 +60,8 @@ struct TypeResolutionGraphSnapshotEdge {
 struct TypeResolutionGraphSnapshot {
   std::vector<TypeResolutionGraphSnapshotNode> nodes;
   std::vector<TypeResolutionGraphSnapshotEdge> edges;
+  uint64_t prepareMillis = 0;
+  uint64_t buildMillis = 0;
 };
 
 struct TypeResolutionReturnSnapshotEntry {

@@ -517,6 +517,8 @@ bool buildTypeResolutionGraphForTesting(Program program,
     return false;
   }
   out = {};
+  out.prepareMillis = graph.prepareMillis;
+  out.buildMillis = graph.buildMillis;
   out.nodes.reserve(graph.nodes.size());
   for (const auto &node : graph.nodes) {
     out.nodes.push_back(TypeResolutionGraphSnapshotNode{
