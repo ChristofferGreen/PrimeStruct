@@ -628,6 +628,11 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(statementCallHelpersHeader.find("const SemanticProgram *semanticProgram,") !=
         std::string::npos);
+  CHECK(statementCallHelpersHeader.find("FunctionTableFinalizationResult finalizeEntryFunctionTableAndLowerCallables(\n"
+                                        "    const Program &program,\n"
+                                        "    const Definition &entryDef,\n"
+                                        "    const SemanticProgram *semanticProgram,") !=
+        std::string::npos);
   CHECK(statementCallHelpersSource.find("buildSemanticProductTargetAdapter(semanticProgram)") !=
         std::string::npos);
   CHECK(statementCallHelpersSource.find("const auto definitionsByPath = buildDefinitionBodyLookup(program);") !=
