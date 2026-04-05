@@ -3572,9 +3572,12 @@ read-only path.
     helper returns, and inline `location(...)`-wrapped receivers. The remaining
     implementation work therefore starts with the now-completed reusable non-owning
     `SoaColumn<T>` borrowed-view helper substrate plus the still-missing reusable
-    reflected per-field borrowed-view carrier over `SoaColumn<T>` storage, then routes
-    that shared helper path onto the per-field carrier, and only after that preserves it
-    across local binding, helper pass-through, and return surfaces.
+    non-owning strided field-view carrier over whole-element `SoaColumn<T>` storage.
+    `SoaColumn<T>` still stores contiguous whole `T` elements, so a named field cannot
+    honestly project as plain `SoaColumn<Field>` storage without a new carrier that
+    preserves field-offset and stride semantics. After that carrier exists, the shared
+    helper path can route onto it, and only after that can it be preserved across local
+    binding, helper pass-through, and return surfaces.
   - **Standalone mutating field-view contract:** the remaining standalone mutating write slice
     should replace the current pending-only `assign(value.field(), next)` /
     `assign(field(value), next)` contract with the same writable column-view substrate that
