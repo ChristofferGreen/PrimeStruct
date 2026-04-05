@@ -201,6 +201,13 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
           builtinSoaDirectPendingHelperPath(initializer, params, locals)) {
     return failBindingDiagnostic(soaDirectPendingUnavailableMethodDiagnostic(*pendingPath));
   }
+  if (isBuiltinSoaFieldViewExpr(initializer, params, locals, nullptr) &&
+      !initializer.args.empty()) {
+    const Expr &fieldViewReceiver = initializer.args.front();
+    if (fieldViewReceiver.kind != Expr::Kind::Name) {
+      return failBindingDiagnostic("field-view escapes via binding");
+    }
+  }
 
   ReturnKind initKind = inferExprReturnKind(initializer, params, locals);
   if (initKind == ReturnKind::Void && !isStructConstructorValueExpr(initializer)) {
