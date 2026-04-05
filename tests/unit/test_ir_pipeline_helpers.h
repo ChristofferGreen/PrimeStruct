@@ -45,6 +45,7 @@ inline std::filesystem::path makeTempIrPipelineSourcePath() {
 
 inline bool parseAndValidateThroughCompilePipeline(const std::string &source,
                                                    primec::Program &program,
+                                                   primec::SemanticProgram *semanticProgramOut,
                                                    std::string &error,
                                                    const std::vector<std::string> &defaultEffects,
                                                    const std::vector<std::string> &entryDefaultEffects) {
@@ -76,17 +77,25 @@ inline bool parseAndValidateThroughCompilePipeline(const std::string &source,
   }
 
   program = std::move(output.program);
+  if (semanticProgramOut != nullptr) {
+    if (!output.hasSemanticProgram) {
+      error = "compile pipeline did not publish semantic product";
+      return false;
+    }
+    *semanticProgramOut = std::move(output.semanticProgram);
+  }
   return true;
 }
 
 inline bool parseAndValidate(const std::string &source,
                              primec::Program &program,
+                             primec::SemanticProgram *semanticProgramOut,
                              std::string &error,
                              const std::vector<std::string> &defaultEffects,
                              const std::vector<std::string> &entryDefaultEffects) {
   if (usesStdImportPipeline(source)) {
     return parseAndValidateThroughCompilePipeline(
-        source, program, error, defaultEffects, entryDefaultEffects);
+        source, program, semanticProgramOut, error, defaultEffects, entryDefaultEffects);
   }
   primec::Lexer lexer(source);
   primec::Parser parser(lexer.tokenize());
@@ -94,14 +103,32 @@ inline bool parseAndValidate(const std::string &source,
     return false;
   }
   primec::Semantics semantics;
-  return semantics.validate(program, "/main", error, defaultEffects, entryDefaultEffects);
+  return semantics.validate(program,
+                            "/main",
+                            error,
+                            defaultEffects,
+                            entryDefaultEffects,
+                            {},
+                            nullptr,
+                            false,
+                            semanticProgramOut);
+}
+
+inline bool parseAndValidate(const std::string &source,
+                             primec::Program &program,
+                             primec::SemanticProgram &semanticProgram,
+                             std::string &error,
+                             const std::vector<std::string> &defaultEffects,
+                             const std::vector<std::string> &entryDefaultEffects) {
+  return parseAndValidate(
+      source, program, &semanticProgram, error, defaultEffects, entryDefaultEffects);
 }
 
 inline bool parseAndValidate(const std::string &source,
                              primec::Program &program,
                              std::string &error,
                              std::vector<std::string> defaultEffects = {}) {
-  return parseAndValidate(source, program, error, defaultEffects, defaultEffects);
+  return parseAndValidate(source, program, nullptr, error, defaultEffects, defaultEffects);
 }
 
 inline bool validateProgram(primec::Program &program,

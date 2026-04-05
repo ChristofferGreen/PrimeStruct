@@ -80,13 +80,14 @@ TEST_CASE("ir lowerer materializes variadic File handle packs with indexed file 
       "  return(plus(score_files(a0, a1, a2), plus(forward(b0, b1, b2), forward_mixed(c0, c1))))\n"
       "}\n";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -149,12 +150,13 @@ TEST_CASE("ir lowerer materializes variadic File handle packs with indexed file 
       "  return(plus(score_refs(r0, r1), plus(forward(s0, s1), forward_mixed(t0))))\n"
       "}\n";
   primec::Program wrappedProgram;
+  primec::SemanticProgram wrappedSemanticProgram;
   error.clear();
-  REQUIRE(parseAndValidate(wrappedSource, wrappedProgram, error));
+  REQUIRE(parseAndValidate(wrappedSource, wrappedProgram, wrappedSemanticProgram, error));
   CHECK(error.empty());
 
   primec::IrModule wrappedModule;
-  REQUIRE(lowerer.lower(wrappedProgram, "/main", {}, {}, wrappedModule, error));
+  REQUIRE(lowerer.lower(wrappedProgram, &wrappedSemanticProgram, "/main", {}, {}, wrappedModule, error));
   CHECK(error.empty());
 
   result = 0;
@@ -225,12 +227,13 @@ TEST_CASE("ir lowerer materializes variadic File handle packs with indexed file 
       "  return(plus(score_refs(r0, r1), plus(forward(s0, s1), forward_mixed(t0))))\n"
       "}\n";
   primec::Program wrappedReadProgram;
+  primec::SemanticProgram wrappedReadSemanticProgram;
   error.clear();
-  REQUIRE(parseAndValidate(wrappedReadSource, wrappedReadProgram, error));
+  REQUIRE(parseAndValidate(wrappedReadSource, wrappedReadProgram, wrappedReadSemanticProgram, error));
   CHECK(error.empty());
 
   primec::IrModule wrappedReadModule;
-  REQUIRE(lowerer.lower(wrappedReadProgram, "/main", {}, {}, wrappedReadModule, error));
+  REQUIRE(lowerer.lower(wrappedReadProgram, &wrappedReadSemanticProgram, "/main", {}, {}, wrappedReadModule, error));
   CHECK(error.empty());
 
   result = 0;
@@ -314,13 +317,14 @@ TEST_CASE("ir lowerer materializes variadic borrowed File handle packs with inde
       "  return(plus(score_refs(r0, r1, r2), plus(forward(s0, s1, s2), forward_mixed(t0, t1))))\n"
       "}\n";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -383,12 +387,13 @@ TEST_CASE("ir lowerer materializes variadic borrowed File handle packs with inde
       "  return(plus(score_ptrs(r0, r1), plus(forward(s0, s1), forward_mixed(t0))))\n"
       "}\n";
   primec::Program wrappedProgram;
+  primec::SemanticProgram wrappedSemanticProgram;
   error.clear();
-  REQUIRE(parseAndValidate(wrappedSource, wrappedProgram, error));
+  REQUIRE(parseAndValidate(wrappedSource, wrappedProgram, wrappedSemanticProgram, error));
   CHECK(error.empty());
 
   primec::IrModule wrappedModule;
-  REQUIRE(lowerer.lower(wrappedProgram, "/main", {}, {}, wrappedModule, error));
+  REQUIRE(lowerer.lower(wrappedProgram, &wrappedSemanticProgram, "/main", {}, {}, wrappedModule, error));
   CHECK(error.empty());
 
   result = 0;
@@ -459,12 +464,13 @@ TEST_CASE("ir lowerer materializes variadic borrowed File handle packs with inde
       "  return(plus(score_ptrs(r0, r1), plus(forward(s0, s1), forward_mixed(t0))))\n"
       "}\n";
   primec::Program wrappedReadProgram;
+  primec::SemanticProgram wrappedReadSemanticProgram;
   error.clear();
-  REQUIRE(parseAndValidate(wrappedReadSource, wrappedReadProgram, error));
+  REQUIRE(parseAndValidate(wrappedReadSource, wrappedReadProgram, wrappedReadSemanticProgram, error));
   CHECK(error.empty());
 
   primec::IrModule wrappedReadModule;
-  REQUIRE(lowerer.lower(wrappedReadProgram, "/main", {}, {}, wrappedReadModule, error));
+  REQUIRE(lowerer.lower(wrappedReadProgram, &wrappedReadSemanticProgram, "/main", {}, {}, wrappedReadModule, error));
   CHECK(error.empty());
 
   result = 0;
@@ -547,13 +553,14 @@ TEST_CASE("ir lowerer materializes variadic pointer File handle packs with index
       "  return(plus(score_ptrs(r0, r1, r2), plus(forward(s0, s1, s2), forward_mixed(t0, t1))))\n"
       "}\n";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;

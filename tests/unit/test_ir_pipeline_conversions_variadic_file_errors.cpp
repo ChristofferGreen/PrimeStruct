@@ -48,13 +48,14 @@ TEST_CASE("ir lowerer materializes variadic FileError packs with indexed why met
       "                   forward_mixed(c0, c1))))\n"
       "}\n";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -106,13 +107,14 @@ TEST_CASE("ir lowerer materializes variadic borrowed FileError packs with indexe
       "                   forward_mixed(t0, t1))))\n"
       "}\n";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -164,8 +166,9 @@ TEST_CASE("ir lowerer rejects prefix spread borrowed FileError packs") {
       "                   forward_mixed(t0, t1))))\n"
       "}\n";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.find("spread argument must be final") != std::string::npos);
 }
 
@@ -211,13 +214,14 @@ TEST_CASE("ir lowerer materializes variadic pointer FileError packs with indexed
       "                   forward_mixed(t0, t1))))\n"
       "}\n";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -307,13 +311,14 @@ TEST_CASE("ir lowerer materializes variadic wrapped FileError packs with named f
       "                                  forward_ptrs_mixed(u0, u1)))))))\n"
       "}\n";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -366,8 +371,9 @@ TEST_CASE("ir lowerer rejects prefix spread pointer FileError packs") {
       "                   forward_mixed(t0, t1))))\n"
       "}\n";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.find("spread argument must be final") != std::string::npos);
 }
 

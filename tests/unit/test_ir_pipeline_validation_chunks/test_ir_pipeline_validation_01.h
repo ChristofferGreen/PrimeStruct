@@ -8,13 +8,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
   CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Any, error));
@@ -40,6 +41,7 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
   primec::Lexer lexer(source);
   primec::Parser parser(lexer.tokenize());
@@ -48,7 +50,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error == "native backend requires compile-time reflection query elimination before IR emission: /meta/type_name");
 }
 
@@ -69,13 +71,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
   REQUIRE(module.entryIndex >= 0);
@@ -107,13 +110,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
   CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Any, error));
   CHECK(error.empty());
@@ -144,13 +148,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
   CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Any, error));
   CHECK(error.empty());
@@ -241,8 +246,9 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::Emitter emitter;
@@ -264,8 +270,9 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   bool rewroteCall = false;
@@ -293,8 +300,9 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   bool rewroteAlias = false;
@@ -326,13 +334,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 1);
   CHECK(module.functions[0].name == "/main");
@@ -356,13 +365,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 }
 
@@ -391,13 +401,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 }
 
@@ -429,13 +440,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 }
 
@@ -466,13 +478,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 }
 
@@ -489,13 +502,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error == "native backend does not support non-empty soa_vector literals");
 }
 
@@ -515,13 +529,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK_FALSE(error.empty());
 }
 
@@ -536,8 +551,9 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.find("get requires soa_vector target") != std::string::npos);
 }
 
@@ -557,8 +573,9 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
 }
 
@@ -573,8 +590,9 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
 }
 
@@ -591,13 +609,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error ==
         "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/"
         "pointer/assign/increment/decrement calls in expressions");
@@ -617,13 +636,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error ==
         "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/"
         "pointer/assign/increment/decrement calls in expressions");
@@ -643,13 +663,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK_FALSE(error.empty());
 }
 
@@ -662,8 +683,9 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.find("/std/collections/soa_vector/reserve") != std::string::npos);
 }
 
@@ -680,13 +702,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error == "reserve requires mutable vector binding");
 }
 
@@ -705,13 +728,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK_FALSE(error.empty());
 }
 
@@ -732,13 +756,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 }
 
@@ -757,13 +782,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK_FALSE(error.empty());
 }
 
@@ -784,13 +810,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 }
 
@@ -815,13 +842,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.find("struct parameter type mismatch") != std::string::npos);
   CHECK(error.find("/std/collections/experimental_soa_vector/SoaVector__") != std::string::npos);
 }
@@ -844,8 +872,9 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
 }
 
@@ -867,13 +896,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.find("struct parameter type mismatch") != std::string::npos);
   CHECK(error.find("got /soa_vector") != std::string::npos);
 }
@@ -897,13 +927,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 }
 
@@ -933,13 +964,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
   CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Any, error));
   CHECK(error.empty());
@@ -964,8 +996,9 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.find("argument type mismatch for /to_aos parameter values") != std::string::npos);
 }
 
@@ -985,8 +1018,9 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.find("/std/collections/soa_vector/to_aos") != std::string::npos);
 }
 
@@ -1002,8 +1036,9 @@ Particle() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error == "soa_vector field views are not implemented yet: x");
 }
 
@@ -1019,8 +1054,9 @@ Particle() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error == "soa_vector field views are not implemented yet: x");
 }
 
@@ -1036,8 +1072,9 @@ Particle() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error == "soa_vector field views are not implemented yet: x");
 }
 
@@ -1053,8 +1090,9 @@ Particle() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error == "soa_vector field views are not implemented yet: x");
 }
 
@@ -1070,8 +1108,9 @@ Particle() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error == "named arguments not supported for builtin calls");
 }
 
@@ -1087,8 +1126,9 @@ Particle() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error == "named arguments not supported for builtin calls");
 }
 

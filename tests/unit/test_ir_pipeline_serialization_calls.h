@@ -13,13 +13,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 2);
   CHECK(module.functions[0].name == "/main");
@@ -60,13 +61,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 2);
   CHECK(module.functions[0].name == "/main");
@@ -107,13 +109,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 2);
   CHECK(module.functions[0].name == "/main");
@@ -147,13 +150,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 2);
   CHECK(module.functions[0].name == "/main");
@@ -188,13 +192,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.find("recursive") != std::string::npos);
 }
 
@@ -206,13 +211,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
   const auto &inst = module.functions[0].instructions;
   REQUIRE(inst.size() == 3);
@@ -234,13 +240,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
   const auto &inst = module.functions[0].instructions;
   REQUIRE(inst.size() == 3);
@@ -263,13 +270,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
   const auto &inst = module.functions[0].instructions;
   REQUIRE(inst.size() == 1);
@@ -291,13 +299,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
   const auto &inst = module.functions[0].instructions;
   REQUIRE(inst.size() == 6);
@@ -323,13 +332,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
   bool sawCompare = false;
@@ -356,13 +366,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -380,13 +391,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -407,13 +419,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
   bool sawJumpIfZero = false;
@@ -446,13 +459,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
   bool sawJumpIfZero = false;
@@ -529,10 +543,11 @@ TEST_CASE("ir and semantics agree on conflicting auto returns in statements") {
   CHECK(semanticsError.find("conflicting return types on /pick") != std::string::npos);
 
   primec::Program lowerProgram = makeProgram();
+  primec::SemanticProgram lowerSemanticProgram;
   primec::IrLowerer lowerer;
   primec::IrModule module;
   std::string lowerError;
-  CHECK_FALSE(lowerer.lower(lowerProgram, "/main", {}, {}, module, lowerError));
+  CHECK_FALSE(lowerer.lower(lowerProgram, &lowerSemanticProgram, "/main", {}, {}, module, lowerError));
   CHECK(lowerError.find("conflicting return types on /pick") != std::string::npos);
 }
 
@@ -602,10 +617,11 @@ TEST_CASE("semantics and ir lowerer diverge on unresolved auto return in stateme
   CHECK(semanticsError.find("unable to infer return type on /pick") != std::string::npos);
 
   primec::Program lowerProgram = makeProgram();
+  primec::SemanticProgram lowerSemanticProgram;
   primec::IrLowerer lowerer;
   primec::IrModule module;
   std::string lowerError;
-  CHECK_FALSE(lowerer.lower(lowerProgram, "/main", {}, {}, module, lowerError));
+  CHECK_FALSE(lowerer.lower(lowerProgram, &lowerSemanticProgram, "/main", {}, {}, module, lowerError));
   CHECK(lowerError.find("conflicting return types on /pick") != std::string::npos);
 }
 
@@ -675,10 +691,11 @@ TEST_CASE("semantics and ir lowerer diverge on unresolved auto return_expr") {
   CHECK(semanticsError.find("unable to infer return type on /pick") != std::string::npos);
 
   primec::Program lowerProgram = makeProgram();
+  primec::SemanticProgram lowerSemanticProgram;
   primec::IrLowerer lowerer;
   primec::IrModule module;
   std::string lowerError;
-  CHECK_FALSE(lowerer.lower(lowerProgram, "/main", {}, {}, module, lowerError));
+  CHECK_FALSE(lowerer.lower(lowerProgram, &lowerSemanticProgram, "/main", {}, {}, module, lowerError));
   CHECK(lowerError.find("conflicting return types on /pick") != std::string::npos);
 }
 

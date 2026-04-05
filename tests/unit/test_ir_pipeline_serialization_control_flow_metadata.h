@@ -270,13 +270,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 2);
   CHECK((module.functions[0].metadata.instrumentationFlags & primec::InstrumentationTailExecution) != 0u);
@@ -302,19 +303,21 @@ main() {
 )";
 
   primec::Program firstProgram;
+  primec::SemanticProgram firstSemanticProgram;
   primec::Program secondProgram;
+  primec::SemanticProgram secondSemanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, firstProgram, error));
+  REQUIRE(parseAndValidate(source, firstProgram, firstSemanticProgram, error));
   CHECK(error.empty());
-  REQUIRE(parseAndValidate(source, secondProgram, error));
+  REQUIRE(parseAndValidate(source, secondProgram, secondSemanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule firstModule;
   primec::IrModule secondModule;
-  REQUIRE(lowerer.lower(firstProgram, "/main", {}, {}, firstModule, error));
+  REQUIRE(lowerer.lower(firstProgram, &firstSemanticProgram, "/main", {}, {}, firstModule, error));
   CHECK(error.empty());
-  REQUIRE(lowerer.lower(secondProgram, "/main", {}, {}, secondModule, error));
+  REQUIRE(lowerer.lower(secondProgram, &secondSemanticProgram, "/main", {}, {}, secondModule, error));
   CHECK(error.empty());
 
   REQUIRE(firstModule.functions.size() == secondModule.functions.size());
@@ -352,19 +355,21 @@ main() {
 )";
 
   primec::Program firstProgram;
+  primec::SemanticProgram firstSemanticProgram;
   primec::Program secondProgram;
+  primec::SemanticProgram secondSemanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, firstProgram, error));
+  REQUIRE(parseAndValidate(source, firstProgram, firstSemanticProgram, error));
   CHECK(error.empty());
-  REQUIRE(parseAndValidate(source, secondProgram, error));
+  REQUIRE(parseAndValidate(source, secondProgram, secondSemanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule firstModule;
   primec::IrModule secondModule;
-  REQUIRE(lowerer.lower(firstProgram, "/main", {}, {}, firstModule, error));
+  REQUIRE(lowerer.lower(firstProgram, &firstSemanticProgram, "/main", {}, {}, firstModule, error));
   CHECK(error.empty());
-  REQUIRE(lowerer.lower(secondProgram, "/main", {}, {}, secondModule, error));
+  REQUIRE(lowerer.lower(secondProgram, &secondSemanticProgram, "/main", {}, {}, secondModule, error));
   CHECK(error.empty());
 
   size_t totalInstructionCount = 0;
@@ -441,13 +446,14 @@ main() {
 )";
 
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error, {"io_out"}));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error, {"io_out"}));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {"io_out"}, {"io_out"}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {"io_out"}, {"io_out"}, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 1);
   REQUIRE(!module.functions[0].instructions.empty());
@@ -482,13 +488,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 1);
   CHECK((module.functions[0].metadata.instrumentationFlags & primec::InstrumentationTailExecution) == 0u);
@@ -507,13 +514,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 2);
   CHECK((module.functions[0].metadata.instrumentationFlags & primec::InstrumentationTailExecution) != 0u);
@@ -530,13 +538,14 @@ main() {
 }
 )";
   primec::Program program;
+  primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
   bool sawAddressOf = false;
@@ -560,4 +569,3 @@ main() {
   CHECK(error.empty());
   CHECK(result == 9);
 }
-
