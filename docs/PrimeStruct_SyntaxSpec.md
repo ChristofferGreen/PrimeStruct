@@ -1145,11 +1145,13 @@ borrowed-view helper substrate plus the still-missing reflected layout facts
 for reflect-enabled structs. `SoaColumn<T>` still stores contiguous whole `T`
 elements, and the current `SoaSchema*` helpers expose field
 names/types/visibility but not validated field byte offsets or whole-element
-stride. After those reflected layout facts exist, a reflected field-slot
-pointer helper can address one named field inside whole-element storage; then a
-reusable non-owning strided field-view carrier can sit on top of it; only then
-can the shared helper path route onto that carrier, and only after that can it
-be preserved across pass/return/local-binding surfaces.
+stride. The next seam is publishing those validated layout facts themselves;
+only after that can generated `SoaSchemaFieldOffset(...)` /
+`SoaSchemaElementStride()` wrappers exist, then a reflected field-slot pointer
+helper can address one named field inside whole-element storage, then a
+reusable non-owning strided field-view carrier can sit on top of it, and only
+after that can the shared helper path route onto that carrier and preserve it
+across pass/return/local-binding surfaces.
 The remaining standalone mutating write step is that `assign(value.field(), next)` and
 `assign(field(value), next)` should stop on the pending diagnostic only until those
 receivers can lower through the existing writable wrapper substrate instead of mutating a

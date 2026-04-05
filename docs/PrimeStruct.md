@@ -3575,11 +3575,12 @@ read-only path.
     facts for reflect-enabled structs. `SoaColumn<T>` still stores contiguous whole `T`
     elements, and the current `SoaSchema*` reflection helpers expose field
     names/types/visibility but not validated field byte offsets or whole-element stride.
-    After those reflected layout facts exist, a reflected field-slot pointer helper can
-    address one named field inside whole-element storage; then a reusable non-owning
-    strided field-view carrier can sit on top of it; only then can the shared helper path
-    route onto that carrier, and only after that can it be preserved across local
-    binding, helper pass-through, and return surfaces.
+    The next seam is publishing those validated layout facts themselves; only after that
+    can generated `SoaSchemaFieldOffset(...)` / `SoaSchemaElementStride()` wrappers exist,
+    then a reflected field-slot pointer helper can address one named field inside
+    whole-element storage, then a reusable non-owning strided field-view carrier can sit
+    on top of it, and only after that can the shared helper path route onto that carrier
+    and preserve it across local binding, helper pass-through, and return surfaces.
   - **Standalone mutating field-view contract:** the remaining standalone mutating write slice
     should replace the current pending-only `assign(value.field(), next)` /
     `assign(field(value), next)` contract with the same writable column-view substrate that
