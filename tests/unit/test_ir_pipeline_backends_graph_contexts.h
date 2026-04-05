@@ -768,6 +768,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(inlineCallContextHelpersHeader.find("struct OnErrorHandler;") != std::string::npos);
   CHECK(inlineCallContextHelpersHeader.find("struct ResultReturnInfo;") != std::string::npos);
   CHECK(inlineCallContextHelpersHeader.find("struct ReturnInfo;") != std::string::npos);
+  CHECK(inlineCallContextHelpersHeader.find("OnErrorByDefinition") == std::string::npos);
 
   const auto lowerEffectsHeader = readFile("include/primec/testing/ir_lowerer_helpers/IrLowererLowerEffects.h");
   CHECK(lowerEffectsHeader.find("struct Definition;") != std::string::npos);

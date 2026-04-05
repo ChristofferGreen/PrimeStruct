@@ -21,6 +21,6 @@ bool prepareInlineDefinitionCallContext(
     const std::function<bool(const Definition &)> &isStructDefinition,
     std::unordered_set<std::string> &inlineStack,
     std::unordered_set<std::string> &loweredCallTargets,
-    const OnErrorByDefinition &onErrorByDef,
+    const std::unordered_map<std::string, std::optional<OnErrorHandler>> &onErrorByDef,
     InlineDefinitionCallContextSetup &out,
     std::string &error);
