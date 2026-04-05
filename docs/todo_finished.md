@@ -71,6 +71,16 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 5, 2026, continued)**
 
+**Group 11 - Near-term graph queue**
+- ✓ Implement graph-backed query invalidation rules and coverage for intra-definition edits now that the intra-definition invalidation contract is documented. Completed: local-binding, control-flow, and initializer-shape invalidation counts now have coverage.
+  - ✓ Implement graph-backed query invalidation rules and coverage for local-binding edits.
+  - ✓ Implement graph-backed query invalidation rules and coverage for control-flow edits.
+  - ✓ Implement graph-backed query invalidation rules and coverage for initializer-shape edits.
+- ✓ Implement graph-backed query invalidation rules and coverage for cross-definition edits now that the cross-definition invalidation contract is documented. Completed: definition-signature, import-alias, and receiver-type invalidation counts are now covered.
+  - ✓ Implement graph-backed query invalidation rules and coverage for definition-signature edits.
+  - ✓ Implement graph-backed query invalidation rules and coverage for import-alias edits.
+  - ✓ Implement graph-backed query invalidation rules and coverage for receiver-type edits.
+
 **Group 12 - Semantics/lowering boundary**
 Boundary note: this group is now split into semantic-product creation, pipeline plumbing, lowering cutover, and cleanup so it can be worked incrementally instead of as one flat migration queue.
 
