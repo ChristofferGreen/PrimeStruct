@@ -788,6 +788,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const auto lowerInferenceSetupHeader =
       readFile("include/primec/testing/ir_lowerer_helpers/IrLowererLowerInferenceSetup.h");
   CHECK(lowerInferenceSetupHeader.find("struct Definition;") != std::string::npos);
+  CHECK(lowerInferenceSetupHeader.find("struct Program;") != std::string::npos);
   CHECK(lowerInferenceSetupHeader.find("struct ReturnInfo;") != std::string::npos);
   CHECK(lowerInferenceSetupHeader.find("struct SemanticProductTargetAdapter;") != std::string::npos);
 
@@ -880,6 +881,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(uninitializedTypeHelpersHeader.find("struct Definition;") != std::string::npos);
   CHECK(uninitializedTypeHelpersHeader.find("struct IrFunction;") != std::string::npos);
   CHECK(uninitializedTypeHelpersHeader.find("struct Program;") != std::string::npos);
+  CHECK(operatorConversionsAndCallsHelpersHeader.find("struct Definition;") !=
+        std::string::npos);
   CHECK(operatorConversionsAndCallsHelpersHeader.find("struct LayoutFieldBinding;") !=
         std::string::npos);
   CHECK(structLayoutHelpersHeader.find("struct SemanticProgramTypeMetadata;") !=
