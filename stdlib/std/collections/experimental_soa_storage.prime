@@ -66,6 +66,14 @@ namespace std {
     }
   }
 
+  [public struct]
+  SoaFieldView<T>() {
+    [public i32] count
+    [public i32] capacity
+    [public Pointer<uninitialized<T>>] data
+    [public i32] stride
+  }
+
   [public return<void>]
   soaArbitraryWidthPending<T>([i32] fieldCount) {
     [array<i32>] trap{array<i32>()}
@@ -318,6 +326,80 @@ namespace std {
     [Pointer<i32>] fieldBytes{
         /std/collections/experimental_buffer_unchecked/bufferOffsetBytesUnsafe(baseBytes, elementOffset)}
     return(/std/collections/experimental_buffer_unchecked/bufferReinterpretFromBytes<uninitialized<Field>>(fieldBytes))
+  }
+
+  [public return<SoaFieldView<Field>>]
+  soaColumnFieldViewUnsafe<Struct, Field>([SoaColumn<Struct>] values, [i32] fieldIndex) {
+    soaColumnCheckShape<Struct>(values)
+    [i32] fieldCount{/Struct/SoaSchemaFieldCount()}
+    if(or(less_than(fieldIndex, 0i32),
+          not(less_than(fieldIndex, fieldCount))),
+       then() {
+         [array<i32>] empty{array<i32>()}
+         empty[fieldIndex]
+       },
+       else() { })
+    [i32] stride{/Struct/SoaSchemaElementStride()}
+    [i32] fieldOffset{/Struct/SoaSchemaFieldOffset(fieldIndex)}
+    [Pointer<i32>] baseBytes{
+        /std/collections/experimental_buffer_unchecked/bufferReinterpretBytes<uninitialized<Struct>>(values.data)}
+    [Pointer<i32>] fieldBytes{
+        /std/collections/experimental_buffer_unchecked/bufferOffsetBytesUnsafe(baseBytes, fieldOffset)}
+    [Pointer<uninitialized<Field>>] fieldBase{
+        /std/collections/experimental_buffer_unchecked/bufferReinterpretFromBytes<uninitialized<Field>>(fieldBytes)}
+    return(SoaFieldView<Field>(
+        values.field_count(),
+        values.field_capacity(),
+        fieldBase,
+        stride))
+  }
+
+  [return<void>]
+  soaFieldViewCheckShape<T>([SoaFieldView<T>] values) {
+    if(or(or(less_than(values.field_count(), 0i32),
+             less_than(values.field_capacity(), 0i32)),
+          or(greater_than(values.field_count(), values.field_capacity()),
+             or(greater_than(values.field_capacity(), 1073741823i32),
+                less_than(values.stride, 1i32)))),
+       then() {
+         [array<i32>] empty{array<i32>()}
+         empty[0i32]
+       },
+       else() { })
+  }
+
+  [return<void>]
+  soaFieldViewCheckIndex<T>([SoaFieldView<T>] values, [i32] index) {
+    soaFieldViewCheckShape<T>(values)
+    if(or(or(less_than(index, 0i32),
+             not(less_than(index, values.field_count()))),
+          not(less_than(index, values.field_capacity()))),
+       then() {
+         [array<i32>] empty{array<i32>()}
+         empty[index]
+       },
+       else() { })
+  }
+
+  [return<Pointer<uninitialized<T>>>]
+  soaFieldViewSlotUnsafe<T>([SoaFieldView<T>] values, [i32] index) {
+    soaFieldViewCheckIndex<T>(values, index)
+    [i32] byteOffset{multiply(index, values.stride)}
+    [Pointer<i32>] baseBytes{
+        /std/collections/experimental_buffer_unchecked/bufferReinterpretBytes<uninitialized<T>>(values.data)}
+    [Pointer<i32>] slotBytes{
+        /std/collections/experimental_buffer_unchecked/bufferOffsetBytesUnsafe(baseBytes, byteOffset)}
+    return(/std/collections/experimental_buffer_unchecked/bufferReinterpretFromBytes<uninitialized<T>>(slotBytes))
+  }
+
+  [public return<T>]
+  soaFieldViewRead<T>([SoaFieldView<T>] values, [i32] index) {
+    return(dereference(soaFieldViewSlotUnsafe<T>(values, index)))
+  }
+
+  [public return<Reference<T>>]
+  soaFieldViewRef<T>([SoaFieldView<T>] values, [i32] index) {
+    return(borrow(dereference(soaFieldViewSlotUnsafe<T>(values, index))))
   }
 
   [return<void>]

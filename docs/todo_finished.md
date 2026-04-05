@@ -35,6 +35,12 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
   `soaColumnFieldSlotUnsafe<Struct, Field>(...)` now uses `SoaSchemaFieldOffset(...)`,
   `SoaSchemaElementStride()`, and byte-addressable buffer helpers to recover a
   typed field pointer within whole-element `SoaColumn<Struct>` storage.
+- ✓ Introduced a reusable non-owning strided field-view carrier. Completed:
+  `SoaFieldView<T>` plus `soaFieldView*` helpers now model strided borrowed
+  views over field storage without pretending the data is contiguous.
+- ✓ Routed `/soa_vector/field_view/<field>` onto the strided carrier. Completed:
+  standalone field-view calls now rewrite onto `soaVectorFieldView<...>` and
+  return the strided `SoaFieldView` carrier instead of the pending diagnostic.
 - ✓ Retired the stale richer borrowed field-view receiver-family split.
   Completed: standalone `borrowed.field()` / `field(borrowed)` attempts still
   all funnel through the same synthetic `/soa_vector/field_view/<field>` helper

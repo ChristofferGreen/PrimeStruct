@@ -3575,18 +3575,14 @@ read-only path.
     reflect-enabled structs. `SoaColumn<T>` still stores contiguous whole `T` elements,
     and the current `SoaSchema*` reflection helpers now expose validated field byte
     offsets and whole-element stride through `SoaSchemaFieldOffset(...)` /
-    `SoaSchemaElementStride()`. Existing buffer helpers still offset only already-typed
-    pointers in whole-element units, so the missing primitives are typed
-    reinterpretation from whole-element storage pointers to raw byte-addressable
-    pointers (a raw pointer reinterpret primitive now exists and can cast whole-element
-    storage to byte-addressable pointers without changing the address), then byte-addressable
-    pointer offsetting over that raw storage, and then
-    typed reinterpretation from the recovered byte-addressed slot to a field pointer;
-    only after that can a reflected field-slot pointer helper address one named field
-    inside whole-element storage, then a reusable non-owning strided field-view
-    carrier can sit on top of it, and only after that can the shared helper path route
-    onto that carrier and preserve it across local binding, helper pass-through, and
-    return surfaces.
+    `SoaSchemaElementStride()`. Existing buffer helpers now expose byte-addressable
+    reinterpretation and offsetting, and the stdlib builds
+    `soaColumnFieldSlotUnsafe<Struct, Field>(...)` plus the strided `SoaFieldView<T>`
+    carrier on top of those reflected layout facts. Standalone field-view calls now
+    route through the shared `/soa_vector/field_view/<field>` helper path onto
+    `soaVectorFieldView<...>` and return a non-owning strided view; the remaining work
+    is preserving those borrowed field-view values across local binding, helper
+    pass-through, and return surfaces.
   - **Standalone mutating field-view contract:** the remaining standalone mutating write slice
     should replace the current pending-only `assign(value.field(), next)` /
     `assign(field(value), next)` contract with the same writable column-view substrate that

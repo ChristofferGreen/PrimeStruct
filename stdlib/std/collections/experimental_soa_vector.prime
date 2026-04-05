@@ -99,6 +99,13 @@ namespace std {
     return(/std/collections/experimental_soa_storage/soaColumnRef<T>(storage, index))
   }
 
+  [public return<SoaFieldView<Field>>]
+  soaVectorFieldView<Struct, Field>([SoaVector<Struct>] values, [i32] fieldIndex) {
+    soaVectorValidateType<Struct>()
+    [SoaColumn<Struct>] storage{values.storage}
+    return(/std/collections/experimental_soa_storage/soaColumnFieldViewUnsafe<Struct, Field>(storage, fieldIndex))
+  }
+
   [public effects(heap_alloc), return<void>]
   soaVectorReserve<T>([SoaVector<T> mut] values, [i32] capacity) {
     soaVectorValidateType<T>()
