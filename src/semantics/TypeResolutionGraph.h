@@ -40,6 +40,8 @@ struct TypeResolutionGraphEdge {
 struct TypeResolutionGraph {
   std::vector<TypeResolutionGraphNode> nodes;
   std::vector<TypeResolutionGraphEdge> edges;
+  uint64_t prepareMillis = 0;
+  uint64_t buildMillis = 0;
 };
 
 std::string_view typeResolutionNodeKindName(TypeResolutionNodeKind kind);

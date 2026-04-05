@@ -44,11 +44,10 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
   - ○ Expand local-`auto` graph support across the next initializer-family surface.
   - ○ Expand local-`auto` graph support across the next control-flow join surface.
 - ◐ Implement graph performance guardrails and sustained perf coverage now that the regression-budget contract is documented. Progress: the performance work is now split into baseline metrics, regression thresholds/reporting, and sustained perf coverage instead of one umbrella guardrail bullet.
-  - ○ Add baseline graph timing and invalidation metrics for the current stabilized graph surface.
+  - ◐ Add baseline graph timing and invalidation metrics for the current stabilized graph surface. Progress: the type-resolution graph dump now includes prepare/build timing plus node/edge counts; invalidation metrics remain pending.
   - ○ Add regression thresholds and reporting for those graph metrics.
   - ○ Add sustained graph performance coverage over the stabilized graph surface.
 - ◐ Prototype optional parallel solve now that its execution and merge contract is documented. Progress: the parallel-solve work is now split into execution partitioning, deterministic merge ordering, and parity coverage instead of one umbrella prototype bullet.
   - ○ Prototype the partition/execution layer for optional parallel solve.
   - ○ Implement deterministic merge ordering for optional parallel solve results.
   - ○ Add parity coverage between optional parallel solve and the existing single-threaded graph solve.
-

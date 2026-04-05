@@ -5,6 +5,7 @@
 #include "TypeResolutionGraphPreparation.h"
 #include "primec/testing/SemanticsGraphHelpers.h"
 
+#include <chrono>
 #include <optional>
 #include <sstream>
 #include <string_view>
@@ -439,8 +440,14 @@ std::string_view typeResolutionEdgeKindName(TypeResolutionEdgeKind kind) {
 }
 
 TypeResolutionGraph buildTypeResolutionGraph(const Program &program) {
+  const auto start = std::chrono::steady_clock::now();
   TypeResolutionGraphBuilder builder(program);
-  return builder.build();
+  TypeResolutionGraph graph = builder.build();
+  const auto end = std::chrono::steady_clock::now();
+  graph.buildMillis =
+      static_cast<uint64_t>(
+          std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
+  return graph;
 }
 
 bool buildTypeResolutionGraphForProgram(Program program,
@@ -450,10 +457,15 @@ bool buildTypeResolutionGraphForProgram(Program program,
                                         TypeResolutionGraph &out) {
   error.clear();
   out = {};
+  const auto prepStart = std::chrono::steady_clock::now();
   if (!prepareProgramForTypeResolutionAnalysis(program, entryPath, semanticTransforms, error)) {
     return false;
   }
+  const auto prepEnd = std::chrono::steady_clock::now();
   out = buildTypeResolutionGraph(program);
+  out.prepareMillis =
+      static_cast<uint64_t>(
+          std::chrono::duration_cast<std::chrono::milliseconds>(prepEnd - prepStart).count());
   return true;
 }
 
@@ -472,6 +484,10 @@ CondensationDag computeTypeResolutionDependencyDag(const TypeResolutionGraph &gr
 std::string formatTypeResolutionGraph(const TypeResolutionGraph &graph) {
   std::ostringstream out;
   out << "type_graph {\n";
+  out << "  metrics prepare_ms=" << graph.prepareMillis
+      << " build_ms=" << graph.buildMillis
+      << " nodes=" << graph.nodes.size()
+      << " edges=" << graph.edges.size() << "\n";
   for (const auto &node : graph.nodes) {
     out << "  node " << node.id << " kind=" << typeResolutionNodeKindName(node.kind)
         << " label=\"" << node.label << "\""
