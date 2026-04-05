@@ -1062,11 +1062,11 @@ main() {
   values.push(Particle(9i32, 12i32))
   [Holder] holder{Holder()}
   [Particle] firstA{location(holder.pickBorrowed(location(values))).get(0i32)}
-  [Particle] secondA{location(holder.pickBorrowed(location(values))).ref(1i32)}
+  [Reference<Particle>] secondA{location(holder.pickBorrowed(location(values))).ref(1i32)}
   [vector<Particle>] unpackedA{location(holder.pickBorrowed(location(values))).to_aos()}
   [i32] countA{location(holder.pickBorrowed(location(values))).count()}
   [Particle] firstB{dereference(location(holder.pickBorrowed(location(values)))).get(0i32)}
-  [Particle] secondB{dereference(location(holder.pickBorrowed(location(values)))).ref(1i32)}
+  [Reference<Particle>] secondB{dereference(location(holder.pickBorrowed(location(values)))).ref(1i32)}
   [i32] fieldBareGet{get(location(holder.pickBorrowed(location(values))), 1i32).y}
   [i32] fieldBareRef{ref(dereference(location(holder.pickBorrowed(location(values)))), 0i32).x}
   [i32] fieldMethodRef{location(holder.pickBorrowed(location(values))).ref(1i32).y}
@@ -1932,11 +1932,11 @@ main() {
   values.push(Particle(7i32))
   values.push(Particle(9i32))
   [Particle] firstA{location(values).get(0i32)}
-  [Particle] secondA{location(values).ref(1i32)}
+  [Reference<Particle>] secondA{location(values).ref(1i32)}
   [vector<Particle>] unpackedA{location(values).to_aos()}
   [i32] countA{location(values).count()}
   [Particle] firstB{dereference(location(values)).get(0i32)}
-  [Particle] secondB{dereference(location(values)).ref(1i32)}
+  [Reference<Particle>] secondB{dereference(location(values)).ref(1i32)}
   [vector<Particle>] unpackedB{dereference(location(values)).to_aos()}
   [i32] countB{dereference(location(values)).count()}
   return(plus(plus(firstA.x, secondA.x),
@@ -1997,11 +1997,11 @@ main() {
   values.push(Particle(7i32, 8i32))
   values.push(Particle(9i32, 12i32))
   [Particle] firstA{location(pickBorrowed(location(values))).get(0i32)}
-  [Particle] secondA{location(pickBorrowed(location(values))).ref(1i32)}
+  [Reference<Particle>] secondA{location(pickBorrowed(location(values))).ref(1i32)}
   [vector<Particle>] unpackedA{location(pickBorrowed(location(values))).to_aos()}
   [i32] countA{location(pickBorrowed(location(values))).count()}
   [Particle] firstB{dereference(location(pickBorrowed(location(values)))).get(0i32)}
-  [Particle] secondB{dereference(location(pickBorrowed(location(values)))).ref(1i32)}
+  [Reference<Particle>] secondB{dereference(location(pickBorrowed(location(values)))).ref(1i32)}
   [vector<Particle>] unpackedB{dereference(location(pickBorrowed(location(values)))).to_aos()}
   [i32] countB{dereference(location(pickBorrowed(location(values)))).count()}
   [int] total{

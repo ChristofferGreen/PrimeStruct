@@ -7,6 +7,13 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Routed the shared canonical and experimental whole-value `ref(...)` helper
+  route onto the standalone borrowed carrier. Completed: canonical
+  `/std/collections/soa_vector/ref`, experimental-wrapper `values.ref(i)`, and
+  the existing experimental helper `soaVectorRef<T>(...)` now all validate
+  through `Reference<T>` carriers instead of collapsing back to whole-element
+  `T`, while projected `.ref(i).field` reads/writes remain in the later
+  standalone borrowed field-view queue.
 - ✓ Replaced the temporary receiver-family split for wrapper `ref(i)` with the
   real shared helper-route seam. Completed: audit showed whole-value
   `values.ref(i)` still rides canonical `/std/collections/soa_vector/ref` and

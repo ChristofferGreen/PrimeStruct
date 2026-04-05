@@ -25,10 +25,10 @@ namespace std {
       return(soaVectorGet<T>(this, index))
     }
 
-    [public return<T>]
+    [public return<Reference<T>>]
     ref([i32] index) {
       soaVectorValidateType<T>()
-      return(dereference(soaVectorRef<T>(this, index)))
+      return(soaVectorRef<T>(this, index))
     }
 
     [public mut effects(heap_alloc), return<void>]

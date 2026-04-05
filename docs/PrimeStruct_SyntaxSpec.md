@@ -1067,28 +1067,22 @@ or same-path `/soa_vector/<field>` path instead of a dedicated
 field-view rejects now reuse the shared unavailable-method helper path there
 instead of an inline pending branch. The remaining live
 follow-ups are now reduced to invalidation plus richer borrowed-view semantics on top of that
-substrate. The current completed borrowed foothold is the indexed/field-level borrowed
-projection surface (`ref(...).field`, `.ref(i).field`, and `value.field()[i]`-style
-reads/writes) rather than standalone `ref(...)` values. Experimental-wrapper
-`SoaVector<T>.ref(i)` plus canonical `/std/collections/soa_vector/ref` still return
-whole-element `T` values through `soaColumnRef<T>(...)`, and those projections are recomputed
-per use through the existing `soaVectorGet(...).field` / `soaVectorRef(...).field` helper
-path, so neither surface yet materializes a standalone borrowed object that survives later
-wrapper mutation. The next implementation step is therefore after the now-completed
+substrate. The current completed borrowed foothold now includes direct whole-value `ref(...)`
+values in addition to the indexed/field-level borrowed projection surface
+(`ref(...).field`, `.ref(i).field`, and `value.field()[i]`-style reads/writes). Those
+projections are recomputed per use through the existing `soaVectorGet(...).field` /
+`soaVectorRef(...).field` helper path, so later invalidation work still starts at standalone
+borrowed values and standalone borrowed field-view values rather than the already-completed
+per-use projection surface. The next implementation step is therefore after the now-completed
 slot-backed borrowed-value carrier exposure through `soaColumnBorrowSlot<T>(...)` /
 `vectorBorrowSlot<T>(...)`. Those stdlib helpers now validate through `[return<Reference<T>>]`
 with slot-pointer provenance preserved through local `slot` aliases, and public
 `soaColumnRef<T>(...)` plus experimental helper `soaVectorRef<T>(...)` now also preserve that
-standalone borrowed carrier instead of dereferencing back to whole-element `T`. The next
-remaining whole-value substrate step is the shared canonical helper route:
-`/std/collections/soa_vector/ref` plus same-path `/soa_vector/ref` still dereference
-`soaVectorRef<T>(...)` back to whole-element `T`, and method-form `values.ref(i)` still rides
-that helper surface. Direct wrapper locals, borrowed receivers, helper-return/method-like
-helper-return receivers, and inline `location(...)`-wrapped receivers are therefore technically
-inseparable at this layer and will move together once that shared helper surface flips to
-`Reference<T>`. Projected `.ref(i).field` reads/writes already ride the existing per-use
-`soaVectorRef(...).field` rewrite and stay with the later standalone borrowed field-view queue
-rather than this whole-value helper step.
+standalone borrowed carrier instead of dereferencing back to whole-element `T`, and the shared
+canonical/helper-method route for `ref(values, i)` / `values.ref(i)` now validates through the
+same `Reference<T>` carrier as well. Projected `.ref(i).field` reads/writes already ride the
+existing per-use `soaVectorRef(...).field` rewrite and stay with the later standalone borrowed
+field-view queue rather than this whole-value helper step.
 Read-only wrapper field-view indexing now routes both method-form `values.field()[i]`
 and call-form `field(values)[i]` reflected reads, plus borrowed local `borrowed.field()[i]`,
 inline `location(values).field()[i]` / `field(dereference(location(values)))[i]`,
