@@ -1074,11 +1074,12 @@ reads/writes) rather than standalone `ref(...)` values. Experimental-wrapper
 whole-element `T` values through `soaColumnRef<T>(...)`, and those projections are recomputed
 per use through the existing `soaVectorGet(...).field` / `soaVectorRef(...).field` helper
 path, so neither surface yet materializes a standalone borrowed object that survives later
-wrapper mutation. The next implementation step is therefore to introduce a dedicated
-borrowed element-view carrier for standalone `ref(...)` values first, then route direct
-borrowed locals, explicit dereference, helper-return, inline `location(...)`, and richer
-standalone borrowed field-view values on top of the same substrate before later invalidation
-rules can apply to anything persistent.
+wrapper mutation. The next implementation step is therefore to introduce a reusable borrowed
+element-view carrier over a single-column `SoaColumn<T>` slot first, then route
+experimental-wrapper `SoaVector<T>.ref(i)` and `soaVectorRef<T>(...)` onto that carrier before
+direct borrowed locals, explicit dereference, helper-return, inline `location(...)`, and richer
+standalone borrowed field-view values can build on the same substrate and before later
+invalidation rules can apply to anything persistent.
 Read-only wrapper field-view indexing now routes both method-form `values.field()[i]`
 and call-form `field(values)[i]` reflected reads, plus borrowed local `borrowed.field()[i]`,
 inline `location(values).field()[i]` / `field(dereference(location(values)))[i]`,

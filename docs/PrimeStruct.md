@@ -3488,11 +3488,12 @@ foothold is the indexed/field-level borrowed projection surface (`ref(...).field
 `soaColumnRef<T>(...)`, and those projection forms are recomputed per use through the existing
 `soaVectorGet(...).field` / `soaVectorRef(...).field` rewrite and lowering path, so neither
 surface yet materializes a standalone borrowed object that can survive later wrapper mutation.
-The remaining borrowed-view work therefore starts by introducing a dedicated borrowed
-element-view carrier for standalone `ref(...)` values, then routing direct borrowed locals,
-explicit dereference, helper-return, inline `location(...)`, and later standalone borrowed
-field-view values onto that same substrate before invalidation rules can apply to anything
-persistent. Successful experimental
+The remaining borrowed-view work therefore starts by introducing a reusable borrowed
+element-view carrier over a single-column `SoaColumn<T>` slot, then routing experimental-wrapper
+`SoaVector<T>.ref(i)` and `soaVectorRef<T>(...)` onto that carrier before direct borrowed
+locals, explicit dereference, helper-return, inline `location(...)`, and later standalone
+borrowed field-view values can reuse the same substrate and before invalidation rules can apply
+to anything persistent. Successful experimental
 `value.field()[i]` indexing now has its first completed read-only reflected slices on top of
 the current substrate for direct wrapper receivers, borrowed local shorthand, inline
 `location(...)` borrow expressions, explicitly dereferenced borrowed local receivers, borrowed

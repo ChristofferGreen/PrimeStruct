@@ -7,6 +7,12 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Split the oversized Group 8 standalone borrowed element-view carrier item into the real
+  missing single-column carrier substrate plus the wrapper/helper exposure slice. Completed:
+  the live queue and spec/docs now pin the current boundary explicitly: a reusable borrowed
+  element-view carrier over `SoaColumn<T>` must exist before experimental-wrapper
+  `SoaVector<T>.ref(i)` and `soaVectorRef<T>(...)` can stop returning whole-element `T`.
+
 - ✓ Split the oversized Group 8 standalone borrowed `ref(...)` item into the real missing
   experimental-wrapper borrowed-value carrier plus separate direct-local and explicit
   dereference receiver-routing slices. Completed: the live queue and spec/docs now pin the
