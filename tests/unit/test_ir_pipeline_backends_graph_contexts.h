@@ -228,6 +228,37 @@ TEST_CASE("public lowerer testing headers stay in sync with semantic-product hel
   CHECK(setupType.find("resolveMethodCallDefinitionFromExpr(") != std::string::npos);
 }
 
+TEST_CASE("public lowerer testing umbrella keeps alias owners ahead of users") {
+  const auto irLowererHelpersHeader = readFile("include/primec/testing/IrLowererHelpers.h");
+
+  const auto setupTypePos = irLowererHelpersHeader.find("IrLowererSetupTypeHelpers.h");
+  const auto callDispatchPos = irLowererHelpersHeader.find("IrLowererCallDispatchHelpers.h");
+  const auto statementBindingPos = irLowererHelpersHeader.find("IrLowererStatementBindingHelpers.h");
+  const auto countAccessPos = irLowererHelpersHeader.find("IrLowererCountAccessHelpers.h");
+  const auto resultHelpersPos = irLowererHelpersHeader.find("IrLowererResultHelpers.h");
+  const auto stringCallPos = irLowererHelpersHeader.find("IrLowererStringCallHelpers.h");
+  const auto operatorArithmeticPos = irLowererHelpersHeader.find("IrLowererOperatorArithmeticHelpers.h");
+  const auto lowerExprEmitSetupPos = irLowererHelpersHeader.find("IrLowererLowerExprEmitSetup.h");
+  const auto lowerInferencePos = irLowererHelpersHeader.find("IrLowererLowerInferenceSetup.h");
+
+  REQUIRE(setupTypePos != std::string::npos);
+  REQUIRE(callDispatchPos != std::string::npos);
+  REQUIRE(statementBindingPos != std::string::npos);
+  REQUIRE(countAccessPos != std::string::npos);
+  REQUIRE(resultHelpersPos != std::string::npos);
+  REQUIRE(stringCallPos != std::string::npos);
+  REQUIRE(operatorArithmeticPos != std::string::npos);
+  REQUIRE(lowerExprEmitSetupPos != std::string::npos);
+  REQUIRE(lowerInferencePos != std::string::npos);
+
+  CHECK(setupTypePos < callDispatchPos);
+  CHECK(statementBindingPos < countAccessPos);
+  CHECK(statementBindingPos < lowerInferencePos);
+  CHECK(resultHelpersPos < operatorArithmeticPos);
+  CHECK(stringCallPos < operatorArithmeticPos);
+  CHECK(operatorArithmeticPos < lowerExprEmitSetupPos);
+}
+
 TEST_CASE("public call dispatch testing header stays in sync with alias-policy helpers") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path callDispatchPath =
