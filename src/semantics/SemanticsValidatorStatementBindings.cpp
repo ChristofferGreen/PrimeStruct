@@ -710,6 +710,22 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         resolveReceiverRootExpr;
     std::function<bool(const Expr &, const ExprSubstitutions &, std::string &)>
         resolveStandaloneRefRootExpr;
+    auto isStandaloneRefCall = [&](const Expr &expr) -> bool {
+      if (expr.kind != Expr::Kind::Call || expr.args.size() != 2) {
+        return false;
+      }
+      const std::string resolvedPath = resolveCalleePath(expr);
+      if (expr.isMethodCall) {
+        return expr.name == "ref" ||
+               resolvedPath.rfind("/std/collections/soa_vector/ref", 0) == 0 ||
+               resolvedPath.rfind("/soa_vector/ref", 0) == 0;
+      }
+      return isSimpleCallName(expr, "ref") ||
+             resolvedPath.rfind("/std/collections/soa_vector/ref", 0) == 0 ||
+             resolvedPath.rfind("/soa_vector/ref", 0) == 0 ||
+             resolvedPath.rfind("/std/collections/experimental_soa_vector/soaVectorRef", 0) == 0 ||
+             resolvedPath.rfind("/std/collections/experimental_soa_storage/soaColumnRef", 0) == 0;
+    };
     auto hasBorrowConflictForRoot =
         [&](const std::string &borrowRoot, bool requestMutable) -> bool {
           if (borrowRoot.empty() ||
@@ -866,8 +882,13 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     if (!initIsLocation && !initIsDirectBorrowStorage && !currentValidationState_.context.definitionIsUnsafe) {
       std::string borrowRoot;
       const ExprSubstitutions substitutions;
-      if (resolveStandaloneRefRootExpr(init, substitutions, borrowRoot) &&
-          !borrowRoot.empty()) {
+      const bool resolvedStandaloneRoot =
+          resolveStandaloneRefRootExpr(init, substitutions, borrowRoot);
+      if (isStandaloneRefCall(init) &&
+          (!resolvedStandaloneRoot || borrowRoot.empty())) {
+        return failBindingDiagnostic("Reference binding requires borrow root");
+      }
+      if (resolvedStandaloneRoot && !borrowRoot.empty()) {
         if (hasBorrowConflictForRoot(borrowRoot, info.isMutable)) {
           return failBindingDiagnostic(
               "borrow conflict: " + borrowRoot + " (root: " + borrowRoot +
