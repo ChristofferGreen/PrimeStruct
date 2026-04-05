@@ -4250,6 +4250,37 @@ void rewriteExperimentalSoaFieldViewAssignTargetsExpr(Expr &expr) {
   }
 
   Expr &target = expr.args.front();
+  if (target.kind == Expr::Kind::Call && !target.isBinding) {
+    static constexpr std::string_view fieldViewPrefix =
+        "/std/collections/experimental_soa_vector/soaVectorFieldView";
+    static constexpr std::string_view columnFieldViewPrefix =
+        "/std/collections/experimental_soa_storage/soaColumnFieldViewUnsafe";
+    if ((target.name.rfind(fieldViewPrefix, 0) == 0 ||
+         target.name.rfind(columnFieldViewPrefix, 0) == 0) &&
+        target.args.size() == 2 && target.templateArgs.size() >= 2) {
+      Expr refCall;
+      refCall.kind = Expr::Kind::Call;
+      refCall.name = "/std/collections/experimental_soa_storage/soaFieldViewRef";
+      refCall.templateArgs = {target.templateArgs[1]};
+      refCall.args.push_back(target);
+      refCall.args.push_back(
+          makeI32LiteralExpr(0, target.sourceLine, target.sourceColumn));
+      refCall.argNames.resize(refCall.args.size());
+      refCall.sourceLine = target.sourceLine;
+      refCall.sourceColumn = target.sourceColumn;
+
+      Expr dereferenceCall;
+      dereferenceCall.kind = Expr::Kind::Call;
+      dereferenceCall.name = "dereference";
+      dereferenceCall.args.push_back(std::move(refCall));
+      dereferenceCall.argNames.resize(dereferenceCall.args.size());
+      dereferenceCall.sourceLine = target.sourceLine;
+      dereferenceCall.sourceColumn = target.sourceColumn;
+
+      target = std::move(dereferenceCall);
+      return;
+    }
+  }
   if (target.kind != Expr::Kind::Call || !target.isFieldAccess ||
       target.args.size() != 1) {
     return;

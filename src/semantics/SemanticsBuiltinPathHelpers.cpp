@@ -448,11 +448,6 @@ bool splitSoaFieldViewHelperPath(std::string_view path, std::string *fieldNameOu
 
 namespace {
 
-std::string soaFieldViewPendingDiagnostic(std::string_view fieldName) {
-  return "soa_vector field views are not implemented yet: " +
-         std::string(fieldName);
-}
-
 std::string soaBorrowedViewPendingDiagnostic() {
   return "soa_vector borrowed views are not implemented yet: ref";
 }
@@ -461,10 +456,6 @@ std::string soaBorrowedViewPendingDiagnostic() {
 
 std::optional<std::string> soaPendingUnavailableMethodDiagnostic(
     std::string_view resolvedPath, bool hasVisibleSoaRefHelper) {
-  std::string fieldName;
-  if (splitSoaFieldViewHelperPath(resolvedPath, &fieldName)) {
-    return soaFieldViewPendingDiagnostic(fieldName);
-  }
   if ((resolvedPath == "/soa_vector/ref" ||
        resolvedPath == "/std/collections/soa_vector/ref") &&
       !hasVisibleSoaRefHelper) {

@@ -45,6 +45,13 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
   Completed: bound, passed, and returned `SoaFieldView<T>` values now rewrite
   indexed access through `soaFieldViewRead/Ref` instead of materializing owning
   vector values.
+- ✓ Implemented standalone mutating field-view writes. Completed: standalone
+  method/call `assign(value.field(), next)` and `assign(field(value), next)`
+  now lower through `soaVectorFieldView(...)` plus `soaFieldViewRef<T>(..., 0)`
+  dereference writes for direct wrapper locals, borrowed locals, borrowed
+  helper-return/method-like helper-return receivers, and inline
+  `location(...)`-wrapped borrowed receivers, replacing the old pending-only
+  assignment diagnostic.
 - ✓ Retired the stale richer borrowed field-view receiver-family split.
   Completed: standalone `borrowed.field()` / `field(borrowed)` attempts still
   all funnel through the same synthetic `/soa_vector/field_view/<field>` helper

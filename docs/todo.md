@@ -48,10 +48,6 @@ Roadmap note: completed map/vector migration and compatibility-cleanup slices no
     - ✓ Introduce a reusable non-owning strided field-view carrier on top of that field-slot pointer helper so one named field can project as a standalone indexed borrowed view without pretending it is plain contiguous `SoaColumn<Field>` storage. Completed: `SoaFieldView<T>` and `soaFieldView*` helpers now model strided borrowed views over field storage.
     - ✓ Route the shared synthetic `/soa_vector/field_view/<field>` helper path onto that strided field-view carrier instead of the current pending diagnostic. Completed: standalone field-view calls now rewrite onto `soaVectorFieldView<...>` which returns the strided `SoaFieldView` carrier.
     - ✓ Preserve borrowed field-view semantics across local binding, pass-through, and return surfaces instead of materializing owning vector values. Completed: bound/passed/returned `SoaFieldView<T>` values now rewrite indexed access through the strided `soaFieldViewRead/Ref` helpers.
-  - ◐ Implement the documented standalone mutating method/call field-view write semantics, replacing the remaining pending contract (`assign(value.field(), next)` / `assign(field(value), next)`) with real field-write lowering on top of the existing writable substrate. Progress: this mutating write surface is now split by receiver family instead of one umbrella write item.
-    - ○ Implement standalone mutating method/call field-view writes for direct wrapper locals and borrowed-local receivers.
-    - ○ Implement standalone mutating method/call field-view writes for borrowed helper-return and method-like struct-helper-return receivers.
-    - ○ Implement standalone mutating method/call field-view writes for inline `location(...)`-wrapped borrowed receivers.
 **Architecture / Type-resolution graph**
 **Group 11 - Near-term graph queue**
 Blocked by Group 13 rollout constraints until the remaining collection-helper/runtime predecessor items are finished and the return-kind pilot path is stable enough to resume broader graph work.

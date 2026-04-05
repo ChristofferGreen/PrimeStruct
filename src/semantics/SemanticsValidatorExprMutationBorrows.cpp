@@ -219,6 +219,8 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
   };
   std::function<bool(const Expr &, std::string &, std::string &)>
       resolveMutablePointerWriteTarget;
+  std::function<bool(const Expr &, std::string &, std::string &)>
+      resolveMutableExperimentalSoaReceiverTarget;
   resolveMutablePointerWriteTarget = [&](const Expr &pointerExpr,
                                          std::string &borrowRootOut,
                                          std::string &ignoreBorrowNameOut)
@@ -261,6 +263,25 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
         borrowRootOut = locationTarget.name;
       }
       return true;
+    }
+    const std::string resolvedPointerPath = resolveCalleePath(pointerExpr);
+    if (resolvedPointerPath.rfind(
+            "/std/collections/experimental_soa_storage/soaFieldViewRef", 0) ==
+            0 &&
+        pointerExpr.args.size() == 2) {
+      const Expr &fieldViewExpr = pointerExpr.args.front();
+      if (fieldViewExpr.kind != Expr::Kind::Call || fieldViewExpr.isBinding ||
+          fieldViewExpr.args.size() != 2) {
+        return false;
+      }
+      const std::string resolvedFieldViewPath = resolveCalleePath(fieldViewExpr);
+      if (resolvedFieldViewPath.rfind(
+              "/std/collections/experimental_soa_vector/soaVectorFieldView",
+              0) != 0) {
+        return false;
+      }
+      return resolveMutableExperimentalSoaReceiverTarget(
+          fieldViewExpr.args.front(), borrowRootOut, ignoreBorrowNameOut);
     }
     std::string opName;
     if (!getBuiltinOperatorName(pointerExpr, opName) ||
@@ -384,7 +405,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     receiverTargetOut = &refExpr.args.front();
     return true;
   };
-  auto resolveMutableExperimentalSoaReceiverTarget =
+  resolveMutableExperimentalSoaReceiverTarget =
       [&](const Expr &receiverTarget,
           std::string &borrowRootOut,
           std::string &ignoreBorrowNameOut) -> bool {

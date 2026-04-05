@@ -292,28 +292,6 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     return true;
   }
 
-  if (resolvedMethod && splitSoaFieldViewHelperPath(resolved)) {
-    handledOut = true;
-    if (hasNamedArguments(expr.argNames) &&
-        !(context.isNamedArgsPackMethodAccessCall != nullptr &&
-          context.isNamedArgsPackMethodAccessCall(expr)) &&
-        !(context.isNamedArgsPackWrappedFileBuiltinAccessCall != nullptr &&
-          context.isNamedArgsPackWrappedFileBuiltinAccessCall(expr))) {
-      return failMapSoaBuiltinDiagnostic(
-          "named arguments not supported for builtin calls");
-    }
-    if (!expr.templateArgs.empty()) {
-      return failMapSoaBuiltinDiagnostic(expr.name +
-                                        " does not accept template arguments");
-    }
-    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      return failMapSoaBuiltinDiagnostic(expr.name +
-                                        " does not accept block arguments");
-    }
-    return failMapSoaBuiltinDiagnostic(
-        soaDirectPendingUnavailableMethodDiagnostic(resolved));
-  }
-
   return true;
 }
 

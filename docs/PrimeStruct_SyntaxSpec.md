@@ -815,10 +815,11 @@ and semantic validation now accepts `soa_vector` usage when constraints hold
 `soa_vector field envelope is unsupported on /Type/field/...: ...` diagnostics for disallowed direct/nested
 element-field envelopes in literal, binding, and return validation paths). Builtin `count`/`get`/`ref` validation and
 current lowering behavior are temporary scaffolding while the language grows the generic SoA substrate needed for a
-real stdlib-owned implementation. Method-form/call-form field-view names now emit
-`soa_vector field views are not implemented yet: <field>` unless a user-defined `/soa_vector/<field>` helper exists,
-including explicit `value.field(i)` / `field(value, i)` index-like spellings, and builtin field-view call-argument/return escapes now
-reject with that same diagnostic while current IR lowering routes `count(...)` on `soa_vector` through the native count path for current SoA bindings
+real stdlib-owned implementation. Method-form/call-form field-view names now route through the shared
+`/soa_vector/field_view/<field>` helper path onto `soaVectorFieldView<Struct, Field>` (or a same-path user helper
+when visible), returning `SoaFieldView` values that can be bound, passed, or returned, and builtin field-view
+call-argument/return escapes now validate through that same column-view substrate while current IR lowering routes
+`count(...)` on `soa_vector` through the native count path for current SoA bindings
 while empty `soa_vector<T>()` literals lower to header-only storage. The stdlib wrapper/helper surface now also covers
 direct canonical `/std/collections/soa_vector/*` helper calls plus imported wrapper `to_aos` helper/method routing
 across C++/native/VM, and valid root bare/method/old-explicit `count`/`get`/`ref` plus bare/direct/method `to_aos`
@@ -941,64 +942,29 @@ handling instead of a native runtime trap. The diagnostic harness now also locks
 imported-helper experimental-wrapper `to_aos` forms to that same canonical helper path at
 `ast-semantic`, so helper-call/conversion diagnostic cleanup is complete and the remaining SoA work is now richer
 field-view behavior rather than more runtime/diagnostic special-case removal.
-The current pending `soa_vector field views are not implemented yet: <field>` and
-`soa_vector borrowed views are not implemented yet: ref` diagnostics now come from shared
-semantics helpers rather than duplicated validator, mutation-borrow, and monomorph string
-assembly, and the validator-side plus monomorph-side fallback probes are gone entirely. The
-compiler-owned
-`/soa_vector/field_view/...` helper path now also routes through shared semantics helper
-construction/parsing instead of open-coded literals, the old resolved-helper
-`soa_vector field view requires soa_vector target` fallback is gone too, and the post-`validateExpr(...)`
-binding/return/call-argument plus return-inference reprobes are gone too. Read-only
-experimental wrapper standalone borrowed field-view attempts such as `borrowed.field()` plus
-borrowed call-form attempts such as `field(borrowed)` plus inline borrow forms such as
-`location(values).field()` / `field(location(values))` now keep the same pending
-`soa_vector field views are not implemented yet: <field>` diagnostic as direct wrapper attempts,
-and helper-return plus inline location-wrapped borrowed helper-return forms such as
-`field(pickBorrowed(...))`, `location(pickBorrowed(...)).field()`, and
-`field(location(pickBorrowed(...)))` now keep it too, and method-like struct-helper return plus
-inline location-wrapped method-like forms such as `holder.pickBorrowed(...).field()`,
-`field(holder.pickBorrowed(...))`, `location(holder.pickBorrowed(...)).field()`, and
-`field(location(holder.pickBorrowed(...)))` now keep it too. Builtin `ref(...)` direct and helper-return
-local persistence plus direct and helper-return call-argument/return escapes now likewise keep the
-shared borrowed-view pending diagnostic instead of degrading to generic inference, template-argument,
-or synthetic field-view fallback.
-Mutating standalone method/call attempts such as `assign(value.field(), next)` now also keep that
-same pending field-view diagnostic on direct, borrowed helper-return, and inline
-location-wrapped borrowed helper-return, method-like struct-helper return, and inline
-location-wrapped method-like struct-helper return receivers instead of degrading to the generic
-mutable-binding assignment contract, while indexed and explicit borrowed-slot writes such as
-`assign(value.field()[i], next)`, `assign(ref(value, i).field, next)`,
-`assign(value.ref(i).field, next)`, `assign(dereference(pickBorrowed(...)).field()[i], next)`,
-`assign(field(location(pickBorrowed(...)))[i], next)`,
-`assign(holder.pickBorrowed(...).field()[i], next)`, and
-`assign(field(location(holder.pickBorrowed(...)))[i], next)` now clear semantics/runtime through
-the existing `soaVectorRef<T>(..., i).field` substrate. Borrowed
+The shared compiler helper path for `/soa_vector/field_view/<field>` now routes
+through `soaVectorFieldView<Struct, Field>` and returns a strided
+`SoaFieldView<Field>` value. Standalone method-form and call-form field-view
+access on direct locals, borrowed locals, helper-return receivers, method-like
+struct-helper return receivers, and inline `location(...)`-wrapped variants now
+validate through that shared helper path instead of stopping on the old pending
+diagnostic. Mutating standalone method/call writes such as
+`assign(value.field(), next)` now lower through `soaVectorFieldView(...)` plus
+`soaFieldViewRef<T>(..., 0)` dereference writes on the same helper path, while
+indexed and explicit borrowed-slot writes such as `assign(value.field()[i], next)`,
+`assign(ref(value, i).field, next)`, and `assign(value.ref(i).field, next)` still
+lower through the existing `soaVectorRef<T>(..., i).field` substrate. Borrowed
 `Reference<SoaVector<T>>` read-only method sugar `borrowed.get(i)`,
 `borrowed.ref(i)`, and `borrowed.to_aos()` plus bare helper forms
-`count(...)`, `get(...)`, `ref(...)`, and `to_aos(...)` now also validate on the existing wrapper
-helper/conversion path for local, parameter, helper-return, inline `location(...)`, inline
-`dereference(location(...))`, inline location-wrapped borrowed helper-return, method-like
-struct-helper return, and inline location-wrapped method-like struct-helper return receivers
-instead of stopping on raw builtin target mismatch or the old helper-return lowerer mismatch.
-The remaining compiler-owned pending cleanup for builtin SoA field views is now
-complete: standalone assign-target method/call writes now reach the shared
-pending diagnostic through ordinary field-view validation, while assign-target
-indexed field-view writes plus `ref(...).field` writes lower through the
-experimental `soaVectorRef<T>(..., i).field` substrate, and direct monomorph
-field-view fallback rejects now also reuse the shared helper-path
-unavailable-method diagnostic instead of building the pending string inline,
-while the shared direct pending reporter now routes both field-view and
-`ref(...)` rejects through those same helper-path/unavailable-method diagnostics,
-with helper-return local-binding `ref(...)` fallback now reusing that same
-direct pending reporter instead of a local string-rewrite branch, and
-monomorph-side builtin `ref(...)` fallback now also reuses the shared
-unavailable-method helper instead of returning the borrowed-view pending
-string directly, while the shared direct pending reporter now also uses that
-same optional unavailable-method helper for both field-view and `ref(...)`
-rejects, and infer pre-dispatch plus late-fallback unavailable-method sites now
-also use that same shared helper instead of the older field-view-only wrapper,
-which is now gone entirely.
+`count(...)`, `get(...)`, `ref(...)`, and `to_aos(...)` now also validate on the
+existing wrapper helper/conversion path for local, parameter, helper-return,
+inline `location(...)`, inline `dereference(location(...))`, inline
+location-wrapped borrowed helper-return, method-like struct-helper return, and
+inline location-wrapped method-like struct-helper return receivers instead of
+stopping on raw builtin target mismatch or the old helper-return lowerer
+mismatch. The remaining compiler-owned pending cleanup for builtin SoA field
+views now focuses only on the borrowed-view `ref(...)` lifetime rules, not on
+field-view helper routing or assignment plumbing.
 Validator-side fixed unavailable-method rejects now also route through one
 shared visibility-aware helper instead of recomputing the `/soa_vector/ref`
 visibility and pending/unavailable split inline, while validator-side visible
@@ -1021,7 +987,7 @@ helper target selection in method-target, infer-time, vector-helper
 mutator routing, plus builtin `get/ref` call-shape detection in direct
 validation and collection-return inference, plus direct same-path
 `/soa_vector/<helper>` visibility checks in count/builtin/method/vector
-routing, direct pending field-view detection, and return-inference
+routing, direct field-view helper detection, and return-inference
 helper-shadow probes now all route through shared validator helpers,
 with the remaining vector-target and builtin count/get/ref same-path
 probes now also using shared target helpers instead of direct
@@ -1120,10 +1086,11 @@ return surfaces. Live standalone `Reference<T>` carriers now also reject later `
 direct borrowed/dereferenced receiver, helper-return, pass-through, and
 return-rooted surfaces. Standalone borrowed field-view values do not exist yet,
 but once they do they inherit this same invalidation contract from the richer
-field-view design note below. The
-compiler-owned direct unsupported field-view path still remains only for
-standalone borrowed reads plus the still-unimplemented mutating method/call and indexed
-field-view write surfaces until indexing moves fully onto the experimental substrate.
+field-view design note below. The compiler-owned direct unsupported field-view
+path now remains only for standalone borrowed reads; indexed field-view writes
+already lower through the `soaVectorRef<T>(..., i).field` substrate and standalone
+method/call writes now lower through `soaFieldViewRef<T>(..., 0)` on the shared
+helper path.
 The intended next borrowed-view step is that standalone borrowed field-view values such as
 `borrowed.field()` / `field(borrowed)` become non-owning column views over the same wrapper
 storage instead of remaining on the pending-diagnostic path. That richer borrowed-view
@@ -1153,24 +1120,18 @@ route through the shared `/soa_vector/field_view/<field>` helper path onto
 `soaVectorFieldView<...>` and return a non-owning strided view. Bound, passed,
 and returned field-view values now preserve borrowed semantics by rewriting
 indexed access through `soaFieldViewRead/Ref` helpers; the remaining work is
-the standalone mutating field-view write surfaces.
-The remaining standalone mutating write step is that `assign(value.field(), next)` and
-`assign(field(value), next)` should stop on the pending diagnostic only until those
-receivers can lower through the existing writable wrapper substrate instead of mutating a
-temporary. That future surface is intended to cover the same mutable receiver families as
-the rest of the wrapper path: direct wrapper locals, mutable borrowed locals, borrowed
-helper returns, method-like helper returns, and inline `location(...)`-wrapped variants.
-Those writes should preserve the same invalidation rules as other borrowed SoA views and
-should not reintroduce builtin-only mutation branches outside the experimental helper path.
-The remaining implementation work naturally splits into direct/borrowed-local receivers,
-helper-return and method-like helper-return receivers, and inline `location(...)`-wrapped
-receivers. The same invalidation boundary therefore now starts at later whole-value
-`ref(...)` shrink/motion, storage-replacement/destruction, and provenance/escape
-rules after the later standalone borrowed field-view values themselves land. The
-remaining implementation slices are then later shrink/motion invalidation,
-storage-replacement/destruction invalidation, and
-provenance/escape rules for those later standalone borrowed surfaces on `location(...)`,
-helper-return, and method-like helper-return receivers.
+the later borrowed field-view lifetime/provenance rules after the invalidation
+surfaces land.
+Standalone mutating method/call field-view writes now lower through
+`soaVectorFieldView(...)` plus `soaFieldViewRef<T>(..., 0)` dereference writes for
+direct wrapper locals, mutable borrowed locals, borrowed helper returns, method-like
+helper returns, and inline `location(...)`-wrapped variants instead of stopping on
+the old pending diagnostic. Those writes preserve the same invalidation rules as
+other borrowed SoA views and do not reintroduce builtin-only mutation branches
+outside the experimental helper path. The remaining invalidation boundary now
+starts at later whole-value `ref(...)` shrink/motion, storage-replacement/destruction,
+and provenance/escape rules after the later standalone borrowed field-view values
+themselves land.
 Non-empty literals still emit the deterministic unsupported diagnostic
 `native backend does not support non-empty soa_vector literals`.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the
