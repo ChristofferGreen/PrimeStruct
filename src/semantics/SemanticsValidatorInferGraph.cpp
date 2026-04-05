@@ -54,6 +54,9 @@ std::vector<std::vector<uint32_t>> buildCondensationDagLayers(const Condensation
     }
     layers[layerByComponent[componentId]].push_back(componentId);
   }
+  for (auto &layer : layers) {
+    std::sort(layer.begin(), layer.end());
+  }
   return layers;
 }
 
