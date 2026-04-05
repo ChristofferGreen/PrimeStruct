@@ -691,7 +691,7 @@ Planned testing-helper migration contract:
   struct/control-flow serialization IR unit tests now also lower through a semantic-product-aware local helper instead
   of the raw-`Program` overload directly. The conversions-heavy remainder plus the remaining serialization-calls,
   serialization-control-flow-metadata, and validation IR families are now cut over as well, leaving only one explicit
-  fallback-parity case before the raw overload itself can disappear. The remaining helper migration work is narrowing
+  fallback-parity case, pinned in the graph snapshot suite, before the raw overload itself can disappear. The remaining helper migration work is narrowing
   `primec/testing/SemanticsValidationHelpers.h` to syntax/provenance-only assertions and deleting redundant legacy
   pipeline/backend entrypoints plus that final raw-overload compatibility tail.
 - `primec/testing/SemanticsValidationHelpers.h` and related helpers should migrate in this order:

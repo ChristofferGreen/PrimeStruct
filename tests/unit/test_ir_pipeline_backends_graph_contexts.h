@@ -152,6 +152,22 @@ TEST_CASE("core IR test helpers expose semantic-product-aware lowering") {
         std::string::npos);
 }
 
+TEST_CASE("graph snapshot suite keeps one explicit raw-lowering fallback parity case") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path snapshotPath =
+      cwd / "tests" / "unit" / "test_semantics_type_resolution_graph_snapshots.cpp";
+  if (!std::filesystem::exists(snapshotPath)) {
+    snapshotPath = cwd.parent_path() / "tests" / "unit" / "test_semantics_type_resolution_graph_snapshots.cpp";
+  }
+  REQUIRE(std::filesystem::exists(snapshotPath));
+
+  const std::string snapshot = readTextFile(snapshotPath);
+  CHECK(snapshot.find("REQUIRE(lowerer.lower(semanticAst, &semanticProgram, \"/main\", defaults, defaults, semanticModule, error));") !=
+        std::string::npos);
+  CHECK(snapshot.find("REQUIRE(lowerer.lower(semanticAst, \"/main\", defaults, defaults, fallbackModule, error));") !=
+        std::string::npos);
+}
+
 TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path semanticProductPath = cwd / "include" / "primec" / "SemanticProduct.h";
