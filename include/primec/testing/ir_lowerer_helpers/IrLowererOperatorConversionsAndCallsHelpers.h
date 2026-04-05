@@ -2,7 +2,6 @@
 
 
 
-struct Definition;
 struct LayoutFieldBinding;
 
 using EmitConversionsAndCallsExprWithLocalsFn = std::function<bool(const Expr &, const LocalMap &)>;

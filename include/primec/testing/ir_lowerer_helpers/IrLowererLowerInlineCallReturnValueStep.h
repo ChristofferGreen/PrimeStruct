@@ -1,7 +1,6 @@
 
 
 
-struct IrFunction;
 
 struct LowerInlineCallReturnValueStepInput {
   IrFunction *function = nullptr;

@@ -17,6 +17,22 @@
 
 namespace primec::testing {
 
+namespace detail {
+
+inline std::string normalizeSemanticTargetName(std::string_view name) {
+  std::string normalized(name);
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  const size_t specializationSuffix = normalized.find("__t");
+  if (specializationSuffix != std::string::npos) {
+    normalized.erase(specializationSuffix);
+  }
+  return normalized;
+}
+
+} // namespace detail
+
 struct CompilePipelineBoundaryDumps {
   std::string astSemantic;
   std::string semanticProduct;
@@ -34,11 +50,14 @@ struct CompilePipelineBackendConformance {
 
   const SemanticProgramDirectCallTarget *findDirectCallTarget(std::string_view scopePath,
                                                               std::string_view callName) const {
+    const std::string normalizedCallName = detail::normalizeSemanticTargetName(callName);
     const auto it =
         std::find_if(output.semanticProgram.directCallTargets.begin(),
                      output.semanticProgram.directCallTargets.end(),
                      [&](const SemanticProgramDirectCallTarget &entry) {
-                       return entry.scopePath == scopePath && entry.callName == callName;
+                       return entry.scopePath == scopePath &&
+                              (entry.callName == callName ||
+                               detail::normalizeSemanticTargetName(entry.callName) == normalizedCallName);
                      });
     if (it == output.semanticProgram.directCallTargets.end()) {
       return nullptr;

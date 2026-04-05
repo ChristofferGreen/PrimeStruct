@@ -1,7 +1,6 @@
 
 
 
-struct IrFunction;
 
 struct LowerStatementsEntryStatementStepInput {
   IrFunction *function = nullptr;

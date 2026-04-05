@@ -1,5 +1,3 @@
-struct Definition;
-struct SemanticProgram;
 struct SemanticProductTargetAdapter;
 
 using ResolveExprPathFn = std::function<std::string(const Expr &)>;
@@ -31,7 +29,7 @@ CallResolutionAdapters makeCallResolutionAdapters(
 CallResolutionAdapters makeCallResolutionAdapters(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases,
-    const SemanticProgram *semanticProgram = nullptr);
+    const SemanticProgram *semanticProgram);
 EntryCallResolutionSetup buildEntryCallResolutionSetup(
     const Definition &entryDef,
     bool definitionReturnsVoid,
@@ -42,14 +40,14 @@ EntryCallResolutionSetup buildEntryCallResolutionSetup(
     bool definitionReturnsVoid,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases,
-    const SemanticProgram *semanticProgram = nullptr);
+    const SemanticProgram *semanticProgram);
 ResolveExprPathFn makeResolveCallPathFromScope(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases);
 ResolveExprPathFn makeResolveCallPathFromScope(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases,
-    const SemanticProductTargetAdapter &semanticProductTargets = {});
+    const SemanticProductTargetAdapter &semanticProductTargets);
 IsTailCallCandidateFn makeIsTailCallCandidate(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveExprPathFn &resolveExprPath);

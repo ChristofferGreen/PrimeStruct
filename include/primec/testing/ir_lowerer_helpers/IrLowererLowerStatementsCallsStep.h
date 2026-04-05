@@ -1,7 +1,6 @@
 
 
 
-struct Definition;
 struct ReturnInfo;
 
 struct LowerStatementsCallsStepInput {

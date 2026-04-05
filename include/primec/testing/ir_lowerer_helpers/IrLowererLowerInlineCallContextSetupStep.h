@@ -1,7 +1,6 @@
 
 
 
-struct IrFunction;
 struct ReturnInfo;
 
 struct LowerInlineCallContextSetupStepInput {

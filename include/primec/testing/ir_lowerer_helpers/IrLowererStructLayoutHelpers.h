@@ -2,12 +2,7 @@
 
 
 
-struct Definition;
-struct IrStructLayout;
 struct LayoutFieldBinding;
-struct Program;
-struct SemanticProgram;
-struct SemanticProgramTypeMetadata;
 struct SemanticProductTargetAdapter;
 
 struct BindingTypeLayout {

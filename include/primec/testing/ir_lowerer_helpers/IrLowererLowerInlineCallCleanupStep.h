@@ -1,7 +1,6 @@
 
 
 
-struct IrFunction;
 
 struct LowerInlineCallCleanupStepInput {
   IrFunction *function = nullptr;

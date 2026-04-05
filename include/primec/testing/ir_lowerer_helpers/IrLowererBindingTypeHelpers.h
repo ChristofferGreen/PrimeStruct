@@ -1,7 +1,6 @@
 
 
 
-struct SemanticProgram;
 
 using BindingKindFromTransformsFn = std::function<LocalInfo::Kind(const Expr &)>;
 using IsBindingTypeFn = std::function<bool(const Expr &)>;

@@ -2,8 +2,6 @@
 
 
 
-struct IrFunction;
-
 using InternRuntimeErrorStringFn = std::function<int32_t(const std::string &)>;
 using EmitRuntimeErrorFn = std::function<void()>;
 

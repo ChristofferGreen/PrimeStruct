@@ -2,9 +2,6 @@
 
 
 
-struct Definition;
-struct IrFunction;
-struct Program;
 
 struct UninitializedTypeInfo {
   LocalInfo::Kind kind = LocalInfo::Kind::Value;

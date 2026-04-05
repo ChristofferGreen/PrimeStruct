@@ -135,10 +135,12 @@ TEST_CASE("block expression accepts direct uninitialized borrow reference bindin
 main() {
   [uninitialized<i32>] storage{uninitialized<i32>()}
   init(storage, 7i32)
-  return(block(){
+  [i32] out{block(){
     [Reference<i32>] ref{borrow(storage)}
     dereference(ref)
-  })
+  }}
+  drop(storage)
+  return(out)
 }
 )";
   std::string error;
@@ -153,10 +155,12 @@ main() {
   [uninitialized<i32>] storage{uninitialized<i32>()}
   [Reference<uninitialized<i32>>] storage_ref{location(storage)}
   init(dereference(storage_ref), 7i32)
-  return(block(){
+  [i32] out{block(){
     [Reference<i32>] ref{borrow(dereference(storage_ref))}
     dereference(ref)
-  })
+  }}
+  drop(dereference(storage_ref))
+  return(out)
 }
 )";
   std::string error;
@@ -235,12 +239,14 @@ TEST_CASE("if expression branch accepts direct uninitialized borrow reference bi
 main() {
   [uninitialized<i32>] storage{uninitialized<i32>()}
   init(storage, 9i32)
-  return(if(true, then(){
+  [i32] out{if(true, then(){
     [Reference<i32>] ref{borrow(storage)}
     dereference(ref)
   }, else(){
     0i32
-  }))
+  })}
+  drop(storage)
+  return(out)
 }
 )";
   std::string error;
@@ -255,12 +261,14 @@ main() {
   [uninitialized<i32>] storage{uninitialized<i32>()}
   [Reference<uninitialized<i32>>] storage_ref{location(storage)}
   init(dereference(storage_ref), 9i32)
-  return(if(true, then(){
+  [i32] out{if(true, then(){
     [Reference<i32>] ref{borrow(dereference(storage_ref))}
     dereference(ref)
   }, else(){
     0i32
-  }))
+  })}
+  drop(dereference(storage_ref))
+  return(out)
 }
 )";
   std::string error;

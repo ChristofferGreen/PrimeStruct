@@ -2,7 +2,6 @@
 
 
 
-struct Definition;
 
 struct InstructionSourceRange {
   size_t beginIndex = 0;

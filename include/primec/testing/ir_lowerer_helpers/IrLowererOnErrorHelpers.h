@@ -2,10 +2,7 @@
 
 
 
-struct Program;
-struct Definition;
 struct OnErrorHandler;
-struct SemanticProgram;
 
 using OnErrorByDefinition = std::unordered_map<std::string, std::optional<OnErrorHandler>>;
 struct EntryCallOnErrorSetup {

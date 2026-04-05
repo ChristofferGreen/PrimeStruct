@@ -1,7 +1,6 @@
 
 
 
-struct IrFunction;
 
 using LowerReturnCallsEmitFileErrorWhyFn = std::function<bool(int32_t)>;
 

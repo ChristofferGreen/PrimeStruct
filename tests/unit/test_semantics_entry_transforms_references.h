@@ -29,7 +29,9 @@ main() {
   [uninitialized<i32>] storage{uninitialized<i32>()}
   [Reference<uninitialized<i32>>] slot{location(storage)}
   init(dereference(slot), 7i32)
-  return(dereference(peek(slot)))
+  [i32] out{dereference(peek(slot))}
+  drop(dereference(slot))
+  return(out)
 }
 )";
   std::string error;

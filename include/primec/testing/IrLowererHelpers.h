@@ -13,11 +13,11 @@
 #include "primec/Ast.h"
 #include "primec/Ir.h"
 #include "primec/SemanticProduct.h"
+#include "primec/testing/ir_lowerer_helpers/IrLowererSemanticProductTargetAdapters.h"
 
 namespace primec::ir_lowerer {
 
 #include "primec/testing/ir_lowerer_helpers/IrLowererSharedTypes.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererSemanticProductTargetAdapters.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererSetupTypeHelpers.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererCallDispatchHelpers.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererCallAccessHelpers.h"
@@ -26,6 +26,7 @@ namespace primec::ir_lowerer {
 #include "primec/testing/ir_lowerer_helpers/IrLowererFileWriteHelpers.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererFlowHelpers.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererHelpers.h"
+#include "primec/testing/ir_lowerer_helpers/IrLowererResultHelpers.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererStatementBindingHelpers.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererCountAccessHelpers.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererIndexKindHelpers.h"
@@ -35,7 +36,6 @@ namespace primec::ir_lowerer {
 #include "primec/testing/ir_lowerer_helpers/IrLowererStructTypeHelpers.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererInlineParamHelpers.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererInlineStructArgHelpers.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererResultHelpers.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererStringCallHelpers.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererOperatorArithmeticHelpers.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererLowerEffects.h"

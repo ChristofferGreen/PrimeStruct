@@ -502,12 +502,6 @@
         return false;
       }
       info.index = nextLocal++;
-      if (info.kind == LocalInfo::Kind::Reference) {
-        if (init.kind != Expr::Kind::Call || !isSimpleCallName(init, "location") || init.args.size() != 1) {
-          error = "reference binding requires location(...) initializer";
-          return false;
-        }
-      }
       localsIn.emplace(stmt.name, info);
       function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
       if (info.isFileHandle && !fileScopeStack.empty()) {

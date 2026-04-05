@@ -135,6 +135,93 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       trimmed = trimmed.substr(start, end - start);
       return normalizeBindingTypeName(trimmed);
     };
+    auto isStandaloneBorrowStorageExpr = [&](const Expr &candidate) {
+      if (candidate.kind == Expr::Kind::Name) {
+        return true;
+      }
+      std::string builtinName;
+      if (candidate.kind == Expr::Kind::Call && getBuiltinPointerName(candidate, builtinName) &&
+          builtinName == "dereference" && candidate.args.size() == 1) {
+        return true;
+      }
+      return candidate.kind == Expr::Kind::Call && candidate.isFieldAccess && candidate.args.size() == 1;
+    };
+    auto resolveDirectBorrowReturnTargetType = [&](const Expr &expr, std::string &targetOut) -> bool {
+      if (expr.kind != Expr::Kind::Call || expr.isMethodCall || !isSimpleCallName(expr, "borrow") ||
+          expr.args.size() != 1) {
+        return false;
+      }
+      const Expr &storage = expr.args.front();
+      if (!isStandaloneBorrowStorageExpr(storage)) {
+        return false;
+      }
+      BindingInfo binding;
+      bool resolved = false;
+      if (!resolveUninitializedStorageBinding(params, locals, storage, binding, resolved)) {
+        return false;
+      }
+      if (!resolved || binding.typeName != "uninitialized" || binding.typeTemplateArg.empty()) {
+        return false;
+      }
+      targetOut = binding.typeTemplateArg;
+      return true;
+    };
+    using ExprSubstitutions = std::vector<std::pair<std::string, const Expr *>>;
+    auto findSubstitutedExpr = [&](const ExprSubstitutions &substitutions,
+                                   const std::string &name) -> const Expr * {
+      for (auto it = substitutions.rbegin(); it != substitutions.rend(); ++it) {
+        if (it->first == name) {
+          return it->second;
+        }
+      }
+      return nullptr;
+    };
+    auto appendCallSubstitutions =
+        [&](const Expr &callExpr,
+            const ExprSubstitutions &baseSubstitutions,
+            ExprSubstitutions &extendedSubstitutions,
+            const Expr *&returnedValueExprOut) -> bool {
+          returnedValueExprOut = nullptr;
+          const std::string resolvedCallPath = resolveCalleePath(callExpr);
+          auto defIt = defMap_.find(resolvedCallPath);
+          if (defIt == defMap_.end() || defIt->second == nullptr) {
+            return false;
+          }
+          const auto paramsIt = paramsByDef_.find(resolvedCallPath);
+          if (paramsIt == paramsByDef_.end()) {
+            return false;
+          }
+          const auto &nestedParams = paramsIt->second;
+          std::string nestedArgError;
+          std::vector<const Expr *> nestedOrderedArgs;
+          if (!buildOrderedArguments(nestedParams, callExpr.args, callExpr.argNames,
+                                     nestedOrderedArgs, nestedArgError)) {
+            return false;
+          }
+          const Definition &nestedDef = *defIt->second;
+          for (const auto &stmtExpr : nestedDef.statements) {
+            if (isReturnCall(stmtExpr) && stmtExpr.args.size() == 1) {
+              returnedValueExprOut = &stmtExpr.args.front();
+            }
+          }
+          if (nestedDef.returnExpr.has_value()) {
+            returnedValueExprOut = &*nestedDef.returnExpr;
+          }
+          if (returnedValueExprOut == nullptr) {
+            return false;
+          }
+          extendedSubstitutions = baseSubstitutions;
+          for (size_t nestedIndex = 0;
+               nestedIndex < nestedParams.size() && nestedIndex < nestedOrderedArgs.size();
+               ++nestedIndex) {
+            const Expr *nestedArg = nestedOrderedArgs[nestedIndex];
+            if (nestedArg == nullptr) {
+              continue;
+            }
+            extendedSubstitutions.emplace_back(nestedParams[nestedIndex].name, nestedArg);
+          }
+          return true;
+        };
     auto referenceRootForReturnBinding = [&](const std::string &bindingName,
                                              const BindingInfo &binding) -> std::string {
       if (binding.typeName != "Reference" && binding.typeName != "Pointer") {
@@ -145,16 +232,20 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       }
       return bindingName;
     };
-    auto resolveParameterOwnedBorrowReturnTarget = [&](const Expr &returnExpr,
-                                                       std::string &targetOut,
-                                                       bool &recognizedOut) -> bool {
+    std::function<bool(const Expr &, const ExprSubstitutions &, std::string &, bool &)>
+        resolveParameterOwnedBorrowReturnTarget;
+    resolveParameterOwnedBorrowReturnTarget = [&](const Expr &returnExpr,
+                                                  const ExprSubstitutions &substitutions,
+                                                  std::string &targetOut,
+                                                  bool &recognizedOut) -> bool {
       recognizedOut = false;
       targetOut.clear();
-      if (returnExpr.kind != Expr::Kind::Call || returnExpr.isMethodCall ||
-          !isSimpleCallName(returnExpr, "borrow") || returnExpr.args.size() != 1) {
+      if (returnExpr.kind == Expr::Kind::Name) {
+        if (const Expr *substitutedExpr = findSubstitutedExpr(substitutions, returnExpr.name)) {
+          return resolveParameterOwnedBorrowReturnTarget(*substitutedExpr, substitutions, targetOut, recognizedOut);
+        }
         return false;
       }
-      recognizedOut = true;
 
       auto parameterOwnedRoot = [&](const std::string &candidateRoot) {
         if (candidateRoot.empty()) {
@@ -194,8 +285,15 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       std::function<bool(const Expr &, std::string &)> resolveParameterOwnedStorageRoot;
       resolveParameterOwnedStorageRoot = [&](const Expr &storageExpr, std::string &rootOut) -> bool {
         if (storageExpr.kind == Expr::Kind::Name) {
+          if (const Expr *substitutedExpr = findSubstitutedExpr(substitutions, storageExpr.name)) {
+            return resolveParameterOwnedStorageRoot(*substitutedExpr, rootOut);
+          }
           if (const BindingInfo *paramBinding = findParamBinding(params, storageExpr.name)) {
-            return resolvePointerLikeRoot(storageExpr.name, *paramBinding, true, rootOut);
+            if (resolvePointerLikeRoot(storageExpr.name, *paramBinding, true, rootOut)) {
+              return true;
+            }
+            rootOut = storageExpr.name;
+            return true;
           }
           auto localIt = locals.find(storageExpr.name);
           if (localIt == locals.end()) {
@@ -221,6 +319,56 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
 
         return false;
       };
+      auto resolveParameterOwnedReferenceCallTarget = [&](const Expr &callExpr, std::string &targetTypeOut) -> bool {
+        if (callExpr.kind != Expr::Kind::Call) {
+          return false;
+        }
+        auto defIt = defMap_.find(resolveCalleePath(callExpr));
+        if (defIt == defMap_.end() || defIt->second == nullptr) {
+          return false;
+        }
+        for (const auto &transform : defIt->second->transforms) {
+          if (transform.name != "return" || transform.templateArgs.size() != 1) {
+            continue;
+          }
+          std::string base;
+          std::string arg;
+          if (!splitTemplateTypeName(transform.templateArgs.front(), base, arg) || base != "Reference") {
+            continue;
+          }
+          std::vector<std::string> args;
+          if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+            return false;
+          }
+          for (const Expr &argExpr : callExpr.args) {
+            std::string root;
+            if (resolveParameterOwnedStorageRoot(argExpr, root) && !root.empty()) {
+              targetTypeOut = args.front();
+              return true;
+            }
+          }
+          return false;
+        }
+        return false;
+      };
+
+      if (returnExpr.kind != Expr::Kind::Call || returnExpr.isMethodCall ||
+          !isSimpleCallName(returnExpr, "borrow") || returnExpr.args.size() != 1) {
+        if (resolveParameterOwnedReferenceCallTarget(returnExpr, targetOut)) {
+          recognizedOut = true;
+          return true;
+        }
+        ExprSubstitutions nestedSubstitutions;
+        const Expr *returnedValueExpr = nullptr;
+        if (returnExpr.kind == Expr::Kind::Call &&
+            appendCallSubstitutions(returnExpr, substitutions, nestedSubstitutions, returnedValueExpr) &&
+            returnedValueExpr != nullptr) {
+          return resolveParameterOwnedBorrowReturnTarget(*returnedValueExpr, nestedSubstitutions, targetOut,
+                                                        recognizedOut);
+        }
+        return false;
+      }
+      recognizedOut = true;
 
       const Expr &storageExpr = returnExpr.args.front();
       BindingInfo storageBinding;
@@ -240,11 +388,13 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
     };
     if (std::optional<std::string> expectedReferenceTarget = declaredReferenceReturnTarget();
         expectedReferenceTarget.has_value()) {
-      const Expr &returnExpr = stmt.args.front();
+        const Expr &returnExpr = stmt.args.front();
       if (returnExpr.kind != Expr::Kind::Name) {
         std::string borrowedTargetType;
         bool recognizedBorrowReturn = false;
-        if (!resolveParameterOwnedBorrowReturnTarget(returnExpr, borrowedTargetType, recognizedBorrowReturn)) {
+        const ExprSubstitutions substitutions;
+        if (!resolveParameterOwnedBorrowReturnTarget(returnExpr, substitutions, borrowedTargetType,
+                                                    recognizedBorrowReturn)) {
           return failReturnDiagnostic("reference return requires direct parameter reference or parameter-rooted borrow");
         }
         if (normalizeReferenceTarget(borrowedTargetType) != normalizeReferenceTarget(*expectedReferenceTarget)) {
@@ -269,11 +419,19 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
           (declaredReturnBinding.typeName == "Pointer" ||
            declaredReturnBinding.typeName == "Reference")) {
         BindingInfo actualReturnBinding;
-        if (!inferBindingTypeFromInitializer(stmt.args.front(), params, locals, actualReturnBinding) ||
-            actualReturnBinding.typeName != declaredReturnBinding.typeName ||
-            !errorTypesMatch(actualReturnBinding.typeTemplateArg,
-                             declaredReturnBinding.typeTemplateArg,
-                             namespacePrefix)) {
+        std::string directBorrowTargetType;
+        const bool directBorrowReturn =
+            declaredReturnBinding.typeName == "Reference" &&
+            resolveDirectBorrowReturnTargetType(stmt.args.front(), directBorrowTargetType);
+        if (directBorrowReturn) {
+          if (!errorTypesMatch(directBorrowTargetType, declaredReturnBinding.typeTemplateArg, namespacePrefix)) {
+            return failReturnDiagnostic("return type mismatch: expected " + declaredReturnBinding.typeName);
+          }
+        } else if (!inferBindingTypeFromInitializer(stmt.args.front(), params, locals, actualReturnBinding) ||
+                   actualReturnBinding.typeName != declaredReturnBinding.typeName ||
+                   !errorTypesMatch(actualReturnBinding.typeTemplateArg,
+                                    declaredReturnBinding.typeTemplateArg,
+                                    namespacePrefix)) {
           return failReturnDiagnostic("return type mismatch: expected " + declaredReturnBinding.typeName);
         }
         validatedPointerLikeReturn = true;

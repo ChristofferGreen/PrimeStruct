@@ -2,7 +2,6 @@
 
 
 
-struct Definition;
 struct LayoutFieldBinding;
 
 using ResolveStructTypePathFn = std::function<std::string(const std::string &, const std::string &)>;

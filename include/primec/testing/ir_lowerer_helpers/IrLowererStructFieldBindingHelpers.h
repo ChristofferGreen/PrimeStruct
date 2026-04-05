@@ -2,8 +2,6 @@
 
 
 
-struct Definition;
-struct Program;
 struct SemanticProductTargetAdapter;
 
 struct LayoutFieldBinding {

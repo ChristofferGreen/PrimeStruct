@@ -1,6 +1,7 @@
         if (!expr.isMethodCall &&
             (isSimpleCallName(expr, "take") || isSimpleCallName(expr, "borrow")) &&
             expr.args.size() == 1) {
+          const bool isBorrowCall = isSimpleCallName(expr, "borrow");
           const Expr &storage = expr.args.front();
           UninitializedStorageAccess access;
           bool resolved = false;
@@ -47,6 +48,10 @@
             if (access.location == UninitializedStorageAccess::Location::Local) {
               const LocalInfo &storageInfo = *access.local;
               if (!storageInfo.structTypeName.empty()) {
+                if (isBorrowCall) {
+                  function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(storageInfo.index)});
+                  return true;
+                }
                 StructSlotLayout layout;
                 if (!resolveStructSlotLayout(storageInfo.structTypeName, layout)) {
                   return false;
@@ -68,7 +73,11 @@
                 function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
                 return true;
               }
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(storageInfo.index)});
+              if (isBorrowCall) {
+                function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(storageInfo.index)});
+              } else {
+                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(storageInfo.index)});
+              }
               return true;
             }
             if (access.location == UninitializedStorageAccess::Location::Field) {
@@ -77,6 +86,10 @@
               const int32_t ptrLocal = allocTempLocal();
               if (!emitFieldPointer(receiver, access.receiver, field, ptrLocal)) {
                 return false;
+              }
+              if (isBorrowCall) {
+                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+                return true;
               }
               if (!field.structPath.empty()) {
                 const int32_t baseLocal = nextLocal;
@@ -101,6 +114,10 @@
               const int32_t ptrLocal = allocTempLocal();
               if (access.pointerExpr == nullptr || !emitIndirectPointer(*access.pointerExpr, ptrLocal)) {
                 return false;
+              }
+              if (isBorrowCall) {
+                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+                return true;
               }
               if (!access.typeInfo.structPath.empty()) {
                 StructSlotLayout layout;

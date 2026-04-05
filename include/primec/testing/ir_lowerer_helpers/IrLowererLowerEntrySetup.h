@@ -2,10 +2,6 @@
 
 
 
-struct Definition;
-struct Program;
-struct SemanticProgram;
-
 bool runLowerEntrySetup(const Program &program,
                         const SemanticProgram *semanticProgram,
                         const std::string &entryPath,

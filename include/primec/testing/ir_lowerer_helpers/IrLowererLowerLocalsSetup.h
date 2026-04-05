@@ -3,11 +3,7 @@
 
 
 
-struct Definition;
-struct IrFunction;
 struct LayoutFieldBinding;
-struct Program;
-struct SemanticProgram;
 
 bool runLowerLocalsSetup(
     std::vector<std::string> &stringTable,

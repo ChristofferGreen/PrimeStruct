@@ -3,8 +3,6 @@
 
 
 
-struct Definition;
-struct Program;
 struct ReturnInfo;
 struct SemanticProductTargetAdapter;
 

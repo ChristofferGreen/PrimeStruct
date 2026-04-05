@@ -101,7 +101,9 @@ main() {
   [uninitialized<i32>] storage{uninitialized<i32>()}
   init(storage, 9i32)
   [Reference<i32>] ref{borrow(storage)}
-  return(dereference(ref))
+  [i32] out{dereference(ref)}
+  drop(storage)
+  return(out)
 }
 )";
   const std::string srcPath = writeTemp("vm_uninitialized_borrow.prime", source);
@@ -117,7 +119,9 @@ main() {
   [Reference<uninitialized<i32>>] storage_ref{location(storage)}
   init(dereference(storage_ref), 9i32)
   [Reference<i32>] ref{borrow(dereference(storage_ref))}
-  return(dereference(ref))
+  [i32] out{dereference(ref)}
+  drop(dereference(storage_ref))
+  return(out)
 }
 )";
   const std::string srcPath = writeTemp("vm_uninitialized_deref_borrow.prime", source);

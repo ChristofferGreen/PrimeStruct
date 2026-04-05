@@ -393,7 +393,7 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
       if (!expr.isMethodCall &&
           (isSimpleCallName(expr, "take") || isSimpleCallName(expr, "borrow")) &&
           !expr.args.empty()) {
-        if (auto err = applyStorageCall(expr.name, expr.args.front(), locals, states, true)) {
+        if (auto err = applyStorageCall(expr.name, expr.args.front(), locals, states, false)) {
           return err;
         }
       }

@@ -1,4 +1,3 @@
-struct Definition;
 struct SemanticProductTargetAdapter;
 
 MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target,
@@ -261,6 +260,18 @@ bool emitMapLookupContains(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error);
+bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
+    int32_t valuesLocal,
+    int32_t valuesWrapperLocal,
+    int32_t ptrLocal,
+    int32_t keyLocal,
+    int32_t valueLocal,
+    LocalInfo::ValueKind mapKeyKind,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void()> &emitPending,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm);
 void emitStringAccessLoad(
     const std::string &accessName,
     int32_t indexLocal,

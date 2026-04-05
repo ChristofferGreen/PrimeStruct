@@ -2,7 +2,6 @@
 
 
 
-struct Definition;
 struct OnErrorHandler;
 struct ResultReturnInfo;
 

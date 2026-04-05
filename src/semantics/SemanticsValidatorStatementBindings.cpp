@@ -805,7 +805,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     }
     if (initIsLocation || initIsDirectBorrowStorage ||
         (!currentValidationState_.context.definitionIsUnsafe && initIsPointerLike)) {
-      if (!initIsPointerLike || !errorTypesMatch(safeTargetType, info.typeTemplateArg, namespacePrefix)) {
+      if (!errorTypesMatch(safeTargetType, info.typeTemplateArg, namespacePrefix)) {
         return failBindingDiagnostic("Reference binding type mismatch");
       }
     }

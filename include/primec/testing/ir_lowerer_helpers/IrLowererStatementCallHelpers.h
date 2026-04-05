@@ -2,13 +2,9 @@
 
 
 
-struct Definition;
-struct IrFunction;
 struct OnErrorHandler;
-struct Program;
 struct ResultReturnInfo;
 struct ReturnInfo;
-struct SemanticProgram;
 struct StructSlotLayoutInfo;
 
 enum class BufferStoreStatementEmitResult {

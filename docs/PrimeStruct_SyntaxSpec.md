@@ -1148,8 +1148,10 @@ whole-element stride through `SoaSchemaFieldOffset(...)` /
 `SoaSchemaElementStride()`. Existing buffer helpers still offset only
 already-typed pointers in whole-element units, so the missing primitives are
 typed reinterpretation from whole-element storage pointers to raw
-byte-addressable pointers, then byte-addressable pointer offsetting over that
-raw storage, and then typed reinterpretation from the recovered byte-addressed
+byte-addressable pointers (on top of a raw pointer reinterpret primitive that
+can cast whole-element storage to byte-addressable pointers without changing
+the address), then byte-addressable pointer offsetting over that raw storage,
+and then typed reinterpretation from the recovered byte-addressed
 slot to a field pointer; only after that can a reflected field-slot pointer
 helper address one named field inside whole-element storage, then a reusable
 non-owning strided field-view carrier can sit on top of it, and only after that

@@ -2,7 +2,6 @@
 
 
 
-struct Definition;
 struct ReturnInfo;
 
 struct OnErrorHandler {
