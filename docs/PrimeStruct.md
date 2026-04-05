@@ -3034,6 +3034,8 @@ bad_use_after_take() {
     - Treat `ref(...)` and future field views as borrowed storage views that are invalid after structural mutation.
     - Structural mutations (`push`, `reserve`) and explicit AoS/SoA conversions (`to_soa`, `to_aos`) are mutation
       boundaries; any previously acquired SoA views/proxies are invalid after these operations.
+    - Explicit lifecycle destroy calls (`Destroy`, `DestroyStack`, `DestroyHeap`, `DestroyBuffer`) on SoA owners are
+      also mutation boundaries; any previously acquired SoA views/proxies are invalid after these operations.
     - Preferred update pattern is two-phase: run a stable-size update pass first, then apply deferred structural
       changes.
     - Example (surface draft): `while(less_than(i, count(particles))) { get(particles, i) ... }` followed by

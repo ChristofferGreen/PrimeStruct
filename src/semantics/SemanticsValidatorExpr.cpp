@@ -378,6 +378,184 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return false;
     }
     resolved = resolveExprConcreteCallPath(params, locals, expr, resolved);
+    auto stripSpecializationSuffix = [](const std::string &path) -> std::string {
+      const size_t suffix = path.find("__t");
+      return suffix == std::string::npos ? path : path.substr(0, suffix);
+    };
+    auto isDestroyHelperPath = [&](const std::string &path) -> bool {
+      const std::string base = stripSpecializationSuffix(path);
+      static const std::array<std::string_view, 4> suffixes = {
+          "/Destroy", "/DestroyStack", "/DestroyHeap", "/DestroyBuffer"};
+      for (std::string_view suffix : suffixes) {
+        if (base.size() >= suffix.size() &&
+            base.compare(base.size() - suffix.size(), suffix.size(),
+                         suffix.data(), suffix.size()) == 0) {
+          return true;
+        }
+      }
+      return false;
+    };
+    if (isDestroyHelperPath(resolved)) {
+      auto resolveNamedBinding =
+          [&](const std::string &name) -> const BindingInfo * {
+        if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
+          return paramBinding;
+        }
+        auto it = locals.find(name);
+        if (it != locals.end()) {
+          return &it->second;
+        }
+        return nullptr;
+      };
+      auto isSoaBorrowBinding = [&](const BindingInfo &binding) -> bool {
+        if (binding.typeName == "soa_vector") {
+          return true;
+        }
+        std::string elemType;
+        if (extractExperimentalSoaVectorElementType(binding, elemType)) {
+          return true;
+        }
+        const std::string normalizedType =
+            normalizeBindingTypeName(binding.typeName);
+        if ((normalizedType == "Reference" || normalizedType == "Pointer") &&
+            !binding.typeTemplateArg.empty()) {
+          std::string base;
+          std::string arg;
+          const std::string normalizedTarget =
+              normalizeBindingTypeName(binding.typeTemplateArg);
+          if (splitTemplateTypeName(normalizedTarget, base, arg)) {
+            return normalizeBindingTypeName(base) == "soa_vector";
+          }
+          return normalizedTarget == "soa_vector";
+        }
+        return false;
+      };
+      auto referenceRootForBorrowBinding =
+          [&](const std::string &bindingName,
+              const BindingInfo &binding) -> std::string {
+        if (binding.typeName != "Reference") {
+          return "";
+        }
+        if (!binding.referenceRoot.empty()) {
+          return binding.referenceRoot;
+        }
+        return bindingName;
+      };
+      auto hasActiveBorrowForRoot =
+          [&](const std::string &borrowRoot,
+              const std::string &ignoreBorrowName = std::string()) -> bool {
+        if (borrowRoot.empty() ||
+            currentValidationState_.context.definitionIsUnsafe) {
+          return false;
+        }
+        auto hasBorrowFrom =
+            [&](const std::string &bindingName,
+                const BindingInfo &binding) -> bool {
+          if (!ignoreBorrowName.empty() &&
+              bindingName == ignoreBorrowName) {
+            return false;
+          }
+          if (currentValidationState_.endedReferenceBorrows.count(bindingName) >
+              0) {
+            return false;
+          }
+          const std::string root =
+              referenceRootForBorrowBinding(bindingName, binding);
+          return !root.empty() && root == borrowRoot;
+        };
+        for (const auto &param : params) {
+          if (hasBorrowFrom(param.name, param.binding)) {
+            return true;
+          }
+        }
+        for (const auto &entry : locals) {
+          if (hasBorrowFrom(entry.first, entry.second)) {
+            return true;
+          }
+        }
+        return false;
+      };
+      auto resolveStandaloneSoaBorrowRoot =
+          [&](const Expr &receiverExpr,
+              std::string &borrowRootOut,
+              std::string &ignoreBorrowNameOut) -> bool {
+        borrowRootOut.clear();
+        ignoreBorrowNameOut.clear();
+        if (receiverExpr.kind == Expr::Kind::Name) {
+          const BindingInfo *binding =
+              resolveNamedBinding(receiverExpr.name);
+          if (binding == nullptr || !isSoaBorrowBinding(*binding)) {
+            return false;
+          }
+          const std::string normalizedType =
+              normalizeBindingTypeName(binding->typeName);
+          if (normalizedType == "Reference" || normalizedType == "Pointer") {
+            ignoreBorrowNameOut = receiverExpr.name;
+            if (!binding->referenceRoot.empty()) {
+              borrowRootOut = binding->referenceRoot;
+            } else {
+              borrowRootOut = receiverExpr.name;
+            }
+            return true;
+          }
+          borrowRootOut = receiverExpr.name;
+          return true;
+        }
+        if (receiverExpr.kind != Expr::Kind::Call) {
+          return false;
+        }
+        std::string builtinName;
+        if (getBuiltinPointerName(receiverExpr, builtinName) &&
+            builtinName == "dereference" &&
+            receiverExpr.args.size() == 1) {
+          const Expr &pointerExpr = receiverExpr.args.front();
+          if (pointerExpr.kind == Expr::Kind::Name) {
+            const BindingInfo *binding =
+                resolveNamedBinding(pointerExpr.name);
+            if (binding == nullptr || binding->referenceRoot.empty() ||
+                !isSoaBorrowBinding(*binding)) {
+              return false;
+            }
+            ignoreBorrowNameOut = pointerExpr.name;
+            borrowRootOut = binding->referenceRoot;
+            return true;
+          }
+          if (getBuiltinPointerName(pointerExpr, builtinName) &&
+              builtinName == "location" && pointerExpr.args.size() == 1 &&
+              pointerExpr.args.front().kind == Expr::Kind::Name) {
+            const BindingInfo *binding =
+                resolveNamedBinding(pointerExpr.args.front().name);
+            if (binding == nullptr || !isSoaBorrowBinding(*binding)) {
+              return false;
+            }
+            borrowRootOut = pointerExpr.args.front().name;
+            return true;
+          }
+        }
+        return false;
+      };
+      const Expr *receiverExpr = nullptr;
+      if (hasMethodReceiverIndex && methodReceiverIndex < expr.args.size()) {
+        receiverExpr = &expr.args[methodReceiverIndex];
+      } else if (expr.isMethodCall && !expr.args.empty()) {
+        receiverExpr = &expr.args.front();
+      } else if (!expr.args.empty()) {
+        receiverExpr = &expr.args.front();
+      }
+      if (receiverExpr != nullptr) {
+        std::string borrowRoot;
+        std::string ignoreBorrowName;
+        if (resolveStandaloneSoaBorrowRoot(*receiverExpr, borrowRoot,
+                                           ignoreBorrowName) &&
+            hasActiveBorrowForRoot(borrowRoot, ignoreBorrowName)) {
+          const std::string borrowSink =
+              !ignoreBorrowName.empty() ? ignoreBorrowName : borrowRoot;
+          return failExprRootDiagnostic(
+              "borrowed binding: " + borrowRoot + " (root: " + borrowRoot +
+              ", sink: " + borrowSink + ")");
+        }
+      }
+    }
     ExprCollectionCountCapacityDispatchContext collectionCountCapacityDispatchContext;
     collectionCountCapacityDispatchContext.isNamespacedVectorHelperCall =
         collectionDispatchSetup.isNamespacedVectorHelperCall;
