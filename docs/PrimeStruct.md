@@ -3543,6 +3543,9 @@ read-only path.
     therefore starts by materializing richer standalone field-view values on
     those same receiver families, then layering later shrink/motion invalidation,
     storage-replacement/destruction invalidation, and provenance/escape rules on top.
+    Standalone `ref(...)` bindings now also participate in borrow-conflict checks even
+    when the receiver is location-wrapped or helper-returned, so those receiver
+    families no longer bypass the existing borrow-conflict rules.
   - **Richer borrowed field-view contract:** the next borrowed-view slice should treat
     standalone field-view expressions as first-class non-owning column views rather than
     keeping `borrowed.field()` / `field(borrowed)` on the compiler-owned pending-diagnostic

@@ -710,6 +710,50 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         resolveReceiverRootExpr;
     std::function<bool(const Expr &, const ExprSubstitutions &, std::string &)>
         resolveStandaloneRefRootExpr;
+    auto hasBorrowConflictForRoot =
+        [&](const std::string &borrowRoot, bool requestMutable) -> bool {
+          if (borrowRoot.empty() ||
+              currentValidationState_.context.definitionIsUnsafe) {
+            return false;
+          }
+          bool sawMutableBorrow = false;
+          bool sawImmutableBorrow = false;
+          auto referenceRootForBorrowBinding =
+              [&](const std::string &bindingName,
+                  const BindingInfo &binding) -> std::string {
+            if (binding.typeName != "Reference") {
+              return "";
+            }
+            if (!binding.referenceRoot.empty()) {
+              return binding.referenceRoot;
+            }
+            return bindingName;
+          };
+          auto observeBorrow = [&](const std::string &bindingName,
+                                   const BindingInfo &binding) {
+            if (currentValidationState_.endedReferenceBorrows.count(bindingName) > 0) {
+              return;
+            }
+            const std::string root =
+                referenceRootForBorrowBinding(bindingName, binding);
+            if (root.empty() || root != borrowRoot) {
+              return;
+            }
+            if (binding.isMutable) {
+              sawMutableBorrow = true;
+            } else {
+              sawImmutableBorrow = true;
+            }
+          };
+          for (const auto &param : params) {
+            observeBorrow(param.name, param.binding);
+          }
+          for (const auto &entry : locals) {
+            observeBorrow(entry.first, entry.second);
+          }
+          return requestMutable ? (sawMutableBorrow || sawImmutableBorrow)
+                                : sawMutableBorrow;
+        };
     resolveReceiverRootExpr =
         [&](const Expr &expr,
             const ExprSubstitutions &substitutions,
@@ -812,7 +856,13 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     if (!initIsLocation && !initIsDirectBorrowStorage && !currentValidationState_.context.definitionIsUnsafe) {
       std::string borrowRoot;
       const ExprSubstitutions substitutions;
-      if (resolveStandaloneRefRootExpr(init, substitutions, borrowRoot) && !borrowRoot.empty()) {
+      if (resolveStandaloneRefRootExpr(init, substitutions, borrowRoot) &&
+          !borrowRoot.empty()) {
+        if (hasBorrowConflictForRoot(borrowRoot, info.isMutable)) {
+          return failBindingDiagnostic(
+              "borrow conflict: " + borrowRoot + " (root: " + borrowRoot +
+              ", sink: " + stmt.name + ")");
+        }
         info.referenceRoot = std::move(borrowRoot);
       }
       if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
