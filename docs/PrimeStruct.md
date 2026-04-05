@@ -696,7 +696,10 @@ Planned testing-helper migration contract:
   validation IR families are now cut over as well, and the raw overload plus its last fallback-parity case are gone.
   `primec/testing/SemanticsValidationHelpers.h` is now reduced to syntax-owned canonicalization/assertion helpers,
   while graph/type-resolution snapshots live in `primec/testing/SemanticsGraphHelpers.h`. The remaining helper
-  migration work is deleting redundant legacy backend entrypoints.
+  migration work is deleting testing-only semantic snapshot transport; the remaining public backend-oriented helpers
+  (`primec/testing/CompilePipelineDumpHelpers.h`, `primec/testing/EmitterHelpers.h`, and
+  `primec/testing/IrLowererHelpers.h`) are now pinned as intentional stable testing APIs rather than temporary
+  compatibility wrappers.
 - `primec/testing/SemanticsValidationHelpers.h` and related helpers should migrate in this order:
   - move lowering-facing assertions onto semantic-product dump helpers or pipeline-facing conformance helpers
   - retain AST-facing helpers only for syntax-owned, provenance-owned, parser-facing, or canonicalization-facing checks
