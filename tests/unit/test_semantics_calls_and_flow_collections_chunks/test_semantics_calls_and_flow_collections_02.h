@@ -1404,6 +1404,72 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental soa_vector standalone ref method expires before later push when unused") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorSingle<Particle>(Particle(7i32))}
+  [Reference<Particle>] value{values.ref(0i32)}
+  values.push(Particle(9i32))
+  return(values.count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("experimental soa_vector standalone ref method blocks later push while live") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorSingle<Particle>(Particle(7i32))}
+  [Reference<Particle>] value{values.ref(0i32)}
+  values.push(Particle(9i32))
+  return(value.x)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("borrowed binding: values") != std::string::npos);
+}
+
+TEST_CASE("experimental soa_vector standalone ref helper blocks later reserve while live") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorSingle<Particle>(Particle(7i32))}
+  [Reference<Particle>] value{soaVectorRef<Particle>(values, 0i32)}
+  soaVectorReserve<Particle>(values, 3i32)
+  return(value.x)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("borrowed binding: values") != std::string::npos);
+}
+
 TEST_CASE("experimental soa_vector stdlib push and reserve helpers validate on reflect-enabled struct elements") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

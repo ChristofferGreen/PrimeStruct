@@ -1115,7 +1115,9 @@ helper-return reads such as `return(holder.pickBorrowed(...).count())`,
 and inline `location(...)`-wrapped variants now route through that same helper/indexing
 substrate. The standalone `ref(...)` receiver families are therefore in place, and those
 whole-value carriers now also survive local binding, helper pass-through, and direct helper
-return surfaces. The
+return surfaces. Live standalone `Reference<T>` carriers rooted directly in wrapper locals
+or direct borrowed/dereferenced receiver roots now also reject later `push` / `reserve`
+growth on that same wrapper. The
 compiler-owned direct unsupported field-view path still remains only for
 standalone borrowed reads plus the still-unimplemented mutating method/call and indexed
 field-view write surfaces until indexing moves fully onto the experimental substrate.
@@ -1141,12 +1143,13 @@ Those writes should preserve the same invalidation rules as other borrowed SoA v
 should not reintroduce builtin-only mutation branches outside the experimental helper path.
 The remaining implementation work naturally splits into direct/borrowed-local receivers,
 helper-return and method-like helper-return receivers, and inline `location(...)`-wrapped
-receivers. The same invalidation boundary therefore starts with materializing later standalone
-`ref(...)` values and later standalone borrowed field-view values rather than the current indexed
-projection syntax. The remaining implementation slices are then growth invalidation, later
-shrink/motion invalidation, storage-replacement/destruction invalidation, and provenance/escape
-rules for those later standalone borrowed surfaces on `location(...)`, helper-return, and
-method-like helper-return receivers.
+receivers. The same invalidation boundary therefore now starts with preserving `push` /
+`reserve` growth invalidation across helper-return, pass-through, and return-rooted
+standalone `ref(...)` carriers, then later standalone borrowed field-view values rather
+than the current indexed projection syntax. The remaining implementation slices are then
+later shrink/motion invalidation, storage-replacement/destruction invalidation, and
+provenance/escape rules for those later standalone borrowed surfaces on `location(...)`,
+helper-return, and method-like helper-return receivers.
 Non-empty literals still emit the deterministic unsupported diagnostic
 `native backend does not support non-empty soa_vector literals`.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the

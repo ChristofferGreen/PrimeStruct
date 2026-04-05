@@ -148,6 +148,129 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     return publishStatementDiagnostic();
   };
+  auto failBorrowedBindingDiagnostic =
+      [&](const std::string &borrowRoot, const std::string &sinkName) -> bool {
+        const std::string sink = sinkName.empty() ? borrowRoot : sinkName;
+        return failStatementDiagnostic("borrowed binding: " + borrowRoot +
+                                       " (root: " + borrowRoot +
+                                       ", sink: " + sink + ")");
+      };
+  auto resolveNamedBinding = [&](const std::string &name) -> const BindingInfo * {
+    if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
+      return paramBinding;
+    }
+    auto it = locals.find(name);
+    if (it != locals.end()) {
+      return &it->second;
+    }
+    return nullptr;
+  };
+  auto referenceRootForBorrowBinding =
+      [&](const std::string &bindingName, const BindingInfo &binding) -> std::string {
+        if (binding.typeName != "Reference") {
+          return "";
+        }
+        if (!binding.referenceRoot.empty()) {
+          return binding.referenceRoot;
+        }
+        return bindingName;
+      };
+  auto hasActiveBorrowForRoot =
+      [&](const std::string &borrowRoot,
+          const std::string &ignoreBorrowName = std::string()) -> bool {
+        if (borrowRoot.empty() || currentValidationState_.context.definitionIsUnsafe) {
+          return false;
+        }
+        auto hasBorrowFrom =
+            [&](const std::string &bindingName, const BindingInfo &binding) -> bool {
+              if (!ignoreBorrowName.empty() && bindingName == ignoreBorrowName) {
+                return false;
+              }
+              if (currentValidationState_.endedReferenceBorrows.count(bindingName) > 0) {
+                return false;
+              }
+              const std::string root = referenceRootForBorrowBinding(bindingName, binding);
+              return !root.empty() && root == borrowRoot;
+            };
+        for (const auto &param : params) {
+          if (hasBorrowFrom(param.name, param.binding)) {
+            return true;
+          }
+        }
+        for (const auto &entry : locals) {
+          if (hasBorrowFrom(entry.first, entry.second)) {
+            return true;
+          }
+        }
+        return false;
+      };
+  std::function<bool(const Expr &, std::string &, std::string &)>
+      resolveStandaloneSoaGrowthRoot;
+  resolveStandaloneSoaGrowthRoot =
+      [&](const Expr &receiverExpr,
+          std::string &borrowRootOut,
+          std::string &ignoreBorrowNameOut) -> bool {
+        borrowRootOut.clear();
+        ignoreBorrowNameOut.clear();
+        if (receiverExpr.kind == Expr::Kind::Name) {
+          const BindingInfo *binding = resolveNamedBinding(receiverExpr.name);
+          if (binding == nullptr) {
+            return false;
+          }
+          if (binding->typeName == "soa_vector") {
+            borrowRootOut = receiverExpr.name;
+            return true;
+          }
+          const std::string normalizedType =
+              normalizeBindingTypeName(binding->typeName);
+          if ((normalizedType == "Reference" || normalizedType == "Pointer") &&
+              !binding->typeTemplateArg.empty()) {
+            std::string base;
+            std::string arg;
+            const std::string normalizedTarget =
+                normalizeBindingTypeName(binding->typeTemplateArg);
+            if (splitTemplateTypeName(normalizedTarget, base, arg)) {
+              if (normalizeBindingTypeName(base) != "soa_vector") {
+                return false;
+              }
+            } else if (normalizedTarget != "soa_vector") {
+              return false;
+            }
+            ignoreBorrowNameOut = receiverExpr.name;
+            if (!binding->referenceRoot.empty()) {
+              borrowRootOut = binding->referenceRoot;
+            } else {
+              borrowRootOut = receiverExpr.name;
+            }
+            return true;
+          }
+          return false;
+        }
+        if (receiverExpr.kind != Expr::Kind::Call) {
+          return false;
+        }
+        std::string builtinName;
+        if (getBuiltinPointerName(receiverExpr, builtinName) &&
+            builtinName == "dereference" && receiverExpr.args.size() == 1) {
+          const Expr &pointerExpr = receiverExpr.args.front();
+          if (pointerExpr.kind == Expr::Kind::Name) {
+            const BindingInfo *binding = resolveNamedBinding(pointerExpr.name);
+            if (binding == nullptr || binding->referenceRoot.empty()) {
+              return false;
+            }
+            ignoreBorrowNameOut = pointerExpr.name;
+            borrowRootOut = binding->referenceRoot;
+            return true;
+          }
+          if (getBuiltinPointerName(pointerExpr, builtinName) &&
+              builtinName == "location" && pointerExpr.args.size() == 1 &&
+              pointerExpr.args.front().kind == Expr::Kind::Name) {
+            borrowRootOut = pointerExpr.args.front().name;
+            return true;
+          }
+        }
+        return false;
+      };
   std::string vectorHelper;
   if (!getVectorStatementHelperName(stmt, vectorHelper)) {
     return true;
@@ -768,6 +891,16 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     if (!validateVectorStatementHelperTarget(params, locals, stmt.args[receiverIndex], "push", binding)) {
       return publishExistingStatementDiagnostic();
     }
+    std::string borrowRoot;
+    std::string ignoreBorrowName;
+    if (binding.typeName == "soa_vector" &&
+        resolveStandaloneSoaGrowthRoot(stmt.args[receiverIndex], borrowRoot,
+                                       ignoreBorrowName) &&
+        hasActiveBorrowForRoot(borrowRoot, ignoreBorrowName)) {
+      const std::string borrowSink =
+          !ignoreBorrowName.empty() ? ignoreBorrowName : borrowRoot;
+      return failBorrowedBindingDiagnostic(borrowRoot, borrowSink);
+    }
     if (currentValidationState_.context.activeEffects.count("heap_alloc") == 0) {
       return failStatementDiagnostic("push requires heap_alloc effect");
     }
@@ -801,6 +934,16 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     BindingInfo binding;
     if (!validateVectorStatementHelperTarget(params, locals, stmt.args[receiverIndex], "reserve", binding)) {
       return publishExistingStatementDiagnostic();
+    }
+    std::string borrowRoot;
+    std::string ignoreBorrowName;
+    if (binding.typeName == "soa_vector" &&
+        resolveStandaloneSoaGrowthRoot(stmt.args[receiverIndex], borrowRoot,
+                                       ignoreBorrowName) &&
+        hasActiveBorrowForRoot(borrowRoot, ignoreBorrowName)) {
+      const std::string borrowSink =
+          !ignoreBorrowName.empty() ? ignoreBorrowName : borrowRoot;
+      return failBorrowedBindingDiagnostic(borrowRoot, borrowSink);
     }
     if (currentValidationState_.context.activeEffects.count("heap_alloc") == 0) {
       return failStatementDiagnostic("reserve requires heap_alloc effect");

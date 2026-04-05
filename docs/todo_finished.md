@@ -7,6 +7,14 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Invalidated standalone whole-value `ref(...)` carriers on `push` /
+  `reserve` for direct local and direct borrowed/dereferenced receiver roots.
+  Completed: live `Reference<T>` carriers rooted directly in wrapper locals or
+  direct borrowed/dereferenced receiver roots now reject later structural
+  growth on that same wrapper, so the remaining Group 8 invalidation work
+  starts at preserving the same growth invalidation across helper-return,
+  pass-through, and return-rooted carriers before later standalone borrowed
+  field-view surfaces.
 - ✓ Preserved standalone whole-value `ref(...)` carriers across local binding,
   helper pass-through, and direct helper return surfaces. Completed: the shared
   canonical/experimental `Reference<T>` carrier path now survives those
