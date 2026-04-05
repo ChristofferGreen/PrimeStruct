@@ -7,6 +7,13 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Retired the stale standalone `ref(...)` receiver-family subtree. Completed:
+  whole-value `ref(...)` now already validates through `Reference<T>` carriers
+  for direct wrapper locals, borrowed locals, explicit `dereference(...)`
+  receivers, borrowed helper-return/method-like helper-return receivers, and
+  inline `location(...)`-wrapped borrowed receivers, so the next live borrowed
+  value work is preserving those carriers across local binding, pass-through,
+  and return surfaces rather than adding more receiver-family routing bullets.
 - ✓ Routed the shared canonical and experimental whole-value `ref(...)` helper
   route onto the standalone borrowed carrier. Completed: canonical
   `/std/collections/soa_vector/ref`, experimental-wrapper `values.ref(i)`, and

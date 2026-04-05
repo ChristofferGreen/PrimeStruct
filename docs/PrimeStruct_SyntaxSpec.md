@@ -1068,12 +1068,14 @@ field-view rejects now reuse the shared unavailable-method helper path there
 instead of an inline pending branch. The remaining live
 follow-ups are now reduced to invalidation plus richer borrowed-view semantics on top of that
 substrate. The current completed borrowed foothold now includes direct whole-value `ref(...)`
-values in addition to the indexed/field-level borrowed projection surface
-(`ref(...).field`, `.ref(i).field`, and `value.field()[i]`-style reads/writes). Those
-projections are recomputed per use through the existing `soaVectorGet(...).field` /
-`soaVectorRef(...).field` helper path, so later invalidation work still starts at standalone
-borrowed values and standalone borrowed field-view values rather than the already-completed
-per-use projection surface. The next implementation step is therefore after the now-completed
+values across direct wrapper locals, borrowed locals, explicit `dereference(...)` receivers,
+borrowed helper-return/method-like helper-return receivers, and inline
+`location(...)`-wrapped borrowed receivers in addition to the indexed/field-level borrowed
+projection surface (`ref(...).field`, `.ref(i).field`, and `value.field()[i]`-style
+reads/writes). Those projections are recomputed per use through the existing
+`soaVectorGet(...).field` / `soaVectorRef(...).field` helper path, so later invalidation
+work still starts at standalone borrowed values and standalone borrowed field-view values
+rather than the already-completed per-use projection surface. The next implementation step is therefore after the now-completed
 slot-backed borrowed-value carrier exposure through `soaColumnBorrowSlot<T>(...)` /
 `vectorBorrowSlot<T>(...)`. Those stdlib helpers now validate through `[return<Reference<T>>]`
 with slot-pointer provenance preserved through local `slot` aliases, and public
@@ -1111,7 +1113,8 @@ helper-return reads such as `return(holder.pickBorrowed(...).count())`,
 `return(holder.pickBorrowed(...).field()[i])`, `return(get(holder.pickBorrowed(...), i).field)`,
 `return(holder.pickBorrowed(...).get(i).field)`, `return(holder.pickBorrowed(...).ref(i).field)`,
 and inline `location(...)`-wrapped variants now route through that same helper/indexing
-substrate. The compiler-owned direct unsupported field-view path still remains only for
+substrate. The standalone `ref(...)` receiver families are therefore in place. The
+compiler-owned direct unsupported field-view path still remains only for
 standalone borrowed reads plus the still-unimplemented mutating method/call and indexed
 field-view write surfaces until indexing moves fully onto the experimental substrate.
 The intended next borrowed-view step is that standalone borrowed field-view values such as

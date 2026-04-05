@@ -3489,12 +3489,15 @@ path. The remaining raw-builtin conversion-specific compiler-owned code is now r
 shared canonical `to_aos` matcher plus invalid-target/user-shadow fallbacks rather than any native
 runtime trap on already-canonicalized bare/direct/method/slash-method calls.
 That single-column borrowed-slot substrate is the current completed foothold, and it now
-includes direct whole-value `ref(...)` values in addition to the indexed/field-level borrowed
-projection surface (`ref(...).field`, `.ref(i).field`, and `value.field()[i]`-style
-reads/writes). Those projection forms are still recomputed per use through the existing
-`soaVectorGet(...).field` / `soaVectorRef(...).field` rewrite and lowering path, so later
-invalidation work still begins at standalone borrowed values and standalone borrowed field-view
-values rather than the already-completed per-use projection surface.
+includes direct whole-value `ref(...)` values across direct wrapper locals, borrowed locals,
+explicit `dereference(...)` receivers, borrowed helper-return/method-like helper-return
+receivers, and inline `location(...)`-wrapped borrowed receivers in addition to the
+indexed/field-level borrowed projection surface (`ref(...).field`, `.ref(i).field`, and
+`value.field()[i]`-style reads/writes). Those projection forms are still recomputed per use
+through the existing `soaVectorGet(...).field` / `soaVectorRef(...).field` rewrite and
+lowering path, so later invalidation work still begins at standalone borrowed values and
+standalone borrowed field-view values rather than the already-completed per-use projection
+surface.
 The remaining borrowed-view work therefore starts after the now-completed
 slot-backed borrowed-value carrier exposure through the stdlib-owned `soaColumnBorrowSlot<T>(...)` /
 `vectorBorrowSlot<T>(...)` helpers. Those internal helpers now validate through
@@ -3533,10 +3536,12 @@ read-only path.
     (`ref(...).field`, `.ref(i).field`, and `value.field()[i]`-style reads/writes), but those
     projections are recomputed per use through the helper rewrite path and do not yet
     materialize a standalone borrowed object that needs its own persisted invalidation state.
-    The remaining implementation work therefore starts by materializing standalone `ref(...)`
-    values and richer standalone field-view values on those same receiver families, then
-    layering growth invalidation, later shrink/motion invalidation, storage-replacement/
-    destruction invalidation, and provenance/escape rules on top.
+    The standalone `ref(...)` receiver families above are now in place, so the remaining
+    implementation work starts by preserving those standalone `ref(...)` values across local
+    binding/pass-through/return surfaces and by materializing richer standalone field-view
+    values on those same receiver families, then layering growth invalidation, later
+    shrink/motion invalidation, storage-replacement/destruction invalidation, and
+    provenance/escape rules on top.
   - **Richer borrowed field-view contract:** the next borrowed-view slice should treat
     standalone field-view expressions as first-class non-owning column views rather than
     keeping `borrowed.field()` / `field(borrowed)` on the compiler-owned pending-diagnostic
