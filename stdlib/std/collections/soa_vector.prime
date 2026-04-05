@@ -12,7 +12,7 @@ import /std/collections/experimental_soa_vector/*
 
 [public return<T>]
 /std/collections/soa_vector/ref<T>([SoaVector<T>] values, [i32] index) {
-  return(/std/collections/experimental_soa_vector/soaVectorRef<T>(values, index))
+  return(dereference(/std/collections/experimental_soa_vector/soaVectorRef<T>(values, index)))
 }
 
 [public effects(heap_alloc), return<void>]

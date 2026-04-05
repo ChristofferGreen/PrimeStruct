@@ -24,7 +24,8 @@ Roadmap note: completed map/vector migration and compatibility-cleanup slices no
             - ✓ Preserve borrowed-root provenance through helper-returned slot pointers such as `soaColumnSlotUnsafe<T>(...)` and `vectorSlotUnsafe<T>(...)`.
             - ✓ Route `soaColumnBorrowSlot<T>(...)` and `vectorBorrowSlot<T>(...)` helper contracts onto that standalone borrowed-value carrier instead of `[return<T>]`.
         - ✓ Route public `soaColumnRef<T>(...)` onto a standalone borrowed element-view carrier instead of dereferencing `soaColumnBorrowSlot<T>(...)`. Completed: `soaColumnRef<T>(...)` now validates through `[public return<Reference<T>>]`, and direct semantics/C++/native/VM coverage now binds and dereferences that standalone borrowed carrier explicitly instead of collapsing back to whole-element `T`.
-        - ○ Route experimental-wrapper `SoaVector<T>.ref(i)` and `soaVectorRef<T>(...)` onto `soaColumnRef<T>(...)`'s standalone borrowed element-view carrier instead of returning whole-element `T`.
+        - ✓ Route experimental helper `soaVectorRef<T>(...)` onto `soaColumnRef<T>(...)`'s standalone borrowed element-view carrier instead of returning whole-element `T`. Completed: direct helper calls now validate through `[public return<Reference<T>>]`, while wrapper `SoaVector<T>.ref(i)` and canonical `/std/collections/soa_vector/ref` still intentionally dereference that helper back to whole-element `T`.
+        - ○ Route experimental-wrapper `SoaVector<T>.ref(i)` onto `soaVectorRef<T>(...)`'s standalone borrowed element-view carrier instead of returning whole-element `T`.
       - ○ Route direct borrowed locals onto that standalone borrowed element-view carrier.
       - ○ Route explicitly dereferenced borrowed receivers onto that standalone borrowed element-view carrier.
     - ○ Implement standalone `ref(...)` values for borrowed helper-return and method-like struct-helper-return receivers.

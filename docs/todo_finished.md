@@ -16,6 +16,11 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
   `soaColumnRef<T>(...)` now validates through `[public return<Reference<T>>]`,
   and the direct semantics/C++/native/VM coverage now binds and dereferences
   that borrowed carrier explicitly.
+- ✓ Routed experimental helper `soaVectorRef<T>(...)` onto the standalone
+  borrowed carrier instead of returning whole-element `T`. Completed:
+  direct helper calls now validate through `[public return<Reference<T>>]`,
+  while wrapper `SoaVector<T>.ref(i)` and canonical `/std/collections/soa_vector/ref`
+  still intentionally dereference that helper back to whole-element `T`.
 - ✓ Preserved borrowed-root provenance through helper-returned slot pointers and
   routed the internal stdlib slot-borrow helpers onto the standalone borrowed-value
   carrier. Completed: `soaColumnSlotUnsafe<T>(...)` / `vectorSlotUnsafe<T>(...)`

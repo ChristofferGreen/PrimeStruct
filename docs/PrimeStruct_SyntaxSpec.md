@@ -1078,9 +1078,9 @@ wrapper mutation. The next implementation step is therefore after the now-comple
 slot-backed borrowed-value carrier exposure through `soaColumnBorrowSlot<T>(...)` /
 `vectorBorrowSlot<T>(...)`. Those stdlib helpers now validate through `[return<Reference<T>>]`
 with slot-pointer provenance preserved through local `slot` aliases, and public
-`soaColumnRef<T>(...)` now also preserves that standalone borrowed carrier instead of
-dereferencing back to whole-element `T`. The next remaining substrate step is to route
-experimental-wrapper `SoaVector<T>.ref(i)` and `soaVectorRef<T>(...)` onto that same
+`soaColumnRef<T>(...)` plus experimental helper `soaVectorRef<T>(...)` now also preserve that
+standalone borrowed carrier instead of dereferencing back to whole-element `T`. The next
+remaining substrate step is to route experimental-wrapper `SoaVector<T>.ref(i)` onto that same
 single-column `SoaColumn<T>` borrowed element-view carrier before direct borrowed locals,
 explicit dereference, helper-return, inline `location(...)`, and richer standalone borrowed
 field-view values can build on the same substrate and before later invalidation rules can apply

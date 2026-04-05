@@ -141,7 +141,7 @@ inline bool captureSemanticBoundaryDumpsForTesting(const std::string &source,
 inline bool prepareCompilePipelineIr(const std::string &source,
                                      const std::string &entryPath,
                                      std::string_view emitKind,
-                                     PreparedCompilePipelineIrState &prepared,
+                                     detail::PreparedCompilePipelineIrState &prepared,
                                      std::string &error,
                                      CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr) {
   const std::filesystem::path sourcePath = detail::makeCompilePipelineDumpSourcePath();
@@ -214,7 +214,7 @@ inline bool runCompilePipelineBackendConformanceForTesting(const std::string &so
                                                            CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr) {
   conformance = {};
   detail::PreparedCompilePipelineIrState prepared;
-  if (!detail::prepareCompilePipelineIr(
+  if (!prepareCompilePipelineIr(
           source, entryPath, emitKind, prepared, error, diagnosticInfo)) {
     return false;
   }

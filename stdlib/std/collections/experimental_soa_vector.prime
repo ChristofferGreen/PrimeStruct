@@ -28,7 +28,7 @@ namespace std {
     [public return<T>]
     ref([i32] index) {
       soaVectorValidateType<T>()
-      return(soaVectorRef<T>(this, index))
+      return(dereference(soaVectorRef<T>(this, index)))
     }
 
     [public mut effects(heap_alloc), return<void>]
@@ -92,11 +92,11 @@ namespace std {
     return(/std/collections/experimental_soa_storage/soaColumnRead<T>(storage, index))
   }
 
-  [public return<T>]
+  [public return<Reference<T>>]
   soaVectorRef<T>([SoaVector<T>] values, [i32] index) {
     soaVectorValidateType<T>()
     [SoaColumn<T>] storage{values.storage}
-    return(dereference(/std/collections/experimental_soa_storage/soaColumnRef<T>(storage, index)))
+    return(/std/collections/experimental_soa_storage/soaColumnRef<T>(storage, index))
   }
 
   [public effects(heap_alloc), return<void>]

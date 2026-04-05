@@ -1341,10 +1341,11 @@ Particle() {
   [i32] x{1i32}
 }
 
-[effects(heap_alloc), return<Particle>]
+[effects(heap_alloc), return<int>]
 main() {
   [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
-  return(soaVectorRef<Particle>(values, 0i32))
+  [Reference<Particle>] value{soaVectorRef<Particle>(values, 0i32)}
+  return(value.x)
 }
 )";
   std::string error;
