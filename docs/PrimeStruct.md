@@ -3575,8 +3575,9 @@ read-only path.
     reflect-enabled structs. `SoaColumn<T>` still stores contiguous whole `T` elements,
     and the current `SoaSchema*` reflection helpers now expose validated field byte
     offsets and whole-element stride through `SoaSchemaFieldOffset(...)` /
-    `SoaSchemaElementStride()`. The next seam is a reflected field-slot pointer helper
-    that can address one named field inside
+    `SoaSchemaElementStride()`. The missing primitive is still byte-addressable pointer
+    offsetting plus typed reinterpretation over whole-element storage; only after that
+    can a reflected field-slot pointer helper address one named field inside
     whole-element storage, then a reusable non-owning strided field-view carrier can sit
     on top of it, and only after that can the shared helper path route onto that carrier
     and preserve it across local binding, helper pass-through, and return surfaces.
