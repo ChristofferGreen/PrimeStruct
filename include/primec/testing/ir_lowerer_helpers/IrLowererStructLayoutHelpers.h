@@ -2,6 +2,7 @@
 
 
 
+struct SemanticProgramTypeMetadata;
 struct SemanticProductTargetAdapter;
 
 struct BindingTypeLayout {

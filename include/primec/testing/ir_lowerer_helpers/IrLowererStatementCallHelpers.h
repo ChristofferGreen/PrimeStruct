@@ -2,6 +2,8 @@
 
 
 
+struct StructSlotLayoutInfo;
+
 enum class BufferStoreStatementEmitResult {
   NotMatched,
   Emitted,
