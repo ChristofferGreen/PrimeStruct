@@ -233,6 +233,8 @@ TEST_CASE("type resolution graph dump stays stable for a simple call chain") {
   CHECK(metricsLine.find("nodes_local_auto=0") != std::string::npos);
   CHECK(metricsLine.find("edges_dependency=2") != std::string::npos);
   CHECK(metricsLine.find("edges_requirement=0") != std::string::npos);
+  CHECK(metricsLine.find("scc_count=3") != std::string::npos);
+  CHECK(metricsLine.find("scc_max_size=1") != std::string::npos);
   const std::string stripped = header + dump.substr(metricsEnd + 1);
   CHECK(stripped == expected);
 }

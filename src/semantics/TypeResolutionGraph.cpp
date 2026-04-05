@@ -538,6 +538,11 @@ std::string formatTypeResolutionGraph(const TypeResolutionGraph &graph) {
         break;
     }
   }
+  const CondensationDag dag = computeTypeResolutionDependencyDag(graph);
+  size_t maxSccSize = 0;
+  for (const auto &component : dag.nodes) {
+    maxSccSize = std::max(maxSccSize, component.memberNodeIds.size());
+  }
   out << "  metrics prepare_ms=" << graph.prepareMillis
       << " build_ms=" << graph.buildMillis
       << " prepare_ms_max=" << graph.prepareMaxMillis
@@ -550,7 +555,9 @@ std::string formatTypeResolutionGraph(const TypeResolutionGraph &graph) {
       << " nodes_call_constraint=" << callConstraintCount
       << " nodes_local_auto=" << localAutoCount
       << " edges_dependency=" << dependencyEdgeCount
-      << " edges_requirement=" << requirementEdgeCount << "\n";
+      << " edges_requirement=" << requirementEdgeCount
+      << " scc_count=" << dag.nodes.size()
+      << " scc_max_size=" << maxSccSize << "\n";
   for (const auto &node : graph.nodes) {
     out << "  node " << node.id << " kind=" << typeResolutionNodeKindName(node.kind)
         << " label=\"" << node.label << "\""
