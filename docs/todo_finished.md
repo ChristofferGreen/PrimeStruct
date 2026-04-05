@@ -7,6 +7,11 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Invalidated standalone `ref(...)` carriers on shrink/motion helpers.
+  Completed: `soa_vector` `remove_at`, `remove_swap`, and `clear` now reject
+  active `Reference<T>` borrows across direct, borrowed, helper-return, and
+  inline `location(...)`-wrapped receiver roots, matching the existing
+  `push` / `reserve` growth invalidation rules.
 - ✓ Split the borrowed field-view field-addressing primitive again at the
   missing typed-to-byte pointer reinterpretation seam. Completed: the live
   queue now treats whole-element-pointer to raw-byte-pointer reinterpretation,

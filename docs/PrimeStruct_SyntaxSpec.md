@@ -803,7 +803,8 @@ Draft constraints:
 - Draft ownership/invalidation contract:
   - `get(...)` is value-style element access.
   - `ref(...)` and future field views are borrowed SoA views and are invalid after structural mutation.
-  - Structural mutation boundaries are `push`, `reserve`, `to_soa`, and `to_aos`.
+  - Structural mutation boundaries are `push`, `reserve`, `remove_at`, `remove_swap`, `clear`,
+    `to_soa`, and `to_aos`.
   - The same invalidation rule should apply to borrowed wrapper receivers reached through
     `location(...)`, helper-return receivers, and method-like helper-return receivers; those
     surfaces do not create a new ownership domain.
