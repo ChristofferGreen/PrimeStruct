@@ -7,6 +7,12 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Retired the duplicate standalone borrowed field-view invalidation subtree.
+  Completed: standalone borrowed field-view values still do not exist yet, and
+  the richer field-view contract already pins that they inherit the same
+  invalidation rules as `ref(...)`, so the live queue now focuses on
+  materializing those field-view values first and keeps only the remaining
+  whole-value `ref(...)` lifetime/provenance invalidation seams.
 - ✓ Invalidated standalone whole-value `ref(...)` carriers on `push` /
   `reserve` across helper-return, pass-through, and return-rooted carrier
   surfaces. Completed: recursive root tracing now preserves live

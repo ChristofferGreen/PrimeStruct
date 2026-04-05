@@ -1118,7 +1118,9 @@ whole-value carriers now also survive local binding, helper pass-through, and di
 return surfaces. Live standalone `Reference<T>` carriers now also reject later `push` /
 `reserve` growth on that same wrapper across direct local,
 direct borrowed/dereferenced receiver, helper-return, pass-through, and
-return-rooted surfaces. The
+return-rooted surfaces. Standalone borrowed field-view values do not exist yet,
+but once they do they inherit this same invalidation contract from the richer
+field-view design note below. The
 compiler-owned direct unsupported field-view path still remains only for
 standalone borrowed reads plus the still-unimplemented mutating method/call and indexed
 field-view write surfaces until indexing moves fully onto the experimental substrate.
@@ -1144,8 +1146,9 @@ Those writes should preserve the same invalidation rules as other borrowed SoA v
 should not reintroduce builtin-only mutation branches outside the experimental helper path.
 The remaining implementation work naturally splits into direct/borrowed-local receivers,
 helper-return and method-like helper-return receivers, and inline `location(...)`-wrapped
-receivers. The same invalidation boundary therefore now starts at later standalone
-borrowed field-view values rather than the current indexed projection syntax. The
+receivers. The same invalidation boundary therefore now starts at later whole-value
+`ref(...)` shrink/motion, storage-replacement/destruction, and provenance/escape
+rules after the later standalone borrowed field-view values themselves land. The
 remaining implementation slices are then later shrink/motion invalidation,
 storage-replacement/destruction invalidation, and
 provenance/escape rules for those later standalone borrowed surfaces on `location(...)`,

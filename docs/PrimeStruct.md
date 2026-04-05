@@ -3541,9 +3541,11 @@ read-only path.
     helper return surfaces, and live carriers now already reject later `push` /
     `reserve` growth on that same wrapper across direct local,
     direct borrowed/dereferenced receiver, helper-return, pass-through, and
-    return-rooted surfaces. The remaining implementation work therefore starts by
-    materializing richer standalone field-view values on those same receiver
-    families, then layering later shrink/motion invalidation,
+    return-rooted surfaces. Standalone borrowed field-view values do not exist
+    yet, but once they do they inherit this same invalidation contract from the
+    richer field-view design note below. The remaining implementation work
+    therefore starts by materializing richer standalone field-view values on
+    those same receiver families, then layering later shrink/motion invalidation,
     storage-replacement/destruction invalidation, and provenance/escape rules on top.
   - **Richer borrowed field-view contract:** the next borrowed-view slice should treat
     standalone field-view expressions as first-class non-owning column views rather than
