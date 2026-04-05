@@ -100,6 +100,50 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       }
       return false;
     }
+    auto isStandaloneSoaRefCall = [&](const Expr &expr,
+                                      const Expr *&receiverOut) -> bool {
+      receiverOut = nullptr;
+      if (expr.kind != Expr::Kind::Call || expr.args.size() != 2) {
+        return false;
+      }
+      const std::string resolvedPath = resolveCalleePath(expr);
+      if (expr.isMethodCall) {
+        if (expr.name != "ref" &&
+            resolvedPath.rfind("/std/collections/soa_vector/ref", 0) != 0 &&
+            resolvedPath.rfind("/soa_vector/ref", 0) != 0 &&
+            resolvedPath.rfind("/std/collections/experimental_soa_vector/soaVectorRef", 0) != 0) {
+          return false;
+        }
+        receiverOut = &expr.args.front();
+        return true;
+      }
+      if (!isSimpleCallName(expr, "ref") &&
+          resolvedPath.rfind("/std/collections/soa_vector/ref", 0) != 0 &&
+          resolvedPath.rfind("/soa_vector/ref", 0) != 0 &&
+          resolvedPath.rfind("/std/collections/experimental_soa_vector/soaVectorRef", 0) != 0 &&
+          resolvedPath.rfind("/std/collections/experimental_soa_storage/soaColumnRef", 0) != 0) {
+        return false;
+      }
+      receiverOut = &expr.args.front();
+      return true;
+    };
+    auto failReturnEscapeDiagnostic = [&](std::string message) -> bool {
+      return failReturnDiagnostic(std::move(message));
+    };
+    const Expr &returnExpr = stmt.args.front();
+    const Expr *escapeReceiver = nullptr;
+    if (isStandaloneSoaRefCall(returnExpr, escapeReceiver) &&
+        escapeReceiver != nullptr &&
+        escapeReceiver->kind != Expr::Kind::Name) {
+      return failReturnEscapeDiagnostic("reference escapes via return");
+    }
+    if (isBuiltinSoaFieldViewExpr(returnExpr, params, locals, nullptr) &&
+        !returnExpr.args.empty()) {
+      const Expr &fieldViewReceiver = returnExpr.args.front();
+      if (fieldViewReceiver.kind != Expr::Kind::Name) {
+        return failReturnEscapeDiagnostic("field-view escapes via return");
+      }
+    }
     auto declaredReferenceReturnTarget = [&]() -> std::optional<std::string> {
       auto defIt = defMap_.find(currentValidationState_.context.definitionPath);
       if (defIt == defMap_.end() || defIt->second == nullptr) {
