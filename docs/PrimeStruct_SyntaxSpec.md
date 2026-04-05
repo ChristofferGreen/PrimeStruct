@@ -1141,15 +1141,15 @@ contract as `ref(...)`, stay borrowed rather than materializing owning vectors, 
 later distinguish read-only versus mutable borrowed receivers on top of the current
 `soaVectorGet(...)` / `soaVectorRef(...)` substrate. The remaining implementation work
 therefore starts with the now-completed reusable non-owning `SoaColumn<T>`
-borrowed-view helper substrate plus the still-missing reflected field
-offset/stride helper surface for reflect-enabled structs. `SoaColumn<T>` still
-stores contiguous whole `T` elements, and the current `SoaSchema*` helpers
-expose field names/types/visibility but not byte offsets or per-element stride
-facts. After that reflected offset/stride substrate exists, a reflected
-field-slot pointer helper can address one named field inside whole-element
-storage; then a reusable non-owning strided field-view carrier can sit on top
-of it; only then can the shared helper path route onto that carrier, and only
-after that can it be preserved across pass/return/local-binding surfaces.
+borrowed-view helper substrate plus the still-missing reflected layout facts
+for reflect-enabled structs. `SoaColumn<T>` still stores contiguous whole `T`
+elements, and the current `SoaSchema*` helpers expose field
+names/types/visibility but not validated field byte offsets or whole-element
+stride. After those reflected layout facts exist, a reflected field-slot
+pointer helper can address one named field inside whole-element storage; then a
+reusable non-owning strided field-view carrier can sit on top of it; only then
+can the shared helper path route onto that carrier, and only after that can it
+be preserved across pass/return/local-binding surfaces.
 The remaining standalone mutating write step is that `assign(value.field(), next)` and
 `assign(field(value), next)` should stop on the pending diagnostic only until those
 receivers can lower through the existing writable wrapper substrate instead of mutating a
