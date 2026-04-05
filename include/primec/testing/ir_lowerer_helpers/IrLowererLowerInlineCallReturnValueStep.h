@@ -1,6 +1,7 @@
 
 
 
+struct IrFunction;
 
 struct LowerInlineCallReturnValueStepInput {
   IrFunction *function = nullptr;
@@ -12,4 +13,3 @@ struct LowerInlineCallReturnValueStepInput {
 
 bool runLowerInlineCallReturnValueStep(const LowerInlineCallReturnValueStepInput &input,
                                        std::string &errorOut);
-

@@ -1,6 +1,11 @@
 
 
 
+struct Program;
+struct Definition;
+struct SemanticProgram;
+struct IrFunction;
+struct ReturnInfo;
 
 struct LowerStatementsFunctionTableStepInput {
   const Program *program = nullptr;

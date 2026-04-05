@@ -1,6 +1,7 @@
 
 
 
+struct IrFunction;
 
 struct LowerInlineCallCleanupStepInput {
   IrFunction *function = nullptr;
@@ -11,4 +12,3 @@ struct LowerInlineCallCleanupStepInput {
 
 bool runLowerInlineCallCleanupStep(const LowerInlineCallCleanupStepInput &input,
                                    std::string &errorOut);
-

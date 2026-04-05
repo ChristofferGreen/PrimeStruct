@@ -1,6 +1,8 @@
 
 
 
+struct IrFunction;
+struct ReturnInfo;
 
 struct LowerInlineCallContextSetupStepInput {
   IrFunction *function = nullptr;
@@ -18,4 +20,3 @@ struct LowerInlineCallContextSetupStepOutput {
 bool runLowerInlineCallContextSetupStep(const LowerInlineCallContextSetupStepInput &input,
                                         LowerInlineCallContextSetupStepOutput &output,
                                         std::string &errorOut);
-

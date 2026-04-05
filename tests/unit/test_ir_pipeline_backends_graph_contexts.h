@@ -712,6 +712,35 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(statementBindingHelpersHeader.find("bool inferPointerMemoryIntrinsicTargetsUninitializedStorage(const Expr &expr, const LocalMap &localsIn);") !=
         std::string::npos);
   CHECK(lowerReturnCallsSetupHeader.find("struct IrFunction;") != std::string::npos);
+
+  const auto lowerInlineCallContextSetupStepHeader = readFile(
+      "include/primec/testing/ir_lowerer_helpers/IrLowererLowerInlineCallContextSetupStep.h");
+  CHECK(lowerInlineCallContextSetupStepHeader.find("struct IrFunction;") != std::string::npos);
+  CHECK(lowerInlineCallContextSetupStepHeader.find("struct ReturnInfo;") != std::string::npos);
+
+  const auto lowerStatementsEntryStatementStepHeader = readFile(
+      "include/primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsEntryStatementStep.h");
+  CHECK(lowerStatementsEntryStatementStepHeader.find("struct IrFunction;") != std::string::npos);
+
+  const auto lowerInlineCallReturnValueStepHeader = readFile(
+      "include/primec/testing/ir_lowerer_helpers/IrLowererLowerInlineCallReturnValueStep.h");
+  CHECK(lowerInlineCallReturnValueStepHeader.find("struct IrFunction;") != std::string::npos);
+
+  const auto lowerInlineCallStatementStepHeader = readFile(
+      "include/primec/testing/ir_lowerer_helpers/IrLowererLowerInlineCallStatementStep.h");
+  CHECK(lowerInlineCallStatementStepHeader.find("struct IrFunction;") != std::string::npos);
+
+  const auto lowerInlineCallCleanupStepHeader = readFile(
+      "include/primec/testing/ir_lowerer_helpers/IrLowererLowerInlineCallCleanupStep.h");
+  CHECK(lowerInlineCallCleanupStepHeader.find("struct IrFunction;") != std::string::npos);
+
+  const auto lowerStatementsFunctionTableStepHeader = readFile(
+      "include/primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsFunctionTableStep.h");
+  CHECK(lowerStatementsFunctionTableStepHeader.find("struct Program;") != std::string::npos);
+  CHECK(lowerStatementsFunctionTableStepHeader.find("struct Definition;") != std::string::npos);
+  CHECK(lowerStatementsFunctionTableStepHeader.find("struct SemanticProgram;") != std::string::npos);
+  CHECK(lowerStatementsFunctionTableStepHeader.find("struct IrFunction;") != std::string::npos);
+  CHECK(lowerStatementsFunctionTableStepHeader.find("struct ReturnInfo;") != std::string::npos);
   CHECK(operatorConversionsAndCallsHelpersHeader.find("struct LayoutFieldBinding;") !=
         std::string::npos);
   CHECK(structLayoutHelpersHeader.find("struct SemanticProgramTypeMetadata;") !=

@@ -1,6 +1,7 @@
 
 
 
+struct IrFunction;
 
 struct LowerStatementsEntryStatementStepInput {
   IrFunction *function = nullptr;
@@ -11,4 +12,3 @@ struct LowerStatementsEntryStatementStepInput {
 bool runLowerStatementsEntryStatementStep(const LowerStatementsEntryStatementStepInput &input,
                                           const Expr &stmt,
                                           std::string &errorOut);
-

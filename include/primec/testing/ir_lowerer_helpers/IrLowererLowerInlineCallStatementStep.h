@@ -1,6 +1,7 @@
 
 
 
+struct IrFunction;
 
 struct LowerInlineCallStatementStepInput {
   IrFunction *function = nullptr;
@@ -11,4 +12,3 @@ struct LowerInlineCallStatementStepInput {
 bool runLowerInlineCallStatementStep(const LowerInlineCallStatementStepInput &input,
                                      const Expr &stmt,
                                      std::string &errorOut);
-
