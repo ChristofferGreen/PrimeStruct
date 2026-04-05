@@ -7,6 +7,12 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Split the borrowed field-view field-addressing primitive into separate
+  byte-offset and typed reinterpretation prerequisites. Completed: the live
+  queue now treats byte-addressable offsetting over whole-element `SoaColumn<T>`
+  storage and typed reinterpretation of the recovered byte-addressed slot as
+  separate missing primitives before the later reflected field-slot helper and
+  strided borrowed field-view carrier layers.
 - ✓ Retired the stale richer borrowed field-view receiver-family split.
   Completed: standalone `borrowed.field()` / `field(borrowed)` attempts still
   all funnel through the same synthetic `/soa_vector/field_view/<field>` helper

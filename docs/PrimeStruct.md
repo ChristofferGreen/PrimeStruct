@@ -3575,12 +3575,13 @@ read-only path.
     reflect-enabled structs. `SoaColumn<T>` still stores contiguous whole `T` elements,
     and the current `SoaSchema*` reflection helpers now expose validated field byte
     offsets and whole-element stride through `SoaSchemaFieldOffset(...)` /
-    `SoaSchemaElementStride()`. The missing primitive is still byte-addressable pointer
-    offsetting plus typed reinterpretation over whole-element storage; only after that
-    can a reflected field-slot pointer helper address one named field inside
-    whole-element storage, then a reusable non-owning strided field-view carrier can sit
-    on top of it, and only after that can the shared helper path route onto that carrier
-    and preserve it across local binding, helper pass-through, and return surfaces.
+    `SoaSchemaElementStride()`. The missing primitives are still byte-addressable
+    pointer offsetting over whole-element storage and then typed reinterpretation from
+    the recovered byte-addressed slot to a field pointer; only after that can a
+    reflected field-slot pointer helper address one named field inside whole-element
+    storage, then a reusable non-owning strided field-view carrier can sit on top of
+    it, and only after that can the shared helper path route onto that carrier and
+    preserve it across local binding, helper pass-through, and return surfaces.
   - **Standalone mutating field-view contract:** the remaining standalone mutating write slice
     should replace the current pending-only `assign(value.field(), next)` /
     `assign(field(value), next)` contract with the same writable column-view substrate that
