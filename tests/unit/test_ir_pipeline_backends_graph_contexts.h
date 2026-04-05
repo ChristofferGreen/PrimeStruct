@@ -678,6 +678,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(structFieldBindingHelpersSource.find("findSemanticProductStructFieldMetadata(*semanticProductTargets, def.fullPath)") !=
         std::string::npos);
+  CHECK(structFieldBindingHelpersHeader.find("bool resolveStructLayoutFieldBinding(") !=
+        std::string::npos);
   CHECK(structLayoutHelpersHeader.find("const SemanticProgramTypeMetadata *typeMetadata,") !=
         std::string::npos);
   CHECK(structLayoutHelpersHeader.find("const std::unordered_map<std::string, const Definition *> &defMap,") !=

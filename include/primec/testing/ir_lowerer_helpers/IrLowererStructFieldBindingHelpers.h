@@ -76,4 +76,10 @@ inline bool collectStructLayoutFieldBindingsFromProgramContext(
                                                             fieldsByStructOut,
                                                             errorOut);
 }
+bool resolveStructLayoutFieldBinding(
+    const std::string &structPath,
+    const std::string &fieldName,
+    const std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &fieldsByStruct,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    LayoutFieldBinding &bindingOut);
 std::string formatLayoutFieldEnvelope(const LayoutFieldBinding &binding);
