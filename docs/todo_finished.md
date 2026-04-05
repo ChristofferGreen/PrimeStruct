@@ -7,6 +7,14 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Split the oversized Group 8 language-level slot-borrow carrier item into direct-storage
+  borrow typing and later pointer/reference-backed `dereference(slot)` routing. Completed:
+  the live queue and spec/docs now pin the current mismatch explicitly: direct
+  `borrow(storage)` still validates mainly through `[return<T>]`-style positions while
+  standalone `[Reference<T>] ref{borrow(storage)}` remains rejected with
+  `Reference bindings require location(...)`, so that direct-storage carrier must land before
+  the later slot-backed stdlib helper exposure work.
+
 - ✓ Split the oversized Group 8 slot-borrow carrier item into the real language-level
   `borrow(dereference(slot))` carrier primitive plus the later stdlib helper exposure slices.
   Completed: the live queue and spec/docs now pin the current boundary explicitly:

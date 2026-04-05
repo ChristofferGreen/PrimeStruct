@@ -1075,12 +1075,14 @@ whole-element `T` values through `soaColumnRef<T>(...)`, and those projections a
 per use through the existing `soaVectorGet(...).field` / `soaVectorRef(...).field` helper
 path, so neither surface yet materializes a standalone borrowed object that survives later
 wrapper mutation. The next implementation step is therefore to introduce a language-level
-slot-borrow carrier so `borrow(dereference(slot))` itself can preserve a standalone borrowed
-value instead of validating through `[return<T>]` helper surfaces that collapse back to
-whole-element `T`, then expose that carrier through `soaColumnBorrowSlot<T>(...)` /
-`vectorBorrowSlot<T>(...)`, then layer a single-column `SoaColumn<T>` borrowed element-view
-carrier on top of that substrate and route experimental-wrapper `SoaVector<T>.ref(i)` and
-`soaVectorRef<T>(...)` onto it before direct borrowed locals, explicit dereference,
+standalone borrowed-value carrier for direct `borrow(storage)` itself, since today even
+`[Reference<T>] ref{borrow(storage)}` still fails with `Reference bindings require location(...)`
+and only `[return<T>]`-style positions accept that borrow surface. After that direct-storage
+carrier exists, the same carrier can be extended across pointer/reference-backed
+`borrow(dereference(slot))`, then exposed through `soaColumnBorrowSlot<T>(...)` /
+`vectorBorrowSlot<T>(...)`, then a single-column `SoaColumn<T>` borrowed element-view carrier
+can be layered on top of that substrate and experimental-wrapper `SoaVector<T>.ref(i)` and
+`soaVectorRef<T>(...)` can route onto it before direct borrowed locals, explicit dereference,
 helper-return, inline `location(...)`, and richer standalone borrowed field-view values can
 build on the same substrate and before later invalidation rules can apply to anything
 persistent.

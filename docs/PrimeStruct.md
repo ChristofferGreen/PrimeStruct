@@ -2729,7 +2729,9 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
   - `storage` must be definitely initialized; otherwise a diagnostic is emitted.
 - **Access:**
   - `take(storage)` moves the value out and leaves the storage uninitialized.
-  - `borrow(storage)` returns `Reference<T>` and participates in normal borrow rules; the storage must be initialized.
+  - `borrow(storage)` is the intended standalone borrowed-value surface, but the current implemented foothold still
+    validates it mainly through `[return<T>]`-style positions; standalone `[Reference<T>]` bindings from
+    `borrow(storage)` remain pending while the borrowed-value carrier work is finished. The storage must be initialized.
   - Any other use of an `uninitialized<T>` value is a type error.
 - **Lifetime rules:** using a storage value after `drop`/`take` is a compile-time error until it is reinitialized.
 - **`Destroy` handling:** structs owning `uninitialized<T>` fields must explicitly `drop` them when initialized.
@@ -3488,15 +3490,18 @@ foothold is the indexed/field-level borrowed projection surface (`ref(...).field
 `soaColumnRef<T>(...)`, and those projection forms are recomputed per use through the existing
 `soaVectorGet(...).field` / `soaVectorRef(...).field` rewrite and lowering path, so neither
 surface yet materializes a standalone borrowed object that can survive later wrapper mutation.
-The remaining borrowed-view work therefore starts by introducing a language-level slot-borrow
-carrier so `borrow(dereference(slot))` itself can preserve a standalone borrowed value instead
-of validating through `[return<T>]` helper surfaces that collapse back to whole-element `T`.
-Only after that can the stdlib-owned `soaColumnBorrowSlot<T>(...)` / `vectorBorrowSlot<T>(...)`
-helpers expose that carrier, then a single-column `SoaColumn<T>` borrowed element-view carrier
-can be layered on top of the same substrate and experimental-wrapper `SoaVector<T>.ref(i)` /
-`soaVectorRef<T>(...)` can route onto it before direct borrowed locals, explicit dereference,
-helper-return, inline `location(...)`, and later standalone borrowed field-view values can
-reuse the same substrate and before invalidation rules can apply to anything persistent.
+The remaining borrowed-view work therefore starts by introducing a language-level standalone
+borrowed-value carrier for direct `borrow(storage)` itself, since today even
+`[Reference<T>] ref{borrow(storage)}` still fails with `Reference bindings require location(...)`
+and only `[return<T>]`-style positions accept that borrow surface. After that direct-storage
+carrier exists, the same carrier can be extended across pointer/reference-backed
+`borrow(dereference(slot))`, then the stdlib-owned `soaColumnBorrowSlot<T>(...)` /
+`vectorBorrowSlot<T>(...)` helpers can expose it, then a single-column `SoaColumn<T>`
+borrowed element-view carrier can be layered on top of the same substrate and
+experimental-wrapper `SoaVector<T>.ref(i)` / `soaVectorRef<T>(...)` can route onto it before
+direct borrowed locals, explicit dereference, helper-return, inline `location(...)`, and later
+standalone borrowed field-view values can reuse the same substrate and before invalidation
+rules can apply to anything persistent.
 Successful experimental
 `value.field()[i]` indexing now has its first completed read-only reflected slices on top of
 the current substrate for direct wrapper receivers, borrowed local shorthand, inline
