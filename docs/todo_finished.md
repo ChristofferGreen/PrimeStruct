@@ -19,6 +19,18 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
   storage and typed reinterpretation of the recovered byte-addressed slot as
   separate missing primitives before the later reflected field-slot helper and
   strided borrowed field-view carrier layers.
+- ✓ Exposed typed reinterpretation from whole-element storage pointers to raw
+  byte-addressable pointers. Completed: experimental buffer helpers now provide
+  `bufferReinterpretBytes<T>(...)` so reflected field byte offsets can start
+  from a raw byte-addressable `Pointer<i32>` base.
+- ✓ Exposed byte-addressable pointer offsetting over raw storage. Completed:
+  experimental buffer helpers now provide `bufferOffsetBytesChecked(...)` /
+  `bufferOffsetBytesUnsafe(...)` to advance byte-addressed pointers by explicit
+  byte offsets.
+- ✓ Exposed typed reinterpretation from recovered byte-addressed slots to
+  typed field pointers. Completed: experimental buffer helpers now provide
+  `bufferReinterpretFromBytes<T>(...)` to cast byte-addressed slots back into
+  typed pointers without materializing owning storage.
 - ✓ Retired the stale richer borrowed field-view receiver-family split.
   Completed: standalone `borrowed.field()` / `field(borrowed)` attempts still
   all funnel through the same synthetic `/soa_vector/field_view/<field>` helper
