@@ -390,6 +390,66 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       }
       expireReferenceBorrowsForRemainder(params, blockLocals, stmt.bodyArguments, bodyIndex + 1);
     }
+    auto isSoaOwnerBinding = [&](const BindingInfo &binding) -> bool {
+      if (binding.typeName == "soa_vector") {
+        return true;
+      }
+      std::string elemType;
+      return extractExperimentalSoaVectorElementType(binding, elemType);
+    };
+    auto referenceRootForBorrowBinding =
+        [&](const std::string &bindingName,
+            const BindingInfo &binding) -> std::string {
+      if (binding.typeName != "Reference") {
+        return "";
+      }
+      if (!binding.referenceRoot.empty()) {
+        return binding.referenceRoot;
+      }
+      return bindingName;
+    };
+    auto hasActiveBorrowForRoot =
+        [&](const std::string &borrowRoot) -> bool {
+      if (borrowRoot.empty() ||
+          currentValidationState_.context.definitionIsUnsafe) {
+        return false;
+      }
+      auto hasBorrowFrom =
+          [&](const std::string &bindingName,
+              const BindingInfo &binding) -> bool {
+        if (currentValidationState_.endedReferenceBorrows.count(bindingName) >
+            0) {
+          return false;
+        }
+        const std::string root =
+            referenceRootForBorrowBinding(bindingName, binding);
+        return !root.empty() && root == borrowRoot;
+      };
+      for (const auto &param : params) {
+        if (hasBorrowFrom(param.name, param.binding)) {
+          return true;
+        }
+      }
+      for (const auto &entry : blockLocals) {
+        if (hasBorrowFrom(entry.first, entry.second)) {
+          return true;
+        }
+      }
+      return false;
+    };
+    for (const auto &entry : blockLocals) {
+      if (locals.count(entry.first) > 0) {
+        continue;
+      }
+      if (!isSoaOwnerBinding(entry.second)) {
+        continue;
+      }
+      if (hasActiveBorrowForRoot(entry.first)) {
+        return failStatementDiagnostic(
+            "borrowed binding: " + entry.first + " (root: " + entry.first +
+            ", sink: " + entry.first + ")");
+      }
+    }
     return true;
   }
   PrintBuiltin printBuiltin;

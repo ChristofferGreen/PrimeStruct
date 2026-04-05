@@ -3036,6 +3036,8 @@ bad_use_after_take() {
       boundaries; any previously acquired SoA views/proxies are invalid after these operations.
     - Explicit lifecycle destroy calls (`Destroy`, `DestroyStack`, `DestroyHeap`, `DestroyBuffer`) on SoA owners are
       also mutation boundaries; any previously acquired SoA views/proxies are invalid after these operations.
+    - Implicit owner drops at scope exit also invalidate outstanding SoA views/proxies; keeping a live `ref(...)`
+      borrow past the end of the owner scope is rejected.
     - Preferred update pattern is two-phase: run a stable-size update pass first, then apply deferred structural
       changes.
     - Example (surface draft): `while(less_than(i, count(particles))) { get(particles, i) ... }` followed by
