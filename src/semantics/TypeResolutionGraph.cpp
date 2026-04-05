@@ -580,6 +580,31 @@ bool buildTypeResolutionGraphForTesting(Program program,
     return false;
   }
   out = {};
+  out.nodeCount = graph.nodes.size();
+  out.edgeCount = graph.edges.size();
+  for (const auto &node : graph.nodes) {
+    switch (node.kind) {
+      case TypeResolutionNodeKind::DefinitionReturn:
+        ++out.definitionReturnCount;
+        break;
+      case TypeResolutionNodeKind::CallConstraint:
+        ++out.callConstraintCount;
+        break;
+      case TypeResolutionNodeKind::LocalAuto:
+        ++out.localAutoCount;
+        break;
+    }
+  }
+  for (const auto &edge : graph.edges) {
+    switch (edge.kind) {
+      case TypeResolutionEdgeKind::Dependency:
+        ++out.dependencyEdgeCount;
+        break;
+      case TypeResolutionEdgeKind::Requirement:
+        ++out.requirementEdgeCount;
+        break;
+    }
+  }
   out.prepareMillis = graph.prepareMillis;
   out.buildMillis = graph.buildMillis;
   out.nodes.reserve(graph.nodes.size());
