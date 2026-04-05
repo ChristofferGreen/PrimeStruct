@@ -1079,12 +1079,13 @@ slot-backed borrowed-value carrier exposure through `soaColumnBorrowSlot<T>(...)
 `vectorBorrowSlot<T>(...)`. Those stdlib helpers now validate through `[return<Reference<T>>]`
 with slot-pointer provenance preserved through local `slot` aliases, while the public
 value-returning wrappers still intentionally dereference back to whole-element `T`. The next
-remaining step is to layer a single-column `SoaColumn<T>` borrowed
-element-view carrier on top of that substrate and route experimental-wrapper
-`SoaVector<T>.ref(i)` and `soaVectorRef<T>(...)` onto it before direct borrowed
-locals, explicit dereference, helper-return, inline `location(...)`, and richer
-standalone borrowed field-view values can build on the same substrate and before
-later invalidation rules can apply to anything persistent.
+remaining substrate step is to stop public `soaColumnRef<T>(...)` from dereferencing that
+slot-borrow carrier back to `T`; only after that single-column `SoaColumn<T>` borrowed
+element-view carrier exists can experimental-wrapper `SoaVector<T>.ref(i)` and
+`soaVectorRef<T>(...)` route onto it before direct borrowed locals, explicit dereference,
+helper-return, inline `location(...)`, and richer standalone borrowed field-view values can
+build on the same substrate and before later invalidation rules can apply to anything
+persistent.
 Read-only wrapper field-view indexing now routes both method-form `values.field()[i]`
 and call-form `field(values)[i]` reflected reads, plus borrowed local `borrowed.field()[i]`,
 inline `location(values).field()[i]` / `field(dereference(location(values)))[i]`,

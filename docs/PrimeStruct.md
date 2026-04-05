@@ -3500,13 +3500,13 @@ The remaining borrowed-view work therefore starts after the now-completed
 slot-backed borrowed-value carrier exposure through the stdlib-owned `soaColumnBorrowSlot<T>(...)` /
 `vectorBorrowSlot<T>(...)` helpers. Those internal helpers now validate through
 `[return<Reference<T>>]` with slot-pointer provenance preserved through local `slot` aliases, while the
-public value-returning wrappers still intentionally collapse back to whole-element `T`. After that
-slot-backed helper exposure exists, a single-column `SoaColumn<T>`
-borrowed element-view carrier can be layered on top of the same substrate and
-experimental-wrapper `SoaVector<T>.ref(i)` / `soaVectorRef<T>(...)` can route onto it before
-direct borrowed locals, explicit dereference, helper-return, inline `location(...)`, and later
-standalone borrowed field-view values can reuse the same substrate and before invalidation
-rules can apply to anything persistent.
+public value-returning wrappers still intentionally collapse back to whole-element `T`. The next
+remaining substrate step is to stop public `soaColumnRef<T>(...)` from dereferencing that
+slot-borrow carrier back to `T`; only after that single-column `SoaColumn<T>` borrowed
+element-view carrier exists can experimental-wrapper `SoaVector<T>.ref(i)` / `soaVectorRef<T>(...)`
+route onto it before direct borrowed locals, explicit dereference, helper-return,
+inline `location(...)`, and later standalone borrowed field-view values can reuse the same
+substrate and before invalidation rules can apply to anything persistent.
 Successful experimental
 `value.field()[i]` indexing now has its first completed read-only reflected slices on top of
 the current substrate for direct wrapper receivers, borrowed local shorthand, inline
@@ -3596,8 +3596,9 @@ read-only path.
     `take(...)`, and `borrow(...)` flows. Their current allocation-failure contract is deterministic
     and matches the existing vector reserve overflow path: oversized reserve requests report
     `vector reserve allocation failed (out of memory)`. Direct borrowed-view coverage for the
-    current single-column substrate is now locked through `soaColumnRef<T>(...)`, but the
-    primitives are not yet threaded into richer wrapper field-view surfaces. Reflected structs can now expose
+    current single-column substrate is now locked through `soaColumnRef<T>(...)`, but that public
+    helper still dereferences slot borrows back to whole-element `T`, so the primitives are not
+    yet threaded into richer wrapper field-view surfaces. Reflected structs can now expose
     generated `SoaSchema*` helpers plus chunked `SoaSchemaStorage` allocation/grow/clear/destroy helpers, so
     arbitrary-width reflected storage no longer stops at the old pending-width runtime gate.
   - **Current implementation status:** VM/native vector locals use a heap-backed `count/capacity/data_ptr` record

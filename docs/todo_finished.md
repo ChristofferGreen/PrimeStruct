@@ -7,6 +7,10 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Split the public single-column borrowed element-view queue into the real
+  `soaColumnRef<T>(...)` substrate step and the later experimental-wrapper
+  `SoaVector<T>.ref(i)` exposure step once the slot-borrow carrier primitive was
+  in place.
 - ✓ Preserved borrowed-root provenance through helper-returned slot pointers and
   routed the internal stdlib slot-borrow helpers onto the standalone borrowed-value
   carrier. Completed: `soaColumnSlotUnsafe<T>(...)` / `vectorSlotUnsafe<T>(...)`
