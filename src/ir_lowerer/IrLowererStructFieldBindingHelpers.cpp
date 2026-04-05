@@ -216,7 +216,7 @@ bool collectStructLayoutFieldBindings(
         continue;
       }
       LayoutFieldBinding binding;
-      if (semanticFields != nullptr && !semanticFields->empty() && !isStaticStructBinding(stmt)) {
+      if (semanticFields != nullptr && !semanticFields->empty() && !isStaticFieldBinding(stmt)) {
         if (semanticIndex >= semanticFields->size()) {
           errorOut = "internal error: mismatched struct field info for " + def.fullPath;
           return false;

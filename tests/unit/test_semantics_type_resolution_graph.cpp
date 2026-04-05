@@ -136,6 +136,23 @@ alpha() {
   return(beta())
 }
 
+[return<auto>]
+beta() {
+  return(alpha())
+}
+)";
+  std::string error;
+  primec::semantics::CondensationDagSnapshot dag;
+  REQUIRE(primec::semantics::computeTypeResolutionDependencyDagForTesting(
+      parseProgram(source), "/alpha", error, dag));
+  CHECK(error.empty());
+
+  REQUIRE(dag.nodes.size() == 1);
+  CHECK(dag.nodes[0].memberNodeIds == std::vector<uint32_t>({0, 1, 2, 3}));
+  CHECK(dag.topologicalComponentIds == std::vector<uint32_t>({0}));
+  CHECK(dag.componentIdByNodeId == std::vector<uint32_t>({0, 0, 0, 0}));
+}
+
 TEST_CASE("type resolution graph snapshot honors budget env vars") {
   const std::string source = R"(
 [return<auto>]
@@ -143,15 +160,75 @@ leaf() {
   return(1i32)
 }
 
+[return<auto>]
+main() {
+  return(leaf())
+}
+)";
+
+  uint64_t prepareMillis = 0;
+  uint64_t buildMillis = 0;
+  {
+    const ScopedEnvVar prepareBudget("PRIMESTRUCT_GRAPH_PREPARE_MS_MAX", "0");
+    const ScopedEnvVar buildBudget("PRIMESTRUCT_GRAPH_BUILD_MS_MAX", "0");
+
+    std::string error;
+    primec::semantics::TypeResolutionGraphSnapshot snapshot;
+    REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, snapshot));
+    CHECK(error.empty());
+
+    CHECK(snapshot.prepareMaxMillis == 0u);
+    CHECK(snapshot.buildMaxMillis == 0u);
+    CHECK(snapshot.prepareOverBudget == (snapshot.prepareMillis > snapshot.prepareMaxMillis));
+    CHECK(snapshot.buildOverBudget == (snapshot.buildMillis > snapshot.buildMaxMillis));
+    prepareMillis = snapshot.prepareMillis;
+    buildMillis = snapshot.buildMillis;
+  }
+
+  const ScopedEnvVar prepareBudget("PRIMESTRUCT_GRAPH_PREPARE_MS_MAX", std::to_string(prepareMillis + 1u));
+  const ScopedEnvVar buildBudget("PRIMESTRUCT_GRAPH_BUILD_MS_MAX", std::to_string(buildMillis + 1u));
+
+  std::string error;
+  primec::semantics::TypeResolutionGraphSnapshot snapshot;
+  REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  CHECK(snapshot.prepareOverBudget == false);
+  CHECK(snapshot.buildOverBudget == false);
+}
+
 TEST_CASE("type resolution graph perf soak (disabled by default)") {
   if (std::getenv("PRIMESTRUCT_GRAPH_SOAK") == nullptr) {
     return;
   }
 
-  std::string source = R"(
+  const std::string source = R"(
 [return<i32>]
 leaf([i32] value) {
   return(value)
+}
+
+[return<i32>]
+main() {
+  [auto] value{0i32}
+  [auto] a{leaf(value)}
+  [auto] b{leaf(a)}
+  [auto] c{leaf(b)}
+  [auto] d{leaf(c)}
+  [auto] e{leaf(d)}
+  [auto] f{leaf(e)}
+  [auto] g{leaf(f)}
+  return(g)
+}
+)";
+
+  for (int index = 0; index < 200; ++index) {
+    std::string error;
+    primec::semantics::TypeResolutionGraphSnapshot snapshot;
+    REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(
+        parseProgram(source), "/main", error, snapshot));
+    CHECK(error.empty());
+  }
 }
 
 TEST_CASE("type resolution graph layer ordering stays consistent") {
@@ -161,11 +238,91 @@ leaf([i32] value) {
   return(value)
 }
 
+[return<auto>]
+main() {
+  return(leaf(1i32))
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionReturnSnapshot baseline;
+  REQUIRE(primec::semantics::computeTypeResolutionReturnSnapshotForTesting(
+      parseProgram(source), "/main", error, baseline));
+  CHECK(error.empty());
+
+  primec::semantics::TypeResolutionReturnSnapshot forward;
+  {
+    const ScopedEnvVar forwardOrder("PRIMESTRUCT_GRAPH_LAYER_ORDER", "forward");
+    REQUIRE(primec::semantics::computeTypeResolutionReturnSnapshotForTesting(
+        parseProgram(source), "/main", error, forward));
+  }
+  CHECK(error.empty());
+  REQUIRE(baseline.entries.size() == forward.entries.size());
+  for (size_t index = 0; index < baseline.entries.size(); ++index) {
+    CHECK(baseline.entries[index].definitionPath == forward.entries[index].definitionPath);
+    CHECK(baseline.entries[index].returnKind == forward.entries[index].returnKind);
+    CHECK(baseline.entries[index].structPath == forward.entries[index].structPath);
+    CHECK(baseline.entries[index].bindingTypeText == forward.entries[index].bindingTypeText);
+  }
+}
+
 TEST_CASE("type resolution graph local binding invalidation follows dependency chain") {
   const std::string source = R"(
 [return<auto>]
 leaf() {
   return(1i32)
+}
+
+[return<auto>]
+main() {
+  [auto] value{leaf()}
+  return(value)
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionGraphSnapshot graph;
+  REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, graph));
+  CHECK(error.empty());
+
+  auto findNodeId = [&](const std::string &label) -> uint32_t {
+    const auto it = std::find_if(graph.nodes.begin(), graph.nodes.end(), [&](const auto &node) {
+      return node.label == label;
+    });
+    REQUIRE(it != graph.nodes.end());
+    return it->id;
+  };
+
+  const uint32_t localAutoId = findNodeId("/main::auto:value#0");
+  std::vector<uint32_t> stack{localAutoId};
+  std::vector<bool> visited(graph.nodes.size(), false);
+  visited[localAutoId] = true;
+  while (!stack.empty()) {
+    const uint32_t current = stack.back();
+    stack.pop_back();
+    for (const auto &edge : graph.edges) {
+      if (edge.kind != "dependency" || edge.sourceId != current) {
+        continue;
+      }
+      if (edge.targetId >= visited.size() || visited[edge.targetId]) {
+        continue;
+      }
+      visited[edge.targetId] = true;
+      stack.push_back(edge.targetId);
+    }
+  }
+
+  auto hasLabel = [&](const std::string &label) {
+    const auto it = std::find_if(graph.nodes.begin(), graph.nodes.end(), [&](const auto &node) {
+      return node.label == label;
+    });
+    REQUIRE(it != graph.nodes.end());
+    return visited[it->id];
+  };
+
+  CHECK(hasLabel("/main::auto:value#0"));
+  CHECK(hasLabel("/main::call#0"));
+  CHECK(hasLabel("/leaf"));
 }
 
 TEST_CASE("type resolution graph control-flow invalidation follows dependency chain") {
@@ -226,9 +383,11 @@ main([bool] flag) {
   CHECK(hasLabel("/leaf"));
 }
 
-[return<auto>]
+TEST_CASE("type resolution graph initializer-shape invalidation tracks bindings") {
+  const std::string source = R"(
+[return<i32>]
 main() {
-  [auto] value{leaf()}
+  [auto] value{1i32}
   return(value)
 }
 )";
@@ -238,149 +397,9 @@ main() {
   REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, graph));
   CHECK(error.empty());
 
-  auto findNodeId = [&](const std::string &label) -> uint32_t {
-    const auto it = std::find_if(graph.nodes.begin(), graph.nodes.end(), [&](const auto &node) {
-      return node.label == label;
-    });
-    REQUIRE(it != graph.nodes.end());
-    return it->id;
-  };
-
-  const uint32_t localAutoId = findNodeId("/main::auto:value#0");
-  std::vector<uint32_t> stack{localAutoId};
-  std::vector<bool> visited(graph.nodes.size(), false);
-  visited[localAutoId] = true;
-  while (!stack.empty()) {
-    const uint32_t current = stack.back();
-    stack.pop_back();
-    for (const auto &edge : graph.edges) {
-      if (edge.kind != "dependency" || edge.sourceId != current) {
-        continue;
-      }
-      if (edge.targetId >= visited.size() || visited[edge.targetId]) {
-        continue;
-      }
-      visited[edge.targetId] = true;
-      stack.push_back(edge.targetId);
-    }
-  }
-
-  auto hasLabel = [&](const std::string &label) {
-    const auto it = std::find_if(graph.nodes.begin(), graph.nodes.end(), [&](const auto &node) {
-      return node.label == label;
-    });
-    REQUIRE(it != graph.nodes.end());
-    return visited[it->id];
-  };
-
-  CHECK(hasLabel("/main::auto:value#0"));
-  CHECK(hasLabel("/main::call#0"));
-  CHECK(hasLabel("/leaf"));
-}
-
-[return<auto>]
-main() {
-  return(leaf(1i32))
-}
-)";
-
-  std::string error;
-  primec::semantics::TypeResolutionReturnSnapshot baseline;
-  REQUIRE(primec::semantics::computeTypeResolutionReturnSnapshotForTesting(
-      parseProgram(source), "/main", error, baseline));
-  CHECK(error.empty());
-
-  primec::semantics::TypeResolutionReturnSnapshot forward;
-  {
-    const ScopedEnvVar forwardOrder("PRIMESTRUCT_GRAPH_LAYER_ORDER", "forward");
-    REQUIRE(primec::semantics::computeTypeResolutionReturnSnapshotForTesting(
-        parseProgram(source), "/main", error, forward));
-  }
-  CHECK(error.empty());
-  REQUIRE(baseline.entries.size() == forward.entries.size());
-  for (size_t index = 0; index < baseline.entries.size(); ++index) {
-    CHECK(baseline.entries[index].definitionPath == forward.entries[index].definitionPath);
-    CHECK(baseline.entries[index].returnKind == forward.entries[index].returnKind);
-    CHECK(baseline.entries[index].structPath == forward.entries[index].structPath);
-    CHECK(baseline.entries[index].bindingTypeText == forward.entries[index].bindingTypeText);
-  }
-}
-
-[return<i32>]
-main() {
-  [auto] value{0i32}
-  [auto] a{leaf(value)}
-  [auto] b{leaf(a)}
-  [auto] c{leaf(b)}
-  [auto] d{leaf(c)}
-  [auto] e{leaf(d)}
-  [auto] f{leaf(e)}
-  [auto] g{leaf(f)}
-  return(g)
-}
-)";
-
-  for (int index = 0; index < 200; ++index) {
-    std::string error;
-    primec::semantics::TypeResolutionGraphSnapshot snapshot;
-    REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(
-        parseProgram(source), "/main", error, snapshot));
-    CHECK(error.empty());
-  }
-}
-
-[return<auto>]
-main() {
-  return(leaf())
-}
-)";
-
-  uint64_t prepareMillis = 0;
-  uint64_t buildMillis = 0;
-  {
-    const ScopedEnvVar prepareBudget("PRIMESTRUCT_GRAPH_PREPARE_MS_MAX", "0");
-    const ScopedEnvVar buildBudget("PRIMESTRUCT_GRAPH_BUILD_MS_MAX", "0");
-
-    std::string error;
-    primec::semantics::TypeResolutionGraphSnapshot snapshot;
-    REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, snapshot));
-    CHECK(error.empty());
-
-    CHECK(snapshot.prepareMaxMillis == 0u);
-    CHECK(snapshot.buildMaxMillis == 0u);
-    CHECK(snapshot.prepareOverBudget == (snapshot.prepareMillis > snapshot.prepareMaxMillis));
-    CHECK(snapshot.buildOverBudget == (snapshot.buildMillis > snapshot.buildMaxMillis));
-    prepareMillis = snapshot.prepareMillis;
-    buildMillis = snapshot.buildMillis;
-  }
-
-  const ScopedEnvVar prepareBudget("PRIMESTRUCT_GRAPH_PREPARE_MS_MAX", std::to_string(prepareMillis + 1u));
-  const ScopedEnvVar buildBudget("PRIMESTRUCT_GRAPH_BUILD_MS_MAX", std::to_string(buildMillis + 1u));
-
-  std::string error;
-  primec::semantics::TypeResolutionGraphSnapshot snapshot;
-  REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, snapshot));
-  CHECK(error.empty());
-
-  CHECK(snapshot.prepareOverBudget == false);
-  CHECK(snapshot.buildOverBudget == false);
-}
-
-[return<auto>]
-beta() {
-  return(alpha())
-}
-)";
-  std::string error;
-  primec::semantics::CondensationDagSnapshot dag;
-  REQUIRE(primec::semantics::computeTypeResolutionDependencyDagForTesting(
-      parseProgram(source), "/alpha", error, dag));
-  CHECK(error.empty());
-
-  REQUIRE(dag.nodes.size() == 1);
-  CHECK(dag.nodes[0].memberNodeIds == std::vector<uint32_t>({0, 1, 2, 3}));
-  CHECK(dag.topologicalComponentIds == std::vector<uint32_t>({0}));
-  CHECK(dag.componentIdByNodeId == std::vector<uint32_t>({0, 0, 0, 0}));
+  CHECK(graph.invalidationLocalBindingCount > 0u);
+  CHECK(graph.invalidationInitializerShapeCount > 0u);
+  CHECK(graph.invalidationInitializerShapeCount <= graph.invalidationLocalBindingCount);
 }
 
 TEST_CASE("type resolution dependency dag helper preserves acyclic graph dependency order") {

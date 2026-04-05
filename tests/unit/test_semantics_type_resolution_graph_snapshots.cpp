@@ -89,34 +89,6 @@ TEST_CASE("type resolution try operand metadata stays aligned with query snapsho
 MyError {
 }
 
-TEST_CASE("type resolution graph snapshot records timing metrics") {
-  const std::string source = R"(
-Pair {
-  left{i32}
-  right{i64}
-}
-
-[return<i32>]
-main() {
-  [auto] data{Pair(1i32, 2i64)}
-  return(data.left)
-}
-)";
-
-  std::string error;
-  primec::semantics::TypeResolutionGraphSnapshot snapshot;
-  REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(
-      parseProgram(source), "/main", error, snapshot));
-  CHECK(error.empty());
-
-  CHECK(snapshot.nodeCount == snapshot.nodes.size());
-  CHECK(snapshot.edgeCount == snapshot.edges.size());
-  CHECK(snapshot.nodeCount > 0u);
-  CHECK(snapshot.sccCount > 0u);
-  CHECK(snapshot.prepareMaxMillis == 0u || snapshot.prepareMaxMillis >= snapshot.prepareMillis);
-  CHECK(snapshot.buildMaxMillis == 0u || snapshot.buildMaxMillis >= snapshot.buildMillis);
-}
-
 [return<void>]
 unexpectedError([MyError] err) {
 }
@@ -165,6 +137,38 @@ main() {
   CHECK(tryEntry.operandQueryTypeText == callEntry.typeText);
   CHECK(tryEntry.valueTypeText == resultEntry.valueTypeText);
   CHECK(tryEntry.errorTypeText == resultEntry.errorTypeText);
+}
+
+TEST_CASE("type resolution graph snapshot records timing metrics") {
+  const std::string source = R"(
+Pair {
+  left{i32}
+  right{i64}
+}
+
+[return<i32>]
+main() {
+  [auto] data{Pair(1i32, 2i64)}
+  return(data.left)
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionGraphSnapshot snapshot;
+  REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  CHECK(snapshot.nodeCount == snapshot.nodes.size());
+  CHECK(snapshot.edgeCount == snapshot.edges.size());
+  CHECK(snapshot.nodeCount > 0u);
+  CHECK(snapshot.sccCount > 0u);
+  if (snapshot.prepareMaxMillis != 0u) {
+    CHECK(snapshot.prepareMaxMillis >= snapshot.prepareMillis);
+  }
+  if (snapshot.buildMaxMillis != 0u) {
+    CHECK(snapshot.buildMaxMillis >= snapshot.buildMillis);
+  }
 }
 
 TEST_CASE("type resolution local query metadata stays aligned with query snapshots") {
