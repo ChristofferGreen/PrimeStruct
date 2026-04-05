@@ -694,6 +694,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(structLayoutHelpersSource.find("if (!isStructDefinition(def, semanticProductTargets)) {") !=
         std::string::npos);
+  CHECK(callAccessHelpersHeader.find("bool emitMapLookupContains(") != std::string::npos);
+  CHECK(callAccessHelpersHeader.find("bool isStructDefinition(const Definition &def, const SemanticProductTargetAdapter *semanticProductTargets);") !=
+        std::string::npos);
   CHECK(bindingTypeHelpersHeader.find("BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgram = nullptr);") !=
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find("findSemanticProductBindingFact(semanticProductTargets, expr)") !=

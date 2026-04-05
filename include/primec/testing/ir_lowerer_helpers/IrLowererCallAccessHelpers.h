@@ -245,6 +245,19 @@ bool emitMapLookupAccess(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error);
+bool emitMapLookupContains(
+    LocalInfo::ValueKind mapKeyKind,
+    const Expr &targetExpr,
+    const Expr &lookupKeyExpr,
+    const LocalMap &localsIn,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error);
 void emitStringAccessLoad(
     const std::string &accessName,
     int32_t indexLocal,
@@ -324,6 +337,7 @@ bool buildOrderedCallArguments(const Expr &callExpr,
 bool definitionHasTransform(const Definition &def, const std::string &transformName);
 bool isStructTransformName(const std::string &name);
 bool isStructDefinition(const Definition &def);
+bool isStructDefinition(const Definition &def, const SemanticProductTargetAdapter *semanticProductTargets);
 bool isStructHelperDefinition(const Definition &def,
                               const std::unordered_set<std::string> &structNames,
                               std::string &parentStructPathOut);
@@ -351,4 +365,3 @@ const Definition *resolveDefinitionByPath(
 std::string resolveDefinitionNamespacePrefix(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::string &definitionPath);
-
