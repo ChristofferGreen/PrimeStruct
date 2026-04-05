@@ -7,6 +7,15 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Preserved borrowed-root provenance through helper-returned slot pointers and
+  routed the internal stdlib slot-borrow helpers onto the standalone borrowed-value
+  carrier. Completed: `soaColumnSlotUnsafe<T>(...)` / `vectorSlotUnsafe<T>(...)`
+  now preserve borrowed-root provenance through local `slot` aliases,
+  `soaColumnBorrowSlot<T>(...)` / `vectorBorrowSlot<T>(...)` now validate through
+  `[return<Reference<T>>]`, and the public value-returning wrappers intentionally
+  keep dereferencing back to whole-element `T` until the later `SoaColumn<T>`
+  borrowed element-view carrier lands.
+
 - ✓ Allowed helper `return<Reference<T>>` contracts to return borrowed-value carrier
   expressions rooted in parameter-owned storage. Completed: direct
   `return(borrow(...))` now validates for helper `return<Reference<T>>` contracts

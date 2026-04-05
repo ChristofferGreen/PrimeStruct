@@ -799,7 +799,13 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
   CHECK(semanticsStatementBindingsSource.find("binding initializer requires a value") != std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("entry argument strings require string bindings") !=
         std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find("std::function<bool(const Expr &, std::string &)> resolveStorageRootExpr;") !=
+        std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("std::function<bool(const Expr &, std::string &)> resolvePointerRoot;") !=
+        std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find("resolvedCallPath.rfind(\"/std/collections/experimental_soa_storage/soaColumnSlotUnsafe\", 0) == 0") !=
+        std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find("resolvedCallPath.rfind(\"/std/collections/experimental_vector/vectorSlotUnsafe\", 0) == 0") !=
         std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("borrow conflict: ") != std::string::npos);
   CHECK(semanticsStatementBuiltinsSource.find("bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(") !=

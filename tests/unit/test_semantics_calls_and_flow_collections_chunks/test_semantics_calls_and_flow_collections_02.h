@@ -2366,6 +2366,50 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental soa storage borrow-slot helper validates reference return") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
+[return<Reference<i32>>]
+borrow_second([SoaColumn<i32>] values) {
+  return(soaColumnBorrowSlot<i32>(values, 1i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumn<i32> mut] values{soaColumnNew<i32>()}
+  soaColumnPush<i32>(values, 2i32)
+  soaColumnPush<i32>(values, 5i32)
+  return(dereference(borrow_second(values)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("experimental vector borrow-slot helper validates reference return") {
+  const std::string source = R"(
+import /std/collections/experimental_vector/*
+
+[return<Reference<i32>>]
+borrow_second([Vector<i32>] values) {
+  return(vectorBorrowSlot<i32>(values, 1i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32> mut] values{vectorNew<i32>()}
+  vectorPush<i32>(values, 2i32)
+  vectorPush<i32>(values, 5i32)
+  return(dereference(borrow_second(values)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental two-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
 import /std/collections/experimental_soa_storage/*

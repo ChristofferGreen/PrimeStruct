@@ -2734,8 +2734,10 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
   - `borrow(storage)` now supports standalone `[Reference<T>]` bindings for direct local/field storage and
     pointer/reference-backed `borrow(dereference(slot))` storage surfaces, and helper
     `return<Reference<T>>` contracts now also accept direct borrowed carriers rooted in parameter-owned storage.
-    The stdlib slot-borrow helpers still return whole-element `T` for now because slot-pointer provenance is not yet
-    preserved through local `slot` aliases. The storage must be initialized.
+    Internal stdlib slot-borrow helpers now also validate through `[return<Reference<T>>]` with slot-pointer
+    provenance preserved through local `slot` aliases, while public value-returning helpers such as
+    `soaColumnRef<T>(...)`, `soaColumnRead<T>(...)`, `vectorAt<T>(...)`, and `vectorAtUnsafe<T>(...)` still
+    intentionally dereference that borrowed carrier back to whole-element `T`. The storage must be initialized.
   - Any other use of an `uninitialized<T>` value is a type error.
 - **Lifetime rules:** using a storage value after `drop`/`take` is a compile-time error until it is reinitialized.
 - **`Destroy` handling:** structs owning `uninitialized<T>` fields must explicitly `drop` them when initialized.
@@ -3494,14 +3496,12 @@ foothold is the indexed/field-level borrowed projection surface (`ref(...).field
 `soaColumnRef<T>(...)`, and those projection forms are recomputed per use through the existing
 `soaVectorGet(...).field` / `soaVectorRef(...).field` rewrite and lowering path, so neither
 surface yet materializes a standalone borrowed object that can survive later wrapper mutation.
-The remaining borrowed-view work therefore starts from exposing the now-completed
-slot-backed borrowed-value carrier through the stdlib-owned `soaColumnBorrowSlot<T>(...)` /
-`vectorBorrowSlot<T>(...)` helpers, but that helper exposure is still blocked on the remaining
-slot-pointer provenance seam: helpers such as `soaColumnSlotUnsafe<T>(...)` /
-`vectorSlotUnsafe<T>(...)` do not yet preserve borrowed-root provenance through the local `slot`
-pointer. Once that provenance seam lands, the slot-backed helper exposure can stop validating
-through `[return<T>]` and collapsing back to whole-element `T`. After that slot-backed helper exposure exists, a
-single-column `SoaColumn<T>`
+The remaining borrowed-view work therefore starts after the now-completed
+slot-backed borrowed-value carrier exposure through the stdlib-owned `soaColumnBorrowSlot<T>(...)` /
+`vectorBorrowSlot<T>(...)` helpers. Those internal helpers now validate through
+`[return<Reference<T>>]` with slot-pointer provenance preserved through local `slot` aliases, while the
+public value-returning wrappers still intentionally collapse back to whole-element `T`. After that
+slot-backed helper exposure exists, a single-column `SoaColumn<T>`
 borrowed element-view carrier can be layered on top of the same substrate and
 experimental-wrapper `SoaVector<T>.ref(i)` / `soaVectorRef<T>(...)` can route onto it before
 direct borrowed locals, explicit dereference, helper-return, inline `location(...)`, and later

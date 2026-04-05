@@ -97,7 +97,7 @@ namespace std {
     return(take(dereference(slot)))
   }
 
-  [return<T>]
+  [return<Reference<T>>]
   vectorBorrowSlot<T>([Vector<T>] values, [i32] index) {
     [Pointer<uninitialized<T>>] slot{vectorSlotUnsafe<T>(values, index)}
     return(borrow(dereference(slot)))
@@ -386,13 +386,13 @@ namespace std {
   [public return<T>]
   vectorAt<T>([Vector<T>] values, [i32] index) {
     vectorCheckIndex<T>(values, index)
-    return(vectorBorrowSlot<T>(values, index))
+    return(dereference(vectorBorrowSlot<T>(values, index)))
   }
 
   [public return<T>]
   vectorAtUnsafe<T>([Vector<T>] values, [i32] index) {
     vectorCheckIndex<T>(values, index)
-    return(vectorBorrowSlot<T>(values, index))
+    return(dereference(vectorBorrowSlot<T>(values, index)))
   }
   }
   }

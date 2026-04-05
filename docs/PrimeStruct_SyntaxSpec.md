@@ -1074,14 +1074,12 @@ reads/writes) rather than standalone `ref(...)` values. Experimental-wrapper
 whole-element `T` values through `soaColumnRef<T>(...)`, and those projections are recomputed
 per use through the existing `soaVectorGet(...).field` / `soaVectorRef(...).field` helper
 path, so neither surface yet materializes a standalone borrowed object that survives later
-wrapper mutation. The next implementation step is therefore to expose the now-completed
-slot-backed borrowed-value carrier through `soaColumnBorrowSlot<T>(...)` /
-`vectorBorrowSlot<T>(...)`, but that stdlib helper step is now blocked only on slot-pointer
-provenance: helper `return<Reference<T>>` already accepts parameter-rooted borrow carriers, while
-slot-pointer helpers such as `soaColumnSlotUnsafe<T>(...)` / `vectorSlotUnsafe<T>(...)` still do
-not preserve borrowed-root provenance through the local `slot` pointer. Once that seam lands, the
-slot-backed helper exposure can stop validating through `[return<T>]`, then layer a
-single-column `SoaColumn<T>` borrowed
+wrapper mutation. The next implementation step is therefore after the now-completed
+slot-backed borrowed-value carrier exposure through `soaColumnBorrowSlot<T>(...)` /
+`vectorBorrowSlot<T>(...)`. Those stdlib helpers now validate through `[return<Reference<T>>]`
+with slot-pointer provenance preserved through local `slot` aliases, while the public
+value-returning wrappers still intentionally dereference back to whole-element `T`. The next
+remaining step is to layer a single-column `SoaColumn<T>` borrowed
 element-view carrier on top of that substrate and route experimental-wrapper
 `SoaVector<T>.ref(i)` and `soaVectorRef<T>(...)` onto it before direct borrowed
 locals, explicit dereference, helper-return, inline `location(...)`, and richer

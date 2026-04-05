@@ -310,7 +310,7 @@ namespace std {
     return(take(dereference(slot)))
   }
 
-  [return<T>]
+  [return<Reference<T>>]
   soaColumnBorrowSlot<T>([SoaColumn<T>] values, [i32] index) {
     [Pointer<uninitialized<T>>] slot{soaColumnSlotUnsafe<T>(values, index)}
     return(borrow(dereference(slot)))
@@ -319,7 +319,7 @@ namespace std {
   [public return<T>]
   soaColumnRef<T>([SoaColumn<T>] values, [i32] index) {
     soaColumnCheckShape<T>(values)
-    return(soaColumnBorrowSlot<T>(values, index))
+    return(dereference(soaColumnBorrowSlot<T>(values, index)))
   }
 
   [return<void>]
@@ -3341,7 +3341,7 @@ namespace std {
   [public return<T>]
   soaColumnRead<T>([SoaColumn<T>] values, [i32] index) {
     soaColumnCheckIndex<T>(values, index)
-    return(soaColumnBorrowSlot<T>(values, index))
+    return(dereference(soaColumnBorrowSlot<T>(values, index)))
   }
 
   [public return<T0>]

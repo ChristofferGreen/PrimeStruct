@@ -409,7 +409,39 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     return &it->second;
   };
 
+  std::function<bool(const Expr &, std::string &)> resolveStorageRootExpr;
   std::function<bool(const Expr &, std::string &)> resolvePointerRoot;
+  resolveStorageRootExpr = [&](const Expr &expr, std::string &rootOut) -> bool {
+    if (expr.kind == Expr::Kind::Name) {
+      const BindingInfo *binding = resolveNamedBinding(expr.name);
+      if (binding == nullptr) {
+        return false;
+      }
+      std::string aliasRoot = pointerAliasRootForBinding(expr.name, *binding);
+      if (!aliasRoot.empty()) {
+        rootOut = std::move(aliasRoot);
+      } else {
+        rootOut = expr.name;
+      }
+      return true;
+    }
+    if (expr.kind != Expr::Kind::Call) {
+      return false;
+    }
+    std::string builtinName;
+    if (getBuiltinPointerName(expr, builtinName) && builtinName == "dereference" && expr.args.size() == 1) {
+      return resolvePointerRoot(expr.args.front(), rootOut);
+    }
+    if (expr.isFieldAccess && expr.args.size() == 1) {
+      std::string receiverRoot;
+      if (!resolveStorageRootExpr(expr.args.front(), receiverRoot) || receiverRoot.empty()) {
+        return false;
+      }
+      rootOut = receiverRoot + "." + expr.name;
+      return true;
+    }
+    return false;
+  };
   resolvePointerRoot = [&](const Expr &expr, std::string &rootOut) -> bool {
     if (expr.kind == Expr::Kind::Name) {
       const BindingInfo *binding = resolveNamedBinding(expr.name);
@@ -454,6 +486,19 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         return false;
       }
       return resolvePointerRoot(expr.args[0], rootOut);
+    }
+    const std::string resolvedCallPath = resolveCalleePath(expr);
+    const bool isSoaColumnSlotUnsafe =
+        resolvedCallPath.rfind("/std/collections/experimental_soa_storage/soaColumnSlotUnsafe", 0) == 0;
+    const bool isVectorSlotUnsafe =
+        resolvedCallPath.rfind("/std/collections/experimental_vector/vectorSlotUnsafe", 0) == 0;
+    if ((isSoaColumnSlotUnsafe || isVectorSlotUnsafe) && !expr.args.empty()) {
+      std::string storageRoot;
+      if (!resolveStorageRootExpr(expr.args.front(), storageRoot) || storageRoot.empty()) {
+        return false;
+      }
+      rootOut = storageRoot + ".data";
+      return true;
     }
     return false;
   };

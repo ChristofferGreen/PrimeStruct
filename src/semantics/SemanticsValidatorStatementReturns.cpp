@@ -161,10 +161,12 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
           return false;
         }
         for (const auto &param : params) {
-          if (param.binding.typeName != "Reference" && param.binding.typeName != "Pointer") {
-            continue;
+          std::string paramRoot;
+          if (param.binding.typeName == "Reference" || param.binding.typeName == "Pointer") {
+            paramRoot = referenceRootForReturnBinding(param.name, param.binding);
+          } else {
+            paramRoot = param.name;
           }
-          const std::string paramRoot = referenceRootForReturnBinding(param.name, param.binding);
           if (!paramRoot.empty() &&
               (candidateRoot == paramRoot || candidateRoot.rfind(paramRoot + ".", 0) == 0)) {
             return true;
