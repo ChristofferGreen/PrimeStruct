@@ -69,6 +69,10 @@ struct TypeResolutionGraphSnapshot {
   size_t requirementEdgeCount = 0;
   uint64_t prepareMillis = 0;
   uint64_t buildMillis = 0;
+  uint64_t prepareMaxMillis = 0;
+  uint64_t buildMaxMillis = 0;
+  bool prepareOverBudget = false;
+  bool buildOverBudget = false;
 };
 
 struct TypeResolutionReturnSnapshotEntry {

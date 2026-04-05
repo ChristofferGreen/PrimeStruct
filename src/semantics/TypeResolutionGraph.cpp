@@ -607,6 +607,10 @@ bool buildTypeResolutionGraphForTesting(Program program,
   }
   out.prepareMillis = graph.prepareMillis;
   out.buildMillis = graph.buildMillis;
+  out.prepareMaxMillis = graph.prepareMaxMillis;
+  out.buildMaxMillis = graph.buildMaxMillis;
+  out.prepareOverBudget = graph.prepareOverBudget;
+  out.buildOverBudget = graph.buildOverBudget;
   out.nodes.reserve(graph.nodes.size());
   for (const auto &node : graph.nodes) {
     out.nodes.push_back(TypeResolutionGraphSnapshotNode{
