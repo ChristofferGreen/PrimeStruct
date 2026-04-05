@@ -24,15 +24,6 @@ bool isSpecializedExperimentalStructTypeName(const std::string &name) {
          normalized.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
 }
 
-bool isStaticStructBinding(const Expr &stmt) {
-  for (const auto &transform : stmt.transforms) {
-    if (transform.name == "static") {
-      return true;
-    }
-  }
-  return false;
-}
-
 std::string normalizeLayoutTypeName(const std::string &name) {
   const std::string normalizedCollectionName = normalizeCollectionBindingTypeName(name);
   if (normalizedCollectionName != name) {
@@ -298,7 +289,7 @@ bool computeStructLayoutUncached(
   uint32_t offset = 0;
   size_t fieldIndex = 0;
   for (const auto &stmt : def.statements) {
-    if (!stmt.isBinding || isStaticStructBinding(stmt)) {
+    if (!stmt.isBinding) {
       continue;
     }
     if (fieldIndex >= fieldBindings.size()) {

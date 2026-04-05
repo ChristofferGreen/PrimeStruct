@@ -21,15 +21,6 @@ bool isSpecializedExperimentalCollectionTypeName(const std::string &typeName) {
          typeName.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
 }
 
-bool isStaticStructBinding(const Expr &stmt) {
-  for (const auto &transform : stmt.transforms) {
-    if (transform.name == "static") {
-      return true;
-    }
-  }
-  return false;
-}
-
 LayoutFieldBinding layoutFieldBindingFromSemanticProduct(
     const SemanticProgramStructFieldMetadata &fieldMetadata) {
   LayoutFieldBinding binding;
@@ -212,40 +203,45 @@ bool collectStructLayoutFieldBindings(
     if (!isStructDefinition(def, semanticProductTargets)) {
       continue;
     }
+    const std::vector<const SemanticProgramStructFieldMetadata *> *semanticFields = nullptr;
     if (semanticProductTargets != nullptr) {
-      if (const auto *semanticFields =
-              findSemanticProductStructFieldMetadata(*semanticProductTargets, def.fullPath);
-          semanticFields != nullptr && !semanticFields->empty()) {
-        std::vector<LayoutFieldBinding> fields;
-        fields.reserve(semanticFields->size());
-        for (const SemanticProgramStructFieldMetadata *fieldMetadata : *semanticFields) {
-          fields.push_back(layoutFieldBindingFromSemanticProduct(*fieldMetadata));
-        }
-        fieldsByStructOut.emplace(def.fullPath, std::move(fields));
-        continue;
-      }
+      semanticFields = findSemanticProductStructFieldMetadata(*semanticProductTargets, def.fullPath);
     }
     std::vector<LayoutFieldBinding> fields;
     std::unordered_map<std::string, LayoutFieldBinding> knownFields;
+    size_t semanticIndex = 0;
     fields.reserve(def.statements.size());
     for (const auto &stmt : def.statements) {
-      if (!stmt.isBinding || isStaticStructBinding(stmt)) {
+      if (!stmt.isBinding) {
         continue;
       }
       LayoutFieldBinding binding;
-      if (!resolveLayoutFieldBinding(def,
-                                     stmt,
-                                     knownFields,
-                                     structNames,
-                                     resolveStructTypePath,
-                                     resolveStructLayoutExprPath,
-                                     defMap,
-                                     binding,
-                                     errorOut)) {
-        return false;
+      if (semanticFields != nullptr && !semanticFields->empty() && !isStaticStructBinding(stmt)) {
+        if (semanticIndex >= semanticFields->size()) {
+          errorOut = "internal error: mismatched struct field info for " + def.fullPath;
+          return false;
+        }
+        binding = layoutFieldBindingFromSemanticProduct(*(*semanticFields)[semanticIndex]);
+        ++semanticIndex;
+      } else {
+        if (!resolveLayoutFieldBinding(def,
+                                       stmt,
+                                       knownFields,
+                                       structNames,
+                                       resolveStructTypePath,
+                                       resolveStructLayoutExprPath,
+                                       defMap,
+                                       binding,
+                                       errorOut)) {
+          return false;
+        }
       }
       knownFields[stmt.name] = binding;
       fields.push_back(std::move(binding));
+    }
+    if (semanticFields != nullptr && !semanticFields->empty() && semanticIndex != semanticFields->size()) {
+      errorOut = "internal error: mismatched struct field info for " + def.fullPath;
+      return false;
     }
     fieldsByStructOut.emplace(def.fullPath, std::move(fields));
   }
@@ -292,7 +288,7 @@ bool resolveStructLayoutFieldBinding(
   const auto &fieldBindings = fieldInfoIt->second;
   size_t fieldIndex = 0;
   for (const auto &stmt : def.statements) {
-    if (!stmt.isBinding || isStaticStructBinding(stmt)) {
+    if (!stmt.isBinding) {
       continue;
     }
     if (fieldIndex >= fieldBindings.size()) {

@@ -612,6 +612,11 @@ bool buildTypeResolutionGraphForTesting(Program program,
         break;
     }
   }
+  const CondensationDag dag = computeTypeResolutionDependencyDag(graph);
+  size_t maxSccSize = 0;
+  for (const auto &component : dag.nodes) {
+    maxSccSize = std::max(maxSccSize, component.memberNodeIds.size());
+  }
   out.sccCount = dag.nodes.size();
   out.sccMaxSize = maxSccSize;
   out.prepareMillis = graph.prepareMillis;
