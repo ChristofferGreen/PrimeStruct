@@ -383,6 +383,40 @@ main([bool] flag) {
   CHECK(hasLabel("/leaf"));
 }
 
+TEST_CASE("type resolution graph local binding invalidation counts bindings") {
+  const std::string source = R"(
+[return<i32>]
+main() {
+  [auto] first{1i32}
+  [auto] second{plus(first, 2i32)}
+  return(second)
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionGraphSnapshot graph;
+  REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, graph));
+  CHECK(error.empty());
+
+  CHECK(graph.invalidationLocalBindingCount == 2u);
+}
+
+TEST_CASE("type resolution graph control-flow invalidation counts if calls") {
+  const std::string source = R"(
+[return<i32>]
+main() {
+  return(if(true, 1i32, 2i32))
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionGraphSnapshot graph;
+  REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, graph));
+  CHECK(error.empty());
+
+  CHECK(graph.invalidationControlFlowCount == 1u);
+}
+
 TEST_CASE("type resolution graph initializer-shape invalidation tracks bindings") {
   const std::string source = R"(
 [return<i32>]
