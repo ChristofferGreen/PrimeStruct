@@ -34,6 +34,62 @@ std::optional<uint64_t> readGraphMetricBudget(const char *envName) {
   return static_cast<uint64_t>(parsed);
 }
 
+struct InvalidationCounts {
+  uint64_t localBinding = 0;
+  uint64_t controlFlow = 0;
+  uint64_t initializerShape = 0;
+  uint64_t definitionSignature = 0;
+  uint64_t importAlias = 0;
+  uint64_t receiverType = 0;
+};
+
+void countInvalidationExpr(const Expr &expr, InvalidationCounts &counts) {
+  if (isIfCall(expr) || isMatchCall(expr)) {
+    ++counts.controlFlow;
+  }
+  if (expr.isMethodCall) {
+    ++counts.receiverType;
+  }
+  for (const auto &arg : expr.args) {
+    countInvalidationExpr(arg, counts);
+  }
+  for (const auto &bodyExpr : expr.bodyArguments) {
+    countInvalidationExpr(bodyExpr, counts);
+  }
+}
+
+InvalidationCounts computeInvalidationCounts(const Program &program) {
+  InvalidationCounts counts;
+  counts.definitionSignature = program.definitions.size();
+  counts.importAlias = program.imports.size();
+  for (const auto &def : program.definitions) {
+    for (const auto &param : def.parameters) {
+      countInvalidationExpr(param, counts);
+    }
+    for (const auto &stmt : def.statements) {
+      if (stmt.isBinding) {
+        ++counts.localBinding;
+        if (!stmt.args.empty() || !stmt.bodyArguments.empty()) {
+          ++counts.initializerShape;
+        }
+      }
+      countInvalidationExpr(stmt, counts);
+    }
+    if (def.returnExpr.has_value()) {
+      countInvalidationExpr(*def.returnExpr, counts);
+    }
+  }
+  for (const auto &exec : program.executions) {
+    for (const auto &arg : exec.arguments) {
+      countInvalidationExpr(arg, counts);
+    }
+    for (const auto &bodyExpr : exec.bodyArguments) {
+      countInvalidationExpr(bodyExpr, counts);
+    }
+  }
+  return counts;
+}
+
 bool hasTransformNamed(const std::vector<Transform> &transforms, std::string_view name) {
   for (const auto &transform : transforms) {
     if (transform.name == name) {
@@ -478,10 +534,17 @@ bool buildTypeResolutionGraphForProgram(Program program,
     return false;
   }
   const auto prepEnd = std::chrono::steady_clock::now();
+  const InvalidationCounts invalidationCounts = computeInvalidationCounts(program);
   out = buildTypeResolutionGraph(program);
   out.prepareMillis =
       static_cast<uint64_t>(
           std::chrono::duration_cast<std::chrono::milliseconds>(prepEnd - prepStart).count());
+  out.invalidationLocalBindingCount = invalidationCounts.localBinding;
+  out.invalidationControlFlowCount = invalidationCounts.controlFlow;
+  out.invalidationInitializerShapeCount = invalidationCounts.initializerShape;
+  out.invalidationDefinitionSignatureCount = invalidationCounts.definitionSignature;
+  out.invalidationImportAliasCount = invalidationCounts.importAlias;
+  out.invalidationReceiverTypeCount = invalidationCounts.receiverType;
   if (const auto maxPrepare = readGraphMetricBudget("PRIMESTRUCT_GRAPH_PREPARE_MS_MAX");
       maxPrepare.has_value()) {
     out.prepareMaxMillis = *maxPrepare;
