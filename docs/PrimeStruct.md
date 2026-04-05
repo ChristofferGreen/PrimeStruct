@@ -3486,8 +3486,9 @@ foothold is the indexed/field-level borrowed projection surface (`ref(...).field
 `ref(...)` values. Those projections are recomputed per use through the existing
 `soaVectorGet(...).field` / `soaVectorRef(...).field` rewrite and lowering path, so they do
 not yet materialize a standalone borrowed object that can survive later wrapper mutation. The
-remaining borrowed-view work therefore starts when standalone `ref(...)` values or
-standalone borrowed field-view values exist on top of the same substrate. Successful experimental
+remaining borrowed-view work therefore starts by materializing standalone `ref(...)` values,
+then standalone borrowed field-view values, on top of the same substrate before later
+invalidation rules can apply to anything persistent. Successful experimental
 `value.field()[i]` indexing now has its first completed read-only reflected slices on top of
 the current substrate for direct wrapper receivers, borrowed local shorthand, inline
 `location(...)` borrow expressions, explicitly dereferenced borrowed local receivers, borrowed
@@ -3514,10 +3515,10 @@ read-only path.
     (`ref(...).field`, `.ref(i).field`, and `value.field()[i]`-style reads/writes), but those
     projections are recomputed per use through the helper rewrite path and do not yet
     materialize a standalone borrowed object that needs its own persisted invalidation state.
-    The remaining implementation work therefore starts with growth invalidation, later
-    shrink/motion invalidation, storage-replacement/destruction invalidation, and
-    provenance/escape rules for later standalone `ref(...)` values plus later standalone field-view
-    values on those same receiver families.
+    The remaining implementation work therefore starts by materializing standalone `ref(...)`
+    values and richer standalone field-view values on those same receiver families, then
+    layering growth invalidation, later shrink/motion invalidation, storage-replacement/
+    destruction invalidation, and provenance/escape rules on top.
   - **Richer borrowed field-view contract:** the next borrowed-view slice should treat
     standalone field-view expressions as first-class non-owning column views rather than
     keeping `borrowed.field()` / `field(borrowed)` on the compiler-owned pending-diagnostic

@@ -1072,6 +1072,9 @@ projection surface (`ref(...).field`, `.ref(i).field`, and `value.field()[i]`-st
 reads/writes) rather than standalone `ref(...)` values. Those projections are recomputed per use
 through the existing `soaVectorGet(...).field` / `soaVectorRef(...).field` helper path, so they
 do not yet materialize a standalone borrowed object that survives later wrapper mutation.
+The next implementation step is therefore to materialize standalone `ref(...)` values first,
+then richer standalone borrowed field-view values on top of the same substrate, before later
+invalidation rules can apply to anything persistent.
 Read-only wrapper field-view indexing now routes both method-form `values.field()[i]`
 and call-form `field(values)[i]` reflected reads, plus borrowed local `borrowed.field()[i]`,
 inline `location(values).field()[i]` / `field(dereference(location(values)))[i]`,
@@ -1125,9 +1128,9 @@ Those writes should preserve the same invalidation rules as other borrowed SoA v
 should not reintroduce builtin-only mutation branches outside the experimental helper path.
 The remaining implementation work naturally splits into direct/borrowed-local receivers,
 helper-return and method-like helper-return receivers, and inline `location(...)`-wrapped
-receivers. The same invalidation boundary therefore starts with later standalone `ref(...)`
-values and later standalone borrowed field-view values rather than the current indexed
-projection syntax. The remaining implementation slices are growth invalidation, later
+receivers. The same invalidation boundary therefore starts with materializing later standalone
+`ref(...)` values and later standalone borrowed field-view values rather than the current indexed
+projection syntax. The remaining implementation slices are then growth invalidation, later
 shrink/motion invalidation, storage-replacement/destruction invalidation, and provenance/escape
 rules for those later standalone borrowed surfaces on `location(...)`, helper-return, and
 method-like helper-return receivers.
