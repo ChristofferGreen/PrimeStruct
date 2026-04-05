@@ -7,6 +7,13 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Extended standalone borrowed-value typing across pointer/reference-backed
+  `borrow(dereference(slot))` storage. Completed: standalone `[Reference<T>]`
+  bindings now validate through dereference-backed `uninitialized<T>` storage in
+  regular bindings plus block-expression and `if`-branch binding sites, while
+  the next remaining borrowed-view work starts at exposing that same carrier
+  through `soaColumnBorrowSlot<T>(...)` and `vectorBorrowSlot<T>(...)`.
+
 - ✓ Introduced direct-storage standalone borrowed-value typing so `[Reference<T>]`
   bindings can use `borrow(storage)` without `location(...)`. Completed: direct local and
   field storage now validate through that borrowed-value carrier, including regular binding,

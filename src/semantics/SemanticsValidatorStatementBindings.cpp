@@ -478,8 +478,13 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       }
       return binding.typeName + "<" + binding.typeTemplateArg + ">";
     };
-    auto isDirectBorrowStorageExpr = [&](const Expr &candidate) {
+    auto isStandaloneBorrowStorageExpr = [&](const Expr &candidate) {
       if (candidate.kind == Expr::Kind::Name) {
+        return true;
+      }
+      std::string builtinName;
+      if (candidate.kind == Expr::Kind::Call && getBuiltinPointerName(candidate, builtinName) &&
+          builtinName == "dereference" && candidate.args.size() == 1) {
         return true;
       }
       return candidate.kind == Expr::Kind::Call && candidate.isFieldAccess && candidate.args.size() == 1;
@@ -490,7 +495,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         return false;
       }
       const Expr &storage = expr.args.front();
-      if (!isDirectBorrowStorageExpr(storage)) {
+      if (!isStandaloneBorrowStorageExpr(storage)) {
         return false;
       }
       BindingInfo binding;
@@ -650,6 +655,11 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     resolveBorrowRootExpr = [&](const Expr &targetExpr, std::string &rootOut) -> bool {
       if (targetExpr.kind == Expr::Kind::Name) {
         return resolveBorrowRoot(targetExpr.name, rootOut);
+      }
+      std::string builtinName;
+      if (targetExpr.kind == Expr::Kind::Call && getBuiltinPointerName(targetExpr, builtinName) &&
+          builtinName == "dereference" && targetExpr.args.size() == 1) {
+        return resolvePointerRoot(targetExpr.args.front(), rootOut);
       }
       if (targetExpr.kind == Expr::Kind::Call && targetExpr.isFieldAccess && targetExpr.args.size() == 1) {
         std::string receiverRoot;

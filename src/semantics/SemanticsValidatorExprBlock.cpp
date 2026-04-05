@@ -95,8 +95,11 @@ bool SemanticsValidator::validateBlockExpr(const std::vector<ParameterInfo> &par
           }
           if (!candidate.isMethodCall && isSimpleCallName(candidate, "borrow") && candidate.args.size() == 1) {
             const Expr &storage = candidate.args.front();
+            std::string builtinName;
             if (storage.kind == Expr::Kind::Name ||
-                (storage.kind == Expr::Kind::Call && storage.isFieldAccess && storage.args.size() == 1)) {
+                (storage.kind == Expr::Kind::Call && storage.isFieldAccess && storage.args.size() == 1) ||
+                (storage.kind == Expr::Kind::Call && getBuiltinPointerName(storage, builtinName) &&
+                 builtinName == "dereference" && storage.args.size() == 1)) {
               BindingInfo binding;
               bool resolved = false;
               if (resolveUninitializedStorageBinding(params, blockLocals, storage, binding, resolved) &&

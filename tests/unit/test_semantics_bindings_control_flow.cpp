@@ -146,6 +146,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("block expression accepts dereferenced uninitialized borrow reference binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [uninitialized<i32>] storage{uninitialized<i32>()}
+  [Reference<uninitialized<i32>>] storage_ref{location(storage)}
+  init(dereference(storage_ref), 7i32)
+  return(block(){
+    [Reference<i32>] ref{borrow(dereference(storage_ref))}
+    dereference(ref)
+  })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("block expression allows explicit return value") {
   const std::string source = R"(
 [return<int>]
@@ -219,6 +237,26 @@ main() {
   init(storage, 9i32)
   return(if(true, then(){
     [Reference<i32>] ref{borrow(storage)}
+    dereference(ref)
+  }, else(){
+    0i32
+  }))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("if expression branch accepts dereferenced uninitialized borrow reference binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [uninitialized<i32>] storage{uninitialized<i32>()}
+  [Reference<uninitialized<i32>>] storage_ref{location(storage)}
+  init(dereference(storage_ref), 9i32)
+  return(if(true, then(){
+    [Reference<i32>] ref{borrow(dereference(storage_ref))}
     dereference(ref)
   }, else(){
     0i32

@@ -132,7 +132,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("uninitialized dereferenced borrow still rejects reference binding") {
+TEST_CASE("uninitialized dereferenced borrow validates reference binding") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -144,8 +144,24 @@ main() {
 }
 )";
   std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("uninitialized dereferenced borrow rejects reference binding type mismatch") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [uninitialized<i64>] storage{uninitialized<i64>()}
+  [Reference<uninitialized<i64>>] storage_ref{location(storage)}
+  init(dereference(storage_ref), 7i64)
+  [Reference<i32>] ref{borrow(dereference(storage_ref))}
+  return(0i32)
+}
+)";
+  std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("Reference bindings require location(...)") != std::string::npos);
+  CHECK(error.find("Reference binding type mismatch") != std::string::npos);
 }
 
 TEST_SUITE_END();

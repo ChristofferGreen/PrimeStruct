@@ -105,13 +105,24 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_uninitialized_borrow.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_uninitialized_borrow_err.txt").string();
-  const std::string runCmd =
-      "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("Reference bindings require location(...)") !=
-        std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 9);
+}
+
+TEST_CASE("runs vm with dereferenced uninitialized borrow") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [uninitialized<i32>] storage{uninitialized<i32>()}
+  [Reference<uninitialized<i32>>] storage_ref{location(storage)}
+  init(dereference(storage_ref), 9i32)
+  [Reference<i32>] ref{borrow(dereference(storage_ref))}
+  return(dereference(ref))
+}
+)";
+  const std::string srcPath = writeTemp("vm_uninitialized_deref_borrow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 9);
 }
 
 TEST_CASE("runs vm with uninitialized struct field") {
