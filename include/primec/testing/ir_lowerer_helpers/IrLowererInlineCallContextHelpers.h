@@ -3,6 +3,8 @@
 
 
 struct Definition;
+struct OnErrorHandler;
+struct ResultReturnInfo;
 struct ReturnInfo;
 
 struct InlineDefinitionCallContextSetup {

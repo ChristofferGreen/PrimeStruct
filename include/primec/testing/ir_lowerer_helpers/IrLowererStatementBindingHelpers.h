@@ -3,6 +3,7 @@
 
 
 struct Definition;
+struct ResultReturnInfo;
 struct ReturnInfo;
 struct StructSlotLayoutInfo;
 struct UninitializedStorageAccessInfo;

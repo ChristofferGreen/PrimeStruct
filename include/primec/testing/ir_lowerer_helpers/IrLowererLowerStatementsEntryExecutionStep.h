@@ -3,6 +3,8 @@
 
 
 struct Definition;
+struct OnErrorHandler;
+struct ResultReturnInfo;
 
 struct LowerStatementsEntryExecutionStepInput {
   const Definition *entryDef = nullptr;

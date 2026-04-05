@@ -765,6 +765,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const auto inlineCallContextHelpersHeader =
       readFile("include/primec/testing/ir_lowerer_helpers/IrLowererInlineCallContextHelpers.h");
   CHECK(inlineCallContextHelpersHeader.find("struct Definition;") != std::string::npos);
+  CHECK(inlineCallContextHelpersHeader.find("struct OnErrorHandler;") != std::string::npos);
+  CHECK(inlineCallContextHelpersHeader.find("struct ResultReturnInfo;") != std::string::npos);
   CHECK(inlineCallContextHelpersHeader.find("struct ReturnInfo;") != std::string::npos);
 
   const auto lowerEffectsHeader = readFile("include/primec/testing/ir_lowerer_helpers/IrLowererLowerEffects.h");
@@ -796,11 +798,13 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
       readFile("include/primec/testing/ir_lowerer_helpers/IrLowererOnErrorHelpers.h");
   CHECK(onErrorHelpersHeader.find("struct Program;") != std::string::npos);
   CHECK(onErrorHelpersHeader.find("struct Definition;") != std::string::npos);
+  CHECK(onErrorHelpersHeader.find("struct OnErrorHandler;") != std::string::npos);
   CHECK(onErrorHelpersHeader.find("struct SemanticProgram;") != std::string::npos);
 
   const auto returnInferenceHelpersHeader =
       readFile("include/primec/testing/ir_lowerer_helpers/IrLowererReturnInferenceHelpers.h");
   CHECK(returnInferenceHelpersHeader.find("struct Definition;") != std::string::npos);
+  CHECK(returnInferenceHelpersHeader.find("struct ResultReturnInfo;") != std::string::npos);
   CHECK(returnInferenceHelpersHeader.find("struct ReturnInfo;") != std::string::npos);
   CHECK(returnInferenceHelpersHeader.find("struct SemanticProgram;") != std::string::npos);
 
@@ -812,7 +816,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
 
   CHECK(statementCallHelpersHeader.find("struct Definition;") != std::string::npos);
   CHECK(statementCallHelpersHeader.find("struct IrFunction;") != std::string::npos);
+  CHECK(statementCallHelpersHeader.find("struct OnErrorHandler;") != std::string::npos);
   CHECK(statementCallHelpersHeader.find("struct Program;") != std::string::npos);
+  CHECK(statementCallHelpersHeader.find("struct ResultReturnInfo;") != std::string::npos);
   CHECK(statementCallHelpersHeader.find("struct ReturnInfo;") != std::string::npos);
   CHECK(statementCallHelpersHeader.find("struct SemanticProgram;") != std::string::npos);
 
@@ -846,6 +852,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const auto lowerStatementsEntryExecutionStepHeader = readFile(
       "include/primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsEntryExecutionStep.h");
   CHECK(lowerStatementsEntryExecutionStepHeader.find("struct Definition;") != std::string::npos);
+  CHECK(lowerStatementsEntryExecutionStepHeader.find("struct OnErrorHandler;") !=
+        std::string::npos);
+  CHECK(lowerStatementsEntryExecutionStepHeader.find("struct ResultReturnInfo;") !=
+        std::string::npos);
 
   const auto lowerStatementsSourceMapStepHeader =
       readFile("include/primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsSourceMapStep.h");
@@ -864,6 +874,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const auto statementBindingHelpersHeader =
       readFile("include/primec/testing/ir_lowerer_helpers/IrLowererStatementBindingHelpers.h");
   CHECK(statementBindingHelpersHeader.find("struct Definition;") != std::string::npos);
+  CHECK(statementBindingHelpersHeader.find("struct ResultReturnInfo;") != std::string::npos);
   CHECK(statementBindingHelpersHeader.find("struct ReturnInfo;") != std::string::npos);
 
   const auto structFieldBindingHelpersHeader =
