@@ -69,6 +69,17 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
     - ✓ Route the shared synthetic `/soa_vector/field_view/<field>` helper path onto that strided field-view carrier instead of the current pending diagnostic. Completed: standalone field-view calls now rewrite onto `soaVectorFieldView<...>` which returns the strided `SoaFieldView` carrier.
     - ✓ Preserve borrowed field-view semantics across local binding, pass-through, and return surfaces instead of materializing owning vector values. Completed: bound/passed/returned `SoaFieldView<T>` values now rewrite indexed access through the strided `soaFieldViewRead/Ref` helpers.
 
+**Todo Cleanup (April 5, 2026, continued)**
+
+**Group 12 - Semantics/lowering boundary**
+Boundary note: this group is now split into semantic-product creation, pipeline plumbing, lowering cutover, and cleanup so it can be worked incrementally instead of as one flat migration queue.
+
+Lowering cutover:
+- ✓ Implement the `prepareIrModule` / `IrLowerer::lower` entrypoint cutover now that the handoff contract is documented. Completed: production entrypoints now pass the semantic product into `prepareIrModule(...)` and the main `IrLowerer::lower(...)` path; lowerer-wide effect validation, import/layout setup, and helper/local setup now prefer semantic-product-backed lowering facts, and the legacy raw-`Program` compatibility overload is now retired under helper-surface cleanup.
+
+Coverage and migration cleanup:
+- ✓ Migrate tests and public testing helpers from `primec/testing/SemanticsValidationHelpers.h` now that their boundary/migration contract is documented, moving lowering-facing assertions onto the semantic-product inspection surface. Completed: lowering-facing dump, compile-pipeline, and backend-facing assertions now route through semantic-product-aware helper surfaces, graph/type-resolution testing snapshots now live in `primec/testing/SemanticsGraphHelpers.h`, `primec/testing/SemanticsValidationHelpers.h` is reduced to syntax-owned canonicalization/assertion helpers, the legacy raw-`Program` `IrLowerer::lower(...)` compatibility overload plus its final fallback parity case are gone, the public prepared-IR pipeline helper is internalized, no redundant public backend helper entrypoints or backend-facing compatibility shims remain, and the testing-only semantic snapshot transport layer is fully deleted.
+
 **Todo Cleanup (April 3, 2026, continued)**
 
 - ✓ Invalidated standalone `ref(...)` carriers on shrink/motion helpers.
