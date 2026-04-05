@@ -41,8 +41,14 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
     - ○ Add a negative diagnostic fixture that proves the adapter boundary rejects mismatches.
 - ◐ Implement the graph-backed explicit/implicit template-inference migrations now that the cutover contract is documented. Progress: the remaining template cutover is now split into explicit template-argument, implicit inference, and revalidation/monomorph follow-up slices instead of one umbrella migration bullet.
   - ○ Migrate the next explicit template-argument inference surface onto the graph path.
+    - ○ Select the explicit template-argument inference surface to migrate.
+    - ○ Land the migration plus matching graph conformance coverage for that surface.
   - ○ Migrate the next implicit template-inference surface onto the graph path.
+    - ○ Select the implicit template-inference surface to migrate.
+    - ○ Land the migration plus matching graph conformance coverage for that surface.
   - ○ Migrate the matching revalidation/monomorph follow-up for those template-inference surfaces onto the graph path.
+    - ○ Identify the revalidation/monomorph follow-up needed for the migrated surfaces.
+    - ○ Land the follow-up and conformance coverage.
 - ◐ Implement the next omitted-envelope and local-`auto` graph expansions now that the widening contract is documented. Progress: the widening work is now split into omitted-envelope facts, new initializer families, and control-flow join widening slices instead of one umbrella expansion bullet.
   - ○ Materialize omitted-envelope graph facts for the next widening slice.
     - ○ Select the next omitted-envelope family to model in the graph.
