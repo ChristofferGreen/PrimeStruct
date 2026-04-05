@@ -3308,7 +3308,7 @@ the remaining lowering bridge from builtin `/soa_vector` values to experimental 
 `SoaVector<T>` parameters instead of on the older imported method `get/ref` unknown-target gap.
 Conversion cleanup itself is now complete on that bridged bare/direct/method/slash-method path. Lowerer,
 backend, runtime-code, and diagnostic/test helper-call/conversion/successful-field-view cleanup are also complete,
-so the remaining SoA work is richer borrowed/mutating field-view behavior rather than more layer-local routing
+so the remaining SoA work is later borrowed-view lifetime/provenance behavior rather than more layer-local routing
 removal. Runtime-code helper-call cleanup is now complete because no production
 runtime-side helper routing remains outside the semantics/lowering/emitter/backend layers, and
 diagnostic/test helper-call cleanup is now complete as well because direct canonical helper
@@ -3319,7 +3319,7 @@ IR-lowerer, and semantic-dump coverage lock both direct-canonical and imported-h
 no-import root raw-builtin bare/direct/method/slash-method `to_aos` now also lock to the canonical
 `/std/collections/soa_vector/to_aos__...` helper path through lowering plus C++/VM execution.
 Runtime-code helper/conversion/field-view cleanup and the matching diagnostic/test special-case cleanup are therefore
-complete; the remaining live SoA work is richer field-view behavior, not more runtime-side routing removal. The current
+complete; the remaining live SoA work is later borrowed-view lifetime/provenance behavior, not more runtime-side routing removal. The current
 successful field-view indexing surface is already locked by compile-run, dump, and source-level coverage rather than
 backend-local routing contracts. The wrapper now also exposes `soaVectorRef<T>()`
 into bare `/get` / `/ref`-style fallback names. Explicit canonical slash-method attempts like
@@ -3470,9 +3470,9 @@ Standalone builtin field-view call forms now route through the shared synthetic
 path instead of a dedicated `SemanticsValidatorExprMapSoaBuiltins.cpp` fallback,
 and resolved helper-form field-view rejects now reuse the shared unavailable-method
 helper path instead of an inline pending-diagnostic branch there.
-The remaining follow-up is therefore richer borrowed-view semantics on top of
-the experimental substrate rather than more compiler-owned pending plumbing or
-another indexed-write bridge. The broader experimental wrapper/helper surface through imported
+The remaining follow-up is therefore later borrowed-view lifetime/provenance rules on top of
+the experimental substrate rather than more compiler-owned pending plumbing or another indexed-write
+bridge. The broader experimental wrapper/helper surface through imported
 `to_aos` helper and method routing is now in place across C++/native/VM for both empty and
 non-empty wrapper state, and stale post-semantics bare `to_aos(...)` target classification is
 now gone from the shared emitter/lowerer path as well. The remaining backend-side
@@ -3514,7 +3514,7 @@ dereferenced borrowed helper-return receivers, with both method-form `value.fiel
 call-form `field(value)[i]` read-only syntax now working on those receivers, while those same borrowed helper-return
 receivers now also share the completed read-only method surface for `get`, `ref`, and
 `to_aos` with the other borrowed wrapper receivers. The remaining
-field-view work is richer borrowed/mutating behavior rather than backend cleanup for that
+field-view work is the later borrowed-view lifetime/provenance rules rather than backend cleanup for that
 read-only path.
   - **Borrowed-view invalidation contract:** the next language-level substrate slice should treat
     standalone `ref(...)` values and future standalone field-view borrows as ephemeral views over
@@ -3599,7 +3599,8 @@ read-only path.
     `soaVectorFieldView<...>` and return a non-owning strided view. Bound, passed,
     and returned field-view values now preserve borrowed semantics by rewriting
     indexed access through `soaFieldViewRead/Ref` helpers; the remaining work is
-    the standalone mutating field-view write surfaces.
+    the later borrowed-view lifetime/provenance rules once standalone field-view
+    values participate in the same invalidation boundary as `ref(...)` carriers.
   - **Standalone mutating field-view contract:** standalone method-form and call-form
     `assign(value.field(), next)` / `assign(field(value), next)` writes now lower through
     `soaVectorFieldView(...)` plus `soaFieldViewRef<T>(..., 0)` dereference writes for the
