@@ -11,6 +11,11 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
   `soaColumnRef<T>(...)` substrate step and the later experimental-wrapper
   `SoaVector<T>.ref(i)` exposure step once the slot-borrow carrier primitive was
   in place.
+- ✓ Routed public `soaColumnRef<T>(...)` onto the standalone borrowed carrier
+  instead of dereferencing `soaColumnBorrowSlot<T>(...)`. Completed:
+  `soaColumnRef<T>(...)` now validates through `[public return<Reference<T>>]`,
+  and the direct semantics/C++/native/VM coverage now binds and dereferences
+  that borrowed carrier explicitly.
 - ✓ Preserved borrowed-root provenance through helper-returned slot pointers and
   routed the internal stdlib slot-borrow helpers onto the standalone borrowed-value
   carrier. Completed: `soaColumnSlotUnsafe<T>(...)` / `vectorSlotUnsafe<T>(...)`

@@ -96,7 +96,7 @@ namespace std {
   soaVectorRef<T>([SoaVector<T>] values, [i32] index) {
     soaVectorValidateType<T>()
     [SoaColumn<T>] storage{values.storage}
-    return(/std/collections/experimental_soa_storage/soaColumnRef<T>(storage, index))
+    return(dereference(/std/collections/experimental_soa_storage/soaColumnRef<T>(storage, index)))
   }
 
   [public effects(heap_alloc), return<void>]

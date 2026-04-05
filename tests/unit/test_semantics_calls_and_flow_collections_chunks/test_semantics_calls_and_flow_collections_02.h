@@ -2357,8 +2357,8 @@ main() {
   [SoaColumn<i32> mut] values{soaColumnNew<i32>()}
   soaColumnPush<i32>(values, 2i32)
   soaColumnPush<i32>(values, 5i32)
-  [i32] borrowed{soaColumnRef<i32>(values, 1i32)}
-  return(plus(borrowed, soaColumnCount<i32>(values)))
+  [Reference<i32>] borrowed{soaColumnRef<i32>(values, 1i32)}
+  return(plus(dereference(borrowed), soaColumnCount<i32>(values)))
 }
 )";
   std::string error;

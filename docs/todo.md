@@ -23,7 +23,7 @@ Roadmap note: completed map/vector migration and compatibility-cleanup slices no
             - ✓ Allow helper `return<Reference<T>>` contracts to return borrowed-value carrier expressions rooted in parameter-owned storage.
             - ✓ Preserve borrowed-root provenance through helper-returned slot pointers such as `soaColumnSlotUnsafe<T>(...)` and `vectorSlotUnsafe<T>(...)`.
             - ✓ Route `soaColumnBorrowSlot<T>(...)` and `vectorBorrowSlot<T>(...)` helper contracts onto that standalone borrowed-value carrier instead of `[return<T>]`.
-        - ○ Route public `soaColumnRef<T>(...)` onto a standalone borrowed element-view carrier instead of dereferencing `soaColumnBorrowSlot<T>(...)`.
+        - ✓ Route public `soaColumnRef<T>(...)` onto a standalone borrowed element-view carrier instead of dereferencing `soaColumnBorrowSlot<T>(...)`. Completed: `soaColumnRef<T>(...)` now validates through `[public return<Reference<T>>]`, and direct semantics/C++/native/VM coverage now binds and dereferences that standalone borrowed carrier explicitly instead of collapsing back to whole-element `T`.
         - ○ Route experimental-wrapper `SoaVector<T>.ref(i)` and `soaVectorRef<T>(...)` onto `soaColumnRef<T>(...)`'s standalone borrowed element-view carrier instead of returning whole-element `T`.
       - ○ Route direct borrowed locals onto that standalone borrowed element-view carrier.
       - ○ Route explicitly dereferenced borrowed receivers onto that standalone borrowed element-view carrier.

@@ -316,10 +316,10 @@ namespace std {
     return(borrow(dereference(slot)))
   }
 
-  [public return<T>]
+  [public return<Reference<T>>]
   soaColumnRef<T>([SoaColumn<T>] values, [i32] index) {
     soaColumnCheckShape<T>(values)
-    return(dereference(soaColumnBorrowSlot<T>(values, index)))
+    return(soaColumnBorrowSlot<T>(values, index))
   }
 
   [return<void>]
