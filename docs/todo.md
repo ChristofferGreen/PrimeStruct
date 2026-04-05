@@ -24,6 +24,8 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
     - ○ Select the next direct-call inference island to move onto the graph path.
     - ○ Land the migration plus matching graph conformance coverage for that island.
   - ○ Migrate the next receiver/method-call non-template inference island onto the graph path.
+    - ○ Select the next receiver/method-call inference island to move onto the graph path.
+    - ○ Land the migration plus matching graph conformance coverage for that island.
   - ○ Migrate the next collection helper/access fallback non-template inference island onto the graph path.
 - ◐ Implement the graph/CT-eval interaction contract now that the boundary is documented. Progress: the remaining work is now split into shared dependency-state consumption, explicit adapter seams, and conformance coverage instead of one broad CT-eval handoff item.
   - ○ Route graph-backed consumers onto shared dependency-state consumption where CT-eval and graph validation overlap.
