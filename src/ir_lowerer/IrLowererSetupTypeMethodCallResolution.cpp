@@ -107,6 +107,10 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     const GetReturnInfoForPathFn &getReturnInfo,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut) {
+  static const std::unordered_map<std::string, std::string> noImportAliases;
+  const auto &semanticAwareImportAliases =
+      semanticProductTargets != nullptr ? noImportAliases : importAliases;
+
   if (callExpr.kind != Expr::Kind::Call || callExpr.isBinding) {
     return nullptr;
   }
@@ -231,7 +235,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   if (!resolveMethodReceiverTarget(*receiver,
                                    localsIn,
                                    callExpr.name,
-                                   importAliases,
+                                   semanticAwareImportAliases,
                                    structNames,
                                    inferExprKind,
                                    resolveExprPath,
@@ -266,8 +270,8 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         return resolved;
       }
     }
-    auto aliasIt = importAliases.find(receiverTypeName);
-    if (aliasIt == importAliases.end()) {
+    auto aliasIt = semanticAwareImportAliases.find(receiverTypeName);
+    if (aliasIt == semanticAwareImportAliases.end()) {
       return nullptr;
     }
     const std::string aliasTypeName = normalizeMapImportAliasPath(aliasIt->second);
@@ -307,8 +311,8 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         current.erase(slash);
       }
     }
-    auto importIt = importAliases.find(receiverTypeName);
-    if (importIt != importAliases.end() && structNames.count(importIt->second) > 0) {
+    auto importIt = semanticAwareImportAliases.find(receiverTypeName);
+    if (importIt != semanticAwareImportAliases.end() && structNames.count(importIt->second) > 0) {
       return importIt->second;
     }
     return "";
@@ -341,7 +345,8 @@ const Definition *resolveMethodCallDefinitionFromExpr(
           return inferred;
         }
       }
-      return resolveMethodReceiverStructTypePathFromCallExpr(expr, resolvedPath, importAliases, structNames);
+      return resolveMethodReceiverStructTypePathFromCallExpr(
+          expr, resolvedPath, semanticAwareImportAliases, structNames);
     };
     std::unordered_set<std::string> visitedDefs = {definition.fullPath};
     return inferStructReturnPathFromDefinition(
@@ -374,7 +379,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
                                                         isArrayCountCall,
                                                         isVectorCapacityCall,
                                                         isEntryArgsName,
-                                                        importAliases,
+                                                        semanticAwareImportAliases,
                                                         structNames,
                                                         inferExprKind,
                                                         resolveExprPath,

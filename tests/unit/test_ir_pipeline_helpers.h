@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "primec/CompilePipeline.h"
+#include "primec/EmitKind.h"
 #include "primec/IrBackends.h"
 #include "primec/IrLowerer.h"
 #include "primec/IrPreparation.h"

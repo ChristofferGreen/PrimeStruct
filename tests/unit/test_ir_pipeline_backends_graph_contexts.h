@@ -507,6 +507,17 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irMethodResolution.find("findSemanticProductMethodCallTarget(*semanticProductTargets, callExpr)") !=
         std::string::npos);
+  CHECK(irMethodResolution.find("const auto &semanticAwareImportAliases =") != std::string::npos);
+  CHECK(irMethodResolution.find("resolveMethodReceiverTarget(*receiver,") != std::string::npos);
+  CHECK(irMethodResolution.find("semanticAwareImportAliases,") != std::string::npos);
+  CHECK(irMethodResolution.find("resolveMethodCallDefinitionFromExpr(*receiver,") != std::string::npos);
+  CHECK(irMethodResolution.find("resolveMethodCallDefinitionFromExpr(*receiver,\n"
+                                "                                                        localsIn,\n"
+                                "                                                        isArrayCountCall,\n"
+                                "                                                        isVectorCapacityCall,\n"
+                                "                                                        isEntryArgsName,\n"
+                                "                                                        importAliases,") ==
+        std::string::npos);
   CHECK(irInferenceSetup.find(".semanticProductTargets = &callResolutionAdapters.semanticProductTargets,") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("struct SemanticProductTargetAdapter") != std::string::npos);
