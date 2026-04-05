@@ -216,7 +216,18 @@ TEST_CASE("type resolution graph dump stays stable for a simple call chain") {
       "  edge 1 kind=dependency source=1 target=2\n"
       "}\n";
 
-  CHECK(requireTypeResolutionGraphDump(source, "/main") == expected);
+  const std::string dump = requireTypeResolutionGraphDump(source, "/main");
+  const std::string header = "type_graph {\n";
+  REQUIRE(dump.rfind(header, 0) == 0);
+  const size_t metricsStart = header.size();
+  const size_t metricsEnd = dump.find('\n', metricsStart);
+  REQUIRE(metricsEnd != std::string::npos);
+  const std::string metricsLine = dump.substr(metricsStart, metricsEnd - metricsStart);
+  CHECK(metricsLine.rfind("  metrics ", 0) == 0);
+  CHECK(metricsLine.find("nodes=3") != std::string::npos);
+  CHECK(metricsLine.find("edges=2") != std::string::npos);
+  const std::string stripped = header + dump.substr(metricsEnd + 1);
+  CHECK(stripped == expected);
 }
 
 TEST_CASE("type resolution graph dump stays stable for mutual recursion") {
