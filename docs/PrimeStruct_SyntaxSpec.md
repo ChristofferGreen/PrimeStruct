@@ -1140,8 +1140,9 @@ dereference, borrowed helper returns, method-like helper returns, and inline
 contract as `ref(...)`, stay borrowed rather than materializing owning vectors, and may
 later distinguish read-only versus mutable borrowed receivers on top of the current
 `soaVectorGet(...)` / `soaVectorRef(...)` substrate. The remaining implementation work
-therefore starts with materializing a reusable standalone borrowed field-view carrier on
-that shared helper path, then preserving it across pass/return/local-binding surfaces.
+therefore starts with introducing a reusable standalone borrowed field-view carrier on
+that shared helper path, then routing the helper path onto it, and only after that
+preserving it across pass/return/local-binding surfaces.
 The remaining standalone mutating write step is that `assign(value.field(), next)` and
 `assign(field(value), next)` should stop on the pending diagnostic only until those
 receivers can lower through the existing writable wrapper substrate instead of mutating a

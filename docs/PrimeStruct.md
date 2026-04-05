@@ -3570,9 +3570,10 @@ read-only path.
     funnel through the same synthetic `/soa_vector/field_view/<field>` helper path across
     direct borrowed locals, explicit dereference, borrowed helper returns, method-like
     helper returns, and inline `location(...)`-wrapped receivers. The remaining
-    implementation work therefore starts with materializing a reusable standalone borrowed
-    field-view carrier on that shared helper path, then preserving that carrier across
-    local binding, helper pass-through, and return surfaces.
+    implementation work therefore starts with introducing a reusable standalone borrowed
+    field-view carrier on that shared helper path, then routing the helper path onto that
+    carrier, and only after that preserving it across local binding, helper pass-through,
+    and return surfaces.
   - **Standalone mutating field-view contract:** the remaining standalone mutating write slice
     should replace the current pending-only `assign(value.field(), next)` /
     `assign(field(value), next)` contract with the same writable column-view substrate that
