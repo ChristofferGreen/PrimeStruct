@@ -33,6 +33,8 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
   - ○ Migrate the matching revalidation/monomorph follow-up for those template-inference surfaces onto the graph path.
 - ◐ Implement the next omitted-envelope and local-`auto` graph expansions now that the widening contract is documented. Progress: the widening work is now split into omitted-envelope facts, new initializer families, and control-flow join widening slices instead of one umbrella expansion bullet.
   - ○ Materialize omitted-envelope graph facts for the next widening slice.
+    - ○ Select the next omitted-envelope family to model in the graph.
+    - ○ Add graph facts and coverage for that omitted-envelope family.
   - ○ Expand local-`auto` graph support across the next initializer-family surface.
   - ○ Expand local-`auto` graph support across the next control-flow join surface.
 - ✓ Implement graph performance guardrails and sustained perf coverage now that the regression-budget contract is documented. Completed: baseline metrics, regression thresholds/reporting, and sustained perf coverage are now in place.
