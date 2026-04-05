@@ -31,6 +31,7 @@ using ResolveCallDefinitionFn = std::function<const Definition *(const Expr &)>;
 using LookupDefinitionResultInfoFn = std::function<bool(const std::string &, ResultExprInfo &)>;
 using ResolveMethodCallWithLocalsFn = std::function<const Definition *(const Expr &, const LocalMap &)>;
 using LookupReturnInfoFn = std::function<bool(const std::string &, ReturnInfo &)>;
+using InferExprKindWithLocalsFn = std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
 using ResolveResultExprInfoWithLocalsFn =
     std::function<bool(const Expr &, const LocalMap &, ResultExprInfo &)>;
 struct ResultWhyCallOps;
@@ -88,6 +89,13 @@ enum class ResultOkMethodCallEmitResult {
   Emitted,
   Error,
 };
+struct PackedResultStructPayloadInfo {
+  bool supported = false;
+  bool isPackedSingleSlot = false;
+  LocalInfo::ValueKind packedKind = LocalInfo::ValueKind::Unknown;
+  int32_t slotCount = 0;
+  int32_t fieldOffset = 0;
+};
 std::string unsupportedPackedResultValueKindError(const std::string &builtinName);
 bool resolveSupportedPackedResultStructValueKind(
     const std::string &structType,
@@ -105,6 +113,12 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     std::string &error);
+bool inferPackedResultStructType(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const ResolveCallDefinitionFn &resolveDefinitionCall,
+    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
+    std::string &structTypeOut);
 ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
     const Expr &expr,
     const LocalMap &localsIn,
@@ -192,6 +206,26 @@ bool emitResultWhyCallWithComposedOps(
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
     const std::function<bool(int32_t)> &emitFileErrorWhy,
     std::string &error);
+bool usesInlineBufferResultErrorDiscriminator(const ResultExprInfo &resultInfo);
+bool isSupportedPackedResultCollectionKind(LocalInfo::Kind kind);
+bool resolveSupportedResultCollectionType(const std::string &typeText,
+                                          LocalInfo::Kind &collectionKindOut,
+                                          LocalInfo::ValueKind &valueKindOut,
+                                          LocalInfo::ValueKind *mapKeyKindOut = nullptr);
+bool isSupportedPackedResultValueKind(LocalInfo::ValueKind kind);
+bool isSupportedPackedResultValueInfo(const ResultExprInfo &info,
+                                     const std::function<bool(const std::string &, StructSlotLayoutInfo &)>
+                                         &resolveStructSlotLayout);
+bool resolvePackedResultStructPayloadInfo(
+    const std::string &structType,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    PackedResultStructPayloadInfo &out);
+bool resolveSupportedResultStructPayloadInfo(
+    const std::string &structType,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    bool &isPackedSingleSlotOut,
+    LocalInfo::ValueKind &packedKindOut,
+    int32_t &slotCountOut);
 bool isSupportedResultWhyErrorKind(LocalInfo::ValueKind kind);
 std::string normalizeResultWhyErrorName(const std::string &errorType, LocalInfo::ValueKind errorKind);
 void emitResultWhyErrorLocalFromResult(
@@ -246,4 +280,3 @@ ResultWhyCallEmitResult emitResolvedResultWhyCall(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResultWhyCallOps &ops,
     std::string &error);
-

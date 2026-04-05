@@ -37,12 +37,8 @@ void emitFileCloseIfValid(std::vector<IrInstruction> &instructions, int32_t loca
 void emitFileScopeCleanup(std::vector<IrInstruction> &instructions, const std::vector<int32_t> &scope);
 void emitAllFileScopeCleanup(std::vector<IrInstruction> &instructions,
                              const std::vector<std::vector<int32_t>> &fileScopeStack);
-bool emitStructCopyFromPtrs(std::vector<IrInstruction> &instructions,
-                            int32_t destPtrLocal,
-                            int32_t srcPtrLocal,
-                            int32_t slotCount);
 bool emitDestroyHelperFromPtr(
-    int32_t ptrLocal,
+    int32_t valuePtrLocal,
     const std::string &structPath,
     const Definition *destroyHelper,
     const LocalMap &localsIn,
@@ -56,6 +52,10 @@ bool emitMoveHelperFromPtrs(
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
     std::string &error);
+bool emitStructCopyFromPtrs(std::vector<IrInstruction> &instructions,
+                            int32_t destPtrLocal,
+                            int32_t srcPtrLocal,
+                            int32_t slotCount);
 bool emitStructCopySlots(std::vector<IrInstruction> &instructions,
                          int32_t destBaseLocal,
                          int32_t srcPtrLocal,
@@ -72,18 +72,21 @@ bool emitVectorDestroySlot(
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
     std::string &error);
-bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
-    int32_t valuesLocal,
-    int32_t valuesWrapperLocal,
-    int32_t ptrLocal,
-    int32_t keyLocal,
-    int32_t valueLocal,
-    LocalInfo::ValueKind mapKeyKind,
+bool emitVectorMoveSlot(
+    std::vector<IrInstruction> &instructions,
+    int32_t dataPtrLocal,
+    int32_t destIndexLocal,
+    int32_t srcIndexLocal,
+    LocalInfo::ValueKind indexKind,
+    const std::string &structPath,
+    const Definition *moveHelper,
+    const LocalMap &localsIn,
     const std::function<int32_t()> &allocTempLocal,
-    const std::function<void()> &emitPending,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm);
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    std::string &error);
+void emitDisarmTemporaryStructAfterCopy(const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+                                        int32_t srcPtrLocal,
+                                        const std::string &structPath);
 bool emitCompareToZero(std::vector<IrInstruction> &instructions,
                        LocalInfo::ValueKind kind,
                        bool equals,

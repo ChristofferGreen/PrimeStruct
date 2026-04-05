@@ -160,6 +160,73 @@ TEST_CASE("core IR test helpers expose semantic-product-aware lowering") {
         std::string::npos);
 }
 
+TEST_CASE("public lowerer testing headers stay in sync with semantic-product helper declarations") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path bindingTransformPath =
+      cwd / "include" / "primec" / "testing" / "ir_lowerer_helpers" / "IrLowererBindingTransformHelpers.h";
+  std::filesystem::path flowHelpersPath =
+      cwd / "include" / "primec" / "testing" / "ir_lowerer_helpers" / "IrLowererFlowHelpers.h";
+  std::filesystem::path inlineParamPath =
+      cwd / "include" / "primec" / "testing" / "ir_lowerer_helpers" / "IrLowererInlineParamHelpers.h";
+  std::filesystem::path lowerInferencePath =
+      cwd / "include" / "primec" / "testing" / "ir_lowerer_helpers" / "IrLowererLowerInferenceSetup.h";
+  std::filesystem::path lowerLocalsPath =
+      cwd / "include" / "primec" / "testing" / "ir_lowerer_helpers" / "IrLowererLowerLocalsSetup.h";
+  std::filesystem::path resultHelpersPath =
+      cwd / "include" / "primec" / "testing" / "ir_lowerer_helpers" / "IrLowererResultHelpers.h";
+  std::filesystem::path setupTypePath =
+      cwd / "include" / "primec" / "testing" / "ir_lowerer_helpers" / "IrLowererSetupTypeHelpers.h";
+  if (!std::filesystem::exists(bindingTransformPath)) {
+    const std::filesystem::path root = cwd.parent_path();
+    bindingTransformPath =
+        root / "include" / "primec" / "testing" / "ir_lowerer_helpers" / "IrLowererBindingTransformHelpers.h";
+    flowHelpersPath =
+        root / "include" / "primec" / "testing" / "ir_lowerer_helpers" / "IrLowererFlowHelpers.h";
+    inlineParamPath =
+        root / "include" / "primec" / "testing" / "ir_lowerer_helpers" / "IrLowererInlineParamHelpers.h";
+    lowerInferencePath =
+        root / "include" / "primec" / "testing" / "ir_lowerer_helpers" / "IrLowererLowerInferenceSetup.h";
+    lowerLocalsPath =
+        root / "include" / "primec" / "testing" / "ir_lowerer_helpers" / "IrLowererLowerLocalsSetup.h";
+    resultHelpersPath =
+        root / "include" / "primec" / "testing" / "ir_lowerer_helpers" / "IrLowererResultHelpers.h";
+    setupTypePath =
+        root / "include" / "primec" / "testing" / "ir_lowerer_helpers" / "IrLowererSetupTypeHelpers.h";
+  }
+  REQUIRE(std::filesystem::exists(bindingTransformPath));
+  REQUIRE(std::filesystem::exists(flowHelpersPath));
+  REQUIRE(std::filesystem::exists(inlineParamPath));
+  REQUIRE(std::filesystem::exists(lowerInferencePath));
+  REQUIRE(std::filesystem::exists(lowerLocalsPath));
+  REQUIRE(std::filesystem::exists(resultHelpersPath));
+  REQUIRE(std::filesystem::exists(setupTypePath));
+
+  const std::string bindingTransform = readTextFile(bindingTransformPath);
+  const std::string flowHelpers = readTextFile(flowHelpersPath);
+  const std::string inlineParam = readTextFile(inlineParamPath);
+  const std::string lowerInference = readTextFile(lowerInferencePath);
+  const std::string lowerLocals = readTextFile(lowerLocalsPath);
+  const std::string resultHelpers = readTextFile(resultHelpersPath);
+  const std::string setupType = readTextFile(setupTypePath);
+
+  CHECK(bindingTransform.find("extractTopLevelUninitializedTypeText") != std::string::npos);
+  CHECK(bindingTransform.find("unwrapTopLevelUninitializedTypeText") != std::string::npos);
+  CHECK(flowHelpers.find("emitVectorMoveSlot(") != std::string::npos);
+  CHECK(flowHelpers.find("emitDisarmTemporaryStructAfterCopy(") != std::string::npos);
+  CHECK(flowHelpers.find("emitBuiltinCanonicalMapInsertOverwriteOrPending(") == std::string::npos);
+  CHECK(inlineParam.find("using ResolveInlineParameterDefinitionCallFn") != std::string::npos);
+  CHECK(inlineParam.find("const std::string &calleePath,") != std::string::npos);
+  CHECK(lowerInference.find("const SemanticProductTargetAdapter *semanticProductTargets = nullptr;") !=
+        std::string::npos);
+  CHECK(lowerLocals.find("const SemanticProgram *semanticProgram,") != std::string::npos);
+  CHECK(resultHelpers.find("using InferExprKindWithLocalsFn") != std::string::npos);
+  CHECK(resultHelpers.find("struct PackedResultStructPayloadInfo") != std::string::npos);
+  CHECK(resultHelpers.find("inferPackedResultStructType(") != std::string::npos);
+  CHECK(resultHelpers.find("resolvePackedResultStructPayloadInfo(") != std::string::npos);
+  CHECK(setupType.find("const SemanticProductTargetAdapter *semanticProductTargets,") !=
+        std::string::npos);
+}
+
 TEST_CASE("graph snapshot suite uses semantic-product-aware lowering only") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path snapshotPath =

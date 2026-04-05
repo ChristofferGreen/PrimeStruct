@@ -113,6 +113,33 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     const std::unordered_set<std::string> &structNames,
     const InferReceiverExprKindFn &inferExprKind,
     const ResolveReceiverExprPathFn &resolveExprPath,
+    const SemanticProductTargetAdapter *semanticProductTargets,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    std::string &errorOut);
+const Definition *resolveMethodCallDefinitionFromExpr(
+    const Expr &callExpr,
+    const LocalMap &localsIn,
+    const IsMethodCallClassifierFn &isArrayCountCall,
+    const IsMethodCallClassifierFn &isVectorCapacityCall,
+    const IsMethodCallClassifierFn &isEntryArgsName,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    const std::unordered_set<std::string> &structNames,
+    const InferReceiverExprKindFn &inferExprKind,
+    const ResolveReceiverExprPathFn &resolveExprPath,
+    const GetReturnInfoForPathFn &getReturnInfo,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    std::string &errorOut);
+const Definition *resolveMethodCallDefinitionFromExpr(
+    const Expr &callExpr,
+    const LocalMap &localsIn,
+    const IsMethodCallClassifierFn &isArrayCountCall,
+    const IsMethodCallClassifierFn &isVectorCapacityCall,
+    const IsMethodCallClassifierFn &isEntryArgsName,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    const std::unordered_set<std::string> &structNames,
+    const InferReceiverExprKindFn &inferExprKind,
+    const ResolveReceiverExprPathFn &resolveExprPath,
+    const SemanticProductTargetAdapter *semanticProductTargets,
     const GetReturnInfoForPathFn &getReturnInfo,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut);
@@ -132,4 +159,3 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
                                  std::string &typeNameOut,
                                  std::string &resolvedTypePathOut,
                                  std::string &errorOut);
-
