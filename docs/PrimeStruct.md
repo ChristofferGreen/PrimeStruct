@@ -3551,6 +3551,9 @@ read-only path.
     Standalone `ref(...)` bindings now also require a resolvable borrow root, so
     location-wrapped and helper-return receiver flows no longer drop borrow
     provenance when binding a reference.
+    Standalone `ref(...)` call-argument escapes derived from location-wrapped or
+    helper-return receivers are now rejected, matching the same non-escaping
+    borrow intent as other parameter-rooted reference rules.
   - **Richer borrowed field-view contract:** the next borrowed-view slice should treat
     standalone field-view expressions as first-class non-owning column views rather than
     keeping `borrowed.field()` / `field(borrowed)` on the compiler-owned pending-diagnostic

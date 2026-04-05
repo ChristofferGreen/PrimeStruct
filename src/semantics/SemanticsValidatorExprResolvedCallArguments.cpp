@@ -218,6 +218,76 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     return splitTemplateTypeName(typeText, base, argText) &&
            normalizeBindingTypeName(base) == "Reference";
   };
+  auto isStandaloneSoaRefCall = [&](const Expr &arg,
+                                    const Expr *&receiverOut) -> bool {
+    receiverOut = nullptr;
+    if (arg.kind != Expr::Kind::Call || arg.args.size() != 2) {
+      return false;
+    }
+    if (arg.isMethodCall) {
+      if (arg.name != "ref") {
+        return false;
+      }
+      receiverOut = &arg.args.front();
+      return true;
+    }
+    const std::string resolvedPath = resolveCalleePath(arg);
+    if (!isSimpleCallName(arg, "ref") &&
+        resolvedPath.rfind("/std/collections/soa_vector/ref", 0) != 0 &&
+        resolvedPath.rfind("/soa_vector/ref", 0) != 0 &&
+        resolvedPath.rfind("/std/collections/experimental_soa_vector/soaVectorRef", 0) != 0 &&
+        resolvedPath.rfind("/std/collections/experimental_soa_storage/soaColumnRef", 0) != 0) {
+      return false;
+    }
+    receiverOut = &arg.args.front();
+    return true;
+  };
+  auto isReferenceEscapeCandidate = [&](const Expr &arg,
+                                        const ParameterInfo &param) -> bool {
+    const std::string expectedTypeText =
+        param.binding.typeTemplateArg.empty()
+            ? param.binding.typeName
+            : param.binding.typeName + "<" + param.binding.typeTemplateArg + ">";
+    if (!isReferenceTypeText(param.binding.typeName, expectedTypeText)) {
+      return false;
+    }
+    const Expr *receiverExpr = nullptr;
+    if (!isStandaloneSoaRefCall(arg, receiverExpr)) {
+      return false;
+    }
+    if (receiverExpr == nullptr) {
+      return false;
+    }
+    return receiverExpr->kind != Expr::Kind::Name;
+  };
+  auto checkStandaloneSoaRefEscapes = [&](const Expr &arg,
+                                          const ParameterInfo &param) -> bool {
+    if (!isReferenceEscapeCandidate(arg, param)) {
+      return true;
+    }
+    return failResolvedCallArgumentDiagnostic(
+        "reference escapes via argument to " + resolved);
+  };
+
+  for (size_t paramIndex = 0; paramIndex < calleeParams.size(); ++paramIndex) {
+    if (paramIndex == packedParamIndex) {
+      for (const Expr *arg : packedArgs) {
+        if (arg != nullptr &&
+            !checkStandaloneSoaRefEscapes(*arg, calleeParams[paramIndex])) {
+          return false;
+        }
+      }
+      continue;
+    }
+    const Expr *arg =
+        paramIndex < orderedArgs.size() ? orderedArgs[paramIndex] : nullptr;
+    if (arg == nullptr) {
+      continue;
+    }
+    if (!checkStandaloneSoaRefEscapes(*arg, calleeParams[paramIndex])) {
+      return false;
+    }
+  }
 
   bool calleeIsUnsafe = false;
   if (context.resolvedDefinition != nullptr) {
