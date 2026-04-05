@@ -7,6 +7,14 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Split the oversized Group 8 slot-borrow carrier item into the real language-level
+  `borrow(dereference(slot))` carrier primitive plus the later stdlib helper exposure slices.
+  Completed: the live queue and spec/docs now pin the current boundary explicitly:
+  `soaColumnBorrowSlot<T>(...)` and `vectorBorrowSlot<T>(...)` still expose
+  `borrow(dereference(slot))` through `[return<T>]` helper surfaces, so the next honest
+  prerequisite is a language-level standalone borrowed-value carrier on that exact expression
+  path.
+
 - ✓ Split the oversized Group 8 single-column borrowed carrier item into the real slot-borrow
   carrier primitive plus the later `SoaColumn<T>` and wrapper/helper exposure slices.
   Completed: the live queue and spec/docs now pin the current boundary explicitly:
