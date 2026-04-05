@@ -258,7 +258,7 @@ bool getBuiltinMemoryName(const Expr &expr, std::string &out) {
     return false;
   }
   if (normalized == "alloc" || normalized == "free" || normalized == "realloc" || normalized == "at" ||
-      normalized == "at_unsafe") {
+      normalized == "at_unsafe" || normalized == "reinterpret") {
     out = normalized;
     return true;
   }

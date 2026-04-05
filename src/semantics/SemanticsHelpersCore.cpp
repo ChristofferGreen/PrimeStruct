@@ -50,6 +50,9 @@ bool isPointerExpr(const Expr &expr,
     if (builtinName == "at_unsafe" && expr.templateArgs.empty() && expr.args.size() == 2) {
       return isPointerExpr(expr.args.front(), params, locals);
     }
+    if (builtinName == "reinterpret" && expr.templateArgs.size() == 1 && expr.args.size() == 1) {
+      return isPointerExpr(expr.args.front(), params, locals);
+    }
   }
   if (getBuiltinOperatorName(expr, builtinName) && (builtinName == "plus" || builtinName == "minus") &&
       expr.args.size() == 2) {

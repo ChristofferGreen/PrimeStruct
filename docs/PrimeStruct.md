@@ -3578,7 +3578,7 @@ read-only path.
     `SoaSchemaElementStride()`. Existing buffer helpers still offset only already-typed
     pointers in whole-element units, so the missing primitives are typed
     reinterpretation from whole-element storage pointers to raw byte-addressable
-    pointers (on top of a raw pointer reinterpret primitive that can cast whole-element
+    pointers (a raw pointer reinterpret primitive now exists and can cast whole-element
     storage to byte-addressable pointers without changing the address), then byte-addressable
     pointer offsetting over that raw storage, and then
     typed reinterpretation from the recovered byte-addressed slot to a field pointer;

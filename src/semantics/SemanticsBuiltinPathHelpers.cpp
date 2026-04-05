@@ -342,7 +342,8 @@ bool getBuiltinMemoryName(const Expr &expr, std::string &out) {
   if (!parseMemoryName(expr.name, out)) {
     return false;
   }
-  return out == "alloc" || out == "free" || out == "realloc" || out == "at" || out == "at_unsafe";
+  return out == "alloc" || out == "free" || out == "realloc" || out == "at" || out == "at_unsafe" ||
+         out == "reinterpret";
 }
 
 bool getBuiltinPointerName(const Expr &expr, std::string &out) {

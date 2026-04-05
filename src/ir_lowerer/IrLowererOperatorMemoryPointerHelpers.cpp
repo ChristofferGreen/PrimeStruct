@@ -48,6 +48,9 @@ std::string inferPointerStructTypePath(
     if (memoryBuiltin == "at_unsafe" && expr.args.size() == 2) {
       return inferPointerStructTypePath(expr.args.front(), localsIn, resolveStructTypeName);
     }
+    if (memoryBuiltin == "reinterpret" && expr.args.size() == 1) {
+      return "";
+    }
   }
 
   std::string builtinName;
@@ -308,6 +311,20 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
       pushIndexConst(indexKind, slotCountMultiplier * IrSlotBytesI32);
       instructions.push_back({mulForIndex(indexKind), 0});
       instructions.push_back({IrOpcode::AddI64, 0});
+      return true;
+    }
+    if (builtin == "reinterpret") {
+      if (expr.templateArgs.size() != 1) {
+        error = "reinterpret requires exactly one template argument";
+        return false;
+      }
+      if (expr.args.size() != 1) {
+        error = "reinterpret requires exactly one argument";
+        return false;
+      }
+      if (!emitExpr(expr.args.front(), localsIn)) {
+        return false;
+      }
       return true;
     }
     if (builtin != "alloc") {

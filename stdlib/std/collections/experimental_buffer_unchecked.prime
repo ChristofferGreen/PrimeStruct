@@ -21,6 +21,11 @@ namespace std {
     return(/std/intrinsics/memory/at_unsafe(ptr, index))
   }
 
+  [public return<Pointer<T>>]
+  bufferReinterpret<T, U>([Pointer<U>] ptr) {
+    return(/std/intrinsics/memory/reinterpret<T>(ptr))
+  }
+
   [public return<void>]
   bufferWriteUnsafe<T>([Pointer<T> mut] ptr, [i32] index, [T] value) {
     [Pointer<T> mut] slot{/std/intrinsics/memory/at_unsafe(ptr, index)}

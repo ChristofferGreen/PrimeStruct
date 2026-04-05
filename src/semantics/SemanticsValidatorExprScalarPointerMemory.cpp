@@ -361,6 +361,24 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
       }
       return true;
     }
+    if (builtinName == "reinterpret") {
+      if (expr.templateArgs.size() != 1) {
+        return failScalarPointerMemoryBuiltin("reinterpret requires exactly one template argument");
+      }
+      if (expr.args.size() != 1) {
+        return failScalarPointerMemoryBuiltin("argument count mismatch for builtin reinterpret");
+      }
+      if (!validateMemoryTargetType(expr.templateArgs.front())) {
+        return false;
+      }
+      if (!validateExpr(params, locals, expr.args.front())) {
+        return false;
+      }
+      if (!isPointerExpr(expr.args.front(), params, locals)) {
+        return failScalarPointerMemoryBuiltin("reinterpret requires pointer target");
+      }
+      return true;
+    }
     if (!expr.templateArgs.empty()) {
       return failScalarPointerMemoryBuiltin(builtinName + " does not accept template arguments");
     }

@@ -26,7 +26,7 @@ bool isPointerMemoryIntrinsicCallImpl(const Expr &expr) {
     return false;
   }
   return builtinName == "alloc" || builtinName == "realloc" || builtinName == "at" ||
-         builtinName == "at_unsafe";
+         builtinName == "at_unsafe" || builtinName == "reinterpret";
 }
 
 bool inferPointerMemoryIntrinsicTargetsUninitializedStorageImpl(const Expr &expr, const LocalMap &localsIn) {
@@ -35,6 +35,10 @@ bool inferPointerMemoryIntrinsicTargetsUninitializedStorageImpl(const Expr &expr
     return false;
   }
   if (builtinName == "alloc" && expr.templateArgs.size() == 1) {
+    std::string targetType;
+    return extractTopLevelUninitializedTypeText(expr.templateArgs.front(), targetType);
+  }
+  if (builtinName == "reinterpret" && expr.templateArgs.size() == 1 && expr.args.size() == 1) {
     std::string targetType;
     return extractTopLevelUninitializedTypeText(expr.templateArgs.front(), targetType);
   }

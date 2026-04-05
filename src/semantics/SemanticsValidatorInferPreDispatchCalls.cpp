@@ -153,6 +153,11 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
             pointerExpr.args.size() == 2) {
           return pointerTargetKind(pointerExpr.args.front());
         }
+        if (pointerName == "reinterpret" && pointerExpr.templateArgs.size() == 1 &&
+            pointerExpr.args.size() == 1) {
+          return inferReferenceTargetKind(pointerExpr.templateArgs.front(),
+                                          pointerExpr.namespacePrefix);
+        }
       }
       std::string opName;
       if (getBuiltinOperatorName(pointerExpr, opName) &&

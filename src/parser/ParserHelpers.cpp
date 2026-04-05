@@ -161,7 +161,7 @@ bool isBuiltinName(const std::string &name, bool allowMathBare) {
     return false;
   }
   bool isMemoryBuiltin = candidate == "alloc" || candidate == "free" || candidate == "realloc" ||
-                         candidate == "at" || candidate == "at_unsafe";
+                         candidate == "at" || candidate == "at_unsafe" || candidate == "reinterpret";
   if (isMemoryQualified && !isMemoryBuiltin) {
     return false;
   }

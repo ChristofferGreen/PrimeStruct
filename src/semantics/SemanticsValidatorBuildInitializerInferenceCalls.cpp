@@ -270,6 +270,10 @@ bool SemanticsValidator::inferBuiltinPointerBinding(const Expr &expr,
       if (builtinName == "at_unsafe" && candidate.templateArgs.empty() && candidate.args.size() == 2) {
         return resolvePointerTargetType(candidate.args.front(), targetOut);
       }
+      if (builtinName == "reinterpret" && candidate.templateArgs.size() == 1 && candidate.args.size() == 1) {
+        targetOut = candidate.templateArgs.front();
+        return true;
+      }
     }
     std::string opName;
     if (getBuiltinOperatorName(candidate, opName) && (opName == "plus" || opName == "minus") &&
@@ -308,6 +312,11 @@ bool SemanticsValidator::inferBuiltinPointerBinding(const Expr &expr,
           !resolvePointerTargetType(expr.args.front(), targetType)) {
         return false;
       }
+    } else if (builtinName == "reinterpret") {
+      if (expr.templateArgs.size() != 1 || expr.args.size() != 1) {
+        return false;
+      }
+      targetType = expr.templateArgs.front();
     } else {
       return false;
     }
