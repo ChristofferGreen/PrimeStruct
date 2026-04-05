@@ -1133,14 +1133,15 @@ method-like helper returns, and inline `location(...)`-wrapped borrowed receiver
 that indexed field-view path is still only a per-use rewrite through
 `soaVectorGet(...)` / `soaVectorRef(...)`; `borrowed.field()` and `field(borrowed)` do not
 yet materialize a reusable standalone borrowed field-view value that can be bound, passed
-through helpers, or returned. Those field-view values inherit the same invalidation
+through helpers, or returned. Those attempts already funnel through the same synthetic
+`/soa_vector/field_view/<field>` helper path across direct borrowed locals, explicit
+dereference, borrowed helper returns, method-like helper returns, and inline
+`location(...)`-wrapped receivers. Those field-view values inherit the same invalidation
 contract as `ref(...)`, stay borrowed rather than materializing owning vectors, and may
 later distinguish read-only versus mutable borrowed receivers on top of the current
 `soaVectorGet(...)` / `soaVectorRef(...)` substrate. The remaining implementation work
-therefore starts with a reusable standalone borrowed field-view carrier, then naturally
-splits into direct / explicit-dereference receivers, helper-return and method-like
-helper-return receivers, inline `location(...)`-wrapped receivers, and
-pass/return/local-binding preservation.
+therefore starts with materializing a reusable standalone borrowed field-view carrier on
+that shared helper path, then preserving it across pass/return/local-binding surfaces.
 The remaining standalone mutating write step is that `assign(value.field(), next)` and
 `assign(field(value), next)` should stop on the pending diagnostic only until those
 receivers can lower through the existing writable wrapper substrate instead of mutating a

@@ -7,6 +7,12 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Retired the stale richer borrowed field-view receiver-family split.
+  Completed: standalone `borrowed.field()` / `field(borrowed)` attempts still
+  all funnel through the same synthetic `/soa_vector/field_view/<field>` helper
+  path, so the live queue now targets that shared helper-path carrier seam
+  first and leaves pass/return/local-binding preservation as the only follow-up
+  slice.
 - ✓ Split the richer standalone borrowed field-view TODO into the real next
   substrate seam plus later receiver-routing slices. Completed: the indexed
   `value.field()[i]` surface still exists only as a per-use
