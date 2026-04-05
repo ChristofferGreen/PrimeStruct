@@ -1150,9 +1150,10 @@ reinterpretation and offsetting, and the stdlib builds
 `soaColumnFieldSlotUnsafe<Struct, Field>(...)` plus the strided `SoaFieldView<T>`
 carrier on top of those reflected layout facts. Standalone field-view calls now
 route through the shared `/soa_vector/field_view/<field>` helper path onto
-`soaVectorFieldView<...>` and return a non-owning strided view; the remaining
-work is preserving those borrowed field-view values across local binding,
-helper pass-through, and return surfaces.
+`soaVectorFieldView<...>` and return a non-owning strided view. Bound, passed,
+and returned field-view values now preserve borrowed semantics by rewriting
+indexed access through `soaFieldViewRead/Ref` helpers; the remaining work is
+the standalone mutating field-view write surfaces.
 The remaining standalone mutating write step is that `assign(value.field(), next)` and
 `assign(field(value), next)` should stop on the pending diagnostic only until those
 receivers can lower through the existing writable wrapper substrate instead of mutating a

@@ -3580,9 +3580,10 @@ read-only path.
     `soaColumnFieldSlotUnsafe<Struct, Field>(...)` plus the strided `SoaFieldView<T>`
     carrier on top of those reflected layout facts. Standalone field-view calls now
     route through the shared `/soa_vector/field_view/<field>` helper path onto
-    `soaVectorFieldView<...>` and return a non-owning strided view; the remaining work
-    is preserving those borrowed field-view values across local binding, helper
-    pass-through, and return surfaces.
+    `soaVectorFieldView<...>` and return a non-owning strided view. Bound, passed,
+    and returned field-view values now preserve borrowed semantics by rewriting
+    indexed access through `soaFieldViewRead/Ref` helpers; the remaining work is
+    the standalone mutating field-view write surfaces.
   - **Standalone mutating field-view contract:** the remaining standalone mutating write slice
     should replace the current pending-only `assign(value.field(), next)` /
     `assign(field(value), next)` contract with the same writable column-view substrate that
