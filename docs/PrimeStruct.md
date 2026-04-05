@@ -3502,11 +3502,11 @@ slot-backed borrowed-value carrier exposure through the stdlib-owned `soaColumnB
 `[return<Reference<T>>]` with slot-pointer provenance preserved through local `slot` aliases, and public
 `soaColumnRef<T>(...)` now also preserves that standalone borrowed carrier instead of collapsing back
 to whole-element `T`, and experimental helper `soaVectorRef<T>(...)` now forwards that same carrier for
-direct helper-call use. The next remaining substrate step is to route experimental-wrapper
-`SoaVector<T>.ref(i)` onto that same single-column `SoaColumn<T>`
-borrowed element-view carrier before direct borrowed locals, explicit dereference, helper-return,
-inline `location(...)`, and later standalone borrowed field-view values can reuse the same
-substrate and before invalidation rules can apply to anything persistent.
+direct helper-call use. The next remaining whole-value substrate step is to route direct
+experimental-wrapper `SoaVector<T>.ref(i)` bindings/returns onto that same single-column
+`SoaColumn<T>` borrowed element-view carrier. Projected `.ref(i).field` reads/writes already ride the
+existing per-use `soaVectorRef(...).field` rewrite and stay with the later standalone borrowed
+field-view queue rather than this whole-value carrier step.
 Successful experimental
 `value.field()[i]` indexing now has its first completed read-only reflected slices on top of
 the current substrate for direct wrapper receivers, borrowed local shorthand, inline

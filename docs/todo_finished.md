@@ -7,6 +7,11 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Narrowed the experimental-wrapper `SoaVector<T>.ref(i)` borrowed-carrier
+  queue to the real remaining whole-value slice. Completed: direct whole-value
+  wrapper `ref(i)` exposure remains live, while projected `.ref(i).field`
+  reads/writes stay with the later standalone borrowed field-view queue because
+  they already ride the existing per-use helper rewrite.
 - ✓ Split the public single-column borrowed element-view queue into the real
   `soaColumnRef<T>(...)` substrate step and the later experimental-wrapper
   `SoaVector<T>.ref(i)` exposure step once the slot-borrow carrier primitive was
