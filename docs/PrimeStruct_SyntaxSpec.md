@@ -1080,11 +1080,13 @@ slot-backed borrowed-value carrier exposure through `soaColumnBorrowSlot<T>(...)
 with slot-pointer provenance preserved through local `slot` aliases, and public
 `soaColumnRef<T>(...)` plus experimental helper `soaVectorRef<T>(...)` now also preserve that
 standalone borrowed carrier instead of dereferencing back to whole-element `T`. The next
-remaining whole-value substrate step is to route direct experimental-wrapper `SoaVector<T>.ref(i)`
-onto that same single-column `SoaColumn<T>` borrowed element-view carrier. Projected
-`.ref(i).field` reads/writes already ride the existing per-use `soaVectorRef(...).field`
-rewrite and stay with the later standalone borrowed field-view queue rather than this
-whole-value carrier step.
+remaining whole-value substrate step is to route experimental-wrapper `SoaVector<T>.ref(i)`
+onto that same single-column `SoaColumn<T>` borrowed element-view carrier, but this wrapper
+method now remains split by receiver family: direct wrapper locals first, then borrowed
+receivers, helper-return/method-like helper-return receivers, and inline
+`location(...)`-wrapped receivers. Projected `.ref(i).field` reads/writes already ride the
+existing per-use `soaVectorRef(...).field` rewrite and stay with the later standalone borrowed
+field-view queue rather than this whole-value carrier step.
 Read-only wrapper field-view indexing now routes both method-form `values.field()[i]`
 and call-form `field(values)[i]` reflected reads, plus borrowed local `borrowed.field()[i]`,
 inline `location(values).field()[i]` / `field(dereference(location(values)))[i]`,

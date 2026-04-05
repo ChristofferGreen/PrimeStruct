@@ -7,6 +7,11 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Split the experimental-wrapper `SoaVector<T>.ref(i)` whole-value carrier
+  queue by receiver family. Completed: the live queue now tracks direct wrapper
+  locals, borrowed receivers, helper-return receivers, and inline
+  `location(...)`-wrapped receivers separately instead of hiding them under one
+  oversized wrapper-method item.
 - ✓ Narrowed the experimental-wrapper `SoaVector<T>.ref(i)` borrowed-carrier
   queue to the real remaining whole-value slice. Completed: direct whole-value
   wrapper `ref(i)` exposure remains live, while projected `.ref(i).field`
