@@ -3538,12 +3538,12 @@ read-only path.
     materialize a standalone borrowed object that needs its own persisted invalidation state.
     The standalone `ref(...)` receiver families above are now in place, those
     whole-value carriers now also survive local binding, helper pass-through, and direct
-    helper return surfaces, and live carriers rooted directly in wrapper locals or direct
-    borrowed/dereferenced receiver roots now already reject later `push` / `reserve`
-    growth on that same wrapper. The remaining implementation work therefore starts by
-    preserving that same growth invalidation across helper-return, pass-through, and
-    return-rooted carriers, then materializing richer standalone field-view values on
-    those same receiver families, then layering later shrink/motion invalidation,
+    helper return surfaces, and live carriers now already reject later `push` /
+    `reserve` growth on that same wrapper across direct local,
+    direct borrowed/dereferenced receiver, helper-return, pass-through, and
+    return-rooted surfaces. The remaining implementation work therefore starts by
+    materializing richer standalone field-view values on those same receiver
+    families, then layering later shrink/motion invalidation,
     storage-replacement/destruction invalidation, and provenance/escape rules on top.
   - **Richer borrowed field-view contract:** the next borrowed-view slice should treat
     standalone field-view expressions as first-class non-owning column views rather than

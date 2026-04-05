@@ -650,84 +650,147 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       }
       return true;
     };
-    std::function<bool(const Expr &, std::string &)> resolveStandaloneRefRootExpr;
-    resolveStandaloneRefRootExpr = [&](const Expr &expr, std::string &rootOut) -> bool {
-      auto resolveReceiverRoot = [&](const Expr &receiverExpr,
-                                     std::string &receiverRootOut) -> bool {
-        if (receiverExpr.kind == Expr::Kind::Name) {
-          return resolveBorrowRoot(receiverExpr.name, receiverRootOut);
-        }
-        std::string builtinName;
-        if (receiverExpr.kind == Expr::Kind::Call &&
-            getBuiltinPointerName(receiverExpr, builtinName) &&
-            builtinName == "dereference" && receiverExpr.args.size() == 1) {
-          return resolvePointerRoot(receiverExpr.args.front(), receiverRootOut);
-        }
-        return false;
-      };
-      if (expr.kind == Expr::Kind::Call && expr.args.size() == 2) {
-        const std::string resolvedPath = resolveCalleePath(expr);
-        const bool isMethodRefCall =
-            expr.isMethodCall &&
-            (expr.name == "ref" ||
-             resolvedPath.rfind("/std/collections/soa_vector/ref", 0) == 0 ||
-             resolvedPath.rfind("/soa_vector/ref", 0) == 0);
-        const bool isHelperRefCall =
-            !expr.isMethodCall &&
-            (isSimpleCallName(expr, "ref") ||
-             resolvedPath.rfind("/std/collections/soa_vector/ref", 0) == 0 ||
-             resolvedPath.rfind("/soa_vector/ref", 0) == 0 ||
-             resolvedPath.rfind("/std/collections/experimental_soa_vector/soaVectorRef", 0) == 0 ||
-             resolvedPath.rfind("/std/collections/experimental_soa_storage/soaColumnRef", 0) == 0);
-        if ((isMethodRefCall || isHelperRefCall) &&
-            resolveReceiverRoot(expr.args.front(), rootOut)) {
-          return !rootOut.empty();
+    using ExprSubstitutions = std::vector<std::pair<std::string, const Expr *>>;
+    auto findSubstitutedExpr = [&](const ExprSubstitutions &substitutions,
+                                   const std::string &name) -> const Expr * {
+      for (auto it = substitutions.rbegin(); it != substitutions.rend(); ++it) {
+        if (it->first == name) {
+          return it->second;
         }
       }
-      if (expr.kind != Expr::Kind::Call) {
-        return false;
-      }
-      const std::string resolvedCallPath = resolveCalleePath(expr);
-      auto defIt = defMap_.find(resolvedCallPath);
-      if (defIt == defMap_.end() || defIt->second == nullptr) {
-        return false;
-      }
-      const Definition &nestedDef = *defIt->second;
-      const Expr *returnedValueExpr = nullptr;
-      for (const auto &stmtExpr : nestedDef.statements) {
-        if (isReturnCall(stmtExpr) && stmtExpr.args.size() == 1) {
-          returnedValueExpr = &stmtExpr.args.front();
-        }
-      }
-      if (nestedDef.returnExpr.has_value()) {
-        returnedValueExpr = &*nestedDef.returnExpr;
-      }
-      if (returnedValueExpr == nullptr || returnedValueExpr->kind != Expr::Kind::Name) {
-        return false;
-      }
-      const auto paramsIt = paramsByDef_.find(resolvedCallPath);
-      if (paramsIt == paramsByDef_.end()) {
-        return false;
-      }
-      const auto &nestedParams = paramsIt->second;
-      std::string nestedArgError;
-      std::vector<const Expr *> nestedOrderedArgs;
-      if (!buildOrderedArguments(nestedParams, expr.args, expr.argNames,
-                                 nestedOrderedArgs, nestedArgError)) {
-        return false;
-      }
-      for (size_t nestedIndex = 0;
-           nestedIndex < nestedParams.size() && nestedIndex < nestedOrderedArgs.size();
-           ++nestedIndex) {
-        const auto &nestedParam = nestedParams[nestedIndex];
-        const Expr *nestedArg = nestedOrderedArgs[nestedIndex];
-        if (nestedArg == nullptr || nestedParam.name != returnedValueExpr->name) {
-          continue;
-        }
-        return resolveStandaloneRefRootExpr(*nestedArg, rootOut);
-      }
-      return false;
+      return nullptr;
     };
+    auto appendCallSubstitutions =
+        [&](const Expr &callExpr,
+            const ExprSubstitutions &baseSubstitutions,
+            ExprSubstitutions &extendedSubstitutions,
+            const Expr *&returnedValueExprOut) -> bool {
+          returnedValueExprOut = nullptr;
+          const std::string resolvedCallPath = resolveCalleePath(callExpr);
+          auto defIt = defMap_.find(resolvedCallPath);
+          if (defIt == defMap_.end() || defIt->second == nullptr) {
+            return false;
+          }
+          const auto paramsIt = paramsByDef_.find(resolvedCallPath);
+          if (paramsIt == paramsByDef_.end()) {
+            return false;
+          }
+          const auto &nestedParams = paramsIt->second;
+          std::string nestedArgError;
+          std::vector<const Expr *> nestedOrderedArgs;
+          if (!buildOrderedArguments(nestedParams, callExpr.args, callExpr.argNames,
+                                     nestedOrderedArgs, nestedArgError)) {
+            return false;
+          }
+          const Definition &nestedDef = *defIt->second;
+          for (const auto &stmtExpr : nestedDef.statements) {
+            if (isReturnCall(stmtExpr) && stmtExpr.args.size() == 1) {
+              returnedValueExprOut = &stmtExpr.args.front();
+            }
+          }
+          if (nestedDef.returnExpr.has_value()) {
+            returnedValueExprOut = &*nestedDef.returnExpr;
+          }
+          if (returnedValueExprOut == nullptr) {
+            return false;
+          }
+          extendedSubstitutions = baseSubstitutions;
+          for (size_t nestedIndex = 0;
+               nestedIndex < nestedParams.size() && nestedIndex < nestedOrderedArgs.size();
+               ++nestedIndex) {
+            const Expr *nestedArg = nestedOrderedArgs[nestedIndex];
+            if (nestedArg == nullptr) {
+              continue;
+            }
+            extendedSubstitutions.emplace_back(nestedParams[nestedIndex].name, nestedArg);
+          }
+          return true;
+        };
+    std::function<bool(const Expr &, const ExprSubstitutions &, std::string &)>
+        resolveReceiverRootExpr;
+    std::function<bool(const Expr &, const ExprSubstitutions &, std::string &)>
+        resolveStandaloneRefRootExpr;
+    resolveReceiverRootExpr =
+        [&](const Expr &expr,
+            const ExprSubstitutions &substitutions,
+            std::string &rootOut) -> bool {
+          if (expr.kind == Expr::Kind::Name) {
+            if (const Expr *substitutedExpr =
+                    findSubstitutedExpr(substitutions, expr.name)) {
+              return resolveReceiverRootExpr(*substitutedExpr,
+                                            substitutions,
+                                            rootOut);
+            }
+            return resolveBorrowRoot(expr.name, rootOut);
+          }
+          if (expr.kind != Expr::Kind::Call) {
+            return false;
+          }
+          std::string builtinName;
+          if (getBuiltinPointerName(expr, builtinName) && expr.args.size() == 1) {
+            if (builtinName == "location" || builtinName == "dereference") {
+              return resolveReceiverRootExpr(expr.args.front(),
+                                            substitutions,
+                                            rootOut);
+            }
+          }
+          ExprSubstitutions nestedSubstitutions;
+          const Expr *returnedValueExpr = nullptr;
+          if (!appendCallSubstitutions(expr, substitutions, nestedSubstitutions,
+                                       returnedValueExpr)) {
+            return false;
+          }
+          return resolveReceiverRootExpr(*returnedValueExpr,
+                                        nestedSubstitutions,
+                                        rootOut);
+        };
+    resolveStandaloneRefRootExpr =
+        [&](const Expr &expr,
+            const ExprSubstitutions &substitutions,
+            std::string &rootOut) -> bool {
+          if (expr.kind == Expr::Kind::Name) {
+            if (const Expr *substitutedExpr =
+                    findSubstitutedExpr(substitutions, expr.name)) {
+              return resolveStandaloneRefRootExpr(*substitutedExpr,
+                                                 substitutions,
+                                                 rootOut);
+            }
+            return false;
+          }
+          if (expr.kind == Expr::Kind::Call && expr.args.size() == 2) {
+            const std::string resolvedPath = resolveCalleePath(expr);
+            const bool isMethodRefCall =
+                expr.isMethodCall &&
+                (expr.name == "ref" ||
+                 resolvedPath.rfind("/std/collections/soa_vector/ref", 0) == 0 ||
+                 resolvedPath.rfind("/soa_vector/ref", 0) == 0);
+            const bool isHelperRefCall =
+                !expr.isMethodCall &&
+                (isSimpleCallName(expr, "ref") ||
+                 resolvedPath.rfind("/std/collections/soa_vector/ref", 0) == 0 ||
+                 resolvedPath.rfind("/soa_vector/ref", 0) == 0 ||
+                 resolvedPath.rfind("/std/collections/experimental_soa_vector/soaVectorRef", 0) == 0 ||
+                 resolvedPath.rfind("/std/collections/experimental_soa_storage/soaColumnRef", 0) == 0);
+            if ((isMethodRefCall || isHelperRefCall) &&
+                resolveReceiverRootExpr(expr.args.front(),
+                                       substitutions,
+                                       rootOut)) {
+              return !rootOut.empty();
+            }
+          }
+          if (expr.kind != Expr::Kind::Call) {
+            return false;
+          }
+          ExprSubstitutions nestedSubstitutions;
+          const Expr *returnedValueExpr = nullptr;
+          if (!appendCallSubstitutions(expr, substitutions, nestedSubstitutions,
+                                       returnedValueExpr)) {
+            return false;
+          }
+          return resolveStandaloneRefRootExpr(*returnedValueExpr,
+                                             nestedSubstitutions,
+                                             rootOut);
+        };
 
     std::string pointerName;
     const bool initIsLocation =
@@ -748,7 +811,8 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     }
     if (!initIsLocation && !initIsDirectBorrowStorage && !currentValidationState_.context.definitionIsUnsafe) {
       std::string borrowRoot;
-      if (resolveStandaloneRefRootExpr(init, borrowRoot) && !borrowRoot.empty()) {
+      const ExprSubstitutions substitutions;
+      if (resolveStandaloneRefRootExpr(init, substitutions, borrowRoot) && !borrowRoot.empty()) {
         info.referenceRoot = std::move(borrowRoot);
       }
       if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {

@@ -8,6 +8,13 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 3, 2026, continued)**
 
 - ✓ Invalidated standalone whole-value `ref(...)` carriers on `push` /
+  `reserve` across helper-return, pass-through, and return-rooted carrier
+  surfaces. Completed: recursive root tracing now preserves live
+  `Reference<T>` borrow roots through helper returns, pass-through helpers, and
+  returned carrier expressions, so the whole-value `ref(...)` growth
+  invalidation contract is complete and the remaining Group 8 invalidation work
+  starts at standalone borrowed field-view values plus later lifetime rules.
+- ✓ Invalidated standalone whole-value `ref(...)` carriers on `push` /
   `reserve` for direct local and direct borrowed/dereferenced receiver roots.
   Completed: live `Reference<T>` carriers rooted directly in wrapper locals or
   direct borrowed/dereferenced receiver roots now reject later structural

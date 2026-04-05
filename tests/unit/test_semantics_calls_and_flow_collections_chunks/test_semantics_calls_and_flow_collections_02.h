@@ -1470,6 +1470,128 @@ main() {
   CHECK(error.find("borrowed binding: values") != std::string::npos);
 }
 
+TEST_CASE("experimental soa_vector helper-return ref method expires before later push when unused") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<Reference<Particle>>]
+pass([Reference<Particle>] value) {
+  return(value)
+}
+
+[return<Reference<Particle>>]
+pick([SoaVector<Particle>] values) {
+  return(pass(values.ref(0i32)))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorSingle<Particle>(Particle(7i32))}
+  [Reference<Particle>] value{pick(values)}
+  values.push(Particle(9i32))
+  return(values.count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("experimental soa_vector helper-return ref method blocks later push while live") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<Reference<Particle>>]
+pass([Reference<Particle>] value) {
+  return(value)
+}
+
+[return<Reference<Particle>>]
+pick([SoaVector<Particle>] values) {
+  return(pass(values.ref(0i32)))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorSingle<Particle>(Particle(7i32))}
+  [Reference<Particle>] value{pick(values)}
+  values.push(Particle(9i32))
+  return(value.x)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("borrowed binding: values") != std::string::npos);
+}
+
+TEST_CASE("experimental soa_vector borrowed helper-return ref method blocks later reserve while live") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<Reference<SoaVector<Particle>>>]
+pickBorrowed([Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32))
+  values.push(Particle(9i32))
+  [Reference<Particle>] value{pickBorrowed(location(values)).ref(1i32)}
+  soaVectorReserve<Particle>(values, 3i32)
+  return(value.x)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("borrowed binding: values") != std::string::npos);
+}
+
+TEST_CASE("experimental soa_vector inline location borrowed helper-return ref blocks later push while live") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<Reference<SoaVector<Particle>>>]
+pickBorrowed([Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32))
+  values.push(Particle(9i32))
+  [Reference<Particle>] value{location(pickBorrowed(location(values))).ref(1i32)}
+  values.push(Particle(11i32))
+  return(value.x)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("borrowed binding: values") != std::string::npos);
+}
+
 TEST_CASE("experimental soa_vector stdlib push and reserve helpers validate on reflect-enabled struct elements") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
