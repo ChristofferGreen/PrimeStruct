@@ -5,7 +5,9 @@
 #include "TypeResolutionGraphPreparation.h"
 #include "primec/testing/SemanticsGraphHelpers.h"
 
+#include <cerrno>
 #include <chrono>
+#include <cstdlib>
 #include <optional>
 #include <sstream>
 #include <string_view>
@@ -17,6 +19,20 @@
 namespace primec::semantics {
 
 namespace {
+
+std::optional<uint64_t> readGraphMetricBudget(const char *envName) {
+  const char *value = std::getenv(envName);
+  if (value == nullptr || *value == '\0') {
+    return std::nullopt;
+  }
+  errno = 0;
+  char *end = nullptr;
+  const unsigned long long parsed = std::strtoull(value, &end, 10);
+  if (errno != 0 || end == value || *end != '\0') {
+    return std::nullopt;
+  }
+  return static_cast<uint64_t>(parsed);
+}
 
 bool hasTransformNamed(const std::vector<Transform> &transforms, std::string_view name) {
   for (const auto &transform : transforms) {
@@ -466,6 +482,16 @@ bool buildTypeResolutionGraphForProgram(Program program,
   out.prepareMillis =
       static_cast<uint64_t>(
           std::chrono::duration_cast<std::chrono::milliseconds>(prepEnd - prepStart).count());
+  if (const auto maxPrepare = readGraphMetricBudget("PRIMESTRUCT_GRAPH_PREPARE_MS_MAX");
+      maxPrepare.has_value()) {
+    out.prepareMaxMillis = *maxPrepare;
+    out.prepareOverBudget = out.prepareMillis > out.prepareMaxMillis;
+  }
+  if (const auto maxBuild = readGraphMetricBudget("PRIMESTRUCT_GRAPH_BUILD_MS_MAX");
+      maxBuild.has_value()) {
+    out.buildMaxMillis = *maxBuild;
+    out.buildOverBudget = out.buildMillis > out.buildMaxMillis;
+  }
   return true;
 }
 
@@ -486,6 +512,10 @@ std::string formatTypeResolutionGraph(const TypeResolutionGraph &graph) {
   out << "type_graph {\n";
   out << "  metrics prepare_ms=" << graph.prepareMillis
       << " build_ms=" << graph.buildMillis
+      << " prepare_ms_max=" << graph.prepareMaxMillis
+      << " build_ms_max=" << graph.buildMaxMillis
+      << " prepare_over=" << (graph.prepareOverBudget ? "true" : "false")
+      << " build_over=" << (graph.buildOverBudget ? "true" : "false")
       << " nodes=" << graph.nodes.size()
       << " edges=" << graph.edges.size() << "\n";
   for (const auto &node : graph.nodes) {

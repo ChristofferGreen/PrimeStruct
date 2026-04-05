@@ -42,6 +42,10 @@ struct TypeResolutionGraph {
   std::vector<TypeResolutionGraphEdge> edges;
   uint64_t prepareMillis = 0;
   uint64_t buildMillis = 0;
+  uint64_t prepareMaxMillis = 0;
+  uint64_t buildMaxMillis = 0;
+  bool prepareOverBudget = false;
+  bool buildOverBudget = false;
 };
 
 std::string_view typeResolutionNodeKindName(TypeResolutionNodeKind kind);
