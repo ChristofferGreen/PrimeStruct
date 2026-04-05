@@ -1005,22 +1005,10 @@ TEST_CASE("semantic product lowering preserves debug source-map provenance") {
 
   primec::IrLowerer lowerer;
   primec::IrModule semanticModule;
-  primec::IrModule fallbackModule;
   REQUIRE(lowerer.lower(semanticAst, &semanticProgram, "/main", defaults, defaults, semanticModule, error));
   CHECK(error.empty());
-  REQUIRE(lowerer.lower(semanticAst, "/main", defaults, defaults, fallbackModule, error));
-  CHECK(error.empty());
 
-  REQUIRE(semanticModule.instructionSourceMap.size() == fallbackModule.instructionSourceMap.size());
-  for (size_t i = 0; i < semanticModule.instructionSourceMap.size(); ++i) {
-    const auto &semanticEntry = semanticModule.instructionSourceMap[i];
-    const auto &fallbackEntry = fallbackModule.instructionSourceMap[i];
-    CHECK(semanticEntry.debugId == fallbackEntry.debugId);
-    CHECK(semanticEntry.line == fallbackEntry.line);
-    CHECK(semanticEntry.column == fallbackEntry.column);
-    CHECK(semanticEntry.provenance == fallbackEntry.provenance);
-  }
-
+  CHECK_FALSE(semanticModule.instructionSourceMap.empty());
   CHECK(hasCanonicalSourceMapEntry(semanticModule, directCallEntry->sourceLine, directCallEntry->sourceColumn));
   CHECK(hasCanonicalSourceMapEntry(semanticModule, methodCallEntry->sourceLine, methodCallEntry->sourceColumn));
   CHECK(hasCanonicalSourceMapEntry(semanticModule, bridgeEntry->sourceLine, bridgeEntry->sourceColumn));

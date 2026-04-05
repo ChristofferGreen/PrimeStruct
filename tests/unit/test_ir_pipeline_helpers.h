@@ -126,6 +126,22 @@ inline bool parseAndValidate(const std::string &source,
 
 inline bool parseAndValidate(const std::string &source,
                              primec::Program &program,
+                             primec::SemanticProgram &semanticProgram,
+                             std::string &error) {
+  return parseAndValidate(source, program, &semanticProgram, error, {}, {});
+}
+
+inline bool parseAndValidate(const std::string &source,
+                             primec::Program &program,
+                             primec::SemanticProgram &semanticProgram,
+                             std::string &error,
+                             std::vector<std::string> defaultEffects) {
+  return parseAndValidate(
+      source, program, &semanticProgram, error, defaultEffects, defaultEffects);
+}
+
+inline bool parseAndValidate(const std::string &source,
+                             primec::Program &program,
                              std::string &error,
                              std::vector<std::string> defaultEffects = {}) {
   return parseAndValidate(source, program, nullptr, error, defaultEffects, defaultEffects);

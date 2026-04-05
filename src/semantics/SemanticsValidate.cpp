@@ -1,5 +1,6 @@
 #include "primec/Semantics.h"
 #include "primec/testing/SemanticsGraphHelpers.h"
+#include "primec/testing/SemanticsValidationHelpers.h"
 
 #include "SemanticsValidateConvertConstructors.h"
 #include "SemanticsValidateExperimentalGfxConstructors.h"

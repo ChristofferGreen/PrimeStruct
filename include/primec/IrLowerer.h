@@ -13,16 +13,6 @@ namespace primec {
 class IrLowerer {
  public:
   bool lower(const Program &program,
-             const std::string &entryPath,
-             const std::vector<std::string> &defaultEffects,
-             const std::vector<std::string> &entryDefaultEffects,
-             IrModule &out,
-             std::string &error,
-             DiagnosticSinkReport *diagnosticInfo = nullptr) const {
-    return lower(program, nullptr, entryPath, defaultEffects, entryDefaultEffects, out, error, diagnosticInfo);
-  }
-
-  bool lower(const Program &program,
              const SemanticProgram *semanticProgram,
              const std::string &entryPath,
              const std::vector<std::string> &defaultEffects,

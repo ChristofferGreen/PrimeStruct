@@ -453,7 +453,7 @@ Planned lowerer entrypoint cutover:
 - The top-level cutover should establish one production entry contract:
   - semantic success publishes a semantic product plus AST-backed provenance
   - IR preparation consumes the semantic product directly
-  - any remaining raw-`Program` compatibility path is temporary adapter code only
+  - any compatibility path is temporary adapter code only
 - That first entrypoint seam is already live at `prepareIrModule(...)`, and the production `IrLowerer::lower(...)`
   path is now cut over as well.
 - The remaining residual lowerer-entry boundary is narrower:
@@ -461,7 +461,7 @@ Planned lowerer entrypoint cutover:
   - native-backend software-numeric and runtime-reflection rejection are pinned as syntax-owned backend policy scans over spelled expression surfaces rather than semantic-product facts
   - import/layout setup now treats its remaining `Definition*` map as an explicitly AST-owned provenance/body inventory for field statements, namespace prefixes, and recursive layout traversal; the import-alias table is pinned as a syntax-owned shorthand layer derived from spelled `import` directives plus wildcard expansion; top-level struct layout enumeration already prefers semantic-product type inventories, so the only live raw-`Program` seam left there is AST-owned field/provenance traversal inside layout computation
   - helper/local setup now prefers semantic-product `on_error`, callable, binding, and return facts wherever lowering-facing meaning exists; callable-definition lowering enumerates semantic-product definitions and keeps the AST only as the executable body/provenance source, while statement-call lowering remains intentionally syntax-owned because it walks spelled statement bodies directly and the math-import probe remains syntax-owned import shorthand during uninitialized setup
-  - the only remaining raw-`Program` lowerer entry is the public compatibility overload still used by tests/helpers; its retirement now belongs to helper-surface cleanup rather than production cutover
+  - no raw-`Program` lowerer entry remains; the old public compatibility overload used by tests/helpers is retired
 - The entrypoint boundary should make ownership explicit:
   - lowering-facing meaning comes from the semantic product
   - syntax-faithful provenance, spans, and source reproduction remain AST-owned
@@ -471,7 +471,7 @@ Planned lowerer entrypoint cutover:
   long-term second lowering API.
 - Completion criteria:
   - production entrypoints pass semantic-product data into `prepareIrModule` and `IrLowerer::lower`
-  - any remaining raw-`Program` lowering entry is isolated as a clearly temporary compatibility overload for tests/helpers only
+  - no raw-`Program` lowering entry remains on public production or testing helper paths
   - backend-facing tests can exercise the lowerer boundary without depending on AST-owned semantic caches
   - future lowerer setup work can assume semantic-product input instead of mixed AST/semantic entry state
 
@@ -691,12 +691,11 @@ Planned testing-helper migration contract:
   entrypoint is gone. Entry-arg, pointer, pointer-numeric, GPU, variadic basics/results, method-call/argv, and core
   struct/control-flow serialization IR unit tests now also lower through a semantic-product-aware local helper instead
   of the raw-`Program` overload directly. The conversions-heavy remainder plus the remaining serialization-calls,
-  serialization-control-flow-metadata, and validation IR families are now cut over as well, leaving only one explicit
-  fallback-parity case, pinned in the graph snapshot suite, before the raw overload itself can disappear.
+  serialization-control-flow-metadata, and validation IR families are now cut over as well, and the raw overload plus
+  its last fallback-parity case are gone.
   `primec/testing/SemanticsValidationHelpers.h` is now reduced to syntax-owned canonicalization/assertion helpers,
   while graph/type-resolution snapshots live in `primec/testing/SemanticsGraphHelpers.h`. The remaining helper
-  migration work is deleting redundant legacy pipeline/backend entrypoints plus that final raw-overload compatibility
-  tail.
+  migration work is deleting redundant legacy pipeline/backend entrypoints.
 - `primec/testing/SemanticsValidationHelpers.h` and related helpers should migrate in this order:
   - move lowering-facing assertions onto semantic-product dump helpers or pipeline-facing conformance helpers
   - retain AST-facing helpers only for syntax-owned, provenance-owned, parser-facing, or canonicalization-facing checks

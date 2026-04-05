@@ -158,7 +158,7 @@ TEST_CASE("core IR test helpers expose semantic-product-aware lowering") {
         std::string::npos);
 }
 
-TEST_CASE("graph snapshot suite keeps one explicit raw-lowering fallback parity case") {
+TEST_CASE("graph snapshot suite uses semantic-product-aware lowering only") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path snapshotPath =
       cwd / "tests" / "unit" / "test_semantics_type_resolution_graph_snapshots.cpp";
@@ -170,7 +170,20 @@ TEST_CASE("graph snapshot suite keeps one explicit raw-lowering fallback parity 
   const std::string snapshot = readTextFile(snapshotPath);
   CHECK(snapshot.find("REQUIRE(lowerer.lower(semanticAst, &semanticProgram, \"/main\", defaults, defaults, semanticModule, error));") !=
         std::string::npos);
-  CHECK(snapshot.find("REQUIRE(lowerer.lower(semanticAst, \"/main\", defaults, defaults, fallbackModule, error));") !=
+  CHECK(snapshot.find("fallbackModule") == std::string::npos);
+}
+
+TEST_CASE("ir lowerer header exposes only semantic-product-aware lowering entrypoint") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path irLowererHeaderPath = cwd / "include" / "primec" / "IrLowerer.h";
+  if (!std::filesystem::exists(irLowererHeaderPath)) {
+    irLowererHeaderPath = cwd.parent_path() / "include" / "primec" / "IrLowerer.h";
+  }
+  REQUIRE(std::filesystem::exists(irLowererHeaderPath));
+
+  const std::string header = readTextFile(irLowererHeaderPath);
+  CHECK(header.find("const SemanticProgram *semanticProgram") != std::string::npos);
+  CHECK(header.find("return lower(program, nullptr, entryPath, defaultEffects, entryDefaultEffects, out, error, diagnosticInfo);") ==
         std::string::npos);
 }
 
