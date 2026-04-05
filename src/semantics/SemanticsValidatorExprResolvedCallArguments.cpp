@@ -242,6 +242,31 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     receiverOut = &arg.args.front();
     return true;
   };
+  auto isSoaFieldViewTypeText = [&](const std::string &typeText) -> bool {
+    std::string base;
+    std::string argText;
+    const std::string normalized = normalizeBindingTypeName(typeText);
+    if (splitTemplateTypeName(normalized, base, argText)) {
+      const std::string normalizedBase = normalizeBindingTypeName(base);
+      return normalizedBase == "SoaFieldView" ||
+             normalizedBase == "std/collections/experimental_soa_storage/SoaFieldView";
+    }
+    return normalized == "SoaFieldView" ||
+           normalized == "std/collections/experimental_soa_storage/SoaFieldView";
+  };
+  auto isStandaloneSoaFieldViewCall = [&](const Expr &arg,
+                                          const Expr *&receiverOut) -> bool {
+    receiverOut = nullptr;
+    std::string fieldName;
+    if (!isBuiltinSoaFieldViewExpr(arg, params, locals, &fieldName)) {
+      return false;
+    }
+    if (arg.kind != Expr::Kind::Call || arg.args.empty()) {
+      return false;
+    }
+    receiverOut = &arg.args.front();
+    return true;
+  };
   auto isReferenceEscapeCandidate = [&](const Expr &arg,
                                         const ParameterInfo &param) -> bool {
     const std::string expectedTypeText =
@@ -268,12 +293,35 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     return failResolvedCallArgumentDiagnostic(
         "reference escapes via argument to " + resolved);
   };
+  auto checkStandaloneSoaFieldViewEscapes = [&](const Expr &arg,
+                                                const ParameterInfo &param) -> bool {
+    const std::string expectedTypeText =
+        param.binding.typeTemplateArg.empty()
+            ? param.binding.typeName
+            : param.binding.typeName + "<" + param.binding.typeTemplateArg + ">";
+    if (!isSoaFieldViewTypeText(expectedTypeText)) {
+      return true;
+    }
+    const Expr *receiverExpr = nullptr;
+    if (!isStandaloneSoaFieldViewCall(arg, receiverExpr)) {
+      return true;
+    }
+    if (receiverExpr == nullptr || receiverExpr->kind == Expr::Kind::Name) {
+      return true;
+    }
+    return failResolvedCallArgumentDiagnostic(
+        "field-view escapes via argument to " + resolved);
+  };
 
   for (size_t paramIndex = 0; paramIndex < calleeParams.size(); ++paramIndex) {
     if (paramIndex == packedParamIndex) {
       for (const Expr *arg : packedArgs) {
         if (arg != nullptr &&
             !checkStandaloneSoaRefEscapes(*arg, calleeParams[paramIndex])) {
+          return false;
+        }
+        if (arg != nullptr &&
+            !checkStandaloneSoaFieldViewEscapes(*arg, calleeParams[paramIndex])) {
           return false;
         }
       }
@@ -285,6 +333,9 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
       continue;
     }
     if (!checkStandaloneSoaRefEscapes(*arg, calleeParams[paramIndex])) {
+      return false;
+    }
+    if (!checkStandaloneSoaFieldViewEscapes(*arg, calleeParams[paramIndex])) {
       return false;
     }
   }

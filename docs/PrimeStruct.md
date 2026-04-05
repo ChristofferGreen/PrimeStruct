@@ -3554,6 +3554,9 @@ read-only path.
     Standalone `ref(...)` call-argument escapes derived from location-wrapped or
     helper-return receivers are now rejected, matching the same non-escaping
     borrow intent as other parameter-rooted reference rules.
+    Standalone field-view call-argument escapes derived from location-wrapped or
+    helper-return receivers are now rejected as well, keeping borrowed field views
+    from outliving the owner they were derived from.
   - **Richer borrowed field-view contract:** the next borrowed-view slice should treat
     standalone field-view expressions as first-class non-owning column views rather than
     keeping `borrowed.field()` / `field(borrowed)` on the compiler-owned pending-diagnostic
