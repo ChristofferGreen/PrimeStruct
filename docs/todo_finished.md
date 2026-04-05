@@ -7,6 +7,13 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Split the oversized Group 8 standalone borrowed `ref(...)` item into the real missing
+  experimental-wrapper borrowed-value carrier plus separate direct-local and explicit
+  dereference receiver-routing slices. Completed: the live queue and spec/docs now pin the
+  current boundary explicitly: `SoaVector<T>.ref(i)` and canonical
+  `/std/collections/soa_vector/ref` still return whole-element `T` values through
+  `soaColumnRef<T>(...)` rather than standalone borrowed-view objects.
+
 - ✓ Retired the stale backend-helper cleanup tail. Completed: the remaining public backend-oriented testing surfaces are now explicitly pinned as intentional stable APIs (`primec/testing/CompilePipelineDumpHelpers.h`, `primec/testing/EmitterHelpers.h`, and `primec/testing/IrLowererHelpers.h`), so there are no redundant backend helper entrypoints or backend-facing compatibility shims left to delete.
 - ✓ Deleted redundant lowering-facing pipeline helper entrypoints and the matching pipeline-facing compatibility helper. Completed: the old public `prepareCompilePipelineIrForTesting(...)` entrypoint and `CompilePipelinePreparedIr` surface are gone from `primec/testing/CompilePipelineDumpHelpers.h`, backend conformance keeps the shared semantic-product-aware public surface, and the remaining direct prepared-IR plumbing now lives only in local test helpers that still need one-off compile-pipeline setup.
 - ✓ Retired the legacy raw-`Program` `IrLowerer::lower(...)` compatibility overload. Completed: the final graph-snapshot fallback parity case is deleted, public/test helper entrypoints now lower only through the semantic-product-aware path, and the raw lowering wrapper is gone from `IrLowerer.h`.

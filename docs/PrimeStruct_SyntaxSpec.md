@@ -1069,12 +1069,16 @@ instead of an inline pending branch. The remaining live
 follow-ups are now reduced to invalidation plus richer borrowed-view semantics on top of that
 substrate. The current completed borrowed foothold is the indexed/field-level borrowed
 projection surface (`ref(...).field`, `.ref(i).field`, and `value.field()[i]`-style
-reads/writes) rather than standalone `ref(...)` values. Those projections are recomputed per use
-through the existing `soaVectorGet(...).field` / `soaVectorRef(...).field` helper path, so they
-do not yet materialize a standalone borrowed object that survives later wrapper mutation.
-The next implementation step is therefore to materialize standalone `ref(...)` values first,
-then richer standalone borrowed field-view values on top of the same substrate, before later
-invalidation rules can apply to anything persistent.
+reads/writes) rather than standalone `ref(...)` values. Experimental-wrapper
+`SoaVector<T>.ref(i)` plus canonical `/std/collections/soa_vector/ref` still return
+whole-element `T` values through `soaColumnRef<T>(...)`, and those projections are recomputed
+per use through the existing `soaVectorGet(...).field` / `soaVectorRef(...).field` helper
+path, so neither surface yet materializes a standalone borrowed object that survives later
+wrapper mutation. The next implementation step is therefore to introduce a dedicated
+borrowed element-view carrier for standalone `ref(...)` values first, then route direct
+borrowed locals, explicit dereference, helper-return, inline `location(...)`, and richer
+standalone borrowed field-view values on top of the same substrate before later invalidation
+rules can apply to anything persistent.
 Read-only wrapper field-view indexing now routes both method-form `values.field()[i]`
 and call-form `field(values)[i]` reflected reads, plus borrowed local `borrowed.field()[i]`,
 inline `location(values).field()[i]` / `field(dereference(location(values)))[i]`,
