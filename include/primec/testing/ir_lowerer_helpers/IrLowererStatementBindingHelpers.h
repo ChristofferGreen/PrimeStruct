@@ -75,6 +75,16 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
                                                        const BindingKindFn &bindingKind,
                                                        const BindingValueKindFn &bindingValueKind,
                                                        const InferBindingExprKindFn &inferExprKind);
+StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
+                                                       const Expr &init,
+                                                       const LocalMap &localsIn,
+                                                       const HasExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransform,
+                                                       const BindingKindFn &bindingKind,
+                                                       const BindingValueKindFn &bindingValueKind,
+                                                       const InferBindingExprKindFn &inferExprKind,
+                                                       const ResolveDefinitionCallForStatementFn &resolveDefinitionCall);
+bool isPointerMemoryIntrinsicCall(const Expr &expr);
+bool inferPointerMemoryIntrinsicTargetsUninitializedStorage(const Expr &expr, const LocalMap &localsIn);
 
 bool selectUninitializedStorageZeroInstruction(LocalInfo::Kind kind,
                                                LocalInfo::ValueKind valueKind,
@@ -175,4 +185,3 @@ StatementMatchIfEmitResult tryEmitMatchIfStatement(
     const EmitStatementForBindingFn &emitStatement,
     std::vector<IrInstruction> &instructions,
     std::string &error);
-
