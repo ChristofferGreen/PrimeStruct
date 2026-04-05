@@ -31,6 +31,8 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
     - ○ Land the migration plus matching graph conformance coverage for that island.
 - ◐ Implement the graph/CT-eval interaction contract now that the boundary is documented. Progress: the remaining work is now split into shared dependency-state consumption, explicit adapter seams, and conformance coverage instead of one broad CT-eval handoff item.
   - ○ Route graph-backed consumers onto shared dependency-state consumption where CT-eval and graph validation overlap.
+    - ○ Identify the next shared dependency state consumed by both CT-eval and the graph.
+    - ○ Move that dependency state onto the shared graph-backed surface.
   - ○ Add one explicit adapter for the remaining CT-eval-only paths that still cannot consume shared graph dependency state directly.
   - ○ Add conformance coverage for the graph/CT-eval handoff boundary.
 - ◐ Implement the graph-backed explicit/implicit template-inference migrations now that the cutover contract is documented. Progress: the remaining template cutover is now split into explicit template-argument, implicit inference, and revalidation/monomorph follow-up slices instead of one umbrella migration bullet.
