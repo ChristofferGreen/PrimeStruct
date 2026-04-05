@@ -7,6 +7,13 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Split the oversized Group 8 single-column borrowed carrier item into the real slot-borrow
+  carrier primitive plus the later `SoaColumn<T>` and wrapper/helper exposure slices.
+  Completed: the live queue and spec/docs now pin the current boundary explicitly:
+  `soaColumnBorrowSlot<T>(...)` and `vectorBorrowSlot<T>(...)` still return whole-element `T`
+  through `borrow(dereference(slot))`, so a reusable slot-borrow carrier must exist before a
+  `SoaColumn<T>` borrowed element-view carrier or wrapper `ref(...)` surface can materialize.
+
 - ✓ Split the oversized Group 8 standalone borrowed element-view carrier item into the real
   missing single-column carrier substrate plus the wrapper/helper exposure slice. Completed:
   the live queue and spec/docs now pin the current boundary explicitly: a reusable borrowed
