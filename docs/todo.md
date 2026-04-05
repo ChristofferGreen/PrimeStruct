@@ -34,7 +34,11 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
     - ○ Identify the next shared dependency state consumed by both CT-eval and the graph.
     - ○ Move that dependency state onto the shared graph-backed surface.
   - ○ Add one explicit adapter for the remaining CT-eval-only paths that still cannot consume shared graph dependency state directly.
+    - ○ Select the CT-eval-only dependency state that needs an adapter.
+    - ○ Implement the adapter and wire it into the graph/CT-eval boundary.
   - ○ Add conformance coverage for the graph/CT-eval handoff boundary.
+    - ○ Add a positive conformance fixture that exercises the CT-eval adapter seam.
+    - ○ Add a negative diagnostic fixture that proves the adapter boundary rejects mismatches.
 - ◐ Implement the graph-backed explicit/implicit template-inference migrations now that the cutover contract is documented. Progress: the remaining template cutover is now split into explicit template-argument, implicit inference, and revalidation/monomorph follow-up slices instead of one umbrella migration bullet.
   - ○ Migrate the next explicit template-argument inference surface onto the graph path.
   - ○ Migrate the next implicit template-inference surface onto the graph path.
