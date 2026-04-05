@@ -695,8 +695,9 @@ Planned testing-helper migration contract:
   The conversions-heavy remainder plus the remaining serialization-calls, serialization-control-flow-metadata, and
   validation IR families are now cut over as well, and the raw overload plus its last fallback-parity case are gone.
   `primec/testing/SemanticsValidationHelpers.h` is now reduced to syntax-owned canonicalization/assertion helpers,
-  while graph/type-resolution snapshots live in `primec/testing/SemanticsGraphHelpers.h`. The remaining helper
-  migration work is deleting testing-only semantic snapshot transport; the remaining public backend-oriented helpers
+  while graph/type-resolution snapshots live in `primec/testing/SemanticsGraphHelpers.h`. The ad hoc diagnostic-string
+  capture layer in the type-resolution parity helper is now gone, so the remaining helper migration work is deleting
+  the last testing-only semantic snapshot serialization/fixture plumbing; the remaining public backend-oriented helpers
   (`primec/testing/CompilePipelineDumpHelpers.h`, `primec/testing/EmitterHelpers.h`, and
   `primec/testing/IrLowererHelpers.h`) are now pinned as intentional stable testing APIs rather than temporary
   compatibility wrappers.

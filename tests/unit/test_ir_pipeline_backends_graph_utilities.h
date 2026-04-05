@@ -18,8 +18,12 @@ TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
   CHECK(cmake.find("tests/unit/test_ir_pipeline_type_resolution_parity.cpp") != std::string::npos);
   CHECK(parityHelper.find("struct TypeResolverPipelineSnapshot") != std::string::npos);
   CHECK(parityHelper.find("runTypeResolverPipelineSnapshot") != std::string::npos);
+  CHECK(parityHelper.find("snapshotDiagnosticReport") == std::string::npos);
+  CHECK(parityHelper.find("CompilePipelineDiagnosticInfo diagnosticInfo") != std::string::npos);
   CHECK(paritySource.find("default type resolver keeps vm pipeline behavior stable across graph corpus") !=
         std::string::npos);
+  CHECK(paritySource.find("diagnosticReportContainsMessage") != std::string::npos);
+  CHECK(paritySource.find("diagnosticReportContainsRelatedLabel") != std::string::npos);
   CHECK(paritySource.find("direct_call_local_auto_struct") != std::string::npos);
   CHECK(paritySource.find("direct_call_local_auto_collection") != std::string::npos);
   CHECK(paritySource.find("block_local_auto_struct") != std::string::npos);

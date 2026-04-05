@@ -8,6 +8,38 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.type_resolution_parity");
 
+namespace {
+
+bool diagnosticReportContainsMessage(const primec::DiagnosticSinkReport &report, const std::string &substring) {
+  if (report.message.find(substring) != std::string::npos) {
+    return true;
+  }
+  for (const auto &record : report.records) {
+    if (record.message.find(substring) != std::string::npos) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool diagnosticReportContainsRelatedLabel(const primec::DiagnosticSinkReport &report, const std::string &label) {
+  for (const auto &related : report.relatedSpans) {
+    if (related.label.find(label) != std::string::npos) {
+      return true;
+    }
+  }
+  for (const auto &record : report.records) {
+    for (const auto &related : record.relatedSpans) {
+      if (related.label.find(label) != std::string::npos) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+} // namespace
+
 TEST_CASE("default type resolver keeps vm pipeline behavior stable across graph corpus") {
   struct GraphCase {
     std::string name;
@@ -626,7 +658,7 @@ main() {
       CHECK_FALSE(snapshot.error.empty());
       CHECK(snapshot.error.find(testCase.errorSubstring) != std::string::npos);
       if (testCase.expectDiagnosticSnapshot) {
-        CHECK(snapshot.diagnosticSnapshot.find(testCase.errorSubstring) != std::string::npos);
+        CHECK(diagnosticReportContainsMessage(snapshot.diagnosticInfo, testCase.errorSubstring));
       }
       CHECK(snapshot.serializedIr.empty());
     }
@@ -656,11 +688,10 @@ main() {
   CHECK_FALSE(graph.ok);
   CHECK(graph.error == "return type inference cycle requires explicit annotations on /alpha, /beta");
   CHECK(graph.serializedIr.empty());
-  CHECK(graph.diagnosticSnapshot.find(
-            "message=return type inference cycle requires explicit annotations on /alpha, /beta") !=
-        std::string::npos);
-  CHECK(graph.diagnosticSnapshot.find("cycle member: /alpha") != std::string::npos);
-  CHECK(graph.diagnosticSnapshot.find("cycle member: /beta") != std::string::npos);
+  CHECK(diagnosticReportContainsMessage(
+      graph.diagnosticInfo, "return type inference cycle requires explicit annotations on /alpha, /beta"));
+  CHECK(diagnosticReportContainsRelatedLabel(graph.diagnosticInfo, "cycle member: /alpha"));
+  CHECK(diagnosticReportContainsRelatedLabel(graph.diagnosticInfo, "cycle member: /beta"));
 }
 
 TEST_CASE("graph type resolver still surfaces vm recursive-call lowering limits") {
