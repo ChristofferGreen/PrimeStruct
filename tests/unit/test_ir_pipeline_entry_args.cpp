@@ -3,6 +3,7 @@
 
 #include "third_party/doctest.h"
 
+#include "primec/IrSerializer.h"
 #include "primec/Vm.h"
 #include "test_ir_pipeline_helpers.h"
 

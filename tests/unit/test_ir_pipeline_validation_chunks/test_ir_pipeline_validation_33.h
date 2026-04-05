@@ -116,6 +116,9 @@ TEST_CASE("ir lowerer on_error helpers prefer semantic-product metadata") {
       .handlerPath = "/handler",
       .errorType = "FileError",
       .boundArgCount = 1,
+      .returnResultHasValue = false,
+      .returnResultValueType = "",
+      .returnResultErrorType = "",
   });
 
   primec::ir_lowerer::OnErrorByDefinition onErrorByDef;
@@ -224,6 +227,9 @@ TEST_CASE("ir lowerer on_error entry setup validates semantic bound arg counts")
       .handlerPath = "/handler",
       .errorType = "FileError",
       .boundArgCount = 2,
+      .returnResultHasValue = false,
+      .returnResultValueType = "",
+      .returnResultErrorType = "",
   });
 
   primec::ir_lowerer::EntryCallOnErrorSetup setup;

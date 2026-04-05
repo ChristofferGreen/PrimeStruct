@@ -136,7 +136,15 @@ inline bool parseValidateAndLower(const std::string &source,
 
   primec::SemanticProgram semanticProgram;
   primec::Semantics semantics;
-  if (!semantics.validate(program, "/main", error, defaultEffects, entryDefaultEffects, &semanticProgram)) {
+  if (!semantics.validate(program,
+                          "/main",
+                          error,
+                          defaultEffects,
+                          entryDefaultEffects,
+                          {},
+                          nullptr,
+                          false,
+                          &semanticProgram)) {
     return false;
   }
 

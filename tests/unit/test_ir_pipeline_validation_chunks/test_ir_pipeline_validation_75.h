@@ -468,8 +468,10 @@ TEST_CASE("ir lowerer statement call helper prefers semantic callable inventory"
   program.definitions = {entry, skipped, target};
 
   primec::SemanticProgram semanticProgram;
-  semanticProgram.definitions.push_back({.name = "entry", .fullPath = "/main/entry"});
-  semanticProgram.definitions.push_back({.name = "target", .fullPath = "/main/target"});
+  semanticProgram.definitions.push_back(
+      {.name = "entry", .fullPath = "/main/entry", .namespacePrefix = "/main"});
+  semanticProgram.definitions.push_back(
+      {.name = "target", .fullPath = "/main/target", .namespacePrefix = "/main"});
 
   std::unordered_set<std::string> loweredCallTargets = {"/main/skipped", "/main/target"};
   primec::IrFunction function;
