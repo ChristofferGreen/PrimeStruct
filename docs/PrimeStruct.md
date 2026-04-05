@@ -3553,16 +3553,21 @@ read-only path.
     path. The intended contract is: direct borrowed locals, explicit `dereference(...)`
     receivers, borrowed helper-return receivers, method-like struct-helper-return receivers,
     and inline `location(...)`-wrapped borrowed receivers should all expose the same
-    column-view surface that the current successful `value.field()[i]` rewrite already uses;
-    those standalone field-view values remain borrowed projections over wrapper-owned SoA
-    storage, so they inherit the same invalidation rules as `ref(...)`; read-only receivers
-    should expose read-only field-view values, while mutable borrowed receivers may later
-    grow into mutable field-view values that authorize indexed writes through that same
-    column-view substrate; and passing, returning, or locally binding a field-view value
-    should preserve borrowed-view semantics instead of silently materializing an owning
-    vector copy. The remaining implementation work is to thread that contract through the
+    column-view surface that the current successful `value.field()[i]` rewrite already uses.
+    Today that indexed surface is still only a per-use rewrite through
+    `soaVectorGet(...).field` / `soaVectorRef(...).field`; `borrowed.field()` /
+    `field(borrowed)` do not yet materialize a reusable standalone borrowed field-view value
+    that can be locally bound, passed through helpers, or returned. Those standalone
+    field-view values remain borrowed projections over wrapper-owned SoA storage, so they
+    inherit the same invalidation rules as `ref(...)`; read-only receivers should expose
+    read-only field-view values, while mutable borrowed receivers may later grow into
+    mutable field-view values that authorize indexed writes through that same column-view
+    substrate; and passing, returning, or locally binding a field-view value should
+    preserve borrowed-view semantics instead of silently materializing an owning vector
+    copy. The remaining implementation work is to thread that contract through the
     existing experimental wrapper helper/indexing substrate, not to add more builtin-only
-    fallback diagnostics. The remaining implementation work naturally splits into direct /
+    fallback diagnostics. The remaining implementation work therefore starts with a
+    reusable standalone borrowed field-view carrier, then naturally splits into direct /
     explicit-dereference receivers, borrowed helper-return and method-like helper-return
     receivers, inline `location(...)`-wrapped receivers, and pass/return/local-binding
     preservation.

@@ -7,6 +7,13 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Split the richer standalone borrowed field-view TODO into the real next
+  substrate seam plus later receiver-routing slices. Completed: the indexed
+  `value.field()[i]` surface still exists only as a per-use
+  `soaVectorGet(...).field` / `soaVectorRef(...).field` rewrite, so the live
+  queue now starts with introducing a reusable standalone borrowed field-view
+  carrier before the direct / helper-return / `location(...)` receiver-family
+  work.
 - ✓ Retired the duplicate standalone borrowed field-view invalidation subtree.
   Completed: standalone borrowed field-view values still do not exist yet, and
   the richer field-view contract already pins that they inherit the same

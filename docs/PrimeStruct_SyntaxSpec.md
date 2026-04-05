@@ -1129,13 +1129,18 @@ The intended next borrowed-view step is that standalone borrowed field-view valu
 storage instead of remaining on the pending-diagnostic path. That richer borrowed-view
 surface is meant to cover the same receiver families that already succeed for
 `value.field()[i]`: direct borrowed locals, explicit dereference, borrowed helper returns,
-method-like helper returns, and inline `location(...)`-wrapped borrowed receivers. Those
-field-view values inherit the same invalidation contract as `ref(...)`, stay borrowed rather
-than materializing owning vectors, and may later distinguish read-only versus mutable
-borrowed receivers on top of the current `soaVectorGet(...)` / `soaVectorRef(...)`
-substrate. The remaining implementation work naturally splits into direct / explicit-
-dereference receivers, helper-return and method-like helper-return receivers, inline
-`location(...)`-wrapped receivers, and pass/return/local-binding preservation.
+method-like helper returns, and inline `location(...)`-wrapped borrowed receivers. Today
+that indexed field-view path is still only a per-use rewrite through
+`soaVectorGet(...)` / `soaVectorRef(...)`; `borrowed.field()` and `field(borrowed)` do not
+yet materialize a reusable standalone borrowed field-view value that can be bound, passed
+through helpers, or returned. Those field-view values inherit the same invalidation
+contract as `ref(...)`, stay borrowed rather than materializing owning vectors, and may
+later distinguish read-only versus mutable borrowed receivers on top of the current
+`soaVectorGet(...)` / `soaVectorRef(...)` substrate. The remaining implementation work
+therefore starts with a reusable standalone borrowed field-view carrier, then naturally
+splits into direct / explicit-dereference receivers, helper-return and method-like
+helper-return receivers, inline `location(...)`-wrapped receivers, and
+pass/return/local-binding preservation.
 The remaining standalone mutating write step is that `assign(value.field(), next)` and
 `assign(field(value), next)` should stop on the pending diagnostic only until those
 receivers can lower through the existing writable wrapper substrate instead of mutating a
