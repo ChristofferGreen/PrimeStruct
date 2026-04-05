@@ -1,3 +1,5 @@
+struct SemanticProductTargetAdapter;
+
 MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target,
                                                const LocalMap &localsIn,
                                                const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo);
