@@ -4,7 +4,7 @@
 
 #include "primec/IrLowerer.h"
 #include "primec/testing/CompilePipelineDumpHelpers.h"
-#include "primec/testing/SemanticsValidationHelpers.h"
+#include "primec/testing/SemanticsGraphHelpers.h"
 
 #include "third_party/doctest.h"
 #include "test_semantics_helpers.h"

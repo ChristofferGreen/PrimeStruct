@@ -1,4 +1,4 @@
-#include "primec/testing/SemanticsValidationHelpers.h"
+#include "primec/testing/SemanticsGraphHelpers.h"
 
 #include "test_semantics_helpers.h"
 

@@ -3,7 +3,7 @@
 #include "CondensationDag.h"
 #include "SemanticsHelpers.h"
 #include "TypeResolutionGraphPreparation.h"
-#include "primec/testing/SemanticsValidationHelpers.h"
+#include "primec/testing/SemanticsGraphHelpers.h"
 
 #include <optional>
 #include <sstream>

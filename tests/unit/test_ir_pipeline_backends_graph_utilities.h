@@ -39,12 +39,12 @@ TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
 TEST_CASE("strongly connected component utility is wired through semantics testing api") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path cmakePath = cwd / "CMakeLists.txt";
-  std::filesystem::path testApiPath = cwd / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
+  std::filesystem::path testApiPath = cwd / "include" / "primec" / "testing" / "SemanticsGraphHelpers.h";
   std::filesystem::path sccHeaderPath = cwd / "src" / "semantics" / "StronglyConnectedComponents.h";
   std::filesystem::path sccSourcePath = cwd / "src" / "semantics" / "StronglyConnectedComponents.cpp";
   if (!std::filesystem::exists(cmakePath)) {
     cmakePath = cwd.parent_path() / "CMakeLists.txt";
-    testApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
+    testApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsGraphHelpers.h";
     sccHeaderPath = cwd.parent_path() / "src" / "semantics" / "StronglyConnectedComponents.h";
     sccSourcePath = cwd.parent_path() / "src" / "semantics" / "StronglyConnectedComponents.cpp";
   }
@@ -75,12 +75,12 @@ TEST_CASE("strongly connected component utility is wired through semantics testi
 TEST_CASE("condensation dag utility is wired through semantics testing api") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path cmakePath = cwd / "CMakeLists.txt";
-  std::filesystem::path testApiPath = cwd / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
+  std::filesystem::path testApiPath = cwd / "include" / "primec" / "testing" / "SemanticsGraphHelpers.h";
   std::filesystem::path dagHeaderPath = cwd / "src" / "semantics" / "CondensationDag.h";
   std::filesystem::path dagSourcePath = cwd / "src" / "semantics" / "CondensationDag.cpp";
   if (!std::filesystem::exists(cmakePath)) {
     cmakePath = cwd.parent_path() / "CMakeLists.txt";
-    testApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
+    testApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsGraphHelpers.h";
     dagHeaderPath = cwd.parent_path() / "src" / "semantics" / "CondensationDag.h";
     dagSourcePath = cwd.parent_path() / "src" / "semantics" / "CondensationDag.cpp";
   }

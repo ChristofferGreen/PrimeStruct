@@ -52,7 +52,8 @@ TEST_CASE("semantics validator rebuilds base contexts behind explicit validation
 TEST_CASE("type resolution graph builder is wired through semantics testing api") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path cmakePath = cwd / "CMakeLists.txt";
-  std::filesystem::path testApiPath = cwd / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
+  std::filesystem::path testApiPath = cwd / "include" / "primec" / "testing" / "SemanticsGraphHelpers.h";
+  std::filesystem::path validationApiPath = cwd / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
   std::filesystem::path graphHeaderPath = cwd / "src" / "semantics" / "TypeResolutionGraph.h";
   std::filesystem::path graphSourcePath = cwd / "src" / "semantics" / "TypeResolutionGraph.cpp";
   std::filesystem::path pipelinePath = cwd / "src" / "CompilePipeline.cpp";
@@ -60,7 +61,8 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   std::filesystem::path primevmMainPath = cwd / "src" / "primevm_main.cpp";
   if (!std::filesystem::exists(cmakePath)) {
     cmakePath = cwd.parent_path() / "CMakeLists.txt";
-    testApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
+    testApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsGraphHelpers.h";
+    validationApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
     graphHeaderPath = cwd.parent_path() / "src" / "semantics" / "TypeResolutionGraph.h";
     graphSourcePath = cwd.parent_path() / "src" / "semantics" / "TypeResolutionGraph.cpp";
     pipelinePath = cwd.parent_path() / "src" / "CompilePipeline.cpp";
@@ -69,6 +71,7 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   }
   REQUIRE(std::filesystem::exists(cmakePath));
   REQUIRE(std::filesystem::exists(testApiPath));
+  REQUIRE(std::filesystem::exists(validationApiPath));
   REQUIRE(std::filesystem::exists(graphHeaderPath));
   REQUIRE(std::filesystem::exists(graphSourcePath));
   REQUIRE(std::filesystem::exists(pipelinePath));
@@ -77,6 +80,7 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
 
   const std::string cmake = readTextFile(cmakePath);
   const std::string testApi = readTextFile(testApiPath);
+  const std::string validationApi = readTextFile(validationApiPath);
   const std::string graphHeader = readTextFile(graphHeaderPath);
   const std::string graphSource = readTextFile(graphSourcePath);
   const std::string pipeline = readTextFile(pipelinePath);
@@ -89,6 +93,8 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   CHECK(testApi.find("struct TypeResolutionGraphSnapshot") != std::string::npos);
   CHECK(testApi.find("buildTypeResolutionGraphForTesting") != std::string::npos);
   CHECK(testApi.find("dumpTypeResolutionGraphForTesting") != std::string::npos);
+  CHECK(validationApi.find("struct TypeResolutionGraphSnapshotNode") == std::string::npos);
+  CHECK(validationApi.find("buildTypeResolutionGraphForTesting") == std::string::npos);
   CHECK(graphHeader.find("enum class TypeResolutionNodeKind") != std::string::npos);
   CHECK(graphHeader.find("enum class TypeResolutionEdgeKind") != std::string::npos);
   CHECK(graphHeader.find("struct TypeResolutionGraphNode") != std::string::npos);

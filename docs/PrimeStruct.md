@@ -658,8 +658,9 @@ Planned pipeline-facing semantic-product conformance matrix:
   - semantic-product dump and `ir` dumps can be compared in the same scenario without AST-only re-derivation.
   - C++/VM/native compile-pipeline cases prove that lowering uses published semantic-product facts rather than hidden
     AST-side caches.
-  - `primec/testing/SemanticsValidationHelpers.h` snapshot assertions for lowering-facing facts are reduced to syntax-
-    owned cases only.
+  - graph-backed SCC, condensation-DAG, and type-resolution snapshot assertions now live in
+    `primec/testing/SemanticsGraphHelpers.h`, while `primec/testing/SemanticsValidationHelpers.h`
+    is reduced to syntax-owned canonicalization/assertion helpers only.
 
 Planned testing-only snapshot removal contract:
 - The repository should converge on one canonical lowering-facing inspection surface: the published semantic product and
@@ -691,9 +692,11 @@ Planned testing-helper migration contract:
   struct/control-flow serialization IR unit tests now also lower through a semantic-product-aware local helper instead
   of the raw-`Program` overload directly. The conversions-heavy remainder plus the remaining serialization-calls,
   serialization-control-flow-metadata, and validation IR families are now cut over as well, leaving only one explicit
-  fallback-parity case, pinned in the graph snapshot suite, before the raw overload itself can disappear. The remaining helper migration work is narrowing
-  `primec/testing/SemanticsValidationHelpers.h` to syntax/provenance-only assertions and deleting redundant legacy
-  pipeline/backend entrypoints plus that final raw-overload compatibility tail.
+  fallback-parity case, pinned in the graph snapshot suite, before the raw overload itself can disappear.
+  `primec/testing/SemanticsValidationHelpers.h` is now reduced to syntax-owned canonicalization/assertion helpers,
+  while graph/type-resolution snapshots live in `primec/testing/SemanticsGraphHelpers.h`. The remaining helper
+  migration work is deleting redundant legacy pipeline/backend entrypoints plus that final raw-overload compatibility
+  tail.
 - `primec/testing/SemanticsValidationHelpers.h` and related helpers should migrate in this order:
   - move lowering-facing assertions onto semantic-product dump helpers or pipeline-facing conformance helpers
   - retain AST-facing helpers only for syntax-owned, provenance-owned, parser-facing, or canonicalization-facing checks

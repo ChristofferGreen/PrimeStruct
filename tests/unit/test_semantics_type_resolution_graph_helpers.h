@@ -1,3 +1,5 @@
+#include "primec/testing/SemanticsGraphHelpers.h"
+
 namespace {
 
 [[maybe_unused]] const primec::semantics::TypeResolutionGraphSnapshotNode &requireGraphNode(

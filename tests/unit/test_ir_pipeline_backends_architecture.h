@@ -244,6 +244,7 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   std::filesystem::path emitterTestApiPath = cwd / "include" / "primec" / "testing" / "EmitterHelpers.h";
   std::filesystem::path irLowererTestApiPath = cwd / "include" / "primec" / "testing" / "IrLowererHelpers.h";
   std::filesystem::path parserTestApiPath = cwd / "include" / "primec" / "testing" / "ParserHelpers.h";
+  std::filesystem::path semanticsGraphTestApiPath = cwd / "include" / "primec" / "testing" / "SemanticsGraphHelpers.h";
   std::filesystem::path semanticsTestApiPath = cwd / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
   std::filesystem::path textFilterTestApiPath = cwd / "include" / "primec" / "testing" / "TextFilterHelpers.h";
   std::filesystem::path parserHelperTestPath = cwd / "tests" / "unit" / "test_parser_basic_parser_helpers.cpp";
@@ -256,6 +257,7 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
     emitterTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "EmitterHelpers.h";
     irLowererTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "IrLowererHelpers.h";
     parserTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "ParserHelpers.h";
+    semanticsGraphTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsGraphHelpers.h";
     semanticsTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
     textFilterTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "TextFilterHelpers.h";
     parserHelperTestPath = cwd.parent_path() / "tests" / "unit" / "test_parser_basic_parser_helpers.cpp";
@@ -268,6 +270,7 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   REQUIRE(std::filesystem::exists(emitterTestApiPath));
   REQUIRE(std::filesystem::exists(irLowererTestApiPath));
   REQUIRE(std::filesystem::exists(parserTestApiPath));
+  REQUIRE(std::filesystem::exists(semanticsGraphTestApiPath));
   REQUIRE(std::filesystem::exists(semanticsTestApiPath));
   REQUIRE(std::filesystem::exists(textFilterTestApiPath));
   REQUIRE(std::filesystem::exists(parserHelperTestPath));
@@ -316,9 +319,14 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
         std::string::npos);
 
   const std::string parserTestApi = readTextFile(parserTestApiPath);
+  const std::string semanticsGraphTestApi = readTextFile(semanticsGraphTestApiPath);
   CHECK(parserTestApi.find("namespace primec::parser") != std::string::npos);
   CHECK(parserTestApi.find("bool isBuiltinName(const std::string &name, bool allowMathBare);") !=
         std::string::npos);
+
+  CHECK(semanticsGraphTestApi.find("namespace primec::semantics") != std::string::npos);
+  CHECK(semanticsGraphTestApi.find("struct TypeResolutionGraphSnapshotNode") != std::string::npos);
+  CHECK(semanticsGraphTestApi.find("computeStronglyConnectedComponentsForTesting") != std::string::npos);
 
   const std::string textFilterTestApi = readTextFile(textFilterTestApiPath);
   CHECK(textFilterTestApi.find("namespace primec::text_filter") != std::string::npos);
@@ -332,6 +340,7 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   CHECK(semanticsTestApi.find("runSemanticsValidatorStatementKnownIterationCountStep") != std::string::npos);
   CHECK(semanticsTestApi.find("runSemanticsValidatorStatementCanIterateMoreThanOnceStep") != std::string::npos);
   CHECK(semanticsTestApi.find("runSemanticsValidatorStatementIsNegativeIntegerLiteralStep") != std::string::npos);
+  CHECK(semanticsTestApi.find("buildTypeResolutionGraphForTesting") == std::string::npos);
 
   const std::string parserHelperTest = readTextFile(parserHelperTestPath);
   CHECK(parserHelperTest.find("#include \"primec/testing/ParserHelpers.h\"") != std::string::npos);

@@ -1,6 +1,6 @@
 #include "CondensationDag.h"
 
-#include "primec/testing/SemanticsValidationHelpers.h"
+#include "primec/testing/SemanticsGraphHelpers.h"
 
 #include <algorithm>
 #include <cstdint>
