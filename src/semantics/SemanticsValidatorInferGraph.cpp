@@ -4,6 +4,7 @@
 #include "TypeResolutionGraph.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <functional>
 #include <sstream>
 
@@ -58,6 +59,14 @@ std::vector<std::vector<uint32_t>> buildCondensationDagLayers(const Condensation
     std::sort(layer.begin(), layer.end());
   }
   return layers;
+}
+
+bool useForwardGraphLayerOrder() {
+  const char *value = std::getenv("PRIMESTRUCT_GRAPH_LAYER_ORDER");
+  if (value == nullptr || *value == '\0') {
+    return false;
+  }
+  return std::string_view(value) == "forward";
 }
 
 } // namespace
@@ -160,8 +169,63 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
   };
 
   const std::vector<std::vector<uint32_t>> dagLayers = buildCondensationDagLayers(dag);
-  for (auto layerIt = dagLayers.rbegin(); layerIt != dagLayers.rend(); ++layerIt) {
-    for (uint32_t componentId : *layerIt) {
+  const bool forwardOrder = useForwardGraphLayerOrder();
+  if (forwardOrder) {
+    for (const auto &layer : dagLayers) {
+      for (uint32_t componentId : layer) {
+        if (componentId >= dag.nodes.size()) {
+          continue;
+        }
+        const CondensationDagNode &componentNode = dag.nodes[componentId];
+        const bool componentHasCycle = componentNode.memberNodeIds.size() > 1;
+        std::vector<const Definition *> definitions = collectUnknownDefinitions(componentNode);
+        if (definitions.empty()) {
+          continue;
+        }
+
+        bool changed = false;
+        do {
+          changed = false;
+          for (const Definition *definition : definitions) {
+            bool definitionChanged = false;
+            if (!inferDefinitionReturnKindGraphStep(
+                    *definition, false, componentHasCycle, definitionChanged)) {
+              return false;
+            }
+            changed = changed || definitionChanged;
+          }
+        } while (changed);
+
+        std::vector<const TypeResolutionGraphNode *> unresolvedNodes =
+            collectUnknownDefinitionNodes(componentNode);
+        std::vector<const Definition *> unresolvedDefinitions;
+        unresolvedDefinitions.reserve(unresolvedNodes.size());
+        for (const TypeResolutionGraphNode *node : unresolvedNodes) {
+          auto defIt = defMap_.find(node->resolvedPath);
+          if (defIt == defMap_.end() || defIt->second == nullptr) {
+            continue;
+          }
+          unresolvedDefinitions.push_back(defIt->second);
+        }
+        if (unresolvedDefinitions.empty()) {
+          continue;
+        }
+
+        if (componentHasCycle) {
+          return failInferGraphCycleDiagnostic(unresolvedNodes);
+        }
+
+        for (const Definition *definition : unresolvedDefinitions) {
+          bool definitionChanged = false;
+          if (!inferDefinitionReturnKindGraphStep(*definition, true, componentHasCycle, definitionChanged)) {
+            return false;
+          }
+        }
+      }
+    }
+  } else {
+    for (auto layerIt = dagLayers.rbegin(); layerIt != dagLayers.rend(); ++layerIt) {
+      for (uint32_t componentId : *layerIt) {
       if (componentId >= dag.nodes.size()) {
         continue;
       }
@@ -211,6 +275,7 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
         }
       }
     }
+  }
   }
 
   for (const auto &def : program_.definitions) {

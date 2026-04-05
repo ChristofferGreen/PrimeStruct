@@ -154,6 +154,41 @@ leaf([i32] value) {
   return(value)
 }
 
+TEST_CASE("type resolution graph layer ordering stays consistent") {
+  const std::string source = R"(
+[return<auto>]
+leaf([i32] value) {
+  return(value)
+}
+
+[return<auto>]
+main() {
+  return(leaf(1i32))
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionReturnSnapshot baseline;
+  REQUIRE(primec::semantics::computeTypeResolutionReturnSnapshotForTesting(
+      parseProgram(source), "/main", error, baseline));
+  CHECK(error.empty());
+
+  primec::semantics::TypeResolutionReturnSnapshot forward;
+  {
+    const ScopedEnvVar forwardOrder("PRIMESTRUCT_GRAPH_LAYER_ORDER", "forward");
+    REQUIRE(primec::semantics::computeTypeResolutionReturnSnapshotForTesting(
+        parseProgram(source), "/main", error, forward));
+  }
+  CHECK(error.empty());
+  REQUIRE(baseline.entries.size() == forward.entries.size());
+  for (size_t index = 0; index < baseline.entries.size(); ++index) {
+    CHECK(baseline.entries[index].definitionPath == forward.entries[index].definitionPath);
+    CHECK(baseline.entries[index].returnKind == forward.entries[index].returnKind);
+    CHECK(baseline.entries[index].structPath == forward.entries[index].structPath);
+    CHECK(baseline.entries[index].bindingTypeText == forward.entries[index].bindingTypeText);
+  }
+}
+
 [return<i32>]
 main() {
   [auto] value{0i32}
