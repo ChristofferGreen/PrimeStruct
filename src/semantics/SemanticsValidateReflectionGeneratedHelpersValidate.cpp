@@ -301,6 +301,8 @@ bool emitReflectionSoaSchemaHelpers(ReflectionGeneratedHelperContext &context) {
   const std::string nameHelperPath = context.def.fullPath + "/SoaSchemaFieldName";
   const std::string typeHelperPath = context.def.fullPath + "/SoaSchemaFieldType";
   const std::string visibilityHelperPath = context.def.fullPath + "/SoaSchemaFieldVisibility";
+  const std::string offsetHelperPath = context.def.fullPath + "/SoaSchemaFieldOffset";
+  const std::string strideHelperPath = context.def.fullPath + "/SoaSchemaElementStride";
   const std::string chunkCountHelperPath = context.def.fullPath + "/SoaSchemaChunkCount";
   const std::string chunkStartHelperPath = context.def.fullPath + "/SoaSchemaChunkFieldStart";
   const std::string chunkFieldCountHelperPath = context.def.fullPath + "/SoaSchemaChunkFieldCount";
@@ -309,6 +311,8 @@ bool emitReflectionSoaSchemaHelpers(ReflectionGeneratedHelperContext &context) {
                                  &nameHelperPath,
                                  &typeHelperPath,
                                  &visibilityHelperPath,
+                                 &offsetHelperPath,
+                                 &strideHelperPath,
                                  &chunkCountHelperPath,
                                  &chunkStartHelperPath,
                                  &chunkFieldCountHelperPath}) {
@@ -381,18 +385,34 @@ bool emitReflectionSoaSchemaHelpers(ReflectionGeneratedHelperContext &context) {
 
   std::vector<std::string> fieldTypes;
   std::vector<std::string> fieldVisibilities;
+  std::vector<uint64_t> fieldOffsets;
   fieldTypes.reserve(context.fieldNames.size());
   fieldVisibilities.reserve(context.fieldNames.size());
+  fieldOffsets.reserve(context.fieldNames.size());
   for (const auto &fieldName : context.fieldNames) {
     const auto typeIt = context.fieldTypeNames.find(fieldName);
     fieldTypes.push_back(typeIt == context.fieldTypeNames.end() ? "" : typeIt->second);
     const auto visibilityIt = context.fieldVisibilityNames.find(fieldName);
     fieldVisibilities.push_back(visibilityIt == context.fieldVisibilityNames.end() ? "public" : visibilityIt->second);
+    const auto offsetIt = context.fieldOffsetBytes.find(fieldName);
+    if (offsetIt == context.fieldOffsetBytes.end()) {
+      context.error = "generated reflection helper " + offsetHelperPath +
+                      " does not support field layout: " + fieldName;
+      return false;
+    }
+    fieldOffsets.push_back(offsetIt->second);
   }
 
   appendIndexedStringHelper("SoaSchemaFieldName", nameHelperPath, context.fieldNames);
   appendIndexedStringHelper("SoaSchemaFieldType", typeHelperPath, fieldTypes);
   appendIndexedStringHelper("SoaSchemaFieldVisibility", visibilityHelperPath, fieldVisibilities);
+  appendIndexedI32Helper("SoaSchemaFieldOffset", offsetHelperPath, fieldOffsets);
+
+  Definition strideHelper = makeHelper("SoaSchemaElementStride", strideHelperPath, "i32", false);
+  strideHelper.returnExpr = makeI32LiteralExpr(context.elementStrideBytes);
+  strideHelper.hasReturnStatement = true;
+  context.rewrittenDefinitions.push_back(std::move(strideHelper));
+  context.definitionPaths.insert(strideHelperPath);
 
   const size_t chunkWidth = 16;
   const size_t chunkCount = (context.fieldNames.size() + chunkWidth - 1) / chunkWidth;

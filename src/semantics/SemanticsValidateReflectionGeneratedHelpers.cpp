@@ -3,6 +3,7 @@
 #include "SemanticsHelpers.h"
 #include "SemanticsValidateReflectionGeneratedHelpersCloneDebug.h"
 #include "SemanticsValidateReflectionGeneratedHelpersCompare.h"
+#include "SemanticsValidateReflectionMetadataInternal.h"
 #include "SemanticsValidateReflectionGeneratedHelpersSerialization.h"
 #include "SemanticsValidateReflectionGeneratedHelpersState.h"
 #include "SemanticsValidateReflectionGeneratedHelpersValidate.h"
@@ -100,6 +101,9 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     }
     definitionPaths.insert(def.fullPath);
   }
+
+  ReflectionMetadataRewriteContext reflectionMetadataContext = buildReflectionMetadataRewriteContext(program);
+  const std::unordered_map<std::string, uint32_t> emptyFieldOffsets;
 
   auto bindingTypeFromField = [](const Expr &fieldBindingExpr, bool &ambiguousOut) -> std::string {
     ambiguousOut = false;
@@ -240,100 +244,120 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
       return false;
     }
 
+    const auto layoutIt = reflectionMetadataContext.structLayoutMetadata.find(def.fullPath);
+    const auto &fieldOffsetBytes =
+        layoutIt == reflectionMetadataContext.structLayoutMetadata.end() ? emptyFieldOffsets : layoutIt->second.fieldOffsetBytes;
+    const uint32_t elementStrideBytes =
+        layoutIt == reflectionMetadataContext.structLayoutMetadata.end() ? 0u : layoutIt->second.elementStrideBytes;
+
     if (shouldGenerateEqual) {
       ReflectionGeneratedHelperContext compareContext{
-          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, fieldOffsetBytes, elementStrideBytes,
+          definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionComparisonHelper(compareContext, "Equal", "equal", "and", true)) {
         return false;
       }
     }
     if (shouldGenerateNotEqual) {
       ReflectionGeneratedHelperContext compareContext{
-          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, fieldOffsetBytes, elementStrideBytes,
+          definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionComparisonHelper(compareContext, "NotEqual", "not_equal", "or", false)) {
         return false;
       }
     }
     if (shouldGenerateCompare) {
       ReflectionGeneratedHelperContext compareContext{
-          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, fieldOffsetBytes, elementStrideBytes,
+          definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionCompareHelper(compareContext)) {
         return false;
       }
     }
     if (shouldGenerateHash64) {
       ReflectionGeneratedHelperContext compareContext{
-          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, fieldOffsetBytes, elementStrideBytes,
+          definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionHash64Helper(compareContext)) {
         return false;
       }
     }
     if (shouldGenerateClear) {
       ReflectionGeneratedHelperContext stateContext{
-          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, fieldOffsetBytes, elementStrideBytes,
+          definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionClearHelper(stateContext)) {
         return false;
       }
     }
     if (shouldGenerateCopyFrom) {
       ReflectionGeneratedHelperContext stateContext{
-          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, fieldOffsetBytes, elementStrideBytes,
+          definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionCopyFromHelper(stateContext)) {
         return false;
       }
     }
     if (shouldGenerateValidate) {
       ReflectionGeneratedHelperContext validationContext{
-          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, fieldOffsetBytes, elementStrideBytes,
+          definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionValidateHelper(validationContext)) {
         return false;
       }
     }
     if (shouldGenerateSerialize) {
       ReflectionGeneratedHelperContext serializationContext{
-          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, fieldOffsetBytes, elementStrideBytes,
+          definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionSerializeHelper(serializationContext)) {
         return false;
       }
     }
     if (shouldGenerateDeserialize) {
       ReflectionGeneratedHelperContext serializationContext{
-          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, fieldOffsetBytes, elementStrideBytes,
+          definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionDeserializeHelper(serializationContext)) {
         return false;
       }
     }
     if (shouldGenerateDefault) {
       ReflectionGeneratedHelperContext stateContext{
-          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, fieldOffsetBytes, elementStrideBytes,
+          definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionDefaultHelper(stateContext)) {
         return false;
       }
     }
     if (shouldGenerateIsDefault) {
       ReflectionGeneratedHelperContext stateContext{
-          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, fieldOffsetBytes, elementStrideBytes,
+          definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionIsDefaultHelper(stateContext)) {
         return false;
       }
     }
     if (shouldGenerateClone) {
       ReflectionGeneratedHelperContext cloneDebugContext{
-          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, fieldOffsetBytes, elementStrideBytes,
+          definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionCloneHelper(cloneDebugContext)) {
         return false;
       }
     }
     if (shouldGenerateDebugPrint) {
       ReflectionGeneratedHelperContext cloneDebugContext{
-          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, fieldOffsetBytes, elementStrideBytes,
+          definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionDebugPrintHelper(cloneDebugContext)) {
         return false;
       }
     }
     if (shouldGenerateSoaSchema) {
       ReflectionGeneratedHelperContext validationContext{
-          def, fieldNames, fieldTypeNames, fieldVisibilityNames, definitionPaths, rewrittenDefinitions, error};
+          def, fieldNames, fieldTypeNames, fieldVisibilityNames, fieldOffsetBytes, elementStrideBytes,
+          definitionPaths, rewrittenDefinitions, error};
       if (!emitReflectionSoaSchemaHelpers(validationContext)) {
         return false;
       }

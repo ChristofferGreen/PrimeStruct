@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -14,6 +15,8 @@ struct ReflectionGeneratedHelperContext {
   const std::vector<std::string> &fieldNames;
   const std::unordered_map<std::string, std::string> &fieldTypeNames;
   const std::unordered_map<std::string, std::string> &fieldVisibilityNames;
+  const std::unordered_map<std::string, uint32_t> &fieldOffsetBytes;
+  uint32_t elementStrideBytes = 0;
   std::unordered_set<std::string> &definitionPaths;
   std::vector<Definition> &rewrittenDefinitions;
   std::string &error;

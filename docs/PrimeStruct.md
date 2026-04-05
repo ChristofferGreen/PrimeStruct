@@ -3571,13 +3571,12 @@ read-only path.
     direct borrowed locals, explicit dereference, borrowed helper returns, method-like
     helper returns, and inline `location(...)`-wrapped receivers. The remaining
     implementation work therefore starts with the now-completed reusable non-owning
-    `SoaColumn<T>` borrowed-view helper substrate plus the still-missing reflected layout
-    facts for reflect-enabled structs. `SoaColumn<T>` still stores contiguous whole `T`
-    elements, and the current `SoaSchema*` reflection helpers expose field
-    names/types/visibility but not validated field byte offsets or whole-element stride.
-    The next seam is publishing those validated layout facts themselves; only after that
-    can generated `SoaSchemaFieldOffset(...)` / `SoaSchemaElementStride()` wrappers exist,
-    then a reflected field-slot pointer helper can address one named field inside
+    `SoaColumn<T>` borrowed-view helper substrate plus reflected layout facts for
+    reflect-enabled structs. `SoaColumn<T>` still stores contiguous whole `T` elements,
+    and the current `SoaSchema*` reflection helpers now expose validated field byte
+    offsets and whole-element stride through `SoaSchemaFieldOffset(...)` /
+    `SoaSchemaElementStride()`. The next seam is a reflected field-slot pointer helper
+    that can address one named field inside
     whole-element storage, then a reusable non-owning strided field-view carrier can sit
     on top of it, and only after that can the shared helper path route onto that carrier
     and preserve it across local binding, helper pass-through, and return surfaces.

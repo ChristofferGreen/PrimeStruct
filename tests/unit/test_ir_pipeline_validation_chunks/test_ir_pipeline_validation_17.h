@@ -208,6 +208,10 @@ TEST_CASE("semantics validate source delegation stays stable") {
             "emitReflectionSoaSchemaStorageHelpers(validationContext)") != std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersSerializationHeaderSource.find(
             "const std::unordered_map<std::string, std::string> &fieldVisibilityNames;") != std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSerializationHeaderSource.find(
+            "const std::unordered_map<std::string, uint32_t> &fieldOffsetBytes;") != std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersSerializationHeaderSource.find(
+            "uint32_t elementStrideBytes = 0;") != std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateHeaderSource.find(
             "bool emitReflectionSoaSchemaHelpers(ReflectionGeneratedHelperContext &context)") !=
         std::string::npos);
@@ -247,6 +251,12 @@ TEST_CASE("semantics validate source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
             "appendIndexedStringHelper(\"SoaSchemaFieldVisibility\", visibilityHelperPath, fieldVisibilities)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
+            "appendIndexedI32Helper(\"SoaSchemaFieldOffset\", offsetHelperPath, fieldOffsets)") !=
+        std::string::npos);
+  CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
+            "Definition strideHelper = makeHelper(\"SoaSchemaElementStride\", strideHelperPath, \"i32\", false);") !=
         std::string::npos);
   CHECK(semanticsValidateReflectionGeneratedHelpersValidateSource.find(
             "appendIndexedI32Helper(\"SoaSchemaChunkFieldStart\", chunkStartHelperPath, chunkStarts)") !=

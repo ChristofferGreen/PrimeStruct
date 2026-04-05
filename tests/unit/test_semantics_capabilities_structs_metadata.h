@@ -184,6 +184,8 @@ main() {
   const primec::Definition *nameHelper = nullptr;
   const primec::Definition *typeHelper = nullptr;
   const primec::Definition *visibilityHelper = nullptr;
+  const primec::Definition *offsetHelper = nullptr;
+  const primec::Definition *strideHelper = nullptr;
   const primec::Definition *chunkCountHelper = nullptr;
   const primec::Definition *chunkStartHelper = nullptr;
   const primec::Definition *chunkFieldCountHelper = nullptr;
@@ -203,6 +205,10 @@ main() {
       typeHelper = &def;
     } else if (def.fullPath == "/Item/SoaSchemaFieldVisibility") {
       visibilityHelper = &def;
+    } else if (def.fullPath == "/Item/SoaSchemaFieldOffset") {
+      offsetHelper = &def;
+    } else if (def.fullPath == "/Item/SoaSchemaElementStride") {
+      strideHelper = &def;
     } else if (def.fullPath == "/Item/SoaSchemaChunkCount") {
       chunkCountHelper = &def;
     } else if (def.fullPath == "/Item/SoaSchemaChunkFieldStart") {
@@ -230,6 +236,8 @@ main() {
   REQUIRE(nameHelper != nullptr);
   REQUIRE(typeHelper != nullptr);
   REQUIRE(visibilityHelper != nullptr);
+  REQUIRE(offsetHelper != nullptr);
+  REQUIRE(strideHelper != nullptr);
   REQUIRE(chunkCountHelper != nullptr);
   REQUIRE(chunkStartHelper != nullptr);
   REQUIRE(chunkFieldCountHelper != nullptr);
@@ -322,6 +330,10 @@ main() {
   assertIndexedStringHelper(*nameHelper, "\"x\"utf8", "\"label\"utf8");
   assertIndexedStringHelper(*typeHelper, "\"i32\"utf8", "\"string\"utf8");
   assertIndexedStringHelper(*visibilityHelper, "\"public\"utf8", "\"private\"utf8");
+  assertIndexedI32Helper(*offsetHelper, 0, 8);
+  REQUIRE(strideHelper->returnExpr.has_value());
+  CHECK(strideHelper->returnExpr->kind == primec::Expr::Kind::Literal);
+  CHECK(strideHelper->returnExpr->literalValue == 16);
   assertIndexedI32Helper(*chunkStartHelper, 0);
   assertIndexedI32Helper(*chunkFieldCountHelper, 2);
 
@@ -394,6 +406,7 @@ main() {
   const primec::Definition *chunkCountHelper = nullptr;
   const primec::Definition *chunkStartHelper = nullptr;
   const primec::Definition *chunkFieldCountHelper = nullptr;
+  const primec::Definition *strideHelper = nullptr;
   const primec::Definition *storageStruct = nullptr;
   const primec::Definition *storageNewHelper = nullptr;
   const primec::Definition *storageCountHelper = nullptr;
@@ -408,6 +421,8 @@ main() {
       chunkStartHelper = &def;
     } else if (def.fullPath == "/Item/SoaSchemaChunkFieldCount") {
       chunkFieldCountHelper = &def;
+    } else if (def.fullPath == "/Item/SoaSchemaElementStride") {
+      strideHelper = &def;
     } else if (def.fullPath == "/Item/SoaSchemaStorage") {
       storageStruct = &def;
     } else if (def.fullPath == "/Item/SoaSchemaStorageNew") {
@@ -428,6 +443,7 @@ main() {
   REQUIRE(chunkCountHelper != nullptr);
   REQUIRE(chunkStartHelper != nullptr);
   REQUIRE(chunkFieldCountHelper != nullptr);
+  REQUIRE(strideHelper != nullptr);
   REQUIRE(storageStruct != nullptr);
   REQUIRE(storageNewHelper != nullptr);
   REQUIRE(storageCountHelper != nullptr);
@@ -444,6 +460,9 @@ main() {
   CHECK(chunkStartHelper->statements[1].args[1].bodyArguments[0].args[0].literalValue == 16);
   CHECK(chunkFieldCountHelper->statements[0].args[1].bodyArguments[0].args[0].literalValue == 16);
   CHECK(chunkFieldCountHelper->statements[1].args[1].bodyArguments[0].args[0].literalValue == 1);
+  REQUIRE(strideHelper->returnExpr.has_value());
+  CHECK(strideHelper->returnExpr->kind == primec::Expr::Kind::Literal);
+  CHECK(strideHelper->returnExpr->literalValue == 68);
 
   REQUIRE(storageStruct->statements.size() == 2);
   const primec::Expr &firstChunk = storageStruct->statements[0];

@@ -231,30 +231,33 @@ main() {
   [i32 mut] index{0i32}
   if(equal(/Pair/SoaSchemaFieldCount(), 2i32), then() { assign(score, plus(score, 1i32)) }, else() { })
   if(equal(/Pair/SoaSchemaFieldName(index).count(), 1i32), then() { assign(score, plus(score, 2i32)) }, else() { })
+  if(equal(/Pair/SoaSchemaFieldOffset(index), 0i32), then() { assign(score, plus(score, 4i32)) }, else() { })
   increment(index)
-  if(equal(/Pair/SoaSchemaFieldType(index).count(), 4i32), then() { assign(score, plus(score, 4i32)) }, else() { })
+  if(equal(/Pair/SoaSchemaFieldType(index).count(), 4i32), then() { assign(score, plus(score, 8i32)) }, else() { })
   if(equal(/Pair/SoaSchemaFieldVisibility(index).count(), 7i32),
-     then() { assign(score, plus(score, 8i32)) },
+     then() { assign(score, plus(score, 16i32)) },
      else() { })
+  if(equal(/Pair/SoaSchemaFieldOffset(index), 4i32), then() { assign(score, plus(score, 32i32)) }, else() { })
+  if(equal(/Pair/SoaSchemaElementStride(), 8i32), then() { assign(score, plus(score, 64i32)) }, else() { })
   return(score)
 }
 )";
   const std::string srcPath = writeTemp("compile_reflection_soa_schema_runtime.prime", source);
 
   const std::string vmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
-  CHECK(runCommand(vmCmd) == 15);
+  CHECK(runCommand(vmCmd) == 127);
 
   const std::string exePath = (testScratchPath("") / "primec_reflection_soa_schema_exe").string();
   const std::string exeCompileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) + " --entry /main";
   CHECK(runCommand(exeCompileCmd) == 0);
-  CHECK(runCommand(quoteShellArg(exePath)) == 15);
+  CHECK(runCommand(quoteShellArg(exePath)) == 127);
 
   const std::string nativePath = (testScratchPath("") / "primec_reflection_soa_schema_native").string();
   const std::string nativeCompileCmd =
       "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(nativePath) + " --entry /main";
   CHECK(runCommand(nativeCompileCmd) == 0);
-  CHECK(runCommand(quoteShellArg(nativePath)) == 15);
+  CHECK(runCommand(quoteShellArg(nativePath)) == 127);
 }
 
 TEST_CASE("reflection SoaSchema chunk helper runtime stays aligned across backends") {
@@ -291,25 +294,26 @@ main() {
   if(equal(/Wide/SoaSchemaChunkFieldStart(1i32), 16i32), then() { assign(score, plus(score, 8i32)) }, else() { })
   if(equal(/Wide/SoaSchemaChunkFieldCount(1i32), 1i32), then() { assign(score, plus(score, 16i32)) }, else() { })
   if(equal(/Wide/SoaSchemaChunkFieldCount(2i32), 0i32), then() { assign(score, plus(score, 32i32)) }, else() { })
+  if(equal(/Wide/SoaSchemaElementStride(), 68i32), then() { assign(score, plus(score, 64i32)) }, else() { })
   return(score)
 }
 )";
   const std::string srcPath = writeTemp("compile_reflection_soa_schema_chunk_runtime.prime", source);
 
   const std::string vmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
-  CHECK(runCommand(vmCmd) == 63);
+  CHECK(runCommand(vmCmd) == 127);
 
   const std::string exePath = (testScratchPath("") / "primec_reflection_soa_schema_chunk_exe").string();
   const std::string exeCompileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) + " --entry /main";
   CHECK(runCommand(exeCompileCmd) == 0);
-  CHECK(runCommand(quoteShellArg(exePath)) == 63);
+  CHECK(runCommand(quoteShellArg(exePath)) == 127);
 
   const std::string nativePath = (testScratchPath("") / "primec_reflection_soa_schema_chunk_native").string();
   const std::string nativeCompileCmd =
       "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(nativePath) + " --entry /main";
   CHECK(runCommand(nativeCompileCmd) == 0);
-  CHECK(runCommand(quoteShellArg(nativePath)) == 63);
+  CHECK(runCommand(quoteShellArg(nativePath)) == 127);
 }
 
 TEST_CASE("reflection SoaSchema storage helper runtime stays aligned across backends") {
