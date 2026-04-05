@@ -718,7 +718,8 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       if (expr.isMethodCall) {
         return expr.name == "ref" ||
                resolvedPath.rfind("/std/collections/soa_vector/ref", 0) == 0 ||
-               resolvedPath.rfind("/soa_vector/ref", 0) == 0;
+               resolvedPath.rfind("/soa_vector/ref", 0) == 0 ||
+               resolvedPath.rfind("/std/collections/experimental_soa_vector/soaVectorRef", 0) == 0;
       }
       return isSimpleCallName(expr, "ref") ||
              resolvedPath.rfind("/std/collections/soa_vector/ref", 0) == 0 ||
