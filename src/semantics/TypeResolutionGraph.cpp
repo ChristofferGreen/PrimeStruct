@@ -510,6 +510,34 @@ CondensationDag computeTypeResolutionDependencyDag(const TypeResolutionGraph &gr
 std::string formatTypeResolutionGraph(const TypeResolutionGraph &graph) {
   std::ostringstream out;
   out << "type_graph {\n";
+  size_t definitionReturnCount = 0;
+  size_t callConstraintCount = 0;
+  size_t localAutoCount = 0;
+  for (const auto &node : graph.nodes) {
+    switch (node.kind) {
+      case TypeResolutionNodeKind::DefinitionReturn:
+        ++definitionReturnCount;
+        break;
+      case TypeResolutionNodeKind::CallConstraint:
+        ++callConstraintCount;
+        break;
+      case TypeResolutionNodeKind::LocalAuto:
+        ++localAutoCount;
+        break;
+    }
+  }
+  size_t dependencyEdgeCount = 0;
+  size_t requirementEdgeCount = 0;
+  for (const auto &edge : graph.edges) {
+    switch (edge.kind) {
+      case TypeResolutionEdgeKind::Dependency:
+        ++dependencyEdgeCount;
+        break;
+      case TypeResolutionEdgeKind::Requirement:
+        ++requirementEdgeCount;
+        break;
+    }
+  }
   out << "  metrics prepare_ms=" << graph.prepareMillis
       << " build_ms=" << graph.buildMillis
       << " prepare_ms_max=" << graph.prepareMaxMillis
@@ -517,7 +545,12 @@ std::string formatTypeResolutionGraph(const TypeResolutionGraph &graph) {
       << " prepare_over=" << (graph.prepareOverBudget ? "true" : "false")
       << " build_over=" << (graph.buildOverBudget ? "true" : "false")
       << " nodes=" << graph.nodes.size()
-      << " edges=" << graph.edges.size() << "\n";
+      << " edges=" << graph.edges.size()
+      << " nodes_definition_return=" << definitionReturnCount
+      << " nodes_call_constraint=" << callConstraintCount
+      << " nodes_local_auto=" << localAutoCount
+      << " edges_dependency=" << dependencyEdgeCount
+      << " edges_requirement=" << requirementEdgeCount << "\n";
   for (const auto &node : graph.nodes) {
     out << "  node " << node.id << " kind=" << typeResolutionNodeKindName(node.kind)
         << " label=\"" << node.label << "\""
