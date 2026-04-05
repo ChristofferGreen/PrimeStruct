@@ -1,6 +1,7 @@
 #include "SemanticsValidator.h"
 
 #include <cctype>
+#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
@@ -121,32 +122,141 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       }
       return std::nullopt;
     };
+    auto normalizeReferenceTarget = [&](const std::string &target) -> std::string {
+      std::string trimmed = target;
+      size_t start = 0;
+      while (start < trimmed.size() && std::isspace(static_cast<unsigned char>(trimmed[start])) != 0) {
+        ++start;
+      }
+      size_t end = trimmed.size();
+      while (end > start && std::isspace(static_cast<unsigned char>(trimmed[end - 1])) != 0) {
+        --end;
+      }
+      trimmed = trimmed.substr(start, end - start);
+      return normalizeBindingTypeName(trimmed);
+    };
+    auto referenceRootForReturnBinding = [&](const std::string &bindingName,
+                                             const BindingInfo &binding) -> std::string {
+      if (binding.typeName != "Reference" && binding.typeName != "Pointer") {
+        return "";
+      }
+      if (!binding.referenceRoot.empty()) {
+        return binding.referenceRoot;
+      }
+      return bindingName;
+    };
+    auto resolveParameterOwnedBorrowReturnTarget = [&](const Expr &returnExpr,
+                                                       std::string &targetOut,
+                                                       bool &recognizedOut) -> bool {
+      recognizedOut = false;
+      targetOut.clear();
+      if (returnExpr.kind != Expr::Kind::Call || returnExpr.isMethodCall ||
+          !isSimpleCallName(returnExpr, "borrow") || returnExpr.args.size() != 1) {
+        return false;
+      }
+      recognizedOut = true;
+
+      auto parameterOwnedRoot = [&](const std::string &candidateRoot) {
+        if (candidateRoot.empty()) {
+          return false;
+        }
+        for (const auto &param : params) {
+          if (param.binding.typeName != "Reference" && param.binding.typeName != "Pointer") {
+            continue;
+          }
+          const std::string paramRoot = referenceRootForReturnBinding(param.name, param.binding);
+          if (!paramRoot.empty() &&
+              (candidateRoot == paramRoot || candidateRoot.rfind(paramRoot + ".", 0) == 0)) {
+            return true;
+          }
+        }
+        return false;
+      };
+      auto resolvePointerLikeRoot = [&](const std::string &bindingName,
+                                        const BindingInfo &binding,
+                                        bool isParamBinding,
+                                        std::string &rootOut) -> bool {
+        if (binding.typeName != "Reference" && binding.typeName != "Pointer") {
+          return false;
+        }
+        const std::string root = referenceRootForReturnBinding(bindingName, binding);
+        if (root.empty()) {
+          return false;
+        }
+        if (!isParamBinding && !parameterOwnedRoot(root)) {
+          return false;
+        }
+        rootOut = root;
+        return true;
+      };
+      std::function<bool(const Expr &, std::string &)> resolveParameterOwnedStorageRoot;
+      resolveParameterOwnedStorageRoot = [&](const Expr &storageExpr, std::string &rootOut) -> bool {
+        if (storageExpr.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, storageExpr.name)) {
+            return resolvePointerLikeRoot(storageExpr.name, *paramBinding, true, rootOut);
+          }
+          auto localIt = locals.find(storageExpr.name);
+          if (localIt == locals.end()) {
+            return false;
+          }
+          return resolvePointerLikeRoot(localIt->first, localIt->second, false, rootOut);
+        }
+
+        std::string builtinName;
+        if (storageExpr.kind == Expr::Kind::Call && getBuiltinPointerName(storageExpr, builtinName) &&
+            builtinName == "dereference" && storageExpr.args.size() == 1) {
+          return resolveParameterOwnedStorageRoot(storageExpr.args.front(), rootOut);
+        }
+
+        if (storageExpr.kind == Expr::Kind::Call && storageExpr.isFieldAccess && storageExpr.args.size() == 1) {
+          std::string receiverRoot;
+          if (!resolveParameterOwnedStorageRoot(storageExpr.args.front(), receiverRoot) || receiverRoot.empty()) {
+            return false;
+          }
+          rootOut = receiverRoot + "." + storageExpr.name;
+          return true;
+        }
+
+        return false;
+      };
+
+      const Expr &storageExpr = returnExpr.args.front();
+      BindingInfo storageBinding;
+      bool resolvedStorage = false;
+      if (!resolveUninitializedStorageBinding(params, locals, storageExpr, storageBinding, resolvedStorage) ||
+          !resolvedStorage || storageBinding.typeName != "uninitialized" || storageBinding.typeTemplateArg.empty()) {
+        return false;
+      }
+
+      std::string borrowRoot;
+      if (!resolveParameterOwnedStorageRoot(storageExpr, borrowRoot) || borrowRoot.empty()) {
+        return false;
+      }
+
+      targetOut = storageBinding.typeTemplateArg;
+      return true;
+    };
     if (std::optional<std::string> expectedReferenceTarget = declaredReferenceReturnTarget();
         expectedReferenceTarget.has_value()) {
       const Expr &returnExpr = stmt.args.front();
       if (returnExpr.kind != Expr::Kind::Name) {
-        return failReturnDiagnostic("reference return requires direct parameter reference");
-      }
-      const BindingInfo *paramBinding = findParamBinding(params, returnExpr.name);
-      if (paramBinding == nullptr || paramBinding->typeName != "Reference") {
-        return failReturnDiagnostic("reference return requires direct parameter reference");
-      }
-      auto normalizeReferenceTarget = [&](const std::string &target) -> std::string {
-        std::string trimmed = target;
-        size_t start = 0;
-        while (start < trimmed.size() && std::isspace(static_cast<unsigned char>(trimmed[start])) != 0) {
-          ++start;
+        std::string borrowedTargetType;
+        bool recognizedBorrowReturn = false;
+        if (!resolveParameterOwnedBorrowReturnTarget(returnExpr, borrowedTargetType, recognizedBorrowReturn)) {
+          return failReturnDiagnostic("reference return requires direct parameter reference or parameter-rooted borrow");
         }
-        size_t end = trimmed.size();
-        while (end > start && std::isspace(static_cast<unsigned char>(trimmed[end - 1])) != 0) {
-          --end;
+        if (normalizeReferenceTarget(borrowedTargetType) != normalizeReferenceTarget(*expectedReferenceTarget)) {
+          return failReturnDiagnostic("reference return type mismatch");
         }
-        trimmed = trimmed.substr(start, end - start);
-        return normalizeBindingTypeName(trimmed);
-      };
-      if (normalizeReferenceTarget(paramBinding->typeTemplateArg) !=
-          normalizeReferenceTarget(*expectedReferenceTarget)) {
-        return failReturnDiagnostic("reference return type mismatch");
+      } else {
+        const BindingInfo *paramBinding = findParamBinding(params, returnExpr.name);
+        if (paramBinding == nullptr || paramBinding->typeName != "Reference") {
+          return failReturnDiagnostic("reference return requires direct parameter reference or parameter-rooted borrow");
+        }
+        if (normalizeReferenceTarget(paramBinding->typeTemplateArg) !=
+            normalizeReferenceTarget(*expectedReferenceTarget)) {
+          return failReturnDiagnostic("reference return type mismatch");
+        }
       }
     }
     bool validatedPointerLikeReturn = false;

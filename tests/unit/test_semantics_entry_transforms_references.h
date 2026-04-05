@@ -17,6 +17,26 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("reference return allows parameter-rooted borrow expression") {
+  const std::string source = R"(
+[return<Reference<i32>>]
+peek([Reference<uninitialized<i32>>] slot) {
+  return(borrow(dereference(slot)))
+}
+
+[return<int>]
+main() {
+  [uninitialized<i32>] storage{uninitialized<i32>()}
+  [Reference<uninitialized<i32>>] slot{location(storage)}
+  init(dereference(slot), 7i32)
+  return(dereference(peek(slot)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("reference return rejects local reference escape") {
   const std::string source = R"(
 [return<Reference<i32>>]
@@ -31,6 +51,21 @@ bad() {
   CHECK(error.find("reference return requires direct parameter reference") != std::string::npos);
 }
 
+TEST_CASE("reference return rejects local borrow escape") {
+  const std::string source = R"(
+[return<Reference<i32>>]
+bad() {
+  [uninitialized<i32>] storage{uninitialized<i32>()}
+  init(storage, 1i32)
+  return(borrow(storage))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/bad", error));
+  CHECK(error.find("reference return requires direct parameter reference or parameter-rooted borrow") !=
+        std::string::npos);
+}
+
 TEST_CASE("reference return rejects derived parameter reference") {
   const std::string source = R"(
 [return<Reference<i32>>]
@@ -42,6 +77,18 @@ bad([Reference<i32>] input) {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/bad", error));
   CHECK(error.find("reference return requires direct parameter reference") != std::string::npos);
+}
+
+TEST_CASE("reference return rejects mismatched parameter-rooted borrow target") {
+  const std::string source = R"(
+[return<Reference<i32>>]
+bad([Reference<uninitialized<i64>>] slot) {
+  return(borrow(dereference(slot)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/bad", error));
+  CHECK(error.find("reference return type mismatch") != std::string::npos);
 }
 
 TEST_CASE("reference return requires matching template target") {

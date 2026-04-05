@@ -7,6 +7,14 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Allowed helper `return<Reference<T>>` contracts to return borrowed-value carrier
+  expressions rooted in parameter-owned storage. Completed: direct
+  `return(borrow(...))` now validates for helper `return<Reference<T>>` contracts
+  when the borrowed `uninitialized<T>` storage is rooted in parameter-owned
+  reference/pointer storage, including `borrow(dereference(slot))`, while local
+  borrow escapes remain rejected and the remaining stdlib slot-helper blocker is
+  slot-pointer provenance through local `slot` aliases.
+
 - ✓ Split the oversized Group 8 stdlib slot-borrow helper exposure item into the real helper-return,
   slot-provenance, and final helper-contract slices. Completed: the live queue and spec/docs now
   pin the actual blockers explicitly: helper `return<Reference<T>>` still only accepts direct

@@ -2629,8 +2629,10 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
     stays active.
   - Borrowing a field borrows the whole struct value (no field-splitting in v1).
   - Borrowed bindings cannot be reassigned or moved until all borrows end.
-  - `return<Reference<T>>` may only return a direct `Reference<T>` parameter (`return(paramRef)`); local and derived
-    references are rejected.
+  - `return<Reference<T>>` accepts either a direct `Reference<T>` parameter (`return(paramRef)`) or a direct
+    parameter-rooted borrowed carrier such as `return(borrow(dereference(slot)))` when the borrowed storage is
+    rooted in parameter-owned `uninitialized<T>` storage; local and non-parameter-rooted reference escapes are still
+    rejected.
 - **Unsafe scopes:** `[unsafe]` on a definition allows aliasing within that body, and also allows pointer-to-reference
   initialization from pointer-like expressions when types match. References created there must not escape the unsafe
   scope. Unsafe scopes are aliasing barriers for optimization.
@@ -2730,9 +2732,10 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
 - **Access:**
   - `take(storage)` moves the value out and leaves the storage uninitialized.
   - `borrow(storage)` now supports standalone `[Reference<T>]` bindings for direct local/field storage and
-    pointer/reference-backed `borrow(dereference(slot))` storage surfaces. Those standalone carriers currently stop
-    at binding sites; helper `return<Reference<T>>` contracts still only accept direct parameter references, so the
-    stdlib slot-borrow helpers still return whole-element `T` for now. The storage must be initialized.
+    pointer/reference-backed `borrow(dereference(slot))` storage surfaces, and helper
+    `return<Reference<T>>` contracts now also accept direct borrowed carriers rooted in parameter-owned storage.
+    The stdlib slot-borrow helpers still return whole-element `T` for now because slot-pointer provenance is not yet
+    preserved through local `slot` aliases. The storage must be initialized.
   - Any other use of an `uninitialized<T>` value is a type error.
 - **Lifetime rules:** using a storage value after `drop`/`take` is a compile-time error until it is reinitialized.
 - **`Destroy` handling:** structs owning `uninitialized<T>` fields must explicitly `drop` them when initialized.
@@ -3493,12 +3496,11 @@ foothold is the indexed/field-level borrowed projection surface (`ref(...).field
 surface yet materializes a standalone borrowed object that can survive later wrapper mutation.
 The remaining borrowed-view work therefore starts from exposing the now-completed
 slot-backed borrowed-value carrier through the stdlib-owned `soaColumnBorrowSlot<T>(...)` /
-`vectorBorrowSlot<T>(...)` helpers, but that helper exposure is still blocked on two semantics
-seams: helper `return<Reference<T>>` contracts still only accept direct parameter references, and
-slot-pointer helpers such as `soaColumnSlotUnsafe<T>(...)` / `vectorSlotUnsafe<T>(...)` do not
-yet preserve borrowed-root provenance through the local `slot` pointer. Once those helper-return
-and provenance seams land, the slot-backed helper exposure can stop validating through `[return<T>]`
-and collapsing back to whole-element `T`. After that slot-backed helper exposure exists, a
+`vectorBorrowSlot<T>(...)` helpers, but that helper exposure is still blocked on the remaining
+slot-pointer provenance seam: helpers such as `soaColumnSlotUnsafe<T>(...)` /
+`vectorSlotUnsafe<T>(...)` do not yet preserve borrowed-root provenance through the local `slot`
+pointer. Once that provenance seam lands, the slot-backed helper exposure can stop validating
+through `[return<T>]` and collapsing back to whole-element `T`. After that slot-backed helper exposure exists, a
 single-column `SoaColumn<T>`
 borrowed element-view carrier can be layered on top of the same substrate and
 experimental-wrapper `SoaVector<T>.ref(i)` / `soaVectorRef<T>(...)` can route onto it before
