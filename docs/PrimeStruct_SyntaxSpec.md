@@ -1141,13 +1141,14 @@ contract as `ref(...)`, stay borrowed rather than materializing owning vectors, 
 later distinguish read-only versus mutable borrowed receivers on top of the current
 `soaVectorGet(...)` / `soaVectorRef(...)` substrate. The remaining implementation work
 therefore starts with the now-completed reusable non-owning `SoaColumn<T>`
-borrowed-view helper substrate plus the still-missing reusable non-owning
-strided field-view carrier over whole-element `SoaColumn<T>` storage.
-`SoaColumn<T>` still stores contiguous whole `T` elements, so a named field
-cannot honestly project as plain `SoaColumn<Field>` storage without a new
-carrier that preserves field-offset and stride semantics. After that carrier
-exists, the shared helper path can route onto it, and only after that can it be
-preserved across pass/return/local-binding surfaces.
+borrowed-view helper substrate plus the still-missing reflected field-slot
+pointer/offset helper over whole-element `SoaColumn<T>` storage. `SoaColumn<T>`
+still stores contiguous whole `T` elements and does not yet expose one named
+field as an addressable slot with preserved byte-offset and element-stride
+semantics. After that field-addressing substrate exists, a reusable non-owning
+strided field-view carrier can sit on top of it; only then can the shared
+helper path route onto that carrier, and only after that can it be preserved
+across pass/return/local-binding surfaces.
 The remaining standalone mutating write step is that `assign(value.field(), next)` and
 `assign(field(value), next)` should stop on the pending diagnostic only until those
 receivers can lower through the existing writable wrapper substrate instead of mutating a
