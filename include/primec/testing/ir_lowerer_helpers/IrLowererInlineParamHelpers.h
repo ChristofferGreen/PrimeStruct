@@ -1,6 +1,8 @@
 
 
 
+struct StructSlotLayoutInfo;
+
 using InferInlineParameterLocalInfoFn = std::function<bool(const Expr &, LocalInfo &, std::string &)>;
 using IsInlineParameterStringBindingFn = std::function<bool(const Expr &)>;
 using EmitInlineParameterStringValueFn =

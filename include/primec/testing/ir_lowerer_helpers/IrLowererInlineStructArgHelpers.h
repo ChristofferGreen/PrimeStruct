@@ -2,6 +2,8 @@
 
 
 
+struct StructSlotLayoutInfo;
+
 using ResolveInlineStructSlotLayoutFn = std::function<bool(const std::string &, StructSlotLayoutInfo &)>;
 using InferInlineStructExprKindFn = std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
 using InferInlineStructExprPathFn = std::function<std::string(const Expr &, const LocalMap &)>;
@@ -41,4 +43,3 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
                                          const AllocInlineStructTempLocalFn &allocTempLocal,
                                          const EmitInlineStructInstructionFn &emitInstruction,
                                          std::string &error);
-

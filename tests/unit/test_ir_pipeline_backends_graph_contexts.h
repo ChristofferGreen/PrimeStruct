@@ -716,6 +716,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(statementCallHelpersHeader.find("struct StructSlotLayoutInfo;") !=
         std::string::npos);
+  CHECK(inlineParamHelpersHeader.find("struct StructSlotLayoutInfo;") !=
+        std::string::npos);
+  CHECK(inlineStructArgHelpersHeader.find("struct StructSlotLayoutInfo;") !=
+        std::string::npos);
   CHECK(countAccessHelpersHeader.find("const SemanticProgram *semanticProgram,") != std::string::npos);
   CHECK(countAccessHelpersSource.find("resolveEntryArgsParameter(const Definition &entryDef,\n"
                                       "                               const SemanticProgram *semanticProgram,") !=
