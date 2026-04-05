@@ -7,6 +7,12 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Split the borrowed field-view field-addressing primitive again at the
+  missing typed-to-byte pointer reinterpretation seam. Completed: the live
+  queue now treats whole-element-pointer to raw-byte-pointer reinterpretation,
+  raw byte offsetting, and byte-slot to field-pointer reinterpretation as three
+  separate prerequisites before the later reflected field-slot helper and
+  strided borrowed field-view carrier layers.
 - ✓ Split the borrowed field-view field-addressing primitive into separate
   byte-offset and typed reinterpretation prerequisites. Completed: the live
   queue now treats byte-addressable offsetting over whole-element `SoaColumn<T>`
