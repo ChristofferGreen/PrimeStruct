@@ -161,6 +161,65 @@ leaf([i32] value) {
   return(value)
 }
 
+TEST_CASE("type resolution graph local binding invalidation follows dependency chain") {
+  const std::string source = R"(
+[return<auto>]
+leaf() {
+  return(1i32)
+}
+
+[return<auto>]
+main() {
+  [auto] value{leaf()}
+  return(value)
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionGraphSnapshot graph;
+  REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, graph));
+  CHECK(error.empty());
+
+  auto findNodeId = [&](const std::string &label) -> uint32_t {
+    const auto it = std::find_if(graph.nodes.begin(), graph.nodes.end(), [&](const auto &node) {
+      return node.label == label;
+    });
+    REQUIRE(it != graph.nodes.end());
+    return it->id;
+  };
+
+  const uint32_t localAutoId = findNodeId("/main::auto:value#0");
+  std::vector<uint32_t> stack{localAutoId};
+  std::vector<bool> visited(graph.nodes.size(), false);
+  visited[localAutoId] = true;
+  while (!stack.empty()) {
+    const uint32_t current = stack.back();
+    stack.pop_back();
+    for (const auto &edge : graph.edges) {
+      if (edge.kind != "dependency" || edge.sourceId != current) {
+        continue;
+      }
+      if (edge.targetId >= visited.size() || visited[edge.targetId]) {
+        continue;
+      }
+      visited[edge.targetId] = true;
+      stack.push_back(edge.targetId);
+    }
+  }
+
+  auto hasLabel = [&](const std::string &label) {
+    const auto it = std::find_if(graph.nodes.begin(), graph.nodes.end(), [&](const auto &node) {
+      return node.label == label;
+    });
+    REQUIRE(it != graph.nodes.end());
+    return visited[it->id];
+  };
+
+  CHECK(hasLabel("/main::auto:value#0"));
+  CHECK(hasLabel("/main::call#0"));
+  CHECK(hasLabel("/leaf"));
+}
+
 [return<auto>]
 main() {
   return(leaf(1i32))

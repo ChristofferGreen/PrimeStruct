@@ -20,7 +20,7 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
   - ○ Add VM backend dispatch conformance for the query-shaped canonical helper/method path once compile-pipeline parity is positive.
   - ○ Add native backend dispatch conformance for the query-shaped canonical helper/method path once compile-pipeline parity is positive.
 - ◐ Implement graph-backed query invalidation rules and coverage for intra-definition edits now that the intra-definition invalidation contract is documented. Progress: this invalidation surface is now split by edit family so local dataflow, control-flow, and initializer-shape invalidation can be implemented and pinned separately.
-  - ○ Implement graph-backed query invalidation rules and coverage for local-binding edits.
+  - ◐ Implement graph-backed query invalidation rules and coverage for local-binding edits. Progress: added dependency-chain coverage for local binding invalidation to establish the expected fan-out surface.
   - ○ Implement graph-backed query invalidation rules and coverage for control-flow edits.
   - ○ Implement graph-backed query invalidation rules and coverage for initializer-shape edits.
 - ◐ Implement graph-backed query invalidation rules and coverage for cross-definition edits now that the cross-definition invalidation contract is documented. Progress: this invalidation surface is now split by dependency family so signature, import-alias, and receiver-type invalidation can be implemented and pinned separately.
