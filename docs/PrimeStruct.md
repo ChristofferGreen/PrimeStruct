@@ -586,7 +586,7 @@ Planned lowerer alias-fallback removal:
   - replace backend-visible lowerer alias fallback paths with direct semantic-product target consumption
   - delete the redundant fallback branches once C++/VM/native conformance proves parity
 - Completion criteria:
-  - lowering no longer performs stdlib/helper alias fallback to recover canonical helper targets
+  - lowering no longer performs direct-call stdlib/helper alias fallback to recover canonical helper targets
   - same-path helper-shadow behavior is preserved by semantic-product targets rather than lowerer-local recovery
   - backend-facing tests prove canonical helper routing without relying on AST-side or lowerer-side alias heuristics
 

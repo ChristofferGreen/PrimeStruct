@@ -62,6 +62,30 @@ std::string normalizeMapImportAliasPath(const std::string &path) {
   return path;
 }
 
+std::string resolveCallPathFromScopeWithoutImportAliases(
+    const Expr &expr,
+    const std::unordered_map<std::string, const Definition *> &defMap) {
+  if (!expr.name.empty() && expr.name[0] == '/') {
+    return expr.name;
+  }
+  if (!expr.namespacePrefix.empty()) {
+    std::string scoped = expr.namespacePrefix;
+    if (!scoped.empty() && scoped.front() != '/') {
+      scoped.insert(scoped.begin(), '/');
+    }
+    scoped += "/" + expr.name;
+    if (defMap.count(scoped) > 0) {
+      return scoped;
+    }
+    const std::string root = "/" + expr.name;
+    if (defMap.count(root) > 0) {
+      return root;
+    }
+    return scoped;
+  }
+  return "/" + expr.name;
+}
+
 } // namespace
 
 const Definition *resolveDefinitionCall(const Expr &callExpr,
@@ -139,7 +163,8 @@ ResolveExprPathFn makeResolveCallPathFromScope(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases,
     const SemanticProductTargetAdapter &semanticProductTargets) {
-  return [defMap, importAliases, semanticProductTargets](const Expr &expr) {
+  (void)importAliases;
+  return [defMap, semanticProductTargets](const Expr &expr) {
     if (const std::string chosenPath = findSemanticProductBridgePathChoice(semanticProductTargets, expr);
         !chosenPath.empty()) {
       return chosenPath;
@@ -148,7 +173,7 @@ ResolveExprPathFn makeResolveCallPathFromScope(
         !resolvedPath.empty()) {
       return resolvedPath;
     }
-    return resolveCallPathFromScope(expr, defMap, importAliases);
+    return resolveCallPathFromScopeWithoutImportAliases(expr, defMap);
   };
 }
 
