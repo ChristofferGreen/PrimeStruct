@@ -4,11 +4,30 @@
 #include "third_party/doctest.h"
 
 #include "primec/CompilePipeline.h"
-#include "test_ir_pipeline_type_resolution_helpers.h"
+#include "test_ir_pipeline_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.type_resolution_parity");
 
 namespace {
+
+struct TypeResolverPipelineSnapshot {
+  bool ok = false;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  primec::CompilePipelineDiagnosticInfo diagnosticInfo;
+};
+
+TypeResolverPipelineSnapshot runTypeResolverPipelineSnapshot(const std::string &source,
+                                                            const std::string &entry = "/main") {
+  TypeResolverPipelineSnapshot snapshot;
+  PreparedCompilePipelineIrForTesting prepared;
+  primec::CompilePipelineDiagnosticInfo diagnosticInfo;
+  snapshot.ok = prepareIrThroughCompilePipeline(
+      source, entry, "vm", prepared, snapshot.error, &diagnosticInfo);
+  snapshot.errorStage = prepared.errorStage;
+  snapshot.diagnosticInfo = std::move(diagnosticInfo);
+  return snapshot;
+}
 
 bool diagnosticReportContainsMessage(const primec::DiagnosticSinkReport &report, const std::string &substring) {
   if (report.message.find(substring) != std::string::npos) {

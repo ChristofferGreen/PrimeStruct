@@ -2,26 +2,22 @@ TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path cmakePath = cwd / "CMakeLists.txt";
   std::filesystem::path paritySourcePath = cwd / "tests" / "unit" / "test_ir_pipeline_type_resolution_parity.cpp";
-  std::filesystem::path parityHelperPath = cwd / "tests" / "unit" / "test_ir_pipeline_type_resolution_helpers.h";
   if (!std::filesystem::exists(cmakePath)) {
     cmakePath = cwd.parent_path() / "CMakeLists.txt";
     paritySourcePath = cwd.parent_path() / "tests" / "unit" / "test_ir_pipeline_type_resolution_parity.cpp";
-    parityHelperPath = cwd.parent_path() / "tests" / "unit" / "test_ir_pipeline_type_resolution_helpers.h";
   }
   REQUIRE(std::filesystem::exists(cmakePath));
   REQUIRE(std::filesystem::exists(paritySourcePath));
-  REQUIRE(std::filesystem::exists(parityHelperPath));
 
   const std::string cmake = readTextFile(cmakePath);
   const std::string paritySource = readTextFile(paritySourcePath);
-  const std::string parityHelper = readTextFile(parityHelperPath);
   CHECK(cmake.find("tests/unit/test_ir_pipeline_type_resolution_parity.cpp") != std::string::npos);
-  CHECK(parityHelper.find("struct TypeResolverPipelineSnapshot") != std::string::npos);
-  CHECK(parityHelper.find("runTypeResolverPipelineSnapshot") != std::string::npos);
-  CHECK(parityHelper.find("snapshotDiagnosticReport") == std::string::npos);
-  CHECK(parityHelper.find("CompilePipelineDiagnosticInfo diagnosticInfo") != std::string::npos);
-  CHECK(parityHelper.find("serializedIr") == std::string::npos);
-  CHECK(parityHelper.find("serializeIr(") == std::string::npos);
+  CHECK(paritySource.find("struct TypeResolverPipelineSnapshot") != std::string::npos);
+  CHECK(paritySource.find("runTypeResolverPipelineSnapshot") != std::string::npos);
+  CHECK(paritySource.find("snapshotDiagnosticReport") == std::string::npos);
+  CHECK(paritySource.find("CompilePipelineDiagnosticInfo diagnosticInfo") != std::string::npos);
+  CHECK(paritySource.find("serializedIr") == std::string::npos);
+  CHECK(paritySource.find("serializeIr(") == std::string::npos);
   CHECK(paritySource.find("default type resolver keeps vm pipeline behavior stable across graph corpus") !=
         std::string::npos);
   CHECK(paritySource.find("diagnosticReportContainsMessage") != std::string::npos);
