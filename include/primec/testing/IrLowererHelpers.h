@@ -17,6 +17,7 @@
 namespace primec::ir_lowerer {
 
 #include "primec/testing/ir_lowerer_helpers/IrLowererSharedTypes.h"
+#include "primec/testing/ir_lowerer_helpers/IrLowererSemanticProductTargetAdapters.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererCallDispatchHelpers.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererCallAccessHelpers.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererBindingTransformHelpers.h"

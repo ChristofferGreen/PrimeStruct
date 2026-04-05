@@ -7,6 +7,7 @@ struct CallResolutionAdapters {
   ResolveExprPathFn resolveExprPath{};
   IsTailCallCandidateFn isTailCallCandidate{};
   DefinitionExistsFn definitionExists{};
+  SemanticProductTargetAdapter semanticProductTargets{};
 };
 struct EntryCallResolutionSetup {
   CallResolutionAdapters adapters{};
@@ -23,14 +24,28 @@ ResolveDefinitionCallFn makeResolveDefinitionCall(
 CallResolutionAdapters makeCallResolutionAdapters(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases);
+CallResolutionAdapters makeCallResolutionAdapters(
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    const SemanticProgram *semanticProgram = nullptr);
 EntryCallResolutionSetup buildEntryCallResolutionSetup(
     const Definition &entryDef,
     bool definitionReturnsVoid,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases);
+EntryCallResolutionSetup buildEntryCallResolutionSetup(
+    const Definition &entryDef,
+    bool definitionReturnsVoid,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    const SemanticProgram *semanticProgram = nullptr);
 ResolveExprPathFn makeResolveCallPathFromScope(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases);
+ResolveExprPathFn makeResolveCallPathFromScope(
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    const SemanticProductTargetAdapter &semanticProductTargets = {});
 IsTailCallCandidateFn makeIsTailCallCandidate(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveExprPathFn &resolveExprPath);
