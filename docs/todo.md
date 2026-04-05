@@ -21,6 +21,8 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
   - ○ Add native backend dispatch conformance for the query-shaped canonical helper/method path once compile-pipeline parity is positive.
 - ◐ Implement the next non-template inference-island migrations now that the graph-backed cutover contract is documented. Progress: the remaining non-template cutover is now split into direct-call, receiver-call, and collection bridge inference seams instead of one umbrella migration bullet.
   - ○ Migrate the next direct-call/callee non-template inference island onto the graph path.
+    - ○ Select the next direct-call inference island to move onto the graph path.
+    - ○ Land the migration plus matching graph conformance coverage for that island.
   - ○ Migrate the next receiver/method-call non-template inference island onto the graph path.
   - ○ Migrate the next collection helper/access fallback non-template inference island onto the graph path.
 - ◐ Implement the graph/CT-eval interaction contract now that the boundary is documented. Progress: the remaining work is now split into shared dependency-state consumption, explicit adapter seams, and conformance coverage instead of one broad CT-eval handoff item.
