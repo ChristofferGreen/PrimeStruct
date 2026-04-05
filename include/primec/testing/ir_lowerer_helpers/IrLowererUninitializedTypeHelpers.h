@@ -2,6 +2,10 @@
 
 
 
+struct Definition;
+struct IrFunction;
+struct Program;
+
 struct UninitializedTypeInfo {
   LocalInfo::Kind kind = LocalInfo::Kind::Value;
   LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;

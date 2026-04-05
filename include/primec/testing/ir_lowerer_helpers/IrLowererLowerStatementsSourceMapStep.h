@@ -2,6 +2,8 @@
 
 
 
+struct Definition;
+
 struct InstructionSourceRange {
   size_t beginIndex = 0;
   size_t endIndex = 0;
@@ -19,4 +21,3 @@ struct LowerStatementsSourceMapStepInput {
 
 bool runLowerStatementsSourceMapStep(const LowerStatementsSourceMapStepInput &input,
                                      std::string &errorOut);
-

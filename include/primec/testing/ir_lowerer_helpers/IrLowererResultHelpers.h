@@ -2,6 +2,10 @@
 
 
 
+struct Definition;
+struct ReturnInfo;
+struct StructSlotLayoutInfo;
+
 struct ResultExprInfo {
   bool isResult = false;
   bool hasValue = false;

@@ -2,6 +2,8 @@
 
 
 
+struct Definition;
+
 struct LowerStatementsEntryExecutionStepInput {
   const Definition *entryDef = nullptr;
   bool returnsVoid = false;
@@ -24,4 +26,3 @@ struct LowerStatementsEntryExecutionStepInput {
 
 bool runLowerStatementsEntryExecutionStep(const LowerStatementsEntryExecutionStepInput &input,
                                           std::string &errorOut);
-

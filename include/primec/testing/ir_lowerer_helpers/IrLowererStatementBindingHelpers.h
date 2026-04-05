@@ -2,6 +2,8 @@
 
 
 
+struct Definition;
+struct ReturnInfo;
 struct StructSlotLayoutInfo;
 struct UninitializedStorageAccessInfo;
 struct PrintBuiltin;

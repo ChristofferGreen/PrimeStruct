@@ -1,6 +1,8 @@
 
 
 
+struct Definition;
+struct ReturnInfo;
 
 struct LowerStatementsCallsStepInput {
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferExprKind;
@@ -25,4 +27,3 @@ bool runLowerStatementsCallsStep(const LowerStatementsCallsStepInput &input,
                                  const Expr &stmt,
                                  const LocalMap &localsIn,
                                  std::string &errorOut);
-
