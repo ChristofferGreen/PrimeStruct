@@ -7,6 +7,12 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Introduced direct-storage standalone borrowed-value typing so `[Reference<T>]`
+  bindings can use `borrow(storage)` without `location(...)`. Completed: direct local and
+  field storage now validate through that borrowed-value carrier, including regular binding,
+  block-expression binding, and `if`-branch binding sites, while pointer/reference-backed
+  `borrow(dereference(slot))` remains the next slot-backed carrier slice.
+
 - ✓ Split the oversized Group 8 language-level slot-borrow carrier item into direct-storage
   borrow typing and later pointer/reference-backed `dereference(slot)` routing. Completed:
   the live queue and spec/docs now pin the current mismatch explicitly: direct

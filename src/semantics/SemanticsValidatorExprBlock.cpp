@@ -93,6 +93,18 @@ bool SemanticsValidator::validateBlockExpr(const std::vector<ParameterInfo> &par
           if (getBuiltinPointerName(candidate, pointerName) && pointerName == "location" && candidate.args.size() == 1) {
             return true;
           }
+          if (!candidate.isMethodCall && isSimpleCallName(candidate, "borrow") && candidate.args.size() == 1) {
+            const Expr &storage = candidate.args.front();
+            if (storage.kind == Expr::Kind::Name ||
+                (storage.kind == Expr::Kind::Call && storage.isFieldAccess && storage.args.size() == 1)) {
+              BindingInfo binding;
+              bool resolved = false;
+              if (resolveUninitializedStorageBinding(params, blockLocals, storage, binding, resolved) &&
+                  resolved && binding.typeName == "uninitialized" && !binding.typeTemplateArg.empty()) {
+                return true;
+              }
+            }
+          }
           auto defIt = defMap_.find(resolveCalleePath(candidate));
           if (defIt == defMap_.end() || defIt->second == nullptr) {
             return false;

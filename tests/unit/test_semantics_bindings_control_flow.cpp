@@ -129,6 +129,23 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("block expression accepts direct uninitialized borrow reference binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [uninitialized<i32>] storage{uninitialized<i32>()}
+  init(storage, 7i32)
+  return(block(){
+    [Reference<i32>] ref{borrow(storage)}
+    dereference(ref)
+  })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("block expression allows explicit return value") {
   const std::string source = R"(
 [return<int>]
@@ -186,6 +203,25 @@ main() {
     return(1i32)
   }, else(){
     return(2i32)
+  }))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("if expression branch accepts direct uninitialized borrow reference binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [uninitialized<i32>] storage{uninitialized<i32>()}
+  init(storage, 9i32)
+  return(if(true, then(){
+    [Reference<i32>] ref{borrow(storage)}
+    dereference(ref)
+  }, else(){
+    0i32
   }))
 }
 )";

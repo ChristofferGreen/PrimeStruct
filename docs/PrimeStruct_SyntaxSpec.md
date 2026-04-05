@@ -1074,18 +1074,15 @@ reads/writes) rather than standalone `ref(...)` values. Experimental-wrapper
 whole-element `T` values through `soaColumnRef<T>(...)`, and those projections are recomputed
 per use through the existing `soaVectorGet(...).field` / `soaVectorRef(...).field` helper
 path, so neither surface yet materializes a standalone borrowed object that survives later
-wrapper mutation. The next implementation step is therefore to introduce a language-level
-standalone borrowed-value carrier for direct `borrow(storage)` itself, since today even
-`[Reference<T>] ref{borrow(storage)}` still fails with `Reference bindings require location(...)`
-and only `[return<T>]`-style positions accept that borrow surface. After that direct-storage
-carrier exists, the same carrier can be extended across pointer/reference-backed
-`borrow(dereference(slot))`, then exposed through `soaColumnBorrowSlot<T>(...)` /
-`vectorBorrowSlot<T>(...)`, then a single-column `SoaColumn<T>` borrowed element-view carrier
-can be layered on top of that substrate and experimental-wrapper `SoaVector<T>.ref(i)` and
-`soaVectorRef<T>(...)` can route onto it before direct borrowed locals, explicit dereference,
-helper-return, inline `location(...)`, and richer standalone borrowed field-view values can
-build on the same substrate and before later invalidation rules can apply to anything
-persistent.
+wrapper mutation. The next implementation step is therefore to extend the now-completed
+direct-storage borrowed-value carrier for `borrow(storage)` across pointer/reference-backed
+`borrow(dereference(slot))`, then expose that slot-backed carrier through
+`soaColumnBorrowSlot<T>(...)` / `vectorBorrowSlot<T>(...)`, then layer a single-column
+`SoaColumn<T>` borrowed element-view carrier on top of that substrate and route
+experimental-wrapper `SoaVector<T>.ref(i)` and `soaVectorRef<T>(...)` onto it before direct
+borrowed locals, explicit dereference, helper-return, inline `location(...)`, and richer
+standalone borrowed field-view values can build on the same substrate and before later
+invalidation rules can apply to anything persistent.
 Read-only wrapper field-view indexing now routes both method-form `values.field()[i]`
 and call-form `field(values)[i]` reflected reads, plus borrowed local `borrowed.field()[i]`,
 inline `location(values).field()[i]` / `field(dereference(location(values)))[i]`,

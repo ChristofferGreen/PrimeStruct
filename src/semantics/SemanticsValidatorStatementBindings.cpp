@@ -478,6 +478,32 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       }
       return binding.typeName + "<" + binding.typeTemplateArg + ">";
     };
+    auto isDirectBorrowStorageExpr = [&](const Expr &candidate) {
+      if (candidate.kind == Expr::Kind::Name) {
+        return true;
+      }
+      return candidate.kind == Expr::Kind::Call && candidate.isFieldAccess && candidate.args.size() == 1;
+    };
+    auto resolveDirectBorrowStorageTargetType = [&](const Expr &expr, std::string &targetOut) -> bool {
+      if (expr.kind != Expr::Kind::Call || expr.isMethodCall || !isSimpleCallName(expr, "borrow") ||
+          expr.args.size() != 1) {
+        return false;
+      }
+      const Expr &storage = expr.args.front();
+      if (!isDirectBorrowStorageExpr(storage)) {
+        return false;
+      }
+      BindingInfo binding;
+      bool resolved = false;
+      if (!resolveUninitializedStorageBinding(params, locals, storage, binding, resolved)) {
+        return false;
+      }
+      if (!resolved || binding.typeName != "uninitialized" || binding.typeTemplateArg.empty()) {
+        return false;
+      }
+      targetOut = binding.typeTemplateArg;
+      return true;
+    };
 
     std::function<bool(const Expr &, std::string &)> resolvePointerTargetType;
     resolvePointerTargetType = [&](const Expr &expr, std::string &targetOut) -> bool {
@@ -560,16 +586,19 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         init.kind == Expr::Kind::Call && getBuiltinPointerName(init, pointerName) && pointerName == "location" &&
         init.args.size() == 1;
     std::string safeTargetType;
+    const bool initIsDirectBorrowStorage = resolveDirectBorrowStorageTargetType(init, safeTargetType);
     const bool initIsPointerLike = resolvePointerTargetType(init, safeTargetType);
-    if (!initIsLocation && !initIsPointerLike && !currentValidationState_.context.definitionIsUnsafe) {
+    if (!initIsLocation && !initIsDirectBorrowStorage && !initIsPointerLike &&
+        !currentValidationState_.context.definitionIsUnsafe) {
       return failBindingDiagnostic("Reference bindings require location(...)");
     }
-    if (initIsLocation || (!currentValidationState_.context.definitionIsUnsafe && initIsPointerLike)) {
+    if (initIsLocation || initIsDirectBorrowStorage ||
+        (!currentValidationState_.context.definitionIsUnsafe && initIsPointerLike)) {
       if (!initIsPointerLike || !errorTypesMatch(safeTargetType, info.typeTemplateArg, namespacePrefix)) {
         return failBindingDiagnostic("Reference binding type mismatch");
       }
     }
-    if (!initIsLocation && !currentValidationState_.context.definitionIsUnsafe) {
+    if (!initIsLocation && !initIsDirectBorrowStorage && !currentValidationState_.context.definitionIsUnsafe) {
       if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
         return false;
       }

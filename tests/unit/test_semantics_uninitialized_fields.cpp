@@ -94,4 +94,58 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("uninitialized local borrow validates reference binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [uninitialized<i32>] storage{uninitialized<i32>()}
+  init(storage, 7i32)
+  [Reference<i32>] ref{borrow(storage)}
+  return(dereference(ref))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("uninitialized field borrow validates reference binding") {
+  const std::string source = R"(
+[struct]
+Box() {
+  [uninitialized<i32>] storage{uninitialized<i32>()}
+
+  [return<i32>]
+  peek() {
+    [Reference<i32>] ref{borrow(this.storage)}
+    return(dereference(ref))
+  }
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("uninitialized dereferenced borrow still rejects reference binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [uninitialized<i32>] storage{uninitialized<i32>()}
+  [Reference<uninitialized<i32>>] storage_ref{location(storage)}
+  init(dereference(storage_ref), 7i32)
+  [Reference<i32>] ref{borrow(dereference(storage_ref))}
+  return(dereference(ref))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("Reference bindings require location(...)") != std::string::npos);
+}
+
 TEST_SUITE_END();
