@@ -596,6 +596,36 @@ TEST_CASE("ir lowerer call helpers build scoped call path resolver") {
   CHECK(resolveExprPath(slashlessMapAlias) == "/map/at");
 }
 
+TEST_CASE("ir lowerer call helpers keep alias fallback only on raw path") {
+  primec::Definition scopedDef;
+  scopedDef.fullPath = "/pkg/foo";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {{"/pkg/foo", &scopedDef}};
+  const std::unordered_map<std::string, std::string> importAliases = {
+      {"bar", "/import/bar"},
+      {"map_count", "std/collections/map/count"},
+  };
+
+  const auto rawResolveExprPath =
+      primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases);
+
+  primec::SemanticProgram semanticProgram;
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto semanticResolveExprPath =
+      primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, semanticTargets);
+
+  primec::Expr namespacedAlias;
+  namespacedAlias.name = "bar";
+  namespacedAlias.namespacePrefix = "/pkg";
+  CHECK(rawResolveExprPath(namespacedAlias) == "/import/bar");
+  CHECK(semanticResolveExprPath(namespacedAlias) == "/pkg/bar");
+
+  primec::Expr slashlessCanonicalMapAlias;
+  slashlessCanonicalMapAlias.name = "map_count";
+  CHECK(rawResolveExprPath(slashlessCanonicalMapAlias) == "/std/collections/map/count");
+  CHECK(semanticResolveExprPath(slashlessCanonicalMapAlias) == "/map_count");
+}
+
 TEST_CASE("ir lowerer call helpers resolve definition calls through slashless map import aliases") {
   primec::Definition canonicalMapCountDef;
   canonicalMapCountDef.fullPath = "/std/collections/map/count";

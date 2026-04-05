@@ -521,6 +521,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(irInferenceSetup.find(".semanticProductTargets = &callResolutionAdapters.semanticProductTargets,") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("struct SemanticProductTargetAdapter") != std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("bool hasSemanticProduct = false;") != std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramCallableSummary *findSemanticProductCallableSummary(") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<std::string, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionPath;") !=
@@ -545,6 +546,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("buildSemanticProductTargetAdapter(const SemanticProgram *semanticProgram)") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.hasSemanticProduct = true;") != std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.callableSummariesByPath.reserve(") != std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.onErrorFactsByDefinitionPath.reserve(semanticProgram->onErrorFacts.size())") !=
         std::string::npos);

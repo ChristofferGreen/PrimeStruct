@@ -163,8 +163,10 @@ ResolveExprPathFn makeResolveCallPathFromScope(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases,
     const SemanticProductTargetAdapter &semanticProductTargets) {
-  (void)importAliases;
-  return [defMap, semanticProductTargets](const Expr &expr) {
+  static const std::unordered_map<std::string, std::string> noImportAliases;
+  const auto &semanticAwareImportAliases =
+      semanticProductTargets.hasSemanticProduct ? noImportAliases : importAliases;
+  return [defMap, semanticProductTargets, semanticAwareImportAliases](const Expr &expr) {
     if (const std::string chosenPath = findSemanticProductBridgePathChoice(semanticProductTargets, expr);
         !chosenPath.empty()) {
       return chosenPath;
@@ -173,7 +175,10 @@ ResolveExprPathFn makeResolveCallPathFromScope(
         !resolvedPath.empty()) {
       return resolvedPath;
     }
-    return resolveCallPathFromScopeWithoutImportAliases(expr, defMap);
+    if (semanticProductTargets.hasSemanticProduct) {
+      return resolveCallPathFromScopeWithoutImportAliases(expr, defMap);
+    }
+    return resolveCallPathFromScope(expr, defMap, semanticAwareImportAliases);
   };
 }
 

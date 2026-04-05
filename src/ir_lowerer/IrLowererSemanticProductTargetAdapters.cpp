@@ -62,6 +62,7 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
   if (semanticProgram == nullptr) {
     return adapter;
   }
+  adapter.hasSemanticProduct = true;
 
   adapter.directCallTargetsByExpr.reserve(semanticProgram->directCallTargets.size());
   for (const auto &entry : semanticProgram->directCallTargets) {

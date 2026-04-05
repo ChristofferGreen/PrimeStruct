@@ -10,6 +10,7 @@
 namespace primec::ir_lowerer {
 
 struct SemanticProductTargetAdapter {
+  bool hasSemanticProduct = false;
   std::unordered_map<std::string, std::string> directCallTargetsByExpr;
   std::unordered_map<std::string, std::string> methodCallTargetsByExpr;
   std::unordered_map<std::string, std::string> bridgePathChoicesByExpr;
