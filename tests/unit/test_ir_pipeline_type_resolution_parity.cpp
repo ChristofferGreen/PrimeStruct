@@ -653,14 +653,12 @@ main() {
     if (testCase.expectSuccess) {
       CHECK(snapshot.errorStage == primec::CompilePipelineErrorStage::None);
       CHECK(snapshot.error.empty());
-      CHECK_FALSE(snapshot.serializedIr.empty());
     } else {
       CHECK_FALSE(snapshot.error.empty());
       CHECK(snapshot.error.find(testCase.errorSubstring) != std::string::npos);
       if (testCase.expectDiagnosticSnapshot) {
         CHECK(diagnosticReportContainsMessage(snapshot.diagnosticInfo, testCase.errorSubstring));
       }
-      CHECK(snapshot.serializedIr.empty());
     }
   }
 }
@@ -687,7 +685,6 @@ main() {
 
   CHECK_FALSE(graph.ok);
   CHECK(graph.error == "return type inference cycle requires explicit annotations on /alpha, /beta");
-  CHECK(graph.serializedIr.empty());
   CHECK(diagnosticReportContainsMessage(
       graph.diagnosticInfo, "return type inference cycle requires explicit annotations on /alpha, /beta"));
   CHECK(diagnosticReportContainsRelatedLabel(graph.diagnosticInfo, "cycle member: /alpha"));
@@ -720,7 +717,6 @@ main() {
 
   CHECK_FALSE(graph.ok);
   CHECK_FALSE(graph.error.empty());
-  CHECK(graph.serializedIr.empty());
 }
 
 TEST_SUITE_END();

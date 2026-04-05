@@ -20,6 +20,8 @@ TEST_CASE("type resolver parity harness is wired through ir pipeline tests") {
   CHECK(parityHelper.find("runTypeResolverPipelineSnapshot") != std::string::npos);
   CHECK(parityHelper.find("snapshotDiagnosticReport") == std::string::npos);
   CHECK(parityHelper.find("CompilePipelineDiagnosticInfo diagnosticInfo") != std::string::npos);
+  CHECK(parityHelper.find("serializedIr") == std::string::npos);
+  CHECK(parityHelper.find("serializeIr(") == std::string::npos);
   CHECK(paritySource.find("default type resolver keeps vm pipeline behavior stable across graph corpus") !=
         std::string::npos);
   CHECK(paritySource.find("diagnosticReportContainsMessage") != std::string::npos);
