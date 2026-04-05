@@ -23,28 +23,24 @@ struct CompilePipelineBoundaryDumps {
   std::string ir;
 };
 
-struct CompilePipelinePreparedIr {
+struct CompilePipelineBackendConformance {
   Options options;
   CompilePipelineOutput output;
   CompilePipelineErrorStage errorStage = CompilePipelineErrorStage::None;
   IrModule ir;
   std::string backendKind;
-};
-
-struct CompilePipelineBackendConformance {
-  CompilePipelinePreparedIr prepared;
   IrBackendEmitResult emitResult;
   std::filesystem::path outputPath;
 
   const SemanticProgramDirectCallTarget *findDirectCallTarget(std::string_view scopePath,
                                                               std::string_view callName) const {
     const auto it =
-        std::find_if(prepared.output.semanticProgram.directCallTargets.begin(),
-                     prepared.output.semanticProgram.directCallTargets.end(),
+        std::find_if(output.semanticProgram.directCallTargets.begin(),
+                     output.semanticProgram.directCallTargets.end(),
                      [&](const SemanticProgramDirectCallTarget &entry) {
                        return entry.scopePath == scopePath && entry.callName == callName;
                      });
-    if (it == prepared.output.semanticProgram.directCallTargets.end()) {
+    if (it == output.semanticProgram.directCallTargets.end()) {
       return nullptr;
     }
     return &*it;
@@ -53,12 +49,12 @@ struct CompilePipelineBackendConformance {
   const SemanticProgramMethodCallTarget *findMethodCallTarget(std::string_view scopePath,
                                                               std::string_view methodName) const {
     const auto it =
-        std::find_if(prepared.output.semanticProgram.methodCallTargets.begin(),
-                     prepared.output.semanticProgram.methodCallTargets.end(),
+        std::find_if(output.semanticProgram.methodCallTargets.begin(),
+                     output.semanticProgram.methodCallTargets.end(),
                      [&](const SemanticProgramMethodCallTarget &entry) {
                        return entry.scopePath == scopePath && entry.methodName == methodName;
                      });
-    if (it == prepared.output.semanticProgram.methodCallTargets.end()) {
+    if (it == output.semanticProgram.methodCallTargets.end()) {
       return nullptr;
     }
     return &*it;
@@ -66,6 +62,14 @@ struct CompilePipelineBackendConformance {
 };
 
 namespace detail {
+
+struct PreparedCompilePipelineIrState {
+  Options options;
+  CompilePipelineOutput output;
+  CompilePipelineErrorStage errorStage = CompilePipelineErrorStage::None;
+  IrModule ir;
+  std::string backendKind;
+};
 
 inline std::filesystem::path makeCompilePipelineDumpSourcePath() {
   static std::atomic<unsigned long long> counter{0};
@@ -134,12 +138,12 @@ inline bool captureSemanticBoundaryDumpsForTesting(const std::string &source,
   return ok;
 }
 
-inline bool prepareCompilePipelineIrForTesting(const std::string &source,
-                                               const std::string &entryPath,
-                                               std::string_view emitKind,
-                                               CompilePipelinePreparedIr &prepared,
-                                               std::string &error,
-                                               CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr) {
+inline bool prepareCompilePipelineIr(const std::string &source,
+                                     const std::string &entryPath,
+                                     std::string_view emitKind,
+                                     PreparedCompilePipelineIrState &prepared,
+                                     std::string &error,
+                                     CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr) {
   const std::filesystem::path sourcePath = detail::makeCompilePipelineDumpSourcePath();
   {
     std::ofstream file(sourcePath);
@@ -209,22 +213,29 @@ inline bool runCompilePipelineBackendConformanceForTesting(const std::string &so
                                                            std::string &error,
                                                            CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr) {
   conformance = {};
-  if (!prepareCompilePipelineIrForTesting(
-          source, entryPath, emitKind, conformance.prepared, error, diagnosticInfo)) {
+  detail::PreparedCompilePipelineIrState prepared;
+  if (!detail::prepareCompilePipelineIr(
+          source, entryPath, emitKind, prepared, error, diagnosticInfo)) {
     return false;
   }
 
-  const IrBackend *backend = findIrBackend(conformance.prepared.backendKind);
+  conformance.options = std::move(prepared.options);
+  conformance.output = std::move(prepared.output);
+  conformance.errorStage = prepared.errorStage;
+  conformance.ir = std::move(prepared.ir);
+  conformance.backendKind = std::move(prepared.backendKind);
+
+  const IrBackend *backend = findIrBackend(conformance.backendKind);
   if (backend == nullptr) {
     error = "unknown IR backend for compile-pipeline backend conformance test: " + std::string(emitKind);
     return false;
   }
 
   IrBackendEmitOptions options;
-  options.inputPath = "semantic_product_" + conformance.prepared.backendKind + "_boundary.prime";
+  options.inputPath = "semantic_product_" + conformance.backendKind + "_boundary.prime";
   if (backend->requiresOutputPath()) {
     conformance.outputPath = testScratchPath("compile_pipeline_backend_conformance/" +
-                                             conformance.prepared.backendKind + "_boundary");
+                                             conformance.backendKind + "_boundary");
     std::error_code ec;
     std::filesystem::create_directories(conformance.outputPath.parent_path(), ec);
     if (ec) {
@@ -235,7 +246,7 @@ inline bool runCompilePipelineBackendConformanceForTesting(const std::string &so
     options.outputPath = conformance.outputPath.string();
   }
 
-  return backend->emit(conformance.prepared.ir, options, conformance.emitResult, error);
+  return backend->emit(conformance.ir, options, conformance.emitResult, error);
 }
 
 } // namespace primec::testing

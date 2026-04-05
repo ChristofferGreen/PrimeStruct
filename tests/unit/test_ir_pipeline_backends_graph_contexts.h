@@ -134,11 +134,11 @@ TEST_CASE("public semantic-product dump helper is available for pipeline tests")
 
   const std::string helper = readTextFile(helperPath);
   CHECK(helper.find("struct CompilePipelineBoundaryDumps") != std::string::npos);
-  CHECK(helper.find("struct CompilePipelinePreparedIr") != std::string::npos);
   CHECK(helper.find("struct CompilePipelineBackendConformance") != std::string::npos);
   CHECK(helper.find("captureCompilePipelineDumpForTesting(") == std::string::npos);
   CHECK(helper.find("captureSemanticBoundaryDumpsForTesting(") != std::string::npos);
-  CHECK(helper.find("prepareCompilePipelineIrForTesting(") != std::string::npos);
+  CHECK(helper.find("struct CompilePipelinePreparedIr") == std::string::npos);
+  CHECK(helper.find("prepareCompilePipelineIrForTesting(") == std::string::npos);
   CHECK(helper.find("runCompilePipelineBackendConformanceForTesting(") != std::string::npos);
 }
 
@@ -152,7 +152,7 @@ TEST_CASE("core IR test helpers expose semantic-product-aware lowering") {
 
   const std::string helper = readTextFile(helperPath);
   CHECK(helper.find("parseValidateAndLower(const std::string &source,") != std::string::npos);
-  CHECK(helper.find("prepareCompilePipelineIrForTesting(") != std::string::npos);
+  CHECK(helper.find("prepareIrThroughCompilePipeline(") != std::string::npos);
   CHECK(helper.find("SemanticProgram semanticProgram;") != std::string::npos);
   CHECK(helper.find("return lowerer.lower(program, &semanticProgram, \"/main\", defaultEffects, entryDefaultEffects, module, error);") !=
         std::string::npos);

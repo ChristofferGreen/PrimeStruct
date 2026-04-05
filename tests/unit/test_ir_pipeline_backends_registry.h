@@ -142,8 +142,8 @@ TEST_CASE("cpp-ir backend accepts semantic-product prepared IR from compile pipe
   REQUIRE(primec::testing::runCompilePipelineBackendConformanceForTesting(
       source, "/main", "cpp-ir", conformance, error));
   CHECK(error.empty());
-  CHECK(conformance.prepared.output.hasSemanticProgram);
-  CHECK(conformance.prepared.backendKind == "cpp-ir");
+  CHECK(conformance.output.hasSemanticProgram);
+  CHECK(conformance.backendKind == "cpp-ir");
   const auto *directCall = conformance.findDirectCallTarget("/main", "id");
   REQUIRE(directCall != nullptr);
   CHECK(directCall->resolvedPath.rfind("/id__t", 0) == 0);
@@ -181,8 +181,8 @@ TEST_CASE("vm backend executes semantic-product prepared IR from compile pipelin
   REQUIRE(primec::testing::runCompilePipelineBackendConformanceForTesting(
       source, "/main", "vm", conformance, error));
   CHECK(error.empty());
-  CHECK(conformance.prepared.output.hasSemanticProgram);
-  CHECK(conformance.prepared.backendKind == "vm");
+  CHECK(conformance.output.hasSemanticProgram);
+  CHECK(conformance.backendKind == "vm");
   const auto *directCall = conformance.findDirectCallTarget("/main", "id");
   REQUIRE(directCall != nullptr);
   CHECK(directCall->resolvedPath.rfind("/id__t", 0) == 0);
@@ -216,8 +216,8 @@ TEST_CASE("native backend emits semantic-product prepared IR from compile pipeli
   REQUIRE(primec::testing::runCompilePipelineBackendConformanceForTesting(
       source, "/main", "native", conformance, error));
   CHECK(error.empty());
-  CHECK(conformance.prepared.output.hasSemanticProgram);
-  CHECK(conformance.prepared.backendKind == "native");
+  CHECK(conformance.output.hasSemanticProgram);
+  CHECK(conformance.backendKind == "native");
   const auto *directCall = conformance.findDirectCallTarget("/main", "id");
   REQUIRE(directCall != nullptr);
   CHECK(directCall->resolvedPath.rfind("/id__t", 0) == 0);

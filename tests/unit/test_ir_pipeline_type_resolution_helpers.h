@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "primec/IrSerializer.h"
-#include "primec/testing/CompilePipelineDumpHelpers.h"
 #include "test_ir_pipeline_helpers.h"
 
 namespace {
@@ -49,9 +48,9 @@ struct TypeResolverPipelineSnapshot {
 inline TypeResolverPipelineSnapshot runTypeResolverPipelineSnapshot(const std::string &source,
                                                                    const std::string &entry = "/main") {
   TypeResolverPipelineSnapshot snapshot;
-  primec::testing::CompilePipelinePreparedIr prepared;
+  PreparedCompilePipelineIrForTesting prepared;
   primec::CompilePipelineDiagnosticInfo diagnosticInfo;
-  snapshot.ok = primec::testing::prepareCompilePipelineIrForTesting(
+  snapshot.ok = prepareIrThroughCompilePipeline(
       source, entry, "vm", prepared, snapshot.error, &diagnosticInfo);
   snapshot.errorStage = prepared.errorStage;
   snapshot.diagnosticSnapshot = snapshotDiagnosticReport(diagnosticInfo);

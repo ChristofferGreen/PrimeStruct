@@ -684,18 +684,19 @@ Planned testing-only snapshot removal contract:
 Planned testing-helper migration contract:
 - Public testing helpers should be split by ownership boundary rather than by current implementation history.
 - Current status: `primec/testing/CompilePipelineDumpHelpers.h` now provides the semantic-product-aware dump helper for
-  compile-pipeline boundary tests plus semantic-product-aware prepared-IR and backend-conformance helpers, and
-  lowering-facing dump/compile-pipeline assertions now route through that helper surface rather than direct CLI shell
-  dumps or ad hoc test-local compile-pipeline wiring. Backend-facing assertions for C++/VM/native now also route
-  through the same helper surface via shared backend conformance helpers, and the old generic dump-compatibility
-  entrypoint is gone. Entry-arg, pointer, pointer-numeric, GPU, variadic basics/results, method-call/argv, and core
-  struct/control-flow serialization IR unit tests now also lower through a semantic-product-aware local helper instead
-  of the raw-`Program` overload directly. The conversions-heavy remainder plus the remaining serialization-calls,
-  serialization-control-flow-metadata, and validation IR families are now cut over as well, and the raw overload plus
-  its last fallback-parity case are gone.
+  compile-pipeline boundary tests plus the shared backend-conformance helper, and lowering-facing dump/compile-pipeline
+  assertions now route through that helper surface rather than direct CLI shell dumps or ad hoc test-local
+  compile-pipeline wiring. The earlier public prepared-IR helper has been internalized behind the backend-conformance
+  path, while the remaining one-off prepared-IR setup now lives in local test helpers instead of the public testing
+  surface. Backend-facing assertions for C++/VM/native now also route through the same helper surface via shared
+  backend conformance helpers, and the old generic dump-compatibility entrypoint is gone. Entry-arg, pointer,
+  pointer-numeric, GPU, variadic basics/results, method-call/argv, and core struct/control-flow serialization IR unit
+  tests now also lower through a semantic-product-aware local helper instead of the raw-`Program` overload directly.
+  The conversions-heavy remainder plus the remaining serialization-calls, serialization-control-flow-metadata, and
+  validation IR families are now cut over as well, and the raw overload plus its last fallback-parity case are gone.
   `primec/testing/SemanticsValidationHelpers.h` is now reduced to syntax-owned canonicalization/assertion helpers,
   while graph/type-resolution snapshots live in `primec/testing/SemanticsGraphHelpers.h`. The remaining helper
-  migration work is deleting redundant legacy pipeline/backend entrypoints.
+  migration work is deleting redundant legacy backend entrypoints.
 - `primec/testing/SemanticsValidationHelpers.h` and related helpers should migrate in this order:
   - move lowering-facing assertions onto semantic-product dump helpers or pipeline-facing conformance helpers
   - retain AST-facing helpers only for syntax-owned, provenance-owned, parser-facing, or canonicalization-facing checks
