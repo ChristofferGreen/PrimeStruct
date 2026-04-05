@@ -7,6 +7,12 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Replaced the temporary receiver-family split for wrapper `ref(i)` with the
+  real shared helper-route seam. Completed: audit showed whole-value
+  `values.ref(i)` still rides canonical `/std/collections/soa_vector/ref` and
+  same-path `/soa_vector/ref`, so direct, borrowed, helper-return, and
+  `location(...)`-wrapped receiver families stay one inseparable helper flip at
+  this layer.
 - ✓ Split the experimental-wrapper `SoaVector<T>.ref(i)` whole-value carrier
   queue by receiver family. Completed: the live queue now tracks direct wrapper
   locals, borrowed receivers, helper-return receivers, and inline
