@@ -61,13 +61,13 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
     - ○ Land the follow-up and conformance coverage.
 - ◐ Implement the next omitted-envelope and local-`auto` graph expansions now that the widening contract is documented. Progress: the widening work is now split into omitted-envelope facts, new initializer families, and control-flow join widening slices instead of one umbrella expansion bullet.
   - ○ Materialize omitted-envelope graph facts for the next widening slice.
-    - ○ Select the next omitted-envelope family to model in the graph.
+    - ○ Select the next omitted-envelope family to model in the graph (proposed: omitted struct initializer envelopes).
     - ○ Add graph facts and coverage for that omitted-envelope family.
   - ○ Expand local-`auto` graph support across the next initializer-family surface.
-    - ○ Select the next initializer-family surface to widen in the graph.
+    - ○ Select the next initializer-family surface to widen in the graph (proposed: `if`-branch local `auto` binds).
     - ○ Land the widening plus matching coverage for that initializer-family surface.
   - ○ Expand local-`auto` graph support across the next control-flow join surface.
-    - ○ Select the next control-flow join surface to widen in the graph.
+    - ○ Select the next control-flow join surface to widen in the graph (proposed: `if` join return inference).
     - ○ Land the widening plus matching coverage for that join surface.
 - ✓ Implement graph performance guardrails and sustained perf coverage now that the regression-budget contract is documented. Completed: baseline metrics, regression thresholds/reporting, and sustained perf coverage are now in place.
 - ✓ Add baseline graph timing and invalidation metrics for the current stabilized graph surface. Completed: the type-resolution graph dump now includes prepare/build timing, node/edge counts, per-kind node/edge totals, SCC counts, and invalidation fan-out counters, while the graph snapshot helper now surfaces prepare/build timing, node/edge totals, and the same invalidation counters.
