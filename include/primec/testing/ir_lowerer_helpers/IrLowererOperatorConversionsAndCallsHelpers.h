@@ -2,6 +2,8 @@
 
 
 
+struct LayoutFieldBinding;
+
 using EmitConversionsAndCallsExprWithLocalsFn = std::function<bool(const Expr &, const LocalMap &)>;
 using EmitConversionsAndCallsStatementWithLocalsFn = std::function<bool(const Expr &, LocalMap &)>;
 using InferConversionsAndCallsExprKindWithLocalsFn =
@@ -119,4 +121,3 @@ bool emitConversionsAndCallsControlExprTail(
     std::vector<IrInstruction> &instructions,
     bool &handled,
     std::string &error);
-
