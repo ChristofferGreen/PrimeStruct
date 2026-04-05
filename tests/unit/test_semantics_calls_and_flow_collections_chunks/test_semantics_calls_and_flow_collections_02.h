@@ -2586,6 +2586,43 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental soa storage borrowed view helper validates on explicit column bindings") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumn<i32> mut] values{soaColumnNew<i32>()}
+  soaColumnPush<i32>(values, 2i32)
+  soaColumnPush<i32>(values, 5i32)
+  [SoaColumn<i32>] view{soaColumnBorrowedView<i32>(values)}
+  return(plus(soaColumnRead<i32>(view, 1i32), soaColumnCount<i32>(view)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("experimental soa storage borrowed view helper validates shared writes") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumn<i32> mut] values{soaColumnNew<i32>()}
+  soaColumnPush<i32>(values, 2i32)
+  soaColumnPush<i32>(values, 5i32)
+  [SoaColumn<i32> mut] view{soaColumnBorrowedView<i32>(values)}
+  soaColumnWrite<i32>(view, 1i32, 7i32)
+  return(soaColumnRead<i32>(values, 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental soa storage borrow-slot helper validates reference return") {
   const std::string source = R"(
 import /std/collections/experimental_soa_storage/*

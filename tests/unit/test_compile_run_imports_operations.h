@@ -2268,6 +2268,29 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("compiles and runs experimental soa storage borrowed view helper in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumn<i32> mut] values{soaColumnNew<i32>()}
+  soaColumnPush<i32>(values, 2i32)
+  soaColumnPush<i32>(values, 5i32)
+  [SoaColumn<i32> mut] view{soaColumnBorrowedView<i32>(values)}
+  soaColumnWrite<i32>(view, 1i32, 7i32)
+  return(plus(soaColumnRead<i32>(view, 1i32), soaColumnCount<i32>(values)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_experimental_soa_storage_view_exe.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_experimental_soa_storage_view_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
 TEST_CASE("rejects experimental soa storage reserve overflow in C++ emitter") {
   const std::string source = R"(
 import /std/collections/experimental_soa_storage/*

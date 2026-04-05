@@ -322,6 +322,16 @@ namespace std {
     return(soaColumnBorrowSlot<T>(values, index))
   }
 
+  [public return<SoaColumn<T>>]
+  soaColumnBorrowedView<T>([SoaColumn<T>] values) {
+    soaColumnCheckShape<T>(values)
+    return(SoaColumn<T>(
+        values.field_count(),
+        values.field_capacity(),
+        values.data,
+        false))
+  }
+
   [return<void>]
   soaColumnDropRange<T>([SoaColumn<T> mut] values, [i32] limit) {
     soaColumnCheckShape<T>(values)
