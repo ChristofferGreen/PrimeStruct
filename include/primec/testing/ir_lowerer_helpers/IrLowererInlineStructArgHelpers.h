@@ -2,6 +2,7 @@
 
 
 
+struct Definition;
 struct StructSlotLayoutInfo;
 
 using ResolveInlineStructSlotLayoutFn = std::function<bool(const std::string &, StructSlotLayoutInfo &)>;

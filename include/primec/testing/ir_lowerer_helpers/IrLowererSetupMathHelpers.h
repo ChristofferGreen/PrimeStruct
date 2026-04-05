@@ -2,6 +2,8 @@
 
 
 
+struct SemanticProgram;
+
 using GetSetupMathBuiltinNameFn = std::function<bool(const Expr &, std::string &)>;
 using GetSetupMathConstantNameFn = std::function<bool(const std::string &, std::string &)>;
 

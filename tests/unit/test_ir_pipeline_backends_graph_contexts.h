@@ -698,6 +698,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(callAccessHelpersHeader.find("struct SemanticProductTargetAdapter;") !=
         std::string::npos);
+  CHECK(callAccessHelpersHeader.find("struct Definition;") != std::string::npos);
   CHECK(callAccessHelpersHeader.find("bool emitMapLookupContains(") != std::string::npos);
   CHECK(callAccessHelpersHeader.find("bool isStructDefinition(const Definition &def, const SemanticProductTargetAdapter *semanticProductTargets);") !=
         std::string::npos);
@@ -792,6 +793,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
 
   const auto onErrorHelpersHeader =
       readFile("include/primec/testing/ir_lowerer_helpers/IrLowererOnErrorHelpers.h");
+  CHECK(onErrorHelpersHeader.find("struct Program;") != std::string::npos);
   CHECK(onErrorHelpersHeader.find("struct Definition;") != std::string::npos);
   CHECK(onErrorHelpersHeader.find("struct SemanticProgram;") != std::string::npos);
 
@@ -884,10 +886,19 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(statementCallHelpersHeader.find("struct StructSlotLayoutInfo;") !=
         std::string::npos);
+  const auto inlineParamHelpersHeader =
+      readFile("include/primec/testing/ir_lowerer_helpers/IrLowererInlineParamHelpers.h");
+  CHECK(inlineParamHelpersHeader.find("struct Definition;") != std::string::npos);
   CHECK(inlineParamHelpersHeader.find("struct StructSlotLayoutInfo;") !=
         std::string::npos);
+  const auto inlineStructArgHelpersHeader =
+      readFile("include/primec/testing/ir_lowerer_helpers/IrLowererInlineStructArgHelpers.h");
+  CHECK(inlineStructArgHelpersHeader.find("struct Definition;") != std::string::npos);
   CHECK(inlineStructArgHelpersHeader.find("struct StructSlotLayoutInfo;") !=
         std::string::npos);
+  const auto lowerInlineCallActiveContextStepHeader = readFile(
+      "include/primec/testing/ir_lowerer_helpers/IrLowererLowerInlineCallActiveContextStep.h");
+  CHECK(lowerInlineCallActiveContextStepHeader.find("struct Definition;") != std::string::npos);
   CHECK(countAccessHelpersHeader.find("const SemanticProgram *semanticProgram,") != std::string::npos);
   CHECK(countAccessHelpersSource.find("resolveEntryArgsParameter(const Definition &entryDef,\n"
                                       "                               const SemanticProgram *semanticProgram,") !=
@@ -925,6 +936,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(lowerStatementsCalls.find(".semanticProgram = semanticProgram,") != std::string::npos);
   CHECK(setupMathHelpersHeader.find("SetupMathAndBindingAdapters makeSetupMathAndBindingAdapters(bool hasMathImport,") !=
         std::string::npos);
+  CHECK(setupMathHelpersHeader.find("struct SemanticProgram;") != std::string::npos);
   CHECK(setupMathHelpersHeader.find("const SemanticProgram *semanticProgram = nullptr);") !=
         std::string::npos);
   CHECK(setupMathHelpersSource.find("adapters.bindingTypeAdapters = makeBindingTypeAdapters(semanticProgram);") !=

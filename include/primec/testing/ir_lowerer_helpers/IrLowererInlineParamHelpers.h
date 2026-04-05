@@ -1,6 +1,7 @@
 
 
 
+struct Definition;
 struct StructSlotLayoutInfo;
 
 using InferInlineParameterLocalInfoFn = std::function<bool(const Expr &, LocalInfo &, std::string &)>;

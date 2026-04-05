@@ -2,6 +2,7 @@
 
 
 
+struct Program;
 struct Definition;
 struct SemanticProgram;
 

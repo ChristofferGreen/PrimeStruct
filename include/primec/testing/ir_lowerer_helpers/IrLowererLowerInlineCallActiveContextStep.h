@@ -2,6 +2,8 @@
 
 
 
+struct Definition;
+
 struct LowerInlineCallActiveContextStepInput {
   const Definition *callee = nullptr;
   bool structDefinition = false;
@@ -14,4 +16,3 @@ struct LowerInlineCallActiveContextStepInput {
 
 bool runLowerInlineCallActiveContextStep(const LowerInlineCallActiveContextStepInput &input,
                                          std::string &errorOut);
-

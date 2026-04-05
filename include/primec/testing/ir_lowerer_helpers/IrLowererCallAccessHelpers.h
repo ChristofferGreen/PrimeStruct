@@ -1,3 +1,4 @@
+struct Definition;
 struct SemanticProductTargetAdapter;
 
 MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target,
