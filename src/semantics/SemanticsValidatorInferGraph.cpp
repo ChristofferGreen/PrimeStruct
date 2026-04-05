@@ -29,6 +29,34 @@ std::string formatReturnInferenceCycleDiagnostic(const std::vector<const Definit
   return message.str();
 }
 
+std::vector<std::vector<uint32_t>> buildCondensationDagLayers(const CondensationDag &dag) {
+  std::vector<uint32_t> layerByComponent(dag.nodes.size(), 0);
+  uint32_t maxLayer = 0;
+  for (uint32_t componentId : dag.topologicalComponentIds) {
+    if (componentId >= dag.nodes.size()) {
+      continue;
+    }
+    uint32_t layer = 0;
+    for (uint32_t incoming : dag.nodes[componentId].incomingComponentIds) {
+      if (incoming >= layerByComponent.size()) {
+        continue;
+      }
+      layer = std::max(layer, static_cast<uint32_t>(layerByComponent[incoming] + 1));
+    }
+    layerByComponent[componentId] = layer;
+    maxLayer = std::max(maxLayer, layer);
+  }
+  std::vector<std::vector<uint32_t>> layers;
+  layers.resize(maxLayer + 1);
+  for (uint32_t componentId : dag.topologicalComponentIds) {
+    if (componentId >= layerByComponent.size()) {
+      continue;
+    }
+    layers[layerByComponent[componentId]].push_back(componentId);
+  }
+  return layers;
+}
+
 } // namespace
 
 bool SemanticsValidator::inferUnknownReturnKinds() {
@@ -128,52 +156,56 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
     return failUncontextualizedDiagnostic(message);
   };
 
-  for (auto componentIt = dag.topologicalComponentIds.rbegin();
-       componentIt != dag.topologicalComponentIds.rend();
-       ++componentIt) {
-    const CondensationDagNode &componentNode = dag.nodes[*componentIt];
-    const bool componentHasCycle = componentNode.memberNodeIds.size() > 1;
-    std::vector<const Definition *> definitions = collectUnknownDefinitions(componentNode);
-    if (definitions.empty()) {
-      continue;
-    }
-
-    bool changed = false;
-    do {
-      changed = false;
-      for (const Definition *definition : definitions) {
-        bool definitionChanged = false;
-        if (!inferDefinitionReturnKindGraphStep(
-                *definition, false, componentHasCycle, definitionChanged)) {
-          return false;
-        }
-        changed = changed || definitionChanged;
-      }
-    } while (changed);
-
-    std::vector<const TypeResolutionGraphNode *> unresolvedNodes =
-        collectUnknownDefinitionNodes(componentNode);
-    std::vector<const Definition *> unresolvedDefinitions;
-    unresolvedDefinitions.reserve(unresolvedNodes.size());
-    for (const TypeResolutionGraphNode *node : unresolvedNodes) {
-      auto defIt = defMap_.find(node->resolvedPath);
-      if (defIt == defMap_.end() || defIt->second == nullptr) {
+  const std::vector<std::vector<uint32_t>> dagLayers = buildCondensationDagLayers(dag);
+  for (auto layerIt = dagLayers.rbegin(); layerIt != dagLayers.rend(); ++layerIt) {
+    for (uint32_t componentId : *layerIt) {
+      if (componentId >= dag.nodes.size()) {
         continue;
       }
-      unresolvedDefinitions.push_back(defIt->second);
-    }
-    if (unresolvedDefinitions.empty()) {
-      continue;
-    }
+      const CondensationDagNode &componentNode = dag.nodes[componentId];
+      const bool componentHasCycle = componentNode.memberNodeIds.size() > 1;
+      std::vector<const Definition *> definitions = collectUnknownDefinitions(componentNode);
+      if (definitions.empty()) {
+        continue;
+      }
 
-    if (componentHasCycle) {
-      return failInferGraphCycleDiagnostic(unresolvedNodes);
-    }
+      bool changed = false;
+      do {
+        changed = false;
+        for (const Definition *definition : definitions) {
+          bool definitionChanged = false;
+          if (!inferDefinitionReturnKindGraphStep(
+                  *definition, false, componentHasCycle, definitionChanged)) {
+            return false;
+          }
+          changed = changed || definitionChanged;
+        }
+      } while (changed);
 
-    for (const Definition *definition : unresolvedDefinitions) {
-      bool definitionChanged = false;
-      if (!inferDefinitionReturnKindGraphStep(*definition, true, componentHasCycle, definitionChanged)) {
-        return false;
+      std::vector<const TypeResolutionGraphNode *> unresolvedNodes =
+          collectUnknownDefinitionNodes(componentNode);
+      std::vector<const Definition *> unresolvedDefinitions;
+      unresolvedDefinitions.reserve(unresolvedNodes.size());
+      for (const TypeResolutionGraphNode *node : unresolvedNodes) {
+        auto defIt = defMap_.find(node->resolvedPath);
+        if (defIt == defMap_.end() || defIt->second == nullptr) {
+          continue;
+        }
+        unresolvedDefinitions.push_back(defIt->second);
+      }
+      if (unresolvedDefinitions.empty()) {
+        continue;
+      }
+
+      if (componentHasCycle) {
+        return failInferGraphCycleDiagnostic(unresolvedNodes);
+      }
+
+      for (const Definition *definition : unresolvedDefinitions) {
+        bool definitionChanged = false;
+        if (!inferDefinitionReturnKindGraphStep(*definition, true, componentHasCycle, definitionChanged)) {
+          return false;
+        }
       }
     }
   }
