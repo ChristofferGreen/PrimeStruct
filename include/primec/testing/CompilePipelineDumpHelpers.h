@@ -63,6 +63,10 @@ struct CompilePipelineBackendConformance {
 
 namespace detail {
 
+inline std::vector<std::string> defaultCompilePipelineTestingEffects() {
+  return {"io_out", "io_err", "heap_alloc"};
+}
+
 struct PreparedCompilePipelineIrState {
   Options options;
   CompilePipelineOutput output;
@@ -90,7 +94,7 @@ inline bool captureCompilePipelineDumpStageFromPath(const std::filesystem::path 
   options.entryPath = entryPath;
   options.emitKind = "native";
   options.wasmProfile = "wasi";
-  options.defaultEffects = {"io_out", "io_err"};
+  options.defaultEffects = detail::defaultCompilePipelineTestingEffects();
   options.entryDefaultEffects = options.defaultEffects;
   options.dumpStage = std::string(dumpStage);
   options.collectDiagnostics = diagnosticInfo != nullptr;
@@ -159,7 +163,7 @@ inline bool prepareCompilePipelineIr(const std::string &source,
   prepared.options.entryPath = entryPath;
   prepared.options.emitKind = std::string(emitKind);
   prepared.options.wasmProfile = "wasi";
-  prepared.options.defaultEffects = {"io_out", "io_err"};
+  prepared.options.defaultEffects = detail::defaultCompilePipelineTestingEffects();
   prepared.options.entryDefaultEffects = prepared.options.defaultEffects;
   prepared.options.collectDiagnostics = diagnosticInfo != nullptr;
   primec::addDefaultStdlibInclude(prepared.options.inputPath, prepared.options.importPaths);

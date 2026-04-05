@@ -133,7 +133,7 @@ TEST_CASE("cpp-ir backend accepts semantic-product prepared IR from compile pipe
       "[return<i32>]\n"
       "main() {\n"
       "  [auto] selected{id(1i32)}\n"
-      "  [auto] values{vector(1i32)}\n"
+      "  [auto] values{vector<i32>(1i32)}\n"
       "  return(selected + values.count())\n"
       "}\n";
 
@@ -172,7 +172,7 @@ TEST_CASE("vm backend executes semantic-product prepared IR from compile pipelin
       "[return<i32>]\n"
       "main() {\n"
       "  [auto] selected{id(1i32)}\n"
-      "  [auto] values{vector(1i32)}\n"
+      "  [auto] values{vector<i32>(1i32)}\n"
       "  return(selected + values.count())\n"
       "}\n";
 
@@ -207,7 +207,7 @@ TEST_CASE("native backend emits semantic-product prepared IR from compile pipeli
       "[return<i32>]\n"
       "main() {\n"
       "  [auto] selected{id(1i32)}\n"
-      "  [auto] values{vector(1i32)}\n"
+      "  [auto] values{vector<i32>(1i32)}\n"
       "  return(selected + values.count())\n"
       "}\n";
 

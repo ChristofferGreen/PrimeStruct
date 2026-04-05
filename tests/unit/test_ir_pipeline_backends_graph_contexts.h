@@ -135,6 +135,8 @@ TEST_CASE("public semantic-product dump helper is available for pipeline tests")
   const std::string helper = readTextFile(helperPath);
   CHECK(helper.find("struct CompilePipelineBoundaryDumps") != std::string::npos);
   CHECK(helper.find("struct CompilePipelineBackendConformance") != std::string::npos);
+  CHECK(helper.find("defaultCompilePipelineTestingEffects()") != std::string::npos);
+  CHECK(helper.find("\"heap_alloc\"") != std::string::npos);
   CHECK(helper.find("captureCompilePipelineDumpForTesting(") == std::string::npos);
   CHECK(helper.find("captureSemanticBoundaryDumpsForTesting(") != std::string::npos);
   CHECK(helper.find("struct CompilePipelinePreparedIr") == std::string::npos);
