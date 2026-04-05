@@ -3546,6 +3546,8 @@ read-only path.
     Standalone `ref(...)` bindings now also participate in borrow-conflict checks even
     when the receiver is location-wrapped or helper-returned, so those receiver
     families no longer bypass the existing borrow-conflict rules.
+    Mutable standalone `ref(...)` bindings now also require a mutable root binding,
+    matching the existing mutable-borrow expectations for other reference paths.
   - **Richer borrowed field-view contract:** the next borrowed-view slice should treat
     standalone field-view expressions as first-class non-owning column views rather than
     keeping `borrowed.field()` / `field(borrowed)` on the compiler-owned pending-diagnostic

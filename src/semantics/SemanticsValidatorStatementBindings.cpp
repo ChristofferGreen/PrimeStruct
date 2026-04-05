@@ -754,6 +754,16 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
           return requestMutable ? (sawMutableBorrow || sawImmutableBorrow)
                                 : sawMutableBorrow;
         };
+    auto isMutableRootBinding = [&](const std::string &borrowRoot) -> bool {
+      if (borrowRoot.empty()) {
+        return false;
+      }
+      if (const BindingInfo *paramBinding = findParamBinding(params, borrowRoot)) {
+        return paramBinding->isMutable;
+      }
+      auto it = locals.find(borrowRoot);
+      return it != locals.end() && it->second.isMutable;
+    };
     resolveReceiverRootExpr =
         [&](const Expr &expr,
             const ExprSubstitutions &substitutions,
@@ -862,6 +872,10 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
           return failBindingDiagnostic(
               "borrow conflict: " + borrowRoot + " (root: " + borrowRoot +
               ", sink: " + stmt.name + ")");
+        }
+        if (info.isMutable && !isMutableRootBinding(borrowRoot)) {
+          return failBindingDiagnostic("Reference binding requires mutable root: " +
+                                       borrowRoot);
         }
         info.referenceRoot = std::move(borrowRoot);
       }
