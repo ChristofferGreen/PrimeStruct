@@ -741,6 +741,99 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(lowerStatementsFunctionTableStepHeader.find("struct SemanticProgram;") != std::string::npos);
   CHECK(lowerStatementsFunctionTableStepHeader.find("struct IrFunction;") != std::string::npos);
   CHECK(lowerStatementsFunctionTableStepHeader.find("struct ReturnInfo;") != std::string::npos);
+
+  const auto bindingTypeHelpersHeader =
+      readFile("include/primec/testing/ir_lowerer_helpers/IrLowererBindingTypeHelpers.h");
+  CHECK(bindingTypeHelpersHeader.find("struct SemanticProgram;") != std::string::npos);
+
+  const auto callDispatchHelpersHeader =
+      readFile("include/primec/testing/ir_lowerer_helpers/IrLowererCallDispatchHelpers.h");
+  CHECK(callDispatchHelpersHeader.find("struct Definition;") != std::string::npos);
+  CHECK(callDispatchHelpersHeader.find("struct SemanticProgram;") != std::string::npos);
+  CHECK(callDispatchHelpersHeader.find("struct SemanticProductTargetAdapter;") != std::string::npos);
+
+  const auto countAccessHelpersHeader =
+      readFile("include/primec/testing/ir_lowerer_helpers/IrLowererCountAccessHelpers.h");
+  CHECK(countAccessHelpersHeader.find("struct Definition;") != std::string::npos);
+  CHECK(countAccessHelpersHeader.find("struct SemanticProgram;") != std::string::npos);
+
+  const auto flowHelpersHeader = readFile("include/primec/testing/ir_lowerer_helpers/IrLowererFlowHelpers.h");
+  CHECK(flowHelpersHeader.find("struct Definition;") != std::string::npos);
+  CHECK(flowHelpersHeader.find("struct ReturnInfo;") != std::string::npos);
+
+  const auto inlineCallContextHelpersHeader =
+      readFile("include/primec/testing/ir_lowerer_helpers/IrLowererInlineCallContextHelpers.h");
+  CHECK(inlineCallContextHelpersHeader.find("struct Definition;") != std::string::npos);
+  CHECK(inlineCallContextHelpersHeader.find("struct ReturnInfo;") != std::string::npos);
+
+  const auto lowerEffectsHeader = readFile("include/primec/testing/ir_lowerer_helpers/IrLowererLowerEffects.h");
+  CHECK(lowerEffectsHeader.find("struct Definition;") != std::string::npos);
+  CHECK(lowerEffectsHeader.find("struct Program;") != std::string::npos);
+  CHECK(lowerEffectsHeader.find("struct SemanticProgram;") != std::string::npos);
+
+  const auto lowerEntrySetupHeader =
+      readFile("include/primec/testing/ir_lowerer_helpers/IrLowererLowerEntrySetup.h");
+  CHECK(lowerEntrySetupHeader.find("struct Definition;") != std::string::npos);
+  CHECK(lowerEntrySetupHeader.find("struct Program;") != std::string::npos);
+  CHECK(lowerEntrySetupHeader.find("struct SemanticProgram;") != std::string::npos);
+
+  const auto lowerImportsStructsSetupHeader =
+      readFile("include/primec/testing/ir_lowerer_helpers/IrLowererLowerImportsStructsSetup.h");
+  CHECK(lowerImportsStructsSetupHeader.find("struct Definition;") != std::string::npos);
+  CHECK(lowerImportsStructsSetupHeader.find("struct LayoutFieldBinding;") != std::string::npos);
+  CHECK(lowerImportsStructsSetupHeader.find("struct Program;") != std::string::npos);
+  CHECK(lowerImportsStructsSetupHeader.find("struct SemanticProgram;") != std::string::npos);
+
+  const auto lowerInferenceSetupHeader =
+      readFile("include/primec/testing/ir_lowerer_helpers/IrLowererLowerInferenceSetup.h");
+  CHECK(lowerInferenceSetupHeader.find("struct Definition;") != std::string::npos);
+  CHECK(lowerInferenceSetupHeader.find("struct ReturnInfo;") != std::string::npos);
+  CHECK(lowerInferenceSetupHeader.find("struct SemanticProductTargetAdapter;") != std::string::npos);
+
+  const auto onErrorHelpersHeader =
+      readFile("include/primec/testing/ir_lowerer_helpers/IrLowererOnErrorHelpers.h");
+  CHECK(onErrorHelpersHeader.find("struct Definition;") != std::string::npos);
+  CHECK(onErrorHelpersHeader.find("struct SemanticProgram;") != std::string::npos);
+
+  const auto returnInferenceHelpersHeader =
+      readFile("include/primec/testing/ir_lowerer_helpers/IrLowererReturnInferenceHelpers.h");
+  CHECK(returnInferenceHelpersHeader.find("struct Definition;") != std::string::npos);
+  CHECK(returnInferenceHelpersHeader.find("struct ReturnInfo;") != std::string::npos);
+  CHECK(returnInferenceHelpersHeader.find("struct SemanticProgram;") != std::string::npos);
+
+  const auto setupTypeHelpersHeader =
+      readFile("include/primec/testing/ir_lowerer_helpers/IrLowererSetupTypeHelpers.h");
+  CHECK(setupTypeHelpersHeader.find("struct Definition;") != std::string::npos);
+  CHECK(setupTypeHelpersHeader.find("struct ReturnInfo;") != std::string::npos);
+  CHECK(setupTypeHelpersHeader.find("struct SemanticProductTargetAdapter;") != std::string::npos);
+
+  CHECK(statementCallHelpersHeader.find("struct Definition;") != std::string::npos);
+  CHECK(statementCallHelpersHeader.find("struct IrFunction;") != std::string::npos);
+  CHECK(statementCallHelpersHeader.find("struct Program;") != std::string::npos);
+  CHECK(statementCallHelpersHeader.find("struct ReturnInfo;") != std::string::npos);
+  CHECK(statementCallHelpersHeader.find("struct SemanticProgram;") != std::string::npos);
+
+  const auto structLayoutHelpersHeader =
+      readFile("include/primec/testing/ir_lowerer_helpers/IrLowererStructLayoutHelpers.h");
+  CHECK(structLayoutHelpersHeader.find("struct Definition;") != std::string::npos);
+  CHECK(structLayoutHelpersHeader.find("struct IrStructLayout;") != std::string::npos);
+  CHECK(structLayoutHelpersHeader.find("struct LayoutFieldBinding;") != std::string::npos);
+  CHECK(structLayoutHelpersHeader.find("struct Program;") != std::string::npos);
+  CHECK(structLayoutHelpersHeader.find("struct SemanticProgram;") != std::string::npos);
+
+  const auto structTypeHelpersHeader =
+      readFile("include/primec/testing/ir_lowerer_helpers/IrLowererStructTypeHelpers.h");
+  CHECK(structTypeHelpersHeader.find("struct Definition;") != std::string::npos);
+  CHECK(structTypeHelpersHeader.find("struct LayoutFieldBinding;") != std::string::npos);
+  CHECK(structTypeHelpersHeader.find("struct Program;") != std::string::npos);
+
+  const auto lowerLocalsSetupHeader =
+      readFile("include/primec/testing/ir_lowerer_helpers/IrLowererLowerLocalsSetup.h");
+  CHECK(lowerLocalsSetupHeader.find("struct Definition;") != std::string::npos);
+  CHECK(lowerLocalsSetupHeader.find("struct IrFunction;") != std::string::npos);
+  CHECK(lowerLocalsSetupHeader.find("struct LayoutFieldBinding;") != std::string::npos);
+  CHECK(lowerLocalsSetupHeader.find("struct Program;") != std::string::npos);
+  CHECK(lowerLocalsSetupHeader.find("struct SemanticProgram;") != std::string::npos);
   CHECK(operatorConversionsAndCallsHelpersHeader.find("struct LayoutFieldBinding;") !=
         std::string::npos);
   CHECK(structLayoutHelpersHeader.find("struct SemanticProgramTypeMetadata;") !=

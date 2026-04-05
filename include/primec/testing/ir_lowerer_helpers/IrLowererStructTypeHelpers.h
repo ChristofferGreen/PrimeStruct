@@ -2,6 +2,9 @@
 
 
 
+struct Definition;
+struct LayoutFieldBinding;
+struct Program;
 struct SemanticProductTargetAdapter;
 
 using ResolveStructTypeNameFn = std::function<bool(const std::string &, const std::string &, std::string &)>;

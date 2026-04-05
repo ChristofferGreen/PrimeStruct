@@ -2,6 +2,9 @@
 
 
 
+struct Definition;
+struct ReturnInfo;
+
 struct InlineDefinitionCallContextSetup {
   ReturnInfo returnInfo;
   bool structDefinition = false;
@@ -19,4 +22,3 @@ bool prepareInlineDefinitionCallContext(
     const OnErrorByDefinition &onErrorByDef,
     InlineDefinitionCallContextSetup &out,
     std::string &error);
-

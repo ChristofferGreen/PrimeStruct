@@ -2,6 +2,9 @@
 
 
 
+struct Definition;
+struct ReturnInfo;
+
 struct OnErrorHandler {
   std::string errorType;
   std::string handlerPath;

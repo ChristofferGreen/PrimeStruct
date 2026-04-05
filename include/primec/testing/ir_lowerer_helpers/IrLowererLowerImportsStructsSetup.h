@@ -3,6 +3,11 @@
 
 
 
+struct Definition;
+struct LayoutFieldBinding;
+struct Program;
+struct SemanticProgram;
+
 bool runLowerImportsStructsSetup(
     const Program &program,
     const SemanticProgram *semanticProgram,

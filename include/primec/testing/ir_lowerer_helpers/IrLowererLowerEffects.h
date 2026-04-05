@@ -2,6 +2,10 @@
 
 
 
+struct Definition;
+struct Program;
+struct SemanticProgram;
+
 bool findEntryDefinition(const Program &program,
                          const std::string &entryPath,
                          const Definition *&entryDefOut,

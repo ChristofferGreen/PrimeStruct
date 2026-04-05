@@ -2,6 +2,10 @@
 
 
 
+struct Definition;
+struct ReturnInfo;
+struct SemanticProgram;
+
 enum class MissingReturnBehavior { Error, Void };
 
 struct ReturnInferenceOptions {

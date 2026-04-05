@@ -2,6 +2,9 @@
 
 
 
+struct Definition;
+struct SemanticProgram;
+
 using OnErrorByDefinition = std::unordered_map<std::string, std::optional<OnErrorHandler>>;
 struct EntryCallOnErrorSetup {
   CallResolutionAdapters callResolutionAdapters{};

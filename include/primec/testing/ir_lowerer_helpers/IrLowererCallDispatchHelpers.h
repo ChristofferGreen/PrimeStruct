@@ -1,3 +1,7 @@
+struct Definition;
+struct SemanticProgram;
+struct SemanticProductTargetAdapter;
+
 using ResolveExprPathFn = std::function<std::string(const Expr &)>;
 using ResolveDefinitionCallFn = std::function<const Definition *(const Expr &)>;
 using IsTailCallCandidateFn = std::function<bool(const Expr &)>;

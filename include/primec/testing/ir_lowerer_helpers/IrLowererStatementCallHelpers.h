@@ -2,6 +2,11 @@
 
 
 
+struct Definition;
+struct IrFunction;
+struct Program;
+struct ReturnInfo;
+struct SemanticProgram;
 struct StructSlotLayoutInfo;
 
 enum class BufferStoreStatementEmitResult {

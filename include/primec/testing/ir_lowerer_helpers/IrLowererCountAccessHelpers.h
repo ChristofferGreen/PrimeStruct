@@ -1,6 +1,8 @@
 
 
 
+struct Definition;
+struct SemanticProgram;
 
 using IsEntryArgsNameFn = std::function<bool(const Expr &, const LocalMap &)>;
 using IsArrayCountCallFn = std::function<bool(const Expr &, const LocalMap &)>;

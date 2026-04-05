@@ -3,6 +3,10 @@
 
 
 
+struct Definition;
+struct ReturnInfo;
+struct SemanticProductTargetAdapter;
+
 using ValueKindFromTypeNameFn = std::function<LocalInfo::ValueKind(const std::string &)>;
 using CombineNumericKindsFn =
     std::function<LocalInfo::ValueKind(LocalInfo::ValueKind, LocalInfo::ValueKind)>;

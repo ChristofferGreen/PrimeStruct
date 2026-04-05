@@ -3,6 +3,10 @@
 
 
 
+struct Definition;
+struct ReturnInfo;
+struct SemanticProductTargetAdapter;
+
 struct UninitializedStorageAccessInfo;
 
 struct LowerInferenceSetupBootstrapState {
