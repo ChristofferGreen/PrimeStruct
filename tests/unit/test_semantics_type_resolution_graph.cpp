@@ -402,6 +402,81 @@ main() {
   CHECK(graph.invalidationInitializerShapeCount <= graph.invalidationLocalBindingCount);
 }
 
+TEST_CASE("type resolution graph definition signature invalidation counts definitions") {
+  const std::string source = R"(
+Box {
+  value{i32}
+}
+
+[return<i32>]
+/Box/get([Box] self) {
+  return(self.value)
+}
+
+[return<i32>]
+main() {
+  [Box] box{Box(1i32)}
+  return(box.get())
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionGraphSnapshot graph;
+  REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, graph));
+  CHECK(error.empty());
+
+  CHECK(graph.invalidationDefinitionSignatureCount == 3u);
+}
+
+TEST_CASE("type resolution graph import alias invalidation counts imports") {
+  const std::string source = R"(
+import /pkg/leaf
+
+[public return<i32>]
+/pkg/leaf() {
+  return(1i32)
+}
+
+[return<i32>]
+main() {
+  return(leaf())
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionGraphSnapshot graph;
+  REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, graph));
+  CHECK(error.empty());
+
+  CHECK(graph.invalidationImportAliasCount == 1u);
+}
+
+TEST_CASE("type resolution graph receiver invalidation counts method calls") {
+  const std::string source = R"(
+Box {
+  value{i32}
+}
+
+[return<i32>]
+/Box/get([Box] self) {
+  return(self.value)
+}
+
+[return<i32>]
+main() {
+  [Box] box{Box(1i32)}
+  return(box.get())
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionGraphSnapshot graph;
+  REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, graph));
+  CHECK(error.empty());
+
+  CHECK(graph.invalidationReceiverTypeCount == 1u);
+}
+
 TEST_CASE("type resolution dependency dag helper preserves acyclic graph dependency order") {
   const std::string source = R"(
 [return<auto>]

@@ -23,10 +23,10 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
   - ◐ Implement graph-backed query invalidation rules and coverage for local-binding edits. Progress: added dependency-chain coverage for local binding invalidation to establish the expected fan-out surface.
   - ◐ Implement graph-backed query invalidation rules and coverage for control-flow edits. Progress: added dependency-chain coverage for control-flow invalidation through conditional return paths.
   - ✓ Implement graph-backed query invalidation rules and coverage for initializer-shape edits.
-- ◐ Implement graph-backed query invalidation rules and coverage for cross-definition edits now that the cross-definition invalidation contract is documented. Progress: this invalidation surface is now split by dependency family so signature, import-alias, and receiver-type invalidation can be implemented and pinned separately.
-  - ○ Implement graph-backed query invalidation rules and coverage for definition-signature edits.
-  - ○ Implement graph-backed query invalidation rules and coverage for import-alias edits.
-  - ○ Implement graph-backed query invalidation rules and coverage for receiver-type edits.
+- ✓ Implement graph-backed query invalidation rules and coverage for cross-definition edits now that the cross-definition invalidation contract is documented. Completed: definition-signature, import-alias, and receiver-type invalidation counts are now covered.
+  - ✓ Implement graph-backed query invalidation rules and coverage for definition-signature edits.
+  - ✓ Implement graph-backed query invalidation rules and coverage for import-alias edits.
+  - ✓ Implement graph-backed query invalidation rules and coverage for receiver-type edits.
 - ◐ Implement the next non-template inference-island migrations now that the graph-backed cutover contract is documented. Progress: the remaining non-template cutover is now split into direct-call, receiver-call, and collection bridge inference seams instead of one umbrella migration bullet.
   - ○ Migrate the next direct-call/callee non-template inference island onto the graph path.
   - ○ Migrate the next receiver/method-call non-template inference island onto the graph path.
