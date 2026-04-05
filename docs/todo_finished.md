@@ -31,6 +31,10 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
   typed field pointers. Completed: experimental buffer helpers now provide
   `bufferReinterpretFromBytes<T>(...)` to cast byte-addressed slots back into
   typed pointers without materializing owning storage.
+- ✓ Introduced a reusable reflected field-slot pointer helper. Completed:
+  `soaColumnFieldSlotUnsafe<Struct, Field>(...)` now uses `SoaSchemaFieldOffset(...)`,
+  `SoaSchemaElementStride()`, and byte-addressable buffer helpers to recover a
+  typed field pointer within whole-element `SoaColumn<Struct>` storage.
 - ✓ Retired the stale richer borrowed field-view receiver-family split.
   Completed: standalone `borrowed.field()` / `field(borrowed)` attempts still
   all funnel through the same synthetic `/soa_vector/field_view/<field>` helper
