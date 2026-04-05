@@ -12,6 +12,10 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
   active `Reference<T>` borrows across direct, borrowed, helper-return, and
   inline `location(...)`-wrapped receiver roots, matching the existing
   `push` / `reserve` growth invalidation rules.
+- ✓ Invalidated standalone `ref(...)` carriers on `to_aos`.
+  Completed: `soa_vector` `to_aos` now rejects active `Reference<T>` borrows
+  across direct, borrowed, helper-return, and inline `location(...)`-wrapped
+  receiver roots, matching the existing growth/shrink invalidation rules.
 - ✓ Split the borrowed field-view field-addressing primitive again at the
   missing typed-to-byte pointer reinterpretation seam. Completed: the live
   queue now treats whole-element-pointer to raw-byte-pointer reinterpretation,

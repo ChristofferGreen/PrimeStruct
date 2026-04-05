@@ -3531,7 +3531,7 @@ read-only path.
     The standalone `ref(...)` receiver families above are now in place, those
     whole-value carriers now also survive local binding, helper pass-through, and direct
     helper return surfaces, and live carriers now already reject later `push` /
-    `reserve` / `remove_at` / `remove_swap` / `clear` mutations on that same wrapper across direct local,
+    `reserve` / `remove_at` / `remove_swap` / `clear` / `to_aos` mutations on that same wrapper across direct local,
     direct borrowed/dereferenced receiver, helper-return, pass-through, and
     return-rooted surfaces. Standalone borrowed field-view values do not exist
     yet, but once they do they inherit this same invalidation contract from the
