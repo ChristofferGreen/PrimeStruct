@@ -180,8 +180,22 @@ void SemanticsValidator::expireReferenceBorrowsForRemainder(const std::vector<Pa
     }
     return false;
   };
-  auto referenceRootForBinding = [](const std::string &bindingName, const BindingInfo &binding) -> std::string {
-    if (binding.typeName != "Reference") {
+  auto isSoaFieldViewBindingType = [](const BindingInfo &binding) -> bool {
+    std::string normalized = normalizeBindingTypeName(binding.typeName);
+    if (normalized.empty()) {
+      return false;
+    }
+    std::string base;
+    std::string arg;
+    if (splitTemplateTypeName(normalized, base, arg)) {
+      normalized = normalizeBindingTypeName(base);
+    }
+    return normalized == "SoaFieldView" ||
+           normalized == "std/collections/experimental_soa_storage/SoaFieldView";
+  };
+  auto referenceRootForBinding = [&](const std::string &bindingName, const BindingInfo &binding) -> std::string {
+    if (binding.typeName != "Reference" &&
+        !isSoaFieldViewBindingType(binding)) {
       return "";
     }
     if (!binding.referenceRoot.empty()) {
@@ -212,7 +226,8 @@ void SemanticsValidator::expireReferenceBorrowsForRemainder(const std::vector<Pa
     return false;
   };
   auto updateName = [&](const std::string &bindingName, const BindingInfo &binding) {
-    if (binding.typeName != "Reference") {
+    if (binding.typeName != "Reference" &&
+        !isSoaFieldViewBindingType(binding)) {
       return;
     }
     const std::string referenceRoot = referenceRootForBinding(bindingName, binding);

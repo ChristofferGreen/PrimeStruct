@@ -400,7 +400,18 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     auto referenceRootForBorrowBinding =
         [&](const std::string &bindingName,
             const BindingInfo &binding) -> std::string {
-      if (binding.typeName != "Reference") {
+      std::string normalized = normalizeBindingTypeName(binding.typeName);
+      if (normalized.empty()) {
+        return "";
+      }
+      std::string base;
+      std::string arg;
+      if (splitTemplateTypeName(normalized, base, arg)) {
+        normalized = normalizeBindingTypeName(base);
+      }
+      const bool isSoaFieldView = normalized == "SoaFieldView" ||
+                                  normalized == "std/collections/experimental_soa_storage/SoaFieldView";
+      if (binding.typeName != "Reference" && !isSoaFieldView) {
         return "";
       }
       if (!binding.referenceRoot.empty()) {

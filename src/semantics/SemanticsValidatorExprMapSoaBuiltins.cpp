@@ -135,9 +135,23 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
                                           " (root: " + borrowRoot +
                                           ", sink: " + sink + ")");
       };
+  auto isSoaFieldViewBindingType = [&](const BindingInfo &binding) -> bool {
+    std::string normalized = normalizeBindingTypeName(binding.typeName);
+    if (normalized.empty()) {
+      return false;
+    }
+    std::string base;
+    std::string arg;
+    if (splitTemplateTypeName(normalized, base, arg)) {
+      normalized = normalizeBindingTypeName(base);
+    }
+    return normalized == "SoaFieldView" ||
+           normalized == "std/collections/experimental_soa_storage/SoaFieldView";
+  };
   auto referenceRootForBorrowBinding =
       [&](const std::string &bindingName, const BindingInfo &binding) -> std::string {
-        if (binding.typeName != "Reference") {
+        if (binding.typeName != "Reference" &&
+            !isSoaFieldViewBindingType(binding)) {
           return "";
         }
         if (!binding.referenceRoot.empty()) {

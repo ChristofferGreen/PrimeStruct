@@ -6,8 +6,22 @@
 namespace primec::semantics {
 namespace {
 
+bool isSoaFieldViewBindingType(const BindingInfo &binding) {
+  std::string normalized = normalizeBindingTypeName(binding.typeName);
+  if (normalized.empty()) {
+    return false;
+  }
+  std::string base;
+  std::string arg;
+  if (splitTemplateTypeName(normalized, base, arg)) {
+    normalized = normalizeBindingTypeName(base);
+  }
+  return normalized == "SoaFieldView" ||
+         normalized == "std/collections/experimental_soa_storage/SoaFieldView";
+}
+
 std::string referenceRootForBorrowBinding(const std::string &bindingName, const BindingInfo &binding) {
-  if (binding.typeName == "Reference") {
+  if (binding.typeName == "Reference" || isSoaFieldViewBindingType(binding)) {
     if (!binding.referenceRoot.empty()) {
       return binding.referenceRoot;
     }
@@ -639,7 +653,8 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     };
     auto resolveBorrowRoot = [&](const std::string &targetName, std::string &rootOut) -> bool {
       if (const BindingInfo *paramBinding = findParamBinding(params, targetName)) {
-        if (paramBinding->typeName == "Reference") {
+        if (paramBinding->typeName == "Reference" ||
+            isSoaFieldViewBindingType(*paramBinding)) {
           rootOut = referenceRootForBorrowBinding(targetName, *paramBinding);
         } else {
           rootOut = targetName;
@@ -650,7 +665,8 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       if (it == locals.end()) {
         return false;
       }
-      if (it->second.typeName == "Reference") {
+      if (it->second.typeName == "Reference" ||
+          isSoaFieldViewBindingType(it->second)) {
         rootOut = referenceRootForBorrowBinding(it->first, it->second);
       } else {
         rootOut = targetName;
@@ -745,7 +761,8 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
           auto referenceRootForBorrowBinding =
               [&](const std::string &bindingName,
                   const BindingInfo &binding) -> std::string {
-            if (binding.typeName != "Reference") {
+            if (binding.typeName != "Reference" &&
+                !isSoaFieldViewBindingType(binding)) {
               return "";
             }
             if (!binding.referenceRoot.empty()) {
@@ -989,6 +1006,246 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     }
     info.referenceRoot = std::move(borrowRoot);
     info.isUnsafeReference = currentValidationState_.context.definitionIsUnsafe;
+  }
+
+  BindingInfo fieldViewBinding = info;
+  if ((!hasExplicitType || explicitAutoType) && info.typeName != "Reference") {
+    BindingInfo inferredBinding;
+    if (inferBindingTypeFromInitializer(initializer, params, locals, inferredBinding, &stmt)) {
+      fieldViewBinding = std::move(inferredBinding);
+    }
+  }
+  if (isSoaFieldViewBindingType(fieldViewBinding)) {
+    auto hasBorrowConflictForRoot =
+        [&](const std::string &borrowRoot, bool requestMutable) -> bool {
+          if (borrowRoot.empty() ||
+              currentValidationState_.context.definitionIsUnsafe) {
+            return false;
+          }
+          bool sawMutableBorrow = false;
+          bool sawImmutableBorrow = false;
+          auto observeBorrow = [&](const std::string &bindingName,
+                                   const BindingInfo &binding) {
+            if (currentValidationState_.endedReferenceBorrows.count(bindingName) > 0) {
+              return;
+            }
+            const std::string root =
+                referenceRootForBorrowBinding(bindingName, binding);
+            if (root.empty() || root != borrowRoot) {
+              return;
+            }
+            if (binding.isMutable) {
+              sawMutableBorrow = true;
+            } else {
+              sawImmutableBorrow = true;
+            }
+          };
+          for (const auto &param : params) {
+            observeBorrow(param.name, param.binding);
+          }
+          for (const auto &entry : locals) {
+            observeBorrow(entry.first, entry.second);
+          }
+          return requestMutable ? (sawMutableBorrow || sawImmutableBorrow)
+                                : sawMutableBorrow;
+        };
+    auto isMutableRootBinding = [&](const std::string &borrowRoot) -> bool {
+      if (borrowRoot.empty()) {
+        return false;
+      }
+      if (const BindingInfo *paramBinding = findParamBinding(params, borrowRoot)) {
+        return paramBinding->isMutable;
+      }
+      auto it = locals.find(borrowRoot);
+      return it != locals.end() && it->second.isMutable;
+    };
+    auto resolveBorrowRootName = [&](const std::string &name,
+                                     std::string &rootOut) -> bool {
+      if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
+        if (paramBinding->typeName == "Reference" ||
+            isSoaFieldViewBindingType(*paramBinding)) {
+          rootOut = referenceRootForBorrowBinding(name, *paramBinding);
+        } else {
+          rootOut = name;
+        }
+        return true;
+      }
+      auto it = locals.find(name);
+      if (it == locals.end()) {
+        return false;
+      }
+      if (it->second.typeName == "Reference" ||
+          isSoaFieldViewBindingType(it->second)) {
+        rootOut = referenceRootForBorrowBinding(it->first, it->second);
+      } else {
+        rootOut = name;
+      }
+      return true;
+    };
+    using ExprSubstitutions = std::vector<std::pair<std::string, const Expr *>>;
+    auto findSubstitutedExpr = [&](const ExprSubstitutions &substitutions,
+                                   const std::string &name) -> const Expr * {
+      for (auto it = substitutions.rbegin(); it != substitutions.rend(); ++it) {
+        if (it->first == name) {
+          return it->second;
+        }
+      }
+      return nullptr;
+    };
+    auto appendCallSubstitutions =
+        [&](const Expr &callExpr,
+            const ExprSubstitutions &baseSubstitutions,
+            ExprSubstitutions &extendedSubstitutions,
+            const Expr *&returnedValueExprOut) -> bool {
+          returnedValueExprOut = nullptr;
+          const std::string resolvedCallPath = resolveCalleePath(callExpr);
+          auto defIt = defMap_.find(resolvedCallPath);
+          if (defIt == defMap_.end() || defIt->second == nullptr) {
+            return false;
+          }
+          const auto paramsIt = paramsByDef_.find(resolvedCallPath);
+          if (paramsIt == paramsByDef_.end()) {
+            return false;
+          }
+          const auto &nestedParams = paramsIt->second;
+          std::string nestedArgError;
+          std::vector<const Expr *> nestedOrderedArgs;
+          if (!buildOrderedArguments(nestedParams, callExpr.args, callExpr.argNames,
+                                     nestedOrderedArgs, nestedArgError)) {
+            return false;
+          }
+          const Definition &nestedDef = *defIt->second;
+          for (const auto &stmtExpr : nestedDef.statements) {
+            if (isReturnCall(stmtExpr) && stmtExpr.args.size() == 1) {
+              returnedValueExprOut = &stmtExpr.args.front();
+            }
+          }
+          if (nestedDef.returnExpr.has_value()) {
+            returnedValueExprOut = &*nestedDef.returnExpr;
+          }
+          if (returnedValueExprOut == nullptr) {
+            return false;
+          }
+          extendedSubstitutions = baseSubstitutions;
+          for (size_t nestedIndex = 0;
+               nestedIndex < nestedParams.size() && nestedIndex < nestedOrderedArgs.size();
+               ++nestedIndex) {
+            const Expr *nestedArg = nestedOrderedArgs[nestedIndex];
+            if (nestedArg == nullptr) {
+              continue;
+            }
+            extendedSubstitutions.emplace_back(nestedParams[nestedIndex].name, nestedArg);
+          }
+          return true;
+        };
+    std::function<bool(const Expr &, const ExprSubstitutions &, std::string &)>
+        resolveReceiverRootExpr;
+    std::function<bool(const Expr &, const ExprSubstitutions &, std::string &)>
+        resolveStandaloneFieldViewRootExpr;
+    resolveReceiverRootExpr =
+        [&](const Expr &expr,
+            const ExprSubstitutions &substitutions,
+            std::string &rootOut) -> bool {
+          if (expr.kind == Expr::Kind::Name) {
+            if (const Expr *substitutedExpr =
+                    findSubstitutedExpr(substitutions, expr.name)) {
+              return resolveReceiverRootExpr(*substitutedExpr,
+                                            substitutions,
+                                            rootOut);
+            }
+            return resolveBorrowRootName(expr.name, rootOut);
+          }
+          if (expr.kind != Expr::Kind::Call) {
+            return false;
+          }
+          std::string builtinName;
+          if (getBuiltinPointerName(expr, builtinName) && expr.args.size() == 1) {
+            if (builtinName == "location" || builtinName == "dereference") {
+              return resolveReceiverRootExpr(expr.args.front(),
+                                            substitutions,
+                                            rootOut);
+            }
+          }
+          ExprSubstitutions nestedSubstitutions;
+          const Expr *returnedValueExpr = nullptr;
+          if (!appendCallSubstitutions(expr, substitutions, nestedSubstitutions,
+                                       returnedValueExpr)) {
+            return false;
+          }
+          return resolveReceiverRootExpr(*returnedValueExpr,
+                                        nestedSubstitutions,
+                                        rootOut);
+        };
+    resolveStandaloneFieldViewRootExpr =
+        [&](const Expr &expr,
+            const ExprSubstitutions &substitutions,
+            std::string &rootOut) -> bool {
+          if (expr.kind == Expr::Kind::Name) {
+            if (const Expr *substitutedExpr =
+                    findSubstitutedExpr(substitutions, expr.name)) {
+              return resolveStandaloneFieldViewRootExpr(*substitutedExpr,
+                                                       substitutions,
+                                                       rootOut);
+            }
+            const BindingInfo *binding = findParamBinding(params, expr.name);
+            if (binding == nullptr) {
+              auto localIt = locals.find(expr.name);
+              if (localIt != locals.end()) {
+                binding = &localIt->second;
+              }
+            }
+            if (binding != nullptr && isSoaFieldViewBindingType(*binding)) {
+              rootOut = referenceRootForBorrowBinding(expr.name, *binding);
+              return !rootOut.empty();
+            }
+            return false;
+          }
+          if (expr.kind == Expr::Kind::Call && expr.args.size() >= 1) {
+            if (isBuiltinSoaFieldViewExpr(expr, params, locals, nullptr)) {
+              const Expr *receiverExpr = &expr.args.front();
+              if (receiverExpr->kind == Expr::Kind::Name) {
+                if (const Expr *substitutedExpr =
+                        findSubstitutedExpr(substitutions, receiverExpr->name)) {
+                  receiverExpr = substitutedExpr;
+                }
+              }
+              if (receiverExpr->kind != Expr::Kind::Name) {
+                return false;
+              }
+              if (resolveReceiverRootExpr(*receiverExpr, substitutions, rootOut)) {
+                return !rootOut.empty();
+              }
+            }
+          }
+          if (expr.kind != Expr::Kind::Call) {
+            return false;
+          }
+          ExprSubstitutions nestedSubstitutions;
+          const Expr *returnedValueExpr = nullptr;
+          if (!appendCallSubstitutions(expr, substitutions, nestedSubstitutions,
+                                       returnedValueExpr)) {
+            return false;
+          }
+          return resolveStandaloneFieldViewRootExpr(*returnedValueExpr,
+                                                    nestedSubstitutions,
+                                                    rootOut);
+        };
+
+    std::string borrowRoot;
+    const ExprSubstitutions substitutions;
+    if (!resolveStandaloneFieldViewRootExpr(initializer, substitutions, borrowRoot) ||
+        borrowRoot.empty()) {
+      return failBindingDiagnostic("field-view binding requires borrow root");
+    }
+    if (hasBorrowConflictForRoot(borrowRoot, info.isMutable)) {
+      return failBindingDiagnostic("borrow conflict: " + borrowRoot + " (root: " +
+                                   borrowRoot + ", sink: " + stmt.name + ")");
+    }
+    if (info.isMutable && !isMutableRootBinding(borrowRoot)) {
+      return failBindingDiagnostic("field-view binding requires mutable root: " +
+                                   borrowRoot);
+    }
+    info.referenceRoot = std::move(borrowRoot);
   }
 
   if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
