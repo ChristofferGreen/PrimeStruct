@@ -49,7 +49,7 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
 - ◐ Add sustained graph performance coverage over the stabilized graph surface. Progress: baseline timing/budget metrics now exist; a lightweight graph perf snapshot test now records prepare/build timings; budgeted prep/build coverage is now wired; remaining work is to wire recurring coverage on top of them.
     - ✓ Add a lightweight graph perf snapshot test that records prepare/build timings for a fixed corpus.
     - ✓ Add budgeted perf coverage for graph prep/build on a representative compile-pipeline fixture.
-    - ○ Add a long-running graph perf soak (disabled by default) for larger program suites.
+    - ✓ Add a long-running graph perf soak (disabled by default) for larger program suites.
 - ◐ Prototype optional parallel solve now that its execution and merge contract is documented. Progress: the parallel-solve work is now split into execution partitioning, deterministic merge ordering, and parity coverage instead of one umbrella prototype bullet.
   - ○ Prototype the partition/execution layer for optional parallel solve.
   - ○ Implement deterministic merge ordering for optional parallel solve results.
