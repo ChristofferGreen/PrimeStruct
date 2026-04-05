@@ -1113,7 +1113,9 @@ helper-return reads such as `return(holder.pickBorrowed(...).count())`,
 `return(holder.pickBorrowed(...).field()[i])`, `return(get(holder.pickBorrowed(...), i).field)`,
 `return(holder.pickBorrowed(...).get(i).field)`, `return(holder.pickBorrowed(...).ref(i).field)`,
 and inline `location(...)`-wrapped variants now route through that same helper/indexing
-substrate. The standalone `ref(...)` receiver families are therefore in place. The
+substrate. The standalone `ref(...)` receiver families are therefore in place, and those
+whole-value carriers now also survive local binding, helper pass-through, and direct helper
+return surfaces. The
 compiler-owned direct unsupported field-view path still remains only for
 standalone borrowed reads plus the still-unimplemented mutating method/call and indexed
 field-view write surfaces until indexing moves fully onto the experimental substrate.

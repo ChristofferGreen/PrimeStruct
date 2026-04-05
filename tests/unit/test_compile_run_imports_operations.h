@@ -1185,6 +1185,41 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("compiles and runs experimental soa_vector ref pass-through and return in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<Reference<Particle>>]
+pass([Reference<Particle>] value) {
+  return(value)
+}
+
+[return<Reference<Particle>>]
+pick([SoaVector<Particle>] values) {
+  return(pass(values.ref(0i32)))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  [Reference<Particle>] value{pick(values)}
+  return(value.x)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_experimental_soa_vector_ref_passthrough_exe.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_experimental_soa_vector_ref_passthrough_exe").string();
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
 TEST_CASE("compiles and runs experimental soa_vector stdlib push and reserve helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

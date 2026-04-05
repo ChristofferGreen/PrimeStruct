@@ -1373,6 +1373,37 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental soa_vector stdlib ref method preserves reference pass-through and return") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<Reference<Particle>>]
+pass([Reference<Particle>] value) {
+  return(value)
+}
+
+[return<Reference<Particle>>]
+pick([SoaVector<Particle>] values) {
+  return(pass(values.ref(0i32)))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  [Reference<Particle>] value{pick(values)}
+  return(value.x)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental soa_vector stdlib push and reserve helpers validate on reflect-enabled struct elements") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

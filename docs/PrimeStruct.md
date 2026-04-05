@@ -3536,10 +3536,10 @@ read-only path.
     (`ref(...).field`, `.ref(i).field`, and `value.field()[i]`-style reads/writes), but those
     projections are recomputed per use through the helper rewrite path and do not yet
     materialize a standalone borrowed object that needs its own persisted invalidation state.
-    The standalone `ref(...)` receiver families above are now in place, so the remaining
-    implementation work starts by preserving those standalone `ref(...)` values across local
-    binding/pass-through/return surfaces and by materializing richer standalone field-view
-    values on those same receiver families, then layering growth invalidation, later
+    The standalone `ref(...)` receiver families above are now in place, and those
+    whole-value carriers now also survive local binding, helper pass-through, and direct
+    helper return surfaces. The remaining implementation work therefore starts by
+    materializing richer standalone field-view values on those same receiver families, then layering growth invalidation, later
     shrink/motion invalidation, storage-replacement/destruction invalidation, and
     provenance/escape rules on top.
   - **Richer borrowed field-view contract:** the next borrowed-view slice should treat

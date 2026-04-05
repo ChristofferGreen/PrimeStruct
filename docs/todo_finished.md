@@ -7,6 +7,13 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 3, 2026, continued)**
 
+- ✓ Preserved standalone whole-value `ref(...)` carriers across local binding,
+  helper pass-through, and direct helper return surfaces. Completed: the shared
+  canonical/experimental `Reference<T>` carrier path now survives those
+  surfaces without collapsing back into per-use projections, so the remaining
+  Group 8 borrowed-view work starts at standalone borrowed field-view values
+  and later invalidation/provenance rules rather than another whole-value
+  `ref(...)` routing step.
 - ✓ Retired the stale standalone `ref(...)` receiver-family subtree. Completed:
   whole-value `ref(...)` now already validates through `Reference<T>` carriers
   for direct wrapper locals, borrowed locals, explicit `dereference(...)`
