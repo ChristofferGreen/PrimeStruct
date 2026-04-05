@@ -1,10 +1,43 @@
 #include <algorithm>
 #include <cstdint>
+#include <cstdlib>
+#include <optional>
+#include <string>
 
 #include "primec/testing/SemanticsGraphHelpers.h"
 
 #include "third_party/doctest.h"
 #include "test_semantics_helpers.h"
+
+namespace {
+
+struct ScopedEnvVar {
+  explicit ScopedEnvVar(const char *name, const std::string &value)
+      : name_(name) {
+    const char *existing = std::getenv(name_);
+    if (existing != nullptr) {
+      previous_ = existing;
+    }
+    setenv(name_, value.c_str(), 1);
+  }
+
+  ~ScopedEnvVar() {
+    if (previous_.has_value()) {
+      setenv(name_, previous_->c_str(), 1);
+    } else {
+      unsetenv(name_);
+    }
+  }
+
+  ScopedEnvVar(const ScopedEnvVar &) = delete;
+  ScopedEnvVar &operator=(const ScopedEnvVar &) = delete;
+
+private:
+  const char *name_;
+  std::optional<std::string> previous_;
+};
+
+} // namespace
 
 TEST_SUITE_BEGIN("primestruct.semantics.type_resolution_graph");
 
@@ -101,6 +134,50 @@ TEST_CASE("type resolution dependency dag helper groups mutual-recursion graph c
 [return<auto>]
 alpha() {
   return(beta())
+}
+
+TEST_CASE("type resolution graph snapshot honors budget env vars") {
+  const std::string source = R"(
+[return<auto>]
+leaf() {
+  return(1i32)
+}
+
+[return<auto>]
+main() {
+  return(leaf())
+}
+)";
+
+  uint64_t prepareMillis = 0;
+  uint64_t buildMillis = 0;
+  {
+    const ScopedEnvVar prepareBudget("PRIMESTRUCT_GRAPH_PREPARE_MS_MAX", "0");
+    const ScopedEnvVar buildBudget("PRIMESTRUCT_GRAPH_BUILD_MS_MAX", "0");
+
+    std::string error;
+    primec::semantics::TypeResolutionGraphSnapshot snapshot;
+    REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, snapshot));
+    CHECK(error.empty());
+
+    CHECK(snapshot.prepareMaxMillis == 0u);
+    CHECK(snapshot.buildMaxMillis == 0u);
+    CHECK(snapshot.prepareOverBudget == (snapshot.prepareMillis > snapshot.prepareMaxMillis));
+    CHECK(snapshot.buildOverBudget == (snapshot.buildMillis > snapshot.buildMaxMillis));
+    prepareMillis = snapshot.prepareMillis;
+    buildMillis = snapshot.buildMillis;
+  }
+
+  const ScopedEnvVar prepareBudget("PRIMESTRUCT_GRAPH_PREPARE_MS_MAX", std::to_string(prepareMillis + 1u));
+  const ScopedEnvVar buildBudget("PRIMESTRUCT_GRAPH_BUILD_MS_MAX", std::to_string(buildMillis + 1u));
+
+  std::string error;
+  primec::semantics::TypeResolutionGraphSnapshot snapshot;
+  REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  CHECK(snapshot.prepareOverBudget == false);
+  CHECK(snapshot.buildOverBudget == false);
 }
 
 [return<auto>]
