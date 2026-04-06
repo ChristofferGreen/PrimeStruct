@@ -58,6 +58,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   bridge calls, and semantic-aware direct-call resolution no longer routes
   same-path or canonical collection-helper bridge calls through duplicated
   direct-call targets when the bridge choice is absent.
+- `semantic-product-completeness-and-provenance`: mutation-based lowering
+  tests now prove post-validation AST call and transform drift does not
+  change semantic-product-owned lowering meaning, while canonical
+  instruction source maps still follow AST-backed line and column data.
 - `semantic-product-binding-routing`: production lowering now validates
   that parameter/local binding facts are published before lowering starts,
   and semantic-aware binding classification no longer falls back to AST

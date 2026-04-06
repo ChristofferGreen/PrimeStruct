@@ -3,6 +3,7 @@
 #include <string_view>
 
 #include "primec/IrLowerer.h"
+#include "primec/IrSerializer.h"
 #include "primec/testing/CompilePipelineDumpHelpers.h"
 #include "primec/testing/SemanticsGraphHelpers.h"
 
@@ -13,6 +14,14 @@
 namespace {
 
 const primec::Definition *findDefinitionByPath(const primec::Program &program, std::string_view fullPath) {
+  const auto it =
+      std::find_if(program.definitions.begin(),
+                   program.definitions.end(),
+                   [fullPath](const primec::Definition &definition) { return definition.fullPath == fullPath; });
+  return it == program.definitions.end() ? nullptr : &*it;
+}
+
+primec::Definition *findDefinitionByPathMutable(primec::Program &program, std::string_view fullPath) {
   const auto it =
       std::find_if(program.definitions.begin(),
                    program.definitions.end(),
@@ -47,6 +56,24 @@ const primec::Expr *findExprRecursive(const primec::Expr &expr, const Predicate 
 }
 
 template <typename Predicate>
+primec::Expr *findExprRecursiveMutable(primec::Expr &expr, const Predicate &predicate) {
+  if (predicate(expr)) {
+    return &expr;
+  }
+  for (auto &arg : expr.args) {
+    if (primec::Expr *found = findExprRecursiveMutable(arg, predicate)) {
+      return found;
+    }
+  }
+  for (auto &bodyExpr : expr.bodyArguments) {
+    if (primec::Expr *found = findExprRecursiveMutable(bodyExpr, predicate)) {
+      return found;
+    }
+  }
+  return nullptr;
+}
+
+template <typename Predicate>
 const primec::Expr *findExprInDefinition(const primec::Definition &definition, const Predicate &predicate) {
   for (const auto &parameter : definition.parameters) {
     if (const primec::Expr *found = findExprRecursive(parameter, predicate)) {
@@ -60,6 +87,24 @@ const primec::Expr *findExprInDefinition(const primec::Definition &definition, c
   }
   if (definition.returnExpr.has_value()) {
     return findExprRecursive(*definition.returnExpr, predicate);
+  }
+  return nullptr;
+}
+
+template <typename Predicate>
+primec::Expr *findExprInDefinitionMutable(primec::Definition &definition, const Predicate &predicate) {
+  for (auto &parameter : definition.parameters) {
+    if (primec::Expr *found = findExprRecursiveMutable(parameter, predicate)) {
+      return found;
+    }
+  }
+  for (auto &statement : definition.statements) {
+    if (primec::Expr *found = findExprRecursiveMutable(statement, predicate)) {
+      return found;
+    }
+  }
+  if (definition.returnExpr.has_value()) {
+    return findExprRecursiveMutable(*definition.returnExpr, predicate);
   }
   return nullptr;
 }
@@ -78,6 +123,23 @@ bool hasCanonicalSourceMapEntry(const primec::IrModule &module, int sourceLine, 
                               entry.line == static_cast<uint32_t>(sourceLine) &&
                               entry.column == static_cast<uint32_t>(sourceColumn);
                      });
+}
+
+std::vector<uint8_t> serializeIrIgnoringSourceMapsAndDebug(const primec::IrModule &module) {
+  primec::IrModule sanitized = module;
+  sanitized.instructionSourceMap.clear();
+  for (auto &function : sanitized.functions) {
+    function.localDebugSlots.clear();
+    for (auto &instruction : function.instructions) {
+      instruction.debugId = 0;
+    }
+  }
+
+  std::vector<uint8_t> encoded;
+  std::string error;
+  REQUIRE(primec::serializeIr(sanitized, encoded, error));
+  CHECK(error.empty());
+  return encoded;
 }
 
 } // namespace
@@ -1294,6 +1356,161 @@ TEST_CASE("semantic product lowering preserves debug source-map provenance") {
   CHECK(hasCanonicalSourceMapEntry(semanticModule, methodCallEntry->sourceLine, methodCallEntry->sourceColumn));
   CHECK(hasCanonicalSourceMapEntry(semanticModule, bridgeEntry->sourceLine, bridgeEntry->sourceColumn));
   CHECK(hasCanonicalSourceMapEntry(semanticModule, returnEntry->sourceLine, returnEntry->sourceColumn));
+}
+
+TEST_CASE("semantic product lowering keeps semantic meaning while source locations stay AST-owned") {
+  const std::string source = R"(
+MyError {
+}
+
+[return<void>]
+unexpectedError([MyError] err) {
+}
+
+[return<T>]
+id<T>([T] value) {
+  return(value)
+}
+
+[return<Result<int, MyError>>]
+lookup() {
+  return(Result.ok(4i32))
+}
+
+[return<i32>]
+/vector/count([vector<i32>] self) {
+  return(17i32)
+}
+
+[return<i32> on_error<MyError, /unexpectedError>]
+main() {
+  [auto] direct{id(1i32)}
+  [auto] values{vector<i32>(1i32)}
+  [i32] method{values.count()}
+  [i32] bridge{count(values)}
+  [auto] selected{try(lookup())}
+  return(direct + method + bridge + selected)
+}
+)";
+
+  auto semanticAst = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(semanticAst, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *semanticDirectEntry =
+      findSemanticEntry(semanticProgram.directCallTargets,
+                        [](const primec::SemanticProgramDirectCallTarget &entry) {
+                          return entry.scopePath == "/main" && entry.callName == "id";
+                        });
+  const auto *semanticMethodEntry =
+      findSemanticEntry(semanticProgram.methodCallTargets,
+                        [](const primec::SemanticProgramMethodCallTarget &entry) {
+                          return entry.scopePath == "/main" && entry.methodName == "count";
+                        });
+  const auto *semanticBridgeEntry =
+      findSemanticEntry(semanticProgram.bridgePathChoices,
+                        [](const primec::SemanticProgramBridgePathChoice &entry) {
+                          return entry.scopePath == "/main" && entry.helperName == "count";
+                        });
+  const auto *semanticReturnEntry =
+      findSemanticEntry(semanticProgram.returnFacts,
+                        [](const primec::SemanticProgramReturnFact &entry) {
+                          return entry.definitionPath == "/main";
+                        });
+  REQUIRE(semanticDirectEntry != nullptr);
+  REQUIRE(semanticMethodEntry != nullptr);
+  REQUIRE(semanticBridgeEntry != nullptr);
+  REQUIRE(semanticReturnEntry != nullptr);
+
+  primec::Program baselineAst = semanticAst;
+  primec::Program driftedAst = semanticAst;
+
+  primec::Definition *driftedMain = findDefinitionByPathMutable(driftedAst, "/main");
+  REQUIRE(driftedMain != nullptr);
+  REQUIRE(driftedMain->transforms.size() >= 2);
+
+  primec::Expr *directCallExpr =
+      findExprInDefinitionMutable(*driftedMain,
+                                  [](const primec::Expr &expr) {
+                                    return expr.kind == primec::Expr::Kind::Call && !expr.isMethodCall &&
+                                           expr.name == "id";
+                                  });
+  primec::Expr *methodCallExpr =
+      findExprInDefinitionMutable(*driftedMain,
+                                  [](const primec::Expr &expr) {
+                                    return expr.kind == primec::Expr::Kind::Call && expr.isMethodCall &&
+                                           expr.name == "count";
+                                  });
+  primec::Expr *bridgeCallExpr =
+      findExprInDefinitionMutable(*driftedMain,
+                                  [](const primec::Expr &expr) {
+                                    return expr.kind == primec::Expr::Kind::Call && !expr.isMethodCall &&
+                                           expr.name == "count";
+                                  });
+  primec::Expr *lookupCallExpr =
+      findExprInDefinitionMutable(*driftedMain,
+                                  [](const primec::Expr &expr) {
+                                    return expr.kind == primec::Expr::Kind::Call && !expr.isMethodCall &&
+                                           expr.name == "lookup";
+                                  });
+  REQUIRE(directCallExpr != nullptr);
+  REQUIRE(methodCallExpr != nullptr);
+  REQUIRE(bridgeCallExpr != nullptr);
+  REQUIRE(lookupCallExpr != nullptr);
+  auto onErrorTransformIt =
+      std::find_if(driftedMain->transforms.begin(),
+                   driftedMain->transforms.end(),
+                   [](const primec::Transform &transform) { return transform.name == "on_error"; });
+  REQUIRE(onErrorTransformIt != driftedMain->transforms.end());
+
+  const int originalDirectLine = semanticDirectEntry->sourceLine;
+  const int originalDirectColumn = semanticDirectEntry->sourceColumn;
+  const int originalMethodLine = semanticMethodEntry->sourceLine;
+  const int originalMethodColumn = semanticMethodEntry->sourceColumn;
+  const int originalBridgeLine = semanticBridgeEntry->sourceLine;
+  const int originalBridgeColumn = semanticBridgeEntry->sourceColumn;
+
+  directCallExpr->name = "drifted_direct_name";
+  directCallExpr->sourceLine = 901;
+  directCallExpr->sourceColumn = 11;
+  methodCallExpr->name = "drifted_method_name";
+  methodCallExpr->sourceLine = 902;
+  methodCallExpr->sourceColumn = 13;
+  bridgeCallExpr->name = "drifted_bridge_name";
+  bridgeCallExpr->sourceLine = 903;
+  bridgeCallExpr->sourceColumn = 15;
+  lookupCallExpr->name = "drifted_lookup_name";
+  onErrorTransformIt->templateArgs[0] = "WrongError";
+  onErrorTransformIt->templateArgs[1] = "/wrongHandler";
+
+  CHECK(semanticDirectEntry->callName == "id");
+  CHECK(semanticMethodEntry->methodName == "count");
+  CHECK(semanticBridgeEntry->helperName == "count");
+  CHECK(semanticReturnEntry->definitionPath == "/main");
+
+  primec::IrLowerer lowerer;
+  primec::IrModule baselineModule;
+  REQUIRE(lowerer.lower(baselineAst, &semanticProgram, "/main", defaults, defaults, baselineModule, error));
+  CHECK(error.empty());
+
+  primec::IrModule driftedModule;
+  REQUIRE(lowerer.lower(driftedAst, &semanticProgram, "/main", defaults, defaults, driftedModule, error));
+  CHECK(error.empty());
+
+  CHECK(serializeIrIgnoringSourceMapsAndDebug(baselineModule) ==
+        serializeIrIgnoringSourceMapsAndDebug(driftedModule));
+
+  CHECK(hasCanonicalSourceMapEntry(driftedModule, 901, 11));
+  CHECK(hasCanonicalSourceMapEntry(driftedModule, 902, 13));
+  CHECK(hasCanonicalSourceMapEntry(driftedModule, 903, 15));
+
+  CHECK_FALSE(hasCanonicalSourceMapEntry(driftedModule, originalDirectLine, originalDirectColumn));
+  CHECK_FALSE(hasCanonicalSourceMapEntry(driftedModule, originalMethodLine, originalMethodColumn));
+  CHECK_FALSE(hasCanonicalSourceMapEntry(driftedModule, originalBridgeLine, originalBridgeColumn));
 }
 
 TEST_CASE("type resolution local Result.ok metadata stays aligned with wrapped call snapshots") {
