@@ -5,6 +5,11 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Cleanup (April 7, 2026)**
+
+**Group 12 - Semantics/lowering boundary**
+- ✓ Make graph-backed query and `try(...)` facts required for lowerer call/result setup. Completed: semantic-id-backed generic call-result metadata now requires published semantic-product query facts instead of optional adapter hints, and semantic-id-backed `try(...)` lowering/inference now requires published semantic-product `try(...)` facts instead of silently re-deriving that metadata from AST/result probing.
+
 **Todo Cleanup (April 6, 2026, continued)**
 
 **Group 12 - Semantics/lowering boundary**

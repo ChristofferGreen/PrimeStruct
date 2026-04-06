@@ -12,6 +12,54 @@
             return false;
           }
           ResultExprInfo resultInfo;
+          auto applySemanticTryValueType = [&](const std::string &valueTypeText,
+                                               ResultExprInfo &resultInfoOut) {
+            const std::string trimmedValueType = trimTemplateTypeText(valueTypeText);
+            if (trimmedValueType.empty()) {
+              return false;
+            }
+            resultInfoOut.valueCollectionKind = LocalInfo::Kind::Value;
+            resultInfoOut.valueKind = LocalInfo::ValueKind::Unknown;
+            resultInfoOut.valueMapKeyKind = LocalInfo::ValueKind::Unknown;
+            resultInfoOut.valueIsFileHandle = false;
+            resultInfoOut.valueStructType.clear();
+            if (ir_lowerer::resolveSupportedResultCollectionType(
+                    trimmedValueType,
+                    resultInfoOut.valueCollectionKind,
+                    resultInfoOut.valueKind,
+                    &resultInfoOut.valueMapKeyKind)) {
+              return true;
+            }
+            std::string baseType;
+            std::string typeArgs;
+            if (splitTemplateTypeName(trimmedValueType, baseType, typeArgs) &&
+                normalizeCollectionBindingTypeName(baseType) == "File") {
+              resultInfoOut.valueKind = LocalInfo::ValueKind::Int64;
+              resultInfoOut.valueIsFileHandle = true;
+              return true;
+            }
+            resultInfoOut.valueKind = valueKindFromTypeName(trimmedValueType);
+            if (resultInfoOut.valueKind != LocalInfo::ValueKind::Unknown) {
+              return true;
+            }
+            resultInfoOut.valueStructType = trimmedValueType;
+            return true;
+          };
+          if (callResolutionAdapters.semanticProductTargets.hasSemanticProduct && expr.semanticNodeId != 0) {
+            const auto *tryFact =
+                findSemanticProductTryFact(callResolutionAdapters.semanticProductTargets, expr);
+            if (tryFact == nullptr) {
+              error = "missing semantic-product try fact: try";
+              return false;
+            }
+            resultInfo.isResult = true;
+            resultInfo.hasValue = true;
+            resultInfo.errorType = tryFact->errorType;
+            if (!applySemanticTryValueType(tryFact->valueType, resultInfo)) {
+              error = "incomplete semantic-product try fact: try";
+              return false;
+            }
+          }
           auto resolveResultFieldInfo = [&](const Expr &valueExpr, ResultExprInfo &fieldResultOut) {
             fieldResultOut = ResultExprInfo{};
             if (!(valueExpr.kind == Expr::Kind::Call && valueExpr.isFieldAccess && valueExpr.args.size() == 1)) {
@@ -64,7 +112,8 @@
                    fieldResultOut.valueKind != LocalInfo::ValueKind::Unknown ||
                    !fieldResultOut.valueStructType.empty();
           };
-          if ((!ir_lowerer::resolveResultExprInfoFromLocals(
+          if (((!resultInfo.isResult &&
+                !ir_lowerer::resolveResultExprInfoFromLocals(
                    expr.args.front(),
                    localsIn,
                    [&](const Expr &callExpr, const LocalMap &callLocals) {
@@ -77,10 +126,14 @@
                    [&](const Expr &valueExpr, const LocalMap &valueLocals) {
                      return inferExprKind(valueExpr, valueLocals);
                    },
-                   resultInfo) ||
+                   resultInfo,
+                   &callResolutionAdapters.semanticProductTargets,
+                   &error)) ||
                !resultInfo.isResult) &&
               !resolveResultFieldInfo(expr.args.front(), resultInfo)) {
-            error = "try requires Result argument";
+            if (error.empty()) {
+              error = "try requires Result argument";
+            }
             return false;
           }
           auto normalizeSpecializedMapResultInfo = [&](ResultExprInfo &valueResultInfo) {

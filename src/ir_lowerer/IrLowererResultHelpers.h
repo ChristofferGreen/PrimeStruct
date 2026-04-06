@@ -13,6 +13,8 @@
 
 namespace primec::ir_lowerer {
 
+struct SemanticProductTargetAdapter;
+
 struct ResultExprInfo {
   bool isResult = false;
   bool hasValue = false;
@@ -64,12 +66,16 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                      const ResolveCallDefinitionFn &resolveDefinitionCall,
                                      const LookupReturnInfoFn &lookupReturnInfo,
                                      const InferExprKindWithLocalsFn &inferExprKind,
-                                     ResultExprInfo &out);
+                                     ResultExprInfo &out,
+                                     const SemanticProductTargetAdapter *semanticProductTargets = nullptr,
+                                     std::string *errorOut = nullptr);
 ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
     const ResolveMethodCallWithLocalsFn &resolveMethodCall,
     const ResolveCallDefinitionFn &resolveDefinitionCall,
     const LookupReturnInfoFn &lookupReturnInfo,
-    const InferExprKindWithLocalsFn &inferExprKind);
+    const InferExprKindWithLocalsFn &inferExprKind,
+    const SemanticProductTargetAdapter *semanticProductTargets = nullptr,
+    std::string *errorOut = nullptr);
 bool resolveResultWhyCallInfo(const Expr &expr,
                               const LocalMap &localsIn,
                               const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,

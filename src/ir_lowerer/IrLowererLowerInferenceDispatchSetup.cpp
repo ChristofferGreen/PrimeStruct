@@ -3,6 +3,7 @@
 #include "IrLowererHelpers.h"
 #include "IrLowererLowerInferenceBaseKindHelpers.h"
 #include "IrLowererResultHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -54,10 +55,32 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
   const auto *defMap = input.defMap;
   const auto resolveExprPath = input.resolveExprPath;
   std::string *const inferenceError = input.error;
-  stateInOut.inferExprKind = [defMap, resolveExprPath, inferenceError, &stateInOut](
+  const auto *semanticProductTargets = stateInOut.semanticProductTargets;
+  stateInOut.inferExprKind = [defMap, resolveExprPath, inferenceError, semanticProductTargets, &stateInOut](
                                  const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
-    auto resolveTryValueKind = [&](const Expr &resultExpr, LocalInfo::ValueKind &kindOut) -> bool {
+    auto resolveTryValueKind = [&](const Expr &tryExpr, LocalInfo::ValueKind &kindOut) -> bool {
       kindOut = LocalInfo::ValueKind::Unknown;
+      if (semanticProductTargets != nullptr && semanticProductTargets->hasSemanticProduct &&
+          tryExpr.semanticNodeId != 0) {
+        const auto *tryFact = findSemanticProductTryFact(*semanticProductTargets, tryExpr);
+        if (tryFact == nullptr) {
+          *inferenceError = "missing semantic-product try fact: try";
+          return false;
+        }
+        kindOut = valueKindFromTypeName(tryFact->valueType);
+        if (kindOut == LocalInfo::ValueKind::Unknown && !tryFact->valueType.empty()) {
+          kindOut = LocalInfo::ValueKind::Int64;
+        }
+        if (kindOut == LocalInfo::ValueKind::Unknown) {
+          *inferenceError = "incomplete semantic-product try fact: try";
+          return false;
+        }
+        return true;
+      }
+      if (tryExpr.kind != Expr::Kind::Call || tryExpr.args.size() != 1) {
+        return false;
+      }
+      const Expr &resultExpr = tryExpr.args.front();
       auto resolveCallReceiverCollectionValueKind = [&](const Expr &receiverExpr,
                                                         LocalInfo::ValueKind &receiverKindOut) -> bool {
         receiverKindOut = LocalInfo::ValueKind::Unknown;
@@ -300,8 +323,11 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
 
         if (isSimpleCallName(expr, "try") && expr.args.size() == 1) {
           LocalInfo::ValueKind tryValueKind = LocalInfo::ValueKind::Unknown;
-          if (resolveTryValueKind(expr.args.front(), tryValueKind) && tryValueKind != LocalInfo::ValueKind::Unknown) {
+          if (resolveTryValueKind(expr, tryValueKind) && tryValueKind != LocalInfo::ValueKind::Unknown) {
             return tryValueKind;
+          }
+          if (!inferenceError->empty()) {
+            return LocalInfo::ValueKind::Unknown;
           }
         }
 

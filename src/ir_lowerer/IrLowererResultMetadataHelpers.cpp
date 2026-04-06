@@ -251,7 +251,9 @@ bool populateMetadataBindingInfo(const Expr &bindingExpr,
                                  const ResolveMethodCallWithLocalsFn &resolveMethodCall,
                                  const ResolveCallDefinitionFn &resolveDefinitionCall,
                                  const LookupReturnInfoFn &lookupReturnInfo,
-                                 const InferExprKindWithLocalsFn &inferExprKind) {
+                                 const InferExprKindWithLocalsFn &inferExprKind,
+                                 const SemanticProductTargetAdapter *semanticProductTargets,
+                                 std::string *errorOut) {
   if (bindingExpr.name.empty() || bindingExpr.args.empty()) {
     return false;
   }
@@ -297,10 +299,14 @@ bool populateMetadataBindingInfo(const Expr &bindingExpr,
                                         resolveDefinitionCall,
                                         lookupReturnInfo,
                                         inferExprKind,
-                                        tryResultInfo) &&
+                                        tryResultInfo,
+                                        semanticProductTargets,
+                                        errorOut) &&
         tryResultInfo.isResult && tryResultInfo.hasValue && tryResultInfo.valueIsFileHandle) {
       bindingInfo.isFileHandle = true;
       bindingInfo.valueKind = LocalInfo::ValueKind::Int64;
+    } else if (errorOut != nullptr && !errorOut->empty()) {
+      return false;
     }
   }
 
@@ -311,7 +317,9 @@ bool populateMetadataBindingInfo(const Expr &bindingExpr,
                                       resolveDefinitionCall,
                                       lookupReturnInfo,
                                       inferExprKind,
-                                      bindingResultInfo) &&
+                                      bindingResultInfo,
+                                      semanticProductTargets,
+                                      errorOut) &&
       bindingResultInfo.isResult) {
     const std::string declaredErrorType = bindingInfo.resultErrorType;
     bindingInfo.isResult = true;
@@ -324,6 +332,8 @@ bool populateMetadataBindingInfo(const Expr &bindingExpr,
     bindingInfo.resultErrorType =
         !bindingResultInfo.errorType.empty() ? bindingResultInfo.errorType : declaredErrorType;
     bindingInfo.valueKind = bindingInfo.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+  } else if (errorOut != nullptr && !errorOut->empty()) {
+    return false;
   }
 
   localsIn[bindingExpr.name] = bindingInfo;
@@ -831,7 +841,9 @@ bool resolveBodyResultExprInfo(const std::vector<Expr> &bodyExprs,
                                const ResolveCallDefinitionFn &resolveDefinitionCall,
                                const LookupReturnInfoFn &lookupReturnInfo,
                                const InferExprKindWithLocalsFn &inferExprKind,
-                               ResultExprInfo &out) {
+                               ResultExprInfo &out,
+                               const SemanticProductTargetAdapter *semanticProductTargets,
+                               std::string *errorOut) {
   out = ResultExprInfo{};
   LocalMap bodyLocals = localsIn;
 
@@ -840,7 +852,14 @@ bool resolveBodyResultExprInfo(const std::vector<Expr> &bodyExprs,
     const bool isLast = (i + 1 == bodyExprs.size());
     if (bodyExpr.isBinding) {
       if (!populateMetadataBindingInfo(
-              bodyExpr, bodyLocals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind)) {
+              bodyExpr,
+              bodyLocals,
+              resolveMethodCall,
+              resolveDefinitionCall,
+              lookupReturnInfo,
+              inferExprKind,
+              semanticProductTargets,
+              errorOut)) {
         return false;
       }
       continue;
@@ -859,7 +878,15 @@ bool resolveBodyResultExprInfo(const std::vector<Expr> &bodyExprs,
     }
 
     return resolveResultExprInfoFromLocals(
-        *valueExpr, bodyLocals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out);
+        *valueExpr,
+        bodyLocals,
+        resolveMethodCall,
+        resolveDefinitionCall,
+        lookupReturnInfo,
+        inferExprKind,
+        out,
+        semanticProductTargets,
+        errorOut);
   }
 
   return false;
@@ -871,7 +898,9 @@ bool resolveResultLambdaValueExprForMetadata(const Expr &lambdaExpr,
                                              const ResolveCallDefinitionFn &resolveDefinitionCall,
                                              const LookupReturnInfoFn &lookupReturnInfo,
                                              const InferExprKindWithLocalsFn &inferExprKind,
-                                             const Expr *&valueExprOut) {
+                                             const Expr *&valueExprOut,
+                                             const SemanticProductTargetAdapter *semanticProductTargets,
+                                             std::string *errorOut) {
   valueExprOut = nullptr;
   if (!lambdaExpr.isLambda || (!lambdaExpr.hasBodyArguments && lambdaExpr.bodyArguments.empty())) {
     return false;
@@ -882,7 +911,14 @@ bool resolveResultLambdaValueExprForMetadata(const Expr &lambdaExpr,
     const bool isLast = (i + 1 == lambdaExpr.bodyArguments.size());
     if (bodyExpr.isBinding) {
       if (!populateMetadataBindingInfo(
-              bodyExpr, lambdaLocals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind)) {
+              bodyExpr,
+              lambdaLocals,
+              resolveMethodCall,
+              resolveDefinitionCall,
+              lookupReturnInfo,
+              inferExprKind,
+              semanticProductTargets,
+              errorOut)) {
         return false;
       }
       continue;

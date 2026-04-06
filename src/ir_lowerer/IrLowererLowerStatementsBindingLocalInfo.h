@@ -9,7 +9,9 @@
                 [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
                 [&](const std::string &path, ReturnInfo &infoOut) { return getReturnInfo(path, infoOut); },
                 [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
-                inferredResultInfo) &&
+                inferredResultInfo,
+                &callResolutionAdapters.semanticProductTargets,
+                &error) &&
             inferredResultInfo.isResult) {
           info.isResult = true;
           info.resultHasValue = inferredResultInfo.hasValue;
@@ -20,13 +22,15 @@
           info.resultValueStructType = inferredResultInfo.valueStructType;
           info.resultErrorType = inferredResultInfo.errorType;
           info.valueKind = info.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+        } else if (!error.empty()) {
+          return false;
         }
       }
-      auto assignInferredFileHandleBinding = [&]() {
+      auto assignInferredFileHandleBinding = [&]() -> bool {
         if (semanticLocalAutoBinding || hasExplicitBindingTypeTransform(stmt) ||
             info.kind != LocalInfo::Kind::Value || info.isResult ||
             info.isFileHandle) {
-          return;
+          return true;
         }
         if (init.kind == Expr::Kind::Name) {
           auto existing = localsIn.find(init.name);
@@ -34,17 +38,17 @@
             info.isFileHandle = true;
             info.valueKind = LocalInfo::ValueKind::Int64;
           }
-          return;
+          return true;
         }
         if (init.kind == Expr::Kind::Call && !init.isMethodCall && isSimpleCallName(init, "File") &&
             init.templateArgs.size() == 1) {
           info.isFileHandle = true;
           info.valueKind = LocalInfo::ValueKind::Int64;
-          return;
+          return true;
         }
         if (!(init.kind == Expr::Kind::Call && !init.isMethodCall && isSimpleCallName(init, "try") &&
               init.args.size() == 1)) {
-          return;
+          return true;
         }
         ResultExprInfo inferredTryResultInfo;
         if (!resolveResultExprInfoFromLocals(
@@ -56,14 +60,22 @@
                 [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
                 [&](const std::string &path, ReturnInfo &infoOut) { return getReturnInfo(path, infoOut); },
                 [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
-                inferredTryResultInfo) ||
+                inferredTryResultInfo,
+                &callResolutionAdapters.semanticProductTargets,
+                &error) ||
             !inferredTryResultInfo.isResult || !inferredTryResultInfo.hasValue || !inferredTryResultInfo.valueIsFileHandle) {
-          return;
+          if (!error.empty()) {
+            return false;
+          }
+          return true;
         }
         info.isFileHandle = true;
         info.valueKind = LocalInfo::ValueKind::Int64;
+        return true;
       };
-      assignInferredFileHandleBinding();
+      if (!assignInferredFileHandleBinding()) {
+        return false;
+      }
       for (const auto &transform : bindingTypeExprRef.transforms) {
         if (transform.name == "soa_vector") {
           info.isSoaVector = true;

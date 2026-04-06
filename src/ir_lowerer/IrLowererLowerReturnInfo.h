@@ -71,7 +71,9 @@
       },
       [&](const Expr &expr, const LocalMap &localsForKind) -> LocalInfo::ValueKind {
         return inferExprKind(expr, localsForKind);
-      });
+      },
+      &callResolutionAdapters.semanticProductTargets,
+      &error);
 
   auto emitStringValueForCall = [&](const Expr &arg,
                                     const LocalMap &callerLocals,

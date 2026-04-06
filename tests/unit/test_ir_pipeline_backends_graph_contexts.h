@@ -221,6 +221,9 @@ TEST_CASE("public lowerer testing headers stay in sync with semantic-product hel
   CHECK(lowerLocals.find("const SemanticProgram *semanticProgram,") != std::string::npos);
   CHECK(resultHelpers.find("using InferExprKindWithLocalsFn") != std::string::npos);
   CHECK(resultHelpers.find("struct PackedResultStructPayloadInfo") != std::string::npos);
+  CHECK(resultHelpers.find("const SemanticProductTargetAdapter *semanticProductTargets = nullptr") !=
+        std::string::npos);
+  CHECK(resultHelpers.find("std::string *errorOut = nullptr") != std::string::npos);
   CHECK(resultHelpers.find("inferPackedResultStructType(") != std::string::npos);
   CHECK(resultHelpers.find("resolvePackedResultStructPayloadInfo(") != std::string::npos);
   CHECK(setupType.find("const SemanticProductTargetAdapter *semanticProductTargets,") !=
@@ -947,9 +950,24 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
 
   const auto resultHelpersHeader =
       readFile("include/primec/testing/ir_lowerer_helpers/IrLowererResultHelpers.h");
+  const auto resultHelpersSource = readFile("src/ir_lowerer/IrLowererResultHelpers.cpp");
+  const auto lowerInferenceDispatchSource = readFile("src/ir_lowerer/IrLowererLowerInferenceDispatchSetup.cpp");
+  const auto lowerEmitExprTryHelpers = readFile("src/ir_lowerer/IrLowererLowerEmitExprTryHelpers.h");
   CHECK(resultHelpersHeader.find("struct Definition;") != std::string::npos);
   CHECK(resultHelpersHeader.find("struct ReturnInfo;") != std::string::npos);
   CHECK(resultHelpersHeader.find("struct StructSlotLayoutInfo;") != std::string::npos);
+  CHECK(resultHelpersHeader.find("const SemanticProductTargetAdapter *semanticProductTargets = nullptr") !=
+        std::string::npos);
+  CHECK(resultHelpersHeader.find("std::string *errorOut = nullptr") != std::string::npos);
+  CHECK(resultHelpersSource.find("findSemanticProductQueryFact(*semanticProductTargets, expr)") !=
+        std::string::npos);
+  CHECK(resultHelpersSource.find("missing semantic-product query fact: ") != std::string::npos);
+  CHECK(lowerInferenceDispatchSource.find("findSemanticProductTryFact(*semanticProductTargets, tryExpr)") !=
+        std::string::npos);
+  CHECK(lowerInferenceDispatchSource.find("missing semantic-product try fact: try") !=
+        std::string::npos);
+  CHECK(lowerEmitExprTryHelpers.find("findSemanticProductTryFact(callResolutionAdapters.semanticProductTargets, expr)") !=
+        std::string::npos);
 
   const auto runtimeErrorHelpersHeader =
       readFile("include/primec/testing/ir_lowerer_helpers/IrLowererRuntimeErrorHelpers.h");

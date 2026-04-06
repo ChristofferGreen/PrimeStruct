@@ -62,6 +62,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   published semantic-product local-`auto` facts before lowering starts, and
   local binding setup now consumes the published local-`auto` binding type
   instead of re-inferring that metadata from AST initializer shape.
+- `semantic-product-query-and-try-lowering-inputs`: semantic-id-backed
+  generic call-result metadata now requires published semantic-product query
+  facts, and semantic-id-backed `try(...)` lowering plus `try(...)`
+  expression-kind inference now require published semantic-product `try(...)`
+  facts instead of probing AST/result metadata as an optional fallback.
 - `semantic-product-lowering-entrypoints`: `prepareIrModule(...)` and
   `IrLowerer::lower(...)` now reject null `SemanticProgram` inputs
   immediately, so production lowering only crosses the boundary with a

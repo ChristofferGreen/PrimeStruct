@@ -3,6 +3,7 @@
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererLowerInferenceBaseKindHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
@@ -13,6 +14,50 @@ namespace {
 bool isResultBuiltinCall(const Expr &expr, const std::string &name, size_t argCount) {
   return expr.kind == Expr::Kind::Call && expr.name == name && expr.args.size() == argCount &&
          !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name && expr.args.front().name == "Result";
+}
+
+void assignSemanticResultError(std::string *errorOut, const std::string &message) {
+  if (errorOut != nullptr && errorOut->empty()) {
+    *errorOut = message;
+  }
+}
+
+std::string describeSemanticResultCall(const Expr &expr) {
+  return expr.name.empty() ? "<call>" : expr.name;
+}
+
+bool isSemanticFileHandleTypeText(const std::string &typeText) {
+  std::string base;
+  std::string args;
+  return splitTemplateTypeName(trimTemplateTypeText(typeText), base, args) &&
+         normalizeCollectionBindingTypeName(base) == "File";
+}
+
+bool applySemanticResultValueTypeText(const std::string &valueTypeText, ResultExprInfo &out) {
+  const std::string trimmedValueType = trimTemplateTypeText(valueTypeText);
+  if (trimmedValueType.empty()) {
+    return false;
+  }
+  out.valueCollectionKind = LocalInfo::Kind::Value;
+  out.valueKind = LocalInfo::ValueKind::Unknown;
+  out.valueMapKeyKind = LocalInfo::ValueKind::Unknown;
+  out.valueIsFileHandle = false;
+  out.valueStructType.clear();
+  if (resolveSupportedResultCollectionType(
+          trimmedValueType, out.valueCollectionKind, out.valueKind, &out.valueMapKeyKind)) {
+    return true;
+  }
+  if (isSemanticFileHandleTypeText(trimmedValueType)) {
+    out.valueKind = LocalInfo::ValueKind::Int64;
+    out.valueIsFileHandle = true;
+    return true;
+  }
+  out.valueKind = valueKindFromTypeName(trimmedValueType);
+  if (out.valueKind != LocalInfo::ValueKind::Unknown) {
+    return true;
+  }
+  out.valueStructType = trimmedValueType;
+  return true;
 }
 
 } // namespace
@@ -149,7 +194,9 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                      const ResolveCallDefinitionFn &resolveDefinitionCall,
                                      const LookupReturnInfoFn &lookupReturnInfo,
                                      const InferExprKindWithLocalsFn &inferExprKind,
-                                     ResultExprInfo &out) {
+                                     ResultExprInfo &out,
+                                     const SemanticProductTargetAdapter *semanticProductTargets,
+                                     std::string *errorOut) {
   out = ResultExprInfo{};
   auto isIndexedArgsPackFileHandleReceiver = [&](const Expr &receiverExpr) {
     std::string accessName;
@@ -326,10 +373,20 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
             resolveDefinitionCall,
             lookupReturnInfo,
             inferExprKind,
-            branchOut);
+            branchOut,
+            semanticProductTargets,
+            errorOut);
       }
       return resolveResultExprInfoFromLocals(
-          branchExpr, localsIn, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, branchOut);
+          branchExpr,
+          localsIn,
+          resolveMethodCall,
+          resolveDefinitionCall,
+          lookupReturnInfo,
+          inferExprKind,
+          branchOut,
+          semanticProductTargets,
+          errorOut);
     };
 
     ResultExprInfo thenResultInfo;
@@ -341,7 +398,15 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
   }
   if (isInlineBodyBlockEnvelope(expr, resolveDefinitionCall)) {
     return resolveBodyResultExprInfo(
-        expr.bodyArguments, localsIn, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out);
+        expr.bodyArguments,
+        localsIn,
+        resolveMethodCall,
+        resolveDefinitionCall,
+        lookupReturnInfo,
+        inferExprKind,
+        out,
+        semanticProductTargets,
+        errorOut);
   }
   if (expr.kind == Expr::Kind::Call && !expr.args.empty() &&
       expr.args.front().kind == Expr::Kind::Name && expr.args.front().name == "Result" && expr.name == "ok") {
@@ -360,7 +425,9 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                          resolveDefinitionCall,
                                          lookupReturnInfo,
                                          inferExprKind,
-                                         sourceResultInfo) ||
+                                         sourceResultInfo,
+                                         semanticProductTargets,
+                                         errorOut) ||
         !sourceResultInfo.isResult || !sourceResultInfo.hasValue || !expr.args[2].isLambda || expr.args[2].args.size() != 1) {
       return false;
     }
@@ -372,7 +439,15 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
 
     const Expr *mappedValueExpr = nullptr;
     if (!resolveResultLambdaValueExprForMetadata(
-            expr.args[2], lambdaLocals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, mappedValueExpr)) {
+            expr.args[2],
+            lambdaLocals,
+            resolveMethodCall,
+            resolveDefinitionCall,
+            lookupReturnInfo,
+            inferExprKind,
+            mappedValueExpr,
+            semanticProductTargets,
+            errorOut)) {
       return false;
     }
 
@@ -390,7 +465,9 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                          resolveDefinitionCall,
                                          lookupReturnInfo,
                                          inferExprKind,
-                                         sourceResultInfo) ||
+                                         sourceResultInfo,
+                                         semanticProductTargets,
+                                         errorOut) ||
         !sourceResultInfo.isResult || !sourceResultInfo.hasValue || !expr.args[2].isLambda || expr.args[2].args.size() != 1) {
       return false;
     }
@@ -402,7 +479,15 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
 
     const Expr *chainedResultExpr = nullptr;
     if (!resolveResultLambdaValueExprForMetadata(
-            expr.args[2], lambdaLocals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, chainedResultExpr)) {
+            expr.args[2],
+            lambdaLocals,
+            resolveMethodCall,
+            resolveDefinitionCall,
+            lookupReturnInfo,
+            inferExprKind,
+            chainedResultExpr,
+            semanticProductTargets,
+            errorOut)) {
       return false;
     }
 
@@ -413,7 +498,9 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                          resolveDefinitionCall,
                                          lookupReturnInfo,
                                          inferExprKind,
-                                         chainedResultInfo) ||
+                                         chainedResultInfo,
+                                         semanticProductTargets,
+                                         errorOut) ||
         !chainedResultInfo.isResult) {
       return false;
     }
@@ -432,14 +519,18 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                          resolveDefinitionCall,
                                          lookupReturnInfo,
                                          inferExprKind,
-                                         leftResultInfo) ||
+                                         leftResultInfo,
+                                         semanticProductTargets,
+                                         errorOut) ||
         !resolveResultExprInfoFromLocals(expr.args[2],
                                          localsIn,
                                          resolveMethodCall,
                                          resolveDefinitionCall,
                                          lookupReturnInfo,
                                          inferExprKind,
-                                         rightResultInfo) ||
+                                         rightResultInfo,
+                                         semanticProductTargets,
+                                         errorOut) ||
         !leftResultInfo.isResult || !leftResultInfo.hasValue || !rightResultInfo.isResult || !rightResultInfo.hasValue ||
         !expr.args[3].isLambda || expr.args[3].args.size() != 2) {
       return false;
@@ -461,7 +552,15 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
 
     const Expr *mappedValueExpr = nullptr;
     if (!resolveResultLambdaValueExprForMetadata(
-            expr.args[3], lambdaLocals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, mappedValueExpr)) {
+            expr.args[3],
+            lambdaLocals,
+            resolveMethodCall,
+            resolveDefinitionCall,
+            lookupReturnInfo,
+            inferExprKind,
+            mappedValueExpr,
+            semanticProductTargets,
+            errorOut)) {
       return false;
     }
 
@@ -525,6 +624,31 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
       return true;
     }
   }
+  if (expr.kind == Expr::Kind::Call && semanticProductTargets != nullptr &&
+      semanticProductTargets->hasSemanticProduct && expr.semanticNodeId != 0) {
+    const auto *queryFact = findSemanticProductQueryFact(*semanticProductTargets, expr);
+    if (queryFact == nullptr) {
+      assignSemanticResultError(
+          errorOut, "missing semantic-product query fact: " + describeSemanticResultCall(expr));
+      return false;
+    }
+    if (!queryFact->hasResultType) {
+      return false;
+    }
+    out.isResult = true;
+    out.hasValue = queryFact->resultTypeHasValue;
+    out.errorType = queryFact->resultErrorType;
+    if (!out.hasValue) {
+      return true;
+    }
+    if (!applySemanticResultValueTypeText(queryFact->resultValueType, out)) {
+      assignSemanticResultError(
+          errorOut,
+          "incomplete semantic-product query fact: " + describeSemanticResultCall(expr));
+      return false;
+    }
+    return true;
+  }
   return resolveResultExprInfo(
       expr, lookupLocal, resolveMethod, resolveDefinitionCall, lookupDefinitionResult, out);
 }
@@ -533,11 +657,21 @@ ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
     const ResolveMethodCallWithLocalsFn &resolveMethodCall,
     const ResolveCallDefinitionFn &resolveDefinitionCall,
     const LookupReturnInfoFn &lookupReturnInfo,
-    const InferExprKindWithLocalsFn &inferExprKind) {
-  return [resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind](
+    const InferExprKindWithLocalsFn &inferExprKind,
+    const SemanticProductTargetAdapter *semanticProductTargets,
+    std::string *errorOut) {
+  return [resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, semanticProductTargets, errorOut](
              const Expr &expr, const LocalMap &localsIn, ResultExprInfo &out) {
     return resolveResultExprInfoFromLocals(
-        expr, localsIn, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out);
+        expr,
+        localsIn,
+        resolveMethodCall,
+        resolveDefinitionCall,
+        lookupReturnInfo,
+        inferExprKind,
+        out,
+        semanticProductTargets,
+        errorOut);
   };
 }
 

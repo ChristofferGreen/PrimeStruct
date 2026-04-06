@@ -11,7 +11,9 @@ bool populateMetadataBindingInfo(const Expr &bindingExpr,
                                  const ResolveMethodCallWithLocalsFn &resolveMethodCall,
                                  const ResolveCallDefinitionFn &resolveDefinitionCall,
                                  const LookupReturnInfoFn &lookupReturnInfo,
-                                 const InferExprKindWithLocalsFn &inferExprKind);
+                                 const InferExprKindWithLocalsFn &inferExprKind,
+                                 const SemanticProductTargetAdapter *semanticProductTargets = nullptr,
+                                 std::string *errorOut = nullptr);
 bool isInlineBodyBlockEnvelope(const Expr &candidate, const ResolveCallDefinitionFn &resolveDefinitionCall);
 bool isInlineBodyValueEnvelope(const Expr &candidate, const ResolveCallDefinitionFn &resolveDefinitionCall);
 bool mergeControlFlowResultInfos(const ResultExprInfo &first,
@@ -39,13 +41,17 @@ bool resolveBodyResultExprInfo(const std::vector<Expr> &bodyExprs,
                                const ResolveCallDefinitionFn &resolveDefinitionCall,
                                const LookupReturnInfoFn &lookupReturnInfo,
                                const InferExprKindWithLocalsFn &inferExprKind,
-                               ResultExprInfo &out);
+                               ResultExprInfo &out,
+                               const SemanticProductTargetAdapter *semanticProductTargets = nullptr,
+                               std::string *errorOut = nullptr);
 bool resolveResultLambdaValueExprForMetadata(const Expr &lambdaExpr,
                                              LocalMap &lambdaLocals,
                                              const ResolveMethodCallWithLocalsFn &resolveMethodCall,
                                              const ResolveCallDefinitionFn &resolveDefinitionCall,
                                              const LookupReturnInfoFn &lookupReturnInfo,
                                              const InferExprKindWithLocalsFn &inferExprKind,
-                                             const Expr *&valueExprOut);
+                                             const Expr *&valueExprOut,
+                                             const SemanticProductTargetAdapter *semanticProductTargets = nullptr,
+                                             std::string *errorOut = nullptr);
 
 } // namespace primec::ir_lowerer

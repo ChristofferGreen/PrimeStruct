@@ -54,6 +54,8 @@ bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &in
   const auto resolveExprPath = input.resolveExprPath;
   const auto getBuiltinOperatorName = input.getBuiltinOperatorName;
 
+  stateOut.semanticProductTargets = semanticProductTargets;
+
   stateOut.resolveMethodCallDefinition = [defMap,
                                           importAliases,
                                           structNames,

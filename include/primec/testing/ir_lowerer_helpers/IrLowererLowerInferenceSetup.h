@@ -30,6 +30,7 @@ struct LowerInferenceSetupBootstrapState {
   std::function<const Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition;
   std::function<const Definition *(const Expr &)> resolveDefinitionCall;
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferPointerTargetKind;
+  const SemanticProductTargetAdapter *semanticProductTargets = nullptr;
 };
 
 struct LowerInferenceSetupBootstrapInput {
