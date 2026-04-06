@@ -71,6 +71,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   lowered callable metadata, entry return metadata, and `on_error` wiring now
   require published callable summaries plus the matching return/`on_error`
   facts instead of silently falling back to AST transforms.
+- `semantic-product-return-query-try-on-error-joins`: the temporary lowerer
+  semantic-product adapter now keys return, local-`auto`, query, `try(...)`,
+  and `on_error` facts by structural semantic ids, and semantic-product-backed
+  entry return plus `on_error` lowering now join through definition semantic
+  ids instead of definition-path lookups except for the narrow compatibility
+  fallback still kept for unannotated manual fixtures.
 - `semantic-product-structural-node-ids`: validated AST definitions,
   executions, and expressions now carry deterministic structural
   `semanticNodeId` values hashed from their resolved scope path plus traversal

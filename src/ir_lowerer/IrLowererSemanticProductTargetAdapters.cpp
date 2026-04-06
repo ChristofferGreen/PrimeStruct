@@ -4,6 +4,41 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+template <typename FactT>
+const FactT *findDefinitionScopedSemanticFact(const std::unordered_map<uint64_t, const FactT *> &factsByDefinitionId,
+                                              const std::unordered_map<std::string, const FactT *> &factsByDefinitionPath,
+                                              const Definition &definition) {
+  if (definition.semanticNodeId != 0) {
+    if (const auto it = factsByDefinitionId.find(definition.semanticNodeId); it != factsByDefinitionId.end()) {
+      return it->second;
+    }
+    return nullptr;
+  }
+  if (definition.fullPath.empty()) {
+    return nullptr;
+  }
+  if (const auto it = factsByDefinitionPath.find(definition.fullPath); it != factsByDefinitionPath.end()) {
+    return it->second;
+  }
+  return nullptr;
+}
+
+template <typename FactT>
+const FactT *findExpressionScopedSemanticFact(const std::unordered_map<uint64_t, const FactT *> &factsByExpr,
+                                              const Expr &expr) {
+  if (expr.semanticNodeId == 0) {
+    return nullptr;
+  }
+  if (const auto it = factsByExpr.find(expr.semanticNodeId); it != factsByExpr.end()) {
+    return it->second;
+  }
+  return nullptr;
+}
+
+} // namespace
+
 SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticProgram *semanticProgram) {
   SemanticProductTargetAdapter adapter;
   if (semanticProgram == nullptr) {
@@ -39,8 +74,12 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
     }
   }
 
+  adapter.onErrorFactsByDefinitionId.reserve(semanticProgram->onErrorFacts.size());
   adapter.onErrorFactsByDefinitionPath.reserve(semanticProgram->onErrorFacts.size());
   for (const auto &entry : semanticProgram->onErrorFacts) {
+    if (entry.semanticNodeId != 0) {
+      adapter.onErrorFactsByDefinitionId.insert_or_assign(entry.semanticNodeId, &entry);
+    }
     if (!entry.definitionPath.empty()) {
       adapter.onErrorFactsByDefinitionPath[entry.definitionPath] = &entry;
     }
@@ -77,10 +116,35 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
                      });
   }
 
+  adapter.returnFactsByDefinitionId.reserve(semanticProgram->returnFacts.size());
   adapter.returnFactsByDefinitionPath.reserve(semanticProgram->returnFacts.size());
   for (const auto &entry : semanticProgram->returnFacts) {
+    if (entry.semanticNodeId != 0) {
+      adapter.returnFactsByDefinitionId.insert_or_assign(entry.semanticNodeId, &entry);
+    }
     if (!entry.definitionPath.empty()) {
       adapter.returnFactsByDefinitionPath[entry.definitionPath] = &entry;
+    }
+  }
+
+  adapter.localAutoFactsByExpr.reserve(semanticProgram->localAutoFacts.size());
+  for (const auto &entry : semanticProgram->localAutoFacts) {
+    if (entry.semanticNodeId != 0) {
+      adapter.localAutoFactsByExpr.insert_or_assign(entry.semanticNodeId, &entry);
+    }
+  }
+
+  adapter.queryFactsByExpr.reserve(semanticProgram->queryFacts.size());
+  for (const auto &entry : semanticProgram->queryFacts) {
+    if (entry.semanticNodeId != 0) {
+      adapter.queryFactsByExpr.insert_or_assign(entry.semanticNodeId, &entry);
+    }
+  }
+
+  adapter.tryFactsByExpr.reserve(semanticProgram->tryFacts.size());
+  for (const auto &entry : semanticProgram->tryFacts) {
+    if (entry.semanticNodeId != 0) {
+      adapter.tryFactsByExpr.insert_or_assign(entry.semanticNodeId, &entry);
     }
   }
 
@@ -139,15 +203,9 @@ const SemanticProgramCallableSummary *findSemanticProductCallableSummary(const S
 }
 
 const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(const SemanticProductTargetAdapter &adapter,
-                                                                const std::string &definitionPath) {
-  if (definitionPath.empty()) {
-    return nullptr;
-  }
-  if (const auto it = adapter.onErrorFactsByDefinitionPath.find(definitionPath);
-      it != adapter.onErrorFactsByDefinitionPath.end()) {
-    return it->second;
-  }
-  return nullptr;
+                                                                const Definition &definition) {
+  return findDefinitionScopedSemanticFact(
+      adapter.onErrorFactsByDefinitionId, adapter.onErrorFactsByDefinitionPath, definition);
 }
 
 const SemanticProgramTypeMetadata *findSemanticProductTypeMetadata(const SemanticProductTargetAdapter &adapter,
@@ -175,27 +233,29 @@ const std::vector<const SemanticProgramStructFieldMetadata *> *findSemanticProdu
 }
 
 const SemanticProgramReturnFact *findSemanticProductReturnFact(const SemanticProductTargetAdapter &adapter,
-                                                              const std::string &definitionPath) {
-  if (definitionPath.empty()) {
-    return nullptr;
-  }
-  if (const auto it = adapter.returnFactsByDefinitionPath.find(definitionPath);
-      it != adapter.returnFactsByDefinitionPath.end()) {
-    return it->second;
-  }
-  return nullptr;
+                                                              const Definition &definition) {
+  return findDefinitionScopedSemanticFact(
+      adapter.returnFactsByDefinitionId, adapter.returnFactsByDefinitionPath, definition);
+}
+
+const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(const SemanticProductTargetAdapter &adapter,
+                                                                    const Expr &expr) {
+  return findExpressionScopedSemanticFact(adapter.localAutoFactsByExpr, expr);
+}
+
+const SemanticProgramQueryFact *findSemanticProductQueryFact(const SemanticProductTargetAdapter &adapter,
+                                                            const Expr &expr) {
+  return findExpressionScopedSemanticFact(adapter.queryFactsByExpr, expr);
+}
+
+const SemanticProgramTryFact *findSemanticProductTryFact(const SemanticProductTargetAdapter &adapter,
+                                                        const Expr &expr) {
+  return findExpressionScopedSemanticFact(adapter.tryFactsByExpr, expr);
 }
 
 const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticProductTargetAdapter &adapter,
                                                                 const Expr &expr) {
-  if (expr.semanticNodeId == 0) {
-    return nullptr;
-  }
-  if (const auto it = adapter.bindingFactsByExpr.find(expr.semanticNodeId);
-      it != adapter.bindingFactsByExpr.end()) {
-    return it->second;
-  }
-  return nullptr;
+  return findExpressionScopedSemanticFact(adapter.bindingFactsByExpr, expr);
 }
 
 } // namespace primec::ir_lowerer

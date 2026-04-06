@@ -252,6 +252,7 @@ TEST_CASE("ir lowerer return inference helper handles void and diagnostics") {
 TEST_CASE("ir lowerer return inference helper reads semantic product return facts") {
   primec::Definition entryDef;
   entryDef.fullPath = "/main";
+  entryDef.semanticNodeId = 41;
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
@@ -271,9 +272,10 @@ TEST_CASE("ir lowerer return inference helper reads semantic product return fact
       "",
       "",
       0,
+      41,
   });
   semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
-      "/main",
+      "/semantic/main",
       "i32",
       "",
       "Result<i64, FileError>",
@@ -283,6 +285,7 @@ TEST_CASE("ir lowerer return inference helper reads semantic product return fact
       "",
       4,
       2,
+      41,
   });
 
   primec::ir_lowerer::EntryReturnConfig out;

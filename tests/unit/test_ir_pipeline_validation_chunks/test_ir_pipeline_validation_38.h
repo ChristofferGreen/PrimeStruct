@@ -147,6 +147,7 @@ TEST_CASE("ir lowerer setup type helper requires semantic-product method targets
   semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
       "/main",
       "push",
+      "",
       "/soa_vector/push",
       0,
       0,

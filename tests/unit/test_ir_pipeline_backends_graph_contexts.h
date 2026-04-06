@@ -663,6 +663,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterHeader.find("bool hasSemanticProduct = false;") != std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramCallableSummary *findSemanticProductCallableSummary(") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("std::unordered_map<uint64_t, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionId;") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<std::string, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionPath;") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(") !=
@@ -677,7 +679,21 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("findSemanticProductStructFieldMetadata(") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("std::unordered_map<uint64_t, const SemanticProgramReturnFact *> returnFactsByDefinitionId;") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramReturnFact *findSemanticProductReturnFact(") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("std::unordered_map<uint64_t, const SemanticProgramLocalAutoFact *> localAutoFactsByExpr;") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("std::unordered_map<uint64_t, const SemanticProgramQueryFact *> queryFactsByExpr;") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("std::unordered_map<uint64_t, const SemanticProgramTryFact *> tryFactsByExpr;") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("const SemanticProgramQueryFact *findSemanticProductQueryFact(") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("const SemanticProgramTryFact *findSemanticProductTryFact(") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<uint64_t, const SemanticProgramBindingFact *> bindingFactsByExpr;") !=
         std::string::npos);
@@ -687,6 +703,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.hasSemanticProduct = true;") != std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.callableSummariesByPath.reserve(") != std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.onErrorFactsByDefinitionId.reserve(semanticProgram->onErrorFacts.size())") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.onErrorFactsByDefinitionPath.reserve(semanticProgram->onErrorFacts.size())") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.typeMetadataByPath.reserve(semanticProgram->typeMetadata.size())") !=
@@ -698,7 +716,15 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterSource.find("adapter.structFieldMetadataByStructPath.reserve(semanticProgram->structFieldMetadata.size())") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("std::stable_sort(entries.begin(),") != std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.returnFactsByDefinitionId.reserve(semanticProgram->returnFacts.size())") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.returnFactsByDefinitionPath.reserve(") != std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.localAutoFactsByExpr.reserve(semanticProgram->localAutoFacts.size())") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.queryFactsByExpr.reserve(semanticProgram->queryFacts.size())") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.tryFactsByExpr.reserve(semanticProgram->tryFacts.size())") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.bindingFactsByExpr.reserve(semanticProgram->bindingFacts.size())") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("expr.semanticNodeId") != std::string::npos);
@@ -983,7 +1009,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(onErrorHelpersSource.find("buildEntryCountAccessSetup(entryDef, semanticProgram, out.countAccessSetup, error)") !=
         std::string::npos);
-  CHECK(onErrorHelpersSource.find("findSemanticProductOnErrorFact(semanticProductTargets, def.fullPath)") !=
+  CHECK(onErrorHelpersSource.find("findSemanticProductOnErrorFact(semanticProductTargets, def)") !=
         std::string::npos);
   CHECK(onErrorHelpersSource.find("missing semantic-product on_error fact: ") !=
         std::string::npos);
@@ -1035,7 +1061,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irReturnInference.find("findSemanticProductCallableSummary(semanticProductTargets, entryPath)") !=
         std::string::npos);
-  CHECK(irReturnInference.find("findSemanticProductReturnFact(semanticProductTargets, entryPath)") !=
+  CHECK(irReturnInference.find("findSemanticProductReturnFact(semanticProductTargets, entryDef)") !=
         std::string::npos);
   CHECK(irReturnInference.find("missing semantic-product return fact: ") !=
         std::string::npos);
@@ -1102,6 +1128,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::string irCallResolution = readRepoFile("src/ir_lowerer/IrLowererCallResolution.cpp");
   const std::string irMethodResolution =
       readRepoFile("src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp");
+  const std::string bindingTypeHelpersSource =
+      readRepoFile("src/ir_lowerer/IrLowererBindingTypeHelpers.cpp");
   const std::string statementCallHelpersHeader =
       readRepoFile("src/ir_lowerer/IrLowererStatementCallHelpers.h");
   const std::string functionTableStepHeader =

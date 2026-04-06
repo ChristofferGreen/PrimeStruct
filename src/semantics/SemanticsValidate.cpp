@@ -5471,7 +5471,7 @@ bool Semantics::validate(Program &program,
   if (!rewriteOmittedStructInitializers(program, error)) {
     return false;
   }
-  assignSemanticNodeIds(program);
+  semantics::assignSemanticNodeIds(program);
   if (semanticProgramOut != nullptr) {
     *semanticProgramOut = buildSemanticProgram(program, entryPath, validator);
   }

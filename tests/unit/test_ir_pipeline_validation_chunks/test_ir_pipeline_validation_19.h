@@ -663,6 +663,118 @@ TEST_CASE("ir lowerer call helpers require semantic-product direct-call targets"
   CHECK(populatedResolveExprPath(callExpr) == "/callee");
 }
 
+TEST_CASE("ir lowerer semantic-product adapter joins return and inference facts by semantic id") {
+  primec::Definition mainDef;
+  mainDef.fullPath = "/renamed_main";
+  mainDef.semanticNodeId = 61;
+
+  primec::Expr localAutoExpr;
+  localAutoExpr.kind = primec::Expr::Kind::Call;
+  localAutoExpr.name = "select";
+  localAutoExpr.semanticNodeId = 62;
+
+  primec::Expr queryExpr;
+  queryExpr.kind = primec::Expr::Kind::Call;
+  queryExpr.name = "lookup";
+  queryExpr.semanticNodeId = 63;
+
+  primec::Expr tryExpr;
+  tryExpr.kind = primec::Expr::Kind::Call;
+  tryExpr.name = "try";
+  tryExpr.semanticNodeId = 64;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      "/legacy_main",
+      "return",
+      "/i32",
+      "i32",
+      false,
+      false,
+      false,
+      "",
+      9,
+      3,
+      61,
+  });
+  semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
+      "/main",
+      "selected",
+      "i32",
+      "/id",
+      "i32",
+      "",
+      "i32",
+      false,
+      "",
+      "",
+      false,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "return",
+      "",
+      "",
+      0,
+      10,
+      5,
+      62,
+  });
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      "/main",
+      "lookup",
+      "/lookup",
+      "Result<i32, FileError>",
+      "Result<i32, FileError>",
+      "",
+      true,
+      true,
+      "i32",
+      "FileError",
+      11,
+      7,
+      63,
+  });
+  semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
+      "/main",
+      "/lookup",
+      "Result<i32, FileError>",
+      "",
+      "Result<i32, FileError>",
+      "i32",
+      "FileError",
+      "return",
+      "/handler",
+      "FileError",
+      1,
+      12,
+      9,
+      64,
+  });
+
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  const auto *returnFact = primec::ir_lowerer::findSemanticProductReturnFact(semanticTargets, mainDef);
+  REQUIRE(returnFact != nullptr);
+  CHECK(returnFact->definitionPath == "/legacy_main");
+
+  const auto *localAutoFact = primec::ir_lowerer::findSemanticProductLocalAutoFact(semanticTargets, localAutoExpr);
+  REQUIRE(localAutoFact != nullptr);
+  CHECK(localAutoFact->bindingName == "selected");
+
+  const auto *queryFact = primec::ir_lowerer::findSemanticProductQueryFact(semanticTargets, queryExpr);
+  REQUIRE(queryFact != nullptr);
+  CHECK(queryFact->resolvedPath == "/lookup");
+
+  const auto *tryFact = primec::ir_lowerer::findSemanticProductTryFact(semanticTargets, tryExpr);
+  REQUIRE(tryFact != nullptr);
+  CHECK(tryFact->onErrorHandlerPath == "/handler");
+}
+
 TEST_CASE("ir lowerer call helpers resolve definition calls through slashless map import aliases") {
   primec::Definition canonicalMapCountDef;
   canonicalMapCountDef.fullPath = "/std/collections/map/count";

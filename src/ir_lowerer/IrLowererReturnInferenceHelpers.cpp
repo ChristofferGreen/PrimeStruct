@@ -67,7 +67,7 @@ bool analyzeEntryReturnTransforms(const Definition &entryDef,
       out.resultInfo.hasValue = callableSummary->resultTypeHasValue;
     }
 
-    const auto *returnFact = findSemanticProductReturnFact(semanticProductTargets, entryPath);
+    const auto *returnFact = findSemanticProductReturnFact(semanticProductTargets, entryDef);
     if (returnFact == nullptr) {
       error = "missing semantic-product return fact: " + entryPath;
       return false;

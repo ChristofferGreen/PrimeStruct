@@ -304,7 +304,7 @@ ResolveExprPathFn makeResolveCallPathFromScope(
     }
     if (semanticProductTargets.hasSemanticProduct &&
         expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
-      return {};
+      return std::string{};
     }
     if (semanticProductTargets.hasSemanticProduct) {
       return resolveCallPathFromScopeWithoutImportAliases(expr, defMap);
