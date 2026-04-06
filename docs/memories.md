@@ -27,6 +27,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   resolution path as statement form, so VM-lowered user-defined `/vector/*`
   expression shadows no longer fall into backend-owned `vector helper`
   rejects.
+- `ir-lowerer-query-local-collection-join-inference`: IR lowering now
+  preserves collection binding metadata for local `auto` bindings sourced from
+  resolved collection-returning calls and `if` branch joins, so query-local
+  `/vector/count` direct-call and slash-method forms lower successfully across
+  compile-pipeline, C++ emitter, VM, and native coverage instead of failing
+  the old branch-compatibility boundary.
 - `map-bare-access-canonical-helper-contract`: bare-root
   `contains(values, key)`, `at(values, key)`, and `at_unsafe(values, key)`
   on builtin `map<K, V>` now reject with canonical

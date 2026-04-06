@@ -20,7 +20,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("vm query-local auto vector helper boundary stays in lowering") {
+TEST_CASE("vm query-local auto vector helpers run through lowering") {
   const std::string directSource = R"(
 /vector/count([vector<i32>] values) {
   return(17i32)
@@ -49,11 +49,8 @@ main() {
 }
 )";
   const std::string directSrcPath = writeTemp("vm_graph_query_vector_helper_call.prime", directSource);
-  const std::string directErrPath =
-      (testScratchPath("") / "vm_graph_query_vector_helper_call_err.txt").string();
-  const std::string directCmd = "./primec --emit=vm " + directSrcPath + " --entry /main 2> " + directErrPath;
-  CHECK(runCommand(directCmd) == 2);
-  CHECK(readFile(directErrPath).find("if branches must return compatible types") != std::string::npos);
+  const std::string directCmd = "./primec --emit=vm " + directSrcPath + " --entry /main";
+  CHECK(runCommand(directCmd) == 17);
 
   const std::string methodSource = R"(
 /vector/count([vector<i32>] values) {
@@ -83,11 +80,8 @@ main() {
 }
 )";
   const std::string methodSrcPath = writeTemp("vm_graph_query_vector_helper_method.prime", methodSource);
-  const std::string methodErrPath =
-      (testScratchPath("") / "vm_graph_query_vector_helper_method_err.txt").string();
-  const std::string methodCmd = "./primec --emit=vm " + methodSrcPath + " --entry /main 2> " + methodErrPath;
-  CHECK(runCommand(methodCmd) == 2);
-  CHECK(readFile(methodErrPath).find("if branches must return compatible types") != std::string::npos);
+  const std::string methodCmd = "./primec --emit=vm " + methodSrcPath + " --entry /main";
+  CHECK(runCommand(methodCmd) == 17);
 }
 
 TEST_CASE("runs vm experimental soa_vector stdlib helpers") {

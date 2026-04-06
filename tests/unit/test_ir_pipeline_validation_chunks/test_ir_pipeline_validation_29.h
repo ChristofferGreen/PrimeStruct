@@ -4,13 +4,13 @@ TEST_CASE("ir lowerer call helpers dispatch buffer and native tail wrappers") {
   using LocalInfo = primec::ir_lowerer::LocalInfo;
 
   primec::ir_lowerer::LocalMap locals;
-  LocalInfo arrayInfo;
+  LocalInfo arrayInfo{};
   arrayInfo.kind = LocalInfo::Kind::Array;
   arrayInfo.index = 9;
   arrayInfo.valueKind = LocalInfo::ValueKind::Int32;
   locals.emplace("arr", arrayInfo);
 
-  LocalInfo vectorInfo;
+  LocalInfo vectorInfo{};
   vectorInfo.kind = LocalInfo::Kind::Vector;
   vectorInfo.index = 11;
   vectorInfo.valueKind = LocalInfo::ValueKind::Unknown;
@@ -366,24 +366,24 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   vectorInfo.valueKind = Kind::Float64;
   locals.emplace("vec", vectorInfo);
 
-  LocalInfo refArrayInfo;
+  LocalInfo refArrayInfo{};
   refArrayInfo.kind = LocalInfo::Kind::Reference;
   refArrayInfo.referenceToArray = true;
   refArrayInfo.valueKind = Kind::Bool;
   locals.emplace("refArr", refArrayInfo);
 
-  LocalInfo bufferInfo;
+  LocalInfo bufferInfo{};
   bufferInfo.kind = LocalInfo::Kind::Buffer;
   bufferInfo.valueKind = Kind::Int32;
   locals.emplace("buffer", bufferInfo);
 
-  LocalInfo refBufferInfo;
+  LocalInfo refBufferInfo{};
   refBufferInfo.kind = LocalInfo::Kind::Reference;
   refBufferInfo.referenceToBuffer = true;
   refBufferInfo.valueKind = Kind::Int32;
   locals.emplace("refBuffer", refBufferInfo);
 
-  LocalInfo structArgsInfo;
+  LocalInfo structArgsInfo{};
   structArgsInfo.kind = LocalInfo::Kind::Array;
   structArgsInfo.isArgsPack = true;
   structArgsInfo.argsPackElementKind = LocalInfo::Kind::Value;
@@ -391,13 +391,13 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   structArgsInfo.structSlotCount = 2;
   locals.emplace("structArgs", structArgsInfo);
 
-  LocalInfo vectorArgsInfo;
+  LocalInfo vectorArgsInfo{};
   vectorArgsInfo.kind = LocalInfo::Kind::Array;
   vectorArgsInfo.isArgsPack = true;
   vectorArgsInfo.argsPackElementKind = LocalInfo::Kind::Vector;
   locals.emplace("vectorArgs", vectorArgsInfo);
 
-  LocalInfo borrowedArrayArgsInfo;
+  LocalInfo borrowedArrayArgsInfo{};
   borrowedArrayArgsInfo.kind = LocalInfo::Kind::Array;
   borrowedArrayArgsInfo.isArgsPack = true;
   borrowedArrayArgsInfo.argsPackElementKind = LocalInfo::Kind::Reference;
@@ -405,7 +405,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   borrowedArrayArgsInfo.valueKind = Kind::Int32;
   locals.emplace("borrowedArrayArgs", borrowedArrayArgsInfo);
 
-  LocalInfo pointerArrayArgsInfo;
+  LocalInfo pointerArrayArgsInfo{};
   pointerArrayArgsInfo.kind = LocalInfo::Kind::Array;
   pointerArrayArgsInfo.isArgsPack = true;
   pointerArrayArgsInfo.argsPackElementKind = LocalInfo::Kind::Pointer;
@@ -413,7 +413,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   pointerArrayArgsInfo.valueKind = Kind::Int32;
   locals.emplace("pointerArrayArgs", pointerArrayArgsInfo);
 
-  LocalInfo borrowedVectorArgsInfo;
+  LocalInfo borrowedVectorArgsInfo{};
   borrowedVectorArgsInfo.kind = LocalInfo::Kind::Array;
   borrowedVectorArgsInfo.isArgsPack = true;
   borrowedVectorArgsInfo.argsPackElementKind = LocalInfo::Kind::Reference;
@@ -421,7 +421,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   borrowedVectorArgsInfo.valueKind = Kind::Int32;
   locals.emplace("borrowedVectorArgs", borrowedVectorArgsInfo);
 
-  LocalInfo pointerVectorArgsInfo;
+  LocalInfo pointerVectorArgsInfo{};
   pointerVectorArgsInfo.kind = LocalInfo::Kind::Array;
   pointerVectorArgsInfo.isArgsPack = true;
   pointerVectorArgsInfo.argsPackElementKind = LocalInfo::Kind::Pointer;
@@ -429,7 +429,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   pointerVectorArgsInfo.valueKind = Kind::Int32;
   locals.emplace("pointerVectorArgs", pointerVectorArgsInfo);
 
-  LocalInfo borrowedBufferArgsInfo;
+  LocalInfo borrowedBufferArgsInfo{};
   borrowedBufferArgsInfo.kind = LocalInfo::Kind::Array;
   borrowedBufferArgsInfo.isArgsPack = true;
   borrowedBufferArgsInfo.argsPackElementKind = LocalInfo::Kind::Reference;
@@ -437,7 +437,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   borrowedBufferArgsInfo.valueKind = Kind::Int32;
   locals.emplace("borrowedBufferArgs", borrowedBufferArgsInfo);
 
-  LocalInfo pointerBufferArgsInfo;
+  LocalInfo pointerBufferArgsInfo{};
   pointerBufferArgsInfo.kind = LocalInfo::Kind::Array;
   pointerBufferArgsInfo.isArgsPack = true;
   pointerBufferArgsInfo.argsPackElementKind = LocalInfo::Kind::Pointer;
@@ -445,7 +445,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   pointerBufferArgsInfo.valueKind = Kind::Int32;
   locals.emplace("pointerBufferArgs", pointerBufferArgsInfo);
 
-  LocalInfo scalarRefArgsInfo;
+  LocalInfo scalarRefArgsInfo{};
   scalarRefArgsInfo.kind = LocalInfo::Kind::Array;
   scalarRefArgsInfo.isArgsPack = true;
   scalarRefArgsInfo.argsPackElementKind = LocalInfo::Kind::Reference;
@@ -513,11 +513,12 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   CHECK(resolved.elemKind == Kind::Unknown);
   CHECK_FALSE(resolved.isVectorTarget);
   CHECK(resolved.isArgsPackTarget);
+  CHECK(resolved.argsPackElementKind == LocalInfo::Kind::Value);
   CHECK(resolved.structTypeName == "/pkg/Pair");
   CHECK(resolved.elemSlotCount == 0);
   error.clear();
-  CHECK_FALSE(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
-  CHECK_FALSE(error.empty());
+  CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
+  CHECK(error.empty());
 
   primec::Expr vectorArgsName;
   vectorArgsName.kind = primec::Expr::Kind::Name;

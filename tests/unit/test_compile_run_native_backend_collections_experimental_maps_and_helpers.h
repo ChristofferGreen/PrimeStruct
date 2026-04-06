@@ -33,7 +33,7 @@ main() {
   CHECK(runCommand(exePath) == 10);
 }
 
-TEST_CASE("native query-local auto vector helper boundary stays in lowering") {
+TEST_CASE("native query-local auto vector helpers run through lowering") {
   const std::string directSource = R"(
 /vector/count([vector<i32>] values) {
   return(17i32)
@@ -62,11 +62,12 @@ main() {
 }
 )";
   const std::string directSrcPath = writeTemp("compile_native_graph_query_vector_helper_call.prime", directSource);
-  const std::string directErrPath =
-      (testScratchPath("") / "compile_native_graph_query_vector_helper_call_err.txt").string();
-  const std::string directCmd = "./primec --emit=native " + directSrcPath + " --entry /main 2> " + directErrPath;
-  CHECK(runCommand(directCmd) == 2);
-  CHECK(readFile(directErrPath).find("if branches must return compatible types") != std::string::npos);
+  const std::string directExePath =
+      (testScratchPath("") / "compile_native_graph_query_vector_helper_call_exe").string();
+  const std::string directCmd =
+      "./primec --emit=native " + directSrcPath + " -o " + directExePath + " --entry /main";
+  CHECK(runCommand(directCmd) == 0);
+  CHECK(runCommand(directExePath) == 17);
 
   const std::string methodSource = R"(
 /vector/count([vector<i32>] values) {
@@ -97,11 +98,12 @@ main() {
 )";
   const std::string methodSrcPath =
       writeTemp("compile_native_graph_query_vector_helper_method.prime", methodSource);
-  const std::string methodErrPath =
-      (testScratchPath("") / "compile_native_graph_query_vector_helper_method_err.txt").string();
-  const std::string methodCmd = "./primec --emit=native " + methodSrcPath + " --entry /main 2> " + methodErrPath;
-  CHECK(runCommand(methodCmd) == 2);
-  CHECK(readFile(methodErrPath).find("if branches must return compatible types") != std::string::npos);
+  const std::string methodExePath =
+      (testScratchPath("") / "compile_native_graph_query_vector_helper_method_exe").string();
+  const std::string methodCmd =
+      "./primec --emit=native " + methodSrcPath + " -o " + methodExePath + " --entry /main";
+  CHECK(runCommand(methodCmd) == 0);
+  CHECK(runCommand(methodExePath) == 17);
 }
 
 TEST_CASE("compiles and runs native experimental soa_vector stdlib helpers") {

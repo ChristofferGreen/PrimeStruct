@@ -288,9 +288,7 @@ main() {
   return(/vector/count(values))
 }
 )",
-          false,
-          "if branches must return compatible types",
-          false,
+          true,
       },
       {
           "query_local_auto_vector_helper_method_boundary",
@@ -321,9 +319,7 @@ main() {
   return(values./vector/count())
 }
 )",
-          false,
-          "if branches must return compatible types",
-          false,
+          true,
       },
       {
           "result_try_local_auto_error_type_boundary",

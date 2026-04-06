@@ -116,6 +116,250 @@ bool resolveSpecializedExperimentalMapTypeKinds(const std::string &typeText,
          valueKindOut != LocalInfo::ValueKind::Unknown;
 }
 
+bool isIfBlockEnvelopeForBindingTypeInfo(const Expr &candidate) {
+  if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+    return false;
+  }
+  if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
+    return false;
+  }
+  return candidate.hasBodyArguments || !candidate.bodyArguments.empty();
+}
+
+const Expr *findIfBranchValueExprForBindingTypeInfo(const Expr &candidate) {
+  if (!isIfBlockEnvelopeForBindingTypeInfo(candidate)) {
+    return &candidate;
+  }
+  const Expr *valueExpr = nullptr;
+  for (const auto &bodyExpr : candidate.bodyArguments) {
+    if (bodyExpr.isBinding) {
+      continue;
+    }
+    if (isReturnCall(bodyExpr)) {
+      if (bodyExpr.args.size() != 1) {
+        return nullptr;
+      }
+      return &bodyExpr.args.front();
+    }
+    valueExpr = &bodyExpr;
+  }
+  return valueExpr;
+}
+
+bool populateBindingTypeInfoFromTypeText(
+    const std::string &typeText,
+    const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
+    StatementBindingTypeInfo &infoOut) {
+  const std::string normalizedTypeText = trimTemplateTypeText(typeText);
+  if (normalizedTypeText.empty()) {
+    return false;
+  }
+
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(normalizedTypeText, base, argText)) {
+    const LocalInfo::ValueKind scalarKind =
+        valueKindFromTypeName(normalizeCollectionBindingTypeName(normalizedTypeText));
+    if (scalarKind != LocalInfo::ValueKind::Unknown) {
+      infoOut.kind = LocalInfo::Kind::Value;
+      infoOut.valueKind = scalarKind;
+      infoOut.structTypeName.clear();
+      return true;
+    }
+    infoOut.kind = LocalInfo::Kind::Value;
+    infoOut.valueKind = LocalInfo::ValueKind::Unknown;
+    infoOut.structTypeName = normalizedTypeText;
+    return true;
+  }
+
+  const std::string normalizedBase =
+      normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+  if (normalizedBase == "array" || normalizedBase == "vector" || normalizedBase == "soa_vector") {
+    infoOut.kind = normalizedBase == "array" ? LocalInfo::Kind::Array : LocalInfo::Kind::Vector;
+    const std::string elementType = trimTemplateTypeText(argText);
+    infoOut.valueKind = valueKindFromTypeName(elementType);
+    infoOut.structTypeName =
+        infoOut.valueKind == LocalInfo::ValueKind::Unknown ? elementType : std::string{};
+    return true;
+  }
+  if (normalizedBase == "map") {
+    std::vector<std::string> args;
+    if (!splitTemplateArgs(argText, args) || args.size() != 2) {
+      return false;
+    }
+    infoOut.kind = LocalInfo::Kind::Map;
+    infoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
+    infoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
+    infoOut.valueKind = infoOut.mapValueKind;
+    return true;
+  }
+  if (normalizedBase == "Pointer" || normalizedBase == "Reference") {
+    infoOut.kind =
+        normalizedBase == "Pointer" ? LocalInfo::Kind::Pointer : LocalInfo::Kind::Reference;
+    const std::string targetType =
+        unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(argText));
+    infoOut.valueKind = valueKindFromTypeName(targetType);
+    infoOut.structTypeName =
+        infoOut.valueKind == LocalInfo::ValueKind::Unknown ? targetType : std::string{};
+    return true;
+  }
+  if (normalizedBase == "Buffer") {
+    infoOut.kind = LocalInfo::Kind::Buffer;
+    infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(argText));
+    return true;
+  }
+  if (normalizedBase == "Result") {
+    infoOut.kind = LocalInfo::Kind::Value;
+    infoOut.valueKind = LocalInfo::ValueKind::Int64;
+    return true;
+  }
+  if (resolveDefinitionCall) {
+    LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
+    if (resolveSpecializedExperimentalVectorElementKind(normalizedTypeText, resolveDefinitionCall, elemKind)) {
+      infoOut.kind = LocalInfo::Kind::Vector;
+      infoOut.valueKind = elemKind;
+      infoOut.structTypeName.clear();
+      return true;
+    }
+    LocalInfo::ValueKind keyKind = LocalInfo::ValueKind::Unknown;
+    LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+    if (resolveSpecializedExperimentalMapTypeKinds(normalizedTypeText, resolveDefinitionCall, keyKind, valueKind)) {
+      infoOut.kind = LocalInfo::Kind::Map;
+      infoOut.mapKeyKind = keyKind;
+      infoOut.mapValueKind = valueKind;
+      infoOut.valueKind = valueKind;
+      return true;
+    }
+  }
+
+  infoOut.kind = LocalInfo::Kind::Value;
+  infoOut.valueKind = LocalInfo::ValueKind::Unknown;
+  infoOut.structTypeName = normalizedTypeText;
+  return true;
+}
+
+bool inferExprBindingTypeInfo(const Expr &expr,
+                              const LocalMap &localsIn,
+                              const InferBindingExprKindFn &inferExprKind,
+                              const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
+                              StatementBindingTypeInfo &infoOut) {
+  infoOut = {};
+  if (expr.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(expr.name);
+    if (it == localsIn.end()) {
+      return false;
+    }
+    infoOut.kind = it->second.kind;
+    infoOut.valueKind = it->second.valueKind;
+    infoOut.mapKeyKind = it->second.mapKeyKind;
+    infoOut.mapValueKind = it->second.mapValueKind;
+    infoOut.structTypeName = it->second.structTypeName;
+    return true;
+  }
+  if (expr.kind == Expr::Kind::Literal) {
+    infoOut.kind = LocalInfo::Kind::Value;
+    infoOut.valueKind = expr.isUnsigned ? LocalInfo::ValueKind::UInt64
+                                        : (expr.intWidth == 64 ? LocalInfo::ValueKind::Int64
+                                                               : LocalInfo::ValueKind::Int32);
+    return true;
+  }
+  if (expr.kind == Expr::Kind::BoolLiteral) {
+    infoOut.kind = LocalInfo::Kind::Value;
+    infoOut.valueKind = LocalInfo::ValueKind::Bool;
+    return true;
+  }
+  if (expr.kind == Expr::Kind::FloatLiteral) {
+    infoOut.kind = LocalInfo::Kind::Value;
+    infoOut.valueKind =
+        expr.floatWidth == 64 ? LocalInfo::ValueKind::Float64 : LocalInfo::ValueKind::Float32;
+    return true;
+  }
+  if (expr.kind == Expr::Kind::StringLiteral) {
+    infoOut.kind = LocalInfo::Kind::Value;
+    infoOut.valueKind = LocalInfo::ValueKind::String;
+    return true;
+  }
+  if (isIfCall(expr) && expr.args.size() == 3) {
+    const Expr *thenValue = findIfBranchValueExprForBindingTypeInfo(expr.args[1]);
+    const Expr *elseValue = findIfBranchValueExprForBindingTypeInfo(expr.args[2]);
+    if (thenValue == nullptr || elseValue == nullptr) {
+      return false;
+    }
+    StatementBindingTypeInfo thenInfo;
+    StatementBindingTypeInfo elseInfo;
+    if (!inferExprBindingTypeInfo(*thenValue, localsIn, inferExprKind, resolveDefinitionCall, thenInfo) ||
+        !inferExprBindingTypeInfo(*elseValue, localsIn, inferExprKind, resolveDefinitionCall, elseInfo)) {
+      return false;
+    }
+    if (thenInfo.kind != elseInfo.kind) {
+      return false;
+    }
+    if (thenInfo.kind == LocalInfo::Kind::Map) {
+      if (thenInfo.mapKeyKind != elseInfo.mapKeyKind || thenInfo.mapValueKind != elseInfo.mapValueKind) {
+        return false;
+      }
+    } else if (thenInfo.kind == LocalInfo::Kind::Value) {
+      if (!thenInfo.structTypeName.empty() || !elseInfo.structTypeName.empty()) {
+        if (thenInfo.structTypeName.empty() || thenInfo.structTypeName != elseInfo.structTypeName) {
+          return false;
+        }
+      } else if (thenInfo.valueKind == LocalInfo::ValueKind::Unknown ||
+                 thenInfo.valueKind != elseInfo.valueKind) {
+        return false;
+      }
+    } else if (thenInfo.valueKind != elseInfo.valueKind ||
+               thenInfo.structTypeName != elseInfo.structTypeName) {
+      return false;
+    }
+    infoOut = thenInfo;
+    return true;
+  }
+  if (expr.kind != Expr::Kind::Call) {
+    return false;
+  }
+
+  std::string collection;
+  if (getBuiltinCollectionName(expr, collection)) {
+    if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
+        expr.templateArgs.size() == 1) {
+      infoOut.kind = collection == "array" ? LocalInfo::Kind::Array : LocalInfo::Kind::Vector;
+      const std::string elementType = trimTemplateTypeText(expr.templateArgs.front());
+      infoOut.valueKind = valueKindFromTypeName(elementType);
+      infoOut.structTypeName =
+          infoOut.valueKind == LocalInfo::ValueKind::Unknown ? elementType : std::string{};
+      return true;
+    }
+    if (collection == "map" && expr.templateArgs.size() == 2) {
+      infoOut.kind = LocalInfo::Kind::Map;
+      infoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(expr.templateArgs[0]));
+      infoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(expr.templateArgs[1]));
+      infoOut.valueKind = infoOut.mapValueKind;
+      return true;
+    }
+  }
+
+  if (resolveDefinitionCall) {
+    if (const Definition *callee = resolveDefinitionCall(expr); callee != nullptr) {
+      for (const auto &transform : callee->transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1 ||
+            transform.templateArgs.front() == "auto") {
+          continue;
+        }
+        return populateBindingTypeInfoFromTypeText(
+            transform.templateArgs.front(), resolveDefinitionCall, infoOut);
+      }
+    }
+  }
+
+  const LocalInfo::ValueKind scalarKind = inferExprKind(expr, localsIn);
+  if (scalarKind == LocalInfo::ValueKind::Unknown) {
+    return false;
+  }
+  infoOut.kind = LocalInfo::Kind::Value;
+  infoOut.valueKind = scalarKind;
+  return true;
+}
+
 } // namespace
 
 StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
@@ -180,6 +424,27 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
             info.kind = LocalInfo::Kind::Map;
           }
         }
+      }
+    }
+  }
+
+  if (!hasExplicitType) {
+    StatementBindingTypeInfo inferredExprInfo;
+    if (inferExprBindingTypeInfo(init, localsIn, inferExprKind, resolveDefinitionCall, inferredExprInfo)) {
+      if (info.kind == LocalInfo::Kind::Value) {
+        info.kind = inferredExprInfo.kind;
+      }
+      if (info.valueKind == LocalInfo::ValueKind::Unknown) {
+        info.valueKind = inferredExprInfo.valueKind;
+      }
+      if (info.mapKeyKind == LocalInfo::ValueKind::Unknown) {
+        info.mapKeyKind = inferredExprInfo.mapKeyKind;
+      }
+      if (info.mapValueKind == LocalInfo::ValueKind::Unknown) {
+        info.mapValueKind = inferredExprInfo.mapValueKind;
+      }
+      if (info.structTypeName.empty()) {
+        info.structTypeName = inferredExprInfo.structTypeName;
       }
     }
   }

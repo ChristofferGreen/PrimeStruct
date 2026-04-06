@@ -1,4 +1,5 @@
 #include "IrLowererOperatorConversionsAndCallsHelpers.h"
+#include "IrLowererStatementBindingHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -172,6 +173,61 @@ bool emitConversionsAndCallsControlExprTail(
       }
       return sawValue ? lastKind : LocalInfo::ValueKind::Unknown;
     };
+    auto inferBranchValueTypeInfo =
+        [&](const Expr &candidate, const LocalMap &localsBase) -> StatementBindingTypeInfo {
+      StatementBindingTypeInfo info;
+      const Expr *valueExpr = &candidate;
+      if (isIfBlockEnvelope(candidate)) {
+        valueExpr = nullptr;
+        for (const auto &bodyExpr : candidate.bodyArguments) {
+          if (bodyExpr.isBinding) {
+            continue;
+          }
+          if (isReturnCall(bodyExpr)) {
+            if (bodyExpr.args.size() != 1) {
+              return info;
+            }
+            valueExpr = &bodyExpr.args.front();
+            break;
+          }
+          valueExpr = &bodyExpr;
+        }
+      }
+      if (valueExpr == nullptr) {
+        return info;
+      }
+      Expr syntheticBinding;
+      syntheticBinding.isBinding = true;
+      syntheticBinding.args.push_back(*valueExpr);
+      return inferStatementBindingTypeInfo(syntheticBinding,
+                                           *valueExpr,
+                                           localsBase,
+                                           hasExplicitBindingTypeTransform,
+                                           bindingKind,
+                                           bindingValueKind,
+                                           inferExprKind,
+                                           resolveDefinitionCall);
+    };
+    auto branchTypeInfoCompatible = [&](const StatementBindingTypeInfo &left,
+                                        const StatementBindingTypeInfo &right) {
+      if (left.kind != right.kind) {
+        return false;
+      }
+      if (left.kind == LocalInfo::Kind::Map) {
+        return left.mapKeyKind == right.mapKeyKind &&
+               left.mapValueKind == right.mapValueKind;
+      }
+      if (left.kind == LocalInfo::Kind::Value) {
+        if (!left.structTypeName.empty() || !right.structTypeName.empty()) {
+          return !left.structTypeName.empty() &&
+                 left.structTypeName == right.structTypeName;
+        }
+        return left.valueKind != LocalInfo::ValueKind::Unknown &&
+               left.valueKind == right.valueKind;
+      }
+      return left.valueKind == right.valueKind &&
+             left.structTypeName == right.structTypeName;
+    };
 
     auto emitBranchValue = [&](const Expr &candidate, const LocalMap &localsBase) -> bool {
       if (!isIfBlockEnvelope(candidate)) {
@@ -241,8 +297,12 @@ bool emitConversionsAndCallsControlExprTail(
 
     LocalInfo::ValueKind thenKind = inferBranchValueKind(thenArg, localsIn);
     LocalInfo::ValueKind elseKind = inferBranchValueKind(elseArg, localsIn);
+    const StatementBindingTypeInfo thenInfo = inferBranchValueTypeInfo(thenArg, localsIn);
+    const StatementBindingTypeInfo elseInfo = inferBranchValueTypeInfo(elseArg, localsIn);
     LocalInfo::ValueKind resultKind = LocalInfo::ValueKind::Unknown;
-    if (thenKind == elseKind) {
+    if (branchTypeInfoCompatible(thenInfo, elseInfo)) {
+      resultKind = thenInfo.valueKind;
+    } else if (thenKind == elseKind) {
       resultKind = thenKind;
     } else {
       resultKind = combineNumericKinds(thenKind, elseKind);
