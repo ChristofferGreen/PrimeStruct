@@ -458,10 +458,75 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
     bool validatedPointerLikeReturn = false;
     auto currentDefIt = defMap_.find(currentValidationState_.context.definitionPath);
     if (currentDefIt != defMap_.end() && currentDefIt->second != nullptr) {
-      BindingInfo declaredReturnBinding;
-      if (inferDefinitionReturnBinding(*currentDefIt->second, declaredReturnBinding) &&
-          (declaredReturnBinding.typeName == "Pointer" ||
-           declaredReturnBinding.typeName == "Reference")) {
+      std::optional<BindingInfo> explicitPointerLikeReturnBinding;
+      auto explicitReturnTypeText = [&]() -> std::optional<std::string> {
+        auto findReturnTypeText = [&](const Definition &def) -> std::optional<std::string> {
+          for (const auto &transform : def.transforms) {
+            if (transform.name == "return" && transform.templateArgs.size() == 1) {
+              const std::string &typeText = transform.templateArgs.front();
+              if (typeText != "auto") {
+                return typeText;
+              }
+              return std::nullopt;
+            }
+          }
+          return std::nullopt;
+        };
+        const std::string &path = currentDefIt->second->fullPath;
+        const size_t suffix = path.find("__t");
+        if (suffix != std::string::npos) {
+          std::string basePath = path.substr(0, suffix);
+          const size_t nextSlash = path.find('/', suffix);
+          if (nextSlash != std::string::npos) {
+            basePath += path.substr(nextSlash);
+          }
+          auto tryBase = [&](const std::string &candidate) -> std::optional<std::string> {
+            auto baseIt = defMap_.find(candidate);
+            if (baseIt != defMap_.end() && baseIt->second != nullptr) {
+              if (auto typeText = findReturnTypeText(*baseIt->second)) {
+                return typeText;
+              }
+            }
+            return std::nullopt;
+          };
+          if (auto typeText = tryBase(basePath)) {
+            return typeText;
+          }
+          if (!basePath.empty() && basePath.front() == '/') {
+            if (auto typeText = tryBase(basePath.substr(1))) {
+              return typeText;
+            }
+          } else {
+            if (auto typeText = tryBase("/" + basePath)) {
+              return typeText;
+            }
+          }
+        }
+        return findReturnTypeText(*currentDefIt->second);
+      }();
+      if (explicitReturnTypeText.has_value()) {
+        std::string normalized = normalizeBindingTypeName(*explicitReturnTypeText);
+        std::string base;
+        std::string argText;
+        if (splitTemplateTypeName(normalized, base, argText)) {
+          normalized = normalizeBindingTypeName(base);
+        }
+        if (normalized == "Pointer" || normalized == "Reference") {
+          if (!argText.empty()) {
+            BindingInfo binding;
+            binding.typeName = normalized;
+            std::vector<std::string> args;
+            if (splitTopLevelTemplateArgs(argText, args) && args.size() == 1) {
+              binding.typeTemplateArg = args.front();
+            } else {
+              binding.typeTemplateArg = argText;
+            }
+            explicitPointerLikeReturnBinding = binding;
+          }
+        }
+      }
+      if (explicitPointerLikeReturnBinding.has_value() && returnKind == ReturnKind::Unknown) {
+        const BindingInfo &declaredReturnBinding = *explicitPointerLikeReturnBinding;
         BindingInfo actualReturnBinding;
         std::string directBorrowTargetType;
         const bool directBorrowReturn =

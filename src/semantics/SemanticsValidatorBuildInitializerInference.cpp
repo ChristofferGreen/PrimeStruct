@@ -704,6 +704,9 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     return true;
   };
   if (initializer.kind == Expr::Kind::Call) {
+    if (inferBuiltinPointerBinding(initializer, params, locals, bindingOut)) {
+      return true;
+    }
     const BindingInfo previousBinding = bindingOut;
     bindingOut = {};
     if (inferCallInitializerBinding(initializer, params, locals, bindingOut)) {

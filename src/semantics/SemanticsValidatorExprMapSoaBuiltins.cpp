@@ -19,6 +19,11 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
   auto failMapSoaBuiltinDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(expr, std::move(message));
   };
+  if (splitSoaFieldViewHelperPath(resolved)) {
+    handledOut = true;
+    return failMapSoaBuiltinDiagnostic(
+        soaDirectPendingUnavailableMethodDiagnostic(resolved));
+  }
   auto returnKindForBinding = [](const BindingInfo &binding) -> ReturnKind {
     if (binding.typeName == "Reference") {
       std::string base;

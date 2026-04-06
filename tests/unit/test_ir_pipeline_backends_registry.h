@@ -237,7 +237,8 @@ TEST_CASE("compile pipeline preserves semantic product on post-semantics failure
     REQUIRE(file.good());
     file << R"(import /std/gfx/experimental/*
 
-main() -> i32 {
+[return<i32>]
+main() {
   return(0i32)
 }
 )";

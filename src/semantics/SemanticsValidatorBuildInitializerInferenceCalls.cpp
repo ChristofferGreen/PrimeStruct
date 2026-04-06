@@ -321,7 +321,17 @@ bool SemanticsValidator::inferBuiltinPointerBinding(const Expr &expr,
       return false;
     }
   } else {
-    return false;
+    std::string opName;
+    if (!getBuiltinOperatorName(expr, opName) || (opName != "plus" && opName != "minus") ||
+        expr.args.size() != 2) {
+      return false;
+    }
+    if (isPointerLikeExpr(expr.args[1], params, locals)) {
+      return false;
+    }
+    if (!resolvePointerTargetType(expr.args.front(), targetType)) {
+      return false;
+    }
   }
   if (targetType.empty()) {
     return false;

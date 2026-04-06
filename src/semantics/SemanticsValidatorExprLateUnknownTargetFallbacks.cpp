@@ -89,6 +89,14 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
         "stdlib File write/write_line currently support up to nine values; broader arities await [args<T>] runtime support");
   }
 
+  const std::string resolvedTarget = resolveCalleePath(expr);
+  std::string soaFieldName;
+  if (splitSoaFieldViewHelperPath(resolvedTarget, &soaFieldName)) {
+    handledOut = true;
+    return failLateUnknownTargetDiagnostic(
+        "soa_vector field views are not implemented yet: " + soaFieldName);
+  }
+
   handledOut = true;
   return failLateUnknownTargetDiagnostic("unknown call target: " +
                                          formatUnknownCallTarget(expr));

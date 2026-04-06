@@ -15,12 +15,6 @@
 namespace primec::semantics {
 
 bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, BindingInfo &bindingOut) {
-  auto cachedBindingIt = returnBindings_.find(def.fullPath);
-  if (cachedBindingIt != returnBindings_.end() && !cachedBindingIt->second.typeName.empty()) {
-    bindingOut = cachedBindingIt->second;
-    return true;
-  }
-
   auto findDefParamBinding = [&](const std::vector<ParameterInfo> &defParams,
                                  const std::string &name) -> const BindingInfo * {
     for (const auto &param : defParams) {
@@ -120,20 +114,74 @@ bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, Bin
     return false;
   };
 
+  const bool isSpecializedDefinition = def.fullPath.find("__t") != std::string::npos;
+  bool sawReturnTransform = false;
+  bool sawUnusableReturnTransform = false;
   for (const auto &transform : def.transforms) {
     if (transform.name != "return" || transform.templateArgs.size() != 1) {
       continue;
     }
+    sawReturnTransform = true;
     const std::string &returnType = transform.templateArgs.front();
     if (returnType == "auto") {
+      sawUnusableReturnTransform = true;
       break;
     }
-    const bool isSpecializedDefinition = def.fullPath.find("__t") != std::string::npos;
     if (isSpecializedDefinition &&
         (returnTypeReferencesTemplateParam(returnType) || !isConcreteReturnTypeText(returnType))) {
+      sawUnusableReturnTransform = true;
       break;
     }
     return parseTypeText(returnType, bindingOut);
+  }
+  if (isSpecializedDefinition && (!sawReturnTransform || sawUnusableReturnTransform)) {
+    const std::string &path = def.fullPath;
+    const size_t suffix = path.find("__t");
+    if (suffix != std::string::npos) {
+      std::string basePath = path.substr(0, suffix);
+      const size_t nextSlash = path.find('/', suffix);
+      if (nextSlash != std::string::npos) {
+        basePath += path.substr(nextSlash);
+      }
+      auto tryBase = [&](const std::string &candidate) -> bool {
+        auto baseIt = defMap_.find(candidate);
+        if (baseIt == defMap_.end() || baseIt->second == nullptr) {
+          return false;
+        }
+        for (const auto &transform : baseIt->second->transforms) {
+          if (transform.name != "return" || transform.templateArgs.size() != 1) {
+            continue;
+          }
+          const std::string &returnType = transform.templateArgs.front();
+          if (returnType == "auto") {
+            break;
+          }
+          if (isConcreteReturnTypeText(returnType)) {
+            return parseTypeText(returnType, bindingOut);
+          }
+          break;
+        }
+        return false;
+      };
+      if (tryBase(basePath)) {
+        return true;
+      }
+      if (!basePath.empty() && basePath.front() == '/') {
+        if (tryBase(basePath.substr(1))) {
+          return true;
+        }
+      } else {
+        if (tryBase("/" + basePath)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  auto cachedBindingIt = returnBindings_.find(def.fullPath);
+  if (cachedBindingIt != returnBindings_.end() && !cachedBindingIt->second.typeName.empty()) {
+    bindingOut = cachedBindingIt->second;
+    return true;
   }
 
   if (!returnBindingInferenceStack_.insert(def.fullPath).second) {
