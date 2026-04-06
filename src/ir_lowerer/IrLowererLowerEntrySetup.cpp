@@ -3,6 +3,7 @@
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
 #include "IrLowererLowerEffects.h"
+#include "IrLowererResultHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -48,6 +49,9 @@ bool runLowerEntrySetup(const Program &program,
     return false;
   }
   if (!validateSemanticProductLocalAutoCoverage(program, semanticProgram, error)) {
+    return false;
+  }
+  if (!validateSemanticProductResultMetadataCompleteness(semanticProgram, error)) {
     return false;
   }
   if (!validateProgramEffects(program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error)) {

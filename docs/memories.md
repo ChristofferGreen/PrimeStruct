@@ -105,6 +105,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   semantic-product snapshot suite now locks provenance-handle determinism
   alongside semantic-node id determinism across repeated runs plus unrelated
   helper-definition reorderings.
+- `semantic-product-result-metadata-preflight`: lowerer entry setup now
+  validates callable-summary result metadata, return-fact binding types,
+  query result payload metadata, and `try(...)` value metadata before
+  lowering begins, so malformed published semantic-product facts fail at the
+  entrypoint instead of surfacing later inside result/return inference.
 - `semantic-product-return-query-try-on-error-joins`: the temporary lowerer
   semantic-product adapter now keys return, local-`auto`, query, `try(...)`,
   and `on_error` facts by structural semantic ids, and semantic-product-backed

@@ -11,6 +11,10 @@
 #include "primec/Ast.h"
 #include "primec/Ir.h"
 
+namespace primec {
+struct SemanticProgram;
+}
+
 namespace primec::ir_lowerer {
 
 struct SemanticProductTargetAdapter;
@@ -76,6 +80,8 @@ ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
     const InferExprKindWithLocalsFn &inferExprKind,
     const SemanticProductTargetAdapter *semanticProductTargets = nullptr,
     std::string *errorOut = nullptr);
+bool validateSemanticProductResultMetadataCompleteness(const primec::SemanticProgram *semanticProgram,
+                                                       std::string &error);
 bool resolveResultWhyCallInfo(const Expr &expr,
                               const LocalMap &localsIn,
                               const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,

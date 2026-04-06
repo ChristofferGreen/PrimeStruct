@@ -209,7 +209,10 @@ bool buildSemanticProductReturnInfo(const LowerInferenceReturnInfoSetupInput &in
     infoOut.resultValueIsFileHandle = false;
     infoOut.resultValueStructType.clear();
     if (callableSummary->resultTypeHasValue) {
-      (void)applySemanticResultValueTypeText(input, definition, callableSummary->resultValueType, infoOut);
+      if (!applySemanticResultValueTypeText(input, definition, callableSummary->resultValueType, infoOut)) {
+        errorOut = "missing semantic-product callable result metadata: " + definition.fullPath;
+        return false;
+      }
     }
   } else if (infoOut.isResult) {
     errorOut = "missing semantic-product callable result metadata: " + definition.fullPath;

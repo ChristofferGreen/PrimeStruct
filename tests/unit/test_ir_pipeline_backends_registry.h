@@ -309,6 +309,184 @@ TEST_CASE("ir lowerer rejects missing semantic-product return facts") {
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer rejects missing semantic-product callable result metadata") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 82;
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .fullPath = "/main",
+      .isExecution = false,
+      .returnKind = "return",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "",
+      .resultErrorType = "FileError",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 82,
+  });
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .definitionPath = "/main",
+      .returnKind = "return",
+      .structPath = "",
+      .bindingTypeText = "Result<i32, FileError>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 82,
+  });
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product callable result metadata: /main");
+  CHECK(diagnosticInfo.message == error);
+}
+
+TEST_CASE("ir lowerer rejects missing semantic-product return binding types") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .definitionPath = "/main",
+      .returnKind = "return",
+      .structPath = "",
+      .bindingTypeText = "",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 0,
+  });
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product return binding type: /main");
+  CHECK(diagnosticInfo.message == error);
+}
+
+TEST_CASE("ir lowerer rejects incomplete semantic-product query facts") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "lookup";
+  callExpr.semanticNodeId = 83;
+  mainDef.statements.push_back(callExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .resolvedPath = "/lookup",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 83,
+  });
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .resolvedPath = "/lookup",
+      .queryTypeText = "Result<i32, FileError>",
+      .bindingTypeText = "Result<i32, FileError>",
+      .receiverBindingTypeText = "",
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "",
+      .resultErrorType = "FileError",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 83,
+  });
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "incomplete semantic-product query fact: lookup");
+  CHECK(diagnosticInfo.message == error);
+}
+
+TEST_CASE("ir lowerer rejects incomplete semantic-product try facts") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  primec::Expr sourceExpr;
+  sourceExpr.kind = primec::Expr::Kind::Name;
+  sourceExpr.name = "value";
+  primec::Expr tryExpr;
+  tryExpr.kind = primec::Expr::Kind::Call;
+  tryExpr.name = "try";
+  tryExpr.args.push_back(sourceExpr);
+  tryExpr.semanticNodeId = 84;
+  mainDef.statements.push_back(tryExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
+      .scopePath = "/main",
+      .operandResolvedPath = "/lookup",
+      .operandBindingTypeText = "Result<i32, FileError>",
+      .operandReceiverBindingTypeText = "",
+      .operandQueryTypeText = "Result<i32, FileError>",
+      .valueType = "",
+      .errorType = "FileError",
+      .contextReturnKind = "return",
+      .onErrorHandlerPath = "/handler",
+      .onErrorErrorType = "FileError",
+      .onErrorBoundArgCount = 1,
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 84,
+  });
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "incomplete semantic-product try fact: try");
+  CHECK(diagnosticInfo.message == error);
+}
+
 TEST_CASE("ir lowerer rejects missing semantic-product on_error facts") {
   primec::Program program;
 

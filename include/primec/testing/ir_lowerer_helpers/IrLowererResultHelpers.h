@@ -67,6 +67,8 @@ ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
     const InferExprKindWithLocalsFn &inferExprKind,
     const SemanticProductTargetAdapter *semanticProductTargets = nullptr,
     std::string *errorOut = nullptr);
+bool validateSemanticProductResultMetadataCompleteness(const primec::SemanticProgram *semanticProgram,
+                                                       std::string &error);
 bool resolveResultWhyCallInfo(const Expr &expr,
                               const LocalMap &localsIn,
                               const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,

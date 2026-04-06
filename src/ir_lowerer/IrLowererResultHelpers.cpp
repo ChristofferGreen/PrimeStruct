@@ -62,6 +62,49 @@ bool applySemanticResultValueTypeText(const std::string &valueTypeText, ResultEx
 
 } // namespace
 
+bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *semanticProgram,
+                                                       std::string &error) {
+  if (semanticProgram == nullptr) {
+    return true;
+  }
+
+  for (const auto &summary : semanticProgram->callableSummaries) {
+    if (summary.hasResultType && summary.resultTypeHasValue) {
+      ResultExprInfo resultInfo;
+      if (!applySemanticResultValueTypeText(summary.resultValueType, resultInfo)) {
+        error = "missing semantic-product callable result metadata: " + summary.fullPath;
+        return false;
+      }
+    }
+  }
+
+  for (const auto &returnFact : semanticProgram->returnFacts) {
+    if (returnFact.bindingTypeText.empty()) {
+      error = "missing semantic-product return binding type: " + returnFact.definitionPath;
+      return false;
+    }
+  }
+
+  for (const auto &queryFact : semanticProgram->queryFacts) {
+    if (queryFact.hasResultType && queryFact.resultTypeHasValue) {
+      ResultExprInfo resultInfo;
+      if (!applySemanticResultValueTypeText(queryFact.resultValueType, resultInfo)) {
+        error = "incomplete semantic-product query fact: " + queryFact.callName;
+        return false;
+      }
+    }
+  }
+
+  for (const auto &tryFact : semanticProgram->tryFacts) {
+    if (trimTemplateTypeText(tryFact.valueType).empty()) {
+      error = "incomplete semantic-product try fact: try";
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool resolveResultExprInfo(const Expr &expr,
                            const LookupLocalResultInfoFn &lookupLocal,
                            const ResolveCallDefinitionFn &resolveMethodCall,

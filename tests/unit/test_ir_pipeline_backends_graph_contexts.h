@@ -637,6 +637,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irEntrySetupSource.find("validateSemanticProductBindingCoverage(program, semanticProgram, error)") !=
         std::string::npos);
+  CHECK(irEntrySetupSource.find("validateSemanticProductResultMetadataCompleteness(semanticProgram, error)") !=
+        std::string::npos);
   CHECK(irCallHelpers.find("SemanticProductTargetAdapter semanticProductTargets{};") != std::string::npos);
   CHECK(irCallResolution.find("buildSemanticProductTargetAdapter(semanticProgram)") != std::string::npos);
   CHECK(irCallResolution.find("findSemanticProductDirectCallTarget(semanticProductTargets, expr)") !=
@@ -963,9 +965,17 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(resultHelpersHeader.find("const SemanticProductTargetAdapter *semanticProductTargets = nullptr") !=
         std::string::npos);
   CHECK(resultHelpersHeader.find("std::string *errorOut = nullptr") != std::string::npos);
+  CHECK(resultHelpersHeader.find("bool validateSemanticProductResultMetadataCompleteness(") !=
+        std::string::npos);
   CHECK(resultHelpersSource.find("findSemanticProductQueryFact(*semanticProductTargets, expr)") !=
         std::string::npos);
   CHECK(resultHelpersSource.find("missing semantic-product query fact: ") != std::string::npos);
+  CHECK(resultHelpersSource.find("missing semantic-product callable result metadata: ") !=
+        std::string::npos);
+  CHECK(resultHelpersSource.find("missing semantic-product return binding type: ") !=
+        std::string::npos);
+  CHECK(resultHelpersSource.find("incomplete semantic-product query fact: ") != std::string::npos);
+  CHECK(resultHelpersSource.find("incomplete semantic-product try fact: try") != std::string::npos);
   CHECK(lowerInferenceDispatchSource.find("findSemanticProductTryFact(*semanticProductTargets, tryExpr)") !=
         std::string::npos);
   CHECK(lowerInferenceDispatchSource.find("missing semantic-product try fact: try") !=
