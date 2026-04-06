@@ -536,6 +536,7 @@ TEST_CASE("ir lowerer setup math helpers thread semantic product binding facts")
       "",
       21,
       4,
+      33,
   });
 
   const auto adapters = primec::ir_lowerer::makeSetupMathAndBindingAdapters(true, &semanticProgram);
@@ -543,6 +544,7 @@ TEST_CASE("ir lowerer setup math helpers thread semantic product binding facts")
   primec::Expr helperResultCall;
   helperResultCall.kind = primec::Expr::Kind::Call;
   helperResultCall.name = "readFile";
+  helperResultCall.semanticNodeId = 33;
   helperResultCall.sourceLine = 21;
   helperResultCall.sourceColumn = 4;
 

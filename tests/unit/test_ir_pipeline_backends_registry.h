@@ -163,6 +163,30 @@ TEST_CASE("ir lowerer rejects missing semantic-product method-call targets") {
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer rejects missing semantic-product binding facts") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  primec::Expr param;
+  param.name = "value";
+  param.semanticNodeId = 7;
+  mainDef.parameters.push_back(param);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product binding fact: /main -> parameter value");
+  CHECK(diagnosticInfo.message == error);
+}
+
 TEST_CASE("cli driver preserves parse-stage diagnostic context") {
   primec::CompilePipelineOutput output;
   output.filteredSource = "main() { return(1i32) }";

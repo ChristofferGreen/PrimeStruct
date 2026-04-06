@@ -23,6 +23,9 @@ struct BindingTypeAdapters {
   SetReferenceArrayInfoFn setReferenceArrayInfo{};
 };
 
+bool validateSemanticProductBindingCoverage(const Program &program,
+                                            const SemanticProgram *semanticProgram,
+                                            std::string &error);
 BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgram = nullptr);
 BindingKindFromTransformsFn makeBindingKindFromTransforms();
 IsBindingTypeFn makeIsStringBindingType();

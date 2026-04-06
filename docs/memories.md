@@ -53,12 +53,14 @@ This file stores durable session-derived facts that are useful in later work. Ke
   before lowering starts, and semantic-product-aware method resolution no
   longer falls back to receiver/helper inference when those facts are
   absent.
+- `semantic-product-binding-routing`: production lowering now validates
+  that parameter/local binding facts are published before lowering starts,
+  and semantic-aware binding classification no longer falls back to AST
+  transforms for semantic-id-backed binding expressions.
 - `semantic-product-lowering-entrypoints`: `prepareIrModule(...)` and
   `IrLowerer::lower(...)` now reject null `SemanticProgram` inputs
   immediately, so production lowering only crosses the boundary with a
-  published semantic product; the remaining audited temporary fallback sites
-  are binding/storage transform fallback in
-  `IrLowererBindingTypeHelpers.cpp`.
+  published semantic product.
 - `semantic-product-entry-params-and-on-error-bound-args`: lowering now
   requires published semantic-product entry parameter facts for entry
   count/argv setup, and semantic-product-backed `on_error` setup now

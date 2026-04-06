@@ -630,6 +630,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irEntrySetupSource.find("validateSemanticProductMethodCallCoverage(program, semanticProgram, error)") !=
         std::string::npos);
+  CHECK(irEntrySetupSource.find("validateSemanticProductBindingCoverage(program, semanticProgram, error)") !=
+        std::string::npos);
   CHECK(irCallHelpers.find("SemanticProductTargetAdapter semanticProductTargets{};") != std::string::npos);
   CHECK(irCallResolution.find("buildSemanticProductTargetAdapter(semanticProgram)") != std::string::npos);
   CHECK(irCallResolution.find("findSemanticProductDirectCallTarget(semanticProductTargets, expr)") !=
@@ -753,9 +755,13 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(callAccessHelpersHeader.find("bool emitMapLookupContains(") != std::string::npos);
   CHECK(callAccessHelpersHeader.find("bool isStructDefinition(const Definition &def, const SemanticProductTargetAdapter *semanticProductTargets);") !=
         std::string::npos);
+  CHECK(bindingTypeHelpersHeader.find("bool validateSemanticProductBindingCoverage(const Program &program,") !=
+        std::string::npos);
   CHECK(bindingTypeHelpersHeader.find("BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgram = nullptr);") !=
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find("findSemanticProductBindingFact(semanticProductTargets, expr)") !=
+        std::string::npos);
+  CHECK(bindingTypeHelpersSource.find("requiresSemanticBindingFact(semanticProductTargets, expr)") !=
         std::string::npos);
   CHECK(statementBindingHelpersHeader.find("const ResolveDefinitionCallForStatementFn &resolveDefinitionCall);") !=
         std::string::npos);
@@ -1149,6 +1155,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(irCallResolution.find("bool validateSemanticProductMethodCallCoverage(const Program &program,") !=
         std::string::npos);
   CHECK(irCallResolution.find("missing semantic-product method-call target: ") != std::string::npos);
+  CHECK(bindingTypeHelpersSource.find("bool validateSemanticProductBindingCoverage(const Program &program,") !=
+        std::string::npos);
+  CHECK(bindingTypeHelpersSource.find("missing semantic-product binding fact: ") != std::string::npos);
   CHECK(irMethodResolution.find("const auto &semanticAwareImportAliases =") != std::string::npos);
   CHECK(statementCallHelpersHeader.find("const SemanticProgram *semanticProgram,") !=
         std::string::npos);

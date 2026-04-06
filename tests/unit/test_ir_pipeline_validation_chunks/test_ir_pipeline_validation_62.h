@@ -475,6 +475,7 @@ TEST_CASE("ir lowerer binding type helpers prefer semantic product temporary fac
       "",
       12,
       7,
+      17,
   });
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
       "/main",
@@ -488,6 +489,7 @@ TEST_CASE("ir lowerer binding type helpers prefer semantic product temporary fac
       "",
       13,
       9,
+      23,
   });
 
   auto adapters = primec::ir_lowerer::makeBindingTypeAdapters(&semanticProgram);
@@ -495,6 +497,7 @@ TEST_CASE("ir lowerer binding type helpers prefer semantic product temporary fac
   primec::Expr tempVectorCall;
   tempVectorCall.kind = primec::Expr::Kind::Call;
   tempVectorCall.name = "makeVec";
+  tempVectorCall.semanticNodeId = 17;
   tempVectorCall.sourceLine = 12;
   tempVectorCall.sourceColumn = 7;
   CHECK(adapters.bindingKind(tempVectorCall) == primec::ir_lowerer::LocalInfo::Kind::Vector);
@@ -504,6 +507,7 @@ TEST_CASE("ir lowerer binding type helpers prefer semantic product temporary fac
   primec::Expr tempRefCall;
   tempRefCall.kind = primec::Expr::Kind::Call;
   tempRefCall.name = "loadArrayRef";
+  tempRefCall.semanticNodeId = 23;
   tempRefCall.sourceLine = 13;
   tempRefCall.sourceColumn = 9;
   primec::ir_lowerer::LocalInfo info;
@@ -513,6 +517,38 @@ TEST_CASE("ir lowerer binding type helpers prefer semantic product temporary fac
   CHECK(adapters.bindingKind(tempRefCall) == primec::ir_lowerer::LocalInfo::Kind::Reference);
   CHECK(info.referenceToArray);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+}
+
+TEST_CASE("ir lowerer binding type helpers stop using transform fallback for semantic expr ids") {
+  primec::SemanticProgram semanticProgram;
+  auto adapters = primec::ir_lowerer::makeBindingTypeAdapters(&semanticProgram);
+
+  primec::Expr tempVectorCall;
+  tempVectorCall.kind = primec::Expr::Kind::Call;
+  tempVectorCall.name = "makeVec";
+  tempVectorCall.semanticNodeId = 91;
+  primec::Transform vectorTransform;
+  vectorTransform.name = "vector";
+  vectorTransform.templateArgs = {"i64"};
+  tempVectorCall.transforms.push_back(vectorTransform);
+  CHECK(adapters.bindingKind(tempVectorCall) == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(adapters.bindingValueKind(tempVectorCall, primec::ir_lowerer::LocalInfo::Kind::Value) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::Expr tempRefCall;
+  tempRefCall.kind = primec::Expr::Kind::Call;
+  tempRefCall.name = "loadArrayRef";
+  tempRefCall.semanticNodeId = 92;
+  primec::Transform referenceArrayTransform;
+  referenceArrayTransform.name = "Reference";
+  referenceArrayTransform.templateArgs = {"array<i64>"};
+  tempRefCall.transforms.push_back(referenceArrayTransform);
+  primec::ir_lowerer::LocalInfo info;
+  info.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  info.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  adapters.setReferenceArrayInfo(tempRefCall, info);
+  CHECK_FALSE(info.referenceToArray);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
 TEST_CASE("ir lowerer count access helpers classify entry args and count calls") {

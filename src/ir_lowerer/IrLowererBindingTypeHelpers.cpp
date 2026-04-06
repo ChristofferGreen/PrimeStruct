@@ -10,6 +10,18 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+std::string describeBindingSite(const std::string &scopePath,
+                                const std::string &siteKind,
+                                const Expr &expr) {
+  const std::string displayName = expr.name.empty() ? "<unnamed>" : expr.name;
+  return scopePath + " -> " + siteKind + " " + displayName;
+}
+
+bool requiresSemanticBindingFact(const SemanticProductTargetAdapter &semanticProductTargets,
+                                 const Expr &expr) {
+  return semanticProductTargets.hasSemanticProduct && expr.semanticNodeId != 0;
+}
+
 LocalInfo::Kind bindingKindFromTypeText(const std::string &typeText) {
   std::string base;
   std::string arg;
@@ -210,6 +222,64 @@ void setReferenceArrayInfoFromTypeText(const std::string &typeText, LocalInfo &i
 
 } // namespace
 
+bool validateSemanticProductBindingCoverage(const Program &program,
+                                           const SemanticProgram *semanticProgram,
+                                           std::string &error) {
+  if (semanticProgram == nullptr) {
+    return true;
+  }
+
+  const SemanticProductTargetAdapter semanticProductTargets =
+      buildSemanticProductTargetAdapter(semanticProgram);
+  auto validateBindingExpr = [&](const std::string &scopePath,
+                                 const std::string &siteKind,
+                                 const Expr &expr) {
+    if (expr.semanticNodeId == 0) {
+      return true;
+    }
+    const SemanticProgramBindingFact *bindingFact =
+        findSemanticProductBindingFact(semanticProductTargets, expr);
+    if (bindingFact == nullptr || bindingFact->bindingTypeText.empty()) {
+      error = "missing semantic-product binding fact: " +
+              describeBindingSite(scopePath, siteKind, expr);
+      return false;
+    }
+    return true;
+  };
+
+  std::function<bool(const std::string &, const Expr &)> validateExpr;
+  auto validateExprs = [&](const std::string &scopePath, const std::vector<Expr> &exprs) {
+    for (const auto &expr : exprs) {
+      if (!validateExpr(scopePath, expr)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  validateExpr = [&](const std::string &scopePath, const Expr &expr) {
+    if (expr.isBinding && !validateBindingExpr(scopePath, "local", expr)) {
+      return false;
+    }
+    return validateExprs(scopePath, expr.args) &&
+           validateExprs(scopePath, expr.bodyArguments);
+  };
+
+  for (const auto &def : program.definitions) {
+    for (const auto &param : def.parameters) {
+      if (!validateBindingExpr(def.fullPath, "parameter", param)) {
+        return false;
+      }
+    }
+    if (!validateExprs(def.fullPath, def.statements) ||
+        (def.returnExpr.has_value() && !validateExpr(def.fullPath, *def.returnExpr))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 std::string normalizeCollectionBindingTypeName(const std::string &name) {
   if (name == "/vector" || name == "std/collections/vector" || name == "/std/collections/vector" ||
       name == "Vector" || name == "std/collections/experimental_vector/Vector" ||
@@ -253,6 +323,9 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
         bindingFact != nullptr && !bindingFact->bindingTypeText.empty()) {
       return bindingKindFromTypeText(bindingFact->bindingTypeText);
     }
+    if (requiresSemanticBindingFact(semanticProductTargets, expr)) {
+      return LocalInfo::Kind::Value;
+    }
     return bindingKindFromTransforms(expr);
   };
   adapters.isStringBinding = [semanticProductTargets](const Expr &expr) {
@@ -260,6 +333,9 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
             findSemanticProductBindingFact(semanticProductTargets, expr);
         bindingFact != nullptr && !bindingFact->bindingTypeText.empty()) {
       return isStringBindingTypeText(bindingFact->bindingTypeText);
+    }
+    if (requiresSemanticBindingFact(semanticProductTargets, expr)) {
+      return false;
     }
     return isStringBindingType(expr);
   };
@@ -269,6 +345,9 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
         bindingFact != nullptr && !bindingFact->bindingTypeText.empty()) {
       return isFileErrorBindingTypeText(bindingFact->bindingTypeText);
     }
+    if (requiresSemanticBindingFact(semanticProductTargets, expr)) {
+      return false;
+    }
     return isFileErrorBindingType(expr);
   };
   adapters.bindingValueKind = [semanticProductTargets](const Expr &expr, LocalInfo::Kind kind) {
@@ -277,6 +356,9 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
         bindingFact != nullptr && !bindingFact->bindingTypeText.empty()) {
       return bindingValueKindFromTypeText(bindingFact->bindingTypeText, kind);
     }
+    if (requiresSemanticBindingFact(semanticProductTargets, expr)) {
+      return LocalInfo::ValueKind::Unknown;
+    }
     return bindingValueKindFromTransforms(expr, kind);
   };
   adapters.setReferenceArrayInfo = [semanticProductTargets](const Expr &expr, LocalInfo &info) {
@@ -284,6 +366,9 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
             findSemanticProductBindingFact(semanticProductTargets, expr);
         bindingFact != nullptr && !bindingFact->bindingTypeText.empty()) {
       setReferenceArrayInfoFromTypeText(bindingFact->bindingTypeText, info);
+      return;
+    }
+    if (requiresSemanticBindingFact(semanticProductTargets, expr)) {
       return;
     }
     setReferenceArrayInfoFromTransforms(expr, info);

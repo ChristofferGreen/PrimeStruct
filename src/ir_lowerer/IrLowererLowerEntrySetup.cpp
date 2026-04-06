@@ -1,5 +1,6 @@
 #include "IrLowererLowerEntrySetup.h"
 
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
 #include "IrLowererLowerEffects.h"
 
@@ -38,6 +39,9 @@ bool runLowerEntrySetup(const Program &program,
     return false;
   }
   if (!validateSemanticProductMethodCallCoverage(program, semanticProgram, error)) {
+    return false;
+  }
+  if (!validateSemanticProductBindingCoverage(program, semanticProgram, error)) {
     return false;
   }
   if (!validateProgramEffects(program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error)) {
