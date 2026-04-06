@@ -37,6 +37,9 @@ bool runLowerEntrySetup(const Program &program,
   if (!validateSemanticProductDirectCallCoverage(program, semanticProgram, error)) {
     return false;
   }
+  if (!validateSemanticProductMethodCallCoverage(program, semanticProgram, error)) {
+    return false;
+  }
   if (!validateProgramEffects(program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error)) {
     return false;
   }

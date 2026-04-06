@@ -96,6 +96,85 @@ TEST_CASE("ir lowerer setup type helper resolves soa_vector receiver method defi
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer setup type helper requires semantic-product method targets") {
+  primec::Definition soaPushDef;
+  soaPushDef.fullPath = "/soa_vector/push";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/soa_vector/push", &soaPushDef},
+  };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "push";
+  methodCall.isMethodCall = true;
+  methodCall.semanticNodeId = 17;
+  methodCall.args.push_back(receiverExpr);
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesLocal;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  valuesLocal.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  valuesLocal.isSoaVector = true;
+  locals.emplace("values", valuesLocal);
+
+  primec::SemanticProgram semanticProgram;
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return std::string(); },
+      &semanticTargets,
+      defMap,
+      error);
+  CHECK(resolved == nullptr);
+  CHECK(error == "missing semantic-product method-call target: push");
+
+  semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
+      "/main",
+      "push",
+      "/soa_vector/push",
+      0,
+      0,
+      17,
+  });
+  const auto populatedTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  error.clear();
+  resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return std::string(); },
+      &populatedTargets,
+      defMap,
+      error);
+  CHECK(resolved == &soaPushDef);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer setup type helper rejects alias receiver call return fallback to canonical stdlib defs") {
   primec::Definition canonicalAtDef;
   canonicalAtDef.fullPath = "/std/collections/vector/at";
@@ -620,4 +699,3 @@ TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for map alias r
             error) == nullptr);
   CHECK(error == "unknown method target for tag");
 }
-

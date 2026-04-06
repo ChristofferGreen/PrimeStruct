@@ -133,6 +133,36 @@ TEST_CASE("ir lowerer rejects missing semantic-product direct-call targets") {
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer rejects missing semantic-product method-call targets") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+  primec::Expr methodCallExpr;
+  methodCallExpr.kind = primec::Expr::Kind::Call;
+  methodCallExpr.name = "count";
+  methodCallExpr.isMethodCall = true;
+  methodCallExpr.semanticNodeId = 42;
+  methodCallExpr.args.push_back(receiverExpr);
+  mainDef.statements.push_back(methodCallExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product method-call target: /main -> count");
+  CHECK(diagnosticInfo.message == error);
+}
+
 TEST_CASE("cli driver preserves parse-stage diagnostic context") {
   primec::CompilePipelineOutput output;
   output.filteredSource = "main() { return(1i32) }";

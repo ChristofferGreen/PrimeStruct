@@ -48,13 +48,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
   fact before lowering starts, and semantic-product-aware direct-call
   resolution no longer falls back to scope/import path recovery when those
   facts are absent.
+- `semantic-product-method-call-routing`: production lowering now validates
+  that every method call has a published semantic-product routing fact
+  before lowering starts, and semantic-product-aware method resolution no
+  longer falls back to receiver/helper inference when those facts are
+  absent.
 - `semantic-product-lowering-entrypoints`: `prepareIrModule(...)` and
   `IrLowerer::lower(...)` now reject null `SemanticProgram` inputs
   immediately, so production lowering only crosses the boundary with a
   published semantic product; the remaining audited temporary fallback sites
-  are receiver/helper fallback in
-  `IrLowererSetupTypeMethodCallResolution.cpp` and binding/storage transform
-  fallback in `IrLowererBindingTypeHelpers.cpp`.
+  are binding/storage transform fallback in
+  `IrLowererBindingTypeHelpers.cpp`.
 - `semantic-product-entry-params-and-on-error-bound-args`: lowering now
   requires published semantic-product entry parameter facts for entry
   count/argv setup, and semantic-product-backed `on_error` setup now

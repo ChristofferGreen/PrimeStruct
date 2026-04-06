@@ -215,6 +215,8 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callResolutionSource.find("CallResolutionAdapters makeCallResolutionAdapters(") !=
         std::string::npos);
+  CHECK(callResolutionSource.find("bool validateSemanticProductMethodCallCoverage(const Program &program,") !=
+        std::string::npos);
   CHECK(callResolutionSource.find("EntryCallResolutionSetup buildEntryCallResolutionSetup(") !=
         std::string::npos);
   CHECK(callResolutionSource.find("ResolveExprPathFn makeResolveCallPathFromScope(") !=

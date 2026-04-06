@@ -33,6 +33,9 @@ CallResolutionAdapters makeCallResolutionAdapters(
 bool validateSemanticProductDirectCallCoverage(const Program &program,
                                                const SemanticProgram *semanticProgram,
                                                std::string &error);
+bool validateSemanticProductMethodCallCoverage(const Program &program,
+                                               const SemanticProgram *semanticProgram,
+                                               std::string &error);
 EntryCallResolutionSetup buildEntryCallResolutionSetup(
     const Definition &entryDef,
     bool definitionReturnsVoid,

@@ -11,6 +11,28 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+std::string describeMethodCallExpr(const Expr &expr) {
+  if (!expr.name.empty() && expr.name.front() == '/') {
+    return expr.name;
+  }
+  if (!expr.namespacePrefix.empty()) {
+    std::string displayName = expr.namespacePrefix;
+    if (!displayName.empty() && displayName.front() != '/') {
+      displayName.insert(displayName.begin(), '/');
+    }
+    displayName += "/" + expr.name;
+    return displayName;
+  }
+  if (!expr.name.empty()) {
+    return expr.name;
+  }
+  return "<unnamed>";
+}
+
+} // namespace
+
 const Definition *resolveMethodCallDefinitionFromExpr(
     const Expr &callExpr,
     const LocalMap &localsIn,
@@ -124,14 +146,25 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   }
 
   if (semanticProductTargets != nullptr) {
-    if (const std::string resolvedPath =
-            findSemanticProductMethodCallTarget(*semanticProductTargets, callExpr);
-        !resolvedPath.empty()) {
-      auto defIt = defMap.find(resolvedPath);
-      if (defIt != defMap.end()) {
-        return defIt->second;
-      }
+    if (callExpr.semanticNodeId == 0) {
+      errorOut = "missing semantic-product method-call semantic id: " +
+                 describeMethodCallExpr(callExpr);
+      return nullptr;
     }
+    const std::string resolvedPath =
+        findSemanticProductMethodCallTarget(*semanticProductTargets, callExpr);
+    if (resolvedPath.empty()) {
+      errorOut = "missing semantic-product method-call target: " +
+                 describeMethodCallExpr(callExpr);
+      return nullptr;
+    }
+    auto defIt = defMap.find(resolvedPath);
+    if (defIt == defMap.end() || defIt->second == nullptr) {
+      errorOut = "missing definition for semantic-product method-call target: " +
+                 resolvedPath;
+      return nullptr;
+    }
+    return defIt->second;
   }
 
   std::string accessName;
