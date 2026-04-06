@@ -86,6 +86,24 @@ std::string resolveCallPathFromScopeWithoutImportAliases(
   return "/" + expr.name;
 }
 
+std::string describeDirectCallSite(const std::string &scopePath, const Expr &expr) {
+  std::string displayName;
+  if (!expr.name.empty() && expr.name.front() == '/') {
+    displayName = expr.name;
+  } else if (!expr.namespacePrefix.empty()) {
+    displayName = expr.namespacePrefix;
+    if (!displayName.empty() && displayName.front() != '/') {
+      displayName.insert(displayName.begin(), '/');
+    }
+    displayName += "/" + expr.name;
+  } else if (!expr.name.empty()) {
+    displayName = expr.name;
+  } else {
+    displayName = "<unnamed>";
+  }
+  return scopePath + " -> " + displayName;
+}
+
 } // namespace
 
 const Definition *resolveDefinitionCall(const Expr &callExpr,
@@ -126,6 +144,61 @@ CallResolutionAdapters makeCallResolutionAdapters(
   adapters.isTailCallCandidate = makeIsTailCallCandidate(defMap, adapters.resolveExprPath);
   adapters.definitionExists = makeDefinitionExistsByPath(defMap);
   return adapters;
+}
+
+bool validateSemanticProductDirectCallCoverage(const Program &program,
+                                               const SemanticProgram *semanticProgram,
+                                               std::string &error) {
+  if (semanticProgram == nullptr) {
+    return true;
+  }
+
+  const SemanticProductTargetAdapter semanticProductTargets =
+      buildSemanticProductTargetAdapter(semanticProgram);
+  std::function<bool(const std::string &, const Expr &)> validateExpr;
+  auto validateExprs = [&](const std::string &scopePath, const std::vector<Expr> &exprs) {
+    for (const auto &expr : exprs) {
+      if (!validateExpr(scopePath, expr)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  validateExpr = [&](const std::string &scopePath, const Expr &expr) {
+    if (expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
+      if (expr.semanticNodeId == 0) {
+        error = "missing semantic-product direct-call semantic id: " +
+                describeDirectCallSite(scopePath, expr);
+        return false;
+      }
+      if (findSemanticProductBridgePathChoice(semanticProductTargets, expr).empty() &&
+          findSemanticProductDirectCallTarget(semanticProductTargets, expr).empty()) {
+        error = "missing semantic-product direct-call target: " +
+                describeDirectCallSite(scopePath, expr);
+        return false;
+      }
+    }
+    return validateExprs(scopePath, expr.args) &&
+           validateExprs(scopePath, expr.bodyArguments);
+  };
+
+  for (const auto &def : program.definitions) {
+    if (!validateExprs(def.fullPath, def.parameters) ||
+        !validateExprs(def.fullPath, def.statements) ||
+        (def.returnExpr.has_value() && !validateExpr(def.fullPath, *def.returnExpr))) {
+      return false;
+    }
+  }
+
+  for (const auto &exec : program.executions) {
+    if (!validateExprs(exec.fullPath, exec.arguments) ||
+        !validateExprs(exec.fullPath, exec.bodyArguments)) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 EntryCallResolutionSetup buildEntryCallResolutionSetup(
@@ -174,6 +247,10 @@ ResolveExprPathFn makeResolveCallPathFromScope(
     if (const std::string resolvedPath = findSemanticProductDirectCallTarget(semanticProductTargets, expr);
         !resolvedPath.empty()) {
       return resolvedPath;
+    }
+    if (semanticProductTargets.hasSemanticProduct &&
+        expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
+      return {};
     }
     if (semanticProductTargets.hasSemanticProduct) {
       return resolveCallPathFromScopeWithoutImportAliases(expr, defMap);

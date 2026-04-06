@@ -1,5 +1,6 @@
 #include "IrLowererLowerEntrySetup.h"
 
+#include "IrLowererCallHelpers.h"
 #include "IrLowererLowerEffects.h"
 
 namespace primec::ir_lowerer {
@@ -31,6 +32,9 @@ bool runLowerEntrySetup(const Program &program,
     return false;
   }
   if (!validateNoRuntimeReflectionQueries(program, error)) {
+    return false;
+  }
+  if (!validateSemanticProductDirectCallCoverage(program, semanticProgram, error)) {
     return false;
   }
   if (!validateProgramEffects(program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error)) {

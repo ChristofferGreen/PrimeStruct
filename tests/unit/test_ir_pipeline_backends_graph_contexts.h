@@ -280,6 +280,7 @@ TEST_CASE("public call dispatch testing header stays in sync with alias-policy h
 
   const std::string callDispatch = readTextFile(callDispatchPath);
   CHECK(callDispatch.find("resolveCallPathFromScopeWithoutImportAliases(") != std::string::npos);
+  CHECK(callDispatch.find("validateSemanticProductDirectCallCoverage(") != std::string::npos);
   CHECK(callDispatch.find("const LocalMap &localsIn,") != std::string::npos);
   CHECK(callDispatch.find("UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(") !=
         std::string::npos);
@@ -623,13 +624,15 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(irEntrySetupSource.find("semantic product entry path mismatch: expected ") != std::string::npos);
   CHECK(irLowererEntry.find("runLowerEntrySetup(program,") != std::string::npos);
   CHECK(irLowererEntry.find("semanticProgram,") != std::string::npos);
+  CHECK(irEntrySetupSource.find("validateSemanticProductDirectCallCoverage(program, semanticProgram, error)") !=
+        std::string::npos);
   CHECK(irCallHelpers.find("SemanticProductTargetAdapter semanticProductTargets{};") != std::string::npos);
   CHECK(irCallResolution.find("buildSemanticProductTargetAdapter(semanticProgram)") != std::string::npos);
   CHECK(irCallResolution.find("findSemanticProductDirectCallTarget(semanticProductTargets, expr)") !=
         std::string::npos);
   CHECK(irCallResolution.find("findSemanticProductBridgePathChoice(semanticProductTargets, expr)") !=
         std::string::npos);
-  CHECK(irCallResolution.find("resolveCallPathFromScopeWithoutImportAliases(expr, defMap)") !=
+  CHECK(irCallResolution.find("expr.kind == Expr::Kind::Call && !expr.isMethodCall) {\n      return {};") !=
         std::string::npos);
   CHECK(irCallResolution.find("return resolveCallPathFromScope(expr, defMap, importAliases);") ==
         std::string::npos);
@@ -1127,8 +1130,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.hasSemanticProduct = true;") != std::string::npos);
 
-  CHECK(irCallResolution.find("resolveCallPathFromScopeWithoutImportAliases(expr, defMap)") !=
+  CHECK(irCallResolution.find("bool validateSemanticProductDirectCallCoverage(const Program &program,") !=
         std::string::npos);
+  CHECK(irCallResolution.find("missing semantic-product direct-call target: ") != std::string::npos);
   CHECK(irMethodResolution.find("const auto &semanticAwareImportAliases =") != std::string::npos);
   CHECK(statementCallHelpersHeader.find("const SemanticProgram *semanticProgram,") !=
         std::string::npos);

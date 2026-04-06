@@ -626,6 +626,41 @@ TEST_CASE("ir lowerer call helpers keep alias fallback only on raw path") {
   CHECK(semanticResolveExprPath(slashlessCanonicalMapAlias) == "/map_count");
 }
 
+TEST_CASE("ir lowerer call helpers require semantic-product direct-call targets") {
+  primec::Definition callee;
+  callee.fullPath = "/callee";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {{"/callee", &callee}};
+  const std::unordered_map<std::string, std::string> importAliases = {
+      {"callee", "/callee"},
+  };
+
+  primec::SemanticProgram semanticProgram;
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto semanticResolveExprPath =
+      primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, semanticTargets);
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "callee";
+  callExpr.semanticNodeId = 17;
+  CHECK(semanticResolveExprPath(callExpr).empty());
+
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      "/main",
+      "callee",
+      "/callee",
+      0,
+      0,
+      17,
+  });
+  const auto populatedTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto populatedResolveExprPath =
+      primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, populatedTargets);
+  CHECK(populatedResolveExprPath(callExpr) == "/callee");
+}
+
 TEST_CASE("ir lowerer call helpers resolve definition calls through slashless map import aliases") {
   primec::Definition canonicalMapCountDef;
   canonicalMapCountDef.fullPath = "/std/collections/map/count";

@@ -104,6 +104,35 @@ TEST_CASE("ir preparation helper reports lowering-stage failure for unresolved e
   CHECK(failure.diagnosticInfo.message == failure.message);
 }
 
+TEST_CASE("ir lowerer rejects missing semantic-product direct-call targets") {
+  primec::Program program;
+
+  primec::Definition callee;
+  callee.fullPath = "/callee";
+  program.definitions.push_back(callee);
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "callee";
+  callExpr.semanticNodeId = 41;
+  mainDef.statements.push_back(callExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product direct-call target: /main -> callee");
+  CHECK(diagnosticInfo.message == error);
+}
+
 TEST_CASE("cli driver preserves parse-stage diagnostic context") {
   primec::CompilePipelineOutput output;
   output.filteredSource = "main() { return(1i32) }";

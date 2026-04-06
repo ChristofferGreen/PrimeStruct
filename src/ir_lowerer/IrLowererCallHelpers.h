@@ -45,6 +45,9 @@ CallResolutionAdapters makeCallResolutionAdapters(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases,
     const SemanticProgram *semanticProgram = nullptr);
+bool validateSemanticProductDirectCallCoverage(const Program &program,
+                                               const SemanticProgram *semanticProgram,
+                                               std::string &error);
 EntryCallResolutionSetup buildEntryCallResolutionSetup(
     const Definition &entryDef,
     bool definitionReturnsVoid,
