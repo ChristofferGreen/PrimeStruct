@@ -62,6 +62,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   that parameter/local binding facts are published before lowering starts,
   and semantic-aware binding classification no longer falls back to AST
   transforms for semantic-id-backed binding expressions.
+- `semantic-product-cross-backend-conformance`: compile-pipeline backend
+  conformance now pins the same semantic-product-owned direct-call,
+  method-call, bridge-path, local-`auto`, query, `try(...)`, `on_error`,
+  and return facts across `cpp-ir`, `vm`, and `native`, so those backend
+  entrypoints all prove they consume the same lowering-facing semantic
+  product boundary.
 - `semantic-product-local-auto-lowering-input`: production lowering now
   validates that semantic-id-backed implicit/`auto` local bindings have
   published semantic-product local-`auto` facts before lowering starts, and

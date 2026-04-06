@@ -17,6 +17,16 @@
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.backends");
 
 namespace {
+
+template <typename Entry, typename Predicate>
+const Entry *findSemanticEntry(const std::vector<Entry> &entries, const Predicate &predicate) {
+  const auto it = std::find_if(entries.begin(), entries.end(), predicate);
+  if (it == entries.end()) {
+    return nullptr;
+  }
+  return &*it;
+}
+
 } // namespace
 
 TEST_CASE("ir backend registry reports deterministic order and lookup") {
@@ -937,6 +947,228 @@ TEST_CASE("native backend emits semantic-product prepared IR from compile pipeli
   CHECK(std::filesystem::exists(conformance.outputPath));
   CHECK(std::filesystem::is_regular_file(conformance.outputPath));
   CHECK(std::filesystem::file_size(conformance.outputPath) > 0);
+}
+
+TEST_CASE("backend conformance keeps semantic-product-owned facts aligned across backends") {
+  const std::string source = R"(
+MyError {
+}
+
+[return<void>]
+unexpectedError([MyError] err) {
+}
+
+[return<T>]
+id<T>([T] value) {
+  return(value)
+}
+
+[return<Result<int, MyError>>]
+lookup() {
+  return(Result.ok(4i32))
+}
+
+[return<i32>]
+/vector/count([vector<i32>] self) {
+  return(17i32)
+}
+
+[return<i32> on_error<MyError, /unexpectedError>]
+main() {
+  [auto] direct{id(1i32)}
+  [auto] values{vector<i32>(1i32)}
+  [i32] method{values.count()}
+  [i32] bridge{count(values)}
+  [auto] selected{try(lookup())}
+  return(direct + method + bridge + selected)
+}
+)";
+
+  auto runConformance = [&](std::string_view emitKind) {
+    primec::testing::CompilePipelineBackendConformance conformance;
+    std::string error;
+    REQUIRE(primec::testing::runCompilePipelineBackendConformanceForTesting(
+        source, "/main", emitKind, conformance, error));
+    CHECK(error.empty());
+    CHECK(conformance.output.hasSemanticProgram);
+    return conformance;
+  };
+
+  const auto cppConformance = runConformance("cpp-ir");
+  const auto vmConformance = runConformance("vm");
+  const auto nativeConformance = runConformance("native");
+
+  const auto *cppDirect = cppConformance.findDirectCallTarget("/main", "id");
+  const auto *vmDirect = vmConformance.findDirectCallTarget("/main", "id");
+  const auto *nativeDirect = nativeConformance.findDirectCallTarget("/main", "id");
+  REQUIRE(cppDirect != nullptr);
+  REQUIRE(vmDirect != nullptr);
+  REQUIRE(nativeDirect != nullptr);
+  CHECK(cppDirect->resolvedPath.rfind("/id__t", 0) == 0);
+  CHECK(vmDirect->resolvedPath == cppDirect->resolvedPath);
+  CHECK(nativeDirect->resolvedPath == cppDirect->resolvedPath);
+
+  const auto *cppMethod = cppConformance.findMethodCallTarget("/main", "count");
+  const auto *vmMethod = vmConformance.findMethodCallTarget("/main", "count");
+  const auto *nativeMethod = nativeConformance.findMethodCallTarget("/main", "count");
+  REQUIRE(cppMethod != nullptr);
+  REQUIRE(vmMethod != nullptr);
+  REQUIRE(nativeMethod != nullptr);
+  CHECK(cppMethod->resolvedPath == "/vector/count");
+  CHECK(vmMethod->resolvedPath == cppMethod->resolvedPath);
+  CHECK(nativeMethod->resolvedPath == cppMethod->resolvedPath);
+
+  const auto *cppBridge = findSemanticEntry(
+      cppConformance.output.semanticProgram.bridgePathChoices,
+      [](const primec::SemanticProgramBridgePathChoice &entry) {
+        return entry.scopePath == "/main" && entry.helperName == "count";
+      });
+  const auto *vmBridge = findSemanticEntry(
+      vmConformance.output.semanticProgram.bridgePathChoices,
+      [](const primec::SemanticProgramBridgePathChoice &entry) {
+        return entry.scopePath == "/main" && entry.helperName == "count";
+      });
+  const auto *nativeBridge = findSemanticEntry(
+      nativeConformance.output.semanticProgram.bridgePathChoices,
+      [](const primec::SemanticProgramBridgePathChoice &entry) {
+        return entry.scopePath == "/main" && entry.helperName == "count";
+      });
+  REQUIRE(cppBridge != nullptr);
+  REQUIRE(vmBridge != nullptr);
+  REQUIRE(nativeBridge != nullptr);
+  CHECK(cppBridge->chosenPath == "/vector/count");
+  CHECK(vmBridge->chosenPath == cppBridge->chosenPath);
+  CHECK(nativeBridge->chosenPath == cppBridge->chosenPath);
+
+  const auto *cppLocalAuto = findSemanticEntry(
+      cppConformance.output.semanticProgram.localAutoFacts,
+      [](const primec::SemanticProgramLocalAutoFact &entry) {
+        return entry.scopePath == "/main" && entry.bindingName == "selected";
+      });
+  const auto *vmLocalAuto = findSemanticEntry(
+      vmConformance.output.semanticProgram.localAutoFacts,
+      [](const primec::SemanticProgramLocalAutoFact &entry) {
+        return entry.scopePath == "/main" && entry.bindingName == "selected";
+      });
+  const auto *nativeLocalAuto = findSemanticEntry(
+      nativeConformance.output.semanticProgram.localAutoFacts,
+      [](const primec::SemanticProgramLocalAutoFact &entry) {
+        return entry.scopePath == "/main" && entry.bindingName == "selected";
+      });
+  REQUIRE(cppLocalAuto != nullptr);
+  REQUIRE(vmLocalAuto != nullptr);
+  REQUIRE(nativeLocalAuto != nullptr);
+  CHECK(cppLocalAuto->initializerResolvedPath == "/lookup");
+  CHECK(cppLocalAuto->initializerHasTry);
+  CHECK(cppLocalAuto->initializerTryValueType == "int");
+  CHECK(vmLocalAuto->bindingTypeText == cppLocalAuto->bindingTypeText);
+  CHECK(nativeLocalAuto->bindingTypeText == cppLocalAuto->bindingTypeText);
+
+  const auto *cppQuery = findSemanticEntry(
+      cppConformance.output.semanticProgram.queryFacts,
+      [](const primec::SemanticProgramQueryFact &entry) {
+        return entry.scopePath == "/main" && entry.resolvedPath == "/lookup";
+      });
+  const auto *vmQuery = findSemanticEntry(
+      vmConformance.output.semanticProgram.queryFacts,
+      [](const primec::SemanticProgramQueryFact &entry) {
+        return entry.scopePath == "/main" && entry.resolvedPath == "/lookup";
+      });
+  const auto *nativeQuery = findSemanticEntry(
+      nativeConformance.output.semanticProgram.queryFacts,
+      [](const primec::SemanticProgramQueryFact &entry) {
+        return entry.scopePath == "/main" && entry.resolvedPath == "/lookup";
+      });
+  REQUIRE(cppQuery != nullptr);
+  REQUIRE(vmQuery != nullptr);
+  REQUIRE(nativeQuery != nullptr);
+  CHECK(cppQuery->bindingTypeText == "Result<int, MyError>");
+  CHECK(cppQuery->resultValueType == "int");
+  CHECK(cppQuery->resultErrorType == "MyError");
+  CHECK(vmQuery->bindingTypeText == cppQuery->bindingTypeText);
+  CHECK(nativeQuery->bindingTypeText == cppQuery->bindingTypeText);
+
+  const auto *cppTry = findSemanticEntry(
+      cppConformance.output.semanticProgram.tryFacts,
+      [](const primec::SemanticProgramTryFact &entry) {
+        return entry.scopePath == "/main" && entry.operandResolvedPath == "/lookup";
+      });
+  const auto *vmTry = findSemanticEntry(
+      vmConformance.output.semanticProgram.tryFacts,
+      [](const primec::SemanticProgramTryFact &entry) {
+        return entry.scopePath == "/main" && entry.operandResolvedPath == "/lookup";
+      });
+  const auto *nativeTry = findSemanticEntry(
+      nativeConformance.output.semanticProgram.tryFacts,
+      [](const primec::SemanticProgramTryFact &entry) {
+        return entry.scopePath == "/main" && entry.operandResolvedPath == "/lookup";
+      });
+  REQUIRE(cppTry != nullptr);
+  REQUIRE(vmTry != nullptr);
+  REQUIRE(nativeTry != nullptr);
+  CHECK(cppTry->valueType == "int");
+  CHECK(cppTry->errorType == "MyError");
+  CHECK(cppTry->onErrorHandlerPath == "/unexpectedError");
+  CHECK(vmTry->valueType == cppTry->valueType);
+  CHECK(nativeTry->valueType == cppTry->valueType);
+
+  const auto *cppOnError = findSemanticEntry(
+      cppConformance.output.semanticProgram.onErrorFacts,
+      [](const primec::SemanticProgramOnErrorFact &entry) {
+        return entry.definitionPath == "/main";
+      });
+  const auto *vmOnError = findSemanticEntry(
+      vmConformance.output.semanticProgram.onErrorFacts,
+      [](const primec::SemanticProgramOnErrorFact &entry) {
+        return entry.definitionPath == "/main";
+      });
+  const auto *nativeOnError = findSemanticEntry(
+      nativeConformance.output.semanticProgram.onErrorFacts,
+      [](const primec::SemanticProgramOnErrorFact &entry) {
+        return entry.definitionPath == "/main";
+      });
+  REQUIRE(cppOnError != nullptr);
+  REQUIRE(vmOnError != nullptr);
+  REQUIRE(nativeOnError != nullptr);
+  CHECK(cppOnError->returnKind == "i32");
+  CHECK(cppOnError->handlerPath == "/unexpectedError");
+  CHECK(vmOnError->handlerPath == cppOnError->handlerPath);
+  CHECK(nativeOnError->handlerPath == cppOnError->handlerPath);
+
+  const auto *cppReturn = findSemanticEntry(
+      cppConformance.output.semanticProgram.returnFacts,
+      [](const primec::SemanticProgramReturnFact &entry) {
+        return entry.definitionPath == "/main";
+      });
+  const auto *vmReturn = findSemanticEntry(
+      vmConformance.output.semanticProgram.returnFacts,
+      [](const primec::SemanticProgramReturnFact &entry) {
+        return entry.definitionPath == "/main";
+      });
+  const auto *nativeReturn = findSemanticEntry(
+      nativeConformance.output.semanticProgram.returnFacts,
+      [](const primec::SemanticProgramReturnFact &entry) {
+        return entry.definitionPath == "/main";
+      });
+  REQUIRE(cppReturn != nullptr);
+  REQUIRE(vmReturn != nullptr);
+  REQUIRE(nativeReturn != nullptr);
+  CHECK(cppReturn->bindingTypeText == "i32");
+  CHECK(vmReturn->bindingTypeText == cppReturn->bindingTypeText);
+  CHECK(nativeReturn->bindingTypeText == cppReturn->bindingTypeText);
+
+  CHECK(cppConformance.backendKind == "cpp-ir");
+  CHECK(vmConformance.backendKind == "vm");
+  CHECK(nativeConformance.backendKind == "native");
+  CHECK(cppConformance.emitResult.exitCode == 0);
+  CHECK(vmConformance.emitResult.exitCode == 39);
+  CHECK(nativeConformance.emitResult.exitCode == 0);
+
+  const std::string cpp = readTextFile(cppConformance.outputPath);
+  CHECK(cpp.find("static int64_t ps_fn_0") != std::string::npos);
+  CHECK(std::filesystem::exists(nativeConformance.outputPath));
+  CHECK(std::filesystem::is_regular_file(nativeConformance.outputPath));
+  CHECK(std::filesystem::file_size(nativeConformance.outputPath) > 0);
 }
 
 TEST_CASE("compile pipeline preserves semantic product on post-semantics failure") {
