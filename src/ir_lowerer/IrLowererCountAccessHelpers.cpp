@@ -41,6 +41,10 @@ bool resolveEntryArgsParameterFromSemanticProduct(const Definition &entryDef,
   }
 
   if (entryParamCount == 0) {
+    if (!entryDef.parameters.empty()) {
+      error = "missing semantic-product entry parameter fact: " + entryDef.fullPath;
+      return false;
+    }
     return true;
   }
   if (entryParamCount != 1) {
@@ -64,10 +68,9 @@ bool resolveEntryArgsParameter(const Definition &entryDef,
                                bool &hasEntryArgsOut,
                                std::string &entryArgsNameOut,
                                std::string &error) {
-  if (resolveEntryArgsParameterFromSemanticProduct(
-          entryDef, semanticProgram, hasEntryArgsOut, entryArgsNameOut, error) &&
-      semanticProgram != nullptr) {
-    return true;
+  if (semanticProgram != nullptr) {
+    return resolveEntryArgsParameterFromSemanticProduct(
+        entryDef, semanticProgram, hasEntryArgsOut, entryArgsNameOut, error);
   }
 
   hasEntryArgsOut = false;

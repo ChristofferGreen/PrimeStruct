@@ -1283,12 +1283,23 @@ SemanticsValidator::onErrorSnapshotForTesting() {
       returnKind = returnKindIt->second;
     }
 
+    std::vector<std::string> boundArgTexts;
+    boundArgTexts.reserve(context.onError->boundArgs.size());
+    for (const auto &transform : def.transforms) {
+      if (transform.name != "on_error") {
+        continue;
+      }
+      boundArgTexts = transform.arguments;
+      break;
+    }
+
     entries.push_back(OnErrorSnapshotEntry{
         def.fullPath,
         returnKind,
         context.onError->handlerPath,
         context.onError->errorType,
         context.onError->boundArgs.size(),
+        std::move(boundArgTexts),
         context.resultType.has_value() && context.resultType->isResult && context.resultType->hasValue,
         context.resultType.has_value() && context.resultType->isResult ? context.resultType->valueType : std::string{},
         context.resultType.has_value() && context.resultType->isResult ? context.resultType->errorType : std::string{},

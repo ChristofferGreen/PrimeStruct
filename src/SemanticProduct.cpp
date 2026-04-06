@@ -302,7 +302,8 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   quoteSemanticString(entry.returnKind) + " handler_path=" +
                                   quoteSemanticString(entry.handlerPath) + " error_type=" +
                                   quoteSemanticString(entry.errorType) + " bound_arg_count=" +
-                                  std::to_string(entry.boundArgCount) + " return_result_has_value=" +
+                                  std::to_string(entry.boundArgCount) + " bound_arg_texts=" +
+                                  formatSemanticStringList(entry.boundArgTexts) + " return_result_has_value=" +
                                   formatSemanticBool(entry.returnResultHasValue) + " return_result_value_type=" +
                                   quoteSemanticString(entry.returnResultValueType) +
                                   " return_result_error_type=" +

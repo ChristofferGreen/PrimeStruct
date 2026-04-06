@@ -767,6 +767,7 @@ main() {
   CHECK(onErrorIt->returnKind == "i32");
   CHECK(onErrorIt->handlerPath == "/unexpectedError");
   CHECK(onErrorIt->errorType == "MyError");
+  CHECK(onErrorIt->boundArgTexts == std::vector<std::string>{});
   CHECK(onErrorIt->returnResultHasValue);
   CHECK(onErrorIt->returnResultValueType == "int");
   CHECK(onErrorIt->returnResultErrorType == "MyError");
@@ -1295,6 +1296,7 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       "/unexpectedError",
       "MyError",
       1,
+      {"err"},
       true,
       "i32",
       "MyError",
@@ -1319,7 +1321,7 @@ TEST_CASE("semantic product formatter exact golden is stable") {
   local_auto_facts[0]: scope_path="/main" binding_name="selected" binding_type_text="i32" initializer_resolved_path="/id" initializer_binding_type_text="i32" initializer_receiver_binding_type_text="" initializer_query_type_text="i32" initializer_result_has_value=false initializer_result_value_type="" initializer_result_error_type="" initializer_has_try=false initializer_try_operand_resolved_path="" initializer_try_operand_binding_type_text="" initializer_try_operand_receiver_binding_type_text="" initializer_try_operand_query_type_text="" initializer_try_value_type="" initializer_try_error_type="" initializer_try_context_return_kind="return" initializer_try_on_error_handler_path="" initializer_try_on_error_error_type="" initializer_try_on_error_bound_arg_count=0 source="14:9"
   query_facts[0]: scope_path="/main" call_name="lookup" resolved_path="/lookup" query_type_text="Result<i32, MyError>" binding_type_text="Result<i32, MyError>" receiver_binding_type_text="" has_result_type=true result_type_has_value=true result_value_type="i32" result_error_type="MyError" source="15:4"
   try_facts[0]: scope_path="/main" operand_resolved_path="/lookup" operand_binding_type_text="Result<i32, MyError>" operand_receiver_binding_type_text="" operand_query_type_text="Result<i32, MyError>" value_type="i32" error_type="MyError" context_return_kind="return" on_error_handler_path="/unexpectedError" on_error_error_type="MyError" on_error_bound_arg_count=1 source="16:8"
-  on_error_facts[0]: definition_path="/main" return_kind="return" handler_path="/unexpectedError" error_type="MyError" bound_arg_count=1 return_result_has_value=true return_result_value_type="i32" return_result_error_type="MyError"
+  on_error_facts[0]: definition_path="/main" return_kind="return" handler_path="/unexpectedError" error_type="MyError" bound_arg_count=1 bound_arg_texts=["err"] return_result_has_value=true return_result_value_type="i32" return_result_error_type="MyError"
 }
 )";
 

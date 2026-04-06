@@ -53,10 +53,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
   immediately, so production lowering only crosses the boundary with a
   published semantic product; the remaining audited temporary fallback sites
   are receiver/helper fallback in
-  `IrLowererSetupTypeMethodCallResolution.cpp`, binding/storage transform
-  fallback in `IrLowererBindingTypeHelpers.cpp`, entry-args fallback in
-  `IrLowererCountAccessHelpers.cpp`, and `on_error` bound-arg AST parsing in
-  `IrLowererOnErrorHelpers.cpp`.
+  `IrLowererSetupTypeMethodCallResolution.cpp` and binding/storage transform
+  fallback in `IrLowererBindingTypeHelpers.cpp`.
+- `semantic-product-entry-params-and-on-error-bound-args`: lowering now
+  requires published semantic-product entry parameter facts for entry
+  count/argv setup, and semantic-product-backed `on_error` setup now
+  consumes published `boundArgTexts` instead of falling back to AST
+  parameters or reparsing `on_error` transforms.
 - `semantic-product-required-callable-metadata`: once lowering is handed a
   `SemanticProgram`, entry effect/capability masks, callable effect validation,
   lowered callable metadata, entry return metadata, and `on_error` wiring now

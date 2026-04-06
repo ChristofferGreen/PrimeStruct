@@ -9,21 +9,6 @@
 namespace primec::ir_lowerer {
 namespace {
 
-const Transform *findOnErrorTransform(const Definition &def, std::string &error) {
-  const Transform *found = nullptr;
-  for (const auto &transform : def.transforms) {
-    if (transform.name != "on_error") {
-      continue;
-    }
-    if (found != nullptr) {
-      error = "duplicate on_error transform on " + def.fullPath;
-      return nullptr;
-    }
-    found = &transform;
-  }
-  return found;
-}
-
 bool buildOnErrorHandlerFromSemanticFact(const Definition &def,
                                          const SemanticProgramOnErrorFact &fact,
                                          std::optional<OnErrorHandler> &out,
@@ -38,18 +23,11 @@ bool buildOnErrorHandlerFromSemanticFact(const Definition &def,
     return true;
   }
 
-  const Transform *transform = findOnErrorTransform(def, error);
-  if (transform == nullptr) {
-    if (error.empty()) {
-      error = "missing on_error transform arguments on " + def.fullPath;
-    }
-    return false;
-  }
-  if (transform->arguments.size() != fact.boundArgCount) {
+  if (fact.boundArgTexts.size() != fact.boundArgCount) {
     error = "semantic-product on_error bound arg mismatch on " + def.fullPath;
     return false;
   }
-  for (const auto &argText : transform->arguments) {
+  for (const auto &argText : fact.boundArgTexts) {
     Expr argExpr;
     if (!parseTransformArgumentExpr(argText, def.namespacePrefix, argExpr, error)) {
       return false;

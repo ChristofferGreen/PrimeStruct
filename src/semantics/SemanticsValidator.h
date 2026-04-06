@@ -166,6 +166,7 @@ public:
     std::string handlerPath;
     std::string errorType;
     size_t boundArgCount = 0;
+    std::vector<std::string> boundArgTexts;
     bool returnResultHasValue = false;
     std::string returnResultValueType;
     std::string returnResultErrorType;

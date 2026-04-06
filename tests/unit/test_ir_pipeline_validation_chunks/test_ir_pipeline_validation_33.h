@@ -94,11 +94,6 @@ TEST_CASE("ir lowerer on_error helpers prefer semantic-product metadata") {
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
   mainDef.namespacePrefix = "";
-  primec::Transform onError;
-  onError.name = "on_error";
-  onError.templateArgs = {"WrongError", "missing"};
-  onError.arguments = {"1i32"};
-  mainDef.transforms.push_back(onError);
   program.definitions.push_back(mainDef);
 
   auto resolveExprPath = [](const primec::Expr &expr) {
@@ -116,6 +111,7 @@ TEST_CASE("ir lowerer on_error helpers prefer semantic-product metadata") {
       .handlerPath = "/handler",
       .errorType = "FileError",
       .boundArgCount = 1,
+      .boundArgTexts = {"2i32"},
       .returnResultHasValue = false,
       .returnResultValueType = "",
       .returnResultErrorType = "",
@@ -132,7 +128,7 @@ TEST_CASE("ir lowerer on_error helpers prefer semantic-product metadata") {
   CHECK(onErrorByDef.at("/main")->errorType == "FileError");
   CHECK(onErrorByDef.at("/main")->handlerPath == "/handler");
   REQUIRE(onErrorByDef.at("/main")->boundArgs.size() == 1);
-  CHECK(onErrorByDef.at("/main")->boundArgs.front().literalValue == 1);
+  CHECK(onErrorByDef.at("/main")->boundArgs.front().literalValue == 2);
 }
 
 TEST_CASE("ir lowerer on_error helpers build bundled entry call and on_error setup") {
@@ -227,6 +223,7 @@ TEST_CASE("ir lowerer on_error entry setup validates semantic bound arg counts")
       .handlerPath = "/handler",
       .errorType = "FileError",
       .boundArgCount = 2,
+      .boundArgTexts = {"1i32"},
       .returnResultHasValue = false,
       .returnResultValueType = "",
       .returnResultErrorType = "",

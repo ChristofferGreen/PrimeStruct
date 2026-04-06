@@ -564,6 +564,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticProduct.find("struct SemanticProgramQueryFact") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramTryFact") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramOnErrorFact") != std::string::npos);
+  CHECK(semanticProduct.find("std::vector<std::string> boundArgTexts;") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramDefinition") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramExecution") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgram") != std::string::npos);
@@ -967,12 +968,19 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(countAccessHelpersSource.find("entryParamFact->bindingTypeText != \"array<string>\"") !=
         std::string::npos);
+  CHECK(countAccessHelpersSource.find("missing semantic-product entry parameter fact: ") !=
+        std::string::npos);
   CHECK(onErrorHelpersSource.find("buildEntryCountAccessSetup(entryDef, semanticProgram, out.countAccessSetup, error)") !=
         std::string::npos);
   CHECK(onErrorHelpersSource.find("findSemanticProductOnErrorFact(semanticProductTargets, def.fullPath)") !=
         std::string::npos);
   CHECK(onErrorHelpersSource.find("missing semantic-product on_error fact: ") !=
         std::string::npos);
+  CHECK(onErrorHelpersSource.find("fact.boundArgTexts.size() != fact.boundArgCount") !=
+        std::string::npos);
+  CHECK(onErrorHelpersSource.find("for (const auto &argText : fact.boundArgTexts)") !=
+        std::string::npos);
+  CHECK(onErrorHelpersSource.find("findOnErrorTransform(") == std::string::npos);
   CHECK(onErrorHelpersSource.find("buildOnErrorByDefinition(program, semanticProgram,") !=
         std::string::npos);
   CHECK(statementCallHelpersHeader.find("const SemanticProgram *semanticProgram,") !=

@@ -601,6 +601,14 @@ TEST_CASE("ir lowerer count access helpers classify entry args and count calls")
   CHECK(entryArgsName == "semanticArgv");
   CHECK(error.empty());
 
+  primec::SemanticProgram incompleteSemanticProgram;
+  error.clear();
+  hasEntryArgs = false;
+  entryArgsName.clear();
+  CHECK_FALSE(primec::ir_lowerer::resolveEntryArgsParameter(
+      entryDef, &incompleteSemanticProgram, hasEntryArgs, entryArgsName, error));
+  CHECK(error == "missing semantic-product entry parameter fact: /main");
+
   primec::ir_lowerer::LocalMap locals;
   primec::Expr entryName;
   entryName.kind = primec::Expr::Kind::Name;
