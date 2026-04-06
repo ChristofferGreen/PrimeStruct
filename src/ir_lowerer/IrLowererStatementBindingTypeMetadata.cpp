@@ -8,6 +8,7 @@
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererResultHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
@@ -199,7 +200,8 @@ bool inferCallParameterDefaultResultInfo(
     const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
-    ResultExprInfo &infoOut) {
+    ResultExprInfo &infoOut,
+    const SemanticProductTargetAdapter *semanticProductTargets) {
   const auto resolveMethodCall = resolveMethodCallDefinition
                                      ? resolveMethodCallDefinition
                                      : [](const Expr &, const LocalMap &) -> const Definition * { return nullptr; };
@@ -214,7 +216,8 @@ bool inferCallParameterDefaultResultInfo(
       resolveDefinition,
       lookupReturnInfo,
       [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
-      infoOut);
+      infoOut,
+      semanticProductTargets);
 }
 
 void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOut) {

@@ -86,7 +86,8 @@
                                                                [&](const std::string &definitionPath,
                                                                    ReturnInfo &returnInfo) {
                                                                  return getReturnInfo(definitionPath, returnInfo);
-                                                               });
+                                                               },
+                                                               &callResolutionAdapters.semanticProductTargets);
               },
               [&](int32_t destBaseLocal, int32_t srcPtrLocal, int32_t slotCount) {
                 return emitStructCopySlots(destBaseLocal, srcPtrLocal, slotCount);
@@ -136,7 +137,8 @@
                                                              [&](const std::string &definitionPath,
                                                                  ReturnInfo &returnInfo) {
                                                                return getReturnInfo(definitionPath, returnInfo);
-                                                             });
+                                                             },
+                                                             &callResolutionAdapters.semanticProductTargets);
             },
             [&](const Expr &param) { return isStringBinding(param); },
             [&](const Expr &argExpr,

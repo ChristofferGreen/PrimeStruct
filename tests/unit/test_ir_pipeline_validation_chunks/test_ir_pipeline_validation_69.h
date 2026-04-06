@@ -253,6 +253,56 @@ TEST_CASE("ir lowerer statement binding helper infers vector kind from initializ
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
+TEST_CASE("ir lowerer statement binding helper prefers semantic temporary facts") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      "/main",
+      "temporary",
+      "makeVec",
+      "/makeVec",
+      "vector<i64>",
+      false,
+      false,
+      false,
+      "",
+      14,
+      5,
+      111,
+  });
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  primec::Expr stmt;
+  stmt.name = "values";
+
+  primec::Expr init;
+  init.kind = primec::Expr::Kind::Call;
+  init.name = "makeVec";
+  init.semanticNodeId = 111;
+  primec::Transform staleTransform;
+  staleTransform.name = "map";
+  staleTransform.templateArgs = {"i32", "i32"};
+  init.transforms.push_back(staleTransform);
+
+  const primec::ir_lowerer::StatementBindingTypeInfo info = primec::ir_lowerer::inferStatementBindingTypeInfo(
+      stmt,
+      init,
+      {},
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      {},
+      &semanticTargets);
+
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Vector);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+}
+
 TEST_CASE("ir lowerer statement binding helper infers pointer kind from alloc initializer call") {
   primec::Expr stmt;
   stmt.name = "ptr";
@@ -611,5 +661,72 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic Result parame
   CHECK(info.resultHasValue);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
   CHECK(info.resultValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(info.resultErrorType == "ParseError");
+}
+
+TEST_CASE("ir lowerer statement binding helper uses semantic query facts for default Result params") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      "/main",
+      "loadValue",
+      "/loadValue",
+      "Result<i64, ParseError>",
+      "Result<i64, ParseError>",
+      "",
+      true,
+      true,
+      "i64",
+      "ParseError",
+      27,
+      9,
+      313,
+  });
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  primec::Expr defaultInit;
+  defaultInit.kind = primec::Expr::Kind::Call;
+  defaultInit.name = "loadValue";
+  defaultInit.semanticNodeId = 313;
+  primec::Transform staleTransform;
+  staleTransform.name = "vector";
+  staleTransform.templateArgs = {"i32"};
+  defaultInit.transforms.push_back(staleTransform);
+
+  primec::Expr param;
+  param.name = "value";
+  param.args = {defaultInit};
+
+  primec::ir_lowerer::LocalInfo info;
+  info.index = 4;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
+      param,
+      {},
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &) { return false; },
+      info,
+      error,
+      {},
+      {},
+      {},
+      &semanticTargets));
+  CHECK(error.empty());
+  CHECK(info.isResult);
+  CHECK(info.resultHasValue);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(info.resultValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
   CHECK(info.resultErrorType == "ParseError");
 }

@@ -92,6 +92,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   of rebuilding that cache from AST/type-resolution inference, so downstream
   result/return consumers stay on semantic-product-owned metadata after the
   lowering boundary.
+- `semantic-product-temporary-call-classification`: statement binding and
+  default-parameter classification now thread the semantic-product target
+  adapter through `inferStatementBindingTypeInfo(...)` and
+  `inferCallParameterLocalInfo(...)`, so semantic-id-backed temporary calls
+  prefer published binding/query facts over AST transform/collection-shape
+  fallback when lowering classifies local/result metadata after the boundary.
 - `semantic-product-return-query-try-on-error-joins`: the temporary lowerer
   semantic-product adapter now keys return, local-`auto`, query, `try(...)`,
   and `on_error` facts by structural semantic ids, and semantic-product-backed

@@ -16,6 +16,7 @@
 namespace primec::ir_lowerer {
 
 struct StructSlotLayoutInfo;
+struct SemanticProductTargetAdapter;
 struct UninitializedStorageAccessInfo;
 struct PrintBuiltin;
 
@@ -95,7 +96,8 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
                                                        const BindingKindFn &bindingKind,
                                                        const BindingValueKindFn &bindingValueKind,
                                                        const InferBindingExprKindFn &inferExprKind,
-                                                       const ResolveDefinitionCallForStatementFn &resolveDefinitionCall);
+                                                       const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
+                                                       const SemanticProductTargetAdapter *semanticProductTargets = nullptr);
 bool isPointerMemoryIntrinsicCall(const Expr &expr);
 bool inferPointerMemoryIntrinsicTargetsUninitializedStorage(const Expr &expr, const LocalMap &localsIn);
 
@@ -122,7 +124,8 @@ bool inferCallParameterLocalInfo(const Expr &param,
                                  const std::function<const Definition *(const Expr &, const LocalMap &)>
                                      &resolveMethodCallDefinition = {},
                                  const std::function<const Definition *(const Expr &)> &resolveDefinitionCall = {},
-                                 const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo = {});
+                                 const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo = {},
+                                 const SemanticProductTargetAdapter *semanticProductTargets = nullptr);
 bool emitStringStatementBindingInitializer(const Expr &stmt,
                                            const Expr &init,
                                            LocalMap &localsIn,

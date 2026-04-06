@@ -17,7 +17,8 @@ bool inferCallParameterDefaultResultInfo(
     const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
-    ResultExprInfo &infoOut);
+    ResultExprInfo &infoOut,
+    const SemanticProductTargetAdapter *semanticProductTargets = nullptr);
 void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOut);
 void applyArgsPackElementStructMetadata(const Expr &param,
                                         const std::string &elementTypeText,

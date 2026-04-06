@@ -6,6 +6,7 @@
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
@@ -238,10 +239,26 @@ bool populateBindingTypeInfoFromTypeText(
   return true;
 }
 
+bool populateBindingTypeInfoFromSemanticBindingFact(
+    const Expr &expr,
+    const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
+    const SemanticProductTargetAdapter *semanticProductTargets,
+    StatementBindingTypeInfo &infoOut) {
+  if (semanticProductTargets == nullptr || !semanticProductTargets->hasSemanticProduct ||
+      expr.semanticNodeId == 0) {
+    return false;
+  }
+  const auto *bindingFact = findSemanticProductBindingFact(*semanticProductTargets, expr);
+  return bindingFact != nullptr && !bindingFact->bindingTypeText.empty() &&
+         populateBindingTypeInfoFromTypeText(
+             bindingFact->bindingTypeText, resolveDefinitionCall, infoOut);
+}
+
 bool inferExprBindingTypeInfo(const Expr &expr,
                               const LocalMap &localsIn,
                               const InferBindingExprKindFn &inferExprKind,
                               const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
+                              const SemanticProductTargetAdapter *semanticProductTargets,
                               StatementBindingTypeInfo &infoOut) {
   infoOut = {};
   if (expr.kind == Expr::Kind::Name) {
@@ -279,6 +296,10 @@ bool inferExprBindingTypeInfo(const Expr &expr,
     infoOut.valueKind = LocalInfo::ValueKind::String;
     return true;
   }
+  if (populateBindingTypeInfoFromSemanticBindingFact(
+          expr, resolveDefinitionCall, semanticProductTargets, infoOut)) {
+    return true;
+  }
   if (isIfCall(expr) && expr.args.size() == 3) {
     const Expr *thenValue = findIfBranchValueExprForBindingTypeInfo(expr.args[1]);
     const Expr *elseValue = findIfBranchValueExprForBindingTypeInfo(expr.args[2]);
@@ -287,8 +308,10 @@ bool inferExprBindingTypeInfo(const Expr &expr,
     }
     StatementBindingTypeInfo thenInfo;
     StatementBindingTypeInfo elseInfo;
-    if (!inferExprBindingTypeInfo(*thenValue, localsIn, inferExprKind, resolveDefinitionCall, thenInfo) ||
-        !inferExprBindingTypeInfo(*elseValue, localsIn, inferExprKind, resolveDefinitionCall, elseInfo)) {
+    if (!inferExprBindingTypeInfo(
+            *thenValue, localsIn, inferExprKind, resolveDefinitionCall, semanticProductTargets, thenInfo) ||
+        !inferExprBindingTypeInfo(
+            *elseValue, localsIn, inferExprKind, resolveDefinitionCall, semanticProductTargets, elseInfo)) {
       return false;
     }
     if (thenInfo.kind != elseInfo.kind) {
@@ -351,6 +374,27 @@ bool inferExprBindingTypeInfo(const Expr &expr,
     }
   }
 
+  const ResolveMethodCallWithLocalsFn noopResolveMethodCall =
+      [](const Expr &, const LocalMap &) -> const Definition * { return nullptr; };
+  const LookupReturnInfoFn noopLookupReturnInfo =
+      [](const std::string &, ReturnInfo &) { return false; };
+  ResultExprInfo resultInfo;
+  if (resolveResultExprInfoFromLocals(expr,
+                                      localsIn,
+                                      noopResolveMethodCall,
+                                      resolveDefinitionCall,
+                                      noopLookupReturnInfo,
+                                      inferExprKind,
+                                      resultInfo,
+                                      semanticProductTargets) &&
+      resultInfo.isResult) {
+    infoOut.kind = LocalInfo::Kind::Value;
+    infoOut.valueKind =
+        resultInfo.hasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+    infoOut.structTypeName.clear();
+    return true;
+  }
+
   const LocalInfo::ValueKind scalarKind = inferExprKind(expr, localsIn);
   if (scalarKind == LocalInfo::ValueKind::Unknown) {
     return false;
@@ -386,7 +430,8 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
                                                        const BindingKindFn &bindingKind,
                                                        const BindingValueKindFn &bindingValueKind,
                                                        const InferBindingExprKindFn &inferExprKind,
-                                                       const ResolveDefinitionCallForStatementFn &resolveDefinitionCall) {
+                                                       const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
+                                                       const SemanticProductTargetAdapter *semanticProductTargets) {
   StatementBindingTypeInfo info;
   info.kind = bindingKind(stmt);
   const bool hasExplicitType = hasExplicitBindingTypeTransform(stmt);
@@ -430,7 +475,8 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
 
   if (!hasExplicitType) {
     StatementBindingTypeInfo inferredExprInfo;
-    if (inferExprBindingTypeInfo(init, localsIn, inferExprKind, resolveDefinitionCall, inferredExprInfo)) {
+    if (inferExprBindingTypeInfo(
+            init, localsIn, inferExprKind, resolveDefinitionCall, semanticProductTargets, inferredExprInfo)) {
       if (info.kind == LocalInfo::Kind::Value) {
         info.kind = inferredExprInfo.kind;
       }
@@ -548,7 +594,8 @@ bool inferCallParameterLocalInfo(const Expr &param,
                                  const std::function<const Definition *(const Expr &, const LocalMap &)>
                                      &resolveMethodCallDefinition,
                                  const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
-                                 const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo) {
+                                 const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
+                                 const SemanticProductTargetAdapter *semanticProductTargets) {
   infoOut.isMutable = isBindingMutable(param);
   infoOut.isSoaVector = hasSoaVectorTypeTransform(param);
   infoOut.isArgsPack = isArgsPackBinding(param);
@@ -575,7 +622,8 @@ bool inferCallParameterLocalInfo(const Expr &param,
             resolveMethodCallDefinition,
             resolveDefinitionCall,
             getReturnInfo,
-            inferredResultInfo) &&
+            inferredResultInfo,
+            semanticProductTargets) &&
         inferredResultInfo.isResult) {
       infoOut.isResult = true;
       infoOut.resultHasValue = inferredResultInfo.hasValue;

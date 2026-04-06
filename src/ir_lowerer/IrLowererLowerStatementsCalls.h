@@ -135,7 +135,8 @@
                                                                          [&](const std::string &definitionPath,
                                                                              ReturnInfo &returnInfo) {
                                                                            return getReturnInfo(definitionPath, returnInfo);
-                                                                         });
+                                                                         },
+                                                                         &callResolutionAdapters.semanticProductTargets);
                         },
                         callError);
                   },

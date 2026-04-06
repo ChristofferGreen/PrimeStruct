@@ -794,7 +794,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find("requiresSemanticBindingFact(semanticProductTargets, expr)") !=
         std::string::npos);
-  CHECK(statementBindingHelpersHeader.find("const ResolveDefinitionCallForStatementFn &resolveDefinitionCall);") !=
+  CHECK(statementBindingHelpersHeader.find("const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,") !=
+        std::string::npos);
+  CHECK(statementBindingHelpersHeader.find("const SemanticProductTargetAdapter *semanticProductTargets = nullptr);") !=
         std::string::npos);
   CHECK(statementBindingHelpersHeader.find("bool isPointerMemoryIntrinsicCall(const Expr &expr);") !=
         std::string::npos);
@@ -980,6 +982,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(statementBindingHelpersHeader.find("struct Definition;") != std::string::npos);
   CHECK(statementBindingHelpersHeader.find("struct ResultReturnInfo;") != std::string::npos);
   CHECK(statementBindingHelpersHeader.find("struct ReturnInfo;") != std::string::npos);
+  CHECK(statementBindingHelpersHeader.find("struct SemanticProductTargetAdapter;") !=
+        std::string::npos);
 
   const auto structFieldBindingHelpersHeader =
       readFile("include/primec/testing/ir_lowerer_helpers/IrLowererStructFieldBindingHelpers.h");

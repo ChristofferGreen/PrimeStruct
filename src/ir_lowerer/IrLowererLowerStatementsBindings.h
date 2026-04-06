@@ -273,7 +273,8 @@
           bindingKind,
           bindingValueKind,
           inferExprKind,
-          [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); });
+          [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+          &callResolutionAdapters.semanticProductTargets);
       LocalInfo::Kind kind = bindingTypeInfo.kind;
       LocalInfo::ValueKind valueKind = bindingTypeInfo.valueKind;
       LocalInfo::ValueKind mapKeyKind = bindingTypeInfo.mapKeyKind;
@@ -437,7 +438,8 @@
                                                                    [&](const std::string &definitionPath,
                                                                        ReturnInfo &returnInfo) {
                                                                      return getReturnInfo(definitionPath, returnInfo);
-                                                                   });
+                                                                   },
+                                                                   &callResolutionAdapters.semanticProductTargets);
                   },
                   [&](int32_t destBase, int32_t srcPtrLocal, int32_t slotCount) {
                     return emitStructCopySlots(destBase, srcPtrLocal, slotCount);
