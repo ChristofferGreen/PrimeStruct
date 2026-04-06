@@ -216,8 +216,57 @@
         localsIn.emplace(stmt.name, info);
         return true;
       }
+      auto isLocalAutoBindingCandidate = [&](const Expr &bindingExpr) {
+        std::string explicitTypeName;
+        std::vector<std::string> explicitTemplateArgs;
+        if (!extractFirstBindingTypeTransform(bindingExpr, explicitTypeName, explicitTemplateArgs)) {
+          return true;
+        }
+        return trimTemplateTypeText(explicitTypeName) == "auto";
+      };
+      Expr semanticLocalAutoBindingExpr;
+      const Expr *bindingTypeExpr = &stmt;
+      if (callResolutionAdapters.semanticProductTargets.hasSemanticProduct &&
+          stmt.semanticNodeId != 0 &&
+          isLocalAutoBindingCandidate(stmt)) {
+        const SemanticProgramLocalAutoFact *localAutoFact =
+            findSemanticProductLocalAutoFact(callResolutionAdapters.semanticProductTargets, stmt);
+        if (localAutoFact == nullptr || localAutoFact->bindingTypeText.empty()) {
+          const std::string scopePath =
+              activeInlineContext != nullptr ? activeInlineContext->defPath : function.name;
+          error = "missing semantic-product local-auto fact: " + scopePath + " -> local " +
+                  (stmt.name.empty() ? std::string("<unnamed>") : stmt.name);
+          return false;
+        }
+        semanticLocalAutoBindingExpr = stmt;
+        semanticLocalAutoBindingExpr.semanticNodeId = 0;
+        semanticLocalAutoBindingExpr.transforms.clear();
+        const std::string bindingTypeText = trimTemplateTypeText(localAutoFact->bindingTypeText);
+        if (bindingTypeText.empty()) {
+          const std::string scopePath =
+              activeInlineContext != nullptr ? activeInlineContext->defPath : function.name;
+          error = "missing semantic-product local-auto fact: " + scopePath + " -> local " +
+                  (stmt.name.empty() ? std::string("<unnamed>") : stmt.name);
+          return false;
+        }
+        Transform semanticTypeTransform;
+        std::string semanticTypeBase;
+        std::string semanticTypeArgList;
+        if (splitTemplateTypeName(bindingTypeText, semanticTypeBase, semanticTypeArgList)) {
+          semanticTypeTransform.name = trimTemplateTypeText(semanticTypeBase);
+          if (!semanticTypeArgList.empty()) {
+            if (!splitTemplateArgs(semanticTypeArgList, semanticTypeTransform.templateArgs)) {
+              semanticTypeTransform.templateArgs.push_back(trimTemplateTypeText(semanticTypeArgList));
+            }
+          }
+        } else {
+          semanticTypeTransform.name = bindingTypeText;
+        }
+        semanticLocalAutoBindingExpr.transforms.push_back(std::move(semanticTypeTransform));
+        bindingTypeExpr = &semanticLocalAutoBindingExpr;
+      }
       const StatementBindingTypeInfo bindingTypeInfo = inferStatementBindingTypeInfo(
-          stmt,
+          *bindingTypeExpr,
           init,
           localsIn,
           hasExplicitBindingTypeTransform,
@@ -275,6 +324,8 @@
       info.mapKeyKind = mapKeyKind;
       info.mapValueKind = mapValueKind;
       info.structTypeName = structTypeName;
+      const bool semanticLocalAutoBinding = bindingTypeExpr != &stmt;
+      const Expr &bindingTypeExprRef = *bindingTypeExpr;
 #include "IrLowererLowerStatementsBindingLocalInfo.h"
 
       if ((info.kind == LocalInfo::Kind::Value || info.kind == LocalInfo::Kind::Map) &&

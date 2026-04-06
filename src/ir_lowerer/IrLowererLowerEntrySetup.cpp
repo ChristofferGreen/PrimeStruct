@@ -44,6 +44,9 @@ bool runLowerEntrySetup(const Program &program,
   if (!validateSemanticProductBindingCoverage(program, semanticProgram, error)) {
     return false;
   }
+  if (!validateSemanticProductLocalAutoCoverage(program, semanticProgram, error)) {
+    return false;
+  }
   if (!validateProgramEffects(program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error)) {
     return false;
   }

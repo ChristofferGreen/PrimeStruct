@@ -22,6 +22,15 @@ bool requiresSemanticBindingFact(const SemanticProductTargetAdapter &semanticPro
   return semanticProductTargets.hasSemanticProduct && expr.semanticNodeId != 0;
 }
 
+bool isLocalAutoBindingCandidate(const Expr &expr) {
+  std::string typeName;
+  std::vector<std::string> templateArgs;
+  if (!extractFirstBindingTypeTransform(expr, typeName, templateArgs)) {
+    return true;
+  }
+  return trimTemplateTypeText(typeName) == "auto";
+}
+
 LocalInfo::Kind bindingKindFromTypeText(const std::string &typeText) {
   std::string base;
   std::string arg;
@@ -271,6 +280,51 @@ bool validateSemanticProductBindingCoverage(const Program &program,
         return false;
       }
     }
+    if (!validateExprs(def.fullPath, def.statements) ||
+        (def.returnExpr.has_value() && !validateExpr(def.fullPath, *def.returnExpr))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool validateSemanticProductLocalAutoCoverage(const Program &program,
+                                              const SemanticProgram *semanticProgram,
+                                              std::string &error) {
+  if (semanticProgram == nullptr) {
+    return true;
+  }
+
+  const SemanticProductTargetAdapter semanticProductTargets =
+      buildSemanticProductTargetAdapter(semanticProgram);
+
+  std::function<bool(const std::string &, const Expr &)> validateExpr;
+  auto validateExprs = [&](const std::string &scopePath, const std::vector<Expr> &exprs) {
+    for (const auto &expr : exprs) {
+      if (!validateExpr(scopePath, expr)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  validateExpr = [&](const std::string &scopePath, const Expr &expr) {
+    if (expr.isBinding && expr.args.size() == 1 && expr.semanticNodeId != 0 &&
+        isLocalAutoBindingCandidate(expr)) {
+      const SemanticProgramLocalAutoFact *localAutoFact =
+          findSemanticProductLocalAutoFact(semanticProductTargets, expr);
+      if (localAutoFact == nullptr || localAutoFact->bindingTypeText.empty()) {
+        error = "missing semantic-product local-auto fact: " +
+                describeBindingSite(scopePath, "local", expr);
+        return false;
+      }
+    }
+    return validateExprs(scopePath, expr.args) &&
+           validateExprs(scopePath, expr.bodyArguments);
+  };
+
+  for (const auto &def : program.definitions) {
     if (!validateExprs(def.fullPath, def.statements) ||
         (def.returnExpr.has_value() && !validateExpr(def.fullPath, *def.returnExpr))) {
       return false;

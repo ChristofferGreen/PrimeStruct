@@ -187,6 +187,52 @@ TEST_CASE("ir lowerer rejects missing semantic-product binding facts") {
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer rejects missing semantic-product local-auto facts") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+
+  primec::Expr initializerExpr;
+  initializerExpr.kind = primec::Expr::Kind::Literal;
+  initializerExpr.literalValue = 1;
+  initializerExpr.intWidth = 32;
+
+  primec::Expr bindingExpr;
+  bindingExpr.isBinding = true;
+  bindingExpr.name = "selected";
+  bindingExpr.semanticNodeId = 43;
+  bindingExpr.args.push_back(initializerExpr);
+  mainDef.statements.push_back(bindingExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      "/main",
+      "local",
+      "selected",
+      "/main/selected",
+      "i32",
+      false,
+      false,
+      false,
+      "",
+      1,
+      1,
+      43,
+  });
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product local-auto fact: /main -> local selected");
+  CHECK(diagnosticInfo.message == error);
+}
+
 TEST_CASE("ir lowerer rejects missing semantic-product return facts") {
   primec::Program program;
 

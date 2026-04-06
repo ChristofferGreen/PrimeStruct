@@ -1,4 +1,4 @@
-      if (!hasExplicitBindingTypeTransform(stmt) && info.kind == LocalInfo::Kind::Value) {
+      if (!semanticLocalAutoBinding && !hasExplicitBindingTypeTransform(stmt) && info.kind == LocalInfo::Kind::Value) {
         ResultExprInfo inferredResultInfo;
         if (resolveResultExprInfoFromLocals(
                 init,
@@ -23,7 +23,8 @@
         }
       }
       auto assignInferredFileHandleBinding = [&]() {
-        if (hasExplicitBindingTypeTransform(stmt) || info.kind != LocalInfo::Kind::Value || info.isResult ||
+        if (semanticLocalAutoBinding || hasExplicitBindingTypeTransform(stmt) ||
+            info.kind != LocalInfo::Kind::Value || info.isResult ||
             info.isFileHandle) {
           return;
         }
@@ -63,7 +64,7 @@
         info.valueKind = LocalInfo::ValueKind::Int64;
       };
       assignInferredFileHandleBinding();
-      for (const auto &transform : stmt.transforms) {
+      for (const auto &transform : bindingTypeExprRef.transforms) {
         if (transform.name == "soa_vector") {
           info.isSoaVector = true;
           break;
@@ -81,10 +82,10 @@
           info.isSoaVector = true;
         }
       }
-      setReferenceArrayInfo(stmt, info);
-      applyStructArrayInfo(stmt, info);
-      applyStructValueInfo(stmt, info);
-      for (const auto &transform : stmt.transforms) {
+      setReferenceArrayInfo(bindingTypeExprRef, info);
+      applyStructArrayInfo(bindingTypeExprRef, info);
+      applyStructValueInfo(bindingTypeExprRef, info);
+      for (const auto &transform : bindingTypeExprRef.transforms) {
         if ((transform.name == "Reference" || transform.name == "Pointer") && transform.templateArgs.size() == 1) {
           std::string targetType;
           if (ir_lowerer::extractTopLevelUninitializedTypeText(transform.templateArgs.front(), targetType)) {
@@ -231,5 +232,5 @@
           }
         }
       }
-      info.isFileError = isFileErrorBinding(stmt);
+      info.isFileError = isFileErrorBinding(bindingTypeExprRef);
       valueKind = info.valueKind;

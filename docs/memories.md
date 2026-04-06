@@ -57,6 +57,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   that parameter/local binding facts are published before lowering starts,
   and semantic-aware binding classification no longer falls back to AST
   transforms for semantic-id-backed binding expressions.
+- `semantic-product-local-auto-lowering-input`: production lowering now
+  validates that semantic-id-backed implicit/`auto` local bindings have
+  published semantic-product local-`auto` facts before lowering starts, and
+  local binding setup now consumes the published local-`auto` binding type
+  instead of re-inferring that metadata from AST initializer shape.
 - `semantic-product-lowering-entrypoints`: `prepareIrModule(...)` and
   `IrLowerer::lower(...)` now reject null `SemanticProgram` inputs
   immediately, so production lowering only crosses the boundary with a

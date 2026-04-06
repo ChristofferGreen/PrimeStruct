@@ -1186,6 +1186,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(bindingTypeHelpersSource.find("bool validateSemanticProductBindingCoverage(const Program &program,") !=
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find("missing semantic-product binding fact: ") != std::string::npos);
+  CHECK(bindingTypeHelpersSource.find("bool validateSemanticProductLocalAutoCoverage(const Program &program,") !=
+        std::string::npos);
+  CHECK(bindingTypeHelpersSource.find("missing semantic-product local-auto fact: ") != std::string::npos);
   CHECK(irMethodResolution.find("const auto &semanticAwareImportAliases =") != std::string::npos);
   CHECK(statementCallHelpersHeader.find("const SemanticProgram *semanticProgram,") !=
         std::string::npos);
