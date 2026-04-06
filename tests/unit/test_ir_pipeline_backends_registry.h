@@ -7,6 +7,7 @@
 #include "primec/EmitKind.h"
 #include "primec/IrBackends.h"
 #include "primec/IrBackendProfiles.h"
+#include "primec/IrLowerer.h"
 #include "primec/IrPreparation.h"
 #include "primec/testing/CompilePipelineDumpHelpers.h"
 
@@ -62,17 +63,45 @@ TEST_CASE("all production primec emit kinds route through ir backend resolution"
   CHECK_FALSE(primec::isPrimecEmitKind("metal"));
 }
 
-TEST_CASE("ir preparation helper reports lowering-stage failure for unresolved entry") {
+TEST_CASE("ir preparation helper requires semantic product before lowering") {
   primec::Program program;
   primec::Options options;
-  options.entryPath = "/missing";
+  options.entryPath = "/main";
   options.inlineIrCalls = true;
 
   primec::IrModule ir;
   primec::IrPreparationFailure failure;
   CHECK_FALSE(primec::prepareIrModule(program, nullptr, options, primec::IrValidationTarget::Vm, ir, failure));
   CHECK(failure.stage == primec::IrPreparationFailureStage::Lowering);
-  CHECK(!failure.message.empty());
+  CHECK(failure.message == "semantic product is required for IR preparation");
+  CHECK(failure.diagnosticInfo.message == failure.message);
+}
+
+TEST_CASE("ir lowerer requires semantic product before lowering") {
+  primec::Program program;
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, nullptr, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "semantic product is required for IR lowering");
+  CHECK(diagnosticInfo.message == error);
+}
+
+TEST_CASE("ir preparation helper reports lowering-stage failure for unresolved entry") {
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  primec::Options options;
+  options.entryPath = "/missing";
+  options.inlineIrCalls = true;
+
+  primec::IrModule ir;
+  primec::IrPreparationFailure failure;
+  CHECK_FALSE(primec::prepareIrModule(program, &semanticProgram, options, primec::IrValidationTarget::Vm, ir, failure));
+  CHECK(failure.stage == primec::IrPreparationFailureStage::Lowering);
+  CHECK(failure.message == "native backend requires entry definition /missing");
+  CHECK(failure.diagnosticInfo.message == failure.message);
 }
 
 TEST_CASE("cli driver preserves parse-stage diagnostic context") {

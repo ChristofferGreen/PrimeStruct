@@ -17,6 +17,13 @@ bool prepareIrModule(Program &program,
   DiagnosticSink diagnosticSink(&failure.diagnosticInfo);
   diagnosticSink.reset();
 
+  if (semanticProgram == nullptr) {
+    failure.stage = IrPreparationFailureStage::Lowering;
+    failure.message = "semantic product is required for IR preparation";
+    diagnosticSink.setSummary(failure.message);
+    return false;
+  }
+
   IrLowerer lowerer;
   if (!lowerer.lower(program,
                      semanticProgram,

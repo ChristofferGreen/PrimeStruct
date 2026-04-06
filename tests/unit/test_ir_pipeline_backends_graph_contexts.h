@@ -1069,6 +1069,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::string irPreparationHeader = readRepoFile("include/primec/IrPreparation.h");
   const std::string irLowererHeader = readRepoFile("include/primec/IrLowerer.h");
   const std::string compilePipelineSource = readRepoFile("src/CompilePipeline.cpp");
+  const std::string irPreparationSource = readRepoFile("src/IrPreparation.cpp");
+  const std::string irLowererEntrySetup =
+      readRepoFile("src/ir_lowerer/IrLowererLowerSetupEntryEffects.h");
   const std::string semanticsValidate = readRepoFile("src/semantics/SemanticsValidate.cpp");
   const std::string semanticTargetAdapterHeader =
       readRepoFile("src/ir_lowerer/IrLowererSemanticProductTargetAdapters.h");
@@ -1104,6 +1107,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(irLowererHeader.find("const SemanticProgram *semanticProgram,") != std::string::npos);
   CHECK(irLowererHeader.find("return lower(program, nullptr, entryPath, defaultEffects, entryDefaultEffects, out, error, diagnosticInfo);") ==
         std::string::npos);
+  CHECK(irPreparationSource.find("semantic product is required for IR preparation") != std::string::npos);
+  CHECK(irLowererEntrySetup.find("semantic product is required for IR lowering") != std::string::npos);
 
   CHECK(compilePipelineSource.find("output.semanticProgram = std::move(semanticProgram);") !=
         std::string::npos);

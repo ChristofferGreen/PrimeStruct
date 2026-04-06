@@ -43,6 +43,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
   access behavior; the C++ emitter now matches that direct-call contract for
   bare `at` / `at_unsafe` calls instead of compiling them through the old
   builtin access fallback.
+- `semantic-product-lowering-entrypoints`: `prepareIrModule(...)` and
+  `IrLowerer::lower(...)` now reject null `SemanticProgram` inputs
+  immediately, so production lowering only crosses the boundary with a
+  published semantic product; the remaining audited temporary fallback sites
+  are direct-call scope fallback in `IrLowererCallResolution.cpp`,
+  receiver/helper fallback in
+  `IrLowererSetupTypeMethodCallResolution.cpp`, binding/storage transform
+  fallback in `IrLowererBindingTypeHelpers.cpp`, entry-args fallback in
+  `IrLowererCountAccessHelpers.cpp`, and `on_error` bound-arg AST parsing in
+  `IrLowererOnErrorHelpers.cpp`.
 - `semantic-product-required-callable-metadata`: once lowering is handed a
   `SemanticProgram`, entry effect/capability masks, callable effect validation,
   lowered callable metadata, entry return metadata, and `on_error` wiring now

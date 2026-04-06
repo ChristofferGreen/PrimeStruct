@@ -23,6 +23,11 @@ bool IrLowerer::lower(const Program &program,
     }
   } loweringDiagnosticScope{diagnosticSink, error, loweringSucceeded};
 
+  if (semanticProgram == nullptr) {
+    error = "semantic product is required for IR lowering";
+    return false;
+  }
+
   const Definition *entryDef = nullptr;
   uint64_t entryEffectMask = 0;
   uint64_t entryCapabilityMask = 0;
