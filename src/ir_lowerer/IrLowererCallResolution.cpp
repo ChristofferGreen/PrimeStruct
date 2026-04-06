@@ -1,5 +1,6 @@
 #include "IrLowererCallHelpers.h"
 
+#include <optional>
 #include <string_view>
 
 #include "IrLowererHelpers.h"
@@ -7,6 +8,75 @@
 namespace primec::ir_lowerer {
 
 namespace {
+
+bool isBridgeHelperName(std::string_view collectionFamily, std::string_view helperName) {
+  if (collectionFamily == "vector") {
+    return helperName == "count" || helperName == "capacity" || helperName == "at" ||
+           helperName == "at_unsafe" || helperName == "push" || helperName == "pop" ||
+           helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
+           helperName == "remove_swap";
+  }
+  if (collectionFamily == "map") {
+    return helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
+           helperName == "at" || helperName == "at_unsafe" || helperName == "insert" ||
+           helperName == "mapInsertRef";
+  }
+  if (collectionFamily == "soa_vector") {
+    return helperName == "count" || helperName == "get" || helperName == "ref" ||
+           helperName == "to_aos" || helperName == "push" || helperName == "reserve";
+  }
+  return false;
+}
+
+std::optional<std::pair<std::string, std::string>>
+collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
+  auto parsePrefixedHelper = [&](std::string_view prefix,
+                                 std::string_view collectionFamily)
+      -> std::optional<std::pair<std::string, std::string>> {
+    if (resolvedPath.rfind(prefix, 0) != 0) {
+      return std::nullopt;
+    }
+    std::string helperName = resolvedPath.substr(prefix.size());
+    const size_t specializationSuffix = helperName.find("__t");
+    if (specializationSuffix != std::string::npos) {
+      helperName.erase(specializationSuffix);
+    }
+    if (!isBridgeHelperName(collectionFamily, helperName)) {
+      return std::nullopt;
+    }
+    return std::pair<std::string, std::string>(std::string(collectionFamily), std::move(helperName));
+  };
+
+  if (auto parsed = parsePrefixedHelper("/vector/", "vector")) {
+    return parsed;
+  }
+  if (auto parsed = parsePrefixedHelper("/std/collections/vector/", "vector")) {
+    return parsed;
+  }
+  if (auto parsed = parsePrefixedHelper("/std/collections/experimental_vector/", "vector")) {
+    return parsed;
+  }
+  if (auto parsed = parsePrefixedHelper("/map/", "map")) {
+    return parsed;
+  }
+  if (auto parsed = parsePrefixedHelper("/std/collections/map/", "map")) {
+    return parsed;
+  }
+  if (auto parsed = parsePrefixedHelper("/std/collections/experimental_map/", "map")) {
+    return parsed;
+  }
+  if (auto parsed = parsePrefixedHelper("/soa_vector/", "soa_vector")) {
+    return parsed;
+  }
+  if (auto parsed = parsePrefixedHelper("/std/collections/soa_vector/", "soa_vector")) {
+    return parsed;
+  }
+  return std::nullopt;
+}
+
+bool isResolvedBridgeHelperPath(const std::string &resolvedPath) {
+  return collectionBridgeChoiceFromResolvedPath(resolvedPath).has_value();
+}
 
 bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath) {
   auto matchesResolvedPath = [&](std::string_view basePath) {
@@ -201,6 +271,60 @@ bool validateSemanticProductDirectCallCoverage(const Program &program,
   return true;
 }
 
+bool validateSemanticProductBridgePathCoverage(const Program &program,
+                                               const SemanticProgram *semanticProgram,
+                                               std::string &error) {
+  if (semanticProgram == nullptr) {
+    return true;
+  }
+
+  const SemanticProductTargetAdapter semanticProductTargets =
+      buildSemanticProductTargetAdapter(semanticProgram);
+  std::function<bool(const std::string &, const Expr &)> validateExpr;
+  auto validateExprs = [&](const std::string &scopePath, const std::vector<Expr> &exprs) {
+    for (const auto &expr : exprs) {
+      if (!validateExpr(scopePath, expr)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  validateExpr = [&](const std::string &scopePath, const Expr &expr) {
+    if (expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
+      if (!findSemanticProductBridgePathChoice(semanticProductTargets, expr).empty()) {
+        return validateExprs(scopePath, expr.args) &&
+               validateExprs(scopePath, expr.bodyArguments);
+      }
+      if (const std::string resolvedPath = findSemanticProductDirectCallTarget(semanticProductTargets, expr);
+          isResolvedBridgeHelperPath(resolvedPath)) {
+        error = "missing semantic-product bridge-path choice: " +
+                describeCallSite(scopePath, expr);
+        return false;
+      }
+    }
+    return validateExprs(scopePath, expr.args) &&
+           validateExprs(scopePath, expr.bodyArguments);
+  };
+
+  for (const auto &def : program.definitions) {
+    if (!validateExprs(def.fullPath, def.parameters) ||
+        !validateExprs(def.fullPath, def.statements) ||
+        (def.returnExpr.has_value() && !validateExpr(def.fullPath, *def.returnExpr))) {
+      return false;
+    }
+  }
+
+  for (const auto &exec : program.executions) {
+    if (!validateExprs(exec.fullPath, exec.arguments) ||
+        !validateExprs(exec.fullPath, exec.bodyArguments)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool validateSemanticProductMethodCallCoverage(const Program &program,
                                                const SemanticProgram *semanticProgram,
                                                std::string &error) {
@@ -298,13 +422,17 @@ ResolveExprPathFn makeResolveCallPathFromScope(
         !chosenPath.empty()) {
       return chosenPath;
     }
+    if (semanticProductTargets.hasSemanticProduct &&
+        expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
+      if (const std::string resolvedPath = findSemanticProductDirectCallTarget(semanticProductTargets, expr);
+          !resolvedPath.empty() && !isResolvedBridgeHelperPath(resolvedPath)) {
+        return resolvedPath;
+      }
+      return std::string{};
+    }
     if (const std::string resolvedPath = findSemanticProductDirectCallTarget(semanticProductTargets, expr);
         !resolvedPath.empty()) {
       return resolvedPath;
-    }
-    if (semanticProductTargets.hasSemanticProduct &&
-        expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
-      return std::string{};
     }
     if (semanticProductTargets.hasSemanticProduct) {
       return resolveCallPathFromScopeWithoutImportAliases(expr, defMap);

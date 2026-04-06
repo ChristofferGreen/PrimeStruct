@@ -48,6 +48,9 @@ CallResolutionAdapters makeCallResolutionAdapters(
 bool validateSemanticProductDirectCallCoverage(const Program &program,
                                                const SemanticProgram *semanticProgram,
                                                std::string &error);
+bool validateSemanticProductBridgePathCoverage(const Program &program,
+                                               const SemanticProgram *semanticProgram,
+                                               std::string &error);
 bool validateSemanticProductMethodCallCoverage(const Program &program,
                                                const SemanticProgram *semanticProgram,
                                                std::string &error);

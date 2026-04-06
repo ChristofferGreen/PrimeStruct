@@ -53,6 +53,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   before lowering starts, and semantic-product-aware method resolution no
   longer falls back to receiver/helper inference when those facts are
   absent.
+- `semantic-product-bridge-path-routing`: production lowering now requires
+  published semantic-product bridge-path choices for collection-helper
+  bridge calls, and semantic-aware direct-call resolution no longer routes
+  same-path or canonical collection-helper bridge calls through duplicated
+  direct-call targets when the bridge choice is absent.
 - `semantic-product-binding-routing`: production lowering now validates
   that parameter/local binding facts are published before lowering starts,
   and semantic-aware binding classification no longer falls back to AST

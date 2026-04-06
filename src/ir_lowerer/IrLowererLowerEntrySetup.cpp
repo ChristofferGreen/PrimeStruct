@@ -38,6 +38,9 @@ bool runLowerEntrySetup(const Program &program,
   if (!validateSemanticProductDirectCallCoverage(program, semanticProgram, error)) {
     return false;
   }
+  if (!validateSemanticProductBridgePathCoverage(program, semanticProgram, error)) {
+    return false;
+  }
   if (!validateSemanticProductMethodCallCoverage(program, semanticProgram, error)) {
     return false;
   }

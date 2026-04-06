@@ -8,6 +8,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 7, 2026)**
 
 **Group 12 - Semantics/lowering boundary**
+- ✓ Move helper-vs-canonical bridge-path routing to semantic-product-only ownership, including same-path helper-shadow choices. Completed: semantic-product-backed lowering now requires published bridge-path choices for collection-helper bridge calls instead of silently routing those calls through duplicated direct-call targets, and same-path helper-shadow bridge choices now resolve only through the published bridge fact.
 - ✓ Make graph-backed query and `try(...)` facts required for lowerer call/result setup. Completed: semantic-id-backed generic call-result metadata now requires published semantic-product query facts instead of optional adapter hints, and semantic-id-backed `try(...)` lowering/inference now requires published semantic-product `try(...)` facts instead of silently re-deriving that metadata from AST/result probing.
 
 **Todo Cleanup (April 6, 2026, continued)**

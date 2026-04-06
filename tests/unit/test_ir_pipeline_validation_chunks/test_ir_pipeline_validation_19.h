@@ -663,6 +663,46 @@ TEST_CASE("ir lowerer call helpers require semantic-product direct-call targets"
   CHECK(populatedResolveExprPath(callExpr) == "/callee");
 }
 
+TEST_CASE("ir lowerer call helpers require semantic-product bridge-path choices") {
+  const std::unordered_map<std::string, const primec::Definition *> defMap;
+  const std::unordered_map<std::string, std::string> importAliases;
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "count";
+  callExpr.semanticNodeId = 18;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      "/main",
+      "count",
+      "/vector/count",
+      0,
+      0,
+      18,
+  });
+  auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  auto semanticResolveExprPath =
+      primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, semanticTargets);
+  CHECK(semanticResolveExprPath(callExpr).empty());
+
+  semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
+      "/main",
+      "vector",
+      "count",
+      "/vector/count",
+      0,
+      0,
+      18,
+  });
+  semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  semanticResolveExprPath =
+      primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, semanticTargets);
+  CHECK(semanticResolveExprPath(callExpr) == "/vector/count");
+}
+
 TEST_CASE("ir lowerer semantic-product adapter joins return and inference facts by semantic id") {
   primec::Definition mainDef;
   mainDef.fullPath = "/renamed_main";
