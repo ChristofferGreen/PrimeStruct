@@ -1,9 +1,13 @@
 #include "IrLowererLowerInferenceSetup.h"
 
 #include "../semantics/CondensationDag.h"
+#include "../semantics/SemanticsHelpers.h"
 #include "../semantics/TypeResolutionGraph.h"
 
+#include "IrLowererResultHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 #include <algorithm>
 #include <limits>
@@ -17,6 +21,10 @@ bool returnInfoEquals(const ReturnInfo &left, const ReturnInfo &right) {
   return left.returnsVoid == right.returnsVoid && left.returnsArray == right.returnsArray &&
          left.kind == right.kind && left.isResult == right.isResult &&
          left.resultHasValue == right.resultHasValue &&
+         left.resultValueCollectionKind == right.resultValueCollectionKind &&
+         left.resultValueMapKeyKind == right.resultValueMapKeyKind &&
+         left.resultValueIsFileHandle == right.resultValueIsFileHandle &&
+         left.resultValueStructType == right.resultValueStructType &&
          left.resultValueKind == right.resultValueKind &&
          left.resultErrorType == right.resultErrorType;
 }
@@ -63,6 +71,210 @@ std::vector<const Definition *> collectReturnInfoComponentDefinitions(
   }
   sortDefinitionsForDeterministicReturnSolve(definitions);
   return definitions;
+}
+
+bool isSemanticFileHandleTypeText(const std::string &typeText) {
+  std::string base;
+  std::string args;
+  return semantics::splitTemplateTypeName(trimTemplateTypeText(typeText), base, args) &&
+         normalizeCollectionBindingTypeName(base) == "File";
+}
+
+void clearReturnInfoResultValue(ReturnInfo &info) {
+  info.resultHasValue = false;
+  info.resultValueKind = LocalInfo::ValueKind::Unknown;
+  info.resultValueCollectionKind = LocalInfo::Kind::Value;
+  info.resultValueMapKeyKind = LocalInfo::ValueKind::Unknown;
+  info.resultValueIsFileHandle = false;
+  info.resultValueStructType.clear();
+  info.resultErrorType.clear();
+}
+
+bool applySemanticResultValueTypeText(const LowerInferenceReturnInfoSetupInput &input,
+                                      const Definition &definition,
+                                      const std::string &valueTypeText,
+                                      ReturnInfo &infoOut) {
+  const std::string trimmedValueType = trimTemplateTypeText(valueTypeText);
+  if (trimmedValueType.empty()) {
+    return false;
+  }
+
+  infoOut.resultValueCollectionKind = LocalInfo::Kind::Value;
+  infoOut.resultValueKind = LocalInfo::ValueKind::Unknown;
+  infoOut.resultValueMapKeyKind = LocalInfo::ValueKind::Unknown;
+  infoOut.resultValueIsFileHandle = false;
+  infoOut.resultValueStructType.clear();
+
+  if (resolveSupportedResultCollectionType(
+          trimmedValueType,
+          infoOut.resultValueCollectionKind,
+          infoOut.resultValueKind,
+          &infoOut.resultValueMapKeyKind)) {
+    return true;
+  }
+  if (isSemanticFileHandleTypeText(trimmedValueType)) {
+    infoOut.resultValueKind = LocalInfo::ValueKind::Int64;
+    infoOut.resultValueIsFileHandle = true;
+    return true;
+  }
+
+  infoOut.resultValueKind = valueKindFromTypeName(trimmedValueType);
+  if (infoOut.resultValueKind != LocalInfo::ValueKind::Unknown) {
+    return true;
+  }
+
+  if (input.resolveStructTypeName) {
+    std::string structPath;
+    if (input.resolveStructTypeName(trimmedValueType, definition.namespacePrefix, structPath)) {
+      infoOut.resultValueStructType = std::move(structPath);
+      return true;
+    }
+  }
+
+  infoOut.resultValueStructType = trimmedValueType;
+  return true;
+}
+
+bool buildSemanticProductReturnInfo(const LowerInferenceReturnInfoSetupInput &input,
+                                    const SemanticProductTargetAdapter &semanticProductTargets,
+                                    const Definition &definition,
+                                    ReturnInfo &infoOut,
+                                    std::string &errorOut) {
+  if (!input.resolveStructTypeName) {
+    errorOut = "native backend missing inference return-info setup dependency: resolveStructTypeName";
+    return false;
+  }
+  if (!input.resolveStructArrayInfoFromPath) {
+    errorOut = "native backend missing inference return-info setup dependency: resolveStructArrayInfoFromPath";
+    return false;
+  }
+
+  const auto *callableSummary = findSemanticProductCallableSummary(semanticProductTargets, definition.fullPath);
+  if (callableSummary == nullptr) {
+    errorOut = "missing semantic-product callable summary: " + definition.fullPath;
+    return false;
+  }
+
+  const auto *returnFact = findSemanticProductReturnFact(semanticProductTargets, definition);
+  if (returnFact == nullptr) {
+    errorOut = "missing semantic-product return fact: " + definition.fullPath;
+    return false;
+  }
+  if (returnFact->bindingTypeText.empty()) {
+    errorOut = "missing semantic-product return binding type: " + definition.fullPath;
+    return false;
+  }
+
+  Definition semanticReturnDefinition;
+  semanticReturnDefinition.fullPath = definition.fullPath;
+  semanticReturnDefinition.namespacePrefix = definition.namespacePrefix;
+  semanticReturnDefinition.sourceLine = definition.sourceLine;
+  semanticReturnDefinition.sourceColumn = definition.sourceColumn;
+  semanticReturnDefinition.semanticNodeId = definition.semanticNodeId;
+  semanticReturnDefinition.transforms.push_back(Transform{
+      .name = "return",
+      .templateArgs = {returnFact->bindingTypeText},
+  });
+
+  infoOut = {};
+  bool hasReturnTransform = false;
+  bool hasReturnAuto = false;
+  analyzeDeclaredReturnTransforms(
+      semanticReturnDefinition,
+      [&](const std::string &typeName, const std::string &namespacePrefix, std::string &structPathOut) {
+        return input.resolveStructTypeName(typeName, namespacePrefix, structPathOut);
+      },
+      [&](const std::string &structPath, StructArrayTypeInfo &structInfoOut) {
+        return input.resolveStructArrayInfoFromPath(structPath, structInfoOut);
+      },
+      infoOut,
+      hasReturnTransform,
+      hasReturnAuto);
+
+  if (!hasReturnTransform || hasReturnAuto) {
+    errorOut = "missing semantic-product return binding type: " + definition.fullPath;
+    return false;
+  }
+
+  if (callableSummary->hasResultType) {
+    infoOut.returnsVoid = false;
+    infoOut.returnsArray = false;
+    infoOut.isResult = true;
+    infoOut.resultHasValue = callableSummary->resultTypeHasValue;
+    infoOut.resultErrorType = callableSummary->resultErrorType;
+    infoOut.kind = callableSummary->resultTypeHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+    infoOut.resultValueCollectionKind = LocalInfo::Kind::Value;
+    infoOut.resultValueKind = LocalInfo::ValueKind::Unknown;
+    infoOut.resultValueMapKeyKind = LocalInfo::ValueKind::Unknown;
+    infoOut.resultValueIsFileHandle = false;
+    infoOut.resultValueStructType.clear();
+    if (callableSummary->resultTypeHasValue) {
+      (void)applySemanticResultValueTypeText(input, definition, callableSummary->resultValueType, infoOut);
+    }
+  } else if (infoOut.isResult) {
+    errorOut = "missing semantic-product callable result metadata: " + definition.fullPath;
+    return false;
+  } else {
+    clearReturnInfoResultValue(infoOut);
+    if (callableSummary->returnKind == "void") {
+      infoOut = {};
+      infoOut.returnsVoid = true;
+    }
+  }
+
+  if (!infoOut.returnsVoid && !infoOut.isResult && infoOut.kind == LocalInfo::ValueKind::Unknown) {
+    errorOut = "native backend does not support return type on " + definition.fullPath;
+    return false;
+  }
+  if (infoOut.returnsArray && infoOut.kind == LocalInfo::ValueKind::String) {
+    errorOut = "native backend does not support string array return types on " + definition.fullPath;
+    return false;
+  }
+  return true;
+}
+
+bool precomputeSemanticProductReturnInfoCache(const LowerInferenceGetReturnInfoSetupInput &input,
+                                              const LowerInferenceReturnInfoSetupInput &returnInfoSetupInput,
+                                              std::string &errorOut) {
+  if (input.defMap == nullptr) {
+    errorOut = "native backend missing inference get-return-info setup dependency: defMap";
+    return false;
+  }
+  if (input.returnInfoCache == nullptr) {
+    errorOut = "native backend missing inference get-return-info setup dependency: returnInfoCache";
+    return false;
+  }
+  if (input.semanticProductTargets == nullptr || !input.semanticProductTargets->hasSemanticProduct) {
+    errorOut = "native backend missing inference get-return-info setup dependency: semanticProductTargets";
+    return false;
+  }
+
+  auto &returnInfoCache = *input.returnInfoCache;
+  returnInfoCache.clear();
+
+  std::vector<const Definition *> definitions;
+  definitions.reserve(input.semanticProductTargets->callableSummariesByPath.size());
+  for (const auto &[path, callableSummary] : input.semanticProductTargets->callableSummariesByPath) {
+    (void)callableSummary;
+    const auto defIt = input.defMap->find(path);
+    if (defIt == input.defMap->end() || defIt->second == nullptr) {
+      errorOut = "native backend cannot resolve definition: " + path;
+      return false;
+    }
+    definitions.push_back(defIt->second);
+  }
+  sortDefinitionsForDeterministicReturnSolve(definitions);
+
+  for (const Definition *definition : definitions) {
+    ReturnInfo info;
+    if (!buildSemanticProductReturnInfo(
+            returnInfoSetupInput, *input.semanticProductTargets, *definition, info, errorOut)) {
+      return false;
+    }
+    returnInfoCache.insert_or_assign(definition->fullPath, std::move(info));
+  }
+
+  return true;
 }
 
 bool runLowerInferenceReturnInfoSetupImpl(const LowerInferenceReturnInfoSetupInput &input,
@@ -423,6 +635,16 @@ bool runLowerInferenceGetReturnInfoStep(const LowerInferenceGetReturnInfoStepInp
     errorOut = "native backend cannot resolve definition: " + path;
     return false;
   }
+  if (input.semanticProductTargets != nullptr && input.semanticProductTargets->hasSemanticProduct) {
+    ReturnInfo info;
+    if (!buildSemanticProductReturnInfo(
+            *input.returnInfoSetupInput, *input.semanticProductTargets, *defIt->second, info, errorOut)) {
+      return false;
+    }
+    returnInfoCache.insert_or_assign(path, info);
+    outInfo = std::move(info);
+    return true;
+  }
   if (!returnInferenceStack.insert(path).second) {
     errorOut = "native backend return type inference requires explicit annotation on " + path;
     return false;
@@ -470,6 +692,7 @@ bool runLowerInferenceGetReturnInfoCallbackSetup(const LowerInferenceGetReturnIn
       .returnInfoCache = input.returnInfoCache,
       .returnInferenceStack = input.returnInferenceStack,
       .returnInfoSetupInput = input.returnInfoSetupInput,
+      .semanticProductTargets = input.semanticProductTargets,
   };
   std::string *const inferenceError = input.error;
   getReturnInfoOut = [stepInput, inferenceError](const std::string &path, ReturnInfo &outInfo) -> bool {
@@ -507,6 +730,7 @@ bool runLowerInferenceGetReturnInfoSetup(const LowerInferenceGetReturnInfoSetupI
   const auto *defMap = input.defMap;
   auto *returnInfoCache = input.returnInfoCache;
   auto *returnInferenceStack = input.returnInferenceStack;
+  const auto *semanticProductTargets = input.semanticProductTargets;
   std::string *const inferenceError = input.error;
   returnInferenceStack->clear();
 
@@ -527,7 +751,7 @@ bool runLowerInferenceGetReturnInfoSetup(const LowerInferenceGetReturnInfoSetupI
       .inferArrayElementKind = input.inferArrayElementKind,
       .lowerMatchToIf = input.lowerMatchToIf,
   };
-  getReturnInfoOut = [defMap, returnInfoCache, returnInferenceStack, returnInfoSetupInput, inferenceError](
+  getReturnInfoOut = [defMap, returnInfoCache, returnInferenceStack, semanticProductTargets, returnInfoSetupInput, inferenceError](
                          const std::string &path, ReturnInfo &outInfo) -> bool {
     auto cached = returnInfoCache->find(path);
     if (cached != returnInfoCache->end()) {
@@ -540,36 +764,40 @@ bool runLowerInferenceGetReturnInfoSetup(const LowerInferenceGetReturnInfoSetupI
             .returnInfoCache = returnInfoCache,
             .returnInferenceStack = returnInferenceStack,
             .returnInfoSetupInput = &returnInfoSetupInput,
+            .semanticProductTargets = semanticProductTargets,
         },
         path,
         outInfo,
         *inferenceError);
   };
-  if (!precomputeGraphReturnInfoCache(
-          {
-              .program = program,
-              .defMap = defMap,
-              .returnInfoCache = returnInfoCache,
-              .returnInferenceStack = returnInferenceStack,
-              .resolveStructTypeName = input.resolveStructTypeName,
-              .resolveStructArrayInfoFromPath = input.resolveStructArrayInfoFromPath,
-              .isBindingMutable = input.isBindingMutable,
-              .bindingKind = input.bindingKind,
-              .hasExplicitBindingTypeTransform = input.hasExplicitBindingTypeTransform,
-              .bindingValueKind = input.bindingValueKind,
-              .inferExprKind = input.inferExprKind,
-              .isFileErrorBinding = input.isFileErrorBinding,
-              .setReferenceArrayInfo = input.setReferenceArrayInfo,
-              .applyStructArrayInfo = input.applyStructArrayInfo,
-              .applyStructValueInfo = input.applyStructValueInfo,
-              .inferStructExprPath = input.inferStructExprPath,
-              .isStringBinding = input.isStringBinding,
-              .inferArrayElementKind = input.inferArrayElementKind,
-              .lowerMatchToIf = input.lowerMatchToIf,
-              .error = inferenceError,
-          },
-          returnInfoSetupInput,
-          errorOut)) {
+  const LowerInferenceGetReturnInfoSetupInput precomputeInput = {
+      .program = program,
+      .defMap = defMap,
+      .returnInfoCache = returnInfoCache,
+      .returnInferenceStack = returnInferenceStack,
+      .semanticProductTargets = semanticProductTargets,
+      .resolveStructTypeName = input.resolveStructTypeName,
+      .resolveStructArrayInfoFromPath = input.resolveStructArrayInfoFromPath,
+      .isBindingMutable = input.isBindingMutable,
+      .bindingKind = input.bindingKind,
+      .hasExplicitBindingTypeTransform = input.hasExplicitBindingTypeTransform,
+      .bindingValueKind = input.bindingValueKind,
+      .inferExprKind = input.inferExprKind,
+      .isFileErrorBinding = input.isFileErrorBinding,
+      .setReferenceArrayInfo = input.setReferenceArrayInfo,
+      .applyStructArrayInfo = input.applyStructArrayInfo,
+      .applyStructValueInfo = input.applyStructValueInfo,
+      .inferStructExprPath = input.inferStructExprPath,
+      .isStringBinding = input.isStringBinding,
+      .inferArrayElementKind = input.inferArrayElementKind,
+      .lowerMatchToIf = input.lowerMatchToIf,
+      .error = inferenceError,
+  };
+  const bool useSemanticProductReturnInfo =
+      semanticProductTargets != nullptr && semanticProductTargets->hasSemanticProduct;
+  if (!(useSemanticProductReturnInfo
+            ? precomputeSemanticProductReturnInfoCache(precomputeInput, returnInfoSetupInput, errorOut)
+            : precomputeGraphReturnInfoCache(precomputeInput, returnInfoSetupInput, errorOut))) {
     return false;
   }
   errorOut.clear();

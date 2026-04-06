@@ -238,6 +238,205 @@ TEST_CASE("ir lowerer inference get-return-info setup validates dependencies") {
   CHECK_FALSE(static_cast<bool>(getReturnInfo));
 }
 
+TEST_CASE("ir lowerer inference get-return-info step uses semantic-product return metadata") {
+  primec::Definition definition;
+  definition.fullPath = "/pkg/current";
+  definition.namespacePrefix = "/pkg";
+  definition.semanticNodeId = 91;
+
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/pkg/current", &definition},
+  };
+  std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> returnInfoCache;
+  std::unordered_set<std::string> returnInferenceStack;
+  const primec::ir_lowerer::LowerInferenceReturnInfoSetupInput returnInfoSetupInput = {
+      .resolveStructTypeName = [](const std::string &typeName, const std::string &, std::string &structPathOut) {
+        if (typeName == "Pair") {
+          structPathOut = "/pkg/Pair";
+          return true;
+        }
+        return false;
+      },
+      .resolveStructArrayInfoFromPath = [](const std::string &, primec::ir_lowerer::StructArrayTypeInfo &) {
+        return false;
+      },
+      .isBindingMutable = [](const primec::Expr &) { return false; },
+      .bindingKind = [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      .hasExplicitBindingTypeTransform = [](const primec::Expr &) { return true; },
+      .bindingValueKind = [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+      },
+      .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      .isFileErrorBinding = [](const primec::Expr &) { return false; },
+      .setReferenceArrayInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      .applyStructArrayInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      .applyStructValueInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string{}; },
+      .isStringBinding = [](const primec::Expr &) { return false; },
+      .inferArrayElementKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      .lowerMatchToIf = [](const primec::Expr &, primec::Expr &, std::string &) { return true; },
+  };
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .fullPath = "/pkg/current",
+      .isExecution = false,
+      .returnKind = "int64",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "Pair",
+      .resultErrorType = "MyError",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 91,
+  });
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .definitionPath = "/pkg/legacy",
+      .returnKind = "int64",
+      .structPath = "/pkg/Pair",
+      .bindingTypeText = "Result<Pair, MyError>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 91,
+  });
+  const auto semanticProductTargets = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  const primec::ir_lowerer::LowerInferenceGetReturnInfoStepInput input = {
+      .defMap = &defMap,
+      .returnInfoCache = &returnInfoCache,
+      .returnInferenceStack = &returnInferenceStack,
+      .returnInfoSetupInput = &returnInfoSetupInput,
+      .semanticProductTargets = &semanticProductTargets,
+  };
+
+  primec::ir_lowerer::ReturnInfo outInfo;
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceGetReturnInfoStep(input, "/pkg/current", outInfo, error));
+  CHECK(error.empty());
+  CHECK(outInfo.isResult);
+  CHECK(outInfo.resultHasValue);
+  CHECK(outInfo.resultValueStructType == "/pkg/Pair");
+  CHECK(outInfo.resultErrorType == "MyError");
+  CHECK(returnInfoCache.count("/pkg/current") == 1);
+}
+
+TEST_CASE("ir lowerer inference get-return-info setup precomputes semantic-product return metadata") {
+  primec::Program program;
+  program.definitions.emplace_back();
+  primec::Definition &definition = program.definitions.back();
+  definition.fullPath = "/pkg/current";
+  definition.namespacePrefix = "/pkg";
+  definition.semanticNodeId = 97;
+
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/pkg/current", &definition},
+  };
+  std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> returnInfoCache;
+  std::unordered_set<std::string> returnInferenceStack;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .fullPath = "/pkg/current",
+      .isExecution = false,
+      .returnKind = "array",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 97,
+  });
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .definitionPath = "/pkg/current",
+      .returnKind = "array",
+      .structPath = "/vector",
+      .bindingTypeText = "vector<Pair>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 97,
+  });
+  const auto semanticProductTargets = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  std::function<bool(const std::string &, primec::ir_lowerer::ReturnInfo &)> getReturnInfo;
+  std::string inferenceError;
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceGetReturnInfoSetup(
+      {
+          .program = &program,
+          .defMap = &defMap,
+          .returnInfoCache = &returnInfoCache,
+          .returnInferenceStack = &returnInferenceStack,
+          .semanticProductTargets = &semanticProductTargets,
+          .resolveStructTypeName = [](const std::string &typeName, const std::string &, std::string &structPathOut) {
+            if (typeName == "Pair") {
+              structPathOut = "/pkg/Pair";
+              return true;
+            }
+            return false;
+          },
+          .resolveStructArrayInfoFromPath =
+              [](const std::string &, primec::ir_lowerer::StructArrayTypeInfo &) { return false; },
+          .isBindingMutable = [](const primec::Expr &) { return false; },
+          .bindingKind = [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+          .hasExplicitBindingTypeTransform = [](const primec::Expr &) { return true; },
+          .bindingValueKind = [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+          },
+          .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          .isFileErrorBinding = [](const primec::Expr &) { return false; },
+          .setReferenceArrayInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+          .applyStructArrayInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+          .applyStructValueInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+          .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return std::string{};
+          },
+          .isStringBinding = [](const primec::Expr &) { return false; },
+          .inferArrayElementKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          .lowerMatchToIf = [](const primec::Expr &, primec::Expr &, std::string &) { return true; },
+          .error = &inferenceError,
+      },
+      getReturnInfo,
+      error));
+  CHECK(error.empty());
+  CHECK(static_cast<bool>(getReturnInfo));
+  CHECK(returnInfoCache.count("/pkg/current") == 1);
+
+  defMap.clear();
+  primec::ir_lowerer::ReturnInfo outInfo;
+  CHECK(getReturnInfo("/pkg/current", outInfo));
+  CHECK(outInfo.returnsArray);
+  CHECK(outInfo.kind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+}
+
 TEST_CASE("ir lowerer inference preserves map reference parameter info for canonical count auto wrappers") {
   primec::Program program;
   program.definitions.reserve(2);
@@ -631,4 +830,3 @@ TEST_CASE("ir lowerer inference expr-kind dispatch infers try from indexed point
 
   CHECK(state.inferExprKind(tryExpr, locals) == primec::ir_lowerer::LocalInfo::ValueKind::String);
 }
-

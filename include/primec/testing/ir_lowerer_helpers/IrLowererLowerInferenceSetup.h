@@ -129,12 +129,14 @@ struct LowerInferenceGetReturnInfoStepInput {
   std::unordered_map<std::string, ReturnInfo> *returnInfoCache = nullptr;
   std::unordered_set<std::string> *returnInferenceStack = nullptr;
   const LowerInferenceReturnInfoSetupInput *returnInfoSetupInput = nullptr;
+  const SemanticProductTargetAdapter *semanticProductTargets = nullptr;
 };
 struct LowerInferenceGetReturnInfoCallbackSetupInput {
   const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
   std::unordered_map<std::string, ReturnInfo> *returnInfoCache = nullptr;
   std::unordered_set<std::string> *returnInferenceStack = nullptr;
   const LowerInferenceReturnInfoSetupInput *returnInfoSetupInput = nullptr;
+  const SemanticProductTargetAdapter *semanticProductTargets = nullptr;
   std::string *error = nullptr;
 };
 struct LowerInferenceGetReturnInfoSetupInput {
@@ -142,6 +144,7 @@ struct LowerInferenceGetReturnInfoSetupInput {
   const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
   std::unordered_map<std::string, ReturnInfo> *returnInfoCache = nullptr;
   std::unordered_set<std::string> *returnInferenceStack = nullptr;
+  const SemanticProductTargetAdapter *semanticProductTargets = nullptr;
   ResolveStructTypeNameForReturnFn resolveStructTypeName = {};
   ResolveStructArrayInfoForReturnFn resolveStructArrayInfoFromPath = {};
   IsBindingMutableForInferenceFn isBindingMutable = {};

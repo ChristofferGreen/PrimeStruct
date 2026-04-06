@@ -86,6 +86,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   lowered callable metadata, entry return metadata, and `on_error` wiring now
   require published callable summaries plus the matching return/`on_error`
   facts instead of silently falling back to AST transforms.
+- `semantic-product-return-metadata-consumption`: once lowering is handed a
+  `SemanticProgram`, `getReturnInfo(...)` now precomputes callable return and
+  result metadata from published callable summaries plus return facts instead
+  of rebuilding that cache from AST/type-resolution inference, so downstream
+  result/return consumers stay on semantic-product-owned metadata after the
+  lowering boundary.
 - `semantic-product-return-query-try-on-error-joins`: the temporary lowerer
   semantic-product adapter now keys return, local-`auto`, query, `try(...)`,
   and `on_error` facts by structural semantic ids, and semantic-product-backed
