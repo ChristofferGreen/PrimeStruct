@@ -13,22 +13,6 @@ Roadmap note: completed map/vector migration, compatibility-cleanup, and graph p
 **Architecture / Type-resolution graph**
 **Group 11 - Near-term graph queue**
 Blocked by Group 13 rollout constraints until the remaining collection-helper/runtime predecessor items are finished and the return-kind pilot path is stable enough to resume broader graph work.
-- ◐ Expand positive end-to-end graph conformance coverage for backend dispatch on C++/VM/native once the still-open query-shaped canonical helper/method resolution path moves past the current compile-pipeline `if branches must return compatible types` boundary. Progress: this backend-dispatch umbrella is now split into explicit compile-pipeline boundary lifts plus per-backend dispatch slices, so graph conformance can land incrementally once query-shaped canonical helper resolution clears the current branch-compatibility failure.
-  - ○ Add positive compile-pipeline parity for query-shaped canonical helper direct-call forms once they move past the current `if branches must return compatible types` boundary.
-    - ○ Identify the direct-call helper/query path that crosses the branch-compatibility boundary.
-    - ○ Add compile-pipeline parity coverage for that direct-call helper/query path.
-  - ○ Add positive compile-pipeline parity for query-shaped canonical helper slash-method forms once they move past the current `if branches must return compatible types` boundary.
-    - ○ Identify the slash-method helper/query path that crosses the branch-compatibility boundary.
-    - ○ Add compile-pipeline parity coverage for that slash-method helper/query path.
-  - ○ Add C++ backend dispatch conformance for the query-shaped canonical helper/method path once compile-pipeline parity is positive.
-    - ○ Select the C++ backend fixture that exercises the helper/method query path.
-    - ○ Add backend conformance coverage for that fixture.
-  - ○ Add VM backend dispatch conformance for the query-shaped canonical helper/method path once compile-pipeline parity is positive.
-    - ○ Select the VM backend fixture that exercises the helper/method query path.
-    - ○ Add backend conformance coverage for that fixture.
-  - ○ Add native backend dispatch conformance for the query-shaped canonical helper/method path once compile-pipeline parity is positive.
-    - ○ Select the native backend fixture that exercises the helper/method query path.
-    - ○ Add backend conformance coverage for that fixture.
 - ◐ Implement the next non-template inference-island migrations now that the graph-backed cutover contract is documented. Progress: the remaining non-template cutover is now split into direct-call, receiver-call, and collection bridge inference seams instead of one umbrella migration bullet.
   - ○ Migrate the next direct-call/callee non-template inference island onto the graph path.
     - ○ Select the next direct-call inference island to move onto the graph path.
@@ -69,3 +53,46 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
   - ○ Expand local-`auto` graph support across the next control-flow join surface.
     - ○ Select the next control-flow join surface to widen in the graph (proposed: `if` join return inference).
     - ○ Land the widening plus matching coverage for that join surface.
+
+**Group 12 - Semantics/lowering boundary**
+Progress note: the first semantic-product publication, dump surface, and temporary lowerer adapter are finished. The remaining live boundary work is to make `SemanticProgram` the only lowering truth, retire location-keyed joins and AST-derived fallbacks, and finish the graph-backed fact handoff needed by later Group 11 migrations.
+- ◐ Make semantic-product identity and provenance explicit across the lowering boundary. Progress: `SemanticProgram` now publishes deterministic fact inventories, but lowering still joins many of them by `line:column:name` instead of stable semantic identities.
+  - ○ Add stable semantic node ids to every lowering-consumed semantic-product fact family.
+  - ○ Add stable provenance handles for syntax-owned spans/debug mapping so lowering can recover source context without using AST state as semantic truth.
+  - ○ Add coverage that proves semantic-product ids/provenance remain deterministic across repeated runs and unrelated definition ordering.
+- ◐ Replace semantic-product source-location lookup adapters with id-based joins. Progress: the temporary adapter still resolves direct-call, method-call, bridge-path, and binding facts through location/name keys and duplicate-key collapse.
+  - ○ Replace direct-call, method-call, and bridge-path adapter lookups with semantic-id joins.
+  - ○ Replace binding/return/query/`try(...)`/`on_error` lookup joins with semantic-id joins.
+  - ○ Delete the duplicate-key collapse behavior from semantic-product adapters once all remaining joins use stable ids.
+- ◐ Turn missing semantic-product facts into explicit conformance failures instead of silent AST fallbacks. Progress: lowering still recovers from missing semantic-product data by re-reading AST transforms or scope/import state in several helper paths.
+  - ○ Add compile-pipeline/backend conformance checks that assert the required semantic-product fact families are present before lowering starts.
+  - ○ Make missing semantic-product fact families fail deterministically in tests and lowering diagnostics instead of falling back silently.
+  - ○ Audit and list the remaining intentionally-temporary fallback sites narrowly so future removals can be tracked slice by slice.
+- ◐ Move resolved call routing to semantic-product-only ownership. Progress: semantic-product call targets are published, but lowerer call routing still falls back to AST/import-alias resolution when semantic-product data is absent.
+  - ○ Move direct-call canonical path routing to semantic-product-only ownership.
+  - ○ Move receiver/method-call target routing to semantic-product-only ownership.
+  - ○ Move helper-vs-canonical bridge-path routing to semantic-product-only ownership, including same-path helper-shadow choices.
+- ◐ Move binding/result/effect/capability consumption to semantic-product-only ownership. Progress: lowerer setup already consumes some callable summaries and binding facts, but several consumers still re-derive binding/storage/effect details from AST transforms or local helper logic.
+  - ○ Move binding/storage classification to semantic-product-only ownership.
+  - ○ Move result/return metadata consumption to semantic-product-only ownership.
+  - ○ Move callable effect/capability consumption to semantic-product-only ownership across entry setup and lowered-callable setup.
+- ◐ Make graph-backed local-`auto`, query, `try(...)`, and `on_error` facts required lowering inputs. Progress: these fact families are already published on `SemanticProgram`, but lowering still treats them as optional adapter hints instead of required semantic inputs.
+  - ○ Make graph-backed local-`auto` facts required for lowerer local type setup.
+  - ○ Make graph-backed query and `try(...)` facts required for lowerer call/result setup.
+  - ○ Make graph-backed `on_error` facts required for lowered handler/result wiring.
+- ◐ Reshape `SemanticProgram` into module-scoped resolved artifacts instead of one flat whole-program fact bag. Progress: the current semantic product is deterministic, but it is still one flat container rather than a module-ordered resolved boundary that mirrors imported source structure.
+  - ○ Define the module-scoped semantic-product container shape and deterministic module ordering contract.
+  - ○ Move existing fact families under module-scoped resolved artifacts without changing their lowering-visible meaning.
+  - ○ Update lowerer/testing consumers to read module-scoped semantic artifacts instead of flat whole-program vectors.
+- ◐ Add semantic-product completeness and provenance coverage for the lowered boundary. Progress: current dump/conformance helpers prove publication and some backend parity, but they do not yet prove that lowering no longer re-derives semantic meaning from the AST.
+  - ○ Add a semantic-product completeness suite that fails when lowering re-derives meaning from AST state instead of consuming published semantic facts.
+  - ○ Add ownership/provenance tests that prove lowering reads meaning from semantic-product facts and syntax location from AST-backed provenance only.
+  - ○ Add backend conformance fixtures that exercise the same semantic-product-owned facts across `vm`, `native`, and file-emitting IR backends.
+- ◐ Add CI budget gates for graph invalidation and graph-build metrics using the `type-graph` output. Progress: the graph dump already reports invalidation counts and budget fields, but there is no sustained CI gate that treats those metrics as a contract.
+  - ○ Select the representative graph corpora and baseline thresholds for prepare/build time and invalidation fan-out.
+  - ○ Wire the graph-budget checks into CI/CTest so regressions fail by default.
+  - ○ Document the workflow for intentionally revising graph budgets and metric baselines.
+- ◐ Retire AST-derived lowering fallbacks until the AST is provenance-only at the lowering boundary. Progress: the temporary adapter reduced duplication, but production lowering still consumes both `Program` and `SemanticProgram`, and several helper paths still use AST/import fallback logic.
+  - ○ Remove the remaining transform-based binding-kind and helper-alias fallback paths once semantic-product fact coverage is complete.
+  - ○ Tighten `prepareIrModule(...)` / `IrLowerer::lower(...)` so production lowering requires the semantic product for semantic meaning.
+  - ○ Remove the final AST-derived semantic fallback slices so the AST remains lowering-visible only for provenance/debug/source-map ownership.
