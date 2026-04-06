@@ -87,7 +87,8 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                               i,
                               "full_path=" + quoteSemanticString(entry.fullPath) + " name=" +
                                   quoteSemanticString(entry.name) + " namespace_prefix=" +
-                                  quoteSemanticString(entry.namespacePrefix) + " source=" +
+                                  quoteSemanticString(entry.namespacePrefix) + " provenance_handle=" +
+                                  std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
   for (size_t i = 0; i < semanticProgram.executions.size(); ++i) {
@@ -97,7 +98,8 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                               i,
                               "full_path=" + quoteSemanticString(entry.fullPath) + " name=" +
                                   quoteSemanticString(entry.name) + " namespace_prefix=" +
-                                  quoteSemanticString(entry.namespacePrefix) + " source=" +
+                                  quoteSemanticString(entry.namespacePrefix) + " provenance_handle=" +
+                                  std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
   for (size_t i = 0; i < semanticProgram.directCallTargets.size(); ++i) {
@@ -107,7 +109,8 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                               i,
                               "scope_path=" + quoteSemanticString(entry.scopePath) + " call_name=" +
                                   quoteSemanticString(entry.callName) + " resolved_path=" +
-                                  quoteSemanticString(entry.resolvedPath) + " source=" +
+                                  quoteSemanticString(entry.resolvedPath) + " provenance_handle=" +
+                                  std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
   for (size_t i = 0; i < semanticProgram.methodCallTargets.size(); ++i) {
@@ -118,7 +121,8 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                               "scope_path=" + quoteSemanticString(entry.scopePath) + " method_name=" +
                                   quoteSemanticString(entry.methodName) + " receiver_type_text=" +
                                   quoteSemanticString(entry.receiverTypeText) + " resolved_path=" +
-                                  quoteSemanticString(entry.resolvedPath) + " source=" +
+                                  quoteSemanticString(entry.resolvedPath) + " provenance_handle=" +
+                                  std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
   for (size_t i = 0; i < semanticProgram.bridgePathChoices.size(); ++i) {
@@ -129,7 +133,8 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                               "scope_path=" + quoteSemanticString(entry.scopePath) + " collection_family=" +
                                   quoteSemanticString(entry.collectionFamily) + " helper_name=" +
                                   quoteSemanticString(entry.helperName) + " chosen_path=" +
-                                  quoteSemanticString(entry.chosenPath) + " source=" +
+                                  quoteSemanticString(entry.chosenPath) + " provenance_handle=" +
+                                  std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
   for (size_t i = 0; i < semanticProgram.callableSummaries.size(); ++i) {
@@ -151,7 +156,8 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   formatSemanticBool(entry.hasOnError) + " on_error_handler_path=" +
                                   quoteSemanticString(entry.onErrorHandlerPath) + " on_error_error_type=" +
                                   quoteSemanticString(entry.onErrorErrorType) + " on_error_bound_arg_count=" +
-                                  std::to_string(entry.onErrorBoundArgCount));
+                                  std::to_string(entry.onErrorBoundArgCount) + " provenance_handle=" +
+                                  std::to_string(entry.provenanceHandle));
   }
   for (size_t i = 0; i < semanticProgram.typeMetadata.size(); ++i) {
     const auto &entry = semanticProgram.typeMetadata[i];
@@ -166,7 +172,8 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   " has_explicit_alignment=" + formatSemanticBool(entry.hasExplicitAlignment) +
                                   " explicit_alignment_bytes=" + std::to_string(entry.explicitAlignmentBytes) +
                                   " field_count=" + std::to_string(entry.fieldCount) + " enum_value_count=" +
-                                  std::to_string(entry.enumValueCount) + " source=" +
+                                  std::to_string(entry.enumValueCount) + " provenance_handle=" +
+                                  std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
   for (size_t i = 0; i < semanticProgram.structFieldMetadata.size(); ++i) {
@@ -177,7 +184,8 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                               "struct_path=" + quoteSemanticString(entry.structPath) + " field_name=" +
                                   quoteSemanticString(entry.fieldName) + " field_index=" +
                                   std::to_string(entry.fieldIndex) + " binding_type_text=" +
-                                  quoteSemanticString(entry.bindingTypeText) + " source=" +
+                                  quoteSemanticString(entry.bindingTypeText) + " provenance_handle=" +
+                                  std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
   for (size_t i = 0; i < semanticProgram.bindingFacts.size(); ++i) {
@@ -193,7 +201,8 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   formatSemanticBool(entry.isMutable) + " is_entry_arg_string=" +
                                   formatSemanticBool(entry.isEntryArgString) + " is_unsafe_reference=" +
                                   formatSemanticBool(entry.isUnsafeReference) + " reference_root=" +
-                                  quoteSemanticString(entry.referenceRoot) + " source=" +
+                                  quoteSemanticString(entry.referenceRoot) + " provenance_handle=" +
+                                  std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
   for (size_t i = 0; i < semanticProgram.returnFacts.size(); ++i) {
@@ -208,7 +217,8 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   formatSemanticBool(entry.isMutable) + " is_entry_arg_string=" +
                                   formatSemanticBool(entry.isEntryArgString) + " is_unsafe_reference=" +
                                   formatSemanticBool(entry.isUnsafeReference) + " reference_root=" +
-                                  quoteSemanticString(entry.referenceRoot) + " source=" +
+                                  quoteSemanticString(entry.referenceRoot) + " provenance_handle=" +
+                                  std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
   for (size_t i = 0; i < semanticProgram.localAutoFacts.size(); ++i) {
@@ -252,7 +262,8 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   " initializer_try_on_error_error_type=" +
                                   quoteSemanticString(entry.initializerTryOnErrorErrorType) +
                                   " initializer_try_on_error_bound_arg_count=" +
-                                  std::to_string(entry.initializerTryOnErrorBoundArgCount) + " source=" +
+                                  std::to_string(entry.initializerTryOnErrorBoundArgCount) +
+                                  " provenance_handle=" + std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
   for (size_t i = 0; i < semanticProgram.queryFacts.size(); ++i) {
@@ -269,7 +280,8 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   formatSemanticBool(entry.hasResultType) + " result_type_has_value=" +
                                   formatSemanticBool(entry.resultTypeHasValue) + " result_value_type=" +
                                   quoteSemanticString(entry.resultValueType) + " result_error_type=" +
-                                  quoteSemanticString(entry.resultErrorType) + " source=" +
+                                  quoteSemanticString(entry.resultErrorType) + " provenance_handle=" +
+                                  std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
   for (size_t i = 0; i < semanticProgram.tryFacts.size(); ++i) {
@@ -290,7 +302,8 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   quoteSemanticString(entry.contextReturnKind) + " on_error_handler_path=" +
                                   quoteSemanticString(entry.onErrorHandlerPath) + " on_error_error_type=" +
                                   quoteSemanticString(entry.onErrorErrorType) + " on_error_bound_arg_count=" +
-                                  std::to_string(entry.onErrorBoundArgCount) + " source=" +
+                                  std::to_string(entry.onErrorBoundArgCount) + " provenance_handle=" +
+                                  std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
   for (size_t i = 0; i < semanticProgram.onErrorFacts.size(); ++i) {
@@ -307,7 +320,8 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   formatSemanticBool(entry.returnResultHasValue) + " return_result_value_type=" +
                                   quoteSemanticString(entry.returnResultValueType) +
                                   " return_result_error_type=" +
-                                  quoteSemanticString(entry.returnResultErrorType));
+                                  quoteSemanticString(entry.returnResultErrorType) + " provenance_handle=" +
+                                  std::to_string(entry.provenanceHandle));
   }
   out << "}\n";
   return out.str();

@@ -14,6 +14,7 @@ struct SemanticProgramDefinition {
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
+  uint64_t provenanceHandle = 0;
 };
 
 struct SemanticProgramExecution {
@@ -23,6 +24,7 @@ struct SemanticProgramExecution {
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
+  uint64_t provenanceHandle = 0;
 };
 
 struct SemanticProgramDirectCallTarget {
@@ -32,6 +34,7 @@ struct SemanticProgramDirectCallTarget {
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
+  uint64_t provenanceHandle = 0;
 };
 
 struct SemanticProgramMethodCallTarget {
@@ -42,6 +45,7 @@ struct SemanticProgramMethodCallTarget {
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
+  uint64_t provenanceHandle = 0;
 };
 
 struct SemanticProgramBridgePathChoice {
@@ -52,6 +56,7 @@ struct SemanticProgramBridgePathChoice {
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
+  uint64_t provenanceHandle = 0;
 };
 
 struct SemanticProgramCallableSummary {
@@ -71,6 +76,7 @@ struct SemanticProgramCallableSummary {
   std::string onErrorErrorType;
   std::size_t onErrorBoundArgCount = 0;
   uint64_t semanticNodeId = 0;
+  uint64_t provenanceHandle = 0;
 };
 
 struct SemanticProgramTypeMetadata {
@@ -86,6 +92,7 @@ struct SemanticProgramTypeMetadata {
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
+  uint64_t provenanceHandle = 0;
 };
 
 struct SemanticProgramStructFieldMetadata {
@@ -96,6 +103,7 @@ struct SemanticProgramStructFieldMetadata {
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
+  uint64_t provenanceHandle = 0;
 };
 
 struct SemanticProgramBindingFact {
@@ -111,6 +119,7 @@ struct SemanticProgramBindingFact {
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
+  uint64_t provenanceHandle = 0;
 };
 
 struct SemanticProgramReturnFact {
@@ -125,6 +134,7 @@ struct SemanticProgramReturnFact {
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
+  uint64_t provenanceHandle = 0;
 };
 
 struct SemanticProgramLocalAutoFact {
@@ -152,6 +162,7 @@ struct SemanticProgramLocalAutoFact {
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
+  uint64_t provenanceHandle = 0;
 };
 
 struct SemanticProgramQueryFact {
@@ -168,6 +179,7 @@ struct SemanticProgramQueryFact {
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
+  uint64_t provenanceHandle = 0;
 };
 
 struct SemanticProgramTryFact {
@@ -185,6 +197,7 @@ struct SemanticProgramTryFact {
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
+  uint64_t provenanceHandle = 0;
 };
 
 struct SemanticProgramOnErrorFact {
@@ -198,6 +211,7 @@ struct SemanticProgramOnErrorFact {
   std::string returnResultValueType;
   std::string returnResultErrorType;
   uint64_t semanticNodeId = 0;
+  uint64_t provenanceHandle = 0;
 };
 
 struct SemanticProgram {

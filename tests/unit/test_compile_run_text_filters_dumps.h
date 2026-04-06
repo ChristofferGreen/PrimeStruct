@@ -2323,6 +2323,7 @@ TEST_CASE("semantic-product dump keeps provenance handles while ast-semantic kee
         std::string::npos);
   CHECK(dumps.semanticProduct.find("binding_facts[0]: scope_path=\"/main\" site_kind=\"local\" name=\"packet\"") !=
         std::string::npos);
+  CHECK(dumps.semanticProduct.find("provenance_handle=") != std::string::npos);
   CHECK(dumps.semanticProduct.find("source=\"2:") != std::string::npos);
   CHECK(dumps.semanticProduct.find("left{1}") == std::string::npos);
   CHECK(dumps.semanticProduct.find("return(selected)") == std::string::npos);

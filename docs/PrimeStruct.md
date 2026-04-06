@@ -599,8 +599,9 @@ Current semantic-product dump contract:
 
 Planned semantic-product unit/golden suite:
 - Current status: the exact semantic-product formatter golden now pins resolved call/helper targets,
-  binding/result facts, effect/capability plus struct/layout metadata, and the current `line:column`
-  provenance-handle surface carried by lowering-facing semantic-product facts. The remaining live
+  binding/result facts, effect/capability plus struct/layout metadata, and the explicit
+  `provenance_handle=<id> source="line:column"` provenance surface carried by lowering-facing
+  semantic-product facts. The remaining live
   Group 12 coverage work is now pipeline-facing/backend conformance rather than narrow formatter
   coverage.
 - Keep one narrow golden corpus focused on exported lowering facts rather than full pipeline behavior.

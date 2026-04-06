@@ -98,11 +98,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `inferCallParameterLocalInfo(...)`, so semantic-id-backed temporary calls
   prefer published binding/query facts over AST transform/collection-shape
   fallback when lowering classifies local/result metadata after the boundary.
-- `semantic-product-id-determinism-coverage`: the semantic-product snapshot
-  suite now locks repeated-run formatter equality plus selected semantic-node
-  id equality across unrelated helper-definition reorderings, so stable id
-  determinism is covered even though syntax-owned provenance handles are still
-  pending.
+- `semantic-product-provenance-handles`: lowering-consumed semantic-product
+  fact families now carry explicit stable `provenanceHandle` values derived
+  from the published semantic node ids, the semantic-product dump exposes
+  `provenance_handle=<id> source="line:column"` for those facts, and the
+  semantic-product snapshot suite now locks provenance-handle determinism
+  alongside semantic-node id determinism across repeated runs plus unrelated
+  helper-definition reorderings.
 - `semantic-product-return-query-try-on-error-joins`: the temporary lowerer
   semantic-product adapter now keys return, local-`auto`, query, `try(...)`,
   and `on_error` facts by structural semantic ids, and semantic-product-backed

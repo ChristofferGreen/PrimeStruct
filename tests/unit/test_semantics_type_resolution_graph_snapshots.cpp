@@ -970,6 +970,8 @@ TEST_CASE("semantic product semantic ids stay deterministic across repeated vali
   REQUIRE(secondMain != nullptr);
   CHECK(firstMain->semanticNodeId != 0);
   CHECK(firstMain->semanticNodeId == secondMain->semanticNodeId);
+  CHECK(firstMain->provenanceHandle != 0);
+  CHECK(firstMain->provenanceHandle == secondMain->provenanceHandle);
 
   const auto *firstDirectCall = findSemanticEntry(
       first.directCallTargets,
@@ -985,6 +987,8 @@ TEST_CASE("semantic product semantic ids stay deterministic across repeated vali
   REQUIRE(secondDirectCall != nullptr);
   CHECK(firstDirectCall->semanticNodeId != 0);
   CHECK(firstDirectCall->semanticNodeId == secondDirectCall->semanticNodeId);
+  CHECK(firstDirectCall->provenanceHandle != 0);
+  CHECK(firstDirectCall->provenanceHandle == secondDirectCall->provenanceHandle);
 
   const auto *firstQuery = findSemanticEntry(
       first.queryFacts,
@@ -1000,6 +1004,8 @@ TEST_CASE("semantic product semantic ids stay deterministic across repeated vali
   REQUIRE(secondQuery != nullptr);
   CHECK(firstQuery->semanticNodeId != 0);
   CHECK(firstQuery->semanticNodeId == secondQuery->semanticNodeId);
+  CHECK(firstQuery->provenanceHandle != 0);
+  CHECK(firstQuery->provenanceHandle == secondQuery->provenanceHandle);
 
   const auto *firstTry = findSemanticEntry(
       first.tryFacts,
@@ -1015,6 +1021,8 @@ TEST_CASE("semantic product semantic ids stay deterministic across repeated vali
   REQUIRE(secondTry != nullptr);
   CHECK(firstTry->semanticNodeId != 0);
   CHECK(firstTry->semanticNodeId == secondTry->semanticNodeId);
+  CHECK(firstTry->provenanceHandle != 0);
+  CHECK(firstTry->provenanceHandle == secondTry->provenanceHandle);
 }
 
 TEST_CASE("semantic product semantic ids ignore unrelated definition ordering") {
@@ -1085,6 +1093,7 @@ TEST_CASE("semantic product semantic ids ignore unrelated definition ordering") 
   REQUIRE(firstMain != nullptr);
   REQUIRE(secondMain != nullptr);
   CHECK(firstMain->semanticNodeId == secondMain->semanticNodeId);
+  CHECK(firstMain->provenanceHandle == secondMain->provenanceHandle);
   CHECK(firstMain->sourceLine == secondMain->sourceLine);
   CHECK(firstMain->sourceColumn == secondMain->sourceColumn);
 
@@ -1101,6 +1110,7 @@ TEST_CASE("semantic product semantic ids ignore unrelated definition ordering") 
   REQUIRE(firstLocal != nullptr);
   REQUIRE(secondLocal != nullptr);
   CHECK(firstLocal->semanticNodeId == secondLocal->semanticNodeId);
+  CHECK(firstLocal->provenanceHandle == secondLocal->provenanceHandle);
   CHECK(firstLocal->sourceLine == secondLocal->sourceLine);
   CHECK(firstLocal->sourceColumn == secondLocal->sourceColumn);
 
@@ -1117,6 +1127,7 @@ TEST_CASE("semantic product semantic ids ignore unrelated definition ordering") 
   REQUIRE(firstTemporary != nullptr);
   REQUIRE(secondTemporary != nullptr);
   CHECK(firstTemporary->semanticNodeId == secondTemporary->semanticNodeId);
+  CHECK(firstTemporary->provenanceHandle == secondTemporary->provenanceHandle);
   CHECK(firstTemporary->sourceLine == secondTemporary->sourceLine);
   CHECK(firstTemporary->sourceColumn == secondTemporary->sourceColumn);
 
@@ -1133,6 +1144,7 @@ TEST_CASE("semantic product semantic ids ignore unrelated definition ordering") 
   REQUIRE(firstDirectCall != nullptr);
   REQUIRE(secondDirectCall != nullptr);
   CHECK(firstDirectCall->semanticNodeId == secondDirectCall->semanticNodeId);
+  CHECK(firstDirectCall->provenanceHandle == secondDirectCall->provenanceHandle);
   CHECK(firstDirectCall->sourceLine == secondDirectCall->sourceLine);
   CHECK(firstDirectCall->sourceColumn == secondDirectCall->sourceColumn);
 
@@ -1145,6 +1157,7 @@ TEST_CASE("semantic product semantic ids ignore unrelated definition ordering") 
   REQUIRE(firstReturn != nullptr);
   REQUIRE(secondReturn != nullptr);
   CHECK(firstReturn->semanticNodeId == secondReturn->semanticNodeId);
+  CHECK(firstReturn->provenanceHandle == secondReturn->provenanceHandle);
   CHECK(firstReturn->sourceLine == secondReturn->sourceLine);
   CHECK(firstReturn->sourceColumn == secondReturn->sourceColumn);
 }
@@ -1266,6 +1279,10 @@ TEST_CASE("semantic product lowering preserves debug source-map provenance") {
   REQUIRE(methodCallEntry != nullptr);
   REQUIRE(bridgeEntry != nullptr);
   REQUIRE(returnEntry != nullptr);
+  CHECK(directCallEntry->provenanceHandle != 0);
+  CHECK(methodCallEntry->provenanceHandle != 0);
+  CHECK(bridgeEntry->provenanceHandle != 0);
+  CHECK(returnEntry->provenanceHandle != 0);
 
   primec::IrLowerer lowerer;
   primec::IrModule semanticModule;
@@ -1365,6 +1382,8 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       "/",
       2,
       3,
+      11,
+      101,
   });
   semanticProgram.executions.push_back(primec::SemanticProgramExecution{
       "main",
@@ -1372,6 +1391,8 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       "/",
       7,
       1,
+      12,
+      102,
   });
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
       "/main",
@@ -1379,6 +1400,8 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       "/id",
       9,
       10,
+      13,
+      103,
   });
   semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
       "/main",
@@ -1387,6 +1410,8 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       "/std/collections/vector/count",
       9,
       13,
+      14,
+      104,
   });
   semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
       "/main",
@@ -1395,6 +1420,8 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       "/std/collections/vector/count",
       9,
       13,
+      15,
+      105,
   });
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
       "/main",
@@ -1412,6 +1439,8 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       "/unexpectedError",
       "MyError",
       1,
+      16,
+      106,
   });
   semanticProgram.typeMetadata.push_back(primec::SemanticProgramTypeMetadata{
       "/Particle",
@@ -1425,6 +1454,8 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       0,
       11,
       5,
+      17,
+      107,
   });
   semanticProgram.structFieldMetadata.push_back(primec::SemanticProgramStructFieldMetadata{
       "/Particle",
@@ -1433,6 +1464,8 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       "i32",
       12,
       7,
+      18,
+      108,
   });
   semanticProgram.structFieldMetadata.push_back(primec::SemanticProgramStructFieldMetadata{
       "/Particle",
@@ -1441,6 +1474,8 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       "i64",
       13,
       7,
+      19,
+      109,
   });
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
       "/main",
@@ -1454,6 +1489,8 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       "",
       12,
       7,
+      20,
+      110,
   });
   semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
       "/main",
@@ -1466,6 +1503,8 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       "",
       13,
       3,
+      21,
+      111,
   });
   semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
       "/main",
@@ -1491,6 +1530,8 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       0,
       14,
       9,
+      22,
+      112,
   });
   semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
       "/main",
@@ -1505,6 +1546,8 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       "MyError",
       15,
       4,
+      23,
+      113,
   });
   semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
       "/main",
@@ -1520,6 +1563,8 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       1,
       16,
       8,
+      24,
+      114,
   });
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
       "/main",
@@ -1531,6 +1576,8 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       true,
       "i32",
       "MyError",
+      25,
+      115,
   });
 
   const std::string expected = R"(semantic_product {
@@ -1538,21 +1585,21 @@ TEST_CASE("semantic product formatter exact golden is stable") {
   source_imports[0]: "/std/collections/*"
   imports[0]: "/id"
   imports[1]: "/main"
-  definitions[0]: full_path="/id" name="id" namespace_prefix="/" source="2:3"
-  executions[0]: full_path="/main" name="main" namespace_prefix="/" source="7:1"
-  direct_call_targets[0]: scope_path="/main" call_name="id" resolved_path="/id" source="9:10"
-  method_call_targets[0]: scope_path="/main" method_name="count" receiver_type_text="vector<i32>" resolved_path="/std/collections/vector/count" source="9:13"
-  bridge_path_choices[0]: scope_path="/main" collection_family="vector" helper_name="count" chosen_path="/std/collections/vector/count" source="9:13"
-  callable_summaries[0]: full_path="/main" is_execution=true return_kind="return" is_compute=false is_unsafe=false active_effects=["io_out"] active_capabilities=["gpu"] has_result_type=true result_type_has_value=true result_value_type="i32" result_error_type="MyError" has_on_error=true on_error_handler_path="/unexpectedError" on_error_error_type="MyError" on_error_bound_arg_count=1
-  type_metadata[0]: full_path="/Particle" category="struct" is_public=true has_no_padding=false has_platform_independent_padding=true has_explicit_alignment=true explicit_alignment_bytes=16 field_count=2 enum_value_count=0 source="11:5"
-  struct_field_metadata[0]: struct_path="/Particle" field_name="left" field_index=0 binding_type_text="i32" source="12:7"
-  struct_field_metadata[1]: struct_path="/Particle" field_name="right" field_index=1 binding_type_text="i64" source="13:7"
-  binding_facts[0]: scope_path="/main" site_kind="local" name="value" resolved_path="/main/value" binding_type_text="i32" is_mutable=true is_entry_arg_string=false is_unsafe_reference=false reference_root="" source="12:7"
-  return_facts[0]: definition_path="/main" return_kind="return" struct_path="/i32" binding_type_text="i32" is_mutable=false is_entry_arg_string=false is_unsafe_reference=false reference_root="" source="13:3"
-  local_auto_facts[0]: scope_path="/main" binding_name="selected" binding_type_text="i32" initializer_resolved_path="/id" initializer_binding_type_text="i32" initializer_receiver_binding_type_text="" initializer_query_type_text="i32" initializer_result_has_value=false initializer_result_value_type="" initializer_result_error_type="" initializer_has_try=false initializer_try_operand_resolved_path="" initializer_try_operand_binding_type_text="" initializer_try_operand_receiver_binding_type_text="" initializer_try_operand_query_type_text="" initializer_try_value_type="" initializer_try_error_type="" initializer_try_context_return_kind="return" initializer_try_on_error_handler_path="" initializer_try_on_error_error_type="" initializer_try_on_error_bound_arg_count=0 source="14:9"
-  query_facts[0]: scope_path="/main" call_name="lookup" resolved_path="/lookup" query_type_text="Result<i32, MyError>" binding_type_text="Result<i32, MyError>" receiver_binding_type_text="" has_result_type=true result_type_has_value=true result_value_type="i32" result_error_type="MyError" source="15:4"
-  try_facts[0]: scope_path="/main" operand_resolved_path="/lookup" operand_binding_type_text="Result<i32, MyError>" operand_receiver_binding_type_text="" operand_query_type_text="Result<i32, MyError>" value_type="i32" error_type="MyError" context_return_kind="return" on_error_handler_path="/unexpectedError" on_error_error_type="MyError" on_error_bound_arg_count=1 source="16:8"
-  on_error_facts[0]: definition_path="/main" return_kind="return" handler_path="/unexpectedError" error_type="MyError" bound_arg_count=1 bound_arg_texts=["err"] return_result_has_value=true return_result_value_type="i32" return_result_error_type="MyError"
+  definitions[0]: full_path="/id" name="id" namespace_prefix="/" provenance_handle=101 source="2:3"
+  executions[0]: full_path="/main" name="main" namespace_prefix="/" provenance_handle=102 source="7:1"
+  direct_call_targets[0]: scope_path="/main" call_name="id" resolved_path="/id" provenance_handle=103 source="9:10"
+  method_call_targets[0]: scope_path="/main" method_name="count" receiver_type_text="vector<i32>" resolved_path="/std/collections/vector/count" provenance_handle=104 source="9:13"
+  bridge_path_choices[0]: scope_path="/main" collection_family="vector" helper_name="count" chosen_path="/std/collections/vector/count" provenance_handle=105 source="9:13"
+  callable_summaries[0]: full_path="/main" is_execution=true return_kind="return" is_compute=false is_unsafe=false active_effects=["io_out"] active_capabilities=["gpu"] has_result_type=true result_type_has_value=true result_value_type="i32" result_error_type="MyError" has_on_error=true on_error_handler_path="/unexpectedError" on_error_error_type="MyError" on_error_bound_arg_count=1 provenance_handle=106
+  type_metadata[0]: full_path="/Particle" category="struct" is_public=true has_no_padding=false has_platform_independent_padding=true has_explicit_alignment=true explicit_alignment_bytes=16 field_count=2 enum_value_count=0 provenance_handle=107 source="11:5"
+  struct_field_metadata[0]: struct_path="/Particle" field_name="left" field_index=0 binding_type_text="i32" provenance_handle=108 source="12:7"
+  struct_field_metadata[1]: struct_path="/Particle" field_name="right" field_index=1 binding_type_text="i64" provenance_handle=109 source="13:7"
+  binding_facts[0]: scope_path="/main" site_kind="local" name="value" resolved_path="/main/value" binding_type_text="i32" is_mutable=true is_entry_arg_string=false is_unsafe_reference=false reference_root="" provenance_handle=110 source="12:7"
+  return_facts[0]: definition_path="/main" return_kind="return" struct_path="/i32" binding_type_text="i32" is_mutable=false is_entry_arg_string=false is_unsafe_reference=false reference_root="" provenance_handle=111 source="13:3"
+  local_auto_facts[0]: scope_path="/main" binding_name="selected" binding_type_text="i32" initializer_resolved_path="/id" initializer_binding_type_text="i32" initializer_receiver_binding_type_text="" initializer_query_type_text="i32" initializer_result_has_value=false initializer_result_value_type="" initializer_result_error_type="" initializer_has_try=false initializer_try_operand_resolved_path="" initializer_try_operand_binding_type_text="" initializer_try_operand_receiver_binding_type_text="" initializer_try_operand_query_type_text="" initializer_try_value_type="" initializer_try_error_type="" initializer_try_context_return_kind="return" initializer_try_on_error_handler_path="" initializer_try_on_error_error_type="" initializer_try_on_error_bound_arg_count=0 provenance_handle=112 source="14:9"
+  query_facts[0]: scope_path="/main" call_name="lookup" resolved_path="/lookup" query_type_text="Result<i32, MyError>" binding_type_text="Result<i32, MyError>" receiver_binding_type_text="" has_result_type=true result_type_has_value=true result_value_type="i32" result_error_type="MyError" provenance_handle=113 source="15:4"
+  try_facts[0]: scope_path="/main" operand_resolved_path="/lookup" operand_binding_type_text="Result<i32, MyError>" operand_receiver_binding_type_text="" operand_query_type_text="Result<i32, MyError>" value_type="i32" error_type="MyError" context_return_kind="return" on_error_handler_path="/unexpectedError" on_error_error_type="MyError" on_error_bound_arg_count=1 provenance_handle=114 source="16:8"
+  on_error_facts[0]: definition_path="/main" return_kind="return" handler_path="/unexpectedError" error_type="MyError" bound_arg_count=1 bound_arg_texts=["err"] return_result_has_value=true return_result_value_type="i32" return_result_error_type="MyError" provenance_handle=115
 }
 )";
 
