@@ -43,6 +43,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   access behavior; the C++ emitter now matches that direct-call contract for
   bare `at` / `at_unsafe` calls instead of compiling them through the old
   builtin access fallback.
+- `semantic-product-required-callable-metadata`: once lowering is handed a
+  `SemanticProgram`, entry effect/capability masks, callable effect validation,
+  lowered callable metadata, entry return metadata, and `on_error` wiring now
+  require published callable summaries plus the matching return/`on_error`
+  facts instead of silently falling back to AST transforms.
 - `semantic-product-structural-node-ids`: validated AST definitions,
   executions, and expressions now carry deterministic structural
   `semanticNodeId` values hashed from their resolved scope path plus traversal

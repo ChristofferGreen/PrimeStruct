@@ -140,10 +140,21 @@ bool buildOnErrorByDefinition(const Program &program,
   out.reserve(program.definitions.size());
   for (const auto &def : program.definitions) {
     std::optional<OnErrorHandler> handler;
-    if (const auto *onErrorFact = findSemanticProductOnErrorFact(semanticProductTargets, def.fullPath);
-        onErrorFact != nullptr) {
-      if (!buildOnErrorHandlerFromSemanticFact(def, *onErrorFact, handler, error)) {
+    if (semanticProgram != nullptr) {
+      const auto *callableSummary = findSemanticProductCallableSummary(semanticProductTargets, def.fullPath);
+      if (callableSummary == nullptr) {
+        error = "missing semantic-product callable summary: " + def.fullPath;
         return false;
+      }
+      if (callableSummary->hasOnError) {
+        const auto *onErrorFact = findSemanticProductOnErrorFact(semanticProductTargets, def.fullPath);
+        if (onErrorFact == nullptr) {
+          error = "missing semantic-product on_error fact: " + def.fullPath;
+          return false;
+        }
+        if (!buildOnErrorHandlerFromSemanticFact(def, *onErrorFact, handler, error)) {
+          return false;
+        }
       }
     } else {
       if (!parseOnErrorTransform(

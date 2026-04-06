@@ -63,20 +63,18 @@ Progress note: the first semantic-product publication, dump surface, and tempora
   - ○ Replace return/query/`try(...)`/`on_error` lookup joins with semantic-id joins.
 - ◐ Turn missing semantic-product facts into explicit conformance failures instead of silent AST fallbacks. Progress: lowering still recovers from missing semantic-product data by re-reading AST transforms or scope/import state in several helper paths.
   - ○ Add compile-pipeline/backend conformance checks that assert the required semantic-product fact families are present before lowering starts.
-  - ○ Make missing semantic-product fact families fail deterministically in tests and lowering diagnostics instead of falling back silently.
+  - ◐ Make missing semantic-product fact families fail deterministically in tests and lowering diagnostics instead of falling back silently. Progress: callable summary, entry return-fact, and `on_error` lowering now fail explicitly when semantic-product publication is incomplete instead of silently falling back to AST transforms.
   - ○ Audit and list the remaining intentionally-temporary fallback sites narrowly so future removals can be tracked slice by slice.
 - ◐ Move resolved call routing to semantic-product-only ownership. Progress: semantic-product call targets are published, but lowerer call routing still falls back to AST/import-alias resolution when semantic-product data is absent.
   - ○ Move direct-call canonical path routing to semantic-product-only ownership.
   - ○ Move receiver/method-call target routing to semantic-product-only ownership.
   - ○ Move helper-vs-canonical bridge-path routing to semantic-product-only ownership, including same-path helper-shadow choices.
-- ◐ Move binding/result/effect/capability consumption to semantic-product-only ownership. Progress: lowerer setup already consumes some callable summaries and binding facts, but several consumers still re-derive binding/storage/effect details from AST transforms or local helper logic.
+- ◐ Move binding/result/effect/capability consumption to semantic-product-only ownership. Progress: callable effect/capability metadata now requires semantic-product summaries across entry setup and lowered-callable setup, but several consumers still re-derive binding/storage and broader result/return details from AST transforms or local helper logic.
   - ○ Move binding/storage classification to semantic-product-only ownership.
   - ○ Move result/return metadata consumption to semantic-product-only ownership.
-  - ○ Move callable effect/capability consumption to semantic-product-only ownership across entry setup and lowered-callable setup.
 - ◐ Make graph-backed local-`auto`, query, `try(...)`, and `on_error` facts required lowering inputs. Progress: these fact families are already published on `SemanticProgram`, but lowering still treats them as optional adapter hints instead of required semantic inputs.
   - ○ Make graph-backed local-`auto` facts required for lowerer local type setup.
   - ○ Make graph-backed query and `try(...)` facts required for lowerer call/result setup.
-  - ○ Make graph-backed `on_error` facts required for lowered handler/result wiring.
 - ◐ Reshape `SemanticProgram` into module-scoped resolved artifacts instead of one flat whole-program fact bag. Progress: the current semantic product is deterministic, but it is still one flat container rather than a module-ordered resolved boundary that mirrors imported source structure.
   - ○ Define the module-scoped semantic-product container shape and deterministic module ordering contract.
   - ○ Move existing fact families under module-scoped resolved artifacts without changing their lowering-visible meaning.

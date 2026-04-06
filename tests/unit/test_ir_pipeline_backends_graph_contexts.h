@@ -968,6 +968,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(onErrorHelpersSource.find("findSemanticProductOnErrorFact(semanticProductTargets, def.fullPath)") !=
         std::string::npos);
+  CHECK(onErrorHelpersSource.find("missing semantic-product on_error fact: ") !=
+        std::string::npos);
   CHECK(onErrorHelpersSource.find("buildOnErrorByDefinition(program, semanticProgram,") !=
         std::string::npos);
   CHECK(statementCallHelpersHeader.find("const SemanticProgram *semanticProgram,") !=
@@ -987,6 +989,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(statementCallHelpersSource.find("findSemanticProductCallableSummary(semanticProductTargets, def.fullPath)") !=
         std::string::npos);
+  CHECK(statementCallHelpersSource.find("missing semantic-product callable summary: ") !=
+        std::string::npos);
   CHECK(functionTableStepHeader.find("const SemanticProgram *semanticProgram = nullptr;") !=
         std::string::npos);
   CHECK(functionTableStepSource.find("input.semanticProgram,") != std::string::npos);
@@ -1005,9 +1009,13 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irLowerEffects.find("findSemanticProductCallableSummary(semanticProductTargets, entryPath)") !=
         std::string::npos);
+  CHECK(irLowerEffects.find("missing semantic-product callable summary: ") !=
+        std::string::npos);
   CHECK(irReturnInference.find("findSemanticProductCallableSummary(semanticProductTargets, entryPath)") !=
         std::string::npos);
   CHECK(irReturnInference.find("findSemanticProductReturnFact(semanticProductTargets, entryPath)") !=
+        std::string::npos);
+  CHECK(irReturnInference.find("missing semantic-product return fact: ") !=
         std::string::npos);
   CHECK(irLowerEffects.find("return validateProgramEffects(program, nullptr, entryPath, defaultEffects, entryDefaultEffects, error);") !=
         std::string::npos);

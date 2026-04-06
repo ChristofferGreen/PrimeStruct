@@ -54,31 +54,32 @@ bool analyzeEntryReturnTransforms(const Definition &entryDef,
   if (semanticProgram != nullptr) {
     const SemanticProductTargetAdapter semanticProductTargets =
         buildSemanticProductTargetAdapter(semanticProgram);
-    if (const auto *callableSummary = findSemanticProductCallableSummary(semanticProductTargets, entryPath);
-        callableSummary != nullptr) {
-      out.hasReturnTransform = true;
-      out.returnsVoid = callableSummary->returnKind == "void";
-      out.hasResultInfo = callableSummary->hasResultType;
-      if (callableSummary->hasResultType) {
-        out.resultInfo.isResult = true;
-        out.resultInfo.hasValue = callableSummary->resultTypeHasValue;
-      }
+    const auto *callableSummary = findSemanticProductCallableSummary(semanticProductTargets, entryPath);
+    if (callableSummary == nullptr) {
+      error = "missing semantic-product callable summary: " + entryPath;
+      return false;
     }
-    if (const auto *returnFact = findSemanticProductReturnFact(semanticProductTargets, entryPath);
-        returnFact != nullptr) {
-      out.hasReturnTransform = true;
-      out.returnsVoid = returnFact->returnKind == "void";
-      std::string base;
-      std::string arg;
-      if (splitTemplateTypeName(returnFact->bindingTypeText, base, arg) && base == "array" &&
-          valueKindFromTypeName(trimTemplateTypeText(arg)) == LocalInfo::ValueKind::String) {
-        error = "native backend does not support string array return types on " + entryPath;
-        return false;
-      }
+    out.hasReturnTransform = true;
+    out.returnsVoid = callableSummary->returnKind == "void";
+    out.hasResultInfo = callableSummary->hasResultType;
+    if (callableSummary->hasResultType) {
+      out.resultInfo.isResult = true;
+      out.resultInfo.hasValue = callableSummary->resultTypeHasValue;
     }
-    if (out.hasReturnTransform) {
-      return true;
+
+    const auto *returnFact = findSemanticProductReturnFact(semanticProductTargets, entryPath);
+    if (returnFact == nullptr) {
+      error = "missing semantic-product return fact: " + entryPath;
+      return false;
     }
+    std::string base;
+    std::string arg;
+    if (splitTemplateTypeName(returnFact->bindingTypeText, base, arg) && base == "array" &&
+        valueKindFromTypeName(trimTemplateTypeText(arg)) == LocalInfo::ValueKind::String) {
+      error = "native backend does not support string array return types on " + entryPath;
+      return false;
+    }
+    return true;
   }
 
   for (const auto &transform : entryDef.transforms) {

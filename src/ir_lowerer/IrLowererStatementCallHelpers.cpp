@@ -226,6 +226,10 @@ CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
         function.metadata.capabilityMask |= bit;
       }
     } else {
+      if (semanticProgram != nullptr) {
+        error = "missing semantic-product callable summary: " + def.fullPath;
+        return CallableDefinitionOrchestrationResult::Error;
+      }
       if (!resolveEffectMask(
               def.transforms, false, defaultEffects, entryDefaultEffects, function.metadata.effectMask, error)) {
         return CallableDefinitionOrchestrationResult::Error;

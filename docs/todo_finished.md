@@ -12,6 +12,8 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 - ✓ Replace direct-call, method-call, and bridge-path adapter lookups with semantic-id joins. Completed: the temporary lowerer adapter now keys those fact families by published semantic ids instead of source-location/name strings.
 - ✓ Replace binding adapter lookups with semantic-id joins. Completed: semantic-product-backed binding classification now resolves through the same structural semantic ids as direct/method/bridge lookups instead of source-location/name joins.
 - ✓ Delete the duplicate-key collapse behavior from semantic-product adapters once all remaining joins use stable ids. Completed: the temporary adapter no longer merges duplicate `line:column:name` keys because its direct/method/bridge/binding joins now key off semantic ids.
+- ✓ Move callable effect/capability consumption to semantic-product-only ownership across entry setup and lowered-callable setup. Completed: entry effect/capability masks, effect validation, and lowered callable metadata now require semantic-product callable summaries instead of silently re-reading AST transforms when a semantic product is present.
+- ✓ Make graph-backed `on_error` facts required for lowered handler/result wiring. Completed: lowered `on_error` setup now requires semantic-product callable summaries plus published `on_error` facts when a semantic product is present instead of falling back to AST transform parsing.
 
 **Todo Cleanup (April 6, 2026)**
 

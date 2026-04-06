@@ -464,6 +464,8 @@ bool validateProgramEffects(const Program &program,
         }
         return true;
       }
+      error = "missing semantic-product callable summary: " + fullPath;
+      return false;
     }
     return validateActiveEffects(transforms, context, isEntry, defaultEffects, entryDefaultEffects, error);
   };
@@ -574,6 +576,8 @@ bool resolveEntryMetadataMasks(const Definition &entryDef,
       }
       return true;
     }
+    error = "missing semantic-product callable summary: " + entryPath;
+    return false;
   }
 
   const auto entryEffects = resolveActiveEffects(entryDef.transforms, true, defaultEffects, entryDefaultEffects);
