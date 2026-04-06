@@ -5,3 +5,8 @@ import /std/collections/experimental_soa_vector_conversions/*
 /std/collections/soa_vector/to_aos<T>([SoaVector<T>] values) {
   return(/std/collections/experimental_soa_vector_conversions/soaVectorToAos<T>(values))
 }
+
+[public effects(heap_alloc), return<vector<T>>]
+/std/collections/soa_vector/to_aos_ref<T>([Reference<SoaVector<T>>] values) {
+  return(/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef<T>(values))
+}

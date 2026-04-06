@@ -127,15 +127,79 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
     if (candidate.kind != Expr::Kind::Call) {
       return false;
     }
-    auto defIt = defMap_.find(resolveCalleePath(candidate));
-    if (defIt == defMap_.end() || defIt->second == nullptr) {
-      return false;
+    auto isPointerLikeBinding = [](const BindingInfo &binding) {
+      const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
+      return normalizedType == "Pointer" || normalizedType == "Reference";
+    };
+    auto isImplicitSoaRefMethod = [&]() {
+      const std::string normalizedName =
+          !candidate.name.empty() && candidate.name.front() == '/'
+              ? candidate.name.substr(1)
+              : candidate.name;
+      if (!candidate.isMethodCall || normalizedName != "ref" ||
+          candidate.args.empty()) {
+        return false;
+      }
+      std::string elemType;
+      const Expr &receiver = candidate.args.front();
+      if (receiver.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
+          return extractExperimentalSoaVectorElementType(*paramBinding, elemType);
+        }
+        auto localIt = locals.find(receiver.name);
+        return localIt != locals.end() &&
+               extractExperimentalSoaVectorElementType(localIt->second, elemType);
+      }
+      BindingInfo receiverBinding;
+      std::string receiverTypeText;
+      if (!inferQueryExprTypeText(receiver, params, locals, receiverTypeText)) {
+        return false;
+      }
+      std::string base;
+      std::string argText;
+      const std::string normalizedType = normalizeBindingTypeName(receiverTypeText);
+      if (splitTemplateTypeName(normalizedType, base, argText)) {
+        receiverBinding.typeName = normalizeBindingTypeName(base);
+        receiverBinding.typeTemplateArg = argText;
+      } else {
+        receiverBinding.typeName = normalizedType;
+        receiverBinding.typeTemplateArg.clear();
+      }
+      return extractExperimentalSoaVectorElementType(receiverBinding, elemType);
+    };
+    if (isImplicitSoaRefMethod()) {
+      return true;
     }
+    std::string resolvedPath = resolveCalleePath(candidate);
+    if (candidate.isMethodCall) {
+      if (candidate.args.empty()) {
+        return false;
+      }
+      bool isBuiltin = false;
+      if (!resolveMethodTarget(params,
+                               locals,
+                               candidate.namespacePrefix,
+                               candidate.args.front(),
+                               candidate.name,
+                               resolvedPath,
+                               isBuiltin)) {
+        return false;
+      }
+    }
+    resolvedPath = resolveExprConcreteCallPath(params, locals, candidate, resolvedPath);
     BindingInfo inferredReturn;
-    if (!inferDefinitionReturnBinding(*defIt->second, inferredReturn)) {
-      return false;
+    if (inferResolvedDirectCallBindingType(resolvedPath, inferredReturn) &&
+        isPointerLikeBinding(inferredReturn)) {
+      return true;
     }
-    return inferredReturn.typeName == "Pointer" || inferredReturn.typeName == "Reference";
+    if (inferBindingTypeFromInitializer(candidate, params, locals, inferredReturn) &&
+        isPointerLikeBinding(inferredReturn)) {
+      return true;
+    }
+    auto defIt = defMap_.find(resolvedPath);
+    return defIt != defMap_.end() && defIt->second != nullptr &&
+           inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
+           isPointerLikeBinding(inferredReturn);
   };
 
   auto validateMemoryTargetType = [&](const std::string &targetType) -> bool {

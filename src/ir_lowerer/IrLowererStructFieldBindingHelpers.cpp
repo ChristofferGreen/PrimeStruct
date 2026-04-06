@@ -24,6 +24,7 @@ bool isSpecializedExperimentalCollectionTypeName(const std::string &typeName) {
 LayoutFieldBinding layoutFieldBindingFromSemanticProduct(
     const SemanticProgramStructFieldMetadata &fieldMetadata) {
   LayoutFieldBinding binding;
+  binding.name = fieldMetadata.fieldName;
   if (!splitTemplateTypeName(fieldMetadata.bindingTypeText, binding.typeName, binding.typeTemplateArg)) {
     binding.typeName = fieldMetadata.bindingTypeText;
     binding.typeTemplateArg.clear();
@@ -58,6 +59,7 @@ const Expr *getEnvelopeValueExpr(const Expr &candidate, bool allowAnyName) {
 
 bool extractExplicitLayoutFieldBinding(const Expr &expr, LayoutFieldBinding &bindingOut) {
   bindingOut = {};
+  bindingOut.name = expr.name;
   for (const auto &transform : expr.transforms) {
     if (transform.name == "effects" || transform.name == "capabilities") {
       continue;
@@ -166,6 +168,7 @@ bool resolveLayoutFieldBinding(
   if (extractExplicitLayoutFieldBinding(expr, bindingOut)) {
     return true;
   }
+  bindingOut.name = expr.name;
 
   const std::string fieldPath = def.fullPath + "/" + expr.name;
   if (expr.args.size() != 1) {
@@ -286,6 +289,14 @@ bool resolveStructLayoutFieldBinding(
 
   const Definition &def = *defIt->second;
   const auto &fieldBindings = fieldInfoIt->second;
+
+  for (const auto &binding : fieldBindings) {
+    if (!binding.name.empty() && binding.name == fieldName) {
+      bindingOut = binding;
+      return true;
+    }
+  }
+
   size_t fieldIndex = 0;
   for (const auto &stmt : def.statements) {
     if (!stmt.isBinding) {

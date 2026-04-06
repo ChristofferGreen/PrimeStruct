@@ -15,6 +15,21 @@ import /std/collections/experimental_soa_vector/*
   return(/std/collections/experimental_soa_vector/soaVectorRef<T>(values, index))
 }
 
+[public return<i32>]
+/std/collections/soa_vector/count_ref<T>([Reference<SoaVector<T>>] values) {
+  return(/std/collections/experimental_soa_vector/soaVectorCountRef<T>(values))
+}
+
+[public return<T>]
+/std/collections/soa_vector/get_ref<T>([Reference<SoaVector<T>>] values, [i32] index) {
+  return(/std/collections/experimental_soa_vector/soaVectorGetRef<T>(values, index))
+}
+
+[public return<Reference<T>>]
+/std/collections/soa_vector/ref_ref<T>([Reference<SoaVector<T>>] values, [i32] index) {
+  return(/std/collections/experimental_soa_vector/soaVectorRefRef<T>(values, index))
+}
+
 [public effects(heap_alloc), return<void>]
 /std/collections/soa_vector/reserve<T>([SoaVector<T> mut] values, [i32] capacity) {
   /std/collections/experimental_soa_vector/soaVectorReserve<T>(values, capacity)

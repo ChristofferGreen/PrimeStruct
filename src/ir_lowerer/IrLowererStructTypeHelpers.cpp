@@ -150,12 +150,22 @@ void appendStructLayoutFieldsFromFieldBindings(
       if (!fieldStmt.isBinding || fieldIndex >= entry.second.size()) {
         continue;
       }
-      const auto &field = entry.second[fieldIndex++];
+      const LayoutFieldBinding *field = nullptr;
+      for (const auto &candidate : entry.second) {
+        if (!candidate.name.empty() && candidate.name == fieldStmt.name) {
+          field = &candidate;
+          break;
+        }
+      }
+      if (field == nullptr) {
+        field = &entry.second[fieldIndex];
+      }
+      ++fieldIndex;
 
       StructLayoutFieldInfo info;
       info.name = fieldStmt.name;
-      info.typeName = field.typeName;
-      info.typeTemplateArg = field.typeTemplateArg;
+      info.typeName = field->typeName;
+      info.typeTemplateArg = field->typeTemplateArg;
       info.isStatic = isStaticFieldBinding(fieldStmt);
       appendStructLayoutField(entry.first, info);
     }

@@ -238,11 +238,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
         ctx.helperOverloads.count(ownedPath) > 0) {
       return {};
     }
-    if (candidate.isMethodCall) {
-      return soaDirectPendingUnavailableMethodDiagnostic(
+    return soaDirectPendingUnavailableMethodDiagnostic(
         soaFieldViewHelperPath(normalizedName));
-    }
-    return {};
   };
   const bool hasLeadingReceiverParam = [&]() {
     if (callParams.empty()) {

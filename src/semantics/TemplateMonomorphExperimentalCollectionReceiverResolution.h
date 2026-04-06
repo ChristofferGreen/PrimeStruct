@@ -486,13 +486,22 @@ std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string 
       matchesPath("/std/collections/soa_vector/count")) {
     return "/std/collections/experimental_soa_vector/soaVectorCount";
   }
+  if (matchesPath("/std/collections/soa_vector/count_ref")) {
+    return "/std/collections/experimental_soa_vector/soaVectorCountRef";
+  }
   if (matchesPath("/std/collections/get") ||
       matchesPath("/std/collections/soa_vector/get")) {
     return "/std/collections/experimental_soa_vector/soaVectorGet";
   }
+  if (matchesPath("/std/collections/soa_vector/get_ref")) {
+    return "/std/collections/experimental_soa_vector/soaVectorGetRef";
+  }
   if (matchesPath("/std/collections/ref") ||
       matchesPath("/std/collections/soa_vector/ref")) {
     return "/std/collections/experimental_soa_vector/soaVectorRef";
+  }
+  if (matchesPath("/std/collections/soa_vector/ref_ref")) {
+    return "/std/collections/experimental_soa_vector/soaVectorRefRef";
   }
   if (matchesPath("/std/collections/reserve") ||
       matchesPath("/std/collections/soa_vector/reserve")) {
@@ -505,6 +514,9 @@ std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string 
   if (matchesPath("/std/collections/to_aos") ||
       matchesPath("/std/collections/soa_vector/to_aos")) {
     return "/std/collections/experimental_soa_vector_conversions/soaVectorToAos";
+  }
+  if (matchesPath("/std/collections/soa_vector/to_aos_ref")) {
+    return "/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef";
   }
   return {};
 }

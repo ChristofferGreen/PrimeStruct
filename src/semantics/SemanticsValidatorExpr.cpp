@@ -82,6 +82,170 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (expr.isBinding) {
       return failExprRootDiagnostic("binding not allowed in expression context");
     }
+    auto pendingFieldViewNameFromRewrittenHelper = [&]() -> std::optional<std::string> {
+      if (expr.kind != Expr::Kind::Call || expr.args.size() < 2 ||
+          expr.args[1].kind != Expr::Kind::Literal) {
+        return std::nullopt;
+      }
+      const std::string resolvedPath = resolveCalleePath(expr);
+      const bool isFieldViewHelper =
+          resolvedPath.rfind(
+              "/std/collections/experimental_soa_vector/soaVectorFieldView",
+              0) == 0 ||
+          resolvedPath.rfind(
+              "/std/collections/experimental_soa_storage/soaColumnFieldViewUnsafe",
+              0) == 0;
+      if (!isFieldViewHelper) {
+        return std::nullopt;
+      }
+      auto inferStructTypeText = [&]() -> std::optional<std::string> {
+        if (!expr.templateArgs.empty()) {
+          return expr.templateArgs.front();
+        }
+        if (expr.args.empty()) {
+          return std::nullopt;
+        }
+        const Expr &receiverExpr = expr.args.front();
+        auto extractReceiverStructType = [&](const BindingInfo &binding)
+            -> std::optional<std::string> {
+          std::string elemType;
+          if (extractExperimentalSoaVectorElementType(binding, elemType)) {
+            return elemType;
+          }
+          return std::nullopt;
+        };
+        if (receiverExpr.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding =
+                  findParamBinding(params, receiverExpr.name)) {
+            return extractReceiverStructType(*paramBinding);
+          }
+          auto localIt = locals.find(receiverExpr.name);
+          if (localIt != locals.end()) {
+            return extractReceiverStructType(localIt->second);
+          }
+        }
+        BindingInfo receiverBinding;
+        if (inferBindingTypeFromInitializer(receiverExpr, params, locals,
+                                            receiverBinding)) {
+          if (const auto elemType = extractReceiverStructType(receiverBinding)) {
+            return elemType;
+          }
+        }
+        std::string inferredTypeText;
+        if (inferQueryExprTypeText(receiverExpr, params, locals, inferredTypeText)) {
+          BindingInfo inferredBinding;
+          std::string base;
+          std::string argText;
+          const std::string normalizedType =
+              normalizeBindingTypeName(inferredTypeText);
+          if (splitTemplateTypeName(normalizedType, base, argText)) {
+            inferredBinding.typeName = normalizeBindingTypeName(base);
+            inferredBinding.typeTemplateArg = argText;
+          } else {
+            inferredBinding.typeName = normalizedType;
+            inferredBinding.typeTemplateArg.clear();
+          }
+          return extractReceiverStructType(inferredBinding);
+        }
+        return std::nullopt;
+      };
+      const auto structTypeText = inferStructTypeText();
+      if (!structTypeText.has_value()) {
+        return std::nullopt;
+      }
+      std::string currentNamespace;
+      if (!currentValidationState_.context.definitionPath.empty()) {
+        const size_t slash =
+            currentValidationState_.context.definitionPath.find_last_of('/');
+        if (slash != std::string::npos && slash > 0) {
+          currentNamespace =
+              currentValidationState_.context.definitionPath.substr(0, slash);
+        }
+      }
+      const std::string lookupNamespace =
+          !expr.namespacePrefix.empty() ? expr.namespacePrefix : currentNamespace;
+      const std::string structPath = resolveStructTypePath(
+          normalizeBindingTypeName(*structTypeText),
+          lookupNamespace,
+          structNames_);
+      auto defIt = defMap_.find(structPath);
+      if (structPath.empty() || defIt == defMap_.end() || defIt->second == nullptr) {
+        return std::nullopt;
+      }
+      const size_t fieldIndex = static_cast<size_t>(expr.args[1].literalValue);
+      size_t currentFieldIndex = 0;
+      for (const auto &fieldStmt : defIt->second->statements) {
+        bool isStaticField = false;
+        for (const auto &transform : fieldStmt.transforms) {
+          if (transform.name == "static") {
+            isStaticField = true;
+            break;
+          }
+        }
+        if (!fieldStmt.isBinding || isStaticField) {
+          continue;
+        }
+        if (currentFieldIndex == fieldIndex) {
+          return fieldStmt.name;
+        }
+        ++currentFieldIndex;
+      }
+      return std::nullopt;
+    };
+    if (!hasNamedArguments(expr.argNames)) {
+      if (const auto pendingFieldName =
+              pendingFieldViewNameFromRewrittenHelper()) {
+        return failExprRootDiagnostic(
+            soaDirectPendingUnavailableMethodDiagnostic(
+                soaFieldViewHelperPath(*pendingFieldName)));
+      }
+    }
+    auto isPendingSoaSchemaHelperCall = [&]() {
+      if (expr.isMethodCall || expr.name.empty()) {
+        return false;
+      }
+      std::string normalizedName = expr.name;
+      if (!normalizedName.empty() && normalizedName.front() == '/') {
+        normalizedName.erase(normalizedName.begin());
+      }
+      const std::string normalizedNamespace =
+          !expr.namespacePrefix.empty() && expr.namespacePrefix.front() == '/'
+              ? expr.namespacePrefix.substr(1)
+              : expr.namespacePrefix;
+      const bool isQualifiedStructSchemaCall =
+          normalizedName == "Struct/SoaSchemaFieldCount" ||
+          normalizedName == "Struct/SoaSchemaElementStride" ||
+          normalizedName == "Struct/SoaSchemaFieldOffset";
+      const bool isSplitStructSchemaCall =
+          normalizedNamespace == "Struct" &&
+          (normalizedName == "SoaSchemaFieldCount" ||
+           normalizedName == "SoaSchemaElementStride" ||
+           normalizedName == "SoaSchemaFieldOffset");
+      if (!isQualifiedStructSchemaCall && !isSplitStructSchemaCall) {
+        return false;
+      }
+      const std::string &definitionPath = currentValidationState_.context.definitionPath;
+      return definitionPath.rfind(
+                 "/std/collections/experimental_soa_storage/soaColumnField", 0) == 0;
+    };
+    if (isPendingSoaSchemaHelperCall()) {
+      for (const Expr &arg : expr.args) {
+        if (!validateExpr(params, locals, arg, enclosingStatements, statementIndex)) {
+          return false;
+        }
+      }
+      return true;
+    }
+    if (!hasNamedArguments(expr.argNames)) {
+      if (const auto pendingPath =
+              builtinSoaDirectPendingHelperPath(expr, params, locals)) {
+        std::string pendingFieldName;
+        if (splitSoaFieldViewHelperPath(*pendingPath, &pendingFieldName)) {
+          return failExprRootDiagnostic(
+              soaDirectPendingUnavailableMethodDiagnostic(*pendingPath));
+        }
+      }
+    }
     std::optional<EffectScope> effectScope;
     if (!expr.transforms.empty()) {
       std::unordered_set<std::string> executionEffects;
@@ -395,7 +559,27 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return false;
     };
-    if (isDestroyHelperPath(resolved)) {
+    auto isSoaGrowthHelperPath = [&](const std::string &path) -> bool {
+      const std::string base = stripSpecializationSuffix(path);
+      if (base == "/soa_vector/push" || base == "/soa_vector/reserve" ||
+          base == "/std/collections/soa_vector/push" ||
+          base == "/std/collections/soa_vector/reserve") {
+        return true;
+      }
+      const bool isExperimentalSoaPath =
+          base.rfind("/std/collections/experimental_soa_vector/", 0) == 0;
+      if (!isExperimentalSoaPath) {
+        return false;
+      }
+      auto hasSuffix = [&](std::string_view suffix) {
+        return base.size() >= suffix.size() &&
+               base.compare(base.size() - suffix.size(), suffix.size(),
+                            suffix.data(), suffix.size()) == 0;
+      };
+      return hasSuffix("/push") || hasSuffix("/reserve") ||
+             hasSuffix("/soaVectorPush") || hasSuffix("/soaVectorReserve");
+    };
+    if (isDestroyHelperPath(resolved) || isSoaGrowthHelperPath(resolved)) {
       auto resolveNamedBinding =
           [&](const std::string &name) -> const BindingInfo * {
         if (const BindingInfo *paramBinding = findParamBinding(params, name)) {

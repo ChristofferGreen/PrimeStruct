@@ -3107,6 +3107,16 @@ std::optional<Expr> normalizeExperimentalSoaBorrowedHelperReceiver(
     const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
     const std::string &definitionNamespace,
     const std::unordered_set<std::string> &structPaths) {
+  auto makeDereferenceCall = [](Expr borrowedExpr) {
+    Expr dereferenceCall;
+    dereferenceCall.kind = Expr::Kind::Call;
+    dereferenceCall.name = "dereference";
+    dereferenceCall.sourceLine = borrowedExpr.sourceLine;
+    dereferenceCall.sourceColumn = borrowedExpr.sourceColumn;
+    dereferenceCall.args.push_back(std::move(borrowedExpr));
+    dereferenceCall.argNames.resize(dereferenceCall.args.size());
+    return dereferenceCall;
+  };
   auto isBorrowedBinding = [&](const semantics::BindingInfo &binding) {
     const std::string normalizedType =
         semantics::normalizeBindingTypeName(binding.typeName);
@@ -3139,12 +3149,12 @@ std::optional<Expr> normalizeExperimentalSoaBorrowedHelperReceiver(
   if (receiver.kind == Expr::Kind::Name) {
     auto bindingIt = bindings.find(receiver.name);
     if (bindingIt != bindings.end() && isBorrowedBinding(bindingIt->second)) {
-      return receiver;
+      return makeDereferenceCall(receiver);
     }
   }
   if (auto canonicalReceiver = canonicalBorrowedExperimentalSoaCall(receiver);
       canonicalReceiver.has_value()) {
-    return canonicalReceiver;
+    return makeDereferenceCall(*canonicalReceiver);
   }
   if (receiver.kind == Expr::Kind::Call && !receiver.isBinding &&
       semantics::isSimpleCallName(receiver, "dereference") &&
@@ -3153,12 +3163,14 @@ std::optional<Expr> normalizeExperimentalSoaBorrowedHelperReceiver(
     if (borrowedSource.kind == Expr::Kind::Name) {
       auto bindingIt = bindings.find(borrowedSource.name);
       if (bindingIt != bindings.end() && isBorrowedBinding(bindingIt->second)) {
-        return borrowedSource;
+        return receiver;
       }
     }
     if (auto canonicalBorrowedSource = canonicalBorrowedExperimentalSoaCall(borrowedSource);
         canonicalBorrowedSource.has_value()) {
-      return canonicalBorrowedSource;
+      Expr normalizedReceiver = receiver;
+      normalizedReceiver.args.front() = *canonicalBorrowedSource;
+      return normalizedReceiver;
     }
   }
   return std::nullopt;
@@ -3170,6 +3182,227 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
     const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace) {
+  auto isBorrowedBinding = [&](const semantics::BindingInfo &binding) {
+    const std::string normalizedType =
+        semantics::normalizeBindingTypeName(binding.typeName);
+    if (normalizedType != "Reference" && normalizedType != "Pointer") {
+      return false;
+    }
+    std::string ignoredElemType;
+    return extractExperimentalSoaVectorElementTypeForFieldViewRewrite(
+        binding, ignoredElemType);
+  };
+  auto canonicalBorrowedExperimentalSoaCall = [&](const Expr &candidate)
+      -> std::optional<Expr> {
+    if (candidate.kind != Expr::Kind::Call || candidate.isBinding) {
+      return std::nullopt;
+    }
+    for (const std::string &candidatePath :
+         candidatePathsForExprCall(candidate,
+                                   definitionNamespace,
+                                   &bindings,
+                                   &structPaths)) {
+      auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
+      if (returnIt != soaVectorReturnDefinitions.end() &&
+          isBorrowedBinding(returnIt->second)) {
+        return canonicalizeResolvedCallPath(candidate, candidatePath);
+      }
+    }
+    return std::nullopt;
+  };
+  auto normalizedBorrowedReceiver = [&](const Expr &receiver)
+      -> std::optional<Expr> {
+    if (receiver.kind == Expr::Kind::Name) {
+      auto bindingIt = bindings.find(receiver.name);
+      if (bindingIt != bindings.end() && isBorrowedBinding(bindingIt->second)) {
+        return receiver;
+      }
+      return std::nullopt;
+    }
+    if (receiver.kind != Expr::Kind::Call || receiver.isBinding) {
+      return std::nullopt;
+    }
+    if (semantics::isSimpleCallName(receiver, "location") &&
+        receiver.args.size() == 1) {
+      const Expr &target = receiver.args.front();
+      if (target.kind == Expr::Kind::Name) {
+        auto bindingIt = bindings.find(target.name);
+        if (bindingIt != bindings.end() && isBorrowedBinding(bindingIt->second)) {
+          return target;
+        }
+      }
+      if (auto canonicalBorrowedCall = canonicalBorrowedExperimentalSoaCall(target);
+          canonicalBorrowedCall.has_value()) {
+        return canonicalBorrowedCall;
+      }
+      return std::nullopt;
+    }
+    if (auto canonicalBorrowedCall = canonicalBorrowedExperimentalSoaCall(receiver);
+        canonicalBorrowedCall.has_value()) {
+      return canonicalBorrowedCall;
+    }
+    if (semantics::isSimpleCallName(receiver, "dereference") &&
+        receiver.args.size() == 1) {
+      const Expr &borrowedSource = receiver.args.front();
+      if (borrowedSource.kind == Expr::Kind::Name) {
+        auto bindingIt = bindings.find(borrowedSource.name);
+        if (bindingIt != bindings.end() && isBorrowedBinding(bindingIt->second)) {
+          return borrowedSource;
+        }
+      }
+      if (borrowedSource.kind == Expr::Kind::Call && !borrowedSource.isBinding &&
+          semantics::isSimpleCallName(borrowedSource, "location") &&
+          borrowedSource.args.size() == 1) {
+        const Expr &target = borrowedSource.args.front();
+        if (target.kind == Expr::Kind::Name) {
+          auto bindingIt = bindings.find(target.name);
+          if (bindingIt != bindings.end() && isBorrowedBinding(bindingIt->second)) {
+            return target;
+          }
+        }
+        if (auto canonicalBorrowedTarget =
+                canonicalBorrowedExperimentalSoaCall(target);
+            canonicalBorrowedTarget.has_value()) {
+          return canonicalBorrowedTarget;
+        }
+        return std::nullopt;
+      }
+      if (auto canonicalBorrowedSource =
+              canonicalBorrowedExperimentalSoaCall(borrowedSource);
+          canonicalBorrowedSource.has_value()) {
+        return canonicalBorrowedSource;
+      }
+    }
+    return std::nullopt;
+  };
+  auto borrowedReceiverElementType = [&](const Expr &receiver)
+      -> std::optional<std::string> {
+    auto bindingElementType = [&](const semantics::BindingInfo &binding)
+        -> std::optional<std::string> {
+      std::string elemType;
+      if (extractExperimentalSoaVectorElementTypeForFieldViewRewrite(
+              binding, elemType) &&
+          !elemType.empty()) {
+        return elemType;
+      }
+      return std::nullopt;
+    };
+    if (receiver.kind == Expr::Kind::Name) {
+      auto bindingIt = bindings.find(receiver.name);
+      return bindingIt != bindings.end() ? bindingElementType(bindingIt->second)
+                                         : std::nullopt;
+    }
+    if (receiver.kind != Expr::Kind::Call || receiver.isBinding) {
+      return std::nullopt;
+    }
+    for (const std::string &candidatePath :
+         candidateDefinitionPaths(receiver, definitionNamespace)) {
+      auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
+      if (returnIt != soaVectorReturnDefinitions.end()) {
+        if (auto elemType = bindingElementType(returnIt->second);
+            elemType.has_value()) {
+          return elemType;
+        }
+      }
+    }
+    if (semantics::isSimpleCallName(receiver, "location") &&
+        receiver.args.size() == 1) {
+      const Expr &target = receiver.args.front();
+      if (target.kind == Expr::Kind::Name) {
+        auto bindingIt = bindings.find(target.name);
+        return bindingIt != bindings.end() ? bindingElementType(bindingIt->second)
+                                           : std::nullopt;
+      }
+      if (target.kind == Expr::Kind::Call && !target.isBinding) {
+        for (const std::string &candidatePath :
+             candidateDefinitionPaths(target, definitionNamespace)) {
+          auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
+          if (returnIt != soaVectorReturnDefinitions.end()) {
+            if (auto elemType = bindingElementType(returnIt->second);
+                elemType.has_value()) {
+              return elemType;
+            }
+          }
+        }
+      }
+      for (const std::string &candidatePath :
+           candidatePathsForExprCall(target,
+                                     definitionNamespace,
+                                     &bindings,
+                                     &structPaths)) {
+        auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
+        if (returnIt != soaVectorReturnDefinitions.end()) {
+          if (auto elemType = bindingElementType(returnIt->second);
+              elemType.has_value()) {
+            return elemType;
+          }
+        }
+      }
+      return std::nullopt;
+    }
+    for (const std::string &candidatePath :
+         candidatePathsForExprCall(receiver,
+                                   definitionNamespace,
+                                   &bindings,
+                                   &structPaths)) {
+      auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
+      if (returnIt != soaVectorReturnDefinitions.end()) {
+        if (auto elemType = bindingElementType(returnIt->second);
+            elemType.has_value()) {
+          return elemType;
+        }
+      }
+    }
+    if (semantics::isSimpleCallName(receiver, "dereference") &&
+        receiver.args.size() == 1) {
+      const Expr &borrowedSource = receiver.args.front();
+      if (borrowedSource.kind == Expr::Kind::Name) {
+        auto bindingIt = bindings.find(borrowedSource.name);
+        return bindingIt != bindings.end() ? bindingElementType(bindingIt->second)
+                                           : std::nullopt;
+      }
+      if (borrowedSource.kind == Expr::Kind::Call && !borrowedSource.isBinding &&
+          semantics::isSimpleCallName(borrowedSource, "location") &&
+          borrowedSource.args.size() == 1) {
+        const Expr &target = borrowedSource.args.front();
+        if (target.kind == Expr::Kind::Name) {
+          auto bindingIt = bindings.find(target.name);
+          return bindingIt != bindings.end() ? bindingElementType(bindingIt->second)
+                                             : std::nullopt;
+        }
+        if (target.kind == Expr::Kind::Call && !target.isBinding) {
+          for (const std::string &candidatePath :
+               candidateDefinitionPaths(target, definitionNamespace)) {
+            auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
+            if (returnIt != soaVectorReturnDefinitions.end()) {
+              if (auto elemType = bindingElementType(returnIt->second);
+                  elemType.has_value()) {
+                return elemType;
+              }
+            }
+          }
+        }
+      }
+      if (auto canonicalBorrowedSource =
+              canonicalBorrowedExperimentalSoaCall(borrowedSource);
+          canonicalBorrowedSource.has_value()) {
+        for (const std::string &candidatePath :
+             candidatePathsForExprCall(borrowedSource,
+                                       definitionNamespace,
+                                       &bindings,
+                                       &structPaths)) {
+          auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
+          if (returnIt != soaVectorReturnDefinitions.end()) {
+            if (auto elemType = bindingElementType(returnIt->second);
+                elemType.has_value()) {
+              return elemType;
+            }
+          }
+        }
+      }
+    }
+    return std::nullopt;
+  };
   if (expr.kind != Expr::Kind::Call || expr.args.empty()) {
     return false;
   }
@@ -3190,6 +3423,32 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
       normalizedMethodName != "ref" &&
       normalizedMethodName != "to_aos") {
     return false;
+  }
+  if (auto borrowedReceiver = normalizedBorrowedReceiver(expr.args.front());
+      borrowedReceiver.has_value()) {
+    const auto borrowedElemType = borrowedReceiverElementType(expr.args.front());
+    expr.isMethodCall = false;
+    expr.isFieldAccess = false;
+    expr.namespacePrefix.clear();
+    expr.args.front() = *borrowedReceiver;
+    if (borrowedElemType.has_value()) {
+      expr.templateArgs.clear();
+      expr.templateArgs.push_back(*borrowedElemType);
+    }
+    if (normalizedMethodName == "count") {
+      expr.name = "/std/collections/soa_vector/count_ref";
+      return true;
+    }
+    if (normalizedMethodName == "get") {
+      expr.name = "/std/collections/soa_vector/get_ref";
+      return true;
+    }
+    if (normalizedMethodName == "ref") {
+      expr.name = "/std/collections/soa_vector/ref_ref";
+      return true;
+    }
+    expr.name = "/std/collections/soa_vector/to_aos_ref";
+    return true;
   }
   if (!expr.isMethodCall && expr.name.find('/') != std::string::npos) {
     return false;
@@ -3562,7 +3821,17 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
   getCall.kind = Expr::Kind::Call;
   getCall.name = "/std/collections/experimental_soa_vector/soaVectorGet";
   getCall.templateArgs = {receiverElemType};
-  if (receiverNeedsDereference && getReceiverExpr->kind == Expr::Kind::Name) {
+  auto appendReceiverValueExpr = [&](Expr &callExpr) {
+    if (!receiverNeedsDereference) {
+      callExpr.args.push_back(*getReceiverExpr);
+      return;
+    }
+    if (getReceiverExpr->kind == Expr::Kind::Call &&
+        semantics::isSimpleCallName(*getReceiverExpr, "dereference") &&
+        getReceiverExpr->args.size() == 1) {
+      callExpr.args.push_back(*getReceiverExpr);
+      return;
+    }
     Expr dereferenceCall;
     dereferenceCall.kind = Expr::Kind::Call;
     dereferenceCall.name = "dereference";
@@ -3570,10 +3839,9 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
     dereferenceCall.argNames.resize(dereferenceCall.args.size());
     dereferenceCall.sourceLine = getReceiverExpr->sourceLine;
     dereferenceCall.sourceColumn = getReceiverExpr->sourceColumn;
-    getCall.args.push_back(std::move(dereferenceCall));
-  } else {
-    getCall.args.push_back(*getReceiverExpr);
-  }
+    callExpr.args.push_back(std::move(dereferenceCall));
+  };
+  appendReceiverValueExpr(getCall);
   getCall.args.push_back(expr.args[1]);
   getCall.argNames.resize(getCall.args.size());
   getCall.sourceLine = expr.sourceLine;
@@ -3928,7 +4196,17 @@ void rewriteExperimentalSoaFieldViewHelperExpr(
   fieldViewCall.kind = Expr::Kind::Call;
   fieldViewCall.name = "/std/collections/experimental_soa_vector/soaVectorFieldView";
   fieldViewCall.templateArgs = {receiverElemType, fieldIt->second.typeText};
-  if (receiverNeedsDereference && getReceiverExpr->kind == Expr::Kind::Name) {
+  auto appendReceiverValueExpr = [&](Expr &callExpr) {
+    if (!receiverNeedsDereference) {
+      callExpr.args.push_back(*getReceiverExpr);
+      return;
+    }
+    if (getReceiverExpr->kind == Expr::Kind::Call &&
+        semantics::isSimpleCallName(*getReceiverExpr, "dereference") &&
+        getReceiverExpr->args.size() == 1) {
+      callExpr.args.push_back(*getReceiverExpr);
+      return;
+    }
     Expr dereferenceCall;
     dereferenceCall.kind = Expr::Kind::Call;
     dereferenceCall.name = "dereference";
@@ -3936,10 +4214,9 @@ void rewriteExperimentalSoaFieldViewHelperExpr(
     dereferenceCall.argNames.resize(dereferenceCall.args.size());
     dereferenceCall.sourceLine = getReceiverExpr->sourceLine;
     dereferenceCall.sourceColumn = getReceiverExpr->sourceColumn;
-    fieldViewCall.args.push_back(std::move(dereferenceCall));
-  } else {
-    fieldViewCall.args.push_back(*getReceiverExpr);
-  }
+    callExpr.args.push_back(std::move(dereferenceCall));
+  };
+  appendReceiverValueExpr(fieldViewCall);
   fieldViewCall.args.push_back(makeI32LiteralExpr(
       static_cast<uint64_t>(fieldIt->second.index),
       expr.sourceLine,
@@ -4255,16 +4532,17 @@ void rewriteExperimentalSoaFieldViewAssignTargetsExpr(Expr &expr) {
         "/std/collections/experimental_soa_vector/soaVectorFieldView";
     static constexpr std::string_view columnFieldViewPrefix =
         "/std/collections/experimental_soa_storage/soaColumnFieldViewUnsafe";
-    if ((target.name.rfind(fieldViewPrefix, 0) == 0 ||
-         target.name.rfind(columnFieldViewPrefix, 0) == 0) &&
-        target.args.size() == 2 && target.templateArgs.size() >= 2) {
+    static constexpr std::string_view fieldReadPrefix =
+        "/std/collections/experimental_soa_storage/soaFieldViewRead";
+    static constexpr std::string_view fieldRefPrefix =
+        "/std/collections/experimental_soa_storage/soaFieldViewRef";
+    if (target.name.rfind(fieldReadPrefix, 0) == 0 &&
+        target.args.size() == 2 && !target.templateArgs.empty()) {
       Expr refCall;
       refCall.kind = Expr::Kind::Call;
-      refCall.name = "/std/collections/experimental_soa_storage/soaFieldViewRef";
-      refCall.templateArgs = {target.templateArgs[1]};
-      refCall.args.push_back(target);
-      refCall.args.push_back(
-          makeI32LiteralExpr(0, target.sourceLine, target.sourceColumn));
+      refCall.name = std::string(fieldRefPrefix);
+      refCall.templateArgs = {target.templateArgs.front()};
+      refCall.args = target.args;
       refCall.argNames.resize(refCall.args.size());
       refCall.sourceLine = target.sourceLine;
       refCall.sourceColumn = target.sourceColumn;
@@ -4278,6 +4556,10 @@ void rewriteExperimentalSoaFieldViewAssignTargetsExpr(Expr &expr) {
       dereferenceCall.sourceColumn = target.sourceColumn;
 
       target = std::move(dereferenceCall);
+      return;
+    }
+    if (target.name.rfind(fieldViewPrefix, 0) == 0 ||
+        target.name.rfind(columnFieldViewPrefix, 0) == 0) {
       return;
     }
   }

@@ -7,6 +7,15 @@ struct SemanticProductTargetAdapter;
 struct LayoutFieldBinding {
   std::string typeName;
   std::string typeTemplateArg;
+  std::string name;
+
+  LayoutFieldBinding() = default;
+  LayoutFieldBinding(const std::string &typeNameIn, const std::string &typeTemplateArgIn)
+      : typeName(typeNameIn), typeTemplateArg(typeTemplateArgIn) {}
+  LayoutFieldBinding(const std::string &typeNameIn,
+                     const std::string &typeTemplateArgIn,
+                     const std::string &nameIn)
+      : typeName(typeNameIn), typeTemplateArg(typeTemplateArgIn), name(nameIn) {}
 };
 
 const Expr *getEnvelopeValueExpr(const Expr &candidate, bool allowAnyName);

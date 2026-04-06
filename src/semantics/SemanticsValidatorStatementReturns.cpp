@@ -2,6 +2,7 @@
 
 #include <cctype>
 #include <functional>
+#include <limits>
 #include <optional>
 #include <string>
 #include <vector>
@@ -107,6 +108,16 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
         return false;
       }
       const std::string resolvedPath = resolveCalleePath(expr);
+      const auto soaAccessHelper = builtinSoaAccessHelperName(expr, params, locals);
+      const bool oldSurfaceCallShape =
+          soaAccessHelper.has_value() && *soaAccessHelper == "ref" &&
+          ((isSimpleCallName(expr, "ref")) ||
+           (expr.isMethodCall && expr.name == "ref") ||
+           resolvedPath == "/soa_vector/ref");
+      if (oldSurfaceCallShape &&
+          usesSamePathSoaHelperTargetForCurrentImports("ref")) {
+        return false;
+      }
       if (expr.isMethodCall) {
         if (expr.name != "ref" &&
             resolvedPath.rfind("/std/collections/soa_vector/ref", 0) != 0 &&
@@ -131,18 +142,117 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       return failReturnDiagnostic(std::move(message));
     };
     const Expr &returnExpr = stmt.args.front();
-    const Expr *escapeReceiver = nullptr;
-    if (isStandaloneSoaRefCall(returnExpr, escapeReceiver) &&
-        escapeReceiver != nullptr &&
-        escapeReceiver->kind != Expr::Kind::Name) {
-      return failReturnEscapeDiagnostic("reference escapes via return");
-    }
-    if (isBuiltinSoaFieldViewExpr(returnExpr, params, locals, nullptr) &&
-        !returnExpr.args.empty()) {
-      const Expr &fieldViewReceiver = returnExpr.args.front();
-      if (fieldViewReceiver.kind != Expr::Kind::Name) {
-        return failReturnEscapeDiagnostic("field-view escapes via return");
+    auto pendingFieldViewNameFromHelper = [&]() -> std::optional<std::string> {
+      if (returnExpr.kind != Expr::Kind::Call || returnExpr.args.size() < 2 ||
+          returnExpr.args[1].kind != Expr::Kind::Literal) {
+        return std::nullopt;
       }
+      const std::string resolvedPath = resolveCalleePath(returnExpr);
+      const bool isFieldViewHelper =
+          resolvedPath.rfind(
+              "/std/collections/experimental_soa_vector/soaVectorFieldView", 0) == 0 ||
+          resolvedPath.rfind(
+              "/std/collections/experimental_soa_storage/soaColumnFieldViewUnsafe",
+              0) == 0;
+      if (!isFieldViewHelper) {
+        return std::nullopt;
+      }
+      auto inferStructTypeText = [&]() -> std::optional<std::string> {
+        if (!returnExpr.templateArgs.empty()) {
+          return returnExpr.templateArgs.front();
+        }
+        if (returnExpr.args.empty()) {
+          return std::nullopt;
+        }
+        const Expr &receiverExpr = returnExpr.args.front();
+        auto extractReceiverStructType = [&](const BindingInfo &binding)
+            -> std::optional<std::string> {
+          std::string elemType;
+          if (extractExperimentalSoaVectorElementType(binding, elemType)) {
+            return elemType;
+          }
+          return std::nullopt;
+        };
+        if (receiverExpr.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding =
+                  findParamBinding(params, receiverExpr.name)) {
+            return extractReceiverStructType(*paramBinding);
+          }
+          auto localIt = locals.find(receiverExpr.name);
+          if (localIt != locals.end()) {
+            return extractReceiverStructType(localIt->second);
+          }
+        }
+        BindingInfo receiverBinding;
+        if (inferBindingTypeFromInitializer(receiverExpr, params, locals,
+                                            receiverBinding)) {
+          if (const auto elemType = extractReceiverStructType(receiverBinding)) {
+            return elemType;
+          }
+        }
+        std::string inferredTypeText;
+        if (inferQueryExprTypeText(receiverExpr, params, locals, inferredTypeText)) {
+          BindingInfo inferredBinding;
+          std::string base;
+          std::string argText;
+          const std::string normalizedType =
+              normalizeBindingTypeName(inferredTypeText);
+          if (splitTemplateTypeName(normalizedType, base, argText)) {
+            inferredBinding.typeName = normalizeBindingTypeName(base);
+            inferredBinding.typeTemplateArg = argText;
+          } else {
+            inferredBinding.typeName = normalizedType;
+            inferredBinding.typeTemplateArg.clear();
+          }
+          return extractReceiverStructType(inferredBinding);
+        }
+        return std::nullopt;
+      };
+      const auto structTypeText = inferStructTypeText();
+      if (!structTypeText.has_value()) {
+        return std::nullopt;
+      }
+      const std::string structPath = resolveStructTypePath(
+          normalizeBindingTypeName(*structTypeText),
+          namespacePrefix,
+          structNames_);
+      auto defIt = defMap_.find(structPath);
+      if (structPath.empty() || defIt == defMap_.end() || defIt->second == nullptr) {
+        return std::nullopt;
+      }
+      size_t fieldIndex = 0;
+      if (returnExpr.args[1].literalValue >
+          static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
+        return std::nullopt;
+      }
+      fieldIndex = static_cast<size_t>(returnExpr.args[1].literalValue);
+      size_t currentFieldIndex = 0;
+      for (const auto &fieldStmt : defIt->second->statements) {
+        bool isStaticField = false;
+        for (const auto &transform : fieldStmt.transforms) {
+          if (transform.name == "static") {
+            isStaticField = true;
+            break;
+          }
+        }
+        if (!fieldStmt.isBinding || isStaticField) {
+          continue;
+        }
+        if (currentFieldIndex == fieldIndex) {
+          return fieldStmt.name;
+        }
+        ++currentFieldIndex;
+      }
+      return std::nullopt;
+    };
+    if (const auto pendingPath =
+            builtinSoaDirectPendingHelperPath(returnExpr, params, locals)) {
+      return failReturnDiagnostic(
+          soaDirectPendingUnavailableMethodDiagnostic(*pendingPath));
+    }
+    if (const auto pendingFieldName = pendingFieldViewNameFromHelper()) {
+      return failReturnDiagnostic(
+          "soa_vector field views are not implemented yet: " + *pendingFieldName);
     }
     auto declaredReferenceReturnTarget = [&]() -> std::optional<std::string> {
       auto defIt = defMap_.find(currentValidationState_.context.definitionPath);
@@ -179,6 +289,22 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       trimmed = trimmed.substr(start, end - start);
       return normalizeBindingTypeName(trimmed);
     };
+    const std::optional<std::string> expectedReferenceReturnTarget =
+        declaredReferenceReturnTarget();
+    const Expr *escapeReceiver = nullptr;
+    if (isStandaloneSoaRefCall(returnExpr, escapeReceiver) &&
+        escapeReceiver != nullptr &&
+        escapeReceiver->kind != Expr::Kind::Name &&
+        !expectedReferenceReturnTarget.has_value()) {
+      return failReturnEscapeDiagnostic("reference escapes via return");
+    }
+    if (isBuiltinSoaFieldViewExpr(returnExpr, params, locals, nullptr) &&
+        !returnExpr.args.empty()) {
+      const Expr &fieldViewReceiver = returnExpr.args.front();
+      if (fieldViewReceiver.kind != Expr::Kind::Name) {
+        return failReturnEscapeDiagnostic("field-view escapes via return");
+      }
+    }
     auto isStandaloneBorrowStorageExpr = [&](const Expr &candidate) {
       if (candidate.kind == Expr::Kind::Name) {
         return true;
@@ -212,13 +338,29 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
     };
     using ExprSubstitutions = std::vector<std::pair<std::string, const Expr *>>;
     auto findSubstitutedExpr = [&](const ExprSubstitutions &substitutions,
-                                   const std::string &name) -> const Expr * {
-      for (auto it = substitutions.rbegin(); it != substitutions.rend(); ++it) {
-        if (it->first == name) {
-          return it->second;
+                                   const std::string &name,
+                                   size_t *matchedIndexOut = nullptr) -> const Expr * {
+      for (size_t index = substitutions.size(); index > 0; --index) {
+        if (substitutions[index - 1].first == name) {
+          if (matchedIndexOut != nullptr) {
+            *matchedIndexOut = index - 1;
+          }
+          return substitutions[index - 1].second;
         }
       }
       return nullptr;
+    };
+    auto removeSubstitutionAt = [&](const ExprSubstitutions &substitutions,
+                                    size_t indexToSkip) {
+      ExprSubstitutions reduced;
+      reduced.reserve(substitutions.size());
+      for (size_t index = 0; index < substitutions.size(); ++index) {
+        if (index == indexToSkip) {
+          continue;
+        }
+        reduced.push_back(substitutions[index]);
+      }
+      return reduced;
     };
     auto appendCallSubstitutions =
         [&](const Expr &callExpr,
@@ -226,7 +368,24 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
             ExprSubstitutions &extendedSubstitutions,
             const Expr *&returnedValueExprOut) -> bool {
           returnedValueExprOut = nullptr;
-          const std::string resolvedCallPath = resolveCalleePath(callExpr);
+          std::string resolvedCallPath = resolveCalleePath(callExpr);
+          if (callExpr.isMethodCall) {
+            if (callExpr.args.empty()) {
+              return false;
+            }
+            bool isBuiltin = false;
+            if (!resolveMethodTarget(params,
+                                     locals,
+                                     callExpr.namespacePrefix,
+                                     callExpr.args.front(),
+                                     callExpr.name,
+                                     resolvedCallPath,
+                                     isBuiltin)) {
+              return false;
+            }
+          }
+          resolvedCallPath =
+              resolveExprConcreteCallPath(params, locals, callExpr, resolvedCallPath);
           auto defIt = defMap_.find(resolvedCallPath);
           if (defIt == defMap_.end() || defIt->second == nullptr) {
             return false;
@@ -266,6 +425,31 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
           }
           return true;
         };
+    auto resolveConcreteCallPath = [&](const Expr &callExpr,
+                                       std::string &resolvedPathOut) -> bool {
+      resolvedPathOut = resolveCalleePath(callExpr);
+      if (callExpr.kind != Expr::Kind::Call) {
+        return !resolvedPathOut.empty();
+      }
+      if (callExpr.isMethodCall) {
+        if (callExpr.args.empty()) {
+          return false;
+        }
+        bool isBuiltin = false;
+        if (!resolveMethodTarget(params,
+                                 locals,
+                                 callExpr.namespacePrefix,
+                                 callExpr.args.front(),
+                                 callExpr.name,
+                                 resolvedPathOut,
+                                 isBuiltin)) {
+          return false;
+        }
+      }
+      resolvedPathOut =
+          resolveExprConcreteCallPath(params, locals, callExpr, resolvedPathOut);
+      return !resolvedPathOut.empty();
+    };
     auto referenceRootForReturnBinding = [&](const std::string &bindingName,
                                              const BindingInfo &binding) -> std::string {
       if (binding.typeName != "Reference" && binding.typeName != "Pointer") {
@@ -285,8 +469,15 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       recognizedOut = false;
       targetOut.clear();
       if (returnExpr.kind == Expr::Kind::Name) {
-        if (const Expr *substitutedExpr = findSubstitutedExpr(substitutions, returnExpr.name)) {
-          return resolveParameterOwnedBorrowReturnTarget(*substitutedExpr, substitutions, targetOut, recognizedOut);
+        size_t matchedIndex = 0;
+        if (const Expr *substitutedExpr =
+                findSubstitutedExpr(substitutions, returnExpr.name, &matchedIndex)) {
+          const ExprSubstitutions reducedSubstitutions =
+              removeSubstitutionAt(substitutions, matchedIndex);
+          return resolveParameterOwnedBorrowReturnTarget(*substitutedExpr,
+                                                         reducedSubstitutions,
+                                                         targetOut,
+                                                         recognizedOut);
         }
         return false;
       }
@@ -343,6 +534,10 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
           if (localIt == locals.end()) {
             return false;
           }
+          if (!localIt->second.referenceRoot.empty()) {
+            rootOut = localIt->second.referenceRoot;
+            return true;
+          }
           return resolvePointerLikeRoot(localIt->first, localIt->second, false, rootOut);
         }
 
@@ -363,11 +558,83 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
 
         return false;
       };
+      auto resolveStandaloneSoaRefReturnTarget = [&](const Expr &candidate,
+                                                     std::string &targetTypeOut)
+          -> bool {
+        const Expr *escapeReceiver = nullptr;
+        if (!isStandaloneSoaRefCall(candidate, escapeReceiver) ||
+            escapeReceiver == nullptr) {
+          return false;
+        }
+        std::string borrowRoot;
+        if (!resolveParameterOwnedStorageRoot(*escapeReceiver, borrowRoot) ||
+            borrowRoot.empty() || !parameterOwnedRoot(borrowRoot)) {
+          return false;
+        }
+        auto inferReceiverBinding = [&]() -> std::optional<BindingInfo> {
+          if (escapeReceiver->kind == Expr::Kind::Name) {
+            if (const BindingInfo *paramBinding =
+                    findParamBinding(params, escapeReceiver->name)) {
+              return *paramBinding;
+            }
+            auto localIt = locals.find(escapeReceiver->name);
+            if (localIt != locals.end()) {
+              return localIt->second;
+            }
+          }
+          BindingInfo receiverBinding;
+          if (inferBindingTypeFromInitializer(*escapeReceiver, params, locals,
+                                              receiverBinding)) {
+            return receiverBinding;
+          }
+          std::string inferredTypeText;
+          if (!inferQueryExprTypeText(*escapeReceiver, params, locals,
+                                      inferredTypeText)) {
+            return std::nullopt;
+          }
+          std::string base;
+          std::string argText;
+          const std::string normalizedType =
+              normalizeBindingTypeName(inferredTypeText);
+          if (splitTemplateTypeName(normalizedType, base, argText)) {
+            receiverBinding.typeName = normalizeBindingTypeName(base);
+            receiverBinding.typeTemplateArg = argText;
+          } else {
+            receiverBinding.typeName = normalizedType;
+            receiverBinding.typeTemplateArg.clear();
+          }
+          return receiverBinding;
+        };
+        const auto receiverBinding = inferReceiverBinding();
+        if (!receiverBinding.has_value()) {
+          return false;
+        }
+        std::string elemType;
+        if (extractExperimentalSoaVectorElementType(*receiverBinding, elemType) &&
+            !elemType.empty()) {
+          targetTypeOut = elemType;
+          return true;
+        }
+        BindingInfo inferredBinding;
+        if (!inferBindingTypeFromInitializer(candidate, params, locals,
+                                             inferredBinding) ||
+            normalizeBindingTypeName(inferredBinding.typeName) !=
+                "Reference" ||
+            inferredBinding.typeTemplateArg.empty()) {
+          return false;
+        }
+        targetTypeOut = inferredBinding.typeTemplateArg;
+        return true;
+      };
       auto resolveParameterOwnedReferenceCallTarget = [&](const Expr &callExpr, std::string &targetTypeOut) -> bool {
         if (callExpr.kind != Expr::Kind::Call) {
           return false;
         }
-        auto defIt = defMap_.find(resolveCalleePath(callExpr));
+        std::string resolvedCallPath = resolveCalleePath(callExpr);
+        if (!resolveConcreteCallPath(callExpr, resolvedCallPath)) {
+          return false;
+        }
+        auto defIt = defMap_.find(resolvedCallPath);
         if (defIt == defMap_.end() || defIt->second == nullptr) {
           return false;
         }
@@ -398,6 +665,10 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
 
       if (returnExpr.kind != Expr::Kind::Call || returnExpr.isMethodCall ||
           !isSimpleCallName(returnExpr, "borrow") || returnExpr.args.size() != 1) {
+        if (resolveStandaloneSoaRefReturnTarget(returnExpr, targetOut)) {
+          recognizedOut = true;
+          return true;
+        }
         if (resolveParameterOwnedReferenceCallTarget(returnExpr, targetOut)) {
           recognizedOut = true;
           return true;
@@ -430,8 +701,8 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       targetOut = storageBinding.typeTemplateArg;
       return true;
     };
-    if (std::optional<std::string> expectedReferenceTarget = declaredReferenceReturnTarget();
-        expectedReferenceTarget.has_value()) {
+    bool validatedExplicitReferenceReturn = false;
+    if (expectedReferenceReturnTarget.has_value()) {
         const Expr &returnExpr = stmt.args.front();
       if (returnExpr.kind != Expr::Kind::Name) {
         std::string borrowedTargetType;
@@ -441,7 +712,8 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
                                                     recognizedBorrowReturn)) {
           return failReturnDiagnostic("reference return requires direct parameter reference or parameter-rooted borrow");
         }
-        if (normalizeReferenceTarget(borrowedTargetType) != normalizeReferenceTarget(*expectedReferenceTarget)) {
+        if (normalizeReferenceTarget(borrowedTargetType) !=
+            normalizeReferenceTarget(*expectedReferenceReturnTarget)) {
           return failReturnDiagnostic("reference return type mismatch");
         }
       } else {
@@ -450,10 +722,11 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
           return failReturnDiagnostic("reference return requires direct parameter reference or parameter-rooted borrow");
         }
         if (normalizeReferenceTarget(paramBinding->typeTemplateArg) !=
-            normalizeReferenceTarget(*expectedReferenceTarget)) {
+            normalizeReferenceTarget(*expectedReferenceReturnTarget)) {
           return failReturnDiagnostic("reference return type mismatch");
         }
       }
+      validatedExplicitReferenceReturn = true;
     }
     bool validatedPointerLikeReturn = false;
     auto currentDefIt = defMap_.find(currentValidationState_.context.definitionPath);
@@ -525,8 +798,12 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
           }
         }
       }
-      if (explicitPointerLikeReturnBinding.has_value() && returnKind == ReturnKind::Unknown) {
+      if (explicitPointerLikeReturnBinding.has_value()) {
         const BindingInfo &declaredReturnBinding = *explicitPointerLikeReturnBinding;
+        if (declaredReturnBinding.typeName == "Reference" &&
+            validatedExplicitReferenceReturn) {
+          validatedPointerLikeReturn = true;
+        } else {
         BindingInfo actualReturnBinding;
         std::string directBorrowTargetType;
         const bool directBorrowReturn =
@@ -544,6 +821,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
           return failReturnDiagnostic("return type mismatch: expected " + declaredReturnBinding.typeName);
         }
         validatedPointerLikeReturn = true;
+        }
       }
     }
     if (!validatedPointerLikeReturn && returnKind != ReturnKind::Unknown) {

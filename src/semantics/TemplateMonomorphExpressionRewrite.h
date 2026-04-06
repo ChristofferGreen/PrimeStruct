@@ -94,9 +94,11 @@ bool rewriteExpr(Expr &expr,
            path == "/std/collections/vector/reserve" || path == "/std/collections/vector/clear" ||
            path == "/std/collections/vector/remove_at" || path == "/std/collections/vector/remove_swap" ||
            path == "/std/collections/vector/at" || path == "/std/collections/vector/at_unsafe" ||
-           path == "/std/collections/soa_vector/count" || path == "/std/collections/soa_vector/get" ||
-           path == "/std/collections/soa_vector/ref" || path == "/std/collections/soa_vector/reserve" ||
-           path == "/std/collections/soa_vector/push" || path == "/std/collections/soa_vector/to_aos";
+           path == "/std/collections/soa_vector/count" || path == "/std/collections/soa_vector/count_ref" ||
+           path == "/std/collections/soa_vector/get" || path == "/std/collections/soa_vector/get_ref" ||
+           path == "/std/collections/soa_vector/ref" || path == "/std/collections/soa_vector/ref_ref" ||
+           path == "/std/collections/soa_vector/reserve" || path == "/std/collections/soa_vector/push" ||
+           path == "/std/collections/soa_vector/to_aos" || path == "/std/collections/soa_vector/to_aos_ref";
   };
   auto isSyntheticSamePathSoaHelperTemplateCarryPath = [](const std::string &path) {
     return path == "/soa_vector/count" || path == "/soa_vector/get" ||
@@ -401,10 +403,12 @@ bool rewriteExpr(Expr &expr,
     } else {
       return path;
     }
-    if (helperName != "count" && helperName != "capacity" &&
-        helperName != "push" && helperName != "reserve" &&
-        helperName != "get" && helperName != "ref" &&
-        helperName != "to_aos") {
+    if (helperName != "count" && helperName != "count_ref" &&
+        helperName != "capacity" && helperName != "push" &&
+        helperName != "reserve" && helperName != "get" &&
+        helperName != "get_ref" && helperName != "ref" &&
+        helperName != "ref_ref" && helperName != "to_aos" &&
+        helperName != "to_aos_ref") {
       return path;
     }
     if (helperName == "count" &&

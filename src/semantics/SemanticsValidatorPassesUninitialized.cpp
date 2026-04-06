@@ -479,6 +479,16 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
     }
     if (isReturnCall(stmt)) {
       for (const auto &arg : stmt.args) {
+        if (!arg.isMethodCall &&
+            (isSimpleCallName(arg, "take") || isSimpleCallName(arg, "borrow")) &&
+            !arg.args.empty()) {
+          if (auto err =
+                  applyStorageCall(arg.name, arg.args.front(), localsIn,
+                                   statesIn, true)) {
+            return {err, false};
+          }
+          continue;
+        }
         if (auto err = applyExprEffects(arg, localsIn, statesIn)) {
           return {err, false};
         }

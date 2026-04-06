@@ -47,7 +47,7 @@ void countInvalidationExpr(const Expr &expr, InvalidationCounts &counts) {
   if (isIfCall(expr) || isMatchCall(expr)) {
     ++counts.controlFlow;
   }
-  if (expr.isMethodCall) {
+  if (expr.isMethodCall && !expr.isFieldAccess) {
     ++counts.receiverType;
   }
   for (const auto &arg : expr.args) {
@@ -67,6 +67,9 @@ InvalidationCounts computeInvalidationCounts(const Program &program) {
       countInvalidationExpr(param, counts);
     }
     for (const auto &stmt : def.statements) {
+      if (def.returnExpr.has_value() && isReturnCall(stmt)) {
+        continue;
+      }
       if (stmt.isBinding) {
         ++counts.localBinding;
         if (!stmt.args.empty() || !stmt.bodyArguments.empty()) {

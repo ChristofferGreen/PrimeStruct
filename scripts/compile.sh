@@ -129,7 +129,7 @@ fi
 ctest_args=(
   --test-dir "$BUILD_DIR"
   --output-on-failure
-  --parallel 8
+  --parallel 5
 )
 
 if [[ "$FAST_MODE" -eq 1 ]]; then

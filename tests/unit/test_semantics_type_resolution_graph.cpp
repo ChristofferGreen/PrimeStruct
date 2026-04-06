@@ -660,7 +660,19 @@ TEST_CASE("type resolution graph dump stays stable for mutual recursion") {
       "  edge 3 kind=dependency source=1 target=3\n"
       "}\n";
 
-  CHECK(requireTypeResolutionGraphDump(source, "/alpha") == expected);
+  const std::string dump = requireTypeResolutionGraphDump(source, "/alpha");
+  const std::string header = "type_graph {\n";
+  REQUIRE(dump.rfind(header, 0) == 0);
+  const size_t metricsStart = header.size();
+  const size_t metricsEnd = dump.find('\n', metricsStart);
+  REQUIRE(metricsEnd != std::string::npos);
+  const std::string metricsLine = dump.substr(metricsStart, metricsEnd - metricsStart);
+  CHECK(metricsLine.rfind("  metrics ", 0) == 0);
+  CHECK(metricsLine.find("nodes=4") != std::string::npos);
+  CHECK(metricsLine.find("edges=4") != std::string::npos);
+  CHECK(metricsLine.find("scc_count=1") != std::string::npos);
+  const std::string stripped = header + dump.substr(metricsEnd + 1);
+  CHECK(stripped == expected);
 }
 
 TEST_CASE("type resolution graph dump stays stable for namespace import resolution") {

@@ -47,13 +47,18 @@ bool SemanticsValidator::inferResolvedDirectCallBindingType(const std::string &r
     return false;
   }
 
+  const auto defIt = defMap_.find(resolvedPath);
+  if (defIt != defMap_.end() && defIt->second != nullptr &&
+      inferDeclaredCollectionBinding(*defIt->second)) {
+    return true;
+  }
+
   const auto directBindingIt = returnBindings_.find(resolvedPath);
   if (directBindingIt != returnBindings_.end() && !directBindingIt->second.typeName.empty()) {
     bindingOut = directBindingIt->second;
     return true;
   }
 
-  const auto defIt = defMap_.find(resolvedPath);
   const auto directStructIt = returnStructs_.find(resolvedPath);
   if (directStructIt != returnStructs_.end() && !directStructIt->second.empty()) {
     if (directStructIt->second.rfind("/std/collections/experimental_map/Map__", 0) == 0) {

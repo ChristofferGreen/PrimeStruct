@@ -72,6 +72,16 @@ namespace std {
     [public i32] capacity
     [public Pointer<uninitialized<T>>] data
     [public i32] stride
+
+    [return<i32>]
+    field_count() {
+      return(this.count)
+    }
+
+    [return<i32>]
+    field_capacity() {
+      return(this.capacity)
+    }
   }
 
   [public return<void>]

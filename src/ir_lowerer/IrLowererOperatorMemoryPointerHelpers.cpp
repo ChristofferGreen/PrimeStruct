@@ -108,6 +108,59 @@ bool isAggregatePointerLikeExpr(const Expr &expr, const LocalMap &localsIn) {
   return false;
 }
 
+bool isAggregatePointerLikeCallExpr(
+    const Expr &expr,
+    const ResolveConversionsAndCallsDefinitionCallFn &resolveDefinitionCall,
+    const ResolveConversionsAndCallsStructTypeNameFn &resolveStructTypeName) {
+  if (expr.kind != Expr::Kind::Call || !resolveDefinitionCall) {
+    return false;
+  }
+
+  const Definition *callee = resolveDefinitionCall(expr);
+  if (callee == nullptr) {
+    return false;
+  }
+
+  for (const auto &transform : callee->transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+
+    std::string base;
+    std::string argList;
+    if (!splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), base, argList)) {
+      continue;
+    }
+    base = normalizeCollectionBindingTypeName(base);
+    if (base != "Reference" && base != "Pointer") {
+      continue;
+    }
+
+    std::vector<std::string> args;
+    if (!splitTemplateArgs(argList, args) || args.size() != 1) {
+      continue;
+    }
+
+    const std::string targetType = trimTemplateTypeText(args.front());
+    std::string targetBase;
+    std::string targetArgList;
+    if (splitTemplateTypeName(targetType, targetBase, targetArgList)) {
+      targetBase = normalizeCollectionBindingTypeName(targetBase);
+      if (targetBase == "array" || targetBase == "vector" || targetBase == "map" ||
+          targetBase == "soa_vector") {
+        return true;
+      }
+    }
+
+    std::string resolvedStruct;
+    if (resolveStructTypeName(targetType, callee->namespacePrefix, resolvedStruct)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 } // namespace
 
 bool emitConversionsAndCallsMemoryAndPointerExpr(
@@ -538,7 +591,9 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
         return false;
       }
     }
-    if (builtin == "dereference" && isAggregatePointerLikeExpr(pointerExpr, localsIn)) {
+    if (builtin == "dereference" &&
+        (isAggregatePointerLikeExpr(pointerExpr, localsIn) ||
+         isAggregatePointerLikeCallExpr(pointerExpr, resolveDefinitionCall, resolveStructTypeName))) {
       return true;
     }
     instructions.push_back({IrOpcode::LoadIndirect, 0});

@@ -40,6 +40,11 @@ bool isBuiltinMapTypeName(const std::string &typeName) {
          typeName == "/std/collections/map";
 }
 
+bool isGenericExperimentalMapTypeName(const std::string &typeName) {
+  return typeName == "Map" || typeName == "std/collections/experimental_map/Map" ||
+         typeName == "/std/collections/experimental_map/Map";
+}
+
 bool isExperimentalMapTypeName(const std::string &typeName) {
   return typeName == "Map" || typeName == "std/collections/experimental_map/Map" ||
          typeName == "/std/collections/experimental_map/Map" ||
@@ -179,7 +184,7 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     out = layout;
     return true;
   }
-  if (isExperimentalMapTypeName(structPath)) {
+  if (isGenericExperimentalMapTypeName(structPath)) {
     StructSlotLayoutInfo layout;
     layout.structPath = structPath;
     layout.totalSlots = 8;

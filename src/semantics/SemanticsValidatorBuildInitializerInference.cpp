@@ -395,6 +395,51 @@ bool SemanticsValidator::usesSamePathSoaHelperTargetForCurrentImports(
   return preferredSoaHelperTargetForCurrentImports(helperName) == samePath;
 }
 
+std::string SemanticsValidator::preferredSoaHelperTargetForCollectionType(
+    std::string_view helperName,
+    std::string_view collectionTypePath) const {
+  const std::string helper(helperName);
+  const std::string samePath =
+      helper == "to_aos" ? "/to_aos" : "/soa_vector/" + helper;
+  const std::string preferredTarget =
+      preferredSoaHelperTargetForCurrentImports(helperName);
+  if (preferredTarget != samePath) {
+    return preferredTarget;
+  }
+  auto paramsIt = paramsByDef_.find(samePath);
+  if (paramsIt == paramsByDef_.end() || paramsIt->second.empty()) {
+    return "/std/collections/soa_vector/" + helper;
+  }
+  const BindingInfo &receiverBinding = paramsIt->second.front().binding;
+  const std::string receiverTypeText =
+      receiverBinding.typeTemplateArg.empty()
+          ? receiverBinding.typeName
+          : receiverBinding.typeName + "<" + receiverBinding.typeTemplateArg + ">";
+  std::string resolvedCollectionType =
+      inferMethodCollectionTypePathFromTypeText(receiverTypeText);
+  if (resolvedCollectionType.empty() && collectionTypePath == "/soa_vector") {
+    std::string elemType;
+    if (extractExperimentalSoaVectorElementType(receiverBinding, elemType)) {
+      resolvedCollectionType = "/soa_vector";
+    }
+  }
+  if (resolvedCollectionType == collectionTypePath) {
+    return samePath;
+  }
+  return "/std/collections/soa_vector/" + helper;
+}
+
+bool SemanticsValidator::usesSamePathSoaHelperTargetForCollectionType(
+    std::string_view helperName,
+    std::string_view collectionTypePath) const {
+  const std::string helper(helperName);
+  const std::string samePath =
+      helper == "to_aos" ? "/to_aos" : "/soa_vector/" + helper;
+  return preferredSoaHelperTargetForCollectionType(helperName,
+                                                   collectionTypePath) ==
+         samePath;
+}
+
 bool SemanticsValidator::hasDirectExperimentalVectorImport() const {
   const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
   for (const auto &importPath : importPaths) {

@@ -218,6 +218,13 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
         }
         return false;
       };
+  auto isSoaGrowthBinding = [&](const BindingInfo &binding) {
+    if (normalizeBindingTypeName(binding.typeName) == "soa_vector") {
+      return true;
+    }
+    std::string experimentalElemType;
+    return extractExperimentalSoaVectorElementType(binding, experimentalElemType);
+  };
   std::function<bool(const Expr &, std::string &, std::string &)>
       resolveStandaloneSoaGrowthRoot;
   resolveStandaloneSoaGrowthRoot =
@@ -231,23 +238,28 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
           if (binding == nullptr) {
             return false;
           }
-          if (binding->typeName == "soa_vector") {
+          const std::string normalizedType =
+              normalizeBindingTypeName(binding->typeName);
+          if (normalizedType != "Reference" &&
+              normalizedType != "Pointer" &&
+              isSoaGrowthBinding(*binding)) {
             borrowRootOut = receiverExpr.name;
             return true;
           }
-          const std::string normalizedType =
-              normalizeBindingTypeName(binding->typeName);
-          if ((normalizedType == "Reference" || normalizedType == "Pointer") &&
-              !binding->typeTemplateArg.empty()) {
+          if (normalizedType == "Reference" || normalizedType == "Pointer") {
             std::string base;
             std::string arg;
             const std::string normalizedTarget =
                 normalizeBindingTypeName(binding->typeTemplateArg);
-            if (splitTemplateTypeName(normalizedTarget, base, arg)) {
-              if (normalizeBindingTypeName(base) != "soa_vector") {
-                return false;
-              }
-            } else if (normalizedTarget != "soa_vector") {
+            const bool targetsBuiltinSoa =
+                !binding->typeTemplateArg.empty() &&
+                (splitTemplateTypeName(normalizedTarget, base, arg)
+                     ? normalizeBindingTypeName(base) == "soa_vector"
+                     : normalizedTarget == "soa_vector");
+            std::string experimentalElemType;
+            if (!targetsBuiltinSoa &&
+                !extractExperimentalSoaVectorElementType(*binding,
+                                                        experimentalElemType)) {
               return false;
             }
             ignoreBorrowNameOut = receiverExpr.name;
@@ -462,6 +474,20 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       stmt.isMethodCall && defMap_.find(vectorHelperResolved) != defMap_.end() &&
       vectorHelperResolved.rfind("/vector/", 0) != 0 && vectorHelperResolved.rfind("/soa_vector/", 0) != 0;
   if (isUserMethodTarget) {
+    if (!stmt.args.empty() &&
+        (vectorHelper == "push" || vectorHelper == "reserve" ||
+         vectorHelper == "remove_at" || vectorHelper == "remove_swap" ||
+         vectorHelper == "clear")) {
+      std::string borrowRoot;
+      std::string ignoreBorrowName;
+      if (resolveStandaloneSoaGrowthRoot(stmt.args.front(), borrowRoot,
+                                         ignoreBorrowName) &&
+          hasActiveBorrowForRoot(borrowRoot, ignoreBorrowName)) {
+        const std::string borrowSink =
+            !ignoreBorrowName.empty() ? ignoreBorrowName : borrowRoot;
+        return failBorrowedBindingDiagnostic(borrowRoot, borrowSink);
+      }
+    }
     return validateExpr(params, locals, stmt, enclosingStatements, statementIndex);
   }
   const std::string oldExplicitSoaPath = explicitOldSoaMutatorPath(stmt);
@@ -751,12 +777,26 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   if (!isBareCanonicalIndexedRemovalExperimentalVectorBridgeCall &&
       !shouldUseCanonicalBuiltinCompatibilityFallback &&
       (hasDeclaredDefinitionPath(vectorHelperResolved) || hasImportedDefinitionPath(vectorHelperResolved))) {
+    const size_t receiverIndex = hasResolvedReceiverIndex ? resolvedReceiverIndex : 0;
+    if (receiverIndex < stmt.args.size() &&
+        (vectorHelper == "push" || vectorHelper == "reserve" ||
+         vectorHelper == "remove_at" || vectorHelper == "remove_swap" ||
+         vectorHelper == "clear")) {
+      std::string borrowRoot;
+      std::string ignoreBorrowName;
+      if (resolveStandaloneSoaGrowthRoot(stmt.args[receiverIndex], borrowRoot,
+                                         ignoreBorrowName) &&
+          hasActiveBorrowForRoot(borrowRoot, ignoreBorrowName)) {
+        const std::string borrowSink =
+            !ignoreBorrowName.empty() ? ignoreBorrowName : borrowRoot;
+        return failBorrowedBindingDiagnostic(borrowRoot, borrowSink);
+      }
+    }
     Expr helperCall = stmt;
     helperCall.name = vectorHelperResolved;
     helperCall.isMethodCall = false;
     if (helperCall.templateArgs.empty() &&
         vectorHelperResolved.rfind("/std/collections/experimental_vector/", 0) == 0) {
-      const size_t receiverIndex = hasResolvedReceiverIndex ? resolvedReceiverIndex : 0;
       if (receiverIndex < stmt.args.size()) {
         BindingInfo inferredBinding;
         bool hasInferredBinding = false;
@@ -907,7 +947,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     std::string borrowRoot;
     std::string ignoreBorrowName;
-    if (binding.typeName == "soa_vector" &&
+    if (isSoaGrowthBinding(binding) &&
         resolveStandaloneSoaGrowthRoot(stmt.args[receiverIndex], borrowRoot,
                                        ignoreBorrowName) &&
         hasActiveBorrowForRoot(borrowRoot, ignoreBorrowName)) {
@@ -951,7 +991,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     std::string borrowRoot;
     std::string ignoreBorrowName;
-    if (binding.typeName == "soa_vector" &&
+    if (isSoaGrowthBinding(binding) &&
         resolveStandaloneSoaGrowthRoot(stmt.args[receiverIndex], borrowRoot,
                                        ignoreBorrowName) &&
         hasActiveBorrowForRoot(borrowRoot, ignoreBorrowName)) {
@@ -996,7 +1036,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     std::string borrowRoot;
     std::string ignoreBorrowName;
-    if (binding.typeName == "soa_vector" &&
+    if (isSoaGrowthBinding(binding) &&
         resolveStandaloneSoaGrowthRoot(stmt.args[receiverIndex], borrowRoot,
                                        ignoreBorrowName) &&
         hasActiveBorrowForRoot(borrowRoot, ignoreBorrowName)) {
@@ -1035,7 +1075,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     std::string borrowRoot;
     std::string ignoreBorrowName;
-    if (binding.typeName == "soa_vector" && vectorHelper == "clear" &&
+    if (isSoaGrowthBinding(binding) && vectorHelper == "clear" &&
         resolveStandaloneSoaGrowthRoot(stmt.args[receiverIndex], borrowRoot,
                                        ignoreBorrowName) &&
         hasActiveBorrowForRoot(borrowRoot, ignoreBorrowName)) {

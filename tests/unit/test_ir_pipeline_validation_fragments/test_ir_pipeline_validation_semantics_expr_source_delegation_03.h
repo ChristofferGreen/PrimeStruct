@@ -826,10 +826,10 @@
             "return failExprDiagnostic(expr, std::move(message));") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
-            "usesSamePathSoaHelperTargetForCurrentImports(helperName)") !=
+            "usesSamePathSoaHelperTargetForCollectionType(helperName,") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
-            "preferredSoaHelperTargetForCurrentImports(") !=
+            "preferredSoaHelperTargetForCollectionType(") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find("auto preferredSoaMutatorHelperTarget =") ==
         std::string::npos);
@@ -839,7 +839,7 @@
             "hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "usesSamePathSoaHelperTargetForCurrentImports(\"count\")") !=
+            "usesSamePathSoaHelperTargetForCollectionType(\"count\", \"/vector\")") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "hasVisibleDefinitionPathForCurrentImports(canonical)") ==
@@ -848,7 +848,7 @@
             "hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)") ==
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
-            "usesSamePathSoaHelperTargetForCurrentImports(\"count\")") !=
+            "usesSamePathSoaHelperTargetForCollectionType(\"count\", \"/vector\")") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
             "hasVisibleDefinitionPathForCurrentImports(canonical)") ==

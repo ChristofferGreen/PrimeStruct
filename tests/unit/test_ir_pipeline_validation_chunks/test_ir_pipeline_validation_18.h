@@ -225,22 +225,25 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = \"/soa_vector/count\";") ==
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
-            "resolvedOut = preferredSoaHelperTargetForCurrentImports(\"count\");") !=
+            "resolvedOut =\n"
+            "            preferredSoaHelperTargetForCollectionType(\"count\", \"/vector\");") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = \"/soa_vector/get\";") ==
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
-            "resolvedOut = preferredSoaHelperTargetForCurrentImports(\"get\");") !=
+            "resolvedOut = preferredSoaHelperTargetForCollectionType(") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = \"/soa_vector/ref\";") ==
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
-            "resolvedOut = preferredSoaHelperTargetForCurrentImports(\"ref\");") !=
+            "\"ref\",\n"
+            "          collectionTypePath == \"/soa_vector\" ? \"/soa_vector\" : \"/vector\");") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = \"/to_aos\";") ==
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
-            "resolvedOut = preferredSoaHelperTargetForCurrentImports(\"to_aos\");") !=
+            "\"to_aos\",\n"
+            "          collectionTypePath == \"/soa_vector\" ? \"/soa_vector\" : \"/vector\");") !=
         std::string::npos);
   CHECK(semanticsInferSource.find("auto extractWrappedPointeeType = [&](const std::string &typeText, std::string &pointeeTypeOut) -> bool {") ==
         std::string::npos);

@@ -450,6 +450,13 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       return false;
     }
 
+    if (isSimpleCallName(receiverTarget, "dereference") &&
+        receiverTarget.args.size() == 1) {
+      return resolveMutablePointerWriteTarget(receiverTarget.args.front(),
+                                             borrowRootOut,
+                                             ignoreBorrowNameOut);
+    }
+
     std::string inferredTypeText;
     if (!inferQueryExprTypeText(receiverTarget, params, locals,
                                 inferredTypeText) ||
@@ -540,15 +547,167 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       return failMutationBorrowDiagnostic("assign requires exactly two arguments");
     }
     const Expr &target = expr.args.front();
+    auto pendingFieldViewNameFromRewrittenHelper =
+        [&](const Expr &candidate) -> std::optional<std::string> {
+          if (candidate.kind != Expr::Kind::Call || candidate.args.size() < 2 ||
+              candidate.args[1].kind != Expr::Kind::Literal) {
+            return std::nullopt;
+          }
+          const std::string resolvedPath = resolveCalleePath(candidate);
+          const bool isFieldViewHelper =
+              resolvedPath.rfind(
+                  "/std/collections/experimental_soa_vector/soaVectorFieldView",
+                  0) == 0 ||
+              resolvedPath.rfind(
+                  "/std/collections/experimental_soa_storage/soaColumnFieldViewUnsafe",
+                  0) == 0;
+          if (!isFieldViewHelper) {
+            return std::nullopt;
+          }
+          auto inferStructTypeText = [&]() -> std::optional<std::string> {
+            if (!candidate.templateArgs.empty()) {
+              return candidate.templateArgs.front();
+            }
+            if (candidate.args.empty()) {
+              return std::nullopt;
+            }
+            const Expr &receiverExpr = candidate.args.front();
+            auto extractReceiverStructType =
+                [&](const BindingInfo &binding) -> std::optional<std::string> {
+              std::string elemType;
+              if (extractExperimentalSoaVectorElementType(binding, elemType)) {
+                return elemType;
+              }
+              return std::nullopt;
+            };
+            if (receiverExpr.kind == Expr::Kind::Name) {
+              if (const BindingInfo *paramBinding =
+                      findParamBinding(params, receiverExpr.name)) {
+                return extractReceiverStructType(*paramBinding);
+              }
+              auto localIt = locals.find(receiverExpr.name);
+              if (localIt != locals.end()) {
+                return extractReceiverStructType(localIt->second);
+              }
+            }
+            BindingInfo receiverBinding;
+            if (inferBindingTypeFromInitializer(receiverExpr, params, locals,
+                                                receiverBinding)) {
+              if (const auto elemType =
+                      extractReceiverStructType(receiverBinding)) {
+                return elemType;
+              }
+            }
+            std::string inferredTypeText;
+            if (inferQueryExprTypeText(receiverExpr, params, locals,
+                                       inferredTypeText)) {
+              BindingInfo inferredBinding;
+              std::string base;
+              std::string argText;
+              const std::string normalizedType =
+                  normalizeBindingTypeName(inferredTypeText);
+              if (splitTemplateTypeName(normalizedType, base, argText)) {
+                inferredBinding.typeName = normalizeBindingTypeName(base);
+                inferredBinding.typeTemplateArg = argText;
+              } else {
+                inferredBinding.typeName = normalizedType;
+                inferredBinding.typeTemplateArg.clear();
+              }
+              return extractReceiverStructType(inferredBinding);
+            }
+            return std::nullopt;
+          };
+          const auto structTypeText = inferStructTypeText();
+          if (!structTypeText.has_value()) {
+            return std::nullopt;
+          }
+          std::string currentNamespace;
+          if (!currentValidationState_.context.definitionPath.empty()) {
+            const size_t slash =
+                currentValidationState_.context.definitionPath.find_last_of('/');
+            if (slash != std::string::npos && slash > 0) {
+              currentNamespace =
+                  currentValidationState_.context.definitionPath.substr(0, slash);
+            }
+          }
+          const std::string lookupNamespace =
+              !candidate.namespacePrefix.empty() ? candidate.namespacePrefix
+                                                : currentNamespace;
+          const std::string structPath = resolveStructTypePath(
+              normalizeBindingTypeName(*structTypeText),
+              lookupNamespace,
+              structNames_);
+          auto defIt = defMap_.find(structPath);
+          if (structPath.empty() || defIt == defMap_.end() ||
+              defIt->second == nullptr) {
+            return std::nullopt;
+          }
+          const size_t fieldIndex =
+              static_cast<size_t>(candidate.args[1].literalValue);
+          size_t currentFieldIndex = 0;
+          for (const auto &fieldStmt : defIt->second->statements) {
+            bool isStaticField = false;
+            for (const auto &transform : fieldStmt.transforms) {
+              if (transform.name == "static") {
+                isStaticField = true;
+                break;
+              }
+            }
+            if (!fieldStmt.isBinding || isStaticField) {
+              continue;
+            }
+            if (currentFieldIndex == fieldIndex) {
+              return fieldStmt.name;
+            }
+            ++currentFieldIndex;
+          }
+          return std::nullopt;
+        };
+    auto resolveSoaFieldViewReceiverExpr =
+        [&](const Expr &fieldViewExpr,
+            std::string *fieldNameOut,
+            const Expr *&receiverExprOut) -> bool {
+          receiverExprOut = nullptr;
+          std::string fieldName;
+          if (isBuiltinSoaFieldViewExpr(fieldViewExpr, params, locals,
+                                        &fieldName)) {
+            if (fieldNameOut != nullptr) {
+              *fieldNameOut = fieldName;
+            }
+            if (!fieldViewExpr.args.empty()) {
+              receiverExprOut = &fieldViewExpr.args.front();
+              return true;
+            }
+            return false;
+          }
+          if (const auto rewrittenFieldName =
+                  pendingFieldViewNameFromRewrittenHelper(fieldViewExpr)) {
+            if (fieldNameOut != nullptr) {
+              *fieldNameOut = *rewrittenFieldName;
+            }
+            if (!fieldViewExpr.args.empty()) {
+              receiverExprOut = &fieldViewExpr.args.front();
+              return true;
+            }
+            return false;
+          }
+          return false;
+        };
     std::string standaloneSoaFieldViewName;
-    if (isBuiltinSoaFieldViewExpr(target, params, locals,
-                                  &standaloneSoaFieldViewName)) {
+    const bool targetIsBuiltinSoaFieldView =
+        isBuiltinSoaFieldViewExpr(target, params, locals,
+                                  &standaloneSoaFieldViewName);
+    const Expr *standaloneSoaFieldViewReceiver = nullptr;
+    if ((targetIsBuiltinSoaFieldView ||
+         resolveSoaFieldViewReceiverExpr(target, &standaloneSoaFieldViewName,
+                                         standaloneSoaFieldViewReceiver)) &&
+        !hasNamedArguments(expr.argNames)) {
       std::string accessName;
       if (!(getBuiltinArrayAccessName(target, accessName) &&
             target.args.size() == 2)) {
-        if (!validateExpr(params, locals, target)) {
-          return false;
-        }
+        return failMutationBorrowDiagnostic(
+            soaDirectPendingUnavailableMethodDiagnostic(
+                soaFieldViewHelperPath(standaloneSoaFieldViewName)));
       }
     }
     const bool targetIsName = target.kind == Expr::Kind::Name;
@@ -605,6 +764,24 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
           fieldTarget.args.size() != 1) {
         return failMutationBorrowDiagnostic(
             "assign target must be a mutable binding");
+      }
+      std::string fieldViewName;
+      if (isBuiltinSoaFieldViewExpr(fieldTarget, params, locals,
+                                    &fieldViewName)) {
+        std::string borrowRoot;
+        std::string ignoreBorrowName;
+        if (!resolveMutableExperimentalSoaReceiverTarget(
+                fieldTarget.args.front(), borrowRoot, ignoreBorrowName)) {
+          return failMutationBorrowDiagnostic(
+              "assign target must be a mutable binding");
+        }
+        if (!borrowRoot.empty() &&
+            hasActiveBorrowForBinding(borrowRoot, ignoreBorrowName)) {
+          const std::string borrowSink =
+              !ignoreBorrowName.empty() ? ignoreBorrowName : borrowRoot;
+          return failBorrowedBindingDiagnostic(borrowRoot, borrowSink);
+        }
+        return true;
       }
       if (auto pendingPath =
               builtinSoaDirectPendingHelperPath(fieldTarget, params, locals);
@@ -679,31 +856,54 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       if (getBuiltinArrayAccessName(target, accessName) &&
           target.args.size() == 2) {
         const Expr &collectionTarget = target.args.front();
+        std::string fieldViewName;
+        const Expr *fieldViewReceiver = nullptr;
+        if (resolveSoaFieldViewReceiverExpr(collectionTarget, &fieldViewName,
+                                            fieldViewReceiver)) {
+          std::string borrowRoot;
+          std::string ignoreBorrowName;
+          if (fieldViewReceiver == nullptr ||
+              !resolveMutableExperimentalSoaReceiverTarget(
+                  *fieldViewReceiver, borrowRoot, ignoreBorrowName)) {
+            return failMutationBorrowDiagnostic(
+                "assign target must be a mutable binding");
+          }
+          if (!borrowRoot.empty() &&
+              hasActiveBorrowForBinding(borrowRoot, ignoreBorrowName)) {
+            const std::string borrowSink =
+                !ignoreBorrowName.empty() ? ignoreBorrowName : borrowRoot;
+            return failBorrowedBindingDiagnostic(borrowRoot, borrowSink);
+          }
+          if (!validateExpr(params, locals, target)) {
+            return false;
+          }
+        } else
         if (!isVectorOrArrayIndexedTarget(collectionTarget)) {
           return failMutationBorrowDiagnostic(
               "assign target must be a mutable binding");
-        }
-        if (collectionTarget.kind == Expr::Kind::Name) {
-          if (!isMutableBinding(collectionTarget.name)) {
+        } else {
+          if (collectionTarget.kind == Expr::Kind::Name) {
+            if (!isMutableBinding(collectionTarget.name)) {
+              return failMutationBorrowDiagnostic(
+                  "assign target must be a mutable binding: " +
+                  collectionTarget.name);
+            }
+            if (hasActiveBorrowForBinding(collectionTarget.name)) {
+              return failBorrowedBindingDiagnostic(collectionTarget.name,
+                                                  collectionTarget.name);
+            }
+          } else if (collectionTarget.kind == Expr::Kind::Call &&
+                     collectionTarget.isFieldAccess) {
+            if (!validateMutableFieldAccessTarget(collectionTarget)) {
+              return false;
+            }
+          } else {
             return failMutationBorrowDiagnostic(
-                "assign target must be a mutable binding: " +
-                collectionTarget.name);
+                "assign target must be a mutable binding");
           }
-          if (hasActiveBorrowForBinding(collectionTarget.name)) {
-            return failBorrowedBindingDiagnostic(collectionTarget.name,
-                                                collectionTarget.name);
-          }
-        } else if (collectionTarget.kind == Expr::Kind::Call &&
-                   collectionTarget.isFieldAccess) {
-          if (!validateMutableFieldAccessTarget(collectionTarget)) {
+          if (!validateExpr(params, locals, target)) {
             return false;
           }
-        } else {
-          return failMutationBorrowDiagnostic(
-              "assign target must be a mutable binding");
-        }
-        if (!validateExpr(params, locals, target)) {
-          return false;
         }
       } else {
         std::string pointerName;

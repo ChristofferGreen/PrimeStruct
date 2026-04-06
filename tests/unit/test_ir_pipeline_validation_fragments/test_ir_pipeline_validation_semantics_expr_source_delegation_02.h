@@ -147,13 +147,14 @@
   CHECK(semanticsExprMethodTargetResolutionSource.find("setCollectionMethodTarget(\"/soa_vector/count\")") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "preferredSoaHelperTargetForCurrentImports(\"count\")") != std::string::npos);
+            "preferredSoaHelperTargetForCollectionType(\"count\", \"/vector\")") !=
+        std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "preferredSoaHelperTargetForCurrentImports(\"get\")") != std::string::npos);
+            "preferredSoaHelperTargetForCollectionType(") != std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "preferredSoaHelperTargetForCurrentImports(\"ref\")") != std::string::npos);
+            "\"ref\", \"/soa_vector\"") != std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "preferredSoaHelperTargetForCurrentImports(\"to_aos\")") != std::string::npos);
+            "\"to_aos\", \"/vector\"") != std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find("setCollectionMethodTarget(\"/to_aos\")") ==
         std::string::npos);
   CHECK(semanticsExprSource.find(

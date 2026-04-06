@@ -127,10 +127,19 @@ bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, Bin
       sawUnusableReturnTransform = true;
       break;
     }
-    if (isSpecializedDefinition &&
-        (returnTypeReferencesTemplateParam(returnType) || !isConcreteReturnTypeText(returnType))) {
-      sawUnusableReturnTransform = true;
-      break;
+    if (isSpecializedDefinition) {
+      const bool referencesTemplateParam = returnTypeReferencesTemplateParam(returnType);
+      const bool isConcreteReturnType = isConcreteReturnTypeText(returnType);
+      if (referencesTemplateParam || !isConcreteReturnType) {
+        std::string base;
+        std::string argText;
+        if (splitTemplateTypeName(normalizeBindingTypeName(returnType), base, argText) &&
+            !base.empty()) {
+          return parseTypeText(returnType, bindingOut);
+        }
+        sawUnusableReturnTransform = true;
+        break;
+      }
     }
     return parseTypeText(returnType, bindingOut);
   }

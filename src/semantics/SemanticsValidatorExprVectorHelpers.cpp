@@ -235,7 +235,8 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
   std::string experimentalSoaElemType;
   if (resolveExperimentalSoaVectorReceiver(receiver, experimentalSoaElemType) &&
       (helperName == "push" || helperName == "reserve")) {
-    resolvedOut = preferredSoaHelperTargetForCurrentImports(helperName);
+    resolvedOut =
+        preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
     return true;
   }
   if (receiver.kind == Expr::Kind::Call &&
@@ -246,8 +247,10 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     if (resolveCallCollectionTypePath(receiver, params, locals, collectionTypePath)) {
       if (collectionTypePath == "/vector" &&
           (helperName == "push" || helperName == "reserve") &&
-          usesSamePathSoaHelperTargetForCurrentImports(helperName)) {
-        resolvedOut = preferredSoaHelperTargetForCurrentImports(helperName);
+          usesSamePathSoaHelperTargetForCollectionType(helperName,
+                                                       "/vector")) {
+        resolvedOut =
+            preferredSoaHelperTargetForCollectionType(helperName, "/vector");
         return true;
       }
       if (collectionTypePath == "/vector") {
@@ -256,7 +259,8 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       }
       if (collectionTypePath == "/soa_vector" &&
           (helperName == "push" || helperName == "reserve")) {
-        resolvedOut = preferredSoaHelperTargetForCurrentImports(helperName);
+        resolvedOut =
+            preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
         return true;
       }
       if (collectionTypePath == "/map" &&
@@ -310,13 +314,15 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     }
     if ((resolvedType == "/vector" || normalizedTypeName == "vector") &&
         (helperName == "push" || helperName == "reserve") &&
-        usesSamePathSoaHelperTargetForCurrentImports(helperName)) {
-      resolvedOut = preferredSoaHelperTargetForCurrentImports(helperName);
+        usesSamePathSoaHelperTargetForCollectionType(helperName, "/vector")) {
+      resolvedOut =
+          preferredSoaHelperTargetForCollectionType(helperName, "/vector");
       return true;
     }
     if ((resolvedType == "/soa_vector" || normalizedTypeName == "soa_vector") &&
         (helperName == "push" || helperName == "reserve")) {
-      resolvedOut = preferredSoaHelperTargetForCurrentImports(helperName);
+      resolvedOut =
+          preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
       return true;
     }
     resolvedOut = resolvedType + "/" + helperName;
@@ -330,8 +336,10 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     if (!resolvedType.empty()) {
       if ((resolvedType == "/vector" || normalizeBindingTypeName(resolvedType) == "vector") &&
           (helperName == "push" || helperName == "reserve") &&
-          usesSamePathSoaHelperTargetForCurrentImports(helperName)) {
-        resolvedOut = preferredSoaHelperTargetForCurrentImports(helperName);
+          usesSamePathSoaHelperTargetForCollectionType(helperName,
+                                                       "/vector")) {
+        resolvedOut =
+            preferredSoaHelperTargetForCollectionType(helperName, "/vector");
         return true;
       }
       if (isVectorCompatibilityHelperName(helperName)) {

@@ -299,6 +299,17 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
       return "";
     }
     if (exprIn.kind == Expr::Kind::Call) {
+      if (!exprIn.isMethodCall && exprIn.args.empty() && exprIn.templateArgs.empty() &&
+          exprIn.bodyArguments.empty()) {
+        Expr syntheticNameExpr;
+        syntheticNameExpr.kind = Expr::Kind::Name;
+        syntheticNameExpr.name = exprIn.name;
+        syntheticNameExpr.namespacePrefix = exprIn.namespacePrefix;
+        const std::string localStructPath = inferStructPathFromNameExpr(syntheticNameExpr, localsInExpr);
+        if (!localStructPath.empty()) {
+          return localStructPath;
+        }
+      }
       if (!exprIn.isMethodCall && exprIn.name == "uninitialized" && exprIn.args.empty() &&
           exprIn.templateArgs.size() == 1) {
         return inferUninitializedTargetStructPath(
@@ -324,8 +335,7 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
           return inferStructExprPath(resultExpr.args[1], localsInExpr);
         }
       }
-      if (!exprIn.isMethodCall &&
-          (isSimpleCallName(exprIn, "get") || isSimpleCallName(exprIn, "ref")) &&
+      if ((isSimpleCallName(exprIn, "get") || isSimpleCallName(exprIn, "ref")) &&
           exprIn.args.size() == 2) {
         const std::string receiverStruct = inferStructExprPath(exprIn.args.front(),
                                                                localsInExpr);
@@ -376,6 +386,43 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
         if (defIt != defMap.end() && defIt->second != nullptr) {
           if (isStructDefinition(*defIt->second)) {
             return resolvedPath;
+          }
+          auto inferExplicitStructReturnPath = [&](const Definition &def) -> std::string {
+            for (const auto &transform : def.transforms) {
+              if (transform.name != "return" || transform.templateArgs.size() != 1) {
+                continue;
+              }
+              std::string candidateType = transform.templateArgs.front();
+              std::string base;
+              std::string argText;
+              if (splitTemplateTypeName(candidateType, base, argText) &&
+                  (base == "Reference" || base == "Pointer")) {
+                std::vector<std::string> args;
+                if (splitTemplateArgs(argText, args) && args.size() == 1) {
+                  candidateType = args.front();
+                } else {
+                  candidateType = argText;
+                }
+              }
+              if (candidateType.empty()) {
+                continue;
+              }
+              if (candidateType.front() == '/') {
+                return candidateType;
+              }
+              std::string resolvedReturnStruct;
+              if (resolveStructTypeName(candidateType,
+                                        exprIn.namespacePrefix,
+                                        resolvedReturnStruct)) {
+                return resolvedReturnStruct;
+              }
+            }
+            return "";
+          };
+          const std::string explicitReturnStruct =
+              inferExplicitStructReturnPath(*defIt->second);
+          if (!explicitReturnStruct.empty()) {
+            return explicitReturnStruct;
           }
           const std::string indexedStruct = inferStructPathFromCallTargetWithFieldBindingIndex(
               exprIn,

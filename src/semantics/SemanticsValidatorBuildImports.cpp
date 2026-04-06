@@ -85,13 +85,17 @@ bool SemanticsValidator::buildImportAliases() {
     if (prefix != "/std/collections/soa_vector") {
       return false;
     }
-    static constexpr std::array<std::pair<std::string_view, std::string_view>, 6> aliases = {{
+    static constexpr std::array<std::pair<std::string_view, std::string_view>, 10> aliases = {{
         {"count", "/std/collections/soa_vector/count"},
+        {"count_ref", "/std/collections/soa_vector/count_ref"},
         {"get", "/std/collections/soa_vector/get"},
+        {"get_ref", "/std/collections/soa_vector/get_ref"},
         {"ref", "/std/collections/soa_vector/ref"},
+        {"ref_ref", "/std/collections/soa_vector/ref_ref"},
         {"reserve", "/std/collections/soa_vector/reserve"},
         {"push", "/std/collections/soa_vector/push"},
         {"to_aos", "/std/collections/soa_vector/to_aos"},
+        {"to_aos_ref", "/std/collections/soa_vector/to_aos_ref"},
     }};
     for (const auto &[name, path] : aliases) {
       importAliases_[std::string(name)] = std::string(path);
