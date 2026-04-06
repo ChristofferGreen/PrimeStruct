@@ -133,6 +133,34 @@ TEST_CASE("ir lowerer rejects missing semantic-product direct-call targets") {
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer rejects missing semantic-product direct-call semantic ids") {
+  primec::Program program;
+
+  primec::Definition callee;
+  callee.fullPath = "/callee";
+  program.definitions.push_back(callee);
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "callee";
+  mainDef.statements.push_back(callExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product direct-call semantic id: /main -> callee");
+  CHECK(diagnosticInfo.message == error);
+}
+
 TEST_CASE("ir lowerer rejects missing semantic-product method-call targets") {
   primec::Program program;
 
@@ -160,6 +188,35 @@ TEST_CASE("ir lowerer rejects missing semantic-product method-call targets") {
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
   CHECK(error == "missing semantic-product method-call target: /main -> count");
+  CHECK(diagnosticInfo.message == error);
+}
+
+TEST_CASE("ir lowerer rejects missing semantic-product method-call semantic ids") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+  primec::Expr methodCallExpr;
+  methodCallExpr.kind = primec::Expr::Kind::Call;
+  methodCallExpr.name = "count";
+  methodCallExpr.isMethodCall = true;
+  methodCallExpr.args.push_back(receiverExpr);
+  mainDef.statements.push_back(methodCallExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product method-call semantic id: /main -> count");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -267,6 +324,84 @@ TEST_CASE("ir lowerer rejects missing semantic-product local-auto facts") {
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
   CHECK(error == "missing semantic-product local-auto fact: /main -> local selected");
+  CHECK(diagnosticInfo.message == error);
+}
+
+TEST_CASE("ir lowerer rejects missing semantic-product callable summaries") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product callable summary: /main");
+  CHECK(diagnosticInfo.message == error);
+}
+
+TEST_CASE("ir lowerer rejects missing semantic-product entry parameter facts") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  primec::Expr entryParam;
+  entryParam.name = "argv";
+  primec::Transform arrayTransform;
+  arrayTransform.name = "array";
+  arrayTransform.templateArgs = {"string"};
+  entryParam.transforms.push_back(arrayTransform);
+  mainDef.parameters.push_back(entryParam);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .fullPath = "/main",
+      .isExecution = false,
+      .returnKind = "void",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 0,
+  });
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .definitionPath = "/main",
+      .returnKind = "void",
+      .structPath = "",
+      .bindingTypeText = "void",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 0,
+  });
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product entry parameter fact: /main");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -559,6 +694,93 @@ TEST_CASE("ir lowerer rejects missing semantic-product on_error facts") {
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
   CHECK(error == "missing semantic-product on_error fact: /main");
+  CHECK(diagnosticInfo.message == error);
+}
+
+TEST_CASE("ir lowerer rejects mismatched semantic-product on_error bound args") {
+  primec::Program program;
+
+  primec::Definition handlerDef;
+  handlerDef.fullPath = "/handler";
+  handlerDef.semanticNodeId = 92;
+  program.definitions.push_back(handlerDef);
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 93;
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .fullPath = "/handler",
+      .isExecution = false,
+      .returnKind = "void",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 92,
+  });
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .fullPath = "/main",
+      .isExecution = false,
+      .returnKind = "void",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = true,
+      .onErrorHandlerPath = "/handler",
+      .onErrorErrorType = "FileError",
+      .onErrorBoundArgCount = 2,
+      .semanticNodeId = 93,
+  });
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .definitionPath = "/main",
+      .returnKind = "void",
+      .structPath = "",
+      .bindingTypeText = "void",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 93,
+  });
+  semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
+      .definitionPath = "/main",
+      .returnKind = "void",
+      .handlerPath = "/handler",
+      .errorType = "FileError",
+      .boundArgCount = 2,
+      .boundArgTexts = {"1i32"},
+      .returnResultHasValue = false,
+      .returnResultValueType = "",
+      .returnResultErrorType = "",
+      .semanticNodeId = 93,
+  });
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "semantic-product on_error bound arg mismatch on /main");
   CHECK(diagnosticInfo.message == error);
 }
 
