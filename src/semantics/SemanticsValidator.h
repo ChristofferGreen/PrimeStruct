@@ -51,6 +51,7 @@ public:
     std::string initializerTryOnErrorHandlerPath;
     std::string initializerTryOnErrorErrorType;
     size_t initializerTryOnErrorBoundArgCount = 0;
+    uint64_t semanticNodeId = 0;
   };
 
   struct LocalAutoTrySnapshotData {
@@ -129,6 +130,7 @@ public:
     std::string onErrorHandlerPath;
     std::string onErrorErrorType;
     size_t onErrorBoundArgCount = 0;
+    uint64_t semanticNodeId = 0;
   };
 
   struct CallBindingSnapshotEntry {
@@ -146,6 +148,7 @@ public:
     std::string resolvedPath;
     int sourceLine = 0;
     int sourceColumn = 0;
+    uint64_t semanticNodeId = 0;
   };
 
   struct QueryReceiverBindingSnapshotEntry {
@@ -166,6 +169,7 @@ public:
     bool returnResultHasValue = false;
     std::string returnResultValueType;
     std::string returnResultErrorType;
+    uint64_t semanticNodeId = 0;
   };
 
   struct ValidationContextSnapshotEntry {
@@ -191,6 +195,7 @@ public:
     int sourceLine = 0;
     int sourceColumn = 0;
     BindingInfo receiverBinding;
+    uint64_t semanticNodeId = 0;
   };
 
   struct BridgePathChoiceSnapshotEntry {
@@ -200,6 +205,7 @@ public:
     std::string chosenPath;
     int sourceLine = 0;
     int sourceColumn = 0;
+    uint64_t semanticNodeId = 0;
   };
 
   struct CallableSummarySnapshotEntry {
@@ -218,6 +224,7 @@ public:
     std::string onErrorHandlerPath;
     std::string onErrorErrorType;
     size_t onErrorBoundArgCount = 0;
+    uint64_t semanticNodeId = 0;
   };
 
   struct TypeMetadataSnapshotEntry {
@@ -232,6 +239,7 @@ public:
     size_t enumValueCount = 0;
     int sourceLine = 0;
     int sourceColumn = 0;
+    uint64_t semanticNodeId = 0;
   };
 
   struct StructFieldMetadataSnapshotEntry {
@@ -241,6 +249,7 @@ public:
     int sourceLine = 0;
     int sourceColumn = 0;
     BindingInfo binding;
+    uint64_t semanticNodeId = 0;
   };
 
   struct BindingFactSnapshotEntry {
@@ -251,6 +260,7 @@ public:
     int sourceLine = 0;
     int sourceColumn = 0;
     BindingInfo binding;
+    uint64_t semanticNodeId = 0;
   };
 
   struct ReturnFactSnapshotEntry {
@@ -260,6 +270,7 @@ public:
     BindingInfo binding;
     int sourceLine = 0;
     int sourceColumn = 0;
+    uint64_t semanticNodeId = 0;
   };
 
   struct QueryFactSnapshotEntry {
@@ -275,6 +286,7 @@ public:
     bool resultTypeHasValue = false;
     std::string resultValueType;
     std::string resultErrorType;
+    uint64_t semanticNodeId = 0;
   };
 
   SemanticsValidator(const Program &program,

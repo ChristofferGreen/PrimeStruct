@@ -5,6 +5,14 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Cleanup (April 6, 2026, continued)**
+
+**Group 12 - Semantics/lowering boundary**
+- ✓ Add stable semantic node ids to every lowering-consumed semantic-product fact family. Completed: validated AST definitions, executions, and expressions now carry deterministic structural semantic ids, and those ids are published across lowering-consumed semantic-product facts instead of leaving lowerer joins anchored to `line:column:name`.
+- ✓ Replace direct-call, method-call, and bridge-path adapter lookups with semantic-id joins. Completed: the temporary lowerer adapter now keys those fact families by published semantic ids instead of source-location/name strings.
+- ✓ Replace binding adapter lookups with semantic-id joins. Completed: semantic-product-backed binding classification now resolves through the same structural semantic ids as direct/method/bridge lookups instead of source-location/name joins.
+- ✓ Delete the duplicate-key collapse behavior from semantic-product adapters once all remaining joins use stable ids. Completed: the temporary adapter no longer merges duplicate `line:column:name` keys because its direct/method/bridge/binding joins now key off semantic ids.
+
 **Todo Cleanup (April 6, 2026)**
 
 **Group 11 - Near-term graph queue**

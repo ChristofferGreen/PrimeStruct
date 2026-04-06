@@ -1,79 +1,8 @@
 #include "IrLowererSemanticProductTargetAdapters.h"
 
 #include <algorithm>
-#include <string_view>
 
 namespace primec::ir_lowerer {
-namespace {
-
-std::string makeTargetLookupKey(int sourceLine, int sourceColumn, std::string_view name) {
-  if (sourceLine <= 0 || sourceColumn <= 0 || name.empty()) {
-    return {};
-  }
-  return std::to_string(sourceLine) + ":" + std::to_string(sourceColumn) + ":" + std::string(name);
-}
-
-std::string makeTargetLookupKey(const Expr &expr, std::string_view name) {
-  return makeTargetLookupKey(expr.sourceLine, expr.sourceColumn, name);
-}
-
-template <typename Value>
-void insertSemanticExprLookup(std::unordered_map<std::string, Value> &valuesByKey,
-                              std::string key,
-                              Value value) {
-  if (key.empty()) {
-    return;
-  }
-  const auto it = valuesByKey.find(key);
-  if (it == valuesByKey.end()) {
-    valuesByKey.emplace(std::move(key), std::move(value));
-    return;
-  }
-  if (it->second == value) {
-    return;
-  }
-  it->second = Value{};
-}
-
-std::string normalizedSemanticProductBridgeHelperName(const Expr &expr) {
-  auto stripTemplateSuffix = [](std::string &helperName) {
-    const size_t specializationSuffix = helperName.find("__t");
-    if (specializationSuffix != std::string::npos) {
-      helperName.erase(specializationSuffix);
-    }
-  };
-
-  auto consumePrefixedHelper = [&](std::string_view prefix) -> std::string {
-    if (expr.name.rfind(prefix, 0) != 0) {
-      return {};
-    }
-    std::string helperName = expr.name.substr(prefix.size());
-    stripTemplateSuffix(helperName);
-    return helperName;
-  };
-
-  if (std::string helperName = consumePrefixedHelper("/vector/"); !helperName.empty()) {
-    return helperName;
-  }
-  if (std::string helperName = consumePrefixedHelper("/std/collections/vector/"); !helperName.empty()) {
-    return helperName;
-  }
-  if (std::string helperName = consumePrefixedHelper("/map/"); !helperName.empty()) {
-    return helperName;
-  }
-  if (std::string helperName = consumePrefixedHelper("/std/collections/map/"); !helperName.empty()) {
-    return helperName;
-  }
-  if (std::string helperName = consumePrefixedHelper("/soa_vector/"); !helperName.empty()) {
-    return helperName;
-  }
-  if (std::string helperName = consumePrefixedHelper("/std/collections/soa_vector/"); !helperName.empty()) {
-    return helperName;
-  }
-  return {};
-}
-
-} // namespace
 
 SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticProgram *semanticProgram) {
   SemanticProductTargetAdapter adapter;
@@ -84,23 +13,23 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
 
   adapter.directCallTargetsByExpr.reserve(semanticProgram->directCallTargets.size());
   for (const auto &entry : semanticProgram->directCallTargets) {
-    insertSemanticExprLookup(adapter.directCallTargetsByExpr,
-                             makeTargetLookupKey(entry.sourceLine, entry.sourceColumn, entry.callName),
-                             entry.resolvedPath);
+    if (entry.semanticNodeId != 0 && !entry.resolvedPath.empty()) {
+      adapter.directCallTargetsByExpr.insert_or_assign(entry.semanticNodeId, entry.resolvedPath);
+    }
   }
 
   adapter.methodCallTargetsByExpr.reserve(semanticProgram->methodCallTargets.size());
   for (const auto &entry : semanticProgram->methodCallTargets) {
-    insertSemanticExprLookup(adapter.methodCallTargetsByExpr,
-                             makeTargetLookupKey(entry.sourceLine, entry.sourceColumn, entry.methodName),
-                             entry.resolvedPath);
+    if (entry.semanticNodeId != 0 && !entry.resolvedPath.empty()) {
+      adapter.methodCallTargetsByExpr.insert_or_assign(entry.semanticNodeId, entry.resolvedPath);
+    }
   }
 
   adapter.bridgePathChoicesByExpr.reserve(semanticProgram->bridgePathChoices.size());
   for (const auto &entry : semanticProgram->bridgePathChoices) {
-    insertSemanticExprLookup(adapter.bridgePathChoicesByExpr,
-                             makeTargetLookupKey(entry.sourceLine, entry.sourceColumn, entry.helperName),
-                             entry.chosenPath);
+    if (entry.semanticNodeId != 0 && !entry.chosenPath.empty()) {
+      adapter.bridgePathChoicesByExpr.insert_or_assign(entry.semanticNodeId, entry.chosenPath);
+    }
   }
 
   adapter.callableSummariesByPath.reserve(semanticProgram->callableSummaries.size());
@@ -157,46 +86,42 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
 
   adapter.bindingFactsByExpr.reserve(semanticProgram->bindingFacts.size());
   for (const auto &entry : semanticProgram->bindingFacts) {
-    insertSemanticExprLookup(adapter.bindingFactsByExpr,
-                             makeTargetLookupKey(entry.sourceLine, entry.sourceColumn, entry.name),
-                             &entry);
+    if (entry.semanticNodeId != 0) {
+      adapter.bindingFactsByExpr.insert_or_assign(entry.semanticNodeId, &entry);
+    }
   }
 
   return adapter;
 }
 
 std::string findSemanticProductDirectCallTarget(const SemanticProductTargetAdapter &adapter, const Expr &expr) {
-  const std::string key = makeTargetLookupKey(expr, expr.name);
-  if (key.empty()) {
+  if (expr.semanticNodeId == 0) {
     return {};
   }
-  if (const auto it = adapter.directCallTargetsByExpr.find(key); it != adapter.directCallTargetsByExpr.end()) {
+  if (const auto it = adapter.directCallTargetsByExpr.find(expr.semanticNodeId);
+      it != adapter.directCallTargetsByExpr.end()) {
     return it->second;
   }
   return {};
 }
 
 std::string findSemanticProductMethodCallTarget(const SemanticProductTargetAdapter &adapter, const Expr &expr) {
-  const std::string key = makeTargetLookupKey(expr, expr.name);
-  if (key.empty()) {
+  if (expr.semanticNodeId == 0) {
     return {};
   }
-  if (const auto it = adapter.methodCallTargetsByExpr.find(key); it != adapter.methodCallTargetsByExpr.end()) {
+  if (const auto it = adapter.methodCallTargetsByExpr.find(expr.semanticNodeId);
+      it != adapter.methodCallTargetsByExpr.end()) {
     return it->second;
   }
   return {};
 }
 
 std::string findSemanticProductBridgePathChoice(const SemanticProductTargetAdapter &adapter, const Expr &expr) {
-  const std::string helperName = normalizedSemanticProductBridgeHelperName(expr);
-  if (helperName.empty()) {
+  if (expr.semanticNodeId == 0) {
     return {};
   }
-  const std::string key = makeTargetLookupKey(expr, helperName);
-  if (key.empty()) {
-    return {};
-  }
-  if (const auto it = adapter.bridgePathChoicesByExpr.find(key); it != adapter.bridgePathChoicesByExpr.end()) {
+  if (const auto it = adapter.bridgePathChoicesByExpr.find(expr.semanticNodeId);
+      it != adapter.bridgePathChoicesByExpr.end()) {
     return it->second;
   }
   return {};
@@ -263,11 +188,11 @@ const SemanticProgramReturnFact *findSemanticProductReturnFact(const SemanticPro
 
 const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticProductTargetAdapter &adapter,
                                                                 const Expr &expr) {
-  const std::string key = makeTargetLookupKey(expr, expr.name);
-  if (key.empty()) {
+  if (expr.semanticNodeId == 0) {
     return nullptr;
   }
-  if (const auto it = adapter.bindingFactsByExpr.find(key); it != adapter.bindingFactsByExpr.end()) {
+  if (const auto it = adapter.bindingFactsByExpr.find(expr.semanticNodeId);
+      it != adapter.bindingFactsByExpr.end()) {
     return it->second;
   }
   return nullptr;

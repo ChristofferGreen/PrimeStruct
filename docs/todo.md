@@ -56,14 +56,11 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
 
 **Group 12 - Semantics/lowering boundary**
 Progress note: the first semantic-product publication, dump surface, and temporary lowerer adapter are finished. The remaining live boundary work is to make `SemanticProgram` the only lowering truth, retire location-keyed joins and AST-derived fallbacks, and finish the graph-backed fact handoff needed by later Group 11 migrations.
-- ◐ Make semantic-product identity and provenance explicit across the lowering boundary. Progress: `SemanticProgram` now publishes deterministic fact inventories, but lowering still joins many of them by `line:column:name` instead of stable semantic identities.
-  - ○ Add stable semantic node ids to every lowering-consumed semantic-product fact family.
+- ◐ Make semantic-product identity and provenance explicit across the lowering boundary. Progress: lowering-consumed semantic-product fact families now carry stable semantic node ids, but syntax-owned provenance handles and determinism coverage are still pending.
   - ○ Add stable provenance handles for syntax-owned spans/debug mapping so lowering can recover source context without using AST state as semantic truth.
   - ○ Add coverage that proves semantic-product ids/provenance remain deterministic across repeated runs and unrelated definition ordering.
-- ◐ Replace semantic-product source-location lookup adapters with id-based joins. Progress: the temporary adapter still resolves direct-call, method-call, bridge-path, and binding facts through location/name keys and duplicate-key collapse.
-  - ○ Replace direct-call, method-call, and bridge-path adapter lookups with semantic-id joins.
-  - ○ Replace binding/return/query/`try(...)`/`on_error` lookup joins with semantic-id joins.
-  - ○ Delete the duplicate-key collapse behavior from semantic-product adapters once all remaining joins use stable ids.
+- ◐ Replace semantic-product source-location lookup adapters with id-based joins. Progress: direct-call, method-call, bridge-path, and binding joins now use semantic ids, and the duplicate-key collapse behavior is gone; the remaining lookup cleanup is return/query/`try(...)`/`on_error` ownership.
+  - ○ Replace return/query/`try(...)`/`on_error` lookup joins with semantic-id joins.
 - ◐ Turn missing semantic-product facts into explicit conformance failures instead of silent AST fallbacks. Progress: lowering still recovers from missing semantic-product data by re-reading AST transforms or scope/import state in several helper paths.
   - ○ Add compile-pipeline/backend conformance checks that assert the required semantic-product fact families are present before lowering starts.
   - ○ Make missing semantic-product fact families fail deterministically in tests and lowering diagnostics instead of falling back silently.

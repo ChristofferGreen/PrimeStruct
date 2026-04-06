@@ -42,6 +42,7 @@ struct Expr {
   bool isSpread = false;
   int sourceLine = 0;
   int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
 };
 
 struct Definition {
@@ -57,6 +58,7 @@ struct Definition {
   bool isNested = false;
   int sourceLine = 0;
   int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
 };
 
 struct Execution {
@@ -72,6 +74,7 @@ struct Execution {
   bool hasBodyArguments = false;
   int sourceLine = 0;
   int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
 };
 
 struct Program {

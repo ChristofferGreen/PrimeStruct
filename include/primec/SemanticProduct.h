@@ -13,6 +13,7 @@ struct SemanticProgramDefinition {
   std::string namespacePrefix;
   int sourceLine = 0;
   int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
 };
 
 struct SemanticProgramExecution {
@@ -21,6 +22,7 @@ struct SemanticProgramExecution {
   std::string namespacePrefix;
   int sourceLine = 0;
   int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
 };
 
 struct SemanticProgramDirectCallTarget {
@@ -29,6 +31,7 @@ struct SemanticProgramDirectCallTarget {
   std::string resolvedPath;
   int sourceLine = 0;
   int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
 };
 
 struct SemanticProgramMethodCallTarget {
@@ -38,6 +41,7 @@ struct SemanticProgramMethodCallTarget {
   std::string resolvedPath;
   int sourceLine = 0;
   int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
 };
 
 struct SemanticProgramBridgePathChoice {
@@ -47,6 +51,7 @@ struct SemanticProgramBridgePathChoice {
   std::string chosenPath;
   int sourceLine = 0;
   int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
 };
 
 struct SemanticProgramCallableSummary {
@@ -65,6 +70,7 @@ struct SemanticProgramCallableSummary {
   std::string onErrorHandlerPath;
   std::string onErrorErrorType;
   std::size_t onErrorBoundArgCount = 0;
+  uint64_t semanticNodeId = 0;
 };
 
 struct SemanticProgramTypeMetadata {
@@ -79,6 +85,7 @@ struct SemanticProgramTypeMetadata {
   std::size_t enumValueCount = 0;
   int sourceLine = 0;
   int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
 };
 
 struct SemanticProgramStructFieldMetadata {
@@ -88,6 +95,7 @@ struct SemanticProgramStructFieldMetadata {
   std::string bindingTypeText;
   int sourceLine = 0;
   int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
 };
 
 struct SemanticProgramBindingFact {
@@ -102,6 +110,7 @@ struct SemanticProgramBindingFact {
   std::string referenceRoot;
   int sourceLine = 0;
   int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
 };
 
 struct SemanticProgramReturnFact {
@@ -115,6 +124,7 @@ struct SemanticProgramReturnFact {
   std::string referenceRoot;
   int sourceLine = 0;
   int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
 };
 
 struct SemanticProgramLocalAutoFact {
@@ -141,6 +151,7 @@ struct SemanticProgramLocalAutoFact {
   std::size_t initializerTryOnErrorBoundArgCount = 0;
   int sourceLine = 0;
   int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
 };
 
 struct SemanticProgramQueryFact {
@@ -156,6 +167,7 @@ struct SemanticProgramQueryFact {
   std::string resultErrorType;
   int sourceLine = 0;
   int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
 };
 
 struct SemanticProgramTryFact {
@@ -172,6 +184,7 @@ struct SemanticProgramTryFact {
   std::size_t onErrorBoundArgCount = 0;
   int sourceLine = 0;
   int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
 };
 
 struct SemanticProgramOnErrorFact {
@@ -183,6 +196,7 @@ struct SemanticProgramOnErrorFact {
   bool returnResultHasValue = false;
   std::string returnResultValueType;
   std::string returnResultErrorType;
+  uint64_t semanticNodeId = 0;
 };
 
 struct SemanticProgram {

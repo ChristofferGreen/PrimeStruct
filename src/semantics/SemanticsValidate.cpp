@@ -72,6 +72,66 @@ std::string bindingTypeTextForSnapshot(const BindingInfo &binding) {
   return binding.typeName + "<" + binding.typeTemplateArg + ">";
 }
 
+uint64_t hashSemanticNodePath(const std::string &path) {
+  constexpr uint64_t FnvOffsetBasis = 14695981039346656037ull;
+  constexpr uint64_t FnvPrime = 1099511628211ull;
+
+  uint64_t hash = FnvOffsetBasis;
+  for (unsigned char ch : path) {
+    hash ^= static_cast<uint64_t>(ch);
+    hash *= FnvPrime;
+  }
+  return hash == 0 ? 1 : hash;
+}
+
+std::string makeIndexedSemanticNodePath(const std::string &base, const char *segment, size_t index) {
+  return base + "/" + segment + "[" + std::to_string(index) + "]";
+}
+
+void assignExprSemanticNodeIds(Expr &expr, const std::string &path) {
+  expr.semanticNodeId = hashSemanticNodePath(path);
+  for (size_t i = 0; i < expr.args.size(); ++i) {
+    assignExprSemanticNodeIds(expr.args[i], makeIndexedSemanticNodePath(path, "arg", i));
+  }
+  for (size_t i = 0; i < expr.bodyArguments.size(); ++i) {
+    assignExprSemanticNodeIds(expr.bodyArguments[i], makeIndexedSemanticNodePath(path, "body", i));
+  }
+}
+
+void assignDefinitionSemanticNodeIds(Definition &def) {
+  const std::string basePath = "definition:" + def.fullPath;
+  def.semanticNodeId = hashSemanticNodePath(basePath);
+  for (size_t i = 0; i < def.parameters.size(); ++i) {
+    assignExprSemanticNodeIds(def.parameters[i], makeIndexedSemanticNodePath(basePath, "parameter", i));
+  }
+  for (size_t i = 0; i < def.statements.size(); ++i) {
+    assignExprSemanticNodeIds(def.statements[i], makeIndexedSemanticNodePath(basePath, "statement", i));
+  }
+  if (def.returnExpr.has_value()) {
+    assignExprSemanticNodeIds(*def.returnExpr, basePath + "/return");
+  }
+}
+
+void assignExecutionSemanticNodeIds(Execution &exec) {
+  const std::string basePath = "execution:" + exec.fullPath;
+  exec.semanticNodeId = hashSemanticNodePath(basePath);
+  for (size_t i = 0; i < exec.arguments.size(); ++i) {
+    assignExprSemanticNodeIds(exec.arguments[i], makeIndexedSemanticNodePath(basePath, "argument", i));
+  }
+  for (size_t i = 0; i < exec.bodyArguments.size(); ++i) {
+    assignExprSemanticNodeIds(exec.bodyArguments[i], makeIndexedSemanticNodePath(basePath, "body", i));
+  }
+}
+
+void assignSemanticNodeIds(Program &program) {
+  for (auto &def : program.definitions) {
+    assignDefinitionSemanticNodeIds(def);
+  }
+  for (auto &exec : program.executions) {
+    assignExecutionSemanticNodeIds(exec);
+  }
+}
+
 template <typename CaptureFn>
 bool runTypeResolutionSnapshot(
     Program &program,
@@ -124,6 +184,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
     definition.namespacePrefix = def.namespacePrefix;
     definition.sourceLine = def.sourceLine;
     definition.sourceColumn = def.sourceColumn;
+    definition.semanticNodeId = def.semanticNodeId;
     semanticProgram.definitions.push_back(std::move(definition));
   }
   semanticProgram.executions.reserve(program.executions.size());
@@ -134,6 +195,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
     execution.namespacePrefix = exec.namespacePrefix;
     execution.sourceLine = exec.sourceLine;
     execution.sourceColumn = exec.sourceColumn;
+    execution.semanticNodeId = exec.semanticNodeId;
     semanticProgram.executions.push_back(std::move(execution));
   }
   const auto directCallTargets = validator.directCallTargetSnapshotForSemanticProduct();
@@ -145,6 +207,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
         entry.resolvedPath,
         entry.sourceLine,
         entry.sourceColumn,
+        entry.semanticNodeId,
     });
   }
   const auto methodCallTargets = validator.methodCallTargetSnapshotForSemanticProduct();
@@ -157,6 +220,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
         entry.resolvedPath,
         entry.sourceLine,
         entry.sourceColumn,
+        entry.semanticNodeId,
     });
   }
   const auto bridgePathChoices = validator.bridgePathChoiceSnapshotForSemanticProduct();
@@ -169,6 +233,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
         entry.chosenPath,
         entry.sourceLine,
         entry.sourceColumn,
+        entry.semanticNodeId,
     });
   }
   const auto callableSummaries = validator.callableSummarySnapshotForSemanticProduct();
@@ -190,6 +255,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
         entry.onErrorHandlerPath,
         entry.onErrorErrorType,
         entry.onErrorBoundArgCount,
+        entry.semanticNodeId,
     });
   }
   const auto typeMetadata = validator.typeMetadataSnapshotForSemanticProduct();
@@ -207,6 +273,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
         entry.enumValueCount,
         entry.sourceLine,
         entry.sourceColumn,
+        entry.semanticNodeId,
     });
   }
   const auto structFieldMetadata = validator.structFieldMetadataSnapshotForSemanticProduct();
@@ -219,6 +286,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
         bindingTypeTextForSemanticProduct(entry.binding),
         entry.sourceLine,
         entry.sourceColumn,
+        entry.semanticNodeId,
     });
   }
   const auto bindingFacts = validator.bindingFactSnapshotForSemanticProduct();
@@ -236,6 +304,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
         entry.binding.referenceRoot,
         entry.sourceLine,
         entry.sourceColumn,
+        entry.semanticNodeId,
     });
   }
   const auto returnFacts = validator.returnFactSnapshotForSemanticProduct();
@@ -252,6 +321,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
         entry.binding.referenceRoot,
         entry.sourceLine,
         entry.sourceColumn,
+        entry.semanticNodeId,
     });
   }
   const auto localAutoFacts = validator.localAutoFactSnapshotForSemanticProduct();
@@ -281,6 +351,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
         entry.initializerTryOnErrorBoundArgCount,
         entry.sourceLine,
         entry.sourceColumn,
+        entry.semanticNodeId,
     });
   }
   const auto queryFacts = validator.queryFactSnapshotForSemanticProduct();
@@ -299,6 +370,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
         entry.resultErrorType,
         entry.sourceLine,
         entry.sourceColumn,
+        entry.semanticNodeId,
     });
   }
   const auto tryFacts = validator.tryFactSnapshotForSemanticProduct();
@@ -318,6 +390,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
         entry.onErrorBoundArgCount,
         entry.sourceLine,
         entry.sourceColumn,
+        entry.semanticNodeId,
     });
   }
   const auto onErrorFacts = validator.onErrorFactSnapshotForSemanticProduct();
@@ -332,6 +405,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
         entry.returnResultHasValue,
         entry.returnResultValueType,
         entry.returnResultErrorType,
+        entry.semanticNodeId,
     });
   }
   return semanticProgram;
@@ -5396,6 +5470,7 @@ bool Semantics::validate(Program &program,
   if (!rewriteOmittedStructInitializers(program, error)) {
     return false;
   }
+  assignSemanticNodeIds(program);
   if (semanticProgramOut != nullptr) {
     *semanticProgramOut = buildSemanticProgram(program, entryPath, validator);
   }

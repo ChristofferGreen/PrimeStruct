@@ -43,6 +43,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   access behavior; the C++ emitter now matches that direct-call contract for
   bare `at` / `at_unsafe` calls instead of compiling them through the old
   builtin access fallback.
+- `semantic-product-structural-node-ids`: validated AST definitions,
+  executions, and expressions now carry deterministic structural
+  `semanticNodeId` values hashed from their resolved scope path plus traversal
+  segment, and the lowerer semantic-product adapter now keys direct-call,
+  method-call, bridge-path, and binding facts off those ids instead of the old
+  `line:column:name` join plus duplicate-key collapse.
 - `template-monomorph-core-utilities-header`:
   shared TemplateMonomorph core utility helpers now live in
   `src/semantics/TemplateMonomorphCoreUtilities.h` and are included by

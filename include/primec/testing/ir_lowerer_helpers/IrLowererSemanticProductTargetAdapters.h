@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -11,9 +12,9 @@ namespace primec::ir_lowerer {
 
 struct SemanticProductTargetAdapter {
   bool hasSemanticProduct = false;
-  std::unordered_map<std::string, std::string> directCallTargetsByExpr;
-  std::unordered_map<std::string, std::string> methodCallTargetsByExpr;
-  std::unordered_map<std::string, std::string> bridgePathChoicesByExpr;
+  std::unordered_map<uint64_t, std::string> directCallTargetsByExpr;
+  std::unordered_map<uint64_t, std::string> methodCallTargetsByExpr;
+  std::unordered_map<uint64_t, std::string> bridgePathChoicesByExpr;
   std::unordered_map<std::string, const SemanticProgramCallableSummary *> callableSummariesByPath;
   std::unordered_map<std::string, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionPath;
   std::unordered_map<std::string, const SemanticProgramTypeMetadata *> typeMetadataByPath;
@@ -21,7 +22,7 @@ struct SemanticProductTargetAdapter {
   std::unordered_map<std::string, std::vector<const SemanticProgramStructFieldMetadata *>>
       structFieldMetadataByStructPath;
   std::unordered_map<std::string, const SemanticProgramReturnFact *> returnFactsByDefinitionPath;
-  std::unordered_map<std::string, const SemanticProgramBindingFact *> bindingFactsByExpr;
+  std::unordered_map<uint64_t, const SemanticProgramBindingFact *> bindingFactsByExpr;
 };
 
 SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticProgram *semanticProgram);

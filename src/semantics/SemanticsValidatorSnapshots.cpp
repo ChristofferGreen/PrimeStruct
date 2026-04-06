@@ -339,6 +339,7 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
             std::move(initializerTryOnErrorHandlerPath),
             std::move(initializerTryOnErrorErrorType),
             initializerTryOnErrorBoundArgCount,
+            expr.semanticNodeId,
         });
       }
     }
@@ -518,6 +519,7 @@ SemanticsValidator::tryValueSnapshotForTesting() {
         std::move(tryData.onErrorHandlerPath),
         std::move(tryData.onErrorErrorType),
         tryData.onErrorBoundArgCount,
+        expr.semanticNodeId,
     });
   });
 
@@ -593,6 +595,7 @@ SemanticsValidator::directCallTargetSnapshotForSemanticProduct() const {
             resolvedPath,
             expr.sourceLine,
             expr.sourceColumn,
+            expr.semanticNodeId,
         });
       }
     }
@@ -681,6 +684,7 @@ SemanticsValidator::methodCallTargetSnapshotForSemanticProduct() {
         expr.sourceLine,
         expr.sourceColumn,
         std::move(receiverBinding),
+        expr.semanticNodeId,
     });
   });
 
@@ -724,6 +728,7 @@ SemanticsValidator::bridgePathChoiceSnapshotForSemanticProduct() const {
             resolvedPath,
             expr.sourceLine,
             expr.sourceColumn,
+            expr.semanticNodeId,
         });
       }
     }
@@ -793,6 +798,7 @@ SemanticsValidator::callableSummarySnapshotForSemanticProduct() const {
         context.onError.has_value() ? context.onError->handlerPath : std::string{},
         context.onError.has_value() ? context.onError->errorType : std::string{},
         context.onError.has_value() ? context.onError->boundArgs.size() : 0,
+        def.semanticNodeId,
     });
   }
 
@@ -815,6 +821,7 @@ SemanticsValidator::callableSummarySnapshotForSemanticProduct() const {
         {},
         {},
         0,
+        exec.semanticNodeId,
     });
   }
 
@@ -881,6 +888,7 @@ SemanticsValidator::typeMetadataSnapshotForSemanticProduct() const {
         enumValueCount,
         def.sourceLine,
         def.sourceColumn,
+        def.semanticNodeId,
     });
   }
 
@@ -930,6 +938,7 @@ SemanticsValidator::structFieldMetadataSnapshotForSemanticProduct() {
           stmt.sourceLine,
           stmt.sourceColumn,
           std::move(binding),
+          stmt.semanticNodeId,
       });
       ++fieldIndex;
     }
@@ -969,6 +978,7 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
           def.parameters[i].sourceLine,
           def.parameters[i].sourceColumn,
           defParams[i].binding,
+          def.parameters[i].semanticNodeId,
       });
     }
   }
@@ -1056,6 +1066,7 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
             expr.sourceLine,
             expr.sourceColumn,
             binding,
+            expr.semanticNodeId,
         });
         activeLocals.emplace(expr.name, std::move(binding));
       }
@@ -1074,6 +1085,7 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
             expr.sourceLine,
             expr.sourceColumn,
             std::move(callData.binding),
+            expr.semanticNodeId,
         });
       }
     }
@@ -1141,6 +1153,8 @@ SemanticsValidator::returnFactSnapshotForSemanticProduct() const {
     entry.sourceLine = definition.returnExpr.has_value() ? definition.returnExpr->sourceLine : definition.sourceLine;
     entry.sourceColumn =
         definition.returnExpr.has_value() ? definition.returnExpr->sourceColumn : definition.sourceColumn;
+    entry.semanticNodeId =
+        definition.returnExpr.has_value() ? definition.returnExpr->semanticNodeId : definition.semanticNodeId;
     if (const auto structIt = returnStructs_.find(definition.fullPath);
         structIt != returnStructs_.end()) {
       entry.structPath = structIt->second;
@@ -1186,6 +1200,7 @@ SemanticsValidator::queryFactSnapshotForSemanticProduct() {
         queryData.resultInfo.isResult && queryData.resultInfo.hasValue,
         std::move(queryData.resultInfo.valueType),
         std::move(queryData.resultInfo.errorType),
+        expr.semanticNodeId,
     });
   });
 
@@ -1277,6 +1292,7 @@ SemanticsValidator::onErrorSnapshotForTesting() {
         context.resultType.has_value() && context.resultType->isResult && context.resultType->hasValue,
         context.resultType.has_value() && context.resultType->isResult ? context.resultType->valueType : std::string{},
         context.resultType.has_value() && context.resultType->isResult ? context.resultType->errorType : std::string{},
+        def.semanticNodeId,
     });
   }
 
