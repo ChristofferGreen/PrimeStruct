@@ -8,18 +8,11 @@ namespace {
 
 template <typename FactT>
 const FactT *findDefinitionScopedSemanticFact(const std::unordered_map<uint64_t, const FactT *> &factsByDefinitionId,
-                                              const std::unordered_map<std::string, const FactT *> &factsByDefinitionPath,
                                               const Definition &definition) {
-  if (definition.semanticNodeId != 0) {
-    if (const auto it = factsByDefinitionId.find(definition.semanticNodeId); it != factsByDefinitionId.end()) {
-      return it->second;
-    }
+  if (definition.semanticNodeId == 0) {
     return nullptr;
   }
-  if (definition.fullPath.empty()) {
-    return nullptr;
-  }
-  if (const auto it = factsByDefinitionPath.find(definition.fullPath); it != factsByDefinitionPath.end()) {
+  if (const auto it = factsByDefinitionId.find(definition.semanticNodeId); it != factsByDefinitionId.end()) {
     return it->second;
   }
   return nullptr;
@@ -75,13 +68,9 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
   }
 
   adapter.onErrorFactsByDefinitionId.reserve(semanticProgram->onErrorFacts.size());
-  adapter.onErrorFactsByDefinitionPath.reserve(semanticProgram->onErrorFacts.size());
   for (const auto &entry : semanticProgram->onErrorFacts) {
     if (entry.semanticNodeId != 0) {
       adapter.onErrorFactsByDefinitionId.insert_or_assign(entry.semanticNodeId, &entry);
-    }
-    if (!entry.definitionPath.empty()) {
-      adapter.onErrorFactsByDefinitionPath[entry.definitionPath] = &entry;
     }
   }
 
@@ -117,13 +106,9 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
   }
 
   adapter.returnFactsByDefinitionId.reserve(semanticProgram->returnFacts.size());
-  adapter.returnFactsByDefinitionPath.reserve(semanticProgram->returnFacts.size());
   for (const auto &entry : semanticProgram->returnFacts) {
     if (entry.semanticNodeId != 0) {
       adapter.returnFactsByDefinitionId.insert_or_assign(entry.semanticNodeId, &entry);
-    }
-    if (!entry.definitionPath.empty()) {
-      adapter.returnFactsByDefinitionPath[entry.definitionPath] = &entry;
     }
   }
 
@@ -204,8 +189,7 @@ const SemanticProgramCallableSummary *findSemanticProductCallableSummary(const S
 
 const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(const SemanticProductTargetAdapter &adapter,
                                                                 const Definition &definition) {
-  return findDefinitionScopedSemanticFact(
-      adapter.onErrorFactsByDefinitionId, adapter.onErrorFactsByDefinitionPath, definition);
+  return findDefinitionScopedSemanticFact(adapter.onErrorFactsByDefinitionId, definition);
 }
 
 const SemanticProgramTypeMetadata *findSemanticProductTypeMetadata(const SemanticProductTargetAdapter &adapter,
@@ -234,8 +218,7 @@ const std::vector<const SemanticProgramStructFieldMetadata *> *findSemanticProdu
 
 const SemanticProgramReturnFact *findSemanticProductReturnFact(const SemanticProductTargetAdapter &adapter,
                                                               const Definition &definition) {
-  return findDefinitionScopedSemanticFact(
-      adapter.returnFactsByDefinitionId, adapter.returnFactsByDefinitionPath, definition);
+  return findDefinitionScopedSemanticFact(adapter.returnFactsByDefinitionId, definition);
 }
 
 const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(const SemanticProductTargetAdapter &adapter,

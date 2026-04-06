@@ -17,13 +17,11 @@ struct SemanticProductTargetAdapter {
   std::unordered_map<uint64_t, std::string> bridgePathChoicesByExpr;
   std::unordered_map<std::string, const SemanticProgramCallableSummary *> callableSummariesByPath;
   std::unordered_map<uint64_t, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionId;
-  std::unordered_map<std::string, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionPath;
   std::unordered_map<std::string, const SemanticProgramTypeMetadata *> typeMetadataByPath;
   std::vector<const SemanticProgramTypeMetadata *> orderedStructTypeMetadata;
   std::unordered_map<std::string, std::vector<const SemanticProgramStructFieldMetadata *>>
       structFieldMetadataByStructPath;
   std::unordered_map<uint64_t, const SemanticProgramReturnFact *> returnFactsByDefinitionId;
-  std::unordered_map<std::string, const SemanticProgramReturnFact *> returnFactsByDefinitionPath;
   std::unordered_map<uint64_t, const SemanticProgramLocalAutoFact *> localAutoFactsByExpr;
   std::unordered_map<uint64_t, const SemanticProgramQueryFact *> queryFactsByExpr;
   std::unordered_map<uint64_t, const SemanticProgramTryFact *> tryFactsByExpr;

@@ -703,7 +703,7 @@ TEST_CASE("ir lowerer call helpers require semantic-product bridge-path choices"
   CHECK(semanticResolveExprPath(callExpr) == "/vector/count");
 }
 
-TEST_CASE("ir lowerer semantic-product adapter joins return and inference facts by semantic id") {
+TEST_CASE("ir lowerer semantic-product adapter joins return and inference facts by semantic id only") {
   primec::Definition mainDef;
   mainDef.fullPath = "/renamed_main";
   mainDef.semanticNodeId = 61;
@@ -801,6 +801,10 @@ TEST_CASE("ir lowerer semantic-product adapter joins return and inference facts 
   const auto *returnFact = primec::ir_lowerer::findSemanticProductReturnFact(semanticTargets, mainDef);
   REQUIRE(returnFact != nullptr);
   CHECK(returnFact->definitionPath == "/legacy_main");
+
+  primec::Definition legacyFixtureDef;
+  legacyFixtureDef.fullPath = "/legacy_main";
+  CHECK(primec::ir_lowerer::findSemanticProductReturnFact(semanticTargets, legacyFixtureDef) == nullptr);
 
   const auto *localAutoFact = primec::ir_lowerer::findSemanticProductLocalAutoFact(semanticTargets, localAutoExpr);
   REQUIRE(localAutoFact != nullptr);

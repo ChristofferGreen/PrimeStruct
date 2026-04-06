@@ -672,7 +672,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<uint64_t, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionId;") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterHeader.find("std::unordered_map<std::string, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionPath;") !=
+  CHECK(semanticTargetAdapterHeader.find("std::unordered_map<std::string, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionPath;") ==
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(") !=
         std::string::npos);
@@ -712,7 +712,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterSource.find("adapter.callableSummariesByPath.reserve(") != std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.onErrorFactsByDefinitionId.reserve(semanticProgram->onErrorFacts.size())") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.onErrorFactsByDefinitionPath.reserve(semanticProgram->onErrorFacts.size())") !=
+  CHECK(semanticTargetAdapterSource.find("adapter.onErrorFactsByDefinitionPath.reserve(semanticProgram->onErrorFacts.size())") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.typeMetadataByPath.reserve(semanticProgram->typeMetadata.size())") !=
         std::string::npos);
@@ -725,7 +725,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterSource.find("std::stable_sort(entries.begin(),") != std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.returnFactsByDefinitionId.reserve(semanticProgram->returnFacts.size())") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.returnFactsByDefinitionPath.reserve(") != std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.returnFactsByDefinitionPath.reserve(") == std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.localAutoFactsByExpr.reserve(semanticProgram->localAutoFacts.size())") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.queryFactsByExpr.reserve(semanticProgram->queryFacts.size())") !=
@@ -734,6 +734,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.bindingFactsByExpr.reserve(semanticProgram->bindingFacts.size())") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("definition.fullPath.empty()") == std::string::npos);
   CHECK(semanticTargetAdapterSource.find("expr.semanticNodeId") != std::string::npos);
   CHECK(semanticTargetAdapterSource.find("insert_or_assign(entry.semanticNodeId, &entry)") != std::string::npos);
   CHECK(semanticTargetAdapterSource.find("const SemanticProgramTypeMetadata *findSemanticProductTypeMetadata(") !=
