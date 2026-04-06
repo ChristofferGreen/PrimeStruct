@@ -918,6 +918,237 @@ TEST_CASE("semantic product source locations stay aligned with AST-owned lowerin
   CHECK(returnEntry->sourceColumn == mainDefinition->returnExpr->sourceColumn);
 }
 
+TEST_CASE("semantic product semantic ids stay deterministic across repeated validation runs") {
+  const std::string source =
+      "MyError {\n"
+      "}\n"
+      "\n"
+      "[return<void>]\n"
+      "unexpectedError([MyError] err) {\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "helper([i32] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<Result<int, MyError>>]\n"
+      "lookup() {\n"
+      "  return(Result.ok(4i32))\n"
+      "}\n"
+      "\n"
+      "[return<Result<int, MyError>> on_error<MyError, /unexpectedError>]\n"
+      "main() {\n"
+      "  [i32] direct{helper(1i32)}\n"
+      "  [auto] selected{try(lookup())}\n"
+      "  return(Result.ok(direct + selected))\n"
+      "}\n";
+
+  auto validateSemanticProduct = [](const std::string &programText) {
+    auto program = parseProgram(programText);
+    primec::Semantics semantics;
+    primec::SemanticProgram semanticProgram;
+    std::string error;
+    const std::vector<std::string> defaults = {"io_out", "io_err"};
+    REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+    CHECK(error.empty());
+    return semanticProgram;
+  };
+
+  const primec::SemanticProgram first = validateSemanticProduct(source);
+  const primec::SemanticProgram second = validateSemanticProduct(source);
+
+  CHECK(primec::formatSemanticProgram(first) == primec::formatSemanticProgram(second));
+
+  const auto *firstMain =
+      findSemanticEntry(first.definitions,
+                        [](const primec::SemanticProgramDefinition &entry) { return entry.fullPath == "/main"; });
+  const auto *secondMain =
+      findSemanticEntry(second.definitions,
+                        [](const primec::SemanticProgramDefinition &entry) { return entry.fullPath == "/main"; });
+  REQUIRE(firstMain != nullptr);
+  REQUIRE(secondMain != nullptr);
+  CHECK(firstMain->semanticNodeId != 0);
+  CHECK(firstMain->semanticNodeId == secondMain->semanticNodeId);
+
+  const auto *firstDirectCall = findSemanticEntry(
+      first.directCallTargets,
+      [](const primec::SemanticProgramDirectCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.callName == "helper";
+      });
+  const auto *secondDirectCall = findSemanticEntry(
+      second.directCallTargets,
+      [](const primec::SemanticProgramDirectCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.callName == "helper";
+      });
+  REQUIRE(firstDirectCall != nullptr);
+  REQUIRE(secondDirectCall != nullptr);
+  CHECK(firstDirectCall->semanticNodeId != 0);
+  CHECK(firstDirectCall->semanticNodeId == secondDirectCall->semanticNodeId);
+
+  const auto *firstQuery = findSemanticEntry(
+      first.queryFacts,
+      [](const primec::SemanticProgramQueryFact &entry) {
+        return entry.scopePath == "/main" && entry.resolvedPath == "/lookup";
+      });
+  const auto *secondQuery = findSemanticEntry(
+      second.queryFacts,
+      [](const primec::SemanticProgramQueryFact &entry) {
+        return entry.scopePath == "/main" && entry.resolvedPath == "/lookup";
+      });
+  REQUIRE(firstQuery != nullptr);
+  REQUIRE(secondQuery != nullptr);
+  CHECK(firstQuery->semanticNodeId != 0);
+  CHECK(firstQuery->semanticNodeId == secondQuery->semanticNodeId);
+
+  const auto *firstTry = findSemanticEntry(
+      first.tryFacts,
+      [](const primec::SemanticProgramTryFact &entry) {
+        return entry.scopePath == "/main" && entry.operandResolvedPath == "/lookup";
+      });
+  const auto *secondTry = findSemanticEntry(
+      second.tryFacts,
+      [](const primec::SemanticProgramTryFact &entry) {
+        return entry.scopePath == "/main" && entry.operandResolvedPath == "/lookup";
+      });
+  REQUIRE(firstTry != nullptr);
+  REQUIRE(secondTry != nullptr);
+  CHECK(firstTry->semanticNodeId != 0);
+  CHECK(firstTry->semanticNodeId == secondTry->semanticNodeId);
+}
+
+TEST_CASE("semantic product semantic ids ignore unrelated definition ordering") {
+  const std::string sourceA =
+      "[return<i32>]\n"
+      "helper([i32] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "noise([i32] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [i32] selected{helper(1i32)}\n"
+      "  return(selected)\n"
+      "}\n";
+  const std::string sourceB =
+      "[return<i32>]\n"
+      "noise([i32] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "helper([i32] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [i32] selected{helper(1i32)}\n"
+      "  return(selected)\n"
+      "}\n";
+
+  auto validateSemanticProduct = [](const std::string &programText) {
+    auto program = parseProgram(programText);
+    primec::Semantics semantics;
+    primec::SemanticProgram semanticProgram;
+    std::string error;
+    const std::vector<std::string> defaults = {"io_out", "io_err"};
+    REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+    CHECK(error.empty());
+    return semanticProgram;
+  };
+
+  const primec::SemanticProgram first = validateSemanticProduct(sourceA);
+  const primec::SemanticProgram second = validateSemanticProduct(sourceB);
+
+  const auto *firstHelper =
+      findSemanticEntry(first.definitions,
+                        [](const primec::SemanticProgramDefinition &entry) { return entry.fullPath == "/helper"; });
+  const auto *secondHelper =
+      findSemanticEntry(second.definitions,
+                        [](const primec::SemanticProgramDefinition &entry) { return entry.fullPath == "/helper"; });
+  REQUIRE(firstHelper != nullptr);
+  REQUIRE(secondHelper != nullptr);
+  CHECK(firstHelper->semanticNodeId != 0);
+  CHECK(firstHelper->semanticNodeId == secondHelper->semanticNodeId);
+
+  const auto *firstMain =
+      findSemanticEntry(first.definitions,
+                        [](const primec::SemanticProgramDefinition &entry) { return entry.fullPath == "/main"; });
+  const auto *secondMain =
+      findSemanticEntry(second.definitions,
+                        [](const primec::SemanticProgramDefinition &entry) { return entry.fullPath == "/main"; });
+  REQUIRE(firstMain != nullptr);
+  REQUIRE(secondMain != nullptr);
+  CHECK(firstMain->semanticNodeId == secondMain->semanticNodeId);
+  CHECK(firstMain->sourceLine == secondMain->sourceLine);
+  CHECK(firstMain->sourceColumn == secondMain->sourceColumn);
+
+  const auto *firstLocal = findSemanticEntry(
+      first.bindingFacts,
+      [](const primec::SemanticProgramBindingFact &entry) {
+        return entry.scopePath == "/main" && entry.siteKind == "local" && entry.name == "selected";
+      });
+  const auto *secondLocal = findSemanticEntry(
+      second.bindingFacts,
+      [](const primec::SemanticProgramBindingFact &entry) {
+        return entry.scopePath == "/main" && entry.siteKind == "local" && entry.name == "selected";
+      });
+  REQUIRE(firstLocal != nullptr);
+  REQUIRE(secondLocal != nullptr);
+  CHECK(firstLocal->semanticNodeId == secondLocal->semanticNodeId);
+  CHECK(firstLocal->sourceLine == secondLocal->sourceLine);
+  CHECK(firstLocal->sourceColumn == secondLocal->sourceColumn);
+
+  const auto *firstTemporary = findSemanticEntry(
+      first.bindingFacts,
+      [](const primec::SemanticProgramBindingFact &entry) {
+        return entry.scopePath == "/main" && entry.siteKind == "temporary" && entry.name == "helper";
+      });
+  const auto *secondTemporary = findSemanticEntry(
+      second.bindingFacts,
+      [](const primec::SemanticProgramBindingFact &entry) {
+        return entry.scopePath == "/main" && entry.siteKind == "temporary" && entry.name == "helper";
+      });
+  REQUIRE(firstTemporary != nullptr);
+  REQUIRE(secondTemporary != nullptr);
+  CHECK(firstTemporary->semanticNodeId == secondTemporary->semanticNodeId);
+  CHECK(firstTemporary->sourceLine == secondTemporary->sourceLine);
+  CHECK(firstTemporary->sourceColumn == secondTemporary->sourceColumn);
+
+  const auto *firstDirectCall = findSemanticEntry(
+      first.directCallTargets,
+      [](const primec::SemanticProgramDirectCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.callName == "helper";
+      });
+  const auto *secondDirectCall = findSemanticEntry(
+      second.directCallTargets,
+      [](const primec::SemanticProgramDirectCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.callName == "helper";
+      });
+  REQUIRE(firstDirectCall != nullptr);
+  REQUIRE(secondDirectCall != nullptr);
+  CHECK(firstDirectCall->semanticNodeId == secondDirectCall->semanticNodeId);
+  CHECK(firstDirectCall->sourceLine == secondDirectCall->sourceLine);
+  CHECK(firstDirectCall->sourceColumn == secondDirectCall->sourceColumn);
+
+  const auto *firstReturn = findSemanticEntry(
+      first.returnFacts,
+      [](const primec::SemanticProgramReturnFact &entry) { return entry.definitionPath == "/main"; });
+  const auto *secondReturn = findSemanticEntry(
+      second.returnFacts,
+      [](const primec::SemanticProgramReturnFact &entry) { return entry.definitionPath == "/main"; });
+  REQUIRE(firstReturn != nullptr);
+  REQUIRE(secondReturn != nullptr);
+  CHECK(firstReturn->semanticNodeId == secondReturn->semanticNodeId);
+  CHECK(firstReturn->sourceLine == secondReturn->sourceLine);
+  CHECK(firstReturn->sourceColumn == secondReturn->sourceColumn);
+}
+
 TEST_CASE("semantic product ownership surfaces keep deterministic source order") {
   const std::string source =
       "Record {\n"
