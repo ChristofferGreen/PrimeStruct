@@ -8,7 +8,7 @@ Legend:
 Finished items are periodically moved to `docs/todo_finished.md`.
 
 **Types & Semantics**
-Roadmap note: completed map/vector migration and compatibility-cleanup slices now live in `docs/todo_finished.md`. Keep this live file focused on unfinished ownership/runtime substrate work, SoA bring-up, and the remaining graph/boundary items.
+Roadmap note: completed map/vector migration, compatibility-cleanup, and graph perf slices now live in `docs/todo_finished.md`. Keep this live file focused on unfinished ownership/runtime substrate work, SoA bring-up, and the remaining graph/boundary items.
 
 **Architecture / Type-resolution graph**
 **Group 11 - Near-term graph queue**
@@ -69,11 +69,3 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
   - ○ Expand local-`auto` graph support across the next control-flow join surface.
     - ○ Select the next control-flow join surface to widen in the graph (proposed: `if` join return inference).
     - ○ Land the widening plus matching coverage for that join surface.
-- ✓ Implement graph performance guardrails and sustained perf coverage now that the regression-budget contract is documented. Completed: baseline metrics, regression thresholds/reporting, and sustained perf coverage are now in place.
-- ✓ Add baseline graph timing and invalidation metrics for the current stabilized graph surface. Completed: the type-resolution graph dump now includes prepare/build timing, node/edge counts, per-kind node/edge totals, SCC counts, and invalidation fan-out counters, while the graph snapshot helper now surfaces prepare/build timing, node/edge totals, and the same invalidation counters.
-  - ✓ Add regression thresholds and reporting for those graph metrics. Completed: type-graph dumps now report optional prepare/build budget caps and over-budget flags via `PRIMESTRUCT_GRAPH_PREPARE_MS_MAX` and `PRIMESTRUCT_GRAPH_BUILD_MS_MAX`, and the graph snapshot helper now surfaces the same budget/over-budget data.
-- ✓ Add sustained graph performance coverage over the stabilized graph surface. Completed: baseline timing/budget metrics now exist; a lightweight graph perf snapshot test records prepare/build timings; budgeted prep/build coverage is wired; and a long-running graph perf soak is available behind `PRIMESTRUCT_GRAPH_SOAK`.
-    - ✓ Add a lightweight graph perf snapshot test that records prepare/build timings for a fixed corpus.
-    - ✓ Add budgeted perf coverage for graph prep/build on a representative compile-pipeline fixture.
-    - ✓ Add a long-running graph perf soak (disabled by default) for larger program suites.
-- ✓ Prototype optional parallel solve now that its execution and merge contract is documented. Completed: a first partition/execution layer now groups condensation DAG components into stable layers with deterministic merge ordering, and parity coverage asserts the layer-order toggle matches the default solve.

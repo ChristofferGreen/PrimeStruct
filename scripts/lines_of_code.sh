@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-TARGET_DIRS=("src" "include")
+TARGET_DIRS=("src" "include" "tests")
 
 count_files() {
   local dir="$1"

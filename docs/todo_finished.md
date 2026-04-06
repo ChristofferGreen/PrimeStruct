@@ -5,6 +5,18 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Cleanup (April 6, 2026)**
+
+**Group 11 - Near-term graph queue**
+- ✓ Implement graph performance guardrails and sustained perf coverage now that the regression-budget contract is documented. Completed: baseline metrics, regression thresholds/reporting, and sustained perf coverage are now in place.
+- ✓ Add baseline graph timing and invalidation metrics for the current stabilized graph surface. Completed: the type-resolution graph dump now includes prepare/build timing, node/edge counts, per-kind node/edge totals, SCC counts, and invalidation fan-out counters, while the graph snapshot helper now surfaces prepare/build timing, node/edge totals, and the same invalidation counters.
+  - ✓ Add regression thresholds and reporting for those graph metrics. Completed: type-graph dumps now report optional prepare/build budget caps and over-budget flags via `PRIMESTRUCT_GRAPH_PREPARE_MS_MAX` and `PRIMESTRUCT_GRAPH_BUILD_MS_MAX`, and the graph snapshot helper now surfaces the same budget/over-budget data.
+- ✓ Add sustained graph performance coverage over the stabilized graph surface. Completed: baseline timing/budget metrics now exist; a lightweight graph perf snapshot test records prepare/build timings; budgeted prep/build coverage is wired; and a long-running graph perf soak is available behind `PRIMESTRUCT_GRAPH_SOAK`.
+  - ✓ Add a lightweight graph perf snapshot test that records prepare/build timings for a fixed corpus.
+  - ✓ Add budgeted perf coverage for graph prep/build on a representative compile-pipeline fixture.
+  - ✓ Add a long-running graph perf soak (disabled by default) for larger program suites.
+- ✓ Prototype optional parallel solve now that its execution and merge contract is documented. Completed: a first partition/execution layer now groups condensation DAG components into stable layers with deterministic merge ordering, and parity coverage asserts the layer-order toggle matches the default solve.
+
 **Todo Cleanup (April 5, 2026)**
 
 **Group 8 - SoA de-builtinization**
