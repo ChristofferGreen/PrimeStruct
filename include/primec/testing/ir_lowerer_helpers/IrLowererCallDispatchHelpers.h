@@ -64,9 +64,6 @@ std::string resolveCallPathFromScope(
     const Expr &expr,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases);
-std::string resolveCallPathFromScopeWithoutImportAliases(
-    const Expr &expr,
-    const std::unordered_map<std::string, const Definition *> &defMap);
 
 bool isTailCallCandidate(const Expr &expr,
                          const std::unordered_map<std::string, const Definition *> &defMap,

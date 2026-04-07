@@ -171,9 +171,7 @@ bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)
   return false;
 }
 
-std::string resolveCallPathFromScopeWithoutImportAliases(
-    const Expr &expr,
-    const std::unordered_map<std::string, const Definition *> &defMap) {
+std::string resolveCallPathWithoutSemanticFallbackProbes(const Expr &expr) {
   if (!expr.name.empty() && expr.name[0] == '/') {
     return expr.name;
   }
@@ -182,15 +180,7 @@ std::string resolveCallPathFromScopeWithoutImportAliases(
     if (!scoped.empty() && scoped.front() != '/') {
       scoped.insert(scoped.begin(), '/');
     }
-    scoped += "/" + expr.name;
-    if (defMap.count(scoped) > 0) {
-      return scoped;
-    }
-    const std::string root = "/" + expr.name;
-    if (defMap.count(root) > 0) {
-      return root;
-    }
-    return scoped;
+    return scoped + "/" + expr.name;
   }
   return "/" + expr.name;
 }
@@ -479,7 +469,7 @@ ResolveExprPathFn makeResolveCallPathFromScope(
       return resolvedPath;
     }
     if (semanticProductTargets.hasSemanticProduct) {
-      return resolveCallPathFromScopeWithoutImportAliases(expr, defMap);
+      return resolveCallPathWithoutSemanticFallbackProbes(expr);
     }
     return resolveCallPathFromScope(expr, defMap, semanticAwareImportAliases);
   };

@@ -235,7 +235,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callResolutionSource.find("normalizeMapImportAliasPath(") !=
         std::string::npos);
-  CHECK(callResolutionSource.find("std::string resolveCallPathFromScopeWithoutImportAliases(") !=
+  CHECK(callResolutionSource.find("std::string resolveCallPathFromScopeWithoutImportAliases(") ==
         std::string::npos);
 
   CHECK(inlineDispatchSource.find("bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee)") !=
@@ -626,6 +626,27 @@ TEST_CASE("ir lowerer call helpers keep alias fallback only on raw path") {
   slashlessCanonicalMapAlias.name = "map_count";
   CHECK(rawResolveExprPath(slashlessCanonicalMapAlias) == "/std/collections/map/count");
   CHECK(semanticResolveExprPath(slashlessCanonicalMapAlias) == "/map_count");
+}
+
+TEST_CASE("ir lowerer call helpers avoid semantic-product scope/root fallback probes") {
+  primec::Definition rootDef;
+  rootDef.fullPath = "/foo";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/foo", &rootDef},
+  };
+  const std::unordered_map<std::string, std::string> importAliases = {};
+
+  primec::SemanticProgram semanticProgram;
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto semanticResolveExprPath =
+      primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, semanticTargets);
+
+  primec::Expr namespacedExpr;
+  namespacedExpr.kind = primec::Expr::Kind::Name;
+  namespacedExpr.name = "foo";
+  namespacedExpr.namespacePrefix = "/pkg";
+  CHECK(semanticResolveExprPath(namespacedExpr) == "/pkg/foo");
 }
 
 TEST_CASE("ir lowerer call helpers require semantic-product direct-call targets") {

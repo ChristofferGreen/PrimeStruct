@@ -282,7 +282,7 @@ TEST_CASE("public call dispatch testing header stays in sync with alias-policy h
   REQUIRE(std::filesystem::exists(callDispatchPath));
 
   const std::string callDispatch = readTextFile(callDispatchPath);
-  CHECK(callDispatch.find("resolveCallPathFromScopeWithoutImportAliases(") != std::string::npos);
+  CHECK(callDispatch.find("resolveCallPathFromScopeWithoutImportAliases(") == std::string::npos);
   CHECK(callDispatch.find("validateSemanticProductDirectCallCoverage(") != std::string::npos);
   CHECK(callDispatch.find("validateSemanticProductMethodCallCoverage(") != std::string::npos);
   CHECK(callDispatch.find("const LocalMap &localsIn,") != std::string::npos);

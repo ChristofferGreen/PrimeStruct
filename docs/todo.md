@@ -83,18 +83,19 @@ Progress note: the first semantic-product publication, dump surface, and tempora
     - ○ Add negative fixtures for type/shape fact families (bindings, local-`auto`, return metadata).
     - ○ Add negative fixtures for result/control fact families (`query`, `try(...)`, `on_error`, entry args).
     - ○ Add one aggregate fixture that validates deterministic first-failure ordering when multiple families are missing.
-- ◐ Move resolved call routing to semantic-product-only ownership.
+- ✓ Move resolved call routing to semantic-product-only ownership.
   - ✓ Move receiver/method-call target routing to semantic-product-only ownership.
   - ✓ Move helper-vs-canonical bridge-path routing to semantic-product-only ownership, including same-path helper-shadow choices.
-  - ◐ Remove any remaining routing helper that still probes scope/import fallback when semantic ids are present.
+  - ✓ Remove any remaining routing helper that still probes scope/import fallback when semantic ids are present.
     - ✓ Inventory the remaining semantic-id-present fallback probes and map each to a caller.
       - ✓ `makeResolveCallPathFromScope`: semantic direct-call target branch falls back to AST rooted name when semantic target path is unresolved in `defMap`.
       - ✓ `makeResolveCallPathFromScope`: rooted rewritten direct-call branch without a semantic-product fact falls back through `resolveCallPathFromScopeWithoutImportAliases`.
       - ✓ `makeResolveCallPathFromScope`: semantic-product-present generic branch still calls `resolveCallPathFromScopeWithoutImportAliases`.
-    - ◐ Switch one caller at a time to semantic-product-only routing.
+    - ✓ Switch one caller at a time to semantic-product-only routing.
       - ✓ Keep semantic-product direct-call targets authoritative even when rooted AST call names differ.
       - ✓ Keep rewritten rooted direct-call paths explicit instead of routing through scope-probing fallback helpers.
-    - ○ Delete the fallback probe helpers once all callers are migrated.
+      - ✓ Keep semantic-product generic path canonical without scope/root fallback probes.
+    - ✓ Delete the fallback probe helpers once all callers are migrated.
 - ◐ Make graph-backed local-`auto`, query, `try(...)`, and `on_error` facts required lowering inputs.
   - ✓ Make graph-backed local-`auto` facts required for lowerer local type setup.
   - ✓ Make graph-backed query and `try(...)` facts required for lowerer call/result setup.
