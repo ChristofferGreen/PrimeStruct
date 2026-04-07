@@ -16,6 +16,17 @@ bool isCanonicalMapMethodHelper(std::string_view helperName) {
          helperName == "insert" || helperName == "insert_ref";
 }
 
+bool isCanonicalVectorAccessMethodHelper(std::string_view helperName) {
+  return helperName == "at" || helperName == "at_unsafe";
+}
+
+bool isVectorFamilyHelperPath(const std::string &path) {
+  return path.rfind("/vector/", 0) == 0 ||
+         path.rfind("/soa_vector/", 0) == 0 ||
+         path.rfind("/std/collections/vector/", 0) == 0 ||
+         path.rfind("/std/collections/experimental_vector/", 0) == 0;
+}
+
 } // namespace
 
 bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
@@ -32,6 +43,10 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
   if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
     normalizedMethodName.erase(normalizedMethodName.begin());
   }
+  const size_t methodSlash = normalizedMethodName.find_last_of('/');
+  if (methodSlash != std::string::npos) {
+    normalizedMethodName = normalizedMethodName.substr(methodSlash + 1);
+  }
   if (context.resolveMapTarget != nullptr && expr.isMethodCall &&
       isCanonicalMapMethodHelper(normalizedMethodName) && !expr.args.empty() &&
       context.resolveMapTarget(expr.args.front())) {
@@ -46,6 +61,74 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
     }
     handledOut = true;
     return validateExpr(params, locals, rewrittenMapMethodCall);
+  }
+  if (expr.isMethodCall &&
+      isCanonicalVectorAccessMethodHelper(normalizedMethodName) &&
+      !expr.args.empty()) {
+    const Expr &receiverExpr = expr.args.front();
+    const bool isMapReceiver =
+        context.resolveMapTarget != nullptr &&
+        context.resolveMapTarget(receiverExpr);
+    if (!isMapReceiver) {
+      std::string vectorMethodTarget;
+      if (resolveVectorHelperMethodTarget(params, locals, receiverExpr,
+                                          normalizedMethodName,
+                                          vectorMethodTarget) &&
+          isVectorFamilyHelperPath(vectorMethodTarget)) {
+        Expr rewrittenVectorMethodCall = expr;
+        rewrittenVectorMethodCall.isMethodCall = false;
+        rewrittenVectorMethodCall.namespacePrefix.clear();
+        rewrittenVectorMethodCall.name = normalizedMethodName;
+        handledOut = true;
+        return validateExpr(params, locals, rewrittenVectorMethodCall);
+      }
+      bool hasCollectionReceiver = false;
+      std::string receiverCollectionTypePath;
+      if (resolveCallCollectionTypePath(receiverExpr, params, locals,
+                                        receiverCollectionTypePath)) {
+        hasCollectionReceiver = receiverCollectionTypePath == "/vector" ||
+                                receiverCollectionTypePath == "/array" ||
+                                receiverCollectionTypePath == "/string" ||
+                                receiverCollectionTypePath == "/soa_vector";
+      }
+      if (!hasCollectionReceiver) {
+        std::string receiverTypeText;
+        if (inferQueryExprTypeText(receiverExpr, params, locals,
+                                   receiverTypeText)) {
+          const std::string normalizedCollectionType =
+              normalizeCollectionTypePath(receiverTypeText);
+          hasCollectionReceiver = normalizedCollectionType == "/vector" ||
+                                  normalizedCollectionType == "/array" ||
+                                  normalizedCollectionType == "/string" ||
+                                  normalizedCollectionType == "/soa_vector";
+        }
+      }
+      if (!hasCollectionReceiver) {
+        const ReturnKind receiverKind =
+            inferExprReturnKind(receiverExpr, params, locals);
+        hasCollectionReceiver =
+            receiverKind == ReturnKind::Array || receiverKind == ReturnKind::String;
+      }
+      if (!hasCollectionReceiver && receiverExpr.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding =
+                findParamBinding(params, receiverExpr.name)) {
+          hasCollectionReceiver = primec::semantics::isArgsPackBinding(*paramBinding);
+        } else {
+          auto localIt = locals.find(receiverExpr.name);
+          if (localIt != locals.end()) {
+            hasCollectionReceiver = primec::semantics::isArgsPackBinding(localIt->second);
+          }
+        }
+      }
+      if (hasCollectionReceiver) {
+        Expr rewrittenVectorMethodCall = expr;
+        rewrittenVectorMethodCall.isMethodCall = false;
+        rewrittenVectorMethodCall.namespacePrefix.clear();
+        rewrittenVectorMethodCall.name = normalizedMethodName;
+        handledOut = true;
+        return validateExpr(params, locals, rewrittenVectorMethodCall);
+      }
+    }
   }
 
   auto isFileBinding = [&](const BindingInfo &binding) {

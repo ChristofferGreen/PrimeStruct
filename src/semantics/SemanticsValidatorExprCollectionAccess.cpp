@@ -599,7 +599,11 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
            methodResolved == "/std/collections/map/contains" ||
            methodResolved == "/std/collections/map/contains_ref") &&
           !hasImportedDefinitionPath("/contains") &&
-          !hasDeclaredDefinitionPath("/contains")) {
+          !hasDeclaredDefinitionPath("/contains") &&
+          !hasImportedDefinitionPath(
+              canonicalStdlibMapContainsPathForResolvedMethod(methodResolved)) &&
+          !hasDeclaredDefinitionPath(
+              canonicalStdlibMapContainsPathForResolvedMethod(methodResolved))) {
         return failCollectionAccessTargetDiagnostic(
             "unknown call target: " +
             canonicalStdlibMapContainsPathForResolvedMethod(methodResolved));

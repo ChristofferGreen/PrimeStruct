@@ -25,7 +25,7 @@ bool getCanonicalCollectionAccessBuiltinName(const Expr &candidate,
                                              std::string &helperOut) {
   helperOut.clear();
   if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
-      candidate.name.empty() || candidate.args.size() != 2) {
+      candidate.name.empty()) {
     return false;
   }
   if (getBuiltinArrayAccessName(candidate, helperOut)) {
