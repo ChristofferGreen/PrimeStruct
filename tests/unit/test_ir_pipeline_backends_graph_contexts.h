@@ -305,6 +305,29 @@ TEST_CASE("graph snapshot suite uses semantic-product-aware lowering only") {
   CHECK(snapshot.find("fallbackModule") == std::string::npos);
 }
 
+TEST_CASE("backend registry keeps semantic-product negative fixture families covered") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path registryPath = cwd / "tests" / "unit" / "test_ir_pipeline_backends_registry.h";
+  if (!std::filesystem::exists(registryPath)) {
+    registryPath = cwd.parent_path() / "tests" / "unit" / "test_ir_pipeline_backends_registry.h";
+  }
+  REQUIRE(std::filesystem::exists(registryPath));
+
+  const std::string registrySource = readTextFile(registryPath);
+  CHECK(registrySource.find("missing semantic-product direct-call target:") != std::string::npos);
+  CHECK(registrySource.find("missing semantic-product method-call target:") != std::string::npos);
+  CHECK(registrySource.find("missing semantic-product bridge-path choice:") != std::string::npos);
+  CHECK(registrySource.find("missing semantic-product binding fact:") != std::string::npos);
+  CHECK(registrySource.find("missing semantic-product local-auto fact:") != std::string::npos);
+  CHECK(registrySource.find("missing semantic-product return fact:") != std::string::npos);
+  CHECK(registrySource.find("missing semantic-product callable result metadata:") != std::string::npos);
+  CHECK(registrySource.find("missing semantic-product return binding type:") != std::string::npos);
+  CHECK(registrySource.find("missing semantic-product query fact:") != std::string::npos);
+  CHECK(registrySource.find("missing semantic-product try fact:") != std::string::npos);
+  CHECK(registrySource.find("missing semantic-product on_error fact:") != std::string::npos);
+  CHECK(registrySource.find("missing semantic-product entry parameter fact:") != std::string::npos);
+}
+
 TEST_CASE("ir lowerer header exposes only semantic-product-aware lowering entrypoint") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path irLowererHeaderPath = cwd / "include" / "primec" / "IrLowerer.h";
