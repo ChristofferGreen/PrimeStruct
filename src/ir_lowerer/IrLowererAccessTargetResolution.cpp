@@ -1,5 +1,7 @@
 #include "IrLowererCallHelpers.h"
 
+#include <sstream>
+
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
@@ -7,6 +9,47 @@
 namespace primec::ir_lowerer {
 
 namespace {
+
+std::string mapKindTypeName(LocalInfo::ValueKind kind) {
+  switch (kind) {
+  case LocalInfo::ValueKind::Int32:
+    return "i32";
+  case LocalInfo::ValueKind::Int64:
+    return "i64";
+  case LocalInfo::ValueKind::UInt64:
+    return "u64";
+  case LocalInfo::ValueKind::Bool:
+    return "bool";
+  case LocalInfo::ValueKind::Float32:
+    return "f32";
+  case LocalInfo::ValueKind::Float64:
+    return "f64";
+  case LocalInfo::ValueKind::String:
+    return "string";
+  default:
+    return "";
+  }
+}
+
+std::string inferExperimentalMapStructPathFromKinds(LocalInfo::ValueKind keyKind,
+                                                    LocalInfo::ValueKind valueKind) {
+  const std::string keyType = mapKindTypeName(keyKind);
+  const std::string valueType = mapKindTypeName(valueKind);
+  if (keyType.empty() || valueType.empty()) {
+    return "";
+  }
+
+  const std::string canonicalArgs = keyType + "," + valueType;
+  uint64_t hash = 1469598103934665603ULL;
+  for (unsigned char ch : canonicalArgs) {
+    hash ^= static_cast<uint64_t>(ch);
+    hash *= 1099511628211ULL;
+  }
+
+  std::ostringstream specializedPath;
+  specializedPath << "/std/collections/experimental_map/Map__t" << std::hex << hash;
+  return specializedPath.str();
+}
 
 bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo &info) {
   info = {};
@@ -20,6 +63,48 @@ bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo
   }
   auto matchesPath = [&](const std::string &basePath) {
     return normalizedName == basePath || normalizedName.rfind(basePath + "__", 0) == 0;
+  };
+  auto inferExperimentalMapStructPath = [&](const std::string &path) -> std::string {
+    constexpr std::string_view prefix = "std/collections/experimental_map/";
+    if (path.rfind(prefix, 0) != 0) {
+      return "";
+    }
+    const std::string suffix = path.substr(prefix.size());
+    auto remap = [&](std::string_view helperStem) -> std::string {
+      const std::string helperPrefix = std::string(helperStem) + "__";
+      if (suffix.rfind(helperPrefix, 0) != 0) {
+        return "";
+      }
+      return "/std/collections/experimental_map/Map__" + suffix.substr(helperPrefix.size());
+    };
+    if (std::string structPath = remap("mapNew"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapSingle"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapDouble"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapPair"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapTriple"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapQuad"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapQuint"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapSext"); !structPath.empty()) {
+      return structPath;
+    }
+    if (std::string structPath = remap("mapSept"); !structPath.empty()) {
+      return structPath;
+    }
+    return remap("mapOct");
   };
   auto isDirectMapConstructor = [&]() {
     return matchesPath("std/collections/map/map") ||
@@ -57,7 +142,9 @@ bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo
   auto inferLiteralKind = [&](const Expr &valueExpr, LocalInfo::ValueKind &kindOut) {
     kindOut = LocalInfo::ValueKind::Unknown;
     if (valueExpr.kind == Expr::Kind::Literal) {
-      kindOut = LocalInfo::ValueKind::Int32;
+      kindOut = valueExpr.isUnsigned ? LocalInfo::ValueKind::UInt64
+                                     : (valueExpr.intWidth == 64 ? LocalInfo::ValueKind::Int64
+                                                                 : LocalInfo::ValueKind::Int32);
       return true;
     }
     if (valueExpr.kind == Expr::Kind::BoolLiteral) {
@@ -83,6 +170,11 @@ bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo
     info.isMapTarget = true;
     info.mapKeyKind = valueKindFromTypeName(target.templateArgs[0]);
     info.mapValueKind = valueKindFromTypeName(target.templateArgs[1]);
+    info.structTypeName = inferExperimentalMapStructPath(normalizedName);
+    if (info.structTypeName.empty()) {
+      info.structTypeName = inferExperimentalMapStructPathFromKinds(
+          info.mapKeyKind, info.mapValueKind);
+    }
     return true;
   }
 
@@ -114,6 +206,10 @@ bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo
 
   info.mapKeyKind = keyKind;
   info.mapValueKind = valueKind;
+  info.structTypeName = inferExperimentalMapStructPath(normalizedName);
+  if (info.structTypeName.empty()) {
+    info.structTypeName = inferExperimentalMapStructPathFromKinds(keyKind, valueKind);
+  }
   return true;
 }
 
@@ -133,6 +229,10 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     info.isMapTarget = true;
     info.mapKeyKind = localInfo.mapKeyKind;
     info.mapValueKind = localInfo.mapValueKind;
+    info.isWrappedMapTarget =
+        (localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToMap) ||
+        (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToMap);
+    info.structTypeName = localInfo.structTypeName;
     return true;
   };
   auto populateFromArgsPackElement = [&](const LocalInfo &localInfo) {
@@ -149,6 +249,8 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     info.isMapTarget = true;
     info.mapKeyKind = localInfo.mapKeyKind;
     info.mapValueKind = localInfo.mapValueKind;
+    info.isWrappedMapTarget = isWrappedMap;
+    info.structTypeName = localInfo.structTypeName;
     return true;
   };
   if (target.kind == Expr::Kind::Name) {
@@ -177,7 +279,12 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
       }
     }
     std::string accessName;
-    if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) {
+    const bool isExplicitMapArgsPackAt =
+        !target.isMethodCall &&
+        (target.name == "/map/at" || target.name == "/std/collections/map/at") &&
+        target.args.size() == 2;
+    if ((getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) ||
+        isExplicitMapArgsPackAt) {
       const Expr &accessReceiver = target.args.front();
       if (accessReceiver.kind == Expr::Kind::Name) {
         auto it = localsIn.find(accessReceiver.name);
@@ -187,23 +294,25 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
       }
     }
     std::string collection;
-    if (getBuiltinCollectionName(target, collection) && collection == "map" &&
-        target.templateArgs.size() == 2) {
-      info.isMapTarget = true;
-      info.mapKeyKind = valueKindFromTypeName(target.templateArgs[0]);
-      info.mapValueKind = valueKindFromTypeName(target.templateArgs[1]);
-      return info;
-    }
-    MapAccessTargetInfo directConstructorInfo;
-    const bool hasDirectConstructorInfo = inferDirectMapConstructorTargetInfo(target, directConstructorInfo);
     if (resolveCallMapAccessTargetInfo) {
       MapAccessTargetInfo inferred;
       if (resolveCallMapAccessTargetInfo(target, inferred)) {
         return inferred;
       }
     }
+    MapAccessTargetInfo directConstructorInfo;
+    const bool hasDirectConstructorInfo = inferDirectMapConstructorTargetInfo(target, directConstructorInfo);
     if (hasDirectConstructorInfo) {
       return directConstructorInfo;
+    }
+    if (getBuiltinCollectionName(target, collection) && collection == "map" &&
+        target.templateArgs.size() == 2) {
+      info.isMapTarget = true;
+      info.mapKeyKind = valueKindFromTypeName(target.templateArgs[0]);
+      info.mapValueKind = valueKindFromTypeName(target.templateArgs[1]);
+      info.structTypeName = inferExperimentalMapStructPathFromKinds(
+          info.mapKeyKind, info.mapValueKind);
+      return info;
     }
   }
   return info;
@@ -295,17 +404,17 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     info.isMapTarget = false;
     info.isWrappedMapTarget = false;
 
+    if (localInfo.argsPackElementKind == LocalInfo::Kind::Map) {
+      info.isArrayOrVectorTarget = true;
+      info.isVectorTarget = false;
+      info.isMapTarget = true;
+      return true;
+    }
     if (!localInfo.structTypeName.empty() &&
         (localInfo.argsPackElementKind == LocalInfo::Kind::Value ||
          localInfo.argsPackElementKind == LocalInfo::Kind::Map)) {
       info.isArrayOrVectorTarget = true;
       info.isVectorTarget = false;
-      return true;
-    }
-    if (localInfo.argsPackElementKind == LocalInfo::Kind::Map) {
-      info.isArrayOrVectorTarget = true;
-      info.isVectorTarget = false;
-      info.isMapTarget = true;
       return true;
     }
     if (localInfo.argsPackElementKind == LocalInfo::Kind::Reference &&

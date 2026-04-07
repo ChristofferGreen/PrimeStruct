@@ -453,6 +453,87 @@ TEST_CASE("semantic product publishes resolved method-call targets") {
   CHECK(targetIt->sourceColumn > 0);
 }
 
+TEST_CASE("semantic product publishes specialized SoaColumn field access targets") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumns5<i32, i32, i32, i32, i32> mut] values{soaColumns5New<i32, i32, i32, i32, i32>()}
+  return(soaColumns5Capacity<i32, i32, i32, i32, i32>(values))
+}
+)";
+
+  primec::testing::CompilePipelineBoundaryDumps dumps;
+  std::string error;
+  REQUIRE(primec::testing::captureSemanticBoundaryDumpsForTesting(
+      source, "/main", dumps, error));
+  CHECK(error.empty());
+  CHECK(dumps.semanticProduct.find(
+            "scope_path=\"/std/collections/experimental_soa_storage/SoaColumn__") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "/field_capacity\" method_name=\"capacity\" receiver_type_text=\"Reference</std/collections/experimental_soa_storage/SoaColumn__") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "resolved_path=\"/std/collections/experimental_soa_storage/SoaColumn__") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find("/capacity\" provenance_handle=") !=
+        std::string::npos);
+}
+
+TEST_CASE("semantic product publishes explicit SoaColumn helper parameter binding facts") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_storage/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumns5<i32, i32, i32, i32, i32> mut] values{soaColumns5New<i32, i32, i32, i32, i32>()}
+  soaColumns5Reserve<i32, i32, i32, i32, i32>(values, 4i32)
+  return(soaColumns5Capacity<i32, i32, i32, i32, i32>(values))
+}
+)";
+
+  primec::testing::CompilePipelineBoundaryDumps dumps;
+  std::string error;
+  REQUIRE(primec::testing::captureSemanticBoundaryDumpsForTesting(
+      source, "/main", dumps, error));
+  CHECK(error.empty());
+  CHECK(dumps.semanticProduct.find(
+            "/set_field_capacity\" site_kind=\"parameter\" name=\"value\" resolved_path=\"\" binding_type_text=\"i32\"") !=
+        std::string::npos);
+}
+
+TEST_CASE("semantic product query facts prefer local bindings over math constants") {
+  const std::string source =
+      "import /std/math/*\n"
+      "\n"
+      "[return<int>]\n"
+      "main() {\n"
+      "  [f32] e{acosh(1.0f32)}\n"
+      "  [f32] f{atanh(0.0f32)}\n"
+      "  return(convert<int>(plus(e, f)))\n"
+      "}\n";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto queryIt =
+      std::find_if(semanticProgram.queryFacts.begin(),
+                   semanticProgram.queryFacts.end(),
+                   [](const primec::SemanticProgramQueryFact &entry) {
+                     return entry.scopePath == "/main" && entry.callName == "plus";
+                   });
+  REQUIRE(queryIt != semanticProgram.queryFacts.end());
+  CHECK(queryIt->queryTypeText == "f32");
+  CHECK(queryIt->bindingTypeText == "f32");
+}
+
 TEST_CASE("semantic product publishes same-path collection bridge routing choices") {
   const std::string source =
       "[return<i32>]\n"

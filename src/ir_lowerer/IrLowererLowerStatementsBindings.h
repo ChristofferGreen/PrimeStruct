@@ -231,7 +231,14 @@
           isLocalAutoBindingCandidate(stmt)) {
         const SemanticProgramLocalAutoFact *localAutoFact =
             findSemanticProductLocalAutoFact(callResolutionAdapters.semanticProductTargets, stmt);
-        if (localAutoFact == nullptr || localAutoFact->bindingTypeText.empty()) {
+        const SemanticProgramBindingFact *bindingFact =
+            findSemanticProductBindingFact(callResolutionAdapters.semanticProductTargets, stmt);
+        const std::string bindingTypeText =
+            localAutoFact != nullptr && !localAutoFact->bindingTypeText.empty()
+                ? trimTemplateTypeText(localAutoFact->bindingTypeText)
+                : (bindingFact != nullptr ? trimTemplateTypeText(bindingFact->bindingTypeText)
+                                          : std::string{});
+        if (bindingTypeText.empty()) {
           const std::string scopePath =
               activeInlineContext != nullptr ? activeInlineContext->defPath : function.name;
           error = "missing semantic-product local-auto fact: " + scopePath + " -> local " +
@@ -241,14 +248,6 @@
         semanticLocalAutoBindingExpr = stmt;
         semanticLocalAutoBindingExpr.semanticNodeId = 0;
         semanticLocalAutoBindingExpr.transforms.clear();
-        const std::string bindingTypeText = trimTemplateTypeText(localAutoFact->bindingTypeText);
-        if (bindingTypeText.empty()) {
-          const std::string scopePath =
-              activeInlineContext != nullptr ? activeInlineContext->defPath : function.name;
-          error = "missing semantic-product local-auto fact: " + scopePath + " -> local " +
-                  (stmt.name.empty() ? std::string("<unnamed>") : stmt.name);
-          return false;
-        }
         Transform semanticTypeTransform;
         std::string semanticTypeBase;
         std::string semanticTypeArgList;

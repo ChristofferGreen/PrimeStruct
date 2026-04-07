@@ -105,7 +105,7 @@ bool extractArgsPackElementTypeName(const Expr &paramExpr, std::string &typeName
   return false;
 }
 
-bool namesExperimentalMapType(const std::string &typeText) {
+bool namesExplicitExperimentalMapType(const std::string &typeText) {
   std::string base;
   std::string argList;
   if (splitTemplateTypeName(typeText, base, argList)) {
@@ -698,7 +698,7 @@ bool emitInlinePackedCallParameter(
     }
     std::string declaredElementType;
     if (!extractArgsPackElementTypeName(param, declaredElementType) ||
-        !namesExperimentalMapType(declaredElementType)) {
+        !namesExplicitExperimentalMapType(declaredElementType)) {
       return true;
     }
 

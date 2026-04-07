@@ -459,7 +459,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend does not support return type on /std/math/ColorSRGBA/toLinear") !=
+  CHECK(readFile(errPath).find("native backend does not support return type on /std/math/ColorRGB/toSRGB") !=
         std::string::npos);
 }
 

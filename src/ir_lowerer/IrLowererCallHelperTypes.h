@@ -68,6 +68,8 @@ struct MapAccessTargetInfo {
   bool isMapTarget = false;
   LocalInfo::ValueKind mapKeyKind = LocalInfo::ValueKind::Unknown;
   LocalInfo::ValueKind mapValueKind = LocalInfo::ValueKind::Unknown;
+  bool isWrappedMapTarget = false;
+  std::string structTypeName;
 };
 
 struct ArrayVectorAccessTargetInfo {

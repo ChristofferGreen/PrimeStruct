@@ -28,6 +28,7 @@ MapAccessLookupEmitResult tryEmitMapContainsLookup(
     std::string &error);
 bool emitMapLookupTryAt(
     LocalInfo::ValueKind mapKeyKind,
+    const std::string &mapStructTypeName,
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
@@ -216,6 +217,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     }
     if (!emitMapLookupTryAt(
             mapTargetInfo.mapKeyKind,
+            mapTargetInfo.structTypeName,
             expr.args.front(),
             expr.args[1],
             localsIn,
@@ -247,6 +249,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     }
     if (!emitMapLookupTryAt(
             mapTargetInfo.mapKeyKind,
+            mapTargetInfo.structTypeName,
             expr.args.front(),
             expr.args[1],
             localsIn,

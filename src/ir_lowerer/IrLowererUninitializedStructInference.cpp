@@ -365,7 +365,12 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
         }
       }
       std::string accessName;
-      if (getBuiltinArrayAccessName(exprIn, accessName) && exprIn.args.size() == 2) {
+      const bool isExplicitMapArgsPackAt =
+          !exprIn.isMethodCall &&
+          (exprIn.name == "/map/at" || exprIn.name == "/std/collections/map/at") &&
+          exprIn.args.size() == 2;
+      if ((getBuiltinArrayAccessName(exprIn, accessName) && exprIn.args.size() == 2) ||
+          isExplicitMapArgsPackAt) {
         const Expr &accessReceiver = exprIn.args.front();
         if (accessReceiver.kind == Expr::Kind::Name) {
           auto receiverIt = localsInExpr.find(accessReceiver.name);

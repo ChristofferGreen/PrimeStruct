@@ -153,6 +153,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup access") {
   CHECK(primec::ir_lowerer::emitMapLookupAccess(
       "at",
       Kind::Int32,
+      "",
       targetExpr,
       keyExpr,
       locals,
@@ -201,6 +202,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup access") {
   CHECK_FALSE(primec::ir_lowerer::emitMapLookupAccess(
       "at",
       Kind::Int32,
+      "",
       targetExpr,
       keyExpr,
       locals,
@@ -234,6 +236,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup access") {
   CHECK_FALSE(primec::ir_lowerer::emitMapLookupAccess(
       "at",
       Kind::String,
+      "",
       targetExpr,
       keyExpr,
       locals,

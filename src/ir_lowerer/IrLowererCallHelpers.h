@@ -548,6 +548,7 @@ void emitMapLookupAccessEpilogue(
 bool emitMapLookupAccess(
     const std::string &accessName,
     LocalInfo::ValueKind mapKeyKind,
+    const std::string &mapStructTypeName,
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
@@ -562,6 +563,7 @@ bool emitMapLookupAccess(
     std::string &error);
 bool emitMapLookupContains(
     LocalInfo::ValueKind mapKeyKind,
+    const std::string &mapStructTypeName,
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
@@ -641,10 +643,28 @@ void emitMapLookupAtKeyNotFoundGuard(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm);
+void emitMapLookupContainsResult(
+    int32_t indexLocal,
+    int32_t countLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
 void emitMapLookupValueLoad(
     int32_t ptrLocal,
     int32_t indexLocal,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+bool emitMapLookupTryAt(
+    LocalInfo::ValueKind mapKeyKind,
+    const std::string &mapStructTypeName,
+    const Expr &targetExpr,
+    const Expr &lookupKeyExpr,
+    const LocalMap &localsIn,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error);
 bool validateMapLookupKeyKind(LocalInfo::ValueKind mapKeyKind,
                               LocalInfo::ValueKind lookupKeyKind,
                               std::string &error);

@@ -4,20 +4,31 @@
           }
 
           std::string helperName;
-          if (getBuiltinArrayAccessName(callExpr, helperName) && callExpr.args.size() == 2) {
-            // Use the normalized builtin access name below.
+          if (callExpr.isMethodCall &&
+              (callExpr.name == "count" || callExpr.name == "contains" ||
+               callExpr.name == "tryAt" || callExpr.name == "at" ||
+               callExpr.name == "at_unsafe")) {
+            helperName = callExpr.name;
           } else if ((callExpr.name == "/map/count" || callExpr.name == "/std/collections/map/count" ||
-                      isSimpleCallName(callExpr, "count")) &&
+                      callExpr.name == "/std/collections/mapCount") &&
                      callExpr.args.size() == 1) {
             helperName = "count";
           } else if ((callExpr.name == "/map/contains" || callExpr.name == "/std/collections/map/contains" ||
-                      isSimpleCallName(callExpr, "contains")) &&
+                      callExpr.name == "/std/collections/mapContains") &&
                      callExpr.args.size() == 2) {
             helperName = "contains";
           } else if ((callExpr.name == "/map/tryAt" || callExpr.name == "/std/collections/map/tryAt" ||
-                      isSimpleCallName(callExpr, "tryAt")) &&
+                      callExpr.name == "/std/collections/mapTryAt") &&
                      callExpr.args.size() == 2) {
             helperName = "tryAt";
+          } else if ((callExpr.name == "/map/at" || callExpr.name == "/std/collections/map/at" ||
+                      callExpr.name == "/std/collections/mapAt") &&
+                     callExpr.args.size() == 2) {
+            helperName = "at";
+          } else if ((callExpr.name == "/map/at_unsafe" || callExpr.name == "/std/collections/map/at_unsafe" ||
+                      callExpr.name == "/std/collections/mapAtUnsafe") &&
+                     callExpr.args.size() == 2) {
+            helperName = "at_unsafe";
           } else {
             return false;
           }
@@ -27,13 +38,29 @@
               auto it = localsIn.find(receiverExpr.name);
               if (it != localsIn.end() &&
                   !it->second.isArgsPack &&
+                  it->second.kind != LocalInfo::Kind::Reference &&
+                  it->second.kind != LocalInfo::Kind::Pointer &&
                   it->second.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
                 return it->second.structTypeName;
               }
             }
-            const std::string inferredStruct = inferStructExprPath(receiverExpr, localsIn);
-            if (inferredStruct.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
-              return inferredStruct;
+            const auto accessTargetInfo =
+                ir_lowerer::resolveArrayVectorAccessTargetInfo(receiverExpr, localsIn);
+            if (accessTargetInfo.isWrappedMapTarget) {
+              const auto mapTargetInfo =
+                  ir_lowerer::resolveMapAccessTargetInfo(receiverExpr, localsIn);
+              if (mapTargetInfo.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+                return mapTargetInfo.structTypeName;
+              }
+              return std::string{};
+            }
+            if (accessTargetInfo.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+              return accessTargetInfo.structTypeName;
+            }
+            const auto mapTargetInfo =
+                ir_lowerer::resolveMapAccessTargetInfo(receiverExpr, localsIn);
+            if (mapTargetInfo.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+              return mapTargetInfo.structTypeName;
             }
             return std::string{};
           };
@@ -95,6 +122,54 @@
           rewrittenExpr.templateArgs.clear();
           return true;
         };
+        auto isVectorStructPath = [](const std::string &structPath) {
+          return structPath == "/vector" ||
+                 structPath == "/std/collections/experimental_vector/Vector" ||
+                 structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+        };
+        auto rewriteExplicitMapHelperBuiltinExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
+          if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall || callExpr.args.empty()) {
+            return false;
+          }
+          std::string helperName;
+          if (callExpr.name == "/std/collections/map/count") {
+            helperName = "count";
+          } else if (callExpr.name == "/std/collections/map/at") {
+            helperName = "at";
+          } else if (callExpr.name == "/std/collections/map/at_unsafe") {
+            helperName = "at_unsafe";
+          } else {
+            return false;
+          }
+          const auto receiverTargetInfo =
+              ir_lowerer::resolveArrayVectorAccessTargetInfo(callExpr.args.front(), localsIn);
+          if (helperName == "at" &&
+              receiverTargetInfo.isArgsPackTarget &&
+              receiverTargetInfo.argsPackElementKind == LocalInfo::Kind::Map) {
+            rewrittenExpr = callExpr;
+            rewrittenExpr.name = "at";
+            rewrittenExpr.namespacePrefix.clear();
+            return true;
+          }
+          if (receiverTargetInfo.isArgsPackTarget &&
+              receiverTargetInfo.argsPackElementKind == LocalInfo::Kind::Map) {
+            return false;
+          }
+          if (receiverTargetInfo.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+            return false;
+          }
+          const std::string receiverStructPath = inferStructExprPath(callExpr.args.front(), localsIn);
+          if (receiverStructPath.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+            return false;
+          }
+          if (!ir_lowerer::resolveMapAccessTargetInfo(callExpr.args.front(), localsIn).isMapTarget) {
+            return false;
+          }
+          rewrittenExpr = callExpr;
+          rewrittenExpr.name = helperName;
+          rewrittenExpr.namespacePrefix.clear();
+          return true;
+        };
         Expr inlineDispatchExpr = expr;
         Expr rewrittenCanonicalExperimentalMapHelperExpr;
         if (rewriteCanonicalMapHelperForExperimentalReceiverExpr(expr, rewrittenCanonicalExperimentalMapHelperExpr)) {
@@ -126,27 +201,7 @@
         if (inlineDispatchResult == ir_lowerer::InlineCallDispatchResult::Error) {
           return false;
         }
-        auto rewriteExplicitMapHelperBuiltinExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
-          if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall || callExpr.args.empty()) {
-            return false;
-          }
-          std::string helperName;
-          if (callExpr.name == "/std/collections/map/count") {
-            helperName = "count";
-          } else if (callExpr.name == "/std/collections/map/at") {
-            helperName = "at";
-          } else if (callExpr.name == "/std/collections/map/at_unsafe") {
-            helperName = "at_unsafe";
-          } else {
-            return false;
-          }
-          if (!ir_lowerer::resolveMapAccessTargetInfo(callExpr.args.front(), localsIn).isMapTarget) {
-            return false;
-          }
-          rewrittenExpr = callExpr;
-          rewrittenExpr.name = helperName;
-          return true;
-        };
+        Expr nativeTailExpr = inlineDispatchExpr;
         auto rewriteImplicitBorrowedMapReceiverExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
           if (callExpr.kind != Expr::Kind::Call || callExpr.args.empty()) {
             return false;
@@ -203,9 +258,8 @@
           rewrittenExpr.args.front() = derefExpr;
           return true;
         };
-        Expr nativeTailExpr = inlineDispatchExpr;
         Expr rewrittenExplicitMapHelperExpr;
-        if (rewriteExplicitMapHelperBuiltinExpr(expr, rewrittenExplicitMapHelperExpr)) {
+        if (rewriteExplicitMapHelperBuiltinExpr(nativeTailExpr, rewrittenExplicitMapHelperExpr)) {
           nativeTailExpr = rewrittenExplicitMapHelperExpr;
         }
         Expr rewrittenBorrowedMapReceiverExpr;
@@ -245,6 +299,44 @@
             },
             [&](const Expr &targetCallExpr, ir_lowerer::MapAccessTargetInfo &targetInfoOut) {
               targetInfoOut = {};
+              auto inferExperimentalMapStructPathFromTypeTexts =
+                  [](const std::string &keyTypeText, const std::string &valueTypeText) {
+                    std::string canonicalArgs;
+                    auto appendCanonicalType = [&](const std::string &typeText) {
+                      const std::string trimmed = trimTemplateTypeText(typeText);
+                      for (char ch : trimmed) {
+                        if (ch != ' ' && ch != '\t' && ch != '\n' && ch != '\r' && ch != '\f' &&
+                            ch != '\v') {
+                          canonicalArgs.push_back(ch);
+                        }
+                      }
+                    };
+                    appendCanonicalType(keyTypeText);
+                    canonicalArgs.push_back(',');
+                    appendCanonicalType(valueTypeText);
+                    if (canonicalArgs.empty()) {
+                      return std::string{};
+                    }
+
+                    uint64_t hash = 1469598103934665603ULL;
+                    for (unsigned char ch : canonicalArgs) {
+                      hash ^= static_cast<uint64_t>(ch);
+                      hash *= 1099511628211ULL;
+                    }
+
+                    std::string suffix;
+                    do {
+                      constexpr char HexDigits[] = "0123456789abcdef";
+                      suffix.push_back(HexDigits[hash & 0xfu]);
+                      hash >>= 4u;
+                    } while (hash != 0);
+
+                    std::string structPath = "/std/collections/experimental_map/Map__t";
+                    for (auto it = suffix.rbegin(); it != suffix.rend(); ++it) {
+                      structPath.push_back(*it);
+                    }
+                    return structPath;
+                  };
               const Definition *callee = resolveDefinitionCall(targetCallExpr);
               if (callee == nullptr) {
                 return false;
@@ -256,6 +348,8 @@
                 targetInfoOut.isMapTarget = true;
                 targetInfoOut.mapKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs[0]);
                 targetInfoOut.mapValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs[1]);
+                targetInfoOut.structTypeName =
+                    inferExperimentalMapStructPathFromTypeTexts(collectionArgs[0], collectionArgs[1]);
                 return true;
               }
               auto extractParameterTypeName = [&](const Expr &paramExpr) {
@@ -299,6 +393,8 @@
                   targetInfoOut.mapValueKind == ir_lowerer::LocalInfo::ValueKind::Unknown) {
                 return false;
               }
+              targetInfoOut.structTypeName =
+                  inferExperimentalMapStructPathFromTypeTexts(keyTypeName, valueTypeName);
               return true;
             },
             [&](const Expr &targetCallExpr, ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut) {
@@ -308,10 +404,11 @@
                 if (!receiverStruct.empty()) {
                   StructSlotFieldInfo fieldInfo;
                   if (resolveStructFieldSlot(receiverStruct, targetCallExpr.name, fieldInfo) &&
-                      fieldInfo.structPath == "/vector") {
+                      isVectorStructPath(fieldInfo.structPath)) {
                     targetInfoOut.isArrayOrVectorTarget = true;
                     targetInfoOut.isVectorTarget = true;
                     targetInfoOut.elemKind = fieldInfo.valueKind;
+                    targetInfoOut.structTypeName = fieldInfo.structPath;
                     return true;
                   }
                 }

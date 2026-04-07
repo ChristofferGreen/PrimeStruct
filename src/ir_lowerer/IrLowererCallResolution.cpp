@@ -88,10 +88,8 @@ bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)
     if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2) {
       return matchesResolvedPath("/std/collections/map/at") ||
              matchesResolvedPath("/std/collections/mapAt") ||
-             matchesResolvedPath("/std/collections/experimental_map/mapAt") ||
              matchesResolvedPath("/std/collections/map/at_unsafe") ||
-             matchesResolvedPath("/std/collections/mapAtUnsafe") ||
-             matchesResolvedPath("/std/collections/experimental_map/mapAtUnsafe");
+             matchesResolvedPath("/std/collections/mapAtUnsafe");
     }
     std::string normalizedName = expr.name;
     if (!normalizedName.empty() && normalizedName.front() == '/') {
@@ -100,21 +98,18 @@ bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)
     if ((normalizedName == "contains" || normalizedName == "map/contains" ||
          normalizedName == "std/collections/map/contains") &&
         expr.args.size() == 2) {
-      return matchesResolvedPath("/std/collections/mapContains") ||
-             matchesResolvedPath("/std/collections/experimental_map/mapContains");
+      return matchesResolvedPath("/std/collections/mapContains");
     }
     if ((normalizedName == "tryAt" || normalizedName == "map/tryAt" ||
          normalizedName == "std/collections/map/tryAt") &&
         expr.args.size() == 2) {
-      return matchesResolvedPath("/std/collections/mapTryAt") ||
-             matchesResolvedPath("/std/collections/experimental_map/mapTryAt");
+      return matchesResolvedPath("/std/collections/mapTryAt");
     }
     if ((normalizedName == "count" || normalizedName == "map/count" ||
          normalizedName == "std/collections/map/count") &&
         expr.args.size() == 1) {
       return matchesResolvedPath("/std/collections/map/count") ||
-             matchesResolvedPath("/std/collections/mapCount") ||
-             matchesResolvedPath("/std/collections/experimental_map/mapCount");
+             matchesResolvedPath("/std/collections/mapCount");
     }
   }
   return false;
@@ -426,7 +421,16 @@ ResolveExprPathFn makeResolveCallPathFromScope(
         expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
       if (const std::string resolvedPath = findSemanticProductDirectCallTarget(semanticProductTargets, expr);
           !resolvedPath.empty() && !isResolvedBridgeHelperPath(resolvedPath)) {
-        return resolvedPath;
+        if (resolveDefinitionByPath(defMap, resolvedPath) != nullptr ||
+            expr.name.empty() || expr.name.front() != '/') {
+          return resolvedPath;
+        }
+        return resolveCallPathFromScopeWithoutImportAliases(expr, defMap);
+      }
+      // Lowering sometimes rewrites validated operators/helpers into rooted direct
+      // calls that do not have their own semantic-product direct-call fact.
+      if (!expr.name.empty() && expr.name.front() == '/') {
+        return resolveCallPathFromScopeWithoutImportAliases(expr, defMap);
       }
       return std::string{};
     }

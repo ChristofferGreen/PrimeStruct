@@ -314,7 +314,12 @@ bool validateSemanticProductLocalAutoCoverage(const Program &program,
         isLocalAutoBindingCandidate(expr)) {
       const SemanticProgramLocalAutoFact *localAutoFact =
           findSemanticProductLocalAutoFact(semanticProductTargets, expr);
-      if (localAutoFact == nullptr || localAutoFact->bindingTypeText.empty()) {
+      const SemanticProgramBindingFact *bindingFact =
+          findSemanticProductBindingFact(semanticProductTargets, expr);
+      const bool hasPublishedBindingType =
+          (localAutoFact != nullptr && !localAutoFact->bindingTypeText.empty()) ||
+          (bindingFact != nullptr && !bindingFact->bindingTypeText.empty());
+      if (!hasPublishedBindingType) {
         error = "missing semantic-product local-auto fact: " +
                 describeBindingSite(scopePath, "local", expr);
         return false;

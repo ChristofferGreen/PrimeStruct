@@ -313,7 +313,7 @@ public:
   std::vector<TypeMetadataSnapshotEntry> typeMetadataSnapshotForSemanticProduct() const;
   std::vector<StructFieldMetadataSnapshotEntry> structFieldMetadataSnapshotForSemanticProduct();
   std::vector<BindingFactSnapshotEntry> bindingFactSnapshotForSemanticProduct();
-  std::vector<ReturnFactSnapshotEntry> returnFactSnapshotForSemanticProduct() const;
+  std::vector<ReturnFactSnapshotEntry> returnFactSnapshotForSemanticProduct();
   std::vector<LocalAutoBindingSnapshotEntry> localAutoFactSnapshotForSemanticProduct() const;
   std::vector<QueryFactSnapshotEntry> queryFactSnapshotForSemanticProduct();
   std::vector<TryValueSnapshotEntry> tryFactSnapshotForSemanticProduct();

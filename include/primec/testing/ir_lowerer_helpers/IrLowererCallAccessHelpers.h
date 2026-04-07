@@ -235,6 +235,7 @@ void emitMapLookupAccessEpilogue(
 bool emitMapLookupAccess(
     const std::string &accessName,
     LocalInfo::ValueKind mapKeyKind,
+    const std::string &mapStructTypeName,
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
@@ -249,6 +250,7 @@ bool emitMapLookupAccess(
     std::string &error);
 bool emitMapLookupContains(
     LocalInfo::ValueKind mapKeyKind,
+    const std::string &mapStructTypeName,
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,

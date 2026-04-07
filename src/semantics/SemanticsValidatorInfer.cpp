@@ -38,9 +38,6 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     return ReturnKind::String;
   }
   if (expr.kind == Expr::Kind::Name) {
-    if (isBuiltinMathConstant(expr.name, allowMathBareName(expr.name))) {
-      return ReturnKind::Float64;
-    }
     if (const BindingInfo *paramBinding = findParamBinding(params, expr.name)) {
       if (paramBinding->typeName == "Reference" && !paramBinding->typeTemplateArg.empty()) {
         ReturnKind refKind = inferReferenceTargetKind(paramBinding->typeTemplateArg, expr.namespacePrefix);
@@ -79,6 +76,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       return ReturnKind::Array;
     }
     return returnKindForTypeName(bindingTypeText(it->second));
+  }
+  if (expr.kind == Expr::Kind::Name &&
+      isBuiltinMathConstant(expr.name, allowMathBareName(expr.name))) {
+    return ReturnKind::Float64;
   }
   if (expr.kind == Expr::Kind::Call) {
     if (expr.isFieldAccess) {

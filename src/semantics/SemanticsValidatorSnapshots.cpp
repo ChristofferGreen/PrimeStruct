@@ -665,7 +665,10 @@ SemanticsValidator::methodCallTargetSnapshotForSemanticProduct() {
                              resolvedPath,
                              builtin) ||
         resolvedPath.empty()) {
-      return;
+      resolvedPath = resolveCalleePath(expr);
+      if (resolvedPath.empty()) {
+        return;
+      }
     }
 
     BindingInfo receiverBinding;
@@ -968,16 +971,21 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
       continue;
     }
     const auto &defParams = paramsIt->second;
-    const size_t paramCount = std::min(def.parameters.size(), defParams.size());
+    const size_t syntheticLeadingParamCount =
+        (defParams.size() > def.parameters.size() && !defParams.empty() && defParams.front().name == "this")
+            ? (defParams.size() - def.parameters.size())
+            : 0;
+    const size_t paramCount =
+        std::min(def.parameters.size(), defParams.size() - std::min(defParams.size(), syntheticLeadingParamCount));
     for (size_t i = 0; i < paramCount; ++i) {
       entries.push_back(BindingFactSnapshotEntry{
           def.fullPath,
           "parameter",
-          defParams[i].name,
+          defParams[syntheticLeadingParamCount + i].name,
           {},
           def.parameters[i].sourceLine,
           def.parameters[i].sourceColumn,
-          defParams[i].binding,
+          defParams[syntheticLeadingParamCount + i].binding,
           def.parameters[i].semanticNodeId,
       });
     }
@@ -1139,9 +1147,19 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
 }
 
 std::vector<SemanticsValidator::ReturnFactSnapshotEntry>
-SemanticsValidator::returnFactSnapshotForSemanticProduct() const {
+SemanticsValidator::returnFactSnapshotForSemanticProduct() {
   std::vector<ReturnFactSnapshotEntry> entries;
   entries.reserve(program_.definitions.size());
+
+  auto withPreservedError = [&](const std::function<bool()> &fn) {
+    const std::string previousError = error_;
+    error_.clear();
+    const bool ok = fn();
+    error_.clear();
+    error_ = previousError;
+    return ok;
+  };
+
   for (const auto &definition : program_.definitions) {
     const auto kindIt = returnKinds_.find(definition.fullPath);
     if (kindIt == returnKinds_.end()) {
@@ -1153,8 +1171,7 @@ SemanticsValidator::returnFactSnapshotForSemanticProduct() const {
     entry.sourceLine = definition.returnExpr.has_value() ? definition.returnExpr->sourceLine : definition.sourceLine;
     entry.sourceColumn =
         definition.returnExpr.has_value() ? definition.returnExpr->sourceColumn : definition.sourceColumn;
-    entry.semanticNodeId =
-        definition.returnExpr.has_value() ? definition.returnExpr->semanticNodeId : definition.semanticNodeId;
+    entry.semanticNodeId = definition.semanticNodeId;
     if (const auto structIt = returnStructs_.find(definition.fullPath);
         structIt != returnStructs_.end()) {
       entry.structPath = structIt->second;
@@ -1162,6 +1179,23 @@ SemanticsValidator::returnFactSnapshotForSemanticProduct() const {
     if (const auto bindingIt = returnBindings_.find(definition.fullPath);
         bindingIt != returnBindings_.end()) {
       entry.binding = bindingIt->second;
+    }
+    if (entry.binding.typeName.empty()) {
+      BindingInfo inferredBinding;
+      if (withPreservedError([&]() {
+            return inferDefinitionReturnBinding(definition, inferredBinding);
+          })) {
+        entry.binding = std::move(inferredBinding);
+      }
+    }
+    if (entry.binding.typeName.empty()) {
+      if (entry.kind == ReturnKind::Array && !entry.structPath.empty()) {
+        entry.binding.typeName = entry.structPath;
+      } else if (entry.kind == ReturnKind::Void) {
+        entry.binding.typeName = "void";
+      } else if (entry.kind != ReturnKind::Unknown) {
+        entry.binding.typeName = typeNameForReturnKind(entry.kind);
+      }
     }
     entries.push_back(std::move(entry));
   }

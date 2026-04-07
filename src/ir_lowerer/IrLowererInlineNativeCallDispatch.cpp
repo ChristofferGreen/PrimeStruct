@@ -25,29 +25,24 @@ bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
     if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2) {
       return matchesHelper("/std/collections/map/at") ||
              matchesHelper("/std/collections/mapAt") ||
-             matchesHelper("/std/collections/experimental_map/mapAt") ||
              matchesHelper("/std/collections/map/at_unsafe") ||
-             matchesHelper("/std/collections/mapAtUnsafe") ||
-             matchesHelper("/std/collections/experimental_map/mapAtUnsafe");
+             matchesHelper("/std/collections/mapAtUnsafe");
     }
     if ((normalizedName == "contains" || normalizedName == "map/contains" ||
          normalizedName == "std/collections/map/contains") &&
         expr.args.size() == 2) {
-      return matchesHelper("/std/collections/mapContains") ||
-             matchesHelper("/std/collections/experimental_map/mapContains");
+      return matchesHelper("/std/collections/mapContains");
     }
     if ((normalizedName == "tryAt" || normalizedName == "map/tryAt" ||
          normalizedName == "std/collections/map/tryAt") &&
         expr.args.size() == 2) {
-      return matchesHelper("/std/collections/mapTryAt") ||
-             matchesHelper("/std/collections/experimental_map/mapTryAt");
+      return matchesHelper("/std/collections/mapTryAt");
     }
     if ((normalizedName == "count" || normalizedName == "map/count" ||
          normalizedName == "std/collections/map/count") &&
         expr.args.size() == 1) {
       return matchesHelper("/std/collections/map/count") ||
-             matchesHelper("/std/collections/mapCount") ||
-             matchesHelper("/std/collections/experimental_map/mapCount");
+             matchesHelper("/std/collections/mapCount");
     }
     return false;
   }
@@ -427,10 +422,11 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding) {
           return false;
         }
+        const auto arrayVectorTargetInfo = resolveArrayVectorAccessTargetInfo(receiverExpr, localsIn);
         if (resolveMapAccessTargetInfo(receiverExpr, localsIn).isMapTarget) {
           return true;
         }
-        if (resolveArrayVectorAccessTargetInfo(receiverExpr, localsIn).isArrayOrVectorTarget) {
+        if (arrayVectorTargetInfo.isArrayOrVectorTarget) {
           return true;
         }
         std::string collectionName;

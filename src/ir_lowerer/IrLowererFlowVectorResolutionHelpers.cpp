@@ -8,6 +8,12 @@
 namespace primec::ir_lowerer {
 
 namespace {
+bool isVectorStructPath(const std::string &structPath) {
+  return structPath == "/vector" ||
+         structPath == "/std/collections/experimental_vector/Vector" ||
+         structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+}
+
 bool checkedAddI64(int64_t lhs, int64_t rhs, int64_t &out) {
   if ((rhs > 0 && lhs > std::numeric_limits<int64_t>::max() - rhs) ||
       (rhs < 0 && lhs < std::numeric_limits<int64_t>::min() - rhs)) {
@@ -279,7 +285,7 @@ bool isMutableVectorTargetExpr(
     }
   }
   return expr.kind == Expr::Kind::Call && expr.isFieldAccess &&
-         inferStructExprPath(expr, localsIn) == "/vector";
+         isVectorStructPath(inferStructExprPath(expr, localsIn));
 }
 
 bool validateVectorStatementHelperTarget(
@@ -361,14 +367,14 @@ bool validateVectorStatementHelperTarget(
       }
       return true;
     }
-    if (target.isFieldAccess && inferStructExprPath(target, localsIn) == "/vector") {
+    if (target.isFieldAccess && isVectorStructPath(inferStructExprPath(target, localsIn))) {
       return true;
     }
     error = vectorHelper + " requires mutable vector binding";
     return false;
   }
   if (target.kind == Expr::Kind::Call && target.isFieldAccess &&
-      inferStructExprPath(target, localsIn) == "/vector") {
+      isVectorStructPath(inferStructExprPath(target, localsIn))) {
     return true;
   }
   error = vectorHelper + " requires mutable vector binding";

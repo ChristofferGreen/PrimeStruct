@@ -57,6 +57,20 @@ bool inferPointerMemoryIntrinsicTargetsUninitializedStorageImpl(const Expr &expr
 bool resolveSpecializedExperimentalMapStructPath(const std::string &typeText, std::string &structPathOut) {
   structPathOut.clear();
   std::string normalizedType = trimTemplateTypeText(typeText);
+  std::string base;
+  std::string argList;
+  if (splitTemplateTypeName(normalizedType, base, argList)) {
+    const std::string normalizedBase =
+        normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+    if ((normalizedBase == "Reference" || normalizedBase == "Pointer") && !argList.empty()) {
+      std::vector<std::string> wrappedArgs;
+      if (splitTemplateArgs(argList, wrappedArgs) && wrappedArgs.size() == 1) {
+        normalizedType = unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(wrappedArgs.front()));
+      } else {
+        normalizedType = unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(argList));
+      }
+    }
+  }
   if (!normalizedType.empty() && normalizedType.front() != '/') {
     normalizedType.insert(normalizedType.begin(), '/');
   }
@@ -65,12 +79,14 @@ bool resolveSpecializedExperimentalMapStructPath(const std::string &typeText, st
     return true;
   }
 
-  std::string base;
-  std::string argList;
   if (!splitTemplateTypeName(typeText, base, argList) ||
       normalizeCollectionBindingTypeName(base) != "map" ||
       argList.empty()) {
-    return false;
+    if (!splitTemplateTypeName(normalizedType, base, argList) ||
+        normalizeCollectionBindingTypeName(base) != "map" ||
+        argList.empty()) {
+      return false;
+    }
   }
 
   std::vector<std::string> templateArgs;
@@ -95,22 +111,6 @@ bool resolveSpecializedExperimentalMapStructPath(const std::string &typeText, st
   specializedPath << "/std/collections/experimental_map/Map__t" << std::hex << hash;
   structPathOut = specializedPath.str();
   return true;
-}
-
-bool namesExperimentalMapType(const std::string &typeText) {
-  std::string base;
-  std::string arg;
-  if (splitTemplateTypeName(typeText, base, arg)) {
-    base = trimTemplateTypeText(base);
-  } else {
-    base = trimTemplateTypeText(typeText);
-  }
-  if (!base.empty() && base.front() == '/') {
-    base.erase(base.begin());
-  }
-  return base == "Map" ||
-         base == "std/collections/experimental_map/Map" ||
-         base.rfind("std/collections/experimental_map/Map__", 0) == 0;
 }
 
 } // namespace
@@ -318,6 +318,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       infoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
       infoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
       infoOut.valueKind = infoOut.mapValueKind;
+      resolveSpecializedExperimentalMapStructPath(pointerTargetType, infoOut.structTypeName);
       return;
     }
     if (splitTemplateTypeName(pointerTargetType, pointerBase, pointerArg) &&
@@ -440,6 +441,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       infoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
       infoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
       infoOut.valueKind = infoOut.mapValueKind;
+      resolveSpecializedExperimentalMapStructPath(refBase + "<" + refArg + ">", infoOut.structTypeName);
       return;
     }
     if (refBase == "File") {
@@ -491,7 +493,6 @@ void applyArgsPackElementStructMetadata(const Expr &param,
   if (elementTypeText.empty() || !infoOut.structTypeName.empty()) {
     return;
   }
-
   Expr syntheticBinding;
   syntheticBinding.namespacePrefix = param.namespacePrefix;
 
@@ -527,8 +528,7 @@ void applyArgsPackElementStructMetadata(const Expr &param,
   }
 
   std::string specializedExperimentalMapStruct;
-  if (namesExperimentalMapType(elementTypeText) &&
-      resolveSpecializedExperimentalMapStructPath(elementTypeText, specializedExperimentalMapStruct)) {
+  if (resolveSpecializedExperimentalMapStructPath(elementTypeText, specializedExperimentalMapStruct)) {
     infoOut.structTypeName = specializedExperimentalMapStruct;
   }
 }

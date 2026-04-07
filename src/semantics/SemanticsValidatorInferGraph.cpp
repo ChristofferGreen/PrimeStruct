@@ -349,14 +349,17 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
     const std::string bindingKey =
         graphLocalAutoBindingKey(def.fullPath, sourceLine, sourceColumn);
     const auto dependencyIt = dependencyCountByBindingKey.find(bindingKey);
-    if (dependencyIt == dependencyCountByBindingKey.end() || bindingExpr.args.size() != 1) {
+    if (dependencyIt == dependencyCountByBindingKey.end()) {
       return false;
+    }
+    if (bindingExpr.args.size() != 1) {
+      return true;
     }
     const Expr &initializer = bindingExpr.args.front();
     if (initializer.kind != Expr::Kind::Call || initializer.isBinding) {
-      return false;
+      return true;
     }
-    if (dependencyIt->second == 1 && !initializer.isMethodCall && !isIfCall(initializer) &&
+    if (dependencyIt->second == 1 && !isIfCall(initializer) &&
         !isMatchCall(initializer) && !isBuiltinBlockCall(initializer)) {
       return true;
     }

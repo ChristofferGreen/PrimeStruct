@@ -8,9 +8,15 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+bool isExperimentalVectorStructPath(const std::string &structPath) {
+  return structPath == "/std/collections/experimental_vector/Vector" ||
+         structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+}
+
 bool usesBuiltinVectorValueStorage(const ArrayVectorAccessTargetInfo &targetInfo) {
   return targetInfo.isVectorTarget &&
-         (targetInfo.structTypeName.empty() || targetInfo.structTypeName == "/vector");
+         (targetInfo.structTypeName.empty() || targetInfo.structTypeName == "/vector" ||
+          isExperimentalVectorStructPath(targetInfo.structTypeName));
 }
 
 } // namespace
@@ -41,6 +47,7 @@ MapAccessLookupEmitResult tryEmitMapAccessLookup(
   if (!emitMapLookupAccess(
           accessName,
           mapTargetInfo.mapKeyKind,
+          mapTargetInfo.structTypeName,
           targetExpr,
           lookupKeyExpr,
           localsIn,
@@ -112,6 +119,7 @@ MapAccessLookupEmitResult tryEmitMapContainsLookup(
   }
   if (!emitMapLookupContains(
           mapTargetInfo.mapKeyKind,
+          mapTargetInfo.structTypeName,
           targetExpr,
           lookupKeyExpr,
           localsIn,
@@ -275,8 +283,7 @@ DynamicStringAccessEmitResult tryEmitDynamicStringAccessLoad(
 
 bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targetInfo, std::string &error) {
   const bool isStructArgsPackTarget =
-      targetInfo.isArgsPackTarget && !targetInfo.isVectorTarget && !targetInfo.structTypeName.empty() &&
-      targetInfo.elemSlotCount > 0;
+      targetInfo.isArgsPackTarget && !targetInfo.isVectorTarget && !targetInfo.structTypeName.empty();
   const bool isWrappedStructArgsPackTarget =
       targetInfo.isArgsPackTarget && !targetInfo.isVectorTarget && !targetInfo.structTypeName.empty() &&
       (targetInfo.argsPackElementKind == LocalInfo::Kind::Pointer ||
@@ -353,14 +360,20 @@ bool emitArrayVectorIndexedAccess(
       arrayVectorTargetInfo.isArgsPackTarget &&
       (arrayVectorTargetInfo.argsPackElementKind == LocalInfo::Kind::Pointer ||
        arrayVectorTargetInfo.argsPackElementKind == LocalInfo::Kind::Reference);
+  const bool isInlineStructArgsPackTarget =
+      arrayVectorTargetInfo.isArgsPackTarget &&
+      !arrayVectorTargetInfo.structTypeName.empty() &&
+      arrayVectorTargetInfo.elemSlotCount > 0 &&
+      !isWrappedStructArgsPackTarget;
   const bool targetUsesVectorStorageLayout =
       arrayVectorTargetInfo.isVectorTarget && !arrayVectorTargetInfo.isArgsPackTarget;
   const bool loadElementValue =
-      arrayVectorTargetInfo.structTypeName.empty() ||
-      arrayVectorTargetInfo.isMapTarget ||
-      arrayVectorTargetInfo.isWrappedMapTarget ||
-      usesBuiltinVectorValueStorage(arrayVectorTargetInfo) ||
-      isWrappedStructArgsPackTarget;
+      !isInlineStructArgsPackTarget &&
+      (arrayVectorTargetInfo.structTypeName.empty() ||
+       arrayVectorTargetInfo.isMapTarget ||
+       arrayVectorTargetInfo.isWrappedMapTarget ||
+       usesBuiltinVectorValueStorage(arrayVectorTargetInfo) ||
+       isWrappedStructArgsPackTarget);
 
   emitArrayVectorAccessLoad(
       accessName,
@@ -451,7 +464,16 @@ bool emitBuiltinArrayAccess(
 
   const auto arrayVectorTargetInfo = resolveArrayVectorAccessTargetInfo(
       targetExpr, localsIn, resolveCallArrayVectorAccessTargetInfo);
-  if (arrayVectorTargetInfo.isArgsPackTarget) {
+  const auto mapTargetInfo = resolveMapAccessTargetInfo(
+      targetExpr, localsIn, resolveCallMapAccessTargetInfo);
+  std::string nestedAccessName;
+  const bool isMapArgsPackElementTarget =
+      arrayVectorTargetInfo.isArgsPackTarget &&
+      targetExpr.kind == Expr::Kind::Call &&
+      getBuiltinArrayAccessName(targetExpr, nestedAccessName) &&
+      targetExpr.args.size() == 2 &&
+      mapTargetInfo.isMapTarget;
+  if (arrayVectorTargetInfo.isArgsPackTarget && !isMapArgsPackElementTarget) {
     return emitArrayVectorIndexedAccess(
         accessName,
         targetExpr,
@@ -468,6 +490,22 @@ bool emitBuiltinArrayAccess(
         error);
   }
 
+  if ((accessName == "at" || accessName == "at_unsafe") &&
+      mapTargetInfo.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+    const size_t suffixStart = mapTargetInfo.structTypeName.find("__");
+    if (suffixStart == std::string::npos) {
+      error = "experimental map helper missing specialization suffix";
+      return false;
+    }
+    Expr helperExpr;
+    helperExpr.kind = Expr::Kind::Call;
+    helperExpr.name =
+        "/std/collections/experimental_map/" +
+        std::string(accessName == "at" ? "mapAt" : "mapAtUnsafe") +
+        mapTargetInfo.structTypeName.substr(suffixStart);
+    helperExpr.args = {targetExpr, indexExpr};
+    return emitExpr(helperExpr, localsIn);
+  }
   const auto mapLookupResult = tryEmitMapAccessLookup(
       accessName,
       targetExpr,

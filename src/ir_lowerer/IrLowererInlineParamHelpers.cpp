@@ -1,6 +1,7 @@
 #include "IrLowererInlineParamHelpers.h"
 #include "IrLowererInlinePackedArgs.h"
 
+#include "IrLowererCallHelpers.h"
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererFlowHelpers.h"
 #include "IrLowererHelpers.h"
@@ -482,7 +483,9 @@ bool emitInlineDefinitionCallParameters(
       continue;
     }
 
-    if (paramInfo.kind == LocalInfo::Kind::Value && paramInfo.isMutable && !paramInfo.structTypeName.empty()) {
+    if ((paramInfo.kind == LocalInfo::Kind::Value ||
+         paramInfo.kind == LocalInfo::Kind::Map) &&
+        paramInfo.isMutable && !paramInfo.structTypeName.empty()) {
       if (!orderedArg) {
         error = "argument count mismatch";
         return false;
@@ -522,7 +525,9 @@ bool emitInlineDefinitionCallParameters(
       continue;
     }
 
-    if (paramInfo.kind == LocalInfo::Kind::Value && !paramInfo.structTypeName.empty()) {
+    if ((paramInfo.kind == LocalInfo::Kind::Value ||
+         paramInfo.kind == LocalInfo::Kind::Map) &&
+        !paramInfo.structTypeName.empty()) {
       if (!orderedArg) {
         error = "argument count mismatch";
         return false;
@@ -555,10 +560,45 @@ bool emitInlineDefinitionCallParameters(
       emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal));
       emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal));
       emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index));
-      if (!emitExpr(*orderedArg, callerLocals)) {
+      const int32_t srcPtrLocal = allocTempLocal();
+      bool emittedStructArgsPackAccessArg = false;
+      std::string accessName;
+      if (orderedArg->kind == Expr::Kind::Call &&
+          getBuiltinArrayAccessName(*orderedArg, accessName) &&
+          orderedArg->args.size() == 2) {
+        const auto targetInfo =
+            ir_lowerer::resolveArrayVectorAccessTargetInfo(orderedArg->args.front(), callerLocals);
+        const bool isStructArgsPackAccess =
+            targetInfo.isArgsPackTarget &&
+            !targetInfo.isVectorTarget &&
+            !targetInfo.structTypeName.empty() &&
+            targetInfo.elemSlotCount > 0;
+        if (isStructArgsPackAccess) {
+          if (!ir_lowerer::emitArrayVectorIndexedAccess(
+                  accessName,
+                  orderedArg->args.front(),
+                  orderedArg->args[1],
+                  callerLocals,
+                  [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+                    return inferExprKind(valueExpr, valueLocals);
+                  },
+                  [&]() { return allocTempLocal(); },
+                  [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+                    return emitExpr(valueExpr, valueLocals);
+                  },
+                  []() {},
+                  []() { return 0; },
+                  emitInstruction,
+                  [](size_t, uint64_t) {},
+                  error)) {
+            return false;
+          }
+          emittedStructArgsPackAccessArg = true;
+        }
+      }
+      if (!emittedStructArgsPackAccessArg && !emitExpr(*orderedArg, callerLocals)) {
         return false;
       }
-      const int32_t srcPtrLocal = allocTempLocal();
       emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal));
       if (builtinSoaToAosStructBridge) {
         if (!emitBuiltinSoaToAosStructBridge(baseLocal,

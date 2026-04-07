@@ -291,12 +291,19 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
+  auto stripGeneratedSuffix = [](std::string alias) {
+    const size_t suffix = alias.find("__");
+    if (suffix != std::string::npos) {
+      alias.erase(suffix);
+    }
+    return alias;
+  };
   std::string name = expr.name;
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
   if (name.rfind("vector/", 0) == 0) {
-    std::string alias = name.substr(std::string("vector/").size());
+    std::string alias = stripGeneratedSuffix(name.substr(std::string("vector/").size()));
     if (alias == "at" || alias == "at_unsafe") {
       out = alias;
       return true;
@@ -304,7 +311,7 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     return false;
   }
   if (name.rfind("std/collections/vector/", 0) == 0) {
-    std::string alias = name.substr(std::string("std/collections/vector/").size());
+    std::string alias = stripGeneratedSuffix(name.substr(std::string("std/collections/vector/").size()));
     if (alias == "at" || alias == "at_unsafe") {
       out = alias;
       return true;
@@ -315,7 +322,7 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     return false;
   }
   if (name.rfind("map/", 0) == 0) {
-    std::string alias = name.substr(std::string("map/").size());
+    std::string alias = stripGeneratedSuffix(name.substr(std::string("map/").size()));
     if (alias == "at" || alias == "at_unsafe") {
       out = alias;
       return true;
@@ -323,13 +330,15 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     return false;
   }
   if (name.rfind("std/collections/map/", 0) == 0) {
-    std::string alias = name.substr(std::string("std/collections/map/").size());
+    std::string alias =
+        stripGeneratedSuffix(name.substr(std::string("std/collections/map/").size()));
     if (alias == "at" || alias == "at_unsafe") {
       out = alias;
       return true;
     }
     return false;
   }
+  name = stripGeneratedSuffix(std::move(name));
   if (name.find('/') != std::string::npos) {
     return false;
   }

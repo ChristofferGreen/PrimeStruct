@@ -1,5 +1,9 @@
 #include "IrLowererStatementBindingHelpers.h"
 
+#include <algorithm>
+#include <cctype>
+#include <sstream>
+
 #include "IrLowererStatementBindingInternal.h"
 
 #include "IrLowererCallHelpers.h"
@@ -117,6 +121,50 @@ bool resolveSpecializedExperimentalMapTypeKinds(const std::string &typeText,
          valueKindOut != LocalInfo::ValueKind::Unknown;
 }
 
+bool resolveSpecializedExperimentalMapStructPathFromTypeText(const std::string &typeText,
+                                                             std::string &structPathOut) {
+  structPathOut.clear();
+  std::string normalizedType = trimTemplateTypeText(typeText);
+  if (!normalizedType.empty() && normalizedType.front() != '/') {
+    normalizedType.insert(normalizedType.begin(), '/');
+  }
+  if (normalizedType.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+    structPathOut = normalizedType;
+    return true;
+  }
+
+  std::string base;
+  std::string argList;
+  if (!splitTemplateTypeName(typeText, base, argList) ||
+      normalizeCollectionBindingTypeName(base) != "map" ||
+      argList.empty()) {
+    return false;
+  }
+
+  std::vector<std::string> templateArgs;
+  if (!splitTemplateArgs(argList, templateArgs) || templateArgs.size() != 2) {
+    return false;
+  }
+
+  std::string canonicalArgs = joinTemplateArgsText(templateArgs);
+  canonicalArgs.erase(
+      std::remove_if(canonicalArgs.begin(),
+                     canonicalArgs.end(),
+                     [](unsigned char ch) { return std::isspace(ch) != 0; }),
+      canonicalArgs.end());
+
+  uint64_t hash = 1469598103934665603ULL;
+  for (unsigned char ch : canonicalArgs) {
+    hash ^= static_cast<uint64_t>(ch);
+    hash *= 1099511628211ULL;
+  }
+
+  std::ostringstream specializedPath;
+  specializedPath << "/std/collections/experimental_map/Map__t" << std::hex << hash;
+  structPathOut = specializedPath.str();
+  return true;
+}
+
 bool isIfBlockEnvelopeForBindingTypeInfo(const Expr &candidate) {
   if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
     return false;
@@ -192,6 +240,7 @@ bool populateBindingTypeInfoFromTypeText(
     infoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
     infoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
     infoOut.valueKind = infoOut.mapValueKind;
+    resolveSpecializedExperimentalMapStructPathFromTypeText(normalizedTypeText, infoOut.structTypeName);
     return true;
   }
   if (normalizedBase == "Pointer" || normalizedBase == "Reference") {
@@ -229,6 +278,7 @@ bool populateBindingTypeInfoFromTypeText(
       infoOut.mapKeyKind = keyKind;
       infoOut.mapValueKind = valueKind;
       infoOut.valueKind = valueKind;
+      infoOut.structTypeName = normalizedTypeText;
       return true;
     }
   }
@@ -413,6 +463,8 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
                                                        const BindingKindFn &bindingKind,
                                                        const BindingValueKindFn &bindingValueKind,
                                                        const InferBindingExprKindFn &inferExprKind) {
+  const ResolveDefinitionCallForStatementFn noopResolveDefinitionCall =
+      [](const Expr &) -> const Definition * { return nullptr; };
   return inferStatementBindingTypeInfo(stmt,
                                        init,
                                        localsIn,
@@ -420,7 +472,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
                                        bindingKind,
                                        bindingValueKind,
                                        inferExprKind,
-                                       {});
+                                       noopResolveDefinitionCall);
 }
 
 StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
@@ -646,6 +698,16 @@ bool inferCallParameterLocalInfo(const Expr &param,
         infoOut.mapKeyKind = valueKindFromTypeName(transform.templateArgs[0]);
         infoOut.mapValueKind = valueKindFromTypeName(transform.templateArgs[1]);
         infoOut.valueKind = infoOut.mapValueKind;
+        if (infoOut.structTypeName.empty()) {
+          std::string declaredType = transform.name + "<" +
+                                     trimTemplateTypeText(transform.templateArgs[0]) + ", " +
+                                     trimTemplateTypeText(transform.templateArgs[1]) + ">";
+          std::string specializedStructPath;
+          if (resolveSpecializedExperimentalMapStructPathFromTypeText(
+                  declaredType, specializedStructPath)) {
+            infoOut.structTypeName = std::move(specializedStructPath);
+          }
+        }
         break;
       }
     }
@@ -739,6 +801,9 @@ bool inferCallParameterLocalInfo(const Expr &param,
           infoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
           infoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
           infoOut.valueKind = infoOut.mapValueKind;
+          if (infoOut.structTypeName.empty()) {
+            resolveSpecializedExperimentalMapStructPathFromTypeText(targetType, infoOut.structTypeName);
+          }
         }
       }
       if (transform.name == "Pointer" &&

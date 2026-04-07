@@ -77,34 +77,6 @@
         if (rewriteStdlibMapConstructorExpr(expr, rewrittenStdlibMapConstructorExpr)) {
           return emitExpr(rewrittenStdlibMapConstructorExpr, localsIn);
         }
-        auto rewriteTemporaryMapMethodToDirectHelperExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
-          if (callExpr.kind != Expr::Kind::Call || !callExpr.isMethodCall || callExpr.args.empty()) {
-            return false;
-          }
-          std::string helperName = callExpr.name;
-          if (!helperName.empty() && helperName.front() == '/') {
-            helperName.erase(helperName.begin());
-          }
-          if (helperName != "count" && helperName != "contains" && helperName != "tryAt" &&
-              helperName != "at" && helperName != "at_unsafe") {
-            return false;
-          }
-          const Expr &receiverExpr = callExpr.args.front();
-          if (receiverExpr.kind != Expr::Kind::Call ||
-              !ir_lowerer::resolveMapAccessTargetInfo(receiverExpr, localsIn).isMapTarget) {
-            return false;
-          }
-          rewrittenExpr = callExpr;
-          rewrittenExpr.isMethodCall = false;
-          rewrittenExpr.namespacePrefix = "/std/collections/map";
-          rewrittenExpr.name = helperName;
-          rewrittenExpr.templateArgs.clear();
-          return true;
-        };
-        Expr rewrittenTemporaryMapMethodHelperExpr;
-        if (rewriteTemporaryMapMethodToDirectHelperExpr(expr, rewrittenTemporaryMapMethodHelperExpr)) {
-          return emitExpr(rewrittenTemporaryMapMethodHelperExpr, localsIn);
-        }
         auto rejectCanonicalVectorTemporaryReceiverExpr = [&](const Expr &callExpr) -> bool {
           if (callExpr.kind != Expr::Kind::Call || callExpr.args.empty()) {
             return false;
@@ -165,10 +137,14 @@
           if (callExpr.kind != Expr::Kind::Call || callExpr.args.empty()) {
             return std::nullopt;
           }
-
           std::string helperName;
           const Expr *receiverExpr = nullptr;
           auto matchesDirectHelperName = [&](const Expr &candidate, std::string_view bareName) {
+            auto matchesResolvedPath = [&](std::string_view basePath) {
+              const std::string resolvedPath = resolveExprPath(candidate);
+              return resolvedPath == basePath ||
+                     resolvedPath.rfind(std::string(basePath) + "__t", 0) == 0;
+            };
             if (isSimpleCallName(candidate, bareName.data())) {
               return true;
             }
@@ -176,9 +152,30 @@
             if (!normalizedName.empty() && normalizedName.front() == '/') {
               normalizedName.erase(normalizedName.begin());
             }
-            return normalizedName == bareName ||
-                   normalizedName == "map/" + std::string(bareName) ||
-                   normalizedName == "std/collections/map/" + std::string(bareName);
+            if (normalizedName == bareName ||
+                normalizedName == "map/" + std::string(bareName) ||
+                normalizedName == "std/collections/map/" + std::string(bareName)) {
+              return true;
+            }
+            if (bareName == "at") {
+              return matchesResolvedPath("/std/collections/map/at") ||
+                     matchesResolvedPath("/std/collections/mapAt");
+            }
+            if (bareName == "at_unsafe") {
+              return matchesResolvedPath("/std/collections/map/at_unsafe") ||
+                     matchesResolvedPath("/std/collections/mapAtUnsafe");
+            }
+            if (bareName == "count") {
+              return matchesResolvedPath("/std/collections/map/count") ||
+                     matchesResolvedPath("/std/collections/mapCount");
+            }
+            if (bareName == "contains") {
+              return matchesResolvedPath("/std/collections/mapContains");
+            }
+            if (bareName == "tryAt") {
+              return matchesResolvedPath("/std/collections/mapTryAt");
+            }
+            return false;
           };
           if (callExpr.isMethodCall) {
             helperName = callExpr.name;
@@ -186,6 +183,8 @@
           } else if (getBuiltinArrayAccessName(callExpr, helperName) && callExpr.args.size() == 2) {
             receiverExpr = &callExpr.args.front();
           } else if ((matchesDirectHelperName(callExpr, "count") ||
+                      matchesDirectHelperName(callExpr, "at") ||
+                      matchesDirectHelperName(callExpr, "at_unsafe") ||
                       matchesDirectHelperName(callExpr, "contains") ||
                       matchesDirectHelperName(callExpr, "tryAt") ||
                       matchesDirectHelperName(callExpr, "capacity")) &&
@@ -198,6 +197,21 @@
             if (lastSlash != std::string::npos) {
               helperName = helperName.substr(lastSlash + 1);
             }
+            const size_t specializationSuffix = helperName.find("__t");
+            if (specializationSuffix != std::string::npos) {
+              helperName.erase(specializationSuffix);
+            }
+            if (helperName == "mapCount") {
+              helperName = "count";
+            } else if (helperName == "mapContains") {
+              helperName = "contains";
+            } else if (helperName == "mapTryAt") {
+              helperName = "tryAt";
+            } else if (helperName == "mapAt") {
+              helperName = "at";
+            } else if (helperName == "mapAtUnsafe") {
+              helperName = "at_unsafe";
+            }
             receiverExpr = &callExpr.args.front();
           } else {
             return std::nullopt;
@@ -206,16 +220,99 @@
           if (receiverExpr == nullptr || receiverExpr->kind != Expr::Kind::Call) {
             return std::nullopt;
           }
-
-          const Definition *receiverDef = resolveDefinitionCall(*receiverExpr);
-          if (receiverDef == nullptr) {
-            return std::nullopt;
-          }
-
           std::string collectionName;
           std::vector<std::string> collectionArgs;
-          if (!ir_lowerer::inferDeclaredReturnCollection(*receiverDef, collectionName, collectionArgs)) {
-            return std::nullopt;
+          std::string collectionStructPath;
+          const Definition *receiverDef = resolveDefinitionCall(*receiverExpr);
+          const bool resolvedCollectionFromDef =
+              receiverDef != nullptr &&
+              ir_lowerer::inferDeclaredReturnCollection(*receiverDef, collectionName, collectionArgs);
+          if (resolvedCollectionFromDef) {
+            collectionStructPath = inferStructExprPath(*receiverExpr, localsIn);
+            if (collectionStructPath.empty() &&
+                receiverDef->fullPath.rfind("/std/collections/experimental_map/", 0) == 0) {
+              const std::string suffix =
+                  receiverDef->fullPath.substr(std::string("/std/collections/experimental_map/").size());
+              auto remapExperimentalMapConstructor = [&](std::string_view helperStem) -> std::string {
+                const std::string helperPrefix = std::string(helperStem) + "__";
+                if (suffix.rfind(helperPrefix, 0) != 0) {
+                  return {};
+                }
+                return "/std/collections/experimental_map/Map__" + suffix.substr(helperPrefix.size());
+              };
+              if (std::string structPath = remapExperimentalMapConstructor("mapNew"); !structPath.empty()) {
+                collectionStructPath = std::move(structPath);
+              } else if (std::string structPath = remapExperimentalMapConstructor("mapSingle");
+                         !structPath.empty()) {
+                collectionStructPath = std::move(structPath);
+              } else if (std::string structPath = remapExperimentalMapConstructor("mapDouble");
+                         !structPath.empty()) {
+                collectionStructPath = std::move(structPath);
+              } else if (std::string structPath = remapExperimentalMapConstructor("mapPair");
+                         !structPath.empty()) {
+                collectionStructPath = std::move(structPath);
+              } else if (std::string structPath = remapExperimentalMapConstructor("mapTriple");
+                         !structPath.empty()) {
+                collectionStructPath = std::move(structPath);
+              } else if (std::string structPath = remapExperimentalMapConstructor("mapQuad");
+                         !structPath.empty()) {
+                collectionStructPath = std::move(structPath);
+              } else if (std::string structPath = remapExperimentalMapConstructor("mapQuint");
+                         !structPath.empty()) {
+                collectionStructPath = std::move(structPath);
+              } else if (std::string structPath = remapExperimentalMapConstructor("mapSext");
+                         !structPath.empty()) {
+                collectionStructPath = std::move(structPath);
+              } else if (std::string structPath = remapExperimentalMapConstructor("mapSept");
+                         !structPath.empty()) {
+                collectionStructPath = std::move(structPath);
+              } else {
+                collectionStructPath = remapExperimentalMapConstructor("mapOct");
+              }
+            }
+          }
+          if (!resolvedCollectionFromDef) {
+            const auto mapTargetInfo = ir_lowerer::resolveMapAccessTargetInfo(*receiverExpr, localsIn);
+            const auto arrayVectorTargetInfo =
+                ir_lowerer::resolveArrayVectorAccessTargetInfo(*receiverExpr, localsIn);
+            const bool isWrappedMapReceiverExpr = [&]() {
+              if (arrayVectorTargetInfo.isWrappedMapTarget) {
+                return true;
+              }
+              if (receiverExpr->kind != Expr::Kind::Name) {
+                return false;
+              }
+              auto localIt = localsIn.find(receiverExpr->name);
+              if (localIt == localsIn.end()) {
+                return false;
+              }
+              return (localIt->second.kind == ir_lowerer::LocalInfo::Kind::Reference &&
+                      localIt->second.referenceToMap) ||
+                     (localIt->second.kind == ir_lowerer::LocalInfo::Kind::Pointer &&
+                      localIt->second.pointerToMap);
+            }();
+            if (mapTargetInfo.isMapTarget && isWrappedMapReceiverExpr) {
+              return std::nullopt;
+            }
+            if (mapTargetInfo.isMapTarget) {
+              collectionName = "map";
+              if (mapTargetInfo.mapKeyKind != ir_lowerer::LocalInfo::ValueKind::Unknown &&
+                  mapTargetInfo.mapValueKind != ir_lowerer::LocalInfo::ValueKind::Unknown) {
+                collectionArgs = {
+                    ir_lowerer::typeNameForValueKind(mapTargetInfo.mapKeyKind),
+                    ir_lowerer::typeNameForValueKind(mapTargetInfo.mapValueKind),
+                };
+              }
+              collectionStructPath = arrayVectorTargetInfo.structTypeName;
+            } else if (arrayVectorTargetInfo.isArrayOrVectorTarget) {
+              collectionName = arrayVectorTargetInfo.isVectorTarget ? "vector" : "array";
+              if (arrayVectorTargetInfo.elemKind != ir_lowerer::LocalInfo::ValueKind::Unknown) {
+                collectionArgs = {ir_lowerer::typeNameForValueKind(arrayVectorTargetInfo.elemKind)};
+              }
+              collectionStructPath = arrayVectorTargetInfo.structTypeName;
+            } else {
+              return std::nullopt;
+            }
           }
 
           auto supportsHelperForCollection = [&](const std::string &name) {
@@ -232,17 +329,108 @@
           if (!supportsHelperForCollection(helperName)) {
             return std::nullopt;
           }
-
           ir_lowerer::LocalInfo materializedInfo;
-          materializedInfo.index = allocTempLocal();
+          auto emitCollectionReceiverValue = [&](const Expr &valueExpr) {
+            std::string accessName;
+            if (valueExpr.kind == Expr::Kind::Call &&
+                getBuiltinArrayAccessName(valueExpr, accessName) &&
+                valueExpr.args.size() == 2) {
+              const auto targetInfo =
+                  ir_lowerer::resolveArrayVectorAccessTargetInfo(valueExpr.args.front(), localsIn);
+              const bool isStructArgsPackAccess =
+                  targetInfo.isArgsPackTarget &&
+                  !targetInfo.isVectorTarget &&
+                  !targetInfo.structTypeName.empty() &&
+                  targetInfo.elemSlotCount > 0 &&
+                  !targetInfo.isMapTarget &&
+                  !targetInfo.isWrappedMapTarget;
+              if (isStructArgsPackAccess) {
+                return ir_lowerer::emitArrayVectorIndexedAccess(
+                    accessName,
+                    valueExpr.args.front(),
+                    valueExpr.args[1],
+                    localsIn,
+                    [&](const Expr &indexExpr, const LocalMap &indexLocals) {
+                      return inferExprKind(indexExpr, indexLocals);
+                    },
+                    [&]() { return allocTempLocal(); },
+                    [&](const Expr &nestedExpr, const LocalMap &nestedLocals) {
+                      return emitExpr(nestedExpr, nestedLocals);
+                    },
+                    [&]() { emitArrayIndexOutOfBounds(); },
+                    [&]() { return function.instructions.size(); },
+                    [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                    [&](size_t indexToPatch, uint64_t target) {
+                      function.instructions[indexToPatch].imm = target;
+                    },
+                    error);
+              }
+            }
+            return emitExpr(valueExpr, localsIn);
+          };
+          if (!collectionStructPath.empty() && collectionName != "map") {
+            StructSlotLayoutInfo layout;
+            if (!resolveStructSlotLayout(collectionStructPath, layout)) {
+              error = "internal error: missing struct slot layout for " + collectionStructPath;
+              return false;
+            }
+
+            const int32_t baseLocal = nextLocal;
+            nextLocal += layout.totalSlots;
+            materializedInfo.index = nextLocal++;
+            materializedInfo.kind = collectionName == "map"
+                                        ? ir_lowerer::LocalInfo::Kind::Map
+                                        : ir_lowerer::LocalInfo::Kind::Value;
+            materializedInfo.valueKind = ir_lowerer::LocalInfo::ValueKind::Int64;
+            materializedInfo.structTypeName = collectionStructPath;
+            materializedInfo.structSlotCount = layout.totalSlots;
+            if (collectionArgs.size() == 2) {
+              materializedInfo.mapKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
+              materializedInfo.mapValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs.back());
+            }
+
+            if (!emitCollectionReceiverValue(*receiverExpr)) {
+              return false;
+            }
+            const int32_t srcPtrLocal = allocTempLocal();
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+            function.instructions.push_back(
+                {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(layout.totalSlots - 1))});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
+            function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(materializedInfo.index)});
+            if (!emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
+              return false;
+            }
+            if (receiverExpr->kind == Expr::Kind::Call) {
+              ir_lowerer::emitDisarmTemporaryStructAfterCopy(
+                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                  srcPtrLocal,
+                  collectionStructPath);
+            }
+          } else {
+            materializedInfo.index = allocTempLocal();
+          }
+
           if (collectionName == "map") {
-            if (collectionArgs.size() != 2) {
+            if (collectionArgs.size() == 2) {
+              materializedInfo.kind = ir_lowerer::LocalInfo::Kind::Map;
+              materializedInfo.mapKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
+              materializedInfo.mapValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs.back());
+              materializedInfo.valueKind = materializedInfo.mapValueKind;
+              if (collectionStructPath.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+                materializedInfo.structTypeName = collectionStructPath;
+                if (materializedInfo.structSlotCount <= 0) {
+                  StructSlotLayoutInfo layout;
+                  if (!resolveStructSlotLayout(collectionStructPath, layout)) {
+                    return false;
+                  }
+                  materializedInfo.structSlotCount = layout.totalSlots;
+                }
+              }
+            } else {
               return std::nullopt;
             }
-            materializedInfo.kind = ir_lowerer::LocalInfo::Kind::Map;
-            materializedInfo.mapKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
-            materializedInfo.mapValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs.back());
-            materializedInfo.valueKind = materializedInfo.mapValueKind;
           } else if (collectionName == "vector") {
             return std::nullopt;
           } else {
@@ -255,17 +443,42 @@
             materializedInfo.valueKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
           }
 
-          if (!emitExpr(*receiverExpr, localsIn)) {
-            return false;
+          if (collectionStructPath.empty() || collectionName == "map") {
+            if (!emitCollectionReceiverValue(*receiverExpr)) {
+              return false;
+            }
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(materializedInfo.index)});
           }
-          function.instructions.push_back(
-              {IrOpcode::StoreLocal, static_cast<uint64_t>(materializedInfo.index)});
 
           Expr rewrittenExpr = callExpr;
           Expr rewrittenReceiver;
           rewrittenReceiver.kind = Expr::Kind::Name;
           rewrittenReceiver.name = "__collection_receiver_" + std::to_string(materializedInfo.index);
           rewrittenExpr.args.front() = rewrittenReceiver;
+          if (collectionName == "map" &&
+              collectionStructPath.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+            const size_t suffixStart = collectionStructPath.find("__");
+            std::string helperStem;
+            if (helperName == "count") {
+              helperStem = "mapCount";
+            } else if (helperName == "contains") {
+              helperStem = "mapContains";
+            } else if (helperName == "tryAt") {
+              helperStem = "mapTryAt";
+            } else if (helperName == "at") {
+              helperStem = "mapAt";
+            } else if (helperName == "at_unsafe") {
+              helperStem = "mapAtUnsafe";
+            }
+            if (!helperStem.empty() && suffixStart != std::string::npos) {
+              rewrittenExpr.name =
+                  "/std/collections/experimental_map/" + helperStem + collectionStructPath.substr(suffixStart);
+              rewrittenExpr.namespacePrefix.clear();
+              rewrittenExpr.isMethodCall = false;
+              rewrittenExpr.templateArgs.clear();
+            }
+          }
 
           ir_lowerer::LocalMap rewrittenLocals = localsIn;
           rewrittenLocals.emplace(rewrittenReceiver.name, materializedInfo);

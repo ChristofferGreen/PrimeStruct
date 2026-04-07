@@ -362,6 +362,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product entry parameter facts") {
 
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 81;
   primec::Expr entryParam;
   entryParam.name = "argv";
   primec::Transform arrayTransform;
@@ -389,7 +390,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product entry parameter facts") {
       .onErrorHandlerPath = "",
       .onErrorErrorType = "",
       .onErrorBoundArgCount = 0,
-      .semanticNodeId = 0,
+      .semanticNodeId = 81,
   });
   semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
       .definitionPath = "/main",
@@ -402,7 +403,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product entry parameter facts") {
       .referenceRoot = "",
       .sourceLine = 0,
       .sourceColumn = 0,
-      .semanticNodeId = 0,
+      .semanticNodeId = 81,
   });
 
   primec::IrLowerer lowerer;

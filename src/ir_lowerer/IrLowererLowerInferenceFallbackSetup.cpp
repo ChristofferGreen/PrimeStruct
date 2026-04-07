@@ -6,6 +6,22 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+bool isVectorCollectionStructPath(const std::string &structPath) {
+  return structPath == "/vector" ||
+         structPath == "/std/collections/experimental_vector/Vector" ||
+         structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+}
+
+bool isMapCollectionStructPath(const std::string &structPath) {
+  return structPath == "/map" ||
+         structPath == "/std/collections/experimental_map/Map" ||
+         structPath.rfind("/std/collections/experimental_map/Map__", 0) == 0;
+}
+
+} // namespace
+
 bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCallFallbackSetupInput &input,
                                                 LowerInferenceSetupBootstrapState &stateInOut,
                                                 std::string &errorOut) {
@@ -196,7 +212,7 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
 
         std::string fieldStructPath;
         if (resolveFieldAccessCollectionInfo(candidate, candidateLocals, fieldStructPath, kindOut) &&
-            fieldStructPath == "/vector") {
+            isVectorCollectionStructPath(fieldStructPath)) {
           return true;
         }
 
@@ -296,7 +312,8 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
                     LocalInfo::ValueKind fieldValueKind = LocalInfo::ValueKind::Unknown;
                     if (resolveFieldAccessCollectionInfo(
                             candidateExpr.args.front(), candidateLocals, fieldStructPath, fieldValueKind)) {
-                      return fieldStructPath == "/vector" || fieldStructPath == "/map";
+                      return isVectorCollectionStructPath(fieldStructPath) ||
+                             isMapCollectionStructPath(fieldStructPath);
                     }
                     LocalInfo::ValueKind receiverCollectionKind = LocalInfo::ValueKind::Unknown;
                     if (resolveCallCollectionAccessValueKind(
@@ -323,7 +340,7 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
                     LocalInfo::ValueKind fieldValueKind = LocalInfo::ValueKind::Unknown;
                     if (resolveFieldAccessCollectionInfo(
                             candidateExpr.args.front(), candidateLocals, fieldStructPath, fieldValueKind)) {
-                      return fieldStructPath == "/vector";
+                      return isVectorCollectionStructPath(fieldStructPath);
                     }
                   }
                   return isVectorCapacityCall(candidateExpr, candidateLocals);

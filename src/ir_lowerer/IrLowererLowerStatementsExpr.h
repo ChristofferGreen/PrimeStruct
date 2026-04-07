@@ -9,19 +9,32 @@
               const auto targetInfo =
                   ir_lowerer::resolveArrayVectorAccessTargetInfo(targetExpr, targetLocals);
               const std::string structPath = inferStructExprPath(targetExpr, targetLocals);
+              const bool isExperimentalVectorTarget =
+                  structPath == "/std/collections/experimental_vector/Vector" ||
+                  structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+              const bool isExperimentalMapTarget =
+                  structPath == "/std/collections/experimental_map/Map" ||
+                  structPath.rfind("/std/collections/experimental_map/Map__", 0) == 0;
               return targetInfo.isArrayOrVectorTarget || structPath == "/array" ||
                      structPath == "/vector" || structPath == "/Buffer" || structPath == "/map" ||
-                     structPath == "/soa_vector";
+                     structPath == "/soa_vector" || isExperimentalVectorTarget ||
+                     isExperimentalMapTarget;
             },
             [&](const Expr &targetExpr, const LocalMap &targetLocals) {
               const auto targetInfo =
                   ir_lowerer::resolveArrayVectorAccessTargetInfo(targetExpr, targetLocals);
-              return targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget;
+              const std::string structPath = inferStructExprPath(targetExpr, targetLocals);
+              return (targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget) ||
+                     structPath == "/std/collections/experimental_vector/Vector" ||
+                     structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
             },
             [&](const Expr &targetExpr, const LocalMap &targetLocals) {
               const auto targetInfo =
                   ir_lowerer::resolveArrayVectorAccessTargetInfo(targetExpr, targetLocals);
-              return targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget;
+              const std::string structPath = inferStructExprPath(targetExpr, targetLocals);
+              return (targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget) ||
+                     structPath == "/std/collections/experimental_vector/Vector" ||
+                     structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
             },
             inferExprKind,
             resolveStringTableTarget,
