@@ -280,10 +280,10 @@
             "contextOut.resolvedCallArgumentContext = {") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
-            "const std::string canonicalMapMethodTarget =") ==
+            "rewrittenMapMethodCall.name = preferredMapMethodTargetForCall(") ==
         std::string::npos);
   CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
-            "const std::string canonicalMapMethodTarget =") !=
+            "rewrittenMapMethodCall.name = preferredMapMethodTargetForCall(") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "return failLateUnknownTargetDiagnostic(\"unknown call target: \" +") ==
@@ -418,7 +418,7 @@
             "return failExprDiagnostic(expr, std::move(message));") !=
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
-            "count requires map target") != std::string::npos);
+            "countHelperName + \" requires map target\"") != std::string::npos);
   CHECK(semanticsExprCollectionAccessSource.find(
             "bool SemanticsValidator::resolveExprCollectionAccessTarget") !=
         std::string::npos);
@@ -582,7 +582,7 @@
             "return failExprDiagnostic(expr, std::move(message));") !=
         std::string::npos);
   CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
-            "const std::string aliasMapMethodTarget = \"/map/\" + expr.name;") !=
+            "if (rewrittenMapMethodCall.name.empty()) {") !=
         std::string::npos);
   CHECK(semanticsExprStructConstructorsSource.find(
             "bool SemanticsValidator::validateExprResolvedStructConstructorCall") !=

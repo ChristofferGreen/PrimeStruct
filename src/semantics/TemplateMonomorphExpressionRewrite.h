@@ -625,10 +625,12 @@ bool rewriteExpr(Expr &expr,
       expr.name = preferredVectorFamilyPath;
       expr.namespacePrefix.clear();
     }
+    const bool resolvesBorrowedExperimentalMapReceiver =
+        resolvesExperimentalMapBorrowedReceiver(
+            mapHelperReceiverExpr(expr), params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx);
     const std::string borrowedCanonicalMapUnknownTarget = canonicalMapHelperUnknownTargetPath(resolvedPath);
     if (!borrowedCanonicalMapUnknownTarget.empty() &&
-        resolvesExperimentalMapBorrowedReceiver(
-            mapHelperReceiverExpr(expr), params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx)) {
+        resolvesBorrowedExperimentalMapReceiver) {
       error = "unknown call target: " + borrowedCanonicalMapUnknownTarget;
       return false;
     }

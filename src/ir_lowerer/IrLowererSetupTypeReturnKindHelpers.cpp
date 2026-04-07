@@ -492,6 +492,8 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     std::string normalizedHelperName;
     if (resolveVectorHelperAliasName(methodExpr, normalizedHelperName)) {
       methodExpr.name = normalizedHelperName;
+    } else if (resolveBorrowedMapHelperAliasName(methodExpr, normalizedHelperName)) {
+      methodExpr.name = normalizedHelperName;
     } else if (resolveMapHelperAliasName(methodExpr, normalizedHelperName)) {
       methodExpr.name = normalizedHelperName;
     }

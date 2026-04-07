@@ -8,6 +8,27 @@
 
 namespace primec::semantics {
 
+namespace {
+
+std::string explicitCallPathForCandidate(const Expr &candidate) {
+  if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
+    return "";
+  }
+  if (!candidate.name.empty() && candidate.name.front() == '/') {
+    return candidate.name;
+  }
+  std::string namespacePrefix = candidate.namespacePrefix;
+  if (!namespacePrefix.empty() && namespacePrefix.front() != '/') {
+    namespacePrefix.insert(namespacePrefix.begin(), '/');
+  }
+  if (namespacePrefix.empty()) {
+    return "/" + candidate.name;
+  }
+  return namespacePrefix + "/" + candidate.name;
+}
+
+} // namespace
+
 size_t SemanticsValidator::mapHelperReceiverIndex(
     const Expr &candidate,
     const BuiltinCollectionDispatchResolvers &dispatchResolvers) const {
@@ -458,8 +479,17 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
     canonicalCandidate.name = normalizedMethod;
     canonicalCandidate.namespacePrefix =
         lastSlash == std::string::npos ? std::string() : canonicalPath.substr(0, lastSlash);
-  } else if (!canonicalExperimentalMapHelperPath(resolveCalleePath(candidate), canonicalPath, helperName)) {
-    return false;
+  } else {
+    const std::string resolvedOrExplicitPath = [&]() {
+      const std::string resolvedPath = resolveCalleePath(candidate);
+      if (!resolvedPath.empty()) {
+        return resolvedPath;
+      }
+      return explicitCallPathForCandidate(candidate);
+    }();
+    if (!canonicalExperimentalMapHelperPath(resolvedOrExplicitPath, canonicalPath, helperName)) {
+      return false;
+    }
   }
 
   const size_t receiverIndex =
@@ -491,6 +521,13 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
     return false;
   }
   rewrittenOut = canonicalCandidate;
+  const bool isBorrowedCanonicalHelper =
+      !resolvesExperimentalMapValue &&
+      helperName.size() >= std::string_view("_ref").size() &&
+      helperName.rfind("_ref") == helperName.size() - std::string_view("_ref").size();
+  if (!candidate.isMethodCall && isBorrowedCanonicalHelper) {
+    return false;
+  }
   if (candidate.isMethodCall) {
     rewrittenOut.templateArgs.clear();
   } else if (rewrittenOut.templateArgs.empty()) {
@@ -516,7 +553,19 @@ bool SemanticsValidator::explicitCanonicalExperimentalMapBorrowedHelperPath(
     return false;
   }
   std::string helperName;
-  if (!canonicalExperimentalMapHelperPath(resolveCalleePath(candidate), resolvedPathOut, helperName)) {
+  const std::string resolvedOrExplicitPath = [&]() {
+    const std::string resolvedPath = resolveCalleePath(candidate);
+    if (!resolvedPath.empty()) {
+      return resolvedPath;
+    }
+    return explicitCallPathForCandidate(candidate);
+  }();
+  if (!canonicalExperimentalMapHelperPath(resolvedOrExplicitPath, resolvedPathOut, helperName)) {
+    return false;
+  }
+  if (helperName.size() >= std::string_view("_ref").size() &&
+      helperName.rfind("_ref") == helperName.size() - std::string_view("_ref").size()) {
+    resolvedPathOut.clear();
     return false;
   }
   const size_t receiverIndex = mapHelperReceiverIndex(candidate, dispatchResolvers);

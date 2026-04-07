@@ -40,6 +40,30 @@ constexpr ExperimentalMapHelperDescriptor kExperimentalMapHelperDescriptors[] = 
      {"/mapInsert", "/Reference/insert", "/insert_ref", "", "", ""}, 3},
 };
 
+struct BorrowedExperimentalMapHelperDescriptor {
+  std::string_view helperName;
+  std::string_view baseHelperName;
+  std::string_view canonicalPath;
+  std::string_view aliasPath;
+  std::string_view wrapperPath;
+  std::string_view experimentalPath;
+};
+
+constexpr BorrowedExperimentalMapHelperDescriptor kBorrowedExperimentalMapHelperDescriptors[] = {
+    {"count_ref", "count", "/std/collections/map/count_ref", "/map/count_ref",
+     "/std/collections/mapCountRef", "/std/collections/experimental_map/mapCountRef"},
+    {"contains_ref", "contains", "/std/collections/map/contains_ref", "/map/contains_ref",
+     "/std/collections/mapContainsRef", "/std/collections/experimental_map/mapContainsRef"},
+    {"tryAt_ref", "tryAt", "/std/collections/map/tryAt_ref", "/map/tryAt_ref",
+     "/std/collections/mapTryAtRef", "/std/collections/experimental_map/mapTryAtRef"},
+    {"at_ref", "at", "/std/collections/map/at_ref", "/map/at_ref",
+     "/std/collections/mapAtRef", "/std/collections/experimental_map/mapAtRef"},
+    {"at_unsafe_ref", "at_unsafe", "/std/collections/map/at_unsafe_ref", "/map/at_unsafe_ref",
+     "/std/collections/mapAtUnsafeRef", "/std/collections/experimental_map/mapAtUnsafeRef"},
+    {"insert_ref", "insert", "/std/collections/map/insert_ref", "/map/insert_ref",
+     "/std/collections/mapInsertRef", "/std/collections/experimental_map/mapInsertRef"},
+};
+
 struct ExperimentalVectorHelperDescriptor {
   std::string_view helperName;
   std::string_view canonicalPath;
@@ -167,6 +191,21 @@ bool resolveRemovedCollectionHelperReference(std::string_view rawMethodName,
 
 [[maybe_unused]] const ExperimentalMapHelperDescriptor *findExperimentalMapHelperByName(std::string_view helperName) {
   for (const auto &descriptor : kExperimentalMapHelperDescriptors) {
+    if (descriptor.helperName == helperName) {
+      return &descriptor;
+    }
+  }
+  for (const auto &descriptor : kBorrowedExperimentalMapHelperDescriptors) {
+    if (descriptor.helperName == helperName) {
+      return findExperimentalMapHelperByName(descriptor.baseHelperName);
+    }
+  }
+  return nullptr;
+}
+
+[[maybe_unused]] const BorrowedExperimentalMapHelperDescriptor *findBorrowedExperimentalMapHelperByName(
+    std::string_view helperName) {
+  for (const auto &descriptor : kBorrowedExperimentalMapHelperDescriptors) {
     if (descriptor.helperName == helperName) {
       return &descriptor;
     }

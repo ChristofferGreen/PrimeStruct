@@ -146,6 +146,58 @@ bool resolveCollectionsMapWrapperAliasName(std::string helperName, std::string &
   return false;
 }
 
+bool resolveCollectionsBorrowedMapWrapperAliasName(std::string helperName, std::string &helperNameOut) {
+  helperName = stripGeneratedHelperSuffix(std::move(helperName));
+  if (helperName == "count_ref" || helperName == "CountRef" || helperName == "mapCountRef") {
+    helperNameOut = "count_ref";
+    return true;
+  }
+  if (helperName == "contains_ref" || helperName == "ContainsRef" || helperName == "mapContainsRef") {
+    helperNameOut = "contains_ref";
+    return true;
+  }
+  if (helperName == "tryAt_ref" || helperName == "TryAtRef" || helperName == "mapTryAtRef") {
+    helperNameOut = "tryAt_ref";
+    return true;
+  }
+  if (helperName == "at_ref" || helperName == "AtRef" || helperName == "mapAtRef") {
+    helperNameOut = "at_ref";
+    return true;
+  }
+  if (helperName == "at_unsafe_ref" || helperName == "AtUnsafeRef" || helperName == "mapAtUnsafeRef") {
+    helperNameOut = "at_unsafe_ref";
+    return true;
+  }
+  if (helperName == "insert_ref" || helperName == "InsertRef" || helperName == "mapInsertRef") {
+    helperNameOut = "insert_ref";
+    return true;
+  }
+  return false;
+}
+
+bool isBorrowedMapHelperSurface(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string normalizedName = expr.name;
+  if (!normalizedName.empty() && normalizedName.front() == '/') {
+    normalizedName.erase(normalizedName.begin());
+  }
+  normalizedName = stripGeneratedHelperSuffix(std::move(normalizedName));
+  const size_t lastSlash = normalizedName.find_last_of('/');
+  const std::string helperName =
+      lastSlash == std::string::npos ? normalizedName : normalizedName.substr(lastSlash + 1);
+  return helperName == "count_ref" || helperName == "contains_ref" ||
+         helperName == "tryAt_ref" || helperName == "at_ref" ||
+         helperName == "at_unsafe_ref" || helperName == "insert_ref" ||
+         helperName == "CountRef" || helperName == "ContainsRef" ||
+         helperName == "TryAtRef" || helperName == "AtRef" ||
+         helperName == "AtUnsafeRef" || helperName == "InsertRef" ||
+         helperName == "mapCountRef" || helperName == "mapContainsRef" ||
+         helperName == "mapTryAtRef" || helperName == "mapAtRef" ||
+         helperName == "mapAtUnsafeRef" || helperName == "mapInsertRef";
+}
+
 } // namespace
 
 bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
@@ -410,6 +462,38 @@ bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   return false;
 }
 
+bool resolveBorrowedMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(0, 1);
+  }
+  const std::string mapPrefix = "map/";
+  const std::string stdMapPrefix = "std/collections/map/";
+  const std::string collectionsMapWrapperPrefix = "std/collections/map";
+  const std::string experimentalMapPrefix = "std/collections/experimental_map/";
+  if (normalized.rfind(mapPrefix, 0) == 0) {
+    return resolveCollectionsBorrowedMapWrapperAliasName(
+        normalized.substr(mapPrefix.size()), helperNameOut);
+  }
+  if (normalized.rfind(stdMapPrefix, 0) == 0) {
+    return resolveCollectionsBorrowedMapWrapperAliasName(
+        normalized.substr(stdMapPrefix.size()), helperNameOut);
+  }
+  if (normalized.rfind(collectionsMapWrapperPrefix, 0) == 0 &&
+      normalized.rfind(stdMapPrefix, 0) != 0) {
+    return resolveCollectionsBorrowedMapWrapperAliasName(
+        normalized.substr(collectionsMapWrapperPrefix.size()), helperNameOut);
+  }
+  if (normalized.rfind(experimentalMapPrefix, 0) == 0) {
+    return resolveCollectionsBorrowedMapWrapperAliasName(
+        normalized.substr(experimentalMapPrefix.size()), helperNameOut);
+  }
+  return false;
+}
+
 std::string normalizeCollectionHelperPath(const std::string &path) {
   std::string normalizedPath = path;
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
@@ -515,6 +599,9 @@ bool isMapBuiltinName(const Expr &expr, const char *name) {
 
 bool isExplicitMapHelperFallbackPath(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty() || expr.isMethodCall) {
+    return false;
+  }
+  if (isBorrowedMapHelperSurface(expr)) {
     return false;
   }
   std::string helperName;

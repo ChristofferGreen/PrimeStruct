@@ -95,16 +95,28 @@ bool extractExperimentalMapValueReceiverTemplateArgsFromTypeText(const std::stri
                                                                  const Context &ctx,
                                                                  std::vector<std::string> &templateArgsOut) {
   std::string normalizedType = normalizeBindingTypeName(typeText);
-  std::string base;
-  std::string argText;
-  if (splitTemplateTypeName(normalizedType, base, argText)) {
+  while (true) {
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(normalizedType, base, argText)) {
+      break;
+    }
     std::string normalizedBase = normalizeBindingTypeName(base);
     if (!normalizedBase.empty() && normalizedBase.front() == '/') {
       normalizedBase.erase(normalizedBase.begin());
     }
+    if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+        return false;
+      }
+      normalizedType = normalizeBindingTypeName(args.front());
+      continue;
+    }
     if (normalizedBase == "Map" || normalizedBase == "std/collections/experimental_map/Map") {
       return splitTopLevelTemplateArgs(argText, templateArgsOut) && templateArgsOut.size() == 2;
     }
+    break;
   }
   std::string resolvedPath = normalizedType;
   if (!resolvedPath.empty() && resolvedPath.front() != '/') {
@@ -363,43 +375,25 @@ std::string canonicalMapHelperUnknownTargetPath(const std::string &resolvedPath)
       resolvedPath == "/std/collections/mapCount") {
     return "/std/collections/map/count";
   }
-  if (resolvedPath == "/std/collections/map/count_ref") {
-    return "/std/collections/map/count_ref";
-  }
   if (resolvedPath == "/std/collections/map/contains" || resolvedPath == "/map/contains" ||
       resolvedPath == "/std/collections/mapContains") {
     return "/std/collections/map/contains";
-  }
-  if (resolvedPath == "/std/collections/map/contains_ref") {
-    return "/std/collections/map/contains_ref";
   }
   if (resolvedPath == "/std/collections/map/tryAt" || resolvedPath == "/map/tryAt" ||
       resolvedPath == "/std/collections/mapTryAt") {
     return "/std/collections/map/tryAt";
   }
-  if (resolvedPath == "/std/collections/map/tryAt_ref") {
-    return "/std/collections/map/tryAt_ref";
-  }
   if (resolvedPath == "/std/collections/map/at" || resolvedPath == "/map/at" ||
       resolvedPath == "/std/collections/mapAt") {
     return "/std/collections/map/at";
-  }
-  if (resolvedPath == "/std/collections/map/at_ref") {
-    return "/std/collections/map/at_ref";
   }
   if (resolvedPath == "/std/collections/map/at_unsafe" || resolvedPath == "/map/at_unsafe" ||
       resolvedPath == "/std/collections/mapAtUnsafe") {
     return "/std/collections/map/at_unsafe";
   }
-  if (resolvedPath == "/std/collections/map/at_unsafe_ref") {
-    return "/std/collections/map/at_unsafe_ref";
-  }
   if (resolvedPath == "/std/collections/map/insert" || resolvedPath == "/map/insert" ||
       resolvedPath == "/std/collections/mapInsert") {
     return "/std/collections/map/insert";
-  }
-  if (resolvedPath == "/std/collections/map/insert_ref") {
-    return "/std/collections/map/insert_ref";
   }
   return {};
 }

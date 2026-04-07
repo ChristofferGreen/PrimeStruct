@@ -29,6 +29,7 @@ std::string preferredGfxErrorHelperTarget(
 bool isRemovedVectorCompatibilityHelper(const std::string &helperName);
 bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut);
 bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut);
+bool resolveBorrowedMapHelperAliasName(const Expr &expr, std::string &helperNameOut);
 
 std::string normalizeCollectionHelperPath(const std::string &path);
 bool isExplicitRemovedVectorMethodAliasPath(const std::string &methodName);

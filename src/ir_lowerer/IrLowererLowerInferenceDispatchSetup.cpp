@@ -61,7 +61,11 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
                                  const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
     if (!expr.isMethodCall && expr.kind == Expr::Kind::Call && !expr.args.empty()) {
       std::string canonicalMapHelperName;
+      std::string borrowedMapHelperName;
+      const bool hasBorrowedMapHelperAlias =
+          resolveBorrowedMapHelperAliasName(expr, borrowedMapHelperName);
       if (resolveMapHelperAliasName(expr, canonicalMapHelperName) &&
+          !hasBorrowedMapHelperAlias &&
           (canonicalMapHelperName == "count" || canonicalMapHelperName == "contains" ||
            canonicalMapHelperName == "tryAt" || canonicalMapHelperName == "at" ||
            canonicalMapHelperName == "at_unsafe" ||

@@ -39,6 +39,23 @@ std::string explicitOldSoaMutatorPath(const Expr &candidate) {
   return "/soa_vector/" + std::string(helperName);
 }
 
+std::string explicitCallPathForCandidate(const Expr &candidate) {
+  if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
+    return "";
+  }
+  if (!candidate.name.empty() && candidate.name.front() == '/') {
+    return candidate.name;
+  }
+  std::string namespacePrefix = candidate.namespacePrefix;
+  if (!namespacePrefix.empty() && namespacePrefix.front() != '/') {
+    namespacePrefix.insert(namespacePrefix.begin(), '/');
+  }
+  if (namespacePrefix.empty()) {
+    return "/" + candidate.name;
+  }
+  return namespacePrefix + "/" + candidate.name;
+}
+
 } // namespace
 
 std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &typePath) const {
@@ -141,6 +158,14 @@ bool SemanticsValidator::hasDefinitionPath(const std::string &path) const {
 }
 
 std::string SemanticsValidator::preferredExperimentalMapHelperTarget(std::string_view helperName) const {
+  if (const auto *borrowedDescriptor = findBorrowedExperimentalMapHelperByName(helperName)) {
+    constexpr std::string_view prefix = "/std/collections/experimental_map/";
+    std::string_view experimentalPath = borrowedDescriptor->experimentalPath;
+    if (experimentalPath.rfind(prefix, 0) == 0) {
+      experimentalPath.remove_prefix(prefix.size());
+    }
+    return std::string(experimentalPath);
+  }
   const ExperimentalMapHelperDescriptor *descriptor = findExperimentalMapHelperByName(helperName);
   if (descriptor == nullptr) {
     return std::string(helperName);
@@ -154,6 +179,9 @@ std::string SemanticsValidator::preferredExperimentalMapHelperTarget(std::string
 }
 
 std::string SemanticsValidator::preferredCanonicalExperimentalMapHelperTarget(std::string_view helperName) const {
+  if (const auto *borrowedDescriptor = findBorrowedExperimentalMapHelperByName(helperName)) {
+    return std::string(borrowedDescriptor->experimentalPath);
+  }
   const ExperimentalMapHelperDescriptor *descriptor = findExperimentalMapHelperByName(helperName);
   if (descriptor == nullptr) {
     return "/std/collections/experimental_map/" + std::string(helperName);
@@ -293,6 +321,15 @@ bool SemanticsValidator::canonicalExperimentalMapHelperPath(const std::string &r
                                                             std::string &helperNameOut) const {
   canonicalPathOut.clear();
   helperNameOut.clear();
+  for (const auto &descriptor : kBorrowedExperimentalMapHelperDescriptors) {
+    if (matchesResolvedPath(resolvedPath, descriptor.canonicalPath) ||
+        matchesResolvedPath(resolvedPath, descriptor.aliasPath) ||
+        matchesResolvedPath(resolvedPath, descriptor.wrapperPath)) {
+      canonicalPathOut = descriptor.canonicalPath;
+      helperNameOut = descriptor.helperName;
+      return true;
+    }
+  }
   for (const auto &descriptor : kExperimentalMapHelperDescriptors) {
     if (matchesResolvedPath(resolvedPath, descriptor.canonicalPath) ||
         matchesResolvedPath(resolvedPath, descriptor.aliasPath) ||
@@ -389,6 +426,20 @@ std::string SemanticsValidator::mapNamespacedMethodCompatibilityPath(
     return dispatchResolvers.resolveMapTarget(target, keyType, valueType) ||
            dispatchResolvers.resolveExperimentalMapTarget(target, keyType, valueType);
   };
+  const std::string borrowedRemovedPath =
+      [&]() -> std::string {
+        const std::string rawHelperName = std::string(trimLeadingSlash(candidate.name));
+        if (const auto *descriptor = findBorrowedExperimentalMapHelperByName(rawHelperName)) {
+          return std::string(descriptor->aliasPath);
+        }
+        return "";
+      }();
+  if (!borrowedRemovedPath.empty()) {
+    if (hasDefinitionPath(borrowedRemovedPath) || !resolveAnyMapTarget(candidate.args.front())) {
+      return "";
+    }
+    return borrowedRemovedPath;
+  }
   const ExperimentalMapHelperDescriptor *descriptor =
       findExperimentalMapCompatibilityHelper(candidate.name, candidate.namespacePrefix, "", false, true);
   if (descriptor == nullptr) {
@@ -420,7 +471,53 @@ std::string SemanticsValidator::directMapHelperCompatibilityPath(
     return dispatchResolvers.resolveMapTarget(target, keyType, valueType) ||
            dispatchResolvers.resolveExperimentalMapTarget(target, keyType, valueType);
   };
-  const std::string resolvedPath = resolveCalleePath(candidate);
+  const std::string resolvedPath = [&]() {
+    const std::string resolved = resolveCalleePath(candidate);
+    if (!resolved.empty()) {
+      return resolved;
+    }
+    return explicitCallPathForCandidate(candidate);
+  }();
+  const std::string borrowedRemovedPath =
+      [&]() -> std::string {
+        std::string canonicalPath;
+        std::string helperName;
+        if (!canonicalExperimentalMapHelperPath(resolvedPath, canonicalPath, helperName)) {
+          return "";
+        }
+        const auto *descriptor = findBorrowedExperimentalMapHelperByName(helperName);
+        if (descriptor == nullptr) {
+          return "";
+        }
+        if (matchesResolvedPath(resolvedPath, descriptor->canonicalPath)) {
+          return "";
+        }
+        return std::string(descriptor->aliasPath);
+      }();
+  if (!borrowedRemovedPath.empty()) {
+    if (hasDefinitionPath(borrowedRemovedPath) || candidate.args.empty()) {
+      return "";
+    }
+    size_t receiverIndex = 0;
+    if (hasNamedArguments(candidate.argNames)) {
+      bool foundValues = false;
+      for (size_t i = 0; i < candidate.args.size(); ++i) {
+        if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+            *candidate.argNames[i] == "values") {
+          receiverIndex = i;
+          foundValues = true;
+          break;
+        }
+      }
+      if (!foundValues) {
+        receiverIndex = 0;
+      }
+    }
+    if (receiverIndex >= candidate.args.size() || !resolveAnyMapTarget(candidate.args[receiverIndex])) {
+      return "";
+    }
+    return borrowedRemovedPath;
+  }
   const ExperimentalMapHelperDescriptor *descriptor =
       findExperimentalMapCompatibilityHelper(candidate.name,
                                              candidate.namespacePrefix,

@@ -149,6 +149,8 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     methodExpr.isMethodCall = true;
     if (hasVectorHelperAlias) {
       methodExpr.name = normalizedVectorHelperName;
+    } else if (std::string borrowedMapHelperName; resolveBorrowedMapHelperAliasName(methodExpr, borrowedMapHelperName)) {
+      methodExpr.name = borrowedMapHelperName;
     } else if (hasMapHelperAlias) {
       methodExpr.name = normalizedMapHelperName;
     }
