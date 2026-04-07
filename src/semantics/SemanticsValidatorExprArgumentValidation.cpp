@@ -128,7 +128,9 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
     if (param.name != "values" || callExpr.isMethodCall ||
         hasNamedArguments(callExpr.argNames) || callExpr.args.size() != 2 ||
         (diagnosticResolved != "/std/collections/map/at" &&
-         diagnosticResolved != "/std/collections/map/at_unsafe")) {
+         diagnosticResolved != "/std/collections/map/at_ref" &&
+         diagnosticResolved != "/std/collections/map/at_unsafe" &&
+         diagnosticResolved != "/std/collections/map/at_unsafe_ref")) {
       return false;
     }
 

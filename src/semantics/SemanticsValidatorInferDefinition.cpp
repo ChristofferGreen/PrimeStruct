@@ -81,10 +81,23 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
       -> bool {
     std::string builtinAccessName;
     if (candidate.kind == Expr::Kind::Call && candidate.isMethodCall &&
-        getBuiltinArrayAccessName(candidate, builtinAccessName)) {
+        (getBuiltinArrayAccessName(candidate, builtinAccessName) ||
+         resolveCalleePath(candidate) == "/std/collections/map/at_ref" ||
+         resolveCalleePath(candidate) == "/std/collections/map/at_unsafe_ref")) {
+      if (builtinAccessName.empty()) {
+        builtinAccessName =
+            resolveCalleePath(candidate) == "/std/collections/map/at_ref"
+                ? "at_ref"
+                : "at_unsafe_ref";
+      }
       const std::string resolvedPath = resolveCalleePath(candidate);
-      if (resolvedPath == "/std/collections/map/at" || resolvedPath == "/std/collections/map/at_unsafe" ||
-          resolvedPath == "/map/at" || resolvedPath == "/map/at_unsafe") {
+      if (resolvedPath == "/std/collections/map/at" ||
+          resolvedPath == "/std/collections/map/at_ref" ||
+          resolvedPath == "/std/collections/map/at_unsafe" ||
+          resolvedPath == "/std/collections/map/at_unsafe_ref" ||
+          resolvedPath == "/map/at" || resolvedPath == "/map/at_ref" ||
+          resolvedPath == "/map/at_unsafe" ||
+          resolvedPath == "/map/at_unsafe_ref") {
         return true;
       }
     }

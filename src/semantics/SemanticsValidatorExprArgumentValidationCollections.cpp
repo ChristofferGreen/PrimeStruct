@@ -5,6 +5,37 @@
 
 namespace primec::semantics {
 
+namespace {
+
+bool getCanonicalMapAccessBuiltinName(const Expr &candidate,
+                                      std::string &helperOut) {
+  helperOut.clear();
+  if (candidate.kind != Expr::Kind::Call || candidate.name.empty() ||
+      candidate.args.size() != 2) {
+    return false;
+  }
+  if (getBuiltinArrayAccessName(candidate, helperOut)) {
+    return true;
+  }
+  std::string normalizedName = candidate.name;
+  if (!normalizedName.empty() && normalizedName.front() == '/') {
+    normalizedName.erase(normalizedName.begin());
+  }
+  if (normalizedName == "map/at_ref" ||
+      normalizedName == "std/collections/map/at_ref") {
+    helperOut = "at_ref";
+    return true;
+  }
+  if (normalizedName == "map/at_unsafe_ref" ||
+      normalizedName == "std/collections/map/at_unsafe_ref") {
+    helperOut = "at_unsafe_ref";
+    return true;
+  }
+  return false;
+}
+
+} // namespace
+
 bool SemanticsValidator::isBuiltinCollectionLiteralExpr(const Expr &candidate) const {
   if (candidate.kind != Expr::Kind::Call) {
     return false;
@@ -29,12 +60,16 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
         defMap_.find(resolvedPath) == defMap_.end() ||
         resolvedPath.rfind("/std/collections/vector/at", 0) == 0 ||
         resolvedPath == "/map/at" ||
+        resolvedPath == "/map/at_ref" ||
         resolvedPath == "/map/at_unsafe" ||
+        resolvedPath == "/map/at_unsafe_ref" ||
         resolvedPath == "/std/collections/map/at" ||
-        resolvedPath == "/std/collections/map/at_unsafe";
+        resolvedPath == "/std/collections/map/at_ref" ||
+        resolvedPath == "/std/collections/map/at_unsafe" ||
+        resolvedPath == "/std/collections/map/at_unsafe_ref";
     std::string accessName;
     if (treatAsBuiltinAccess &&
-        getBuiltinArrayAccessName(arg, accessName) &&
+        getCanonicalMapAccessBuiltinName(arg, accessName) &&
         arg.args.size() == 2) {
       std::string mapValueType;
       if (resolveMapValueType(arg.args.front(), dispatchResolvers, mapValueType) &&
