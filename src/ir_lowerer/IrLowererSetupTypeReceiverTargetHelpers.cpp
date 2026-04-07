@@ -155,7 +155,8 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
   const bool isExplicitRemovedVectorMethodAlias = isExplicitRemovedVectorMethodAliasPath(callExpr.name);
   const bool isExplicitMapMethodAlias = isExplicitMapMethodAliasPath(callExpr.name);
   const bool isBuiltinMapContainsOrTryAtCall =
-      isSimpleCallName(callExpr, "contains") || isSimpleCallName(callExpr, "tryAt");
+      isSimpleCallName(callExpr, "contains") || isSimpleCallName(callExpr, "tryAt") ||
+      isSimpleCallName(callExpr, "insert");
   const bool allowBuiltinFallback =
       !isExplicitRemovedVectorMethodAlias && !isExplicitMapMethodAlias &&
       !isBuiltinBareVectorCapacityMethod &&
