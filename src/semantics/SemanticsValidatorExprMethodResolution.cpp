@@ -23,6 +23,13 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   auto failMethodResolutionDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(expr, std::move(message));
   };
+  const auto isValueSurfaceAccessMethodName = [](std::string_view helperName) {
+    return helperName == "at" || helperName == "at_unsafe";
+  };
+  const auto isCanonicalMapAccessMethodName = [&](std::string_view helperName) {
+    return isValueSurfaceAccessMethodName(helperName) ||
+           helperName == "at_ref" || helperName == "at_unsafe_ref";
+  };
 
   const auto &resolveVectorTarget = dispatchResolvers.resolveVectorTarget;
   const auto &resolveMapTargetWithTypes = dispatchResolvers.resolveMapTarget;
@@ -141,7 +148,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     }
     std::string accessHelperName;
     if (!getBuiltinArrayAccessName(receiverExpr, accessHelperName) ||
-        (accessHelperName != "at" && accessHelperName != "at_unsafe")) {
+        !isCanonicalMapAccessMethodName(accessHelperName)) {
       return false;
     }
     const Expr *accessReceiver = this->resolveBuiltinAccessReceiverExpr(receiverExpr);

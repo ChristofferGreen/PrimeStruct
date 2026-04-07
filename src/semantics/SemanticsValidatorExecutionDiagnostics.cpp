@@ -8,8 +8,11 @@ namespace {
 
 bool isBuiltinCollectionHelperName(std::string_view helperName) {
   return helperName == "count" || helperName == "capacity" || helperName == "contains" ||
-         helperName == "tryAt" || helperName == "at" || helperName == "at_unsafe" ||
-         helperName == "insert" || helperName == "push" || helperName == "pop" ||
+         helperName == "count_ref" || helperName == "contains_ref" ||
+         helperName == "tryAt" || helperName == "tryAt_ref" || helperName == "at" ||
+         helperName == "at_ref" || helperName == "at_unsafe" ||
+         helperName == "at_unsafe_ref" || helperName == "insert" ||
+         helperName == "insert_ref" || helperName == "push" || helperName == "pop" ||
          helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
          helperName == "remove_swap" || helperName == "to_soa" || helperName == "to_aos";
 }
@@ -68,8 +71,14 @@ void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(
     std::string namespacedHelper;
     const bool isCollectionHelperBuiltin =
         isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity") ||
-        (!expr.isMethodCall && isSimpleCallName(expr, "contains")) || isSimpleCallName(expr, "at") ||
-        isSimpleCallName(expr, "at_unsafe") || isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
+        isSimpleCallName(expr, "count_ref") ||
+        (!expr.isMethodCall && isSimpleCallName(expr, "contains")) ||
+        (!expr.isMethodCall && isSimpleCallName(expr, "contains_ref")) ||
+        isSimpleCallName(expr, "tryAt") || isSimpleCallName(expr, "tryAt_ref") ||
+        isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_ref") ||
+        isSimpleCallName(expr, "at_unsafe") || isSimpleCallName(expr, "at_unsafe_ref") ||
+        isSimpleCallName(expr, "insert") || isSimpleCallName(expr, "insert_ref") ||
+        isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
         isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
         isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap") ||
         isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos") ||

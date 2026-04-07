@@ -48,6 +48,13 @@ std::string returnTypeMismatchDiagnostic(const std::string &expectedTypePath,
   return "return type mismatch: expected " + fallbackExpectedType;
 }
 
+bool isUnknownBorrowedMapAccessMethodDiagnostic(const std::string &message) {
+  return message == "unknown method: /map/at" ||
+         message == "unknown method: /map/at_ref" ||
+         message == "unknown method: /map/at_unsafe" ||
+         message == "unknown method: /map/at_unsafe_ref";
+}
+
 } // namespace
 
 bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo> &params,
@@ -95,7 +102,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
     };
     if (!validateExpr(params, locals, stmt.args.front())) {
       if (declaresAutoReturn() &&
-          (error_ == "unknown method: /map/at" || error_ == "unknown method: /map/at_unsafe")) {
+          isUnknownBorrowedMapAccessMethodDiagnostic(error_)) {
         return rewriteAutoReturnDiagnostic("unable to infer return type on " +
                                            currentValidationState_.context.definitionPath);
       }
