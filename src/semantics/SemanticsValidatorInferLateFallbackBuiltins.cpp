@@ -36,6 +36,10 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
     (void)failExprDiagnostic(expr, std::move(message));
     return finish(ReturnKind::Unknown);
   };
+  auto isCanonicalMapAccessHelperName = [&](const std::string &helperName) {
+    return helperName == "at" || helperName == "at_ref" ||
+           helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+  };
 
   const auto resolvedIt = defMap_.find(context.resolved);
   if (!expr.isMethodCall &&
@@ -313,7 +317,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
          !inferCollectionDispatchSetup.shouldInferBuiltinBareMapContainsCall) ||
         (isSimpleCallName(expr, "tryAt") &&
          !inferCollectionDispatchSetup.shouldInferBuiltinBareMapTryAtCall) ||
-        ((expr.name == "at" || expr.name == "at_unsafe") &&
+        (isCanonicalMapAccessHelperName(builtinAccessName) &&
          !inferCollectionDispatchSetup.shouldInferBuiltinBareMapAccessCall)) {
       Expr rewrittenMapHelperCall;
       if (tryRewriteBareMapHelperCall(
@@ -360,8 +364,10 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
               "unknown call target: " + methodResolved);
         }
         if ((methodResolved == "/map/at" ||
+             methodResolved == "/map/at_ref" ||
              methodResolved == "/std/collections/map/at_ref" ||
              methodResolved == "/map/at_unsafe" ||
+             methodResolved == "/map/at_unsafe_ref" ||
              methodResolved == "/std/collections/map/at" ||
              methodResolved == "/std/collections/map/at_unsafe" ||
              methodResolved == "/std/collections/map/at_unsafe_ref") &&

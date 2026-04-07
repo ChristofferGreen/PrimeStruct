@@ -56,7 +56,9 @@ bool SemanticsValidator::validateExprTryBuiltin(
     const bool allowCurrentMapWrapperTryAt =
         shouldBuiltinValidateCurrentMapWrapperHelper("tryAt") ||
         shouldBuiltinValidateCurrentMapWrapperHelper("at") ||
-        shouldBuiltinValidateCurrentMapWrapperHelper("at_unsafe");
+        shouldBuiltinValidateCurrentMapWrapperHelper("at_ref") ||
+        shouldBuiltinValidateCurrentMapWrapperHelper("at_unsafe") ||
+        shouldBuiltinValidateCurrentMapWrapperHelper("at_unsafe_ref");
     if ((tryTargetPath == "/std/collections/map/tryAt" ||
          tryTargetPath == "/std/collections/map/tryAt_ref" ||
          isBareMapTryAtFallback) &&

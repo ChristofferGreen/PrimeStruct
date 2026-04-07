@@ -427,7 +427,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         shouldBuiltinValidateCurrentMapWrapperHelper("tryAt");
     const bool shouldBuiltinValidateBareMapAccessCall =
         shouldBuiltinValidateCurrentMapWrapperHelper("at") ||
-        shouldBuiltinValidateCurrentMapWrapperHelper("at_unsafe");
+        shouldBuiltinValidateCurrentMapWrapperHelper("at_ref") ||
+        shouldBuiltinValidateCurrentMapWrapperHelper("at_unsafe") ||
+        shouldBuiltinValidateCurrentMapWrapperHelper("at_unsafe_ref");
     bool handledEarlyPointerBuiltin = false;
     if (!validateExprEarlyPointerBuiltin(
             params, locals, expr, dispatchBootstrap,

@@ -5,6 +5,52 @@
 
 namespace primec::semantics {
 
+namespace {
+
+bool getCanonicalMapAccessBuiltinName(const Expr &candidate,
+                                      std::string &helperOut) {
+  helperOut.clear();
+  if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
+      candidate.name.empty() || candidate.args.size() != 2) {
+    return false;
+  }
+  if (getBuiltinArrayAccessName(candidate, helperOut)) {
+    return true;
+  }
+  std::string normalizedName = candidate.name;
+  if (!normalizedName.empty() && normalizedName.front() == '/') {
+    normalizedName.erase(normalizedName.begin());
+  }
+  if (normalizedName == "map/at_ref" ||
+      normalizedName == "std/collections/map/at_ref") {
+    helperOut = "at_ref";
+    return true;
+  }
+  if (normalizedName == "map/at_unsafe_ref" ||
+      normalizedName == "std/collections/map/at_unsafe_ref") {
+    helperOut = "at_unsafe_ref";
+    return true;
+  }
+  std::string namespacePrefix = candidate.namespacePrefix;
+  if (!namespacePrefix.empty() && namespacePrefix.front() == '/') {
+    namespacePrefix.erase(namespacePrefix.begin());
+  }
+  if ((namespacePrefix == "map" ||
+       namespacePrefix == "std/collections/map") &&
+      (candidate.name == "at_ref" || candidate.name == "at_unsafe_ref")) {
+    helperOut = candidate.name;
+    return true;
+  }
+  if (candidate.name.find('/') == std::string::npos &&
+      (candidate.name == "at_ref" || candidate.name == "at_unsafe_ref")) {
+    helperOut = candidate.name;
+    return true;
+  }
+  return false;
+}
+
+} // namespace
+
 bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
@@ -39,7 +85,8 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
   };
 
   std::string builtinName;
-  if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinName) &&
+  if (!expr.isMethodCall &&
+      getCanonicalMapAccessBuiltinName(expr, builtinName) &&
       expr.args.size() == 2 && !hasNamedArguments(expr.argNames)) {
     if (!this->isMapLikeBareAccessReceiver(expr.args.front(), params, locals,
                                            *context.dispatchResolvers) &&
@@ -80,7 +127,8 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     }
   }
 
-  if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinName) &&
+  if (!expr.isMethodCall &&
+      getCanonicalMapAccessBuiltinName(expr, builtinName) &&
       !context.shouldBuiltinValidateBareMapAccessCall) {
     Expr rewrittenMapHelperCall;
     if (this->tryRewriteBareMapHelperCall(expr, builtinName,
@@ -244,7 +292,8 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     return true;
   }
 
-  if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinName) &&
+  if (!expr.isMethodCall &&
+      getCanonicalMapAccessBuiltinName(expr, builtinName) &&
       expr.args.size() == 2 &&
       (context.shouldBuiltinValidateBareMapAccessCall ||
        this->isMapLikeBareAccessReceiver(
@@ -299,7 +348,8 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     }
   }
 
-  if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinName) &&
+  if (!expr.isMethodCall &&
+      getCanonicalMapAccessBuiltinName(expr, builtinName) &&
       expr.args.size() == 2 && defMap_.find(resolved) == defMap_.end() &&
       hasImportedDefinitionPath("/std/collections/map/" + builtinName)) {
     size_t receiverIndex = 0;
