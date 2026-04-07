@@ -17,6 +17,7 @@ bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
            callee.fullPath.rfind(std::string(basePath) + "__t", 0) == 0;
   };
   if (!expr.isMethodCall) {
+    std::string aliasName;
     std::string normalizedName = expr.name;
     if (!normalizedName.empty() && normalizedName.front() == '/') {
       normalizedName.erase(normalizedName.begin());
@@ -27,6 +28,42 @@ bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
              matchesHelper("/std/collections/mapAt") ||
              matchesHelper("/std/collections/map/at_unsafe") ||
              matchesHelper("/std/collections/mapAtUnsafe");
+    }
+    if (resolveMapHelperAliasName(expr, aliasName)) {
+      if (aliasName == "count" && expr.args.size() == 1) {
+        return matchesHelper("/std/collections/map/count") ||
+               matchesHelper("/std/collections/mapCount") ||
+               matchesHelper("/std/collections/experimental_map/mapCount") ||
+               matchesHelper("/std/collections/experimental_map/mapCountRef");
+      }
+      if (aliasName == "contains" && expr.args.size() == 2) {
+        return matchesHelper("/std/collections/mapContains") ||
+               matchesHelper("/std/collections/experimental_map/mapContains") ||
+               matchesHelper("/std/collections/experimental_map/mapContainsRef");
+      }
+      if (aliasName == "tryAt" && expr.args.size() == 2) {
+        return matchesHelper("/std/collections/mapTryAt") ||
+               matchesHelper("/std/collections/experimental_map/mapTryAt") ||
+               matchesHelper("/std/collections/experimental_map/mapTryAtRef");
+      }
+      if (aliasName == "at" && expr.args.size() == 2) {
+        return matchesHelper("/std/collections/map/at") ||
+               matchesHelper("/std/collections/mapAt") ||
+               matchesHelper("/std/collections/experimental_map/mapAt") ||
+               matchesHelper("/std/collections/experimental_map/mapAtRef");
+      }
+      if (aliasName == "at_unsafe" && expr.args.size() == 2) {
+        return matchesHelper("/std/collections/map/at_unsafe") ||
+               matchesHelper("/std/collections/mapAtUnsafe") ||
+               matchesHelper("/std/collections/experimental_map/mapAtUnsafe") ||
+               matchesHelper("/std/collections/experimental_map/mapAtUnsafeRef");
+      }
+      if (aliasName == "insert" && expr.args.size() == 3) {
+        return matchesHelper("/std/collections/map/insert") ||
+               matchesHelper("/std/collections/mapInsert") ||
+               matchesHelper("/std/collections/experimental_map/mapInsert") ||
+               matchesHelper("/std/collections/experimental_map/mapInsertRef");
+      }
     }
     if ((normalizedName == "contains" || normalizedName == "map/contains" ||
          normalizedName == "std/collections/map/contains") &&

@@ -64,6 +64,35 @@ bool isVectorTargetImpl(const Expr &target, const LocalMap &localsIn) {
   return false;
 }
 
+bool resolveCollectionsMapWrapperAliasName(std::string helperName, std::string &helperNameOut) {
+  helperName = stripGeneratedHelperSuffix(std::move(helperName));
+  if (helperName == "mapCount" || helperName == "mapCountRef") {
+    helperNameOut = "count";
+    return true;
+  }
+  if (helperName == "mapContains" || helperName == "mapContainsRef") {
+    helperNameOut = "contains";
+    return true;
+  }
+  if (helperName == "mapTryAt" || helperName == "mapTryAtRef") {
+    helperNameOut = "tryAt";
+    return true;
+  }
+  if (helperName == "mapAt" || helperName == "mapAtRef") {
+    helperNameOut = "at";
+    return true;
+  }
+  if (helperName == "mapAtUnsafe" || helperName == "mapAtUnsafeRef") {
+    helperNameOut = "at_unsafe";
+    return true;
+  }
+  if (helperName == "mapInsert" || helperName == "mapInsertRef") {
+    helperNameOut = "insert";
+    return true;
+  }
+  return false;
+}
+
 } // namespace
 
 bool isExplicitArrayCountName(const Expr &expr) {
@@ -216,13 +245,24 @@ bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   }
   const std::string mapPrefix = "map/";
   const std::string stdMapPrefix = "std/collections/map/";
+  const std::string collectionsMapWrapperPrefix = "std/collections/map";
+  const std::string experimentalMapPrefix = "std/collections/experimental_map/";
   if (normalized.rfind(mapPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(mapPrefix.size());
+    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(mapPrefix.size()));
     return true;
   }
   if (normalized.rfind(stdMapPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(stdMapPrefix.size());
+    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdMapPrefix.size()));
     return true;
+  }
+  if (normalized.rfind(collectionsMapWrapperPrefix, 0) == 0 &&
+      normalized.rfind(stdMapPrefix, 0) != 0) {
+    return resolveCollectionsMapWrapperAliasName(
+        normalized.substr(collectionsMapWrapperPrefix.size()), helperNameOut);
+  }
+  if (normalized.rfind(experimentalMapPrefix, 0) == 0) {
+    return resolveCollectionsMapWrapperAliasName(
+        normalized.substr(experimentalMapPrefix.size()), helperNameOut);
   }
   return false;
 }

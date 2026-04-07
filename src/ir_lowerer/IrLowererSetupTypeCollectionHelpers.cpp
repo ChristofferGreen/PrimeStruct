@@ -105,6 +105,35 @@ bool resolveStdCollectionsVectorWrapperAliasName(std::string helperName, std::st
   return false;
 }
 
+bool resolveCollectionsMapWrapperAliasName(std::string helperName, std::string &helperNameOut) {
+  helperName = stripGeneratedHelperSuffix(std::move(helperName));
+  if (helperName == "mapCount" || helperName == "mapCountRef") {
+    helperNameOut = "count";
+    return true;
+  }
+  if (helperName == "mapContains" || helperName == "mapContainsRef") {
+    helperNameOut = "contains";
+    return true;
+  }
+  if (helperName == "mapTryAt" || helperName == "mapTryAtRef") {
+    helperNameOut = "tryAt";
+    return true;
+  }
+  if (helperName == "mapAt" || helperName == "mapAtRef") {
+    helperNameOut = "at";
+    return true;
+  }
+  if (helperName == "mapAtUnsafe" || helperName == "mapAtUnsafeRef") {
+    helperNameOut = "at_unsafe";
+    return true;
+  }
+  if (helperName == "mapInsert" || helperName == "mapInsertRef") {
+    helperNameOut = "insert";
+    return true;
+  }
+  return false;
+}
+
 } // namespace
 
 bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
@@ -347,13 +376,24 @@ bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   }
   const std::string mapPrefix = "map/";
   const std::string stdMapPrefix = "std/collections/map/";
+  const std::string collectionsMapWrapperPrefix = "std/collections/map";
+  const std::string experimentalMapPrefix = "std/collections/experimental_map/";
   if (normalized.rfind(mapPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(mapPrefix.size());
+    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(mapPrefix.size()));
     return true;
   }
   if (normalized.rfind(stdMapPrefix, 0) == 0) {
-    helperNameOut = normalized.substr(stdMapPrefix.size());
+    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdMapPrefix.size()));
     return true;
+  }
+  if (normalized.rfind(collectionsMapWrapperPrefix, 0) == 0 &&
+      normalized.rfind(stdMapPrefix, 0) != 0) {
+    return resolveCollectionsMapWrapperAliasName(
+        normalized.substr(collectionsMapWrapperPrefix.size()), helperNameOut);
+  }
+  if (normalized.rfind(experimentalMapPrefix, 0) == 0) {
+    return resolveCollectionsMapWrapperAliasName(
+        normalized.substr(experimentalMapPrefix.size()), helperNameOut);
   }
   return false;
 }
@@ -365,7 +405,8 @@ std::string normalizeCollectionHelperPath(const std::string &path) {
         normalizedPath.rfind("std/collections/vector/", 0) == 0 ||
         normalizedPath.rfind("std/collections/experimental_vector/", 0) == 0 ||
         normalizedPath.rfind("map/", 0) == 0 ||
-        normalizedPath.rfind("std/collections/map/", 0) == 0) {
+        normalizedPath.rfind("std/collections/map/", 0) == 0 ||
+        normalizedPath.rfind("std/collections/experimental_map/", 0) == 0) {
       normalizedPath.insert(normalizedPath.begin(), '/');
     }
   }
@@ -460,30 +501,22 @@ bool isExplicitMapHelperFallbackPath(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty() || expr.isMethodCall) {
     return false;
   }
-  const std::string normalizedPath = normalizeCollectionHelperPath(expr.name);
-  return normalizedPath == "/map/count" || normalizedPath == "/map/contains" ||
-         normalizedPath == "/map/tryAt" || normalizedPath == "/map/at" ||
-         normalizedPath == "/map/at_unsafe" ||
-         normalizedPath == "/std/collections/map/count" ||
-         normalizedPath == "/std/collections/map/contains" ||
-         normalizedPath == "/std/collections/map/tryAt" ||
-         normalizedPath == "/std/collections/map/at" ||
-         normalizedPath == "/std/collections/map/at_unsafe";
+  std::string helperName;
+  return resolveMapHelperAliasName(expr, helperName) &&
+         (helperName == "count" || helperName == "contains" ||
+          helperName == "tryAt" || helperName == "at" ||
+          helperName == "at_unsafe");
 }
 
 bool isExplicitMapReceiverProbeHelperExpr(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  const std::string normalizedPath = normalizeCollectionHelperPath(expr.name);
-  return normalizedPath == "/map/count" || normalizedPath == "/map/contains" ||
-         normalizedPath == "/map/at" || normalizedPath == "/map/at_unsafe" ||
-         normalizedPath == "/map/tryAt" ||
-         normalizedPath == "/std/collections/map/count" ||
-         normalizedPath == "/std/collections/map/contains" ||
-         normalizedPath == "/std/collections/map/at" ||
-         normalizedPath == "/std/collections/map/at_unsafe" ||
-         normalizedPath == "/std/collections/map/tryAt";
+  std::string helperName;
+  return resolveMapHelperAliasName(expr, helperName) &&
+         (helperName == "count" || helperName == "contains" ||
+          helperName == "at" || helperName == "at_unsafe" ||
+          helperName == "tryAt");
 }
 
 bool isExplicitVectorAccessHelperPath(const std::string &path) {
@@ -540,7 +573,8 @@ std::string normalizeMapImportAliasPath(const std::string &path) {
   if (path.empty() || path.front() == '/') {
     return path;
   }
-  if (path.rfind("map/", 0) == 0 || path.rfind("std/collections/map/", 0) == 0) {
+  if (path.rfind("map/", 0) == 0 || path.rfind("std/collections/map/", 0) == 0 ||
+      path.rfind("std/collections/experimental_map/", 0) == 0) {
     return "/" + path;
   }
   return path;

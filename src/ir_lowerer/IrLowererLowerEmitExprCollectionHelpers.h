@@ -150,6 +150,10 @@
             if (isSimpleCallName(candidate, bareName.data())) {
               return true;
             }
+            std::string aliasName;
+            if (resolveMapHelperAliasName(candidate, aliasName) && aliasName == bareName) {
+              return true;
+            }
             std::string normalizedName = candidate.name;
             if (!normalizedName.empty() && normalizedName.front() == '/') {
               normalizedName.erase(normalizedName.begin());
@@ -205,14 +209,26 @@
             }
             if (helperName == "mapCount") {
               helperName = "count";
+            } else if (helperName == "mapCountRef") {
+              helperName = "count";
             } else if (helperName == "mapContains") {
+              helperName = "contains";
+            } else if (helperName == "mapContainsRef") {
               helperName = "contains";
             } else if (helperName == "mapTryAt") {
               helperName = "tryAt";
+            } else if (helperName == "mapTryAtRef") {
+              helperName = "tryAt";
             } else if (helperName == "mapAt") {
+              helperName = "at";
+            } else if (helperName == "mapAtRef") {
               helperName = "at";
             } else if (helperName == "mapAtUnsafe") {
               helperName = "at_unsafe";
+            } else if (helperName == "mapAtUnsafeRef") {
+              helperName = "at_unsafe";
+            } else if (helperName == "mapInsertRef") {
+              helperName = "insert";
             }
             receiverExpr = &callExpr.args.front();
           } else {
