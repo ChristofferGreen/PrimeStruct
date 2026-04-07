@@ -107,27 +107,33 @@ bool resolveStdCollectionsVectorWrapperAliasName(std::string helperName, std::st
 
 bool resolveCollectionsMapWrapperAliasName(std::string helperName, std::string &helperNameOut) {
   helperName = stripGeneratedHelperSuffix(std::move(helperName));
-  if (helperName == "mapCount" || helperName == "mapCountRef") {
+  if (helperName == "count" || helperName == "count_ref" ||
+      helperName == "mapCount" || helperName == "mapCountRef") {
     helperNameOut = "count";
     return true;
   }
-  if (helperName == "mapContains" || helperName == "mapContainsRef") {
+  if (helperName == "contains" || helperName == "contains_ref" ||
+      helperName == "mapContains" || helperName == "mapContainsRef") {
     helperNameOut = "contains";
     return true;
   }
-  if (helperName == "mapTryAt" || helperName == "mapTryAtRef") {
+  if (helperName == "tryAt" || helperName == "tryAt_ref" ||
+      helperName == "mapTryAt" || helperName == "mapTryAtRef") {
     helperNameOut = "tryAt";
     return true;
   }
-  if (helperName == "mapAt" || helperName == "mapAtRef") {
+  if (helperName == "at" || helperName == "at_ref" ||
+      helperName == "mapAt" || helperName == "mapAtRef") {
     helperNameOut = "at";
     return true;
   }
-  if (helperName == "mapAtUnsafe" || helperName == "mapAtUnsafeRef") {
+  if (helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
+      helperName == "mapAtUnsafe" || helperName == "mapAtUnsafeRef") {
     helperNameOut = "at_unsafe";
     return true;
   }
-  if (helperName == "mapInsert" || helperName == "mapInsertRef") {
+  if (helperName == "insert" || helperName == "insert_ref" ||
+      helperName == "mapInsert" || helperName == "mapInsertRef") {
     helperNameOut = "insert";
     return true;
   }
@@ -379,12 +385,12 @@ bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   const std::string collectionsMapWrapperPrefix = "std/collections/map";
   const std::string experimentalMapPrefix = "std/collections/experimental_map/";
   if (normalized.rfind(mapPrefix, 0) == 0) {
-    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(mapPrefix.size()));
-    return true;
+    return resolveCollectionsMapWrapperAliasName(
+        normalized.substr(mapPrefix.size()), helperNameOut);
   }
   if (normalized.rfind(stdMapPrefix, 0) == 0) {
-    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdMapPrefix.size()));
-    return true;
+    return resolveCollectionsMapWrapperAliasName(
+        normalized.substr(stdMapPrefix.size()), helperNameOut);
   }
   if (normalized.rfind(collectionsMapWrapperPrefix, 0) == 0 &&
       normalized.rfind(stdMapPrefix, 0) != 0) {
@@ -451,14 +457,17 @@ bool isExplicitMapMethodAliasPath(const std::string &methodName) {
   }
   const std::string mapPrefix = "map/";
   const std::string stdMapPrefix = "std/collections/map/";
-  auto isBuiltinMapHelper = [](const std::string &helperName) {
-    return helperName == "count" || helperName == "at" || helperName == "at_unsafe";
-  };
   if (normalized.rfind(mapPrefix, 0) == 0) {
-    return isBuiltinMapHelper(normalized.substr(mapPrefix.size()));
+    std::string helperName;
+    return resolveCollectionsMapWrapperAliasName(normalized.substr(mapPrefix.size()), helperName) &&
+           (helperName == "count" || helperName == "at" ||
+            helperName == "at_unsafe" || helperName == "insert");
   }
   if (normalized.rfind(stdMapPrefix, 0) == 0) {
-    return isBuiltinMapHelper(normalized.substr(stdMapPrefix.size()));
+    std::string helperName;
+    return resolveCollectionsMapWrapperAliasName(normalized.substr(stdMapPrefix.size()), helperName) &&
+           (helperName == "count" || helperName == "at" ||
+            helperName == "at_unsafe" || helperName == "insert");
   }
   return false;
 }
@@ -472,11 +481,16 @@ bool isExplicitMapContainsOrTryAtCompatibilityMethodAliasPath(const std::string 
     normalized.erase(normalized.begin());
   }
   const std::string mapPrefix = "map/";
-  auto isRemovedCompatibilityMethod = [](const std::string &helperName) {
-    return helperName == "contains" || helperName == "tryAt";
-  };
+  const std::string stdMapPrefix = "std/collections/map/";
   if (normalized.rfind(mapPrefix, 0) == 0) {
-    return isRemovedCompatibilityMethod(normalized.substr(mapPrefix.size()));
+    std::string helperName;
+    return resolveCollectionsMapWrapperAliasName(normalized.substr(mapPrefix.size()), helperName) &&
+           (helperName == "contains" || helperName == "tryAt");
+  }
+  if (normalized.rfind(stdMapPrefix, 0) == 0) {
+    std::string helperName;
+    return resolveCollectionsMapWrapperAliasName(normalized.substr(stdMapPrefix.size()), helperName) &&
+           (helperName == "contains" || helperName == "tryAt");
   }
   return false;
 }

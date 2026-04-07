@@ -4,6 +4,7 @@
 #include <string_view>
 
 #include "IrLowererHelpers.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -86,12 +87,57 @@ bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)
            resolvedPath.rfind(std::string(basePath) + "__t", 0) == 0;
   };
   if (!expr.isMethodCall) {
+    std::string aliasName;
     std::string accessName;
     if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2) {
       return matchesResolvedPath("/std/collections/map/at") ||
              matchesResolvedPath("/std/collections/mapAt") ||
              matchesResolvedPath("/std/collections/map/at_unsafe") ||
              matchesResolvedPath("/std/collections/mapAtUnsafe");
+    }
+    if (resolveMapHelperAliasName(expr, aliasName)) {
+      if (aliasName == "count" && expr.args.size() == 1) {
+        return matchesResolvedPath("/std/collections/map/count") ||
+               matchesResolvedPath("/std/collections/map/count_ref") ||
+               matchesResolvedPath("/std/collections/mapCount") ||
+               matchesResolvedPath("/std/collections/experimental_map/mapCount") ||
+               matchesResolvedPath("/std/collections/experimental_map/mapCountRef");
+      }
+      if (aliasName == "contains" && expr.args.size() == 2) {
+        return matchesResolvedPath("/std/collections/map/contains") ||
+               matchesResolvedPath("/std/collections/map/contains_ref") ||
+               matchesResolvedPath("/std/collections/mapContains") ||
+               matchesResolvedPath("/std/collections/experimental_map/mapContains") ||
+               matchesResolvedPath("/std/collections/experimental_map/mapContainsRef");
+      }
+      if (aliasName == "tryAt" && expr.args.size() == 2) {
+        return matchesResolvedPath("/std/collections/map/tryAt") ||
+               matchesResolvedPath("/std/collections/map/tryAt_ref") ||
+               matchesResolvedPath("/std/collections/mapTryAt") ||
+               matchesResolvedPath("/std/collections/experimental_map/mapTryAt") ||
+               matchesResolvedPath("/std/collections/experimental_map/mapTryAtRef");
+      }
+      if (aliasName == "at" && expr.args.size() == 2) {
+        return matchesResolvedPath("/std/collections/map/at") ||
+               matchesResolvedPath("/std/collections/map/at_ref") ||
+               matchesResolvedPath("/std/collections/mapAt") ||
+               matchesResolvedPath("/std/collections/experimental_map/mapAt") ||
+               matchesResolvedPath("/std/collections/experimental_map/mapAtRef");
+      }
+      if (aliasName == "at_unsafe" && expr.args.size() == 2) {
+        return matchesResolvedPath("/std/collections/map/at_unsafe") ||
+               matchesResolvedPath("/std/collections/map/at_unsafe_ref") ||
+               matchesResolvedPath("/std/collections/mapAtUnsafe") ||
+               matchesResolvedPath("/std/collections/experimental_map/mapAtUnsafe") ||
+               matchesResolvedPath("/std/collections/experimental_map/mapAtUnsafeRef");
+      }
+      if (aliasName == "insert" && expr.args.size() == 3) {
+        return matchesResolvedPath("/std/collections/map/insert") ||
+               matchesResolvedPath("/std/collections/map/insert_ref") ||
+               matchesResolvedPath("/std/collections/mapInsert") ||
+               matchesResolvedPath("/std/collections/experimental_map/mapInsert") ||
+               matchesResolvedPath("/std/collections/experimental_map/mapInsertRef");
+      }
     }
     std::string normalizedName = expr.name;
     if (!normalizedName.empty() && normalizedName.front() == '/') {
@@ -115,18 +161,6 @@ bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)
     }
   }
   return false;
-}
-
-std::string normalizeMapImportAliasPath(const std::string &path) {
-  if (path.empty() || path.front() == '/') {
-    return path;
-  }
-  constexpr std::string_view mapPrefix = "map/";
-  constexpr std::string_view stdMapPrefix = "std/collections/map/";
-  if (path.rfind(mapPrefix, 0) == 0 || path.rfind(stdMapPrefix, 0) == 0) {
-    return "/" + path;
-  }
-  return path;
 }
 
 std::string resolveCallPathFromScopeWithoutImportAliases(
