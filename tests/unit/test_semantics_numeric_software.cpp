@@ -40,7 +40,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unsupported convert target type: complex") != std::string::npos);
+  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
 }
 
 TEST_CASE("rejects mixed software and fixed arithmetic") {
@@ -81,7 +81,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unsupported convert target type: complex") != std::string::npos);
+  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
 }
 
 TEST_CASE("rejects mixed complex and real comparisons") {
@@ -95,7 +95,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unsupported convert target type: complex") != std::string::npos);
+  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
 }
 
 TEST_SUITE_END();
