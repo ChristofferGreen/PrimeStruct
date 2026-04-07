@@ -186,7 +186,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     if (path.rfind("/std/collections/map/", 0) == 0) {
       const std::string suffix = path.substr(std::string("/std/collections/map/").size());
       if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-          suffix != "at" && suffix != "at_unsafe") {
+          suffix != "at" && suffix != "at_unsafe" && suffix != "insert") {
         const std::string mapAlias = "/map/" + suffix;
         defIt = defMap.find(mapAlias);
         if (defIt != defMap.end()) {
@@ -322,7 +322,8 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       if (!isExplicitCanonicalMapMethodAlias && !isExplicitCompatibilityMapMethodAlias &&
           !isExplicitMapContainsOrTryAtCompatibilityMethodAlias &&
           isMapReceiverTarget(resolvedTypeWithoutSlash) &&
-          (normalizedMethodName == "contains" || normalizedMethodName == "tryAt")) {
+          (normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||
+           normalizedMethodName == "insert")) {
         errorOut.clear();
         return nullptr;
       }
@@ -381,7 +382,8 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     if (!isExplicitCanonicalMapMethodAlias && !isExplicitCompatibilityMapMethodAlias &&
         !isExplicitMapContainsOrTryAtCompatibilityMethodAlias &&
         isMapReceiverTarget(normalizedTypeName) &&
-        (normalizedMethodName == "contains" || normalizedMethodName == "tryAt")) {
+        (normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||
+         normalizedMethodName == "insert")) {
       errorOut.clear();
       return nullptr;
     }
