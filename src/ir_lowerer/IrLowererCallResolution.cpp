@@ -133,6 +133,13 @@ bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)
                matchesResolvedPath("/std/collections/experimental_map/mapAtUnsafe") ||
                matchesResolvedPath("/std/collections/experimental_map/mapAtUnsafeRef");
       }
+      if (aliasName == "insert" && expr.args.size() == 3) {
+        return matchesResolvedPath("/std/collections/map/insert") ||
+               matchesResolvedPath("/std/collections/map/insert_ref") ||
+               matchesResolvedPath("/std/collections/mapInsert") ||
+               matchesResolvedPath("/std/collections/experimental_map/mapInsert") ||
+               matchesResolvedPath("/std/collections/experimental_map/mapInsertRef");
+      }
     }
     std::string normalizedName = expr.name;
     if (!normalizedName.empty() && normalizedName.front() == '/') {
@@ -153,6 +160,12 @@ bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)
         expr.args.size() == 1) {
       return matchesResolvedPath("/std/collections/map/count") ||
              matchesResolvedPath("/std/collections/mapCount");
+    }
+    if ((normalizedName == "insert" || normalizedName == "map/insert" ||
+         normalizedName == "std/collections/map/insert") &&
+        expr.args.size() == 3) {
+      return matchesResolvedPath("/std/collections/map/insert") ||
+             matchesResolvedPath("/std/collections/mapInsert");
     }
   }
   return false;
