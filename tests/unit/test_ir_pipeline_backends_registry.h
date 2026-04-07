@@ -27,6 +27,17 @@ const Entry *findSemanticEntry(const std::vector<Entry> &entries, const Predicat
   return &*it;
 }
 
+template <typename Entry, typename Predicate>
+const Entry *findSemanticEntry(const std::vector<const Entry *> &entries, const Predicate &predicate) {
+  const auto it = std::find_if(entries.begin(),
+                               entries.end(),
+                               [&](const Entry *entry) { return entry != nullptr && predicate(*entry); });
+  if (it == entries.end()) {
+    return nullptr;
+  }
+  return *it;
+}
+
 } // namespace
 
 TEST_CASE("ir backend registry reports deterministic order and lookup") {
@@ -1143,18 +1154,15 @@ main() {
   CHECK(vmMethod->resolvedPath == cppMethod->resolvedPath);
   CHECK(nativeMethod->resolvedPath == cppMethod->resolvedPath);
 
-  const auto *cppBridge = findSemanticEntry(
-      cppConformance.output.semanticProgram.bridgePathChoices,
+  const auto *cppBridge = findSemanticEntry(primec::semanticProgramBridgePathChoiceView(cppConformance.output.semanticProgram),
       [](const primec::SemanticProgramBridgePathChoice &entry) {
         return entry.scopePath == "/main" && entry.helperName == "count";
       });
-  const auto *vmBridge = findSemanticEntry(
-      vmConformance.output.semanticProgram.bridgePathChoices,
+  const auto *vmBridge = findSemanticEntry(primec::semanticProgramBridgePathChoiceView(vmConformance.output.semanticProgram),
       [](const primec::SemanticProgramBridgePathChoice &entry) {
         return entry.scopePath == "/main" && entry.helperName == "count";
       });
-  const auto *nativeBridge = findSemanticEntry(
-      nativeConformance.output.semanticProgram.bridgePathChoices,
+  const auto *nativeBridge = findSemanticEntry(primec::semanticProgramBridgePathChoiceView(nativeConformance.output.semanticProgram),
       [](const primec::SemanticProgramBridgePathChoice &entry) {
         return entry.scopePath == "/main" && entry.helperName == "count";
       });
@@ -1165,18 +1173,15 @@ main() {
   CHECK(vmBridge->chosenPath == cppBridge->chosenPath);
   CHECK(nativeBridge->chosenPath == cppBridge->chosenPath);
 
-  const auto *cppLocalAuto = findSemanticEntry(
-      cppConformance.output.semanticProgram.localAutoFacts,
+  const auto *cppLocalAuto = findSemanticEntry(primec::semanticProgramLocalAutoFactView(cppConformance.output.semanticProgram),
       [](const primec::SemanticProgramLocalAutoFact &entry) {
         return entry.scopePath == "/main" && entry.bindingName == "selected";
       });
-  const auto *vmLocalAuto = findSemanticEntry(
-      vmConformance.output.semanticProgram.localAutoFacts,
+  const auto *vmLocalAuto = findSemanticEntry(primec::semanticProgramLocalAutoFactView(vmConformance.output.semanticProgram),
       [](const primec::SemanticProgramLocalAutoFact &entry) {
         return entry.scopePath == "/main" && entry.bindingName == "selected";
       });
-  const auto *nativeLocalAuto = findSemanticEntry(
-      nativeConformance.output.semanticProgram.localAutoFacts,
+  const auto *nativeLocalAuto = findSemanticEntry(primec::semanticProgramLocalAutoFactView(nativeConformance.output.semanticProgram),
       [](const primec::SemanticProgramLocalAutoFact &entry) {
         return entry.scopePath == "/main" && entry.bindingName == "selected";
       });
@@ -1189,18 +1194,15 @@ main() {
   CHECK(vmLocalAuto->bindingTypeText == cppLocalAuto->bindingTypeText);
   CHECK(nativeLocalAuto->bindingTypeText == cppLocalAuto->bindingTypeText);
 
-  const auto *cppQuery = findSemanticEntry(
-      cppConformance.output.semanticProgram.queryFacts,
+  const auto *cppQuery = findSemanticEntry(primec::semanticProgramQueryFactView(cppConformance.output.semanticProgram),
       [](const primec::SemanticProgramQueryFact &entry) {
         return entry.scopePath == "/main" && entry.resolvedPath == "/lookup";
       });
-  const auto *vmQuery = findSemanticEntry(
-      vmConformance.output.semanticProgram.queryFacts,
+  const auto *vmQuery = findSemanticEntry(primec::semanticProgramQueryFactView(vmConformance.output.semanticProgram),
       [](const primec::SemanticProgramQueryFact &entry) {
         return entry.scopePath == "/main" && entry.resolvedPath == "/lookup";
       });
-  const auto *nativeQuery = findSemanticEntry(
-      nativeConformance.output.semanticProgram.queryFacts,
+  const auto *nativeQuery = findSemanticEntry(primec::semanticProgramQueryFactView(nativeConformance.output.semanticProgram),
       [](const primec::SemanticProgramQueryFact &entry) {
         return entry.scopePath == "/main" && entry.resolvedPath == "/lookup";
       });
@@ -1213,18 +1215,15 @@ main() {
   CHECK(vmQuery->bindingTypeText == cppQuery->bindingTypeText);
   CHECK(nativeQuery->bindingTypeText == cppQuery->bindingTypeText);
 
-  const auto *cppTry = findSemanticEntry(
-      cppConformance.output.semanticProgram.tryFacts,
+  const auto *cppTry = findSemanticEntry(primec::semanticProgramTryFactView(cppConformance.output.semanticProgram),
       [](const primec::SemanticProgramTryFact &entry) {
         return entry.scopePath == "/main" && entry.operandResolvedPath == "/lookup";
       });
-  const auto *vmTry = findSemanticEntry(
-      vmConformance.output.semanticProgram.tryFacts,
+  const auto *vmTry = findSemanticEntry(primec::semanticProgramTryFactView(vmConformance.output.semanticProgram),
       [](const primec::SemanticProgramTryFact &entry) {
         return entry.scopePath == "/main" && entry.operandResolvedPath == "/lookup";
       });
-  const auto *nativeTry = findSemanticEntry(
-      nativeConformance.output.semanticProgram.tryFacts,
+  const auto *nativeTry = findSemanticEntry(primec::semanticProgramTryFactView(nativeConformance.output.semanticProgram),
       [](const primec::SemanticProgramTryFact &entry) {
         return entry.scopePath == "/main" && entry.operandResolvedPath == "/lookup";
       });
@@ -1237,18 +1236,15 @@ main() {
   CHECK(vmTry->valueType == cppTry->valueType);
   CHECK(nativeTry->valueType == cppTry->valueType);
 
-  const auto *cppOnError = findSemanticEntry(
-      cppConformance.output.semanticProgram.onErrorFacts,
+  const auto *cppOnError = findSemanticEntry(primec::semanticProgramOnErrorFactView(cppConformance.output.semanticProgram),
       [](const primec::SemanticProgramOnErrorFact &entry) {
         return entry.definitionPath == "/main";
       });
-  const auto *vmOnError = findSemanticEntry(
-      vmConformance.output.semanticProgram.onErrorFacts,
+  const auto *vmOnError = findSemanticEntry(primec::semanticProgramOnErrorFactView(vmConformance.output.semanticProgram),
       [](const primec::SemanticProgramOnErrorFact &entry) {
         return entry.definitionPath == "/main";
       });
-  const auto *nativeOnError = findSemanticEntry(
-      nativeConformance.output.semanticProgram.onErrorFacts,
+  const auto *nativeOnError = findSemanticEntry(primec::semanticProgramOnErrorFactView(nativeConformance.output.semanticProgram),
       [](const primec::SemanticProgramOnErrorFact &entry) {
         return entry.definitionPath == "/main";
       });
@@ -1260,18 +1256,15 @@ main() {
   CHECK(vmOnError->handlerPath == cppOnError->handlerPath);
   CHECK(nativeOnError->handlerPath == cppOnError->handlerPath);
 
-  const auto *cppReturn = findSemanticEntry(
-      cppConformance.output.semanticProgram.returnFacts,
+  const auto *cppReturn = findSemanticEntry(primec::semanticProgramReturnFactView(cppConformance.output.semanticProgram),
       [](const primec::SemanticProgramReturnFact &entry) {
         return entry.definitionPath == "/main";
       });
-  const auto *vmReturn = findSemanticEntry(
-      vmConformance.output.semanticProgram.returnFacts,
+  const auto *vmReturn = findSemanticEntry(primec::semanticProgramReturnFactView(vmConformance.output.semanticProgram),
       [](const primec::SemanticProgramReturnFact &entry) {
         return entry.definitionPath == "/main";
       });
-  const auto *nativeReturn = findSemanticEntry(
-      nativeConformance.output.semanticProgram.returnFacts,
+  const auto *nativeReturn = findSemanticEntry(primec::semanticProgramReturnFactView(nativeConformance.output.semanticProgram),
       [](const primec::SemanticProgramReturnFact &entry) {
         return entry.definitionPath == "/main";
       });

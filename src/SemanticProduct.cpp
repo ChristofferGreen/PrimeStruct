@@ -241,8 +241,9 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
-  for (size_t i = 0; i < semanticProgram.directCallTargets.size(); ++i) {
-    const auto &entry = semanticProgram.directCallTargets[i];
+  const auto directCallTargets = semanticProgramDirectCallTargetView(semanticProgram);
+  for (size_t i = 0; i < directCallTargets.size(); ++i) {
+    const auto &entry = *directCallTargets[i];
     appendSemanticIndexedLine(out,
                               "direct_call_targets",
                               i,
@@ -252,8 +253,9 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
-  for (size_t i = 0; i < semanticProgram.methodCallTargets.size(); ++i) {
-    const auto &entry = semanticProgram.methodCallTargets[i];
+  const auto methodCallTargets = semanticProgramMethodCallTargetView(semanticProgram);
+  for (size_t i = 0; i < methodCallTargets.size(); ++i) {
+    const auto &entry = *methodCallTargets[i];
     appendSemanticIndexedLine(out,
                               "method_call_targets",
                               i,
@@ -264,8 +266,9 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
-  for (size_t i = 0; i < semanticProgram.bridgePathChoices.size(); ++i) {
-    const auto &entry = semanticProgram.bridgePathChoices[i];
+  const auto bridgePathChoices = semanticProgramBridgePathChoiceView(semanticProgram);
+  for (size_t i = 0; i < bridgePathChoices.size(); ++i) {
+    const auto &entry = *bridgePathChoices[i];
     appendSemanticIndexedLine(out,
                               "bridge_path_choices",
                               i,
@@ -276,8 +279,9 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
-  for (size_t i = 0; i < semanticProgram.callableSummaries.size(); ++i) {
-    const auto &entry = semanticProgram.callableSummaries[i];
+  const auto callableSummaries = semanticProgramCallableSummaryView(semanticProgram);
+  for (size_t i = 0; i < callableSummaries.size(); ++i) {
+    const auto &entry = *callableSummaries[i];
     appendSemanticIndexedLine(out,
                               "callable_summaries",
                               i,
@@ -327,8 +331,9 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
-  for (size_t i = 0; i < semanticProgram.bindingFacts.size(); ++i) {
-    const auto &entry = semanticProgram.bindingFacts[i];
+  const auto bindingFacts = semanticProgramBindingFactView(semanticProgram);
+  for (size_t i = 0; i < bindingFacts.size(); ++i) {
+    const auto &entry = *bindingFacts[i];
     appendSemanticIndexedLine(out,
                               "binding_facts",
                               i,
@@ -344,8 +349,9 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
-  for (size_t i = 0; i < semanticProgram.returnFacts.size(); ++i) {
-    const auto &entry = semanticProgram.returnFacts[i];
+  const auto returnFacts = semanticProgramReturnFactView(semanticProgram);
+  for (size_t i = 0; i < returnFacts.size(); ++i) {
+    const auto &entry = *returnFacts[i];
     appendSemanticIndexedLine(out,
                               "return_facts",
                               i,
@@ -360,8 +366,9 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
-  for (size_t i = 0; i < semanticProgram.localAutoFacts.size(); ++i) {
-    const auto &entry = semanticProgram.localAutoFacts[i];
+  const auto localAutoFacts = semanticProgramLocalAutoFactView(semanticProgram);
+  for (size_t i = 0; i < localAutoFacts.size(); ++i) {
+    const auto &entry = *localAutoFacts[i];
     appendSemanticIndexedLine(out,
                               "local_auto_facts",
                               i,
@@ -405,8 +412,9 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   " provenance_handle=" + std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
-  for (size_t i = 0; i < semanticProgram.queryFacts.size(); ++i) {
-    const auto &entry = semanticProgram.queryFacts[i];
+  const auto queryFacts = semanticProgramQueryFactView(semanticProgram);
+  for (size_t i = 0; i < queryFacts.size(); ++i) {
+    const auto &entry = *queryFacts[i];
     appendSemanticIndexedLine(out,
                               "query_facts",
                               i,
@@ -423,8 +431,9 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
-  for (size_t i = 0; i < semanticProgram.tryFacts.size(); ++i) {
-    const auto &entry = semanticProgram.tryFacts[i];
+  const auto tryFacts = semanticProgramTryFactView(semanticProgram);
+  for (size_t i = 0; i < tryFacts.size(); ++i) {
+    const auto &entry = *tryFacts[i];
     appendSemanticIndexedLine(out,
                               "try_facts",
                               i,
@@ -445,8 +454,9 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
-  for (size_t i = 0; i < semanticProgram.onErrorFacts.size(); ++i) {
-    const auto &entry = semanticProgram.onErrorFacts[i];
+  const auto onErrorFacts = semanticProgramOnErrorFactView(semanticProgram);
+  for (size_t i = 0; i < onErrorFacts.size(); ++i) {
+    const auto &entry = *onErrorFacts[i];
     appendSemanticIndexedLine(out,
                               "on_error_facts",
                               i,
