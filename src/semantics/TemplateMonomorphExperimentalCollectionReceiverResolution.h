@@ -363,25 +363,43 @@ std::string canonicalMapHelperUnknownTargetPath(const std::string &resolvedPath)
       resolvedPath == "/std/collections/mapCount") {
     return "/std/collections/map/count";
   }
+  if (resolvedPath == "/std/collections/map/count_ref") {
+    return "/std/collections/map/count_ref";
+  }
   if (resolvedPath == "/std/collections/map/contains" || resolvedPath == "/map/contains" ||
       resolvedPath == "/std/collections/mapContains") {
     return "/std/collections/map/contains";
+  }
+  if (resolvedPath == "/std/collections/map/contains_ref") {
+    return "/std/collections/map/contains_ref";
   }
   if (resolvedPath == "/std/collections/map/tryAt" || resolvedPath == "/map/tryAt" ||
       resolvedPath == "/std/collections/mapTryAt") {
     return "/std/collections/map/tryAt";
   }
+  if (resolvedPath == "/std/collections/map/tryAt_ref") {
+    return "/std/collections/map/tryAt_ref";
+  }
   if (resolvedPath == "/std/collections/map/at" || resolvedPath == "/map/at" ||
       resolvedPath == "/std/collections/mapAt") {
     return "/std/collections/map/at";
+  }
+  if (resolvedPath == "/std/collections/map/at_ref") {
+    return "/std/collections/map/at_ref";
   }
   if (resolvedPath == "/std/collections/map/at_unsafe" || resolvedPath == "/map/at_unsafe" ||
       resolvedPath == "/std/collections/mapAtUnsafe") {
     return "/std/collections/map/at_unsafe";
   }
+  if (resolvedPath == "/std/collections/map/at_unsafe_ref") {
+    return "/std/collections/map/at_unsafe_ref";
+  }
   if (resolvedPath == "/std/collections/map/insert" || resolvedPath == "/map/insert" ||
       resolvedPath == "/std/collections/mapInsert") {
     return "/std/collections/map/insert";
+  }
+  if (resolvedPath == "/std/collections/map/insert_ref") {
+    return "/std/collections/map/insert_ref";
   }
   return {};
 }
@@ -423,20 +441,38 @@ std::string experimentalMapHelperPathForCanonicalHelper(const std::string &path)
   if (path == "/std/collections/map/count") {
     return "/std/collections/experimental_map/mapCount";
   }
+  if (path == "/std/collections/map/count_ref") {
+    return "/std/collections/experimental_map/mapCountRef";
+  }
   if (path == "/std/collections/map/contains") {
     return "/std/collections/experimental_map/mapContains";
+  }
+  if (path == "/std/collections/map/contains_ref") {
+    return "/std/collections/experimental_map/mapContainsRef";
   }
   if (path == "/std/collections/map/tryAt") {
     return "/std/collections/experimental_map/mapTryAt";
   }
+  if (path == "/std/collections/map/tryAt_ref") {
+    return "/std/collections/experimental_map/mapTryAtRef";
+  }
   if (path == "/std/collections/map/at") {
     return "/std/collections/experimental_map/mapAt";
+  }
+  if (path == "/std/collections/map/at_ref") {
+    return "/std/collections/experimental_map/mapAtRef";
   }
   if (path == "/std/collections/map/at_unsafe") {
     return "/std/collections/experimental_map/mapAtUnsafe";
   }
+  if (path == "/std/collections/map/at_unsafe_ref") {
+    return "/std/collections/experimental_map/mapAtUnsafeRef";
+  }
   if (path == "/std/collections/map/insert") {
     return "/std/collections/experimental_map/mapInsert";
+  }
+  if (path == "/std/collections/map/insert_ref") {
+    return "/std/collections/experimental_map/mapInsertRef";
   }
   return {};
 }
@@ -567,6 +603,9 @@ std::string experimentalMapHelperPathForWrapperHelper(const std::string &path) {
   }
   if (path == "/std/collections/mapAtUnsafe") {
     return "/std/collections/experimental_map/mapAtUnsafe";
+  }
+  if (path == "/std/collections/mapInsert") {
+    return "/std/collections/experimental_map/mapInsert";
   }
   return {};
 }

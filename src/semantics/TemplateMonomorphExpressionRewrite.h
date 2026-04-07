@@ -84,7 +84,13 @@ bool rewriteExpr(Expr &expr,
     return path == "/std/collections/map/count" || path == "/std/collections/map/contains" ||
            path == "/std/collections/map/tryAt" || path == "/std/collections/map/at" ||
            path == "/std/collections/map/at_unsafe" ||
-           path == "/std/collections/map/insert";
+           path == "/std/collections/map/insert" ||
+           path == "/std/collections/map/count_ref" ||
+           path == "/std/collections/map/contains_ref" ||
+           path == "/std/collections/map/tryAt_ref" ||
+           path == "/std/collections/map/at_ref" ||
+           path == "/std/collections/map/at_unsafe_ref" ||
+           path == "/std/collections/map/insert_ref";
   };
   auto isCanonicalStdlibCollectionHelperPath = [&](const std::string &path) {
     if (isCanonicalBuiltinMapHelperPath(path)) {
