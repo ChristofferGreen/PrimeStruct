@@ -101,7 +101,7 @@ bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
   }
   const std::string helperName = callee.fullPath.substr(slash + 1);
   return helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
-         helperName == "at" || helperName == "at_unsafe";
+         helperName == "at" || helperName == "at_unsafe" || helperName == "insert";
 }
 
 bool isTypeNamespaceMethodCallForInlineEmit(const Expr &callExpr,
