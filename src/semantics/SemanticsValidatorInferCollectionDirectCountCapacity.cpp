@@ -28,15 +28,18 @@ ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKi
     if (context.resolveMethodCallPath == nullptr || context.preferVectorStdlibHelperPath == nullptr) {
       return ReturnKind::Unknown;
     }
+    auto hasVisibleStdlibMapCountDefinition = [&]() {
+      return hasImportedDefinitionPath("/std/collections/map/count") ||
+             (context.hasDeclaredDefinitionPath != nullptr &&
+              context.hasDeclaredDefinitionPath("/std/collections/map/count"));
+    };
     std::string methodResolved;
     if (!context.resolveMethodCallPath(helperName, methodResolved)) {
       return ReturnKind::Unknown;
     }
     methodResolved = context.preferVectorStdlibHelperPath(methodResolved);
     if (helperName == "count" && methodResolved == "/std/collections/map/count" &&
-        context.hasDeclaredDefinitionPath != nullptr &&
-        !hasImportedDefinitionPath("/std/collections/map/count") &&
-        !context.hasDeclaredDefinitionPath("/std/collections/map/count") &&
+        !hasVisibleStdlibMapCountDefinition() &&
         !context.shouldInferBuiltinBareMapCountCall) {
       return failInferDirectCountCapacityDiagnostic(
           "unknown call target: /std/collections/map/count");

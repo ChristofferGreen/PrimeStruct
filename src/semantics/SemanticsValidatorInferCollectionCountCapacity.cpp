@@ -20,12 +20,17 @@ bool SemanticsValidator::resolveBuiltinCollectionCountCapacityReturnKind(
 
   std::string mapKeyType;
   std::string mapValueType;
+  auto hasVisibleStdlibMapCountDefinition = [&]() {
+    return hasImportedDefinitionPath("/std/collections/map/count") ||
+           (context.hasDeclaredDefinitionPath != nullptr &&
+            context.hasDeclaredDefinitionPath("/std/collections/map/count"));
+  };
   if (context.isUnnamespacedMapCountFallbackCall &&
       context.shouldInferBuiltinBareMapCountCall &&
       context.hasDeclaredDefinitionPath != nullptr &&
       !context.hasDeclaredDefinitionPath("/std/collections/map/count") &&
       !context.hasDeclaredDefinitionPath("/map/count") &&
-      !hasImportedDefinitionPath("/std/collections/map/count") &&
+      !hasVisibleStdlibMapCountDefinition() &&
       context.resolveMapTarget != nullptr &&
       context.resolveMapTarget(callExpr.args.front(), mapKeyType, mapValueType)) {
     kindOut = ReturnKind::Int;
@@ -42,9 +47,7 @@ bool SemanticsValidator::resolveBuiltinCollectionCountCapacityReturnKind(
   }
   methodResolved = context.preferVectorStdlibHelperPath(methodResolved);
   if (context.isCountLike && methodResolved == "/std/collections/map/count" &&
-      context.hasDeclaredDefinitionPath != nullptr &&
-      !hasImportedDefinitionPath("/std/collections/map/count") &&
-      !context.hasDeclaredDefinitionPath("/std/collections/map/count") &&
+      !hasVisibleStdlibMapCountDefinition() &&
       !context.shouldInferBuiltinBareMapCountCall) {
     return failInferCountCapacityDiagnostic(
         "unknown call target: /std/collections/map/count");
