@@ -83,6 +83,14 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
                                               " requires map key type " +
                                               mapKeyType);
   };
+  auto hasBareMapContainsBuiltinDefinition = [&]() {
+    return hasImportedDefinitionPath("/std/collections/map/contains") ||
+           hasDeclaredDefinitionPath("/std/collections/map/contains") ||
+           hasImportedDefinitionPath("/std/collections/map/contains_ref") ||
+           hasDeclaredDefinitionPath("/std/collections/map/contains_ref") ||
+           hasImportedDefinitionPath("/contains") ||
+           hasDeclaredDefinitionPath("/contains");
+  };
 
   std::string builtinName;
   if (!expr.isMethodCall &&
@@ -161,10 +169,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
            params, locals, *context.dispatchResolvers) ||
        this->isIndexedArgsPackMapReceiverTarget(
            expr.args.front(), *context.dispatchResolvers))) {
-    if (!hasImportedDefinitionPath("/std/collections/map/contains") &&
-        !hasDeclaredDefinitionPath("/std/collections/map/contains") &&
-        !hasImportedDefinitionPath("/contains") &&
-        !hasDeclaredDefinitionPath("/contains")) {
+    if (!hasBareMapContainsBuiltinDefinition()) {
       return failLateMapAccessBuiltinDiagnostic(
           "unknown call target: /std/collections/map/contains");
     }

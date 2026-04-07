@@ -19,6 +19,14 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
   auto failMapSoaBuiltinDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(expr, std::move(message));
   };
+  auto hasBareMapContainsBuiltinDefinition = [&]() {
+    return hasImportedDefinitionPath("/std/collections/map/contains") ||
+           hasDeclaredDefinitionPath("/std/collections/map/contains") ||
+           hasImportedDefinitionPath("/std/collections/map/contains_ref") ||
+           hasDeclaredDefinitionPath("/std/collections/map/contains_ref") ||
+           hasImportedDefinitionPath("/contains") ||
+           hasDeclaredDefinitionPath("/contains");
+  };
   if (splitSoaFieldViewHelperPath(resolved)) {
     handledOut = true;
     return failMapSoaBuiltinDiagnostic(
@@ -302,10 +310,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
   if (!resolvedMethod && !expr.isMethodCall && isSimpleCallName(expr, "contains") &&
       context.shouldBuiltinValidateBareMapContainsCall && resolvedMissing) {
     handledOut = true;
-    if (!hasImportedDefinitionPath("/std/collections/map/contains") &&
-        !hasDeclaredDefinitionPath("/std/collections/map/contains") &&
-        !hasImportedDefinitionPath("/contains") &&
-        !hasDeclaredDefinitionPath("/contains")) {
+    if (!hasBareMapContainsBuiltinDefinition()) {
       return failMapSoaBuiltinDiagnostic(
           "unknown call target: /std/collections/map/contains");
     }

@@ -48,6 +48,13 @@ std::string canonicalStdlibMapAccessPathForHelper(const std::string &helperName)
   return "";
 }
 
+std::string canonicalStdlibMapContainsPathForResolvedMethod(const std::string &methodResolved) {
+  return methodResolved == "/std/collections/map/contains_ref" ||
+                 methodResolved == "/map/contains_ref"
+             ? "/std/collections/map/contains_ref"
+             : "/std/collections/map/contains";
+}
+
 } // namespace
 
 bool SemanticsValidator::resolveExprCollectionAccessTarget(
@@ -588,14 +595,14 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       }
       if (expr.name == "contains" &&
           (methodResolved == "/map/contains" ||
+           methodResolved == "/map/contains_ref" ||
+           methodResolved == "/std/collections/map/contains" ||
            methodResolved == "/std/collections/map/contains_ref") &&
           !hasImportedDefinitionPath("/contains") &&
           !hasDeclaredDefinitionPath("/contains")) {
         return failCollectionAccessTargetDiagnostic(
             "unknown call target: " +
-            std::string(methodResolved == "/std/collections/map/contains_ref"
-                            ? "/std/collections/map/contains_ref"
-                            : "/std/collections/map/contains"));
+            canonicalStdlibMapContainsPathForResolvedMethod(methodResolved));
       }
       if (isBuiltinMethod) {
         if (((methodResolved == "/std/collections/map/contains" &&
