@@ -46,6 +46,59 @@
               }
               return false;
             };
+        auto rewriteBuiltinMapInsertPendingExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
+          if (callExpr.kind != Expr::Kind::Call || callExpr.args.size() != 3) {
+            return false;
+          }
+
+          size_t receiverIndex = 0;
+          if (callExpr.isMethodCall) {
+            if (callExpr.name != "insert") {
+              return false;
+            }
+          } else {
+            std::string helperName;
+            if (!ir_lowerer::resolveMapHelperAliasName(callExpr, helperName) || helperName != "insert") {
+              return false;
+            }
+            if (hasNamedArguments(callExpr.argNames)) {
+              for (size_t i = 0; i < callExpr.args.size(); ++i) {
+                if (i < callExpr.argNames.size() && callExpr.argNames[i].has_value() &&
+                    *callExpr.argNames[i] == "values") {
+                  receiverIndex = i;
+                  break;
+                }
+              }
+            }
+          }
+
+          if (receiverIndex >= callExpr.args.size()) {
+            return false;
+          }
+          const auto targetInfo =
+              ir_lowerer::resolveMapAccessTargetInfo(callExpr.args[receiverIndex], localsIn);
+          if (!targetInfo.isMapTarget) {
+            return false;
+          }
+
+          rewrittenExpr = callExpr;
+          rewrittenExpr.name = "/std/collections/map/insert_builtin_pending";
+          rewrittenExpr.namespacePrefix.clear();
+          rewrittenExpr.isMethodCall = false;
+          rewrittenExpr.isFieldAccess = false;
+          // Force rewritten rooted helper calls to resolve from their new path
+          // instead of stale semantic-product call-target facts.
+          rewrittenExpr.semanticNodeId = 0;
+          if (rewrittenExpr.templateArgs.empty() &&
+              targetInfo.mapKeyKind != LocalInfo::ValueKind::Unknown &&
+              targetInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
+            rewrittenExpr.templateArgs = {
+                ir_lowerer::typeNameForValueKind(targetInfo.mapKeyKind),
+                ir_lowerer::typeNameForValueKind(targetInfo.mapValueKind),
+            };
+          }
+          return true;
+        };
         auto rewriteCanonicalMapHelperForExperimentalReceiverExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
           std::string helperName;
           if (!resolveBuiltinMapHelperName(callExpr, true, helperName)) {
@@ -186,8 +239,13 @@
           return true;
         };
         Expr inlineDispatchExpr = expr;
+        Expr rewrittenBuiltinMapInsertPendingExpr;
+        if (rewriteBuiltinMapInsertPendingExpr(expr, rewrittenBuiltinMapInsertPendingExpr)) {
+          inlineDispatchExpr = rewrittenBuiltinMapInsertPendingExpr;
+        }
         Expr rewrittenCanonicalExperimentalMapHelperExpr;
-        if (rewriteCanonicalMapHelperForExperimentalReceiverExpr(expr, rewrittenCanonicalExperimentalMapHelperExpr)) {
+        if (rewriteCanonicalMapHelperForExperimentalReceiverExpr(
+                inlineDispatchExpr, rewrittenCanonicalExperimentalMapHelperExpr)) {
           inlineDispatchExpr = rewrittenCanonicalExperimentalMapHelperExpr;
         }
         const auto inlineDispatchResult = ir_lowerer::tryEmitInlineCallDispatchWithLocals(
