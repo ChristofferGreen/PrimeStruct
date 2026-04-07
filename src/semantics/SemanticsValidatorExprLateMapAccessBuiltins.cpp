@@ -256,7 +256,9 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
                                        : "/std/collections/map/tryAt") &&
         !hasDeclaredDefinitionPath(resolved == "/std/collections/map/tryAt_ref"
                                        ? "/std/collections/map/tryAt_ref"
-                                       : "/std/collections/map/tryAt")) {
+                                       : "/std/collections/map/tryAt") &&
+        !hasImportedDefinitionPath("/tryAt") &&
+        !hasDeclaredDefinitionPath("/tryAt")) {
       return failLateMapAccessBuiltinDiagnostic(
           "unknown call target: " +
           std::string(resolved == "/std/collections/map/tryAt_ref"

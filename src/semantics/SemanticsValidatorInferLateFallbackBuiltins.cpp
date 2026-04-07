@@ -359,7 +359,9 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
             !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
                 receiverExpr) &&
             !hasImportedDefinitionPath(methodResolved) &&
-            !hasDeclaredDefinitionPath(methodResolved)) {
+            !hasDeclaredDefinitionPath(methodResolved) &&
+            !hasImportedDefinitionPath("/tryAt") &&
+            !hasDeclaredDefinitionPath("/tryAt")) {
           return failInferLateFallbackDiagnostic(
               "unknown call target: " + methodResolved);
         }
