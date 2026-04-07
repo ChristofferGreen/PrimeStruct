@@ -379,6 +379,10 @@ std::string canonicalMapHelperUnknownTargetPath(const std::string &resolvedPath)
       resolvedPath == "/std/collections/mapAtUnsafe") {
     return "/std/collections/map/at_unsafe";
   }
+  if (resolvedPath == "/std/collections/map/insert" || resolvedPath == "/map/insert" ||
+      resolvedPath == "/std/collections/mapInsert") {
+    return "/std/collections/map/insert";
+  }
   return {};
 }
 
@@ -430,6 +434,9 @@ std::string experimentalMapHelperPathForCanonicalHelper(const std::string &path)
   }
   if (path == "/std/collections/map/at_unsafe") {
     return "/std/collections/experimental_map/mapAtUnsafe";
+  }
+  if (path == "/std/collections/map/insert") {
+    return "/std/collections/experimental_map/mapInsert";
   }
   return {};
 }

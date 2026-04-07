@@ -475,14 +475,15 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
       if (normalizedPrefix == "std/collections/map" &&
           (normalizedName == "count" || normalizedName == "contains" ||
            normalizedName == "tryAt" || normalizedName == "at" ||
-           normalizedName == "at_unsafe")) {
+           normalizedName == "at_unsafe" || normalizedName == "insert")) {
         return normalizedName;
       }
       if (normalizedName.rfind("std/collections/map/", 0) == 0) {
         const std::string helperName =
             normalizedName.substr(std::string("std/collections/map/").size());
         if (helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
-            helperName == "at" || helperName == "at_unsafe") {
+            helperName == "at" || helperName == "at_unsafe" ||
+            helperName == "insert") {
           return helperName;
         }
       }

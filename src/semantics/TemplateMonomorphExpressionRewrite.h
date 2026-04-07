@@ -83,7 +83,8 @@ bool rewriteExpr(Expr &expr,
   auto isCanonicalBuiltinMapHelperPath = [](const std::string &path) {
     return path == "/std/collections/map/count" || path == "/std/collections/map/contains" ||
            path == "/std/collections/map/tryAt" || path == "/std/collections/map/at" ||
-           path == "/std/collections/map/at_unsafe";
+           path == "/std/collections/map/at_unsafe" ||
+           path == "/std/collections/map/insert";
   };
   auto isCanonicalStdlibCollectionHelperPath = [&](const std::string &path) {
     if (isCanonicalBuiltinMapHelperPath(path)) {

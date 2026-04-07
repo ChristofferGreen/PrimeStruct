@@ -71,12 +71,13 @@ bool SemanticsValidator::shouldBypassGraphBindingLookup(const Expr &candidate) c
   if ((normalizedPrefix == "std/collections/map" &&
        (normalizedName == "count" || normalizedName == "contains" ||
         normalizedName == "tryAt" || normalizedName == "at" ||
-        normalizedName == "at_unsafe")) ||
+        normalizedName == "at_unsafe" || normalizedName == "insert")) ||
       normalizedName == "std/collections/map/count" ||
       normalizedName == "std/collections/map/contains" ||
       normalizedName == "std/collections/map/tryAt" ||
       normalizedName == "std/collections/map/at" ||
-      normalizedName == "std/collections/map/at_unsafe") {
+      normalizedName == "std/collections/map/at_unsafe" ||
+      normalizedName == "std/collections/map/insert") {
     return true;
   }
   if ((normalizedPrefix == "std/collections/vector" &&
