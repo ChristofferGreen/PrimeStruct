@@ -89,6 +89,12 @@ bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
       return matchesHelper("/std/collections/map/count") ||
              matchesHelper("/std/collections/mapCount");
     }
+    if ((normalizedName == "insert" || normalizedName == "map/insert" ||
+         normalizedName == "std/collections/map/insert") &&
+        expr.args.size() == 3) {
+      return matchesHelper("/std/collections/map/insert") ||
+             matchesHelper("/std/collections/mapInsert");
+    }
     return false;
   }
   const size_t slash = callee.fullPath.find_last_of('/');
