@@ -451,9 +451,12 @@ ResolveExprPathFn makeResolveCallPathFromScope(
         !chosenPath.empty()) {
       return chosenPath;
     }
-    if (semanticProductTargets.hasSemanticProduct &&
-        expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
-      if (const std::string resolvedPath = findSemanticProductDirectCallTarget(semanticProductTargets, expr);
+    if (semanticProductTargets.hasSemanticProduct && expr.kind == Expr::Kind::Call) {
+      if (expr.isMethodCall) {
+        return findSemanticProductMethodCallTarget(semanticProductTargets, expr);
+      }
+      if (const std::string resolvedPath =
+              findSemanticProductDirectCallTarget(semanticProductTargets, expr);
           !resolvedPath.empty() && !isResolvedBridgeHelperPath(resolvedPath)) {
         return resolvedPath;
       }

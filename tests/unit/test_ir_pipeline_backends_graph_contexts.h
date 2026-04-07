@@ -675,7 +675,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irCallResolution.find("findSemanticProductBridgePathChoice(semanticProductTargets, expr)") !=
         std::string::npos);
-  CHECK(irCallResolution.find("expr.kind == Expr::Kind::Call && !expr.isMethodCall) {\n      return {};") !=
+  CHECK(irCallResolution.find("if (expr.isMethodCall) {\n        return findSemanticProductMethodCallTarget(semanticProductTargets, expr);") !=
         std::string::npos);
   CHECK(irCallResolution.find("return resolveCallPathFromScope(expr, defMap, importAliases);") ==
         std::string::npos);

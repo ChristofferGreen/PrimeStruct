@@ -731,6 +731,38 @@ TEST_CASE("ir lowerer call helpers keep rewritten rooted direct-call paths witho
   CHECK(resolveExprPath(rewrittenExpr) == "/operator/add");
 }
 
+TEST_CASE("ir lowerer call helpers require semantic-product method-call targets") {
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {};
+  const std::unordered_map<std::string, std::string> importAliases = {};
+
+  primec::Expr methodExpr;
+  methodExpr.kind = primec::Expr::Kind::Call;
+  methodExpr.isMethodCall = true;
+  methodExpr.name = "contains";
+  methodExpr.semanticNodeId = 44;
+
+  primec::SemanticProgram semanticProgram;
+  auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  auto resolveExprPath =
+      primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, semanticTargets);
+  CHECK(resolveExprPath(methodExpr).empty());
+
+  semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
+      "/main",
+      "contains",
+      "",
+      "/std/collections/map/contains",
+      0,
+      0,
+      44,
+  });
+  semanticTargets = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  resolveExprPath =
+      primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, semanticTargets);
+  CHECK(resolveExprPath(methodExpr) == "/std/collections/map/contains");
+}
+
 TEST_CASE("ir lowerer call helpers require semantic-product bridge-path choices") {
   const std::unordered_map<std::string, const primec::Definition *> defMap;
   const std::unordered_map<std::string, std::string> importAliases;

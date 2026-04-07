@@ -128,5 +128,7 @@ Progress note: the first semantic-product publication, dump surface, and tempora
   - ○ Remove the final AST-derived semantic fallback slices so the AST remains lowering-visible only for provenance/debug/source-map ownership.
     - ○ Inventory each remaining AST/import fallback site used after the lowering boundary.
     - ○ Replace fallback sites in validator-side binding-kind paths with semantic-product facts or explicit failures.
-    - ○ Replace fallback sites in call/helper alias paths with semantic-product facts or explicit failures.
+    - ◐ Replace fallback sites in call/helper alias paths with semantic-product facts or explicit failures.
+      - ✓ Route semantic-mode method-call path resolution through semantic-product method-call targets (no AST/import alias fallback).
+      - ○ Remove the remaining semantic-mode helper alias remaps that still receiver-probe when semantic targets are absent from the lowered def map.
     - ○ Delete obsolete fallback codepaths and transitional adapters after coverage lands.
