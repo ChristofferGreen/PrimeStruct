@@ -191,7 +191,8 @@
         inlineStack.erase(callee.fullPath);
         return false;
       }
-      int32_t valuesLocal = -1;
+      int32_t valuesLocal =
+          valuesIt->second.kind == LocalInfo::Kind::Map ? valuesIt->second.index : -1;
       int32_t valuesWrapperLocal = -1;
       int32_t ptrLocal = valuesIt->second.index;
       if (!orderedArgs.empty() && orderedArgs.front() != nullptr) {
