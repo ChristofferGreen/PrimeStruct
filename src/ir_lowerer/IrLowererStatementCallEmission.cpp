@@ -244,7 +244,7 @@ static std::optional<LocalInfo::ValueKind> resolveBufferTargetElementKind(
   return std::nullopt;
 }
 
-static bool rewriteMapInsertHelperStatementToBuiltinPending(
+static bool rewriteMapInsertHelperStatementToBuiltin(
     const Expr &stmt,
     const LocalMap &localsIn,
     Expr &rewrittenStmt) {
@@ -689,7 +689,7 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   };
   Expr directStmt = stmt;
   Expr rewrittenMapInsertStmt;
-  if (rewriteMapInsertHelperStatementToBuiltinPending(stmt, localsIn, rewrittenMapInsertStmt)) {
+  if (rewriteMapInsertHelperStatementToBuiltin(stmt, localsIn, rewrittenMapInsertStmt)) {
     directStmt = rewrittenMapInsertStmt;
   }
   bool rewrittenExplicitVectorMutatorToBuiltinCall = false;

@@ -46,7 +46,7 @@
               }
               return false;
             };
-        auto rewriteBuiltinMapInsertPendingExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
+        auto rewriteBuiltinMapInsertBuiltinExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
           if (callExpr.kind != Expr::Kind::Call || callExpr.args.size() != 3) {
             return false;
           }
@@ -253,9 +253,9 @@
           return true;
         };
         Expr inlineDispatchExpr = expr;
-        Expr rewrittenBuiltinMapInsertPendingExpr;
-        if (rewriteBuiltinMapInsertPendingExpr(expr, rewrittenBuiltinMapInsertPendingExpr)) {
-          inlineDispatchExpr = rewrittenBuiltinMapInsertPendingExpr;
+        Expr rewrittenBuiltinMapInsertBuiltinExpr;
+        if (rewriteBuiltinMapInsertBuiltinExpr(expr, rewrittenBuiltinMapInsertBuiltinExpr)) {
+          inlineDispatchExpr = rewrittenBuiltinMapInsertBuiltinExpr;
         }
         Expr rewrittenCanonicalExperimentalMapHelperExpr;
         if (rewriteCanonicalMapHelperForExperimentalReceiverExpr(
