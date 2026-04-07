@@ -2,6 +2,22 @@
 
 namespace primec::semantics {
 
+namespace {
+
+bool isCanonicalMapAccessHelperName(const std::string &helperName) {
+  return helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+}
+
+bool isStdNamespacedCanonicalMapAccessPath(const std::string &path) {
+  return path == "/std/collections/map/at" ||
+         path == "/std/collections/map/at_ref" ||
+         path == "/std/collections/map/at_unsafe" ||
+         path == "/std/collections/map/at_unsafe_ref";
+}
+
+} // namespace
+
 bool SemanticsValidator::prepareExprCollectionDispatchSetup(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
@@ -137,9 +153,8 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       setupOut.isStdNamespacedVectorAccessCall &&
       hasImportedDefinitionPath(resolveCalleePath(expr));
   setupOut.isStdNamespacedMapAccessCall =
-      hasBuiltinAccessSpelling && !expr.isMethodCall &&
-      (resolveCalleePath(expr) == "/std/collections/map/at" ||
-       resolveCalleePath(expr) == "/std/collections/map/at_unsafe");
+      !expr.isMethodCall &&
+      isStdNamespacedCanonicalMapAccessPath(resolveCalleePath(expr));
   setupOut.hasStdNamespacedMapAccessDefinition =
       setupOut.isStdNamespacedMapAccessCall &&
       hasImportedDefinitionPath(resolveCalleePath(expr));
@@ -175,7 +190,10 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
     resolved = "/std/collections/vector/count";
   }
   if (!expr.isMethodCall && expr.args.size() > 1 && !hasNamedArguments(expr.argNames) &&
-      (isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe")) &&
+      (isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_ref") ||
+       isSimpleCallName(expr, "at_unsafe") ||
+       isSimpleCallName(expr, "at_unsafe_ref")) &&
+      isCanonicalMapAccessHelperName(expr.name) &&
       defMap_.find("/" + expr.name) == defMap_.end()) {
     std::string shadowedReceiverPath;
     if (this->resolveDirectCallTemporaryAccessReceiverPath(expr.args.front(), expr.name, shadowedReceiverPath) ||

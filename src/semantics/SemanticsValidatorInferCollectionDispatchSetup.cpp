@@ -2,6 +2,27 @@
 
 namespace primec::semantics {
 
+namespace {
+
+bool isCanonicalMapAccessHelperName(const std::string &helperName) {
+  return helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+}
+
+bool isMapAccessCompatibilityPath(const std::string &path) {
+  return path == "/map/at" || path == "/map/at_ref" ||
+         path == "/map/at_unsafe" || path == "/map/at_unsafe_ref";
+}
+
+bool isStdNamespacedCanonicalMapAccessPath(const std::string &path) {
+  return path == "/std/collections/map/at" ||
+         path == "/std/collections/map/at_ref" ||
+         path == "/std/collections/map/at_unsafe" ||
+         path == "/std/collections/map/at_unsafe_ref";
+}
+
+} // namespace
+
 void SemanticsValidator::prepareInferCollectionDispatchSetup(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
@@ -44,21 +65,65 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
   const bool isMapNamespacedCountCompatibilityCall =
       directRemovedMapCompatibilityPath == "/map/count";
   const bool isMapNamespacedAccessCompatibilityCall =
-      directRemovedMapCompatibilityPath == "/map/at" ||
-      directRemovedMapCompatibilityPath == "/map/at_unsafe";
+      isMapAccessCompatibilityPath(directRemovedMapCompatibilityPath);
   const bool isNamespacedMapCountCall =
       !expr.isMethodCall && isNamespacedMapHelperCall &&
       (namespacedHelper == "count" || namespacedHelper == "count_ref") &&
       !isMapNamespacedCountCompatibilityCall && !isStdNamespacedMapCountCall &&
       !hasDefinitionPath(resolved);
+  auto getCanonicalMapAccessHelperNameForDispatch =
+      [&](const Expr &candidate, std::string &helperNameOut) -> bool {
+        helperNameOut.clear();
+        if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
+            candidate.args.size() != 2 || candidate.name.empty()) {
+          return false;
+        }
+        if (getBuiltinArrayAccessName(candidate, helperNameOut)) {
+          return true;
+        }
+        const std::string resolvedPath = resolveCalleePath(candidate);
+        if (resolvedPath == "/map/at_ref" ||
+            resolvedPath == "/std/collections/map/at_ref") {
+          helperNameOut = "at_ref";
+          return true;
+        }
+        if (resolvedPath == "/map/at_unsafe_ref" ||
+            resolvedPath == "/std/collections/map/at_unsafe_ref") {
+          helperNameOut = "at_unsafe_ref";
+          return true;
+        }
+        std::string namespacePrefix = candidate.namespacePrefix;
+        if (!namespacePrefix.empty() && namespacePrefix.front() == '/') {
+          namespacePrefix.erase(namespacePrefix.begin());
+        }
+        if ((namespacePrefix == "map" ||
+             namespacePrefix == "std/collections/map") &&
+            isCanonicalMapAccessHelperName(candidate.name)) {
+          helperNameOut = candidate.name;
+          return true;
+        }
+        if (candidate.name.find('/') == std::string::npos &&
+            isCanonicalMapAccessHelperName(candidate.name)) {
+          helperNameOut = candidate.name;
+          return true;
+        }
+        return false;
+      };
+  std::string directMapAccessHelperName;
+  setupOut.hasBuiltinAccessSpelling =
+      getCanonicalMapAccessHelperNameForDispatch(expr,
+                                                 directMapAccessHelperName);
+  if (setupOut.hasBuiltinAccessSpelling) {
+    setupOut.builtinAccessName = directMapAccessHelperName;
+  }
   const bool prefersExplicitDirectMapAccessAliasDefinition =
       !expr.isMethodCall &&
       (((isNamespacedMapHelperCall &&
-         (namespacedHelper == "at" || namespacedHelper == "at_unsafe")) ||
+         isCanonicalMapAccessHelperName(namespacedHelper)) ||
         (((expr.namespacePrefix == "map") || (expr.namespacePrefix == "/map")) &&
-         (expr.name == "at" || expr.name == "at_unsafe")))) &&
+         isCanonicalMapAccessHelperName(expr.name)))) &&
       hasDefinitionPath("/map/" +
-                        ((expr.name == "at" || expr.name == "at_unsafe")
+                        (isCanonicalMapAccessHelperName(expr.name)
                              ? expr.name
                              : namespacedHelper));
   const BuiltinCollectionDispatchResolverAdapters mapCountDispatchResolverAdapters;
@@ -80,8 +145,6 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       hasImportedDefinitionPath("/std/collections/vector/capacity");
   const bool shouldBuiltinValidateStdNamespacedVectorCapacityCall =
       isStdNamespacedVectorCapacityCall && hasStdNamespacedVectorCapacityDefinition;
-  setupOut.hasBuiltinAccessSpelling =
-      getBuiltinArrayAccessName(expr, setupOut.builtinAccessName);
   setupOut.isStdNamespacedVectorAccessSpelling =
       setupOut.hasBuiltinAccessSpelling && !expr.isMethodCall &&
       resolveCalleePath(expr).rfind("/std/collections/vector/at", 0) == 0;
@@ -90,14 +153,13 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       hasImportedDefinitionPath(resolveCalleePath(expr));
   setupOut.isStdNamespacedMapAccessSpelling =
       setupOut.hasBuiltinAccessSpelling && !expr.isMethodCall &&
-      (resolveCalleePath(expr) == "/std/collections/map/at" ||
-       resolveCalleePath(expr) == "/std/collections/map/at_unsafe");
+      isStdNamespacedCanonicalMapAccessPath(resolveCalleePath(expr));
   setupOut.hasStdNamespacedMapAccessDefinition =
       setupOut.isStdNamespacedMapAccessSpelling &&
       hasImportedDefinitionPath(resolveCalleePath(expr));
   const bool isResolvedMapAccessCall =
       !expr.isMethodCall &&
-      (resolved == "/map/at" || resolved == "/map/at_unsafe") &&
+      isMapAccessCompatibilityPath(resolved) &&
       !isMapNamespacedAccessCompatibilityCall;
   setupOut.shouldAllowStdAccessCompatibilityFallback =
       setupOut.isStdNamespacedVectorAccessSpelling &&
@@ -115,7 +177,7 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
   const bool isNamespacedMapAccessCall =
       !expr.isMethodCall && setupOut.isBuiltinAccess && isNamespacedMapHelperCall &&
-      (namespacedHelper == "at" || namespacedHelper == "at_unsafe") &&
+      isCanonicalMapAccessHelperName(namespacedHelper) &&
       !prefersExplicitDirectMapAccessAliasDefinition &&
       !isMapNamespacedAccessCompatibilityCall && !hasDefinitionPath(resolved);
   setupOut.shouldInferBuiltinBareMapContainsCall = true;

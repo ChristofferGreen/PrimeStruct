@@ -53,7 +53,8 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     }
     return false;
   }
-  if (resolvedPath == "/map/at" || resolvedPath == "/map/at_unsafe" ||
+  if (resolvedPath == "/map/at" || resolvedPath == "/map/at_ref" ||
+      resolvedPath == "/map/at_unsafe" || resolvedPath == "/map/at_unsafe_ref" ||
       resolvedPath == "/std/collections/map/at" || resolvedPath == "/std/collections/map/at_unsafe" ||
       resolvedPath == "/std/collections/map/at_ref" ||
       resolvedPath == "/std/collections/map/at_unsafe_ref") {
@@ -81,7 +82,16 @@ bool SemanticsValidator::resolveBuiltinCollectionAccessCallReturnKind(
   }
   std::string builtinName;
   if (!getBuiltinArrayAccessName(callExpr, builtinName)) {
-    return false;
+    const std::string resolvedPath = resolveCalleePath(callExpr);
+    if (resolvedPath == "/map/at_ref" ||
+        resolvedPath == "/std/collections/map/at_ref") {
+      builtinName = "at_ref";
+    } else if (resolvedPath == "/map/at_unsafe_ref" ||
+               resolvedPath == "/std/collections/map/at_unsafe_ref") {
+      builtinName = "at_unsafe_ref";
+    } else {
+      return false;
+    }
   }
 
   auto resolveReceiverReturnKind = [&](const Expr &receiverExpr) {
