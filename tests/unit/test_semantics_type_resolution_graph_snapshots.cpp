@@ -905,6 +905,58 @@ main() {
   CHECK(onErrorEntry->returnResultErrorType == "MyError");
 }
 
+TEST_CASE("semantic product publishes graph-backed local auto method-call facts") {
+  const std::string source = R"(
+[return<i32>]
+pick([i32] value) {
+  return(value)
+}
+
+[return<i32>]
+/vector/count([vector<i32>] self) {
+  return(17i32)
+}
+
+[return<i32>]
+main() {
+  [vector<i32>] values{vector<i32>()}
+  [auto] viaDirect{pick(1i32)}
+  [auto] viaMethod{values.count()}
+  return(plus(viaDirect, viaMethod))
+}
+)";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *viaDirectEntry = findSemanticEntry(
+      primec::semanticProgramLocalAutoFactView(semanticProgram),
+      [](const primec::SemanticProgramLocalAutoFact &entry) {
+        return entry.scopePath == "/main" && entry.bindingName == "viaDirect";
+      });
+  REQUIRE(viaDirectEntry != nullptr);
+  CHECK(viaDirectEntry->initializerDirectCallResolvedPath == "/pick");
+  CHECK(viaDirectEntry->initializerDirectCallReturnKind == "i32");
+  CHECK(viaDirectEntry->initializerMethodCallResolvedPath.empty());
+  CHECK(viaDirectEntry->initializerMethodCallReturnKind.empty());
+
+  const auto *viaMethodEntry = findSemanticEntry(
+      primec::semanticProgramLocalAutoFactView(semanticProgram),
+      [](const primec::SemanticProgramLocalAutoFact &entry) {
+        return entry.scopePath == "/main" && entry.bindingName == "viaMethod";
+      });
+  REQUIRE(viaMethodEntry != nullptr);
+  CHECK(viaMethodEntry->initializerDirectCallResolvedPath.empty());
+  CHECK(viaMethodEntry->initializerDirectCallReturnKind.empty());
+  CHECK(viaMethodEntry->initializerMethodCallResolvedPath == "/vector/count");
+  CHECK(viaMethodEntry->initializerMethodCallReturnKind == "i32");
+}
+
 TEST_CASE("semantic product source locations stay aligned with AST-owned lowering facts") {
   const std::string source =
       "Packet {\n"
@@ -1804,6 +1856,8 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       9,
       22,
       112,
+      "",
+      "",
       "",
       "",
   });

@@ -557,6 +557,15 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
           *bindingExpr, graphPreferredResolvedInitializer, graphPreferredDirectCallReturnKind);
   const bool hasGraphPreferredResolvedInitializer =
       graphDirectCallFactAvailable && !graphPreferredResolvedInitializer.empty();
+  std::string graphPreferredMethodResolvedInitializer;
+  ReturnKind graphPreferredMethodCallReturnKind = ReturnKind::Unknown;
+  const bool graphMethodCallFactAvailable =
+      bindingExpr != nullptr &&
+      !shouldBypassGraphBindingLookup(*bindingExpr) &&
+      lookupGraphLocalAutoMethodCallFact(
+          *bindingExpr, graphPreferredMethodResolvedInitializer, graphPreferredMethodCallReturnKind);
+  const bool hasGraphPreferredMethodResolvedInitializer =
+      graphMethodCallFactAvailable && !graphPreferredMethodResolvedInitializer.empty();
   const std::string preferredResolvedInitializer =
       hasGraphPreferredResolvedInitializer ? graphPreferredResolvedInitializer
                                            : preferredResolvedInitializerPath();
@@ -569,23 +578,44 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
     }
   }
   if (initializer.isMethodCall && !initializer.args.empty() && !initializer.name.empty()) {
-    std::string resolvedMethodTarget;
-    bool isBuiltinMethod = false;
-    if (resolveMethodTarget(params,
-                            locals,
-                            initializer.namespacePrefix,
-                            initializer.args.front(),
-                            initializer.name,
-                            resolvedMethodTarget,
-                            isBuiltinMethod)) {
-      if (inferResolvedDirectCallBindingType(resolvedMethodTarget, bindingOut)) {
+    if (hasGraphPreferredMethodResolvedInitializer) {
+      if (inferResolvedDirectCallBindingType(graphPreferredMethodResolvedInitializer, bindingOut)) {
         return true;
       }
-      if (inferDeclaredDirectCallBinding(resolvedMethodTarget)) {
+      if (inferDeclaredDirectCallBinding(graphPreferredMethodResolvedInitializer)) {
+        return true;
+      }
+    } else {
+      std::string resolvedMethodTarget;
+      bool isBuiltinMethod = false;
+      if (resolveMethodTarget(params,
+                              locals,
+                              initializer.namespacePrefix,
+                              initializer.args.front(),
+                              initializer.name,
+                              resolvedMethodTarget,
+                              isBuiltinMethod)) {
+        if (inferResolvedDirectCallBindingType(resolvedMethodTarget, bindingOut)) {
+          return true;
+        }
+        if (inferDeclaredDirectCallBinding(resolvedMethodTarget)) {
+          return true;
+        }
+      }
+    }
+    if (graphMethodCallFactAvailable &&
+        graphPreferredMethodCallReturnKind != ReturnKind::Unknown &&
+        graphPreferredMethodCallReturnKind != ReturnKind::Void &&
+        graphPreferredMethodCallReturnKind != ReturnKind::Array) {
+      const std::string inferredType = typeNameForReturnKind(graphPreferredMethodCallReturnKind);
+      if (!inferredType.empty()) {
+        bindingOut.typeName = inferredType;
+        bindingOut.typeTemplateArg.clear();
         return true;
       }
     }
   }
+
   if (initializerExprForInference != nullptr &&
       !isUnresolvedActiveInferenceCall(*initializerExprForInference)) {
     std::string builtinCollectionName;

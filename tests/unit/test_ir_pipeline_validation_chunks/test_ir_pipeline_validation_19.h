@@ -897,6 +897,8 @@ TEST_CASE("ir lowerer semantic-product adapter joins return and inference facts 
       0,
       "",
       "",
+      "",
+      "",
   });
   semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
       "/main",

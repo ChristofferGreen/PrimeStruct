@@ -556,6 +556,8 @@ TEST_CASE("ir lowerer binding type helpers treat semantic local-auto facts as no
       0,
       "",
       "",
+      "",
+      "",
   });
   auto adapters = primec::ir_lowerer::makeBindingTypeAdapters(&semanticProgram);
 

@@ -154,6 +154,13 @@
   bool lookupGraphLocalAutoDirectCallFact(const Expr &bindingExpr,
                                           std::string &resolvedPathOut,
                                           ReturnKind &returnKindOut) const;
+  bool lookupGraphLocalAutoMethodCallFact(const std::string &scopePath,
+                                          const Expr &bindingExpr,
+                                          std::string &resolvedPathOut,
+                                          ReturnKind &returnKindOut) const;
+  bool lookupGraphLocalAutoMethodCallFact(const Expr &bindingExpr,
+                                          std::string &resolvedPathOut,
+                                          ReturnKind &returnKindOut) const;
   bool inferResolvedDirectCallBindingType(const std::string &resolvedPath, BindingInfo &bindingOut) const;
   bool resolveStructFieldBinding(const Definition &structDef,
                                  const Expr &fieldStmt,
