@@ -520,7 +520,7 @@ bool isExplicitMapHelperFallbackPath(const Expr &expr) {
   return resolveMapHelperAliasName(expr, helperName) &&
          (helperName == "count" || helperName == "contains" ||
           helperName == "tryAt" || helperName == "at" ||
-          helperName == "at_unsafe");
+          helperName == "at_unsafe" || helperName == "insert");
 }
 
 bool isExplicitMapReceiverProbeHelperExpr(const Expr &expr) {
@@ -531,7 +531,7 @@ bool isExplicitMapReceiverProbeHelperExpr(const Expr &expr) {
   return resolveMapHelperAliasName(expr, helperName) &&
          (helperName == "count" || helperName == "contains" ||
           helperName == "at" || helperName == "at_unsafe" ||
-          helperName == "tryAt");
+          helperName == "tryAt" || helperName == "insert");
 }
 
 bool isExplicitVectorAccessHelperPath(const std::string &path) {

@@ -107,7 +107,8 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
            isMapReceiverTarget(candidate) &&
            (isExplicitCanonicalMapMethodAlias || normalizedMethodName == "count" ||
             normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||
-            normalizedMethodName == "at" || normalizedMethodName == "at_unsafe");
+            normalizedMethodName == "at" || normalizedMethodName == "at_unsafe" ||
+            normalizedMethodName == "insert");
   };
   auto shouldRetryCanonicalSoaHelperPath = [&](const std::string &candidate) {
     if (!isRawBuiltinSoaVectorReceiverTarget(candidate)) {
