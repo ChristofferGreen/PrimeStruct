@@ -7,6 +7,62 @@
 namespace primec::semantics {
 namespace {
 
+bool isCanonicalMapAccessHelperName(const std::string &helperName) {
+  return helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+}
+
+bool isCanonicalMapAccessResolvedPath(const std::string &path) {
+  return path == "/map/at" || path == "/map/at_ref" ||
+         path == "/map/at_unsafe" || path == "/map/at_unsafe_ref" ||
+         path == "/std/collections/map/at" ||
+         path == "/std/collections/map/at_ref" ||
+         path == "/std/collections/map/at_unsafe" ||
+         path == "/std/collections/map/at_unsafe_ref";
+}
+
+bool getCanonicalCollectionAccessBuiltinName(const Expr &candidate,
+                                             std::string &helperOut) {
+  helperOut.clear();
+  if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
+      candidate.name.empty() || candidate.args.size() != 2) {
+    return false;
+  }
+  if (getBuiltinArrayAccessName(candidate, helperOut)) {
+    return true;
+  }
+  std::string normalizedName = candidate.name;
+  if (!normalizedName.empty() && normalizedName.front() == '/') {
+    normalizedName.erase(normalizedName.begin());
+  }
+  if (normalizedName == "map/at_ref" ||
+      normalizedName == "std/collections/map/at_ref") {
+    helperOut = "at_ref";
+    return true;
+  }
+  if (normalizedName == "map/at_unsafe_ref" ||
+      normalizedName == "std/collections/map/at_unsafe_ref") {
+    helperOut = "at_unsafe_ref";
+    return true;
+  }
+  std::string namespacePrefix = candidate.namespacePrefix;
+  if (!namespacePrefix.empty() && namespacePrefix.front() == '/') {
+    namespacePrefix.erase(namespacePrefix.begin());
+  }
+  if ((namespacePrefix == "map" ||
+       namespacePrefix == "std/collections/map") &&
+      isCanonicalMapAccessHelperName(candidate.name)) {
+    helperOut = candidate.name;
+    return true;
+  }
+  if (candidate.name.find('/') == std::string::npos &&
+      isCanonicalMapAccessHelperName(candidate.name)) {
+    helperOut = candidate.name;
+    return true;
+  }
+  return false;
+}
+
 bool isCanonicalMapTypeText(const std::string &typeText) {
   std::string normalizedType = normalizeBindingTypeName(typeText);
   while (true) {
@@ -101,8 +157,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
                                                 const std::string &mapKeyType) {
     const bool isExplicitCanonicalMapAccessCall =
         !expr.isMethodCall &&
-        ((resolved == "/std/collections/map/at" ||
-          resolved == "/std/collections/map/at_unsafe") ||
+        (isCanonicalMapAccessResolvedPath(resolved) ||
          expr.name.rfind("/std/collections/map/", 0) == 0 ||
          expr.namespacePrefix == "/std/collections/map" ||
          expr.namespacePrefix == "std/collections/map");
@@ -233,12 +288,15 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
   };
 
   if (expr.isMethodCall && resolvedMethod &&
-      (resolved == "/map/at" || resolved == "/map/at_unsafe" ||
-       resolved == "/std/collections/map/at" ||
-       resolved == "/std/collections/map/at_unsafe")) {
+      isCanonicalMapAccessResolvedPath(resolved)) {
     handledOut = true;
     const std::string helperName =
-        resolved.find("unsafe") != std::string::npos ? "at_unsafe" : "at";
+        resolved.find("unsafe_ref") != std::string::npos
+            ? "at_unsafe_ref"
+            : (resolved.find("unsafe") != std::string::npos
+                   ? "at_unsafe"
+                   : (resolved.find("at_ref") != std::string::npos ? "at_ref"
+                                                                   : "at"));
     return validateMethodMapAccessBuiltin(helperName);
   }
 
@@ -303,7 +361,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
   }
 
   std::string builtinName;
-  if (getBuiltinArrayAccessName(expr, builtinName) &&
+  if (getCanonicalCollectionAccessBuiltinName(expr, builtinName) &&
       (!context.isStdNamespacedVectorAccessCall ||
        context.shouldAllowStdAccessCompatibilityFallback ||
        context.hasStdNamespacedVectorAccessDefinition) &&
@@ -483,9 +541,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       }
     }
     const bool isExplicitMapAccessHelper =
-        resolved == "/map/at" || resolved == "/map/at_unsafe" ||
-        resolved == "/std/collections/map/at" ||
-        resolved == "/std/collections/map/at_unsafe";
+        isCanonicalMapAccessResolvedPath(resolved);
     if (!expr.templateArgs.empty() &&
         (isMap || isExperimentalMap || isExplicitMapAccessHelper)) {
       return true;
