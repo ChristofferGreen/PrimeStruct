@@ -1,6 +1,7 @@
 #include "SemanticsValidator.h"
 
 #include <functional>
+#include <string_view>
 
 namespace primec::semantics {
 
@@ -50,6 +51,13 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
   }
+  const auto isValueSurfaceAccessMethodName = [](std::string_view helperName) {
+    return helperName == "at" || helperName == "at_unsafe";
+  };
+  const auto isCanonicalMapAccessMethodName = [&](std::string_view helperName) {
+    return isValueSurfaceAccessMethodName(helperName) ||
+           helperName == "at_ref" || helperName == "at_unsafe_ref";
+  };
   const std::string explicitRemovedMethodPath =
       explicitRemovedCollectionMethodPath(methodName, expr.namespacePrefix);
   auto resolveCollectionMethodFromTypePath = [&](const std::string &collectionTypePath) -> bool {
@@ -65,7 +73,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         resolvedOut = explicitRemovedMethodPath;
         return true;
       }
-      if ((normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
+      if (isValueSurfaceAccessMethodName(normalizedMethodName) &&
           (collectionTypePath == "/vector" || collectionTypePath == "/array" ||
            collectionTypePath == "/string")) {
         resolvedOut = explicitRemovedMethodPath;
@@ -128,7 +136,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, "insert");
       return true;
     }
-    if (normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") {
+    if (isValueSurfaceAccessMethodName(normalizedMethodName)) {
       if (collectionTypePath == "/array") {
         resolvedOut = preferVectorStdlibHelperPath("/array/" + normalizedMethodName);
         return true;
@@ -141,10 +149,11 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         resolvedOut = "/string/" + normalizedMethodName;
         return true;
       }
-      if (collectionTypePath == "/map") {
-        resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, normalizedMethodName);
-        return true;
-      }
+    }
+    if (isCanonicalMapAccessMethodName(normalizedMethodName) &&
+        collectionTypePath == "/map") {
+      resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, normalizedMethodName);
+      return true;
     }
     if (normalizedMethodName == "empty" && collectionTypePath == "/Buffer") {
       resolvedOut = preferredBufferMethodTargetForCall(params, locals, receiver, "empty");
@@ -395,7 +404,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     std::string keyType;
     std::string valueType;
-    if ((receiverHelperName == "at" || receiverHelperName == "at_unsafe") &&
+    if (isCanonicalMapAccessMethodName(receiverHelperName) &&
         resolveMapTarget(receiver.args.front(), keyType, valueType)) {
       const std::string resolvedReceiver =
           preferredMapMethodTargetForCall(params, locals, receiver, receiverHelperName);
@@ -515,7 +524,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
       return true;
     }
-    if (normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") {
+    if (isValueSurfaceAccessMethodName(normalizedMethodName)) {
       if (resolveArgsPackAccessTarget(receiver, elemType)) {
         resolvedOut = preferVectorStdlibHelperPath("/array/" + normalizedMethodName);
         return true;
@@ -536,7 +545,11 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         return true;
       }
     }
-    if ((normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
+    if (isCanonicalMapAccessMethodName(normalizedMethodName) &&
+        setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
+      return true;
+    }
+    if (isCanonicalMapAccessMethodName(normalizedMethodName) &&
         resolveMapTarget(receiver, keyType, valueType)) {
       resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, normalizedMethodName);
       return true;

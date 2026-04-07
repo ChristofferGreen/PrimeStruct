@@ -57,16 +57,22 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (name.rfind("map/", 0) == 0) {
     std::string alias = stripTemplateSpecializationSuffix(name.substr(std::string("map/").size()));
     if (alias.find('/') == std::string::npos &&
-        (alias == "map" || alias == "count" || alias == "contains" || alias == "tryAt" ||
-         alias == "at" || alias == "at_unsafe" || alias == "insert")) {
+        (alias == "map" || alias == "count" || alias == "count_ref" ||
+         alias == "contains" || alias == "contains_ref" || alias == "tryAt" ||
+         alias == "tryAt_ref" || alias == "at" || alias == "at_ref" ||
+         alias == "at_unsafe" || alias == "at_unsafe_ref" ||
+         alias == "insert" || alias == "insert_ref")) {
       return alias == targetName;
     }
   }
   if (name.rfind("std/collections/map/", 0) == 0) {
     std::string alias = stripTemplateSpecializationSuffix(name.substr(std::string("std/collections/map/").size()));
     if (alias.find('/') == std::string::npos &&
-        (alias == "map" || alias == "count" || alias == "contains" || alias == "tryAt" ||
-         alias == "at" || alias == "at_unsafe" || alias == "insert")) {
+        (alias == "map" || alias == "count" || alias == "count_ref" ||
+         alias == "contains" || alias == "contains_ref" || alias == "tryAt" ||
+         alias == "tryAt_ref" || alias == "at" || alias == "at_ref" ||
+         alias == "at_unsafe" || alias == "at_unsafe_ref" ||
+         alias == "insert" || alias == "insert_ref")) {
       return alias == targetName;
     }
   }

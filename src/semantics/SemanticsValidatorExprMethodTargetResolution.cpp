@@ -522,25 +522,32 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return "/std/collections/experimental_map/" + preferredExperimentalMapHelperTarget(helperName);
   };
   auto preferredCanonicalExperimentalMapReferenceHelperTarget = [&](std::string_view helperName) {
-    if (helperName == "count") {
+    if (helperName == "count" || helperName == "count_ref") {
       return std::string("/std/collections/experimental_map/mapCountRef");
     }
-    if (helperName == "contains") {
+    if (helperName == "contains" || helperName == "contains_ref") {
       return std::string("/std/collections/experimental_map/mapContainsRef");
     }
-    if (helperName == "tryAt") {
+    if (helperName == "tryAt" || helperName == "tryAt_ref") {
       return std::string("/std/collections/experimental_map/mapTryAtRef");
     }
-    if (helperName == "at") {
+    if (helperName == "at" || helperName == "at_ref") {
       return std::string("/std/collections/experimental_map/mapAtRef");
     }
-    if (helperName == "at_unsafe") {
+    if (helperName == "at_unsafe" || helperName == "at_unsafe_ref") {
       return std::string("/std/collections/experimental_map/mapAtUnsafeRef");
     }
-    if (helperName == "insert") {
+    if (helperName == "insert" || helperName == "insert_ref") {
       return std::string("/std/collections/experimental_map/mapInsertRef");
     }
     return std::string();
+  };
+  auto isValueSurfaceAccessMethodName = [](std::string_view helperName) {
+    return helperName == "at" || helperName == "at_unsafe";
+  };
+  auto isCanonicalMapAccessMethodName = [&](std::string_view helperName) {
+    return isValueSurfaceAccessMethodName(helperName) ||
+           helperName == "at_ref" || helperName == "at_unsafe_ref";
   };
   auto resolveBorrowedSoaVectorReceiver = [&](const Expr &candidate,
                                               std::string &elemTypeOut) {
@@ -1312,29 +1319,47 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       normalizedPrefix.erase(normalizedPrefix.begin());
     }
     std::string helperName;
-    if (normalized == "map/count" || normalized == "map/contains" || normalized == "map/tryAt" ||
-        normalized == "map/at" || normalized == "map/at_unsafe" ||
-        normalized == "map/insert") {
+    if (normalized == "map/count" || normalized == "map/count_ref" ||
+        normalized == "map/contains" || normalized == "map/contains_ref" ||
+        normalized == "map/tryAt" || normalized == "map/tryAt_ref" ||
+        normalized == "map/at" || normalized == "map/at_ref" ||
+        normalized == "map/at_unsafe" || normalized == "map/at_unsafe_ref" ||
+        normalized == "map/insert" || normalized == "map/insert_ref") {
       helperName = normalized.substr(std::string("map/").size());
     } else if (normalizedPrefix == "map" &&
-               (normalized == "count" || normalized == "contains" || normalized == "tryAt" ||
-                normalized == "at" || normalized == "at_unsafe" ||
-                normalized == "insert")) {
+               (normalized == "count" || normalized == "count_ref" ||
+                normalized == "contains" || normalized == "contains_ref" ||
+                normalized == "tryAt" || normalized == "tryAt_ref" ||
+                normalized == "at" || normalized == "at_ref" ||
+                normalized == "at_unsafe" || normalized == "at_unsafe_ref" ||
+                normalized == "insert" || normalized == "insert_ref")) {
       helperName = normalized;
     } else {
       const std::string resolvedPath = resolveCalleePath(candidate);
       if (resolvedPath == "/map/count") {
         helperName = "count";
+      } else if (resolvedPath == "/map/count_ref") {
+        helperName = "count_ref";
       } else if (resolvedPath == "/map/contains") {
         helperName = "contains";
+      } else if (resolvedPath == "/map/contains_ref") {
+        helperName = "contains_ref";
       } else if (resolvedPath == "/map/tryAt") {
         helperName = "tryAt";
+      } else if (resolvedPath == "/map/tryAt_ref") {
+        helperName = "tryAt_ref";
       } else if (resolvedPath == "/map/at") {
         helperName = "at";
+      } else if (resolvedPath == "/map/at_ref") {
+        helperName = "at_ref";
       } else if (resolvedPath == "/map/at_unsafe") {
         helperName = "at_unsafe";
+      } else if (resolvedPath == "/map/at_unsafe_ref") {
+        helperName = "at_unsafe_ref";
       } else if (resolvedPath == "/map/insert") {
         helperName = "insert";
+      } else if (resolvedPath == "/map/insert_ref") {
+        helperName = "insert_ref";
       } else {
         return "";
       }
@@ -1343,7 +1368,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (defMap_.find(removedPath) != defMap_.end() || candidate.args.empty()) {
       return "";
     }
-    if (helperName == "at" || helperName == "at_unsafe") {
+    if (isCanonicalMapAccessMethodName(helperName)) {
       return removedPath;
     }
     size_t receiverIndex = 0;
@@ -1396,7 +1421,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         return resolveVectorTarget(receiver, ignoredElemType) ||
                resolveSoaVectorTarget(receiver, ignoredElemType);
       }
-      if (normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") {
+      if (isValueSurfaceAccessMethodName(normalizedMethodName)) {
         const bool isVectorReceiver = resolveVectorTarget(receiver, ignoredElemType);
         if (isVectorReceiver) {
           return false;
@@ -1410,7 +1435,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     };
     if (!explicitRemovedMethodPath.empty() &&
         path.rfind("/string/", 0) == 0 &&
-        (normalizedMethodName == "at" || normalizedMethodName == "at_unsafe")) {
+        isValueSurfaceAccessMethodName(normalizedMethodName)) {
       resolvedOut = explicitRemovedMethodPath;
       isBuiltinOut = false;
       return true;
@@ -1674,7 +1699,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (normalizedMethodName == "insert" && collectionTypePath == "/map") {
       return setPreferredMapMethodTarget(receiver, "insert");
     }
-    if (normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") {
+    if (isValueSurfaceAccessMethodName(normalizedMethodName)) {
       if (collectionTypePath == "/array") {
         return setCollectionMethodTarget("/array/" + normalizedMethodName);
       }
@@ -1684,9 +1709,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       if (collectionTypePath == "/string") {
         return setCollectionMethodTarget("/string/" + normalizedMethodName);
       }
-      if (collectionTypePath == "/map") {
-        return setPreferredMapMethodTarget(receiver, normalizedMethodName);
-      }
+    }
+    if (isCanonicalMapAccessMethodName(normalizedMethodName) &&
+        collectionTypePath == "/map") {
+      return setPreferredMapMethodTarget(receiver, normalizedMethodName);
     }
     if (normalizedMethodName == "get" &&
         (collectionTypePath == "/soa_vector" ||
@@ -1907,9 +1933,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
       }
       if (isMapCollectionTypeName(base) &&
-          (normalizedMethodName == "count" || normalizedMethodName == "contains" ||
-           normalizedMethodName == "tryAt" || normalizedMethodName == "at" ||
-           normalizedMethodName == "at_unsafe" || normalizedMethodName == "insert")) {
+          (normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
+           normalizedMethodName == "contains" || normalizedMethodName == "contains_ref" ||
+           normalizedMethodName == "tryAt" || normalizedMethodName == "tryAt_ref" ||
+           isCanonicalMapAccessMethodName(normalizedMethodName) ||
+           normalizedMethodName == "insert" || normalizedMethodName == "insert_ref")) {
         return setPreferredMapMethodTarget(receiver, normalizedMethodName);
       }
     }
@@ -1928,9 +1956,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return true;
   };
 
-  if ((normalizedMethodName == "count" || normalizedMethodName == "contains" ||
-       normalizedMethodName == "tryAt" || normalizedMethodName == "at" ||
-       normalizedMethodName == "at_unsafe" || normalizedMethodName == "insert") &&
+  if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
+       normalizedMethodName == "contains" || normalizedMethodName == "contains_ref" ||
+       normalizedMethodName == "tryAt" || normalizedMethodName == "tryAt_ref" ||
+       isCanonicalMapAccessMethodName(normalizedMethodName) ||
+       normalizedMethodName == "insert" || normalizedMethodName == "insert_ref") &&
       isDirectMapConstructorReceiverCall(receiver)) {
     std::string keyType;
     std::string valueType;
@@ -2027,7 +2057,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return setCollectionMethodTarget(preferredBareVectorHelperTarget("capacity"));
     }
   }
-  if (normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") {
+  if (isValueSurfaceAccessMethodName(normalizedMethodName)) {
     if (resolveArgsPackAccessTarget(receiver, elemType)) {
       return setCollectionMethodTarget("/array/" + normalizedMethodName);
     }
@@ -2043,12 +2073,14 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (resolveStringTarget(receiver)) {
       return setCollectionMethodTarget("/string/" + normalizedMethodName);
     }
-    if (setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
-      return true;
-    }
-    if (resolveMapTarget(receiver)) {
-      return setPreferredMapMethodTarget(receiver, normalizedMethodName);
-    }
+  }
+  if (isCanonicalMapAccessMethodName(normalizedMethodName) &&
+      setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
+    return true;
+  }
+  if (isCanonicalMapAccessMethodName(normalizedMethodName) &&
+      resolveMapTarget(receiver)) {
+    return setPreferredMapMethodTarget(receiver, normalizedMethodName);
   }
     if (normalizedMethodName == "get") {
       if (resolveVectorTarget(receiver, elemType) &&
@@ -2561,9 +2593,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             normalizedTypeName == "soa_vector" ? "/soa_vector" : "/vector"));
   }
   if (isMapCollectionTypeName(normalizeBindingTypeName(typeName)) &&
-      (normalizedMethodName == "count" || normalizedMethodName == "contains" ||
-       normalizedMethodName == "tryAt" || normalizedMethodName == "at" ||
-       normalizedMethodName == "at_unsafe" || normalizedMethodName == "insert")) {
+      (normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
+       normalizedMethodName == "contains" || normalizedMethodName == "contains_ref" ||
+       normalizedMethodName == "tryAt" || normalizedMethodName == "tryAt_ref" ||
+       isCanonicalMapAccessMethodName(normalizedMethodName) ||
+       normalizedMethodName == "insert" || normalizedMethodName == "insert_ref")) {
     const std::string canonicalMapHelper = "/std/collections/map/" + normalizedMethodName;
     if (hasDeclaredDefinitionPath(canonicalMapHelper) || hasImportedDefinitionPath(canonicalMapHelper)) {
       resolvedOut = canonicalMapHelper;
@@ -2573,9 +2607,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return setPreferredMapMethodTarget(receiver, normalizedMethodName);
   }
   if (typeName == "Reference" &&
-      (normalizedMethodName == "count" || normalizedMethodName == "contains" ||
-       normalizedMethodName == "tryAt" || normalizedMethodName == "at" ||
-       normalizedMethodName == "at_unsafe" || normalizedMethodName == "insert")) {
+      (normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
+       normalizedMethodName == "contains" || normalizedMethodName == "contains_ref" ||
+       normalizedMethodName == "tryAt" || normalizedMethodName == "tryAt_ref" ||
+       isCanonicalMapAccessMethodName(normalizedMethodName) ||
+       normalizedMethodName == "insert" || normalizedMethodName == "insert_ref")) {
     std::string keyType;
     std::string valueType;
     if (resolveExperimentalMapTarget(receiver, keyType, valueType)) {
