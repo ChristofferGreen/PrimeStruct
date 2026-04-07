@@ -172,6 +172,7 @@
             rewrittenExpr.name = directExperimentalHelperPath;
             rewrittenExpr.namespacePrefix.clear();
             rewrittenExpr.isMethodCall = false;
+            rewrittenExpr.semanticNodeId = 0;
             rewrittenExpr.templateArgs.clear();
             return true;
           }
@@ -195,6 +196,7 @@
           rewrittenExpr.name = callee->fullPath;
           rewrittenExpr.namespacePrefix.clear();
           rewrittenExpr.isMethodCall = false;
+          rewrittenExpr.semanticNodeId = 0;
           rewrittenExpr.templateArgs.clear();
           return true;
         };
