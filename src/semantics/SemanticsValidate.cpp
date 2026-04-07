@@ -243,69 +243,97 @@ SemanticProgram buildSemanticProgram(const Program &program,
     execution.provenanceHandle = semantics::makeSemanticProvenanceHandle(exec.semanticNodeId);
     semanticProgram.executions.push_back(std::move(execution));
   }
+  semanticProgram.moduleResolvedArtifacts.reserve(
+      semanticProgram.definitions.size() + semanticProgram.executions.size());
+  std::unordered_map<std::string, std::size_t> moduleIndexByKey;
+  moduleIndexByKey.reserve(semanticProgram.definitions.size() + semanticProgram.executions.size());
+  auto ensureModuleResolvedArtifacts =
+      [&](const std::string &scopePath) -> SemanticProgramModuleResolvedArtifacts & {
+    const std::string moduleKey = semanticModuleKeyForPath(scopePath);
+    const auto it = moduleIndexByKey.find(moduleKey);
+    if (it != moduleIndexByKey.end()) {
+      return semanticProgram.moduleResolvedArtifacts[it->second];
+    }
+    const std::size_t moduleIndex = semanticProgram.moduleResolvedArtifacts.size();
+    moduleIndexByKey.emplace(moduleKey, moduleIndex);
+    semanticProgram.moduleResolvedArtifacts.push_back(SemanticProgramModuleResolvedArtifacts{});
+    auto &module = semanticProgram.moduleResolvedArtifacts.back();
+    module.identity.moduleKey = moduleKey;
+    module.identity.stableOrder = moduleIndex;
+    return module;
+  };
+
   const auto directCallTargets = validator.directCallTargetSnapshotForSemanticProduct();
   semanticProgram.directCallTargets.reserve(directCallTargets.size());
-  for (const auto &entry : directCallTargets) {
+  for (const auto &snapshotEntry : directCallTargets) {
     semanticProgram.directCallTargets.push_back(SemanticProgramDirectCallTarget{
-        entry.scopePath,
-        entry.callName,
-        entry.resolvedPath,
-        entry.sourceLine,
-        entry.sourceColumn,
-        entry.semanticNodeId,
-        semantics::makeSemanticProvenanceHandle(entry.semanticNodeId),
+        snapshotEntry.scopePath,
+        snapshotEntry.callName,
+        snapshotEntry.resolvedPath,
+        snapshotEntry.sourceLine,
+        snapshotEntry.sourceColumn,
+        snapshotEntry.semanticNodeId,
+        semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId),
     });
+    const auto &entry = semanticProgram.directCallTargets.back();
+    ensureModuleResolvedArtifacts(entry.scopePath).directCallTargets.push_back(entry);
   }
   const auto methodCallTargets = validator.methodCallTargetSnapshotForSemanticProduct();
   semanticProgram.methodCallTargets.reserve(methodCallTargets.size());
-  for (const auto &entry : methodCallTargets) {
+  for (const auto &snapshotEntry : methodCallTargets) {
     semanticProgram.methodCallTargets.push_back(SemanticProgramMethodCallTarget{
-        entry.scopePath,
-        entry.methodName,
-        bindingTypeTextForSemanticProduct(entry.receiverBinding),
-        entry.resolvedPath,
-        entry.sourceLine,
-        entry.sourceColumn,
-        entry.semanticNodeId,
-        semantics::makeSemanticProvenanceHandle(entry.semanticNodeId),
+        snapshotEntry.scopePath,
+        snapshotEntry.methodName,
+        bindingTypeTextForSemanticProduct(snapshotEntry.receiverBinding),
+        snapshotEntry.resolvedPath,
+        snapshotEntry.sourceLine,
+        snapshotEntry.sourceColumn,
+        snapshotEntry.semanticNodeId,
+        semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId),
     });
+    const auto &entry = semanticProgram.methodCallTargets.back();
+    ensureModuleResolvedArtifacts(entry.scopePath).methodCallTargets.push_back(entry);
   }
   const auto bridgePathChoices = validator.bridgePathChoiceSnapshotForSemanticProduct();
   semanticProgram.bridgePathChoices.reserve(bridgePathChoices.size());
-  for (const auto &entry : bridgePathChoices) {
+  for (const auto &snapshotEntry : bridgePathChoices) {
     semanticProgram.bridgePathChoices.push_back(SemanticProgramBridgePathChoice{
-        entry.scopePath,
-        entry.collectionFamily,
-        entry.helperName,
-        entry.chosenPath,
-        entry.sourceLine,
-        entry.sourceColumn,
-        entry.semanticNodeId,
-        semantics::makeSemanticProvenanceHandle(entry.semanticNodeId),
+        snapshotEntry.scopePath,
+        snapshotEntry.collectionFamily,
+        snapshotEntry.helperName,
+        snapshotEntry.chosenPath,
+        snapshotEntry.sourceLine,
+        snapshotEntry.sourceColumn,
+        snapshotEntry.semanticNodeId,
+        semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId),
     });
+    const auto &entry = semanticProgram.bridgePathChoices.back();
+    ensureModuleResolvedArtifacts(entry.scopePath).bridgePathChoices.push_back(entry);
   }
   const auto callableSummaries = validator.callableSummarySnapshotForSemanticProduct();
   semanticProgram.callableSummaries.reserve(callableSummaries.size());
-  for (const auto &entry : callableSummaries) {
+  for (const auto &snapshotEntry : callableSummaries) {
     semanticProgram.callableSummaries.push_back(SemanticProgramCallableSummary{
-        entry.fullPath,
-        entry.isExecution,
-        semantics::returnKindSnapshotName(entry.returnKind),
-        entry.isCompute,
-        entry.isUnsafe,
-        entry.activeEffects,
-        entry.activeCapabilities,
-        entry.hasResultType,
-        entry.resultTypeHasValue,
-        entry.resultValueType,
-        entry.resultErrorType,
-        entry.hasOnError,
-        entry.onErrorHandlerPath,
-        entry.onErrorErrorType,
-        entry.onErrorBoundArgCount,
-        entry.semanticNodeId,
-        semantics::makeSemanticProvenanceHandle(entry.semanticNodeId),
+        snapshotEntry.fullPath,
+        snapshotEntry.isExecution,
+        semantics::returnKindSnapshotName(snapshotEntry.returnKind),
+        snapshotEntry.isCompute,
+        snapshotEntry.isUnsafe,
+        snapshotEntry.activeEffects,
+        snapshotEntry.activeCapabilities,
+        snapshotEntry.hasResultType,
+        snapshotEntry.resultTypeHasValue,
+        snapshotEntry.resultValueType,
+        snapshotEntry.resultErrorType,
+        snapshotEntry.hasOnError,
+        snapshotEntry.onErrorHandlerPath,
+        snapshotEntry.onErrorErrorType,
+        snapshotEntry.onErrorBoundArgCount,
+        snapshotEntry.semanticNodeId,
+        semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId),
     });
+    const auto &entry = semanticProgram.callableSummaries.back();
+    ensureModuleResolvedArtifacts(entry.fullPath).callableSummaries.push_back(entry);
   }
   const auto typeMetadata = validator.typeMetadataSnapshotForSemanticProduct();
   semanticProgram.typeMetadata.reserve(typeMetadata.size());
@@ -342,179 +370,140 @@ SemanticProgram buildSemanticProgram(const Program &program,
   }
   const auto bindingFacts = validator.bindingFactSnapshotForSemanticProduct();
   semanticProgram.bindingFacts.reserve(bindingFacts.size());
-  for (const auto &entry : bindingFacts) {
+  for (const auto &snapshotEntry : bindingFacts) {
     semanticProgram.bindingFacts.push_back(SemanticProgramBindingFact{
-        entry.scopePath,
-        entry.siteKind,
-        entry.name,
-        entry.resolvedPath,
-        bindingTypeTextForSemanticProduct(entry.binding),
-        entry.binding.isMutable,
-        entry.binding.isEntryArgString,
-        entry.binding.isUnsafeReference,
-        entry.binding.referenceRoot,
-        entry.sourceLine,
-        entry.sourceColumn,
-        entry.semanticNodeId,
-        semantics::makeSemanticProvenanceHandle(entry.semanticNodeId),
+        snapshotEntry.scopePath,
+        snapshotEntry.siteKind,
+        snapshotEntry.name,
+        snapshotEntry.resolvedPath,
+        bindingTypeTextForSemanticProduct(snapshotEntry.binding),
+        snapshotEntry.binding.isMutable,
+        snapshotEntry.binding.isEntryArgString,
+        snapshotEntry.binding.isUnsafeReference,
+        snapshotEntry.binding.referenceRoot,
+        snapshotEntry.sourceLine,
+        snapshotEntry.sourceColumn,
+        snapshotEntry.semanticNodeId,
+        semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId),
     });
+    const auto &entry = semanticProgram.bindingFacts.back();
+    ensureModuleResolvedArtifacts(entry.scopePath).bindingFacts.push_back(entry);
   }
   const auto returnFacts = validator.returnFactSnapshotForSemanticProduct();
   semanticProgram.returnFacts.reserve(returnFacts.size());
-  for (const auto &entry : returnFacts) {
+  for (const auto &snapshotEntry : returnFacts) {
     semanticProgram.returnFacts.push_back(SemanticProgramReturnFact{
-        entry.definitionPath,
-        semantics::returnKindSnapshotName(entry.kind),
-        entry.structPath,
-        bindingTypeTextForSemanticProduct(entry.binding),
-        entry.binding.isMutable,
-        entry.binding.isEntryArgString,
-        entry.binding.isUnsafeReference,
-        entry.binding.referenceRoot,
-        entry.sourceLine,
-        entry.sourceColumn,
-        entry.semanticNodeId,
-        semantics::makeSemanticProvenanceHandle(entry.semanticNodeId),
+        snapshotEntry.definitionPath,
+        semantics::returnKindSnapshotName(snapshotEntry.kind),
+        snapshotEntry.structPath,
+        bindingTypeTextForSemanticProduct(snapshotEntry.binding),
+        snapshotEntry.binding.isMutable,
+        snapshotEntry.binding.isEntryArgString,
+        snapshotEntry.binding.isUnsafeReference,
+        snapshotEntry.binding.referenceRoot,
+        snapshotEntry.sourceLine,
+        snapshotEntry.sourceColumn,
+        snapshotEntry.semanticNodeId,
+        semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId),
     });
+    const auto &entry = semanticProgram.returnFacts.back();
+    ensureModuleResolvedArtifacts(entry.definitionPath).returnFacts.push_back(entry);
   }
   const auto localAutoFacts = validator.localAutoFactSnapshotForSemanticProduct();
   semanticProgram.localAutoFacts.reserve(localAutoFacts.size());
-  for (const auto &entry : localAutoFacts) {
+  for (const auto &snapshotEntry : localAutoFacts) {
     semanticProgram.localAutoFacts.push_back(SemanticProgramLocalAutoFact{
-        entry.scopePath,
-        entry.bindingName,
-        bindingTypeTextForSemanticProduct(entry.binding),
-        entry.initializerResolvedPath,
-        bindingTypeTextForSemanticProduct(entry.initializerBinding),
-        bindingTypeTextForSemanticProduct(entry.initializerReceiverBinding),
-        entry.initializerQueryTypeText,
-        entry.initializerResultHasValue,
-        entry.initializerResultValueType,
-        entry.initializerResultErrorType,
-        entry.initializerHasTry,
-        entry.initializerTryOperandResolvedPath,
-        bindingTypeTextForSemanticProduct(entry.initializerTryOperandBinding),
-        bindingTypeTextForSemanticProduct(entry.initializerTryOperandReceiverBinding),
-        entry.initializerTryOperandQueryTypeText,
-        entry.initializerTryValueType,
-        entry.initializerTryErrorType,
-        semantics::returnKindSnapshotName(entry.initializerTryContextReturnKind),
-        entry.initializerTryOnErrorHandlerPath,
-        entry.initializerTryOnErrorErrorType,
-        entry.initializerTryOnErrorBoundArgCount,
-        entry.sourceLine,
-        entry.sourceColumn,
-        entry.semanticNodeId,
-        semantics::makeSemanticProvenanceHandle(entry.semanticNodeId),
+        snapshotEntry.scopePath,
+        snapshotEntry.bindingName,
+        bindingTypeTextForSemanticProduct(snapshotEntry.binding),
+        snapshotEntry.initializerResolvedPath,
+        bindingTypeTextForSemanticProduct(snapshotEntry.initializerBinding),
+        bindingTypeTextForSemanticProduct(snapshotEntry.initializerReceiverBinding),
+        snapshotEntry.initializerQueryTypeText,
+        snapshotEntry.initializerResultHasValue,
+        snapshotEntry.initializerResultValueType,
+        snapshotEntry.initializerResultErrorType,
+        snapshotEntry.initializerHasTry,
+        snapshotEntry.initializerTryOperandResolvedPath,
+        bindingTypeTextForSemanticProduct(snapshotEntry.initializerTryOperandBinding),
+        bindingTypeTextForSemanticProduct(snapshotEntry.initializerTryOperandReceiverBinding),
+        snapshotEntry.initializerTryOperandQueryTypeText,
+        snapshotEntry.initializerTryValueType,
+        snapshotEntry.initializerTryErrorType,
+        semantics::returnKindSnapshotName(snapshotEntry.initializerTryContextReturnKind),
+        snapshotEntry.initializerTryOnErrorHandlerPath,
+        snapshotEntry.initializerTryOnErrorErrorType,
+        snapshotEntry.initializerTryOnErrorBoundArgCount,
+        snapshotEntry.sourceLine,
+        snapshotEntry.sourceColumn,
+        snapshotEntry.semanticNodeId,
+        semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId),
     });
+    const auto &entry = semanticProgram.localAutoFacts.back();
+    ensureModuleResolvedArtifacts(entry.scopePath).localAutoFacts.push_back(entry);
   }
   const auto queryFacts = validator.queryFactSnapshotForSemanticProduct();
   semanticProgram.queryFacts.reserve(queryFacts.size());
-  for (const auto &entry : queryFacts) {
+  for (const auto &snapshotEntry : queryFacts) {
     semanticProgram.queryFacts.push_back(SemanticProgramQueryFact{
-        entry.scopePath,
-        entry.callName,
-        entry.resolvedPath,
-        entry.typeText,
-        bindingTypeTextForSemanticProduct(entry.binding),
-        bindingTypeTextForSemanticProduct(entry.receiverBinding),
-        entry.hasResultType,
-        entry.resultTypeHasValue,
-        entry.resultValueType,
-        entry.resultErrorType,
-        entry.sourceLine,
-        entry.sourceColumn,
-        entry.semanticNodeId,
-        semantics::makeSemanticProvenanceHandle(entry.semanticNodeId),
+        snapshotEntry.scopePath,
+        snapshotEntry.callName,
+        snapshotEntry.resolvedPath,
+        snapshotEntry.typeText,
+        bindingTypeTextForSemanticProduct(snapshotEntry.binding),
+        bindingTypeTextForSemanticProduct(snapshotEntry.receiverBinding),
+        snapshotEntry.hasResultType,
+        snapshotEntry.resultTypeHasValue,
+        snapshotEntry.resultValueType,
+        snapshotEntry.resultErrorType,
+        snapshotEntry.sourceLine,
+        snapshotEntry.sourceColumn,
+        snapshotEntry.semanticNodeId,
+        semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId),
     });
+    const auto &entry = semanticProgram.queryFacts.back();
+    ensureModuleResolvedArtifacts(entry.scopePath).queryFacts.push_back(entry);
   }
   const auto tryFacts = validator.tryFactSnapshotForSemanticProduct();
   semanticProgram.tryFacts.reserve(tryFacts.size());
-  for (const auto &entry : tryFacts) {
+  for (const auto &snapshotEntry : tryFacts) {
     semanticProgram.tryFacts.push_back(SemanticProgramTryFact{
-        entry.scopePath,
-        entry.operandResolvedPath,
-        bindingTypeTextForSemanticProduct(entry.operandBinding),
-        bindingTypeTextForSemanticProduct(entry.operandReceiverBinding),
-        entry.operandQueryTypeText,
-        entry.valueType,
-        entry.errorType,
-        semantics::returnKindSnapshotName(entry.contextReturnKind),
-        entry.onErrorHandlerPath,
-        entry.onErrorErrorType,
-        entry.onErrorBoundArgCount,
-        entry.sourceLine,
-        entry.sourceColumn,
-        entry.semanticNodeId,
-        semantics::makeSemanticProvenanceHandle(entry.semanticNodeId),
+        snapshotEntry.scopePath,
+        snapshotEntry.operandResolvedPath,
+        bindingTypeTextForSemanticProduct(snapshotEntry.operandBinding),
+        bindingTypeTextForSemanticProduct(snapshotEntry.operandReceiverBinding),
+        snapshotEntry.operandQueryTypeText,
+        snapshotEntry.valueType,
+        snapshotEntry.errorType,
+        semantics::returnKindSnapshotName(snapshotEntry.contextReturnKind),
+        snapshotEntry.onErrorHandlerPath,
+        snapshotEntry.onErrorErrorType,
+        snapshotEntry.onErrorBoundArgCount,
+        snapshotEntry.sourceLine,
+        snapshotEntry.sourceColumn,
+        snapshotEntry.semanticNodeId,
+        semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId),
     });
+    const auto &entry = semanticProgram.tryFacts.back();
+    ensureModuleResolvedArtifacts(entry.scopePath).tryFacts.push_back(entry);
   }
   const auto onErrorFacts = validator.onErrorFactSnapshotForSemanticProduct();
   semanticProgram.onErrorFacts.reserve(onErrorFacts.size());
-  for (const auto &entry : onErrorFacts) {
+  for (const auto &snapshotEntry : onErrorFacts) {
     semanticProgram.onErrorFacts.push_back(SemanticProgramOnErrorFact{
-        entry.definitionPath,
-        semantics::returnKindSnapshotName(entry.returnKind),
-        entry.handlerPath,
-        entry.errorType,
-        entry.boundArgCount,
-        entry.boundArgTexts,
-        entry.returnResultHasValue,
-        entry.returnResultValueType,
-        entry.returnResultErrorType,
-        entry.semanticNodeId,
-        semantics::makeSemanticProvenanceHandle(entry.semanticNodeId),
+        snapshotEntry.definitionPath,
+        semantics::returnKindSnapshotName(snapshotEntry.returnKind),
+        snapshotEntry.handlerPath,
+        snapshotEntry.errorType,
+        snapshotEntry.boundArgCount,
+        snapshotEntry.boundArgTexts,
+        snapshotEntry.returnResultHasValue,
+        snapshotEntry.returnResultValueType,
+        snapshotEntry.returnResultErrorType,
+        snapshotEntry.semanticNodeId,
+        semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId),
     });
-  }
-
-  semanticProgram.moduleResolvedArtifacts.reserve(
-      semanticProgram.definitions.size() + semanticProgram.executions.size());
-  std::unordered_map<std::string, std::size_t> moduleIndexByKey;
-  moduleIndexByKey.reserve(semanticProgram.definitions.size() + semanticProgram.executions.size());
-  auto ensureModuleResolvedArtifacts =
-      [&](const std::string &scopePath) -> SemanticProgramModuleResolvedArtifacts & {
-    const std::string moduleKey = semanticModuleKeyForPath(scopePath);
-    const auto it = moduleIndexByKey.find(moduleKey);
-    if (it != moduleIndexByKey.end()) {
-      return semanticProgram.moduleResolvedArtifacts[it->second];
-    }
-    const std::size_t moduleIndex = semanticProgram.moduleResolvedArtifacts.size();
-    moduleIndexByKey.emplace(moduleKey, moduleIndex);
-    semanticProgram.moduleResolvedArtifacts.push_back(SemanticProgramModuleResolvedArtifacts{});
-    auto &module = semanticProgram.moduleResolvedArtifacts.back();
-    module.identity.moduleKey = moduleKey;
-    module.identity.stableOrder = moduleIndex;
-    return module;
-  };
-
-  for (const auto &entry : semanticProgram.directCallTargets) {
-    ensureModuleResolvedArtifacts(entry.scopePath).directCallTargets.push_back(entry);
-  }
-  for (const auto &entry : semanticProgram.methodCallTargets) {
-    ensureModuleResolvedArtifacts(entry.scopePath).methodCallTargets.push_back(entry);
-  }
-  for (const auto &entry : semanticProgram.bridgePathChoices) {
-    ensureModuleResolvedArtifacts(entry.scopePath).bridgePathChoices.push_back(entry);
-  }
-  for (const auto &entry : semanticProgram.callableSummaries) {
-    ensureModuleResolvedArtifacts(entry.fullPath).callableSummaries.push_back(entry);
-  }
-  for (const auto &entry : semanticProgram.bindingFacts) {
-    ensureModuleResolvedArtifacts(entry.scopePath).bindingFacts.push_back(entry);
-  }
-  for (const auto &entry : semanticProgram.returnFacts) {
-    ensureModuleResolvedArtifacts(entry.definitionPath).returnFacts.push_back(entry);
-  }
-  for (const auto &entry : semanticProgram.localAutoFacts) {
-    ensureModuleResolvedArtifacts(entry.scopePath).localAutoFacts.push_back(entry);
-  }
-  for (const auto &entry : semanticProgram.queryFacts) {
-    ensureModuleResolvedArtifacts(entry.scopePath).queryFacts.push_back(entry);
-  }
-  for (const auto &entry : semanticProgram.tryFacts) {
-    ensureModuleResolvedArtifacts(entry.scopePath).tryFacts.push_back(entry);
-  }
-  for (const auto &entry : semanticProgram.onErrorFacts) {
+    const auto &entry = semanticProgram.onErrorFacts.back();
     ensureModuleResolvedArtifacts(entry.definitionPath).onErrorFacts.push_back(entry);
   }
 

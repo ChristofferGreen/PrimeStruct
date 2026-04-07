@@ -100,14 +100,14 @@ Progress note: the first semantic-product publication, dump surface, and tempora
   - ✓ Make graph-backed local-`auto` facts required for lowerer local type setup.
   - ✓ Make graph-backed query and `try(...)` facts required for lowerer call/result setup.
   - ✓ Make graph-backed `on_error` and entry-parameter facts required during lower entry setup.
-- ◐ Reshape `SemanticProgram` into module-scoped resolved artifacts instead of one flat whole-program fact bag.
+- ✓ Reshape `SemanticProgram` into module-scoped resolved artifacts instead of one flat whole-program fact bag.
   - ✓ Define the module-scoped semantic-product container shape and deterministic module ordering contract.
     - ✓ Define the module identity key and sort order contract.
     - ✓ Define per-module ownership for callable summaries, bindings, and call-routing facts.
-  - ○ Move existing fact families under module-scoped resolved artifacts without changing their lowering-visible meaning.
+  - ✓ Move existing fact families under module-scoped resolved artifacts without changing their lowering-visible meaning.
     - ✓ Migrate callable + call-routing fact families behind a compatibility adapter.
     - ✓ Migrate binding/result/control-flow fact families behind the same adapter.
-    - ○ Remove the adapter once all families are module-scoped.
+    - ✓ Remove the adapter once all families are module-scoped.
   - ✓ Update lowerer/testing consumers to read module-scoped semantic artifacts instead of flat whole-program vectors.
     - ✓ Migrate lowerer readers first.
     - ✓ Migrate semantic snapshot/testing helpers second.
