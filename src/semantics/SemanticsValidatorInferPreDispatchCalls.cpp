@@ -240,7 +240,8 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
       const std::string suffix = normalizedPath.substr(
           std::string("/std/collections/map/").size());
       if (suffix != "map" && suffix != "count" && suffix != "contains" &&
-          suffix != "tryAt" && suffix != "at" && suffix != "at_unsafe") {
+          suffix != "tryAt" && suffix != "at" && suffix != "at_unsafe" &&
+          suffix != "insert") {
         appendUnique("/map/" + suffix);
       }
     }

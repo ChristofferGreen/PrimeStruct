@@ -125,7 +125,7 @@ std::string SemanticsValidator::preferEffectFreeCollectionHelperPath(const std::
   if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
     if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-        suffix != "at" && suffix != "at_unsafe") {
+        suffix != "at" && suffix != "at_unsafe" && suffix != "insert") {
       const std::string mapAlias = "/map/" + suffix;
       if (defMap_.count(mapAlias) > 0) {
         preferred = mapAlias;
@@ -200,7 +200,7 @@ std::vector<std::string> SemanticsValidator::effectFreeCollectionHelperPathCandi
   } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
     if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-        suffix != "at" && suffix != "at_unsafe") {
+        suffix != "at" && suffix != "at_unsafe" && suffix != "insert") {
       appendUnique("/map/" + suffix);
     }
   }
