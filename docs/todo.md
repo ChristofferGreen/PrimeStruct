@@ -110,7 +110,7 @@ Progress note: the first semantic-product publication, dump surface, and tempora
     - ○ Remove the adapter once all families are module-scoped.
   - ○ Update lowerer/testing consumers to read module-scoped semantic artifacts instead of flat whole-program vectors.
     - ✓ Migrate lowerer readers first.
-    - ○ Migrate semantic snapshot/testing helpers second.
+    - ✓ Migrate semantic snapshot/testing helpers second.
     - ○ Delete flat-vector readers once both migrations are complete.
 - ◐ Add CI budget gates for graph invalidation and graph-build metrics using the `type-graph` output.
   - ○ Select the representative graph corpora and baseline thresholds for prepare/build time and invalidation fan-out.

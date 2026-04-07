@@ -115,6 +115,14 @@ const Entry *findSemanticEntry(const std::vector<Entry> &entries, const Predicat
   return it == entries.end() ? nullptr : &*it;
 }
 
+template <typename Entry, typename Predicate>
+const Entry *findSemanticEntry(const std::vector<const Entry *> &entries, const Predicate &predicate) {
+  const auto it = std::find_if(entries.begin(),
+                               entries.end(),
+                               [&](const Entry *entry) { return entry != nullptr && predicate(*entry); });
+  return it == entries.end() ? nullptr : *it;
+}
+
 bool hasCanonicalSourceMapEntry(const primec::IrModule &module, int sourceLine, int sourceColumn) {
   return std::any_of(module.instructionSourceMap.begin(),
                      module.instructionSourceMap.end(),
@@ -405,17 +413,16 @@ TEST_CASE("semantic product publishes resolved direct-call targets") {
   REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
   CHECK(error.empty());
 
-  const auto targetIt =
-      std::find_if(semanticProgram.directCallTargets.begin(),
-                   semanticProgram.directCallTargets.end(),
-                   [](const primec::SemanticProgramDirectCallTarget &entry) {
-                     return entry.scopePath == "/main" &&
-                            (entry.callName == "id" || entry.callName.rfind("/id__t", 0) == 0) &&
-                            entry.resolvedPath.rfind("/id__t", 0) == 0;
-                   });
-  REQUIRE(targetIt != semanticProgram.directCallTargets.end());
-  CHECK(targetIt->sourceLine > 0);
-  CHECK(targetIt->sourceColumn > 0);
+  const auto *targetEntry = findSemanticEntry(
+      primec::semanticProgramDirectCallTargetView(semanticProgram),
+      [](const primec::SemanticProgramDirectCallTarget &entry) {
+        return entry.scopePath == "/main" &&
+               (entry.callName == "id" || entry.callName.rfind("/id__t", 0) == 0) &&
+               entry.resolvedPath.rfind("/id__t", 0) == 0;
+      });
+  REQUIRE(targetEntry != nullptr);
+  CHECK(targetEntry->sourceLine > 0);
+  CHECK(targetEntry->sourceColumn > 0);
 }
 
 TEST_CASE("semantic product publishes resolved method-call targets") {
@@ -439,18 +446,17 @@ TEST_CASE("semantic product publishes resolved method-call targets") {
   REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
   CHECK(error.empty());
 
-  const auto targetIt =
-      std::find_if(semanticProgram.methodCallTargets.begin(),
-                   semanticProgram.methodCallTargets.end(),
-                   [](const primec::SemanticProgramMethodCallTarget &entry) {
-                     return entry.scopePath == "/main" &&
-                            entry.methodName == "count" &&
-                            entry.resolvedPath == "/vector/count";
-                   });
-  REQUIRE(targetIt != semanticProgram.methodCallTargets.end());
-  CHECK(targetIt->receiverTypeText.find("vector") != std::string::npos);
-  CHECK(targetIt->sourceLine > 0);
-  CHECK(targetIt->sourceColumn > 0);
+  const auto *targetEntry = findSemanticEntry(
+      primec::semanticProgramMethodCallTargetView(semanticProgram),
+      [](const primec::SemanticProgramMethodCallTarget &entry) {
+        return entry.scopePath == "/main" &&
+               entry.methodName == "count" &&
+               entry.resolvedPath == "/vector/count";
+      });
+  REQUIRE(targetEntry != nullptr);
+  CHECK(targetEntry->receiverTypeText.find("vector") != std::string::npos);
+  CHECK(targetEntry->sourceLine > 0);
+  CHECK(targetEntry->sourceColumn > 0);
 }
 
 TEST_CASE("semantic product publishes specialized SoaColumn field access targets") {
@@ -523,15 +529,14 @@ TEST_CASE("semantic product query facts prefer local bindings over math constant
   REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
   CHECK(error.empty());
 
-  const auto queryIt =
-      std::find_if(semanticProgram.queryFacts.begin(),
-                   semanticProgram.queryFacts.end(),
-                   [](const primec::SemanticProgramQueryFact &entry) {
-                     return entry.scopePath == "/main" && entry.callName == "plus";
-                   });
-  REQUIRE(queryIt != semanticProgram.queryFacts.end());
-  CHECK(queryIt->queryTypeText == "f32");
-  CHECK(queryIt->bindingTypeText == "f32");
+  const auto *queryEntry = findSemanticEntry(
+      primec::semanticProgramQueryFactView(semanticProgram),
+      [](const primec::SemanticProgramQueryFact &entry) {
+        return entry.scopePath == "/main" && entry.callName == "plus";
+      });
+  REQUIRE(queryEntry != nullptr);
+  CHECK(queryEntry->queryTypeText == "f32");
+  CHECK(queryEntry->bindingTypeText == "f32");
 }
 
 TEST_CASE("semantic product publishes same-path collection bridge routing choices") {
@@ -555,18 +560,17 @@ TEST_CASE("semantic product publishes same-path collection bridge routing choice
   REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
   CHECK(error.empty());
 
-  const auto choiceIt =
-      std::find_if(semanticProgram.bridgePathChoices.begin(),
-                   semanticProgram.bridgePathChoices.end(),
-                   [](const primec::SemanticProgramBridgePathChoice &entry) {
-                     return entry.scopePath == "/main" &&
-                            entry.collectionFamily == "vector" &&
-                            entry.helperName == "count" &&
-                            entry.chosenPath == "/vector/count";
-                   });
-  REQUIRE(choiceIt != semanticProgram.bridgePathChoices.end());
-  CHECK(choiceIt->sourceLine > 0);
-  CHECK(choiceIt->sourceColumn > 0);
+  const auto *choiceEntry = findSemanticEntry(
+      primec::semanticProgramBridgePathChoiceView(semanticProgram),
+      [](const primec::SemanticProgramBridgePathChoice &entry) {
+        return entry.scopePath == "/main" &&
+               entry.collectionFamily == "vector" &&
+               entry.helperName == "count" &&
+               entry.chosenPath == "/vector/count";
+      });
+  REQUIRE(choiceEntry != nullptr);
+  CHECK(choiceEntry->sourceLine > 0);
+  CHECK(choiceEntry->sourceColumn > 0);
 }
 
 TEST_CASE("semantic product publishes canonical collection bridge routing choices") {
@@ -585,18 +589,17 @@ TEST_CASE("semantic product publishes canonical collection bridge routing choice
   REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
   CHECK(error.empty());
 
-  const auto choiceIt =
-      std::find_if(semanticProgram.bridgePathChoices.begin(),
-                   semanticProgram.bridgePathChoices.end(),
-                   [](const primec::SemanticProgramBridgePathChoice &entry) {
-                     return entry.scopePath == "/main" &&
-                            entry.collectionFamily == "map" &&
-                            entry.helperName == "count" &&
-                            entry.chosenPath == "/std/collections/map/count";
-                   });
-  REQUIRE(choiceIt != semanticProgram.bridgePathChoices.end());
-  CHECK(choiceIt->sourceLine > 0);
-  CHECK(choiceIt->sourceColumn > 0);
+  const auto *choiceEntry = findSemanticEntry(
+      primec::semanticProgramBridgePathChoiceView(semanticProgram),
+      [](const primec::SemanticProgramBridgePathChoice &entry) {
+        return entry.scopePath == "/main" &&
+               entry.collectionFamily == "map" &&
+               entry.helperName == "count" &&
+               entry.chosenPath == "/std/collections/map/count";
+      });
+  REQUIRE(choiceEntry != nullptr);
+  CHECK(choiceEntry->sourceLine > 0);
+  CHECK(choiceEntry->sourceColumn > 0);
 }
 
 TEST_CASE("semantic product publishes callable effect and capability summaries") {
@@ -621,24 +624,23 @@ TEST_CASE("semantic product publishes callable effect and capability summaries")
   REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
   CHECK(error.empty());
 
-  const auto summaryIt =
-      std::find_if(semanticProgram.callableSummaries.begin(),
-                   semanticProgram.callableSummaries.end(),
-                   [](const primec::SemanticProgramCallableSummary &entry) {
-                     return entry.fullPath == "/main" && !entry.isExecution;
-                   });
-  REQUIRE(summaryIt != semanticProgram.callableSummaries.end());
-  CHECK(summaryIt->returnKind == "i32");
-  CHECK(summaryIt->activeEffects ==
+  const auto *summaryEntry = findSemanticEntry(
+      primec::semanticProgramCallableSummaryView(semanticProgram),
+      [](const primec::SemanticProgramCallableSummary &entry) {
+        return entry.fullPath == "/main" && !entry.isExecution;
+      });
+  REQUIRE(summaryEntry != nullptr);
+  CHECK(summaryEntry->returnKind == "i32");
+  CHECK(summaryEntry->activeEffects ==
         std::vector<std::string>{"asset_read", "io_out"});
-  CHECK(summaryIt->activeCapabilities == std::vector<std::string>{"io_out"});
-  CHECK(summaryIt->hasResultType);
-  CHECK(summaryIt->resultTypeHasValue);
-  CHECK(summaryIt->resultValueType == "int");
-  CHECK(summaryIt->resultErrorType == "MyError");
-  CHECK(summaryIt->hasOnError);
-  CHECK(summaryIt->onErrorHandlerPath == "/unexpectedError");
-  CHECK(summaryIt->onErrorErrorType == "MyError");
+  CHECK(summaryEntry->activeCapabilities == std::vector<std::string>{"io_out"});
+  CHECK(summaryEntry->hasResultType);
+  CHECK(summaryEntry->resultTypeHasValue);
+  CHECK(summaryEntry->resultValueType == "int");
+  CHECK(summaryEntry->resultErrorType == "MyError");
+  CHECK(summaryEntry->hasOnError);
+  CHECK(summaryEntry->onErrorHandlerPath == "/unexpectedError");
+  CHECK(summaryEntry->onErrorErrorType == "MyError");
 }
 
 TEST_CASE("semantic product publishes struct and enum metadata") {
@@ -755,82 +757,71 @@ TEST_CASE("semantic product publishes binding and return facts") {
   REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
   CHECK(error.empty());
 
-  const auto parameterIt =
-      std::find_if(semanticProgram.bindingFacts.begin(),
-                   semanticProgram.bindingFacts.end(),
-                   [](const primec::SemanticProgramBindingFact &entry) {
-                     return entry.scopePath == "/makePair" &&
-                            entry.siteKind == "parameter" &&
-                            entry.name == "base";
-                   });
-  REQUIRE(parameterIt != semanticProgram.bindingFacts.end());
-  CHECK(parameterIt->bindingTypeText == "i32");
+  const auto *parameterEntry = findSemanticEntry(
+      primec::semanticProgramBindingFactView(semanticProgram),
+      [](const primec::SemanticProgramBindingFact &entry) {
+        return entry.scopePath == "/makePair" &&
+               entry.siteKind == "parameter" &&
+               entry.name == "base";
+      });
+  REQUIRE(parameterEntry != nullptr);
+  CHECK(parameterEntry->bindingTypeText == "i32");
 
-  const auto localIt =
-      std::find_if(semanticProgram.bindingFacts.begin(),
-                   semanticProgram.bindingFacts.end(),
-                   [](const primec::SemanticProgramBindingFact &entry) {
-                     return entry.scopePath == "/makePair" &&
-                            entry.siteKind == "local" &&
-                            entry.name == "widened";
-                   });
-  REQUIRE(localIt != semanticProgram.bindingFacts.end());
-  CHECK(localIt->bindingTypeText == "i64");
+  const auto *localEntry = findSemanticEntry(
+      primec::semanticProgramBindingFactView(semanticProgram),
+      [](const primec::SemanticProgramBindingFact &entry) {
+        return entry.scopePath == "/makePair" &&
+               entry.siteKind == "local" &&
+               entry.name == "widened";
+      });
+  REQUIRE(localEntry != nullptr);
+  CHECK(localEntry->bindingTypeText == "i64");
 
-  const auto helperParameterIt =
-      std::find_if(semanticProgram.bindingFacts.begin(),
-                   semanticProgram.bindingFacts.end(),
-                   [](const primec::SemanticProgramBindingFact &entry) {
-                     return entry.siteKind == "parameter" &&
-                            entry.name == "value" &&
-                            entry.scopePath.rfind("/id", 0) == 0;
-                   });
-  REQUIRE(helperParameterIt != semanticProgram.bindingFacts.end());
-  CHECK(helperParameterIt->bindingTypeText == "i32");
+  const auto *helperParameterEntry = findSemanticEntry(
+      primec::semanticProgramBindingFactView(semanticProgram),
+      [](const primec::SemanticProgramBindingFact &entry) {
+        return entry.siteKind == "parameter" &&
+               entry.name == "value" &&
+               entry.scopePath.rfind("/id", 0) == 0;
+      });
+  REQUIRE(helperParameterEntry != nullptr);
+  CHECK(helperParameterEntry->bindingTypeText == "i32");
 
-  const auto entryParameterIt =
-      std::find_if(semanticProgram.bindingFacts.begin(),
-                   semanticProgram.bindingFacts.end(),
-                   [](const primec::SemanticProgramBindingFact &entry) {
-                     return entry.scopePath == "/main" &&
-                            entry.siteKind == "parameter" &&
-                            entry.name == "argv";
-                   });
-  REQUIRE(entryParameterIt != semanticProgram.bindingFacts.end());
-  CHECK(entryParameterIt->bindingTypeText == "array<string>");
+  const auto *entryParameterEntry = findSemanticEntry(
+      primec::semanticProgramBindingFactView(semanticProgram),
+      [](const primec::SemanticProgramBindingFact &entry) {
+        return entry.scopePath == "/main" &&
+               entry.siteKind == "parameter" &&
+               entry.name == "argv";
+      });
+  REQUIRE(entryParameterEntry != nullptr);
+  CHECK(entryParameterEntry->bindingTypeText == "array<string>");
 
-  const auto tempIt =
-      std::find_if(semanticProgram.bindingFacts.begin(),
-                   semanticProgram.bindingFacts.end(),
-                   [](const primec::SemanticProgramBindingFact &entry) {
-                     return entry.scopePath == "/main" &&
-                            entry.siteKind == "temporary" &&
-                            (entry.name == "id" || entry.name.rfind("/id__t", 0) == 0) &&
-                            entry.bindingTypeText == "i32";
-                   });
-  REQUIRE(tempIt != semanticProgram.bindingFacts.end());
-  CHECK(tempIt->sourceLine > 0);
-  CHECK(tempIt->sourceColumn > 0);
+  const auto *temporaryEntry = findSemanticEntry(
+      primec::semanticProgramBindingFactView(semanticProgram),
+      [](const primec::SemanticProgramBindingFact &entry) {
+        return entry.scopePath == "/main" &&
+               entry.siteKind == "temporary" &&
+               (entry.name == "id" || entry.name.rfind("/id__t", 0) == 0) &&
+               entry.bindingTypeText == "i32";
+      });
+  REQUIRE(temporaryEntry != nullptr);
+  CHECK(temporaryEntry->sourceLine > 0);
+  CHECK(temporaryEntry->sourceColumn > 0);
 
-  const auto mainReturnIt =
-      std::find_if(semanticProgram.returnFacts.begin(),
-                   semanticProgram.returnFacts.end(),
-                   [](const primec::SemanticProgramReturnFact &entry) {
-                     return entry.definitionPath == "/main";
-                   });
-  REQUIRE(mainReturnIt != semanticProgram.returnFacts.end());
-  CHECK(mainReturnIt->returnKind == "i32");
-  CHECK(mainReturnIt->bindingTypeText == "i32");
+  const auto *mainReturnEntry = findSemanticEntry(
+      primec::semanticProgramReturnFactView(semanticProgram),
+      [](const primec::SemanticProgramReturnFact &entry) { return entry.definitionPath == "/main"; });
+  REQUIRE(mainReturnEntry != nullptr);
+  CHECK(mainReturnEntry->returnKind == "i32");
+  CHECK(mainReturnEntry->bindingTypeText == "i32");
 
-  const auto pairReturnIt =
-      std::find_if(semanticProgram.returnFacts.begin(),
-                   semanticProgram.returnFacts.end(),
-                   [](const primec::SemanticProgramReturnFact &entry) {
-                     return entry.definitionPath == "/makePair";
-                   });
-  REQUIRE(pairReturnIt != semanticProgram.returnFacts.end());
-  CHECK(pairReturnIt->structPath == "/Pair");
-  CHECK(pairReturnIt->bindingTypeText == "Pair");
+  const auto *pairReturnEntry = findSemanticEntry(
+      primec::semanticProgramReturnFactView(semanticProgram),
+      [](const primec::SemanticProgramReturnFact &entry) { return entry.definitionPath == "/makePair"; });
+  REQUIRE(pairReturnEntry != nullptr);
+  CHECK(pairReturnEntry->structPath == "/Pair");
+  CHECK(pairReturnEntry->bindingTypeText == "Pair");
 }
 
 TEST_CASE("semantic product publishes graph-backed local auto query try and on_error facts") {
@@ -862,58 +853,52 @@ main() {
   REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
   CHECK(error.empty());
 
-  const auto localAutoIt =
-      std::find_if(semanticProgram.localAutoFacts.begin(),
-                   semanticProgram.localAutoFacts.end(),
-                   [](const primec::SemanticProgramLocalAutoFact &entry) {
-                     return entry.scopePath == "/main" && entry.bindingName == "selected";
-                   });
-  REQUIRE(localAutoIt != semanticProgram.localAutoFacts.end());
-  CHECK(localAutoIt->bindingTypeText == "int");
-  CHECK(localAutoIt->initializerResolvedPath == "/lookup");
-  CHECK(localAutoIt->initializerHasTry);
-  CHECK(localAutoIt->initializerTryValueType == "int");
-  CHECK(localAutoIt->initializerTryErrorType == "MyError");
+  const auto *localAutoEntry = findSemanticEntry(
+      primec::semanticProgramLocalAutoFactView(semanticProgram),
+      [](const primec::SemanticProgramLocalAutoFact &entry) {
+        return entry.scopePath == "/main" && entry.bindingName == "selected";
+      });
+  REQUIRE(localAutoEntry != nullptr);
+  CHECK(localAutoEntry->bindingTypeText == "int");
+  CHECK(localAutoEntry->initializerResolvedPath == "/lookup");
+  CHECK(localAutoEntry->initializerHasTry);
+  CHECK(localAutoEntry->initializerTryValueType == "int");
+  CHECK(localAutoEntry->initializerTryErrorType == "MyError");
 
-  const auto queryIt =
-      std::find_if(semanticProgram.queryFacts.begin(),
-                   semanticProgram.queryFacts.end(),
-                   [](const primec::SemanticProgramQueryFact &entry) {
-                     return entry.scopePath == "/main" && entry.resolvedPath == "/lookup";
-                   });
-  REQUIRE(queryIt != semanticProgram.queryFacts.end());
-  CHECK(queryIt->bindingTypeText == "Result<int, MyError>");
-  CHECK(queryIt->hasResultType);
-  CHECK(queryIt->resultTypeHasValue);
-  CHECK(queryIt->resultValueType == "int");
-  CHECK(queryIt->resultErrorType == "MyError");
+  const auto *queryEntry = findSemanticEntry(
+      primec::semanticProgramQueryFactView(semanticProgram),
+      [](const primec::SemanticProgramQueryFact &entry) {
+        return entry.scopePath == "/main" && entry.resolvedPath == "/lookup";
+      });
+  REQUIRE(queryEntry != nullptr);
+  CHECK(queryEntry->bindingTypeText == "Result<int, MyError>");
+  CHECK(queryEntry->hasResultType);
+  CHECK(queryEntry->resultTypeHasValue);
+  CHECK(queryEntry->resultValueType == "int");
+  CHECK(queryEntry->resultErrorType == "MyError");
 
-  const auto tryIt =
-      std::find_if(semanticProgram.tryFacts.begin(),
-                   semanticProgram.tryFacts.end(),
-                   [](const primec::SemanticProgramTryFact &entry) {
-                     return entry.scopePath == "/main" && entry.operandResolvedPath == "/lookup";
-                   });
-  REQUIRE(tryIt != semanticProgram.tryFacts.end());
-  CHECK(tryIt->valueType == "int");
-  CHECK(tryIt->errorType == "MyError");
-  CHECK(tryIt->contextReturnKind == "i32");
-  CHECK(tryIt->onErrorHandlerPath == "/unexpectedError");
+  const auto *tryEntry = findSemanticEntry(
+      primec::semanticProgramTryFactView(semanticProgram),
+      [](const primec::SemanticProgramTryFact &entry) {
+        return entry.scopePath == "/main" && entry.operandResolvedPath == "/lookup";
+      });
+  REQUIRE(tryEntry != nullptr);
+  CHECK(tryEntry->valueType == "int");
+  CHECK(tryEntry->errorType == "MyError");
+  CHECK(tryEntry->contextReturnKind == "i32");
+  CHECK(tryEntry->onErrorHandlerPath == "/unexpectedError");
 
-  const auto onErrorIt =
-      std::find_if(semanticProgram.onErrorFacts.begin(),
-                   semanticProgram.onErrorFacts.end(),
-                   [](const primec::SemanticProgramOnErrorFact &entry) {
-                     return entry.definitionPath == "/main";
-                   });
-  REQUIRE(onErrorIt != semanticProgram.onErrorFacts.end());
-  CHECK(onErrorIt->returnKind == "i32");
-  CHECK(onErrorIt->handlerPath == "/unexpectedError");
-  CHECK(onErrorIt->errorType == "MyError");
-  CHECK(onErrorIt->boundArgTexts == std::vector<std::string>{});
-  CHECK(onErrorIt->returnResultHasValue);
-  CHECK(onErrorIt->returnResultValueType == "int");
-  CHECK(onErrorIt->returnResultErrorType == "MyError");
+  const auto *onErrorEntry = findSemanticEntry(
+      primec::semanticProgramOnErrorFactView(semanticProgram),
+      [](const primec::SemanticProgramOnErrorFact &entry) { return entry.definitionPath == "/main"; });
+  REQUIRE(onErrorEntry != nullptr);
+  CHECK(onErrorEntry->returnKind == "i32");
+  CHECK(onErrorEntry->handlerPath == "/unexpectedError");
+  CHECK(onErrorEntry->errorType == "MyError");
+  CHECK(onErrorEntry->boundArgTexts == std::vector<std::string>{});
+  CHECK(onErrorEntry->returnResultHasValue);
+  CHECK(onErrorEntry->returnResultValueType == "int");
+  CHECK(onErrorEntry->returnResultErrorType == "MyError");
 }
 
 TEST_CASE("semantic product source locations stay aligned with AST-owned lowering facts") {
@@ -999,8 +984,7 @@ TEST_CASE("semantic product source locations stay aligned with AST-owned lowerin
   CHECK(fieldEntry->sourceLine == packetLeftField->sourceLine);
   CHECK(fieldEntry->sourceColumn == packetLeftField->sourceColumn);
 
-  const auto *parameterEntry = findSemanticEntry(
-      semanticProgram.bindingFacts,
+  const auto *parameterEntry = findSemanticEntry(primec::semanticProgramBindingFactView(semanticProgram),
       [](const primec::SemanticProgramBindingFact &entry) {
         return entry.scopePath == "/main" && entry.siteKind == "parameter" && entry.name == "argv";
       });
@@ -1008,8 +992,7 @@ TEST_CASE("semantic product source locations stay aligned with AST-owned lowerin
   CHECK(parameterEntry->sourceLine == mainDefinition->parameters[0].sourceLine);
   CHECK(parameterEntry->sourceColumn == mainDefinition->parameters[0].sourceColumn);
 
-  const auto *localEntry = findSemanticEntry(
-      semanticProgram.bindingFacts,
+  const auto *localEntry = findSemanticEntry(primec::semanticProgramBindingFactView(semanticProgram),
       [](const primec::SemanticProgramBindingFact &entry) {
         return entry.scopePath == "/main" && entry.siteKind == "local" && entry.name == "values";
       });
@@ -1017,8 +1000,7 @@ TEST_CASE("semantic product source locations stay aligned with AST-owned lowerin
   CHECK(localEntry->sourceLine == mainValuesBinding->sourceLine);
   CHECK(localEntry->sourceColumn == mainValuesBinding->sourceColumn);
 
-  const auto *temporaryEntry = findSemanticEntry(
-      semanticProgram.bindingFacts,
+  const auto *temporaryEntry = findSemanticEntry(primec::semanticProgramBindingFactView(semanticProgram),
       [](const primec::SemanticProgramBindingFact &entry) {
         return entry.scopePath == "/main" && entry.siteKind == "temporary" && entry.name == "pick";
       });
@@ -1026,8 +1008,7 @@ TEST_CASE("semantic product source locations stay aligned with AST-owned lowerin
   CHECK(temporaryEntry->sourceLine == directCallExpr->sourceLine);
   CHECK(temporaryEntry->sourceColumn == directCallExpr->sourceColumn);
 
-  const auto *directCallEntry = findSemanticEntry(
-      semanticProgram.directCallTargets,
+  const auto *directCallEntry = findSemanticEntry(primec::semanticProgramDirectCallTargetView(semanticProgram),
       [](const primec::SemanticProgramDirectCallTarget &entry) {
         return entry.scopePath == "/main" && entry.callName == "pick";
       });
@@ -1035,8 +1016,7 @@ TEST_CASE("semantic product source locations stay aligned with AST-owned lowerin
   CHECK(directCallEntry->sourceLine == directCallExpr->sourceLine);
   CHECK(directCallEntry->sourceColumn == directCallExpr->sourceColumn);
 
-  const auto *methodCallEntry = findSemanticEntry(
-      semanticProgram.methodCallTargets,
+  const auto *methodCallEntry = findSemanticEntry(primec::semanticProgramMethodCallTargetView(semanticProgram),
       [](const primec::SemanticProgramMethodCallTarget &entry) {
         return entry.scopePath == "/main" && entry.methodName == "count";
       });
@@ -1044,8 +1024,7 @@ TEST_CASE("semantic product source locations stay aligned with AST-owned lowerin
   CHECK(methodCallEntry->sourceLine == methodCallExpr->sourceLine);
   CHECK(methodCallEntry->sourceColumn == methodCallExpr->sourceColumn);
 
-  const auto *bridgeEntry = findSemanticEntry(
-      semanticProgram.bridgePathChoices,
+  const auto *bridgeEntry = findSemanticEntry(primec::semanticProgramBridgePathChoiceView(semanticProgram),
       [](const primec::SemanticProgramBridgePathChoice &entry) {
         return entry.scopePath == "/main" && entry.helperName == "count";
       });
@@ -1053,8 +1032,7 @@ TEST_CASE("semantic product source locations stay aligned with AST-owned lowerin
   CHECK(bridgeEntry->sourceLine == bridgeCallExpr->sourceLine);
   CHECK(bridgeEntry->sourceColumn == bridgeCallExpr->sourceColumn);
 
-  const auto *returnEntry = findSemanticEntry(
-      semanticProgram.returnFacts,
+  const auto *returnEntry = findSemanticEntry(primec::semanticProgramReturnFactView(semanticProgram),
       [](const primec::SemanticProgramReturnFact &entry) { return entry.definitionPath == "/main"; });
   REQUIRE(returnEntry != nullptr);
   CHECK(returnEntry->sourceLine == mainDefinition->returnExpr->sourceLine);
@@ -1116,13 +1094,11 @@ TEST_CASE("semantic product semantic ids stay deterministic across repeated vali
   CHECK(firstMain->provenanceHandle != 0);
   CHECK(firstMain->provenanceHandle == secondMain->provenanceHandle);
 
-  const auto *firstDirectCall = findSemanticEntry(
-      first.directCallTargets,
+  const auto *firstDirectCall = findSemanticEntry(primec::semanticProgramDirectCallTargetView(first),
       [](const primec::SemanticProgramDirectCallTarget &entry) {
         return entry.scopePath == "/main" && entry.callName == "helper";
       });
-  const auto *secondDirectCall = findSemanticEntry(
-      second.directCallTargets,
+  const auto *secondDirectCall = findSemanticEntry(primec::semanticProgramDirectCallTargetView(second),
       [](const primec::SemanticProgramDirectCallTarget &entry) {
         return entry.scopePath == "/main" && entry.callName == "helper";
       });
@@ -1133,13 +1109,11 @@ TEST_CASE("semantic product semantic ids stay deterministic across repeated vali
   CHECK(firstDirectCall->provenanceHandle != 0);
   CHECK(firstDirectCall->provenanceHandle == secondDirectCall->provenanceHandle);
 
-  const auto *firstQuery = findSemanticEntry(
-      first.queryFacts,
+  const auto *firstQuery = findSemanticEntry(primec::semanticProgramQueryFactView(first),
       [](const primec::SemanticProgramQueryFact &entry) {
         return entry.scopePath == "/main" && entry.resolvedPath == "/lookup";
       });
-  const auto *secondQuery = findSemanticEntry(
-      second.queryFacts,
+  const auto *secondQuery = findSemanticEntry(primec::semanticProgramQueryFactView(second),
       [](const primec::SemanticProgramQueryFact &entry) {
         return entry.scopePath == "/main" && entry.resolvedPath == "/lookup";
       });
@@ -1150,13 +1124,11 @@ TEST_CASE("semantic product semantic ids stay deterministic across repeated vali
   CHECK(firstQuery->provenanceHandle != 0);
   CHECK(firstQuery->provenanceHandle == secondQuery->provenanceHandle);
 
-  const auto *firstTry = findSemanticEntry(
-      first.tryFacts,
+  const auto *firstTry = findSemanticEntry(primec::semanticProgramTryFactView(first),
       [](const primec::SemanticProgramTryFact &entry) {
         return entry.scopePath == "/main" && entry.operandResolvedPath == "/lookup";
       });
-  const auto *secondTry = findSemanticEntry(
-      second.tryFacts,
+  const auto *secondTry = findSemanticEntry(primec::semanticProgramTryFactView(second),
       [](const primec::SemanticProgramTryFact &entry) {
         return entry.scopePath == "/main" && entry.operandResolvedPath == "/lookup";
       });
@@ -1240,13 +1212,11 @@ TEST_CASE("semantic product semantic ids ignore unrelated definition ordering") 
   CHECK(firstMain->sourceLine == secondMain->sourceLine);
   CHECK(firstMain->sourceColumn == secondMain->sourceColumn);
 
-  const auto *firstLocal = findSemanticEntry(
-      first.bindingFacts,
+  const auto *firstLocal = findSemanticEntry(primec::semanticProgramBindingFactView(first),
       [](const primec::SemanticProgramBindingFact &entry) {
         return entry.scopePath == "/main" && entry.siteKind == "local" && entry.name == "selected";
       });
-  const auto *secondLocal = findSemanticEntry(
-      second.bindingFacts,
+  const auto *secondLocal = findSemanticEntry(primec::semanticProgramBindingFactView(second),
       [](const primec::SemanticProgramBindingFact &entry) {
         return entry.scopePath == "/main" && entry.siteKind == "local" && entry.name == "selected";
       });
@@ -1257,13 +1227,11 @@ TEST_CASE("semantic product semantic ids ignore unrelated definition ordering") 
   CHECK(firstLocal->sourceLine == secondLocal->sourceLine);
   CHECK(firstLocal->sourceColumn == secondLocal->sourceColumn);
 
-  const auto *firstTemporary = findSemanticEntry(
-      first.bindingFacts,
+  const auto *firstTemporary = findSemanticEntry(primec::semanticProgramBindingFactView(first),
       [](const primec::SemanticProgramBindingFact &entry) {
         return entry.scopePath == "/main" && entry.siteKind == "temporary" && entry.name == "helper";
       });
-  const auto *secondTemporary = findSemanticEntry(
-      second.bindingFacts,
+  const auto *secondTemporary = findSemanticEntry(primec::semanticProgramBindingFactView(second),
       [](const primec::SemanticProgramBindingFact &entry) {
         return entry.scopePath == "/main" && entry.siteKind == "temporary" && entry.name == "helper";
       });
@@ -1274,13 +1242,11 @@ TEST_CASE("semantic product semantic ids ignore unrelated definition ordering") 
   CHECK(firstTemporary->sourceLine == secondTemporary->sourceLine);
   CHECK(firstTemporary->sourceColumn == secondTemporary->sourceColumn);
 
-  const auto *firstDirectCall = findSemanticEntry(
-      first.directCallTargets,
+  const auto *firstDirectCall = findSemanticEntry(primec::semanticProgramDirectCallTargetView(first),
       [](const primec::SemanticProgramDirectCallTarget &entry) {
         return entry.scopePath == "/main" && entry.callName == "helper";
       });
-  const auto *secondDirectCall = findSemanticEntry(
-      second.directCallTargets,
+  const auto *secondDirectCall = findSemanticEntry(primec::semanticProgramDirectCallTargetView(second),
       [](const primec::SemanticProgramDirectCallTarget &entry) {
         return entry.scopePath == "/main" && entry.callName == "helper";
       });
@@ -1291,11 +1257,9 @@ TEST_CASE("semantic product semantic ids ignore unrelated definition ordering") 
   CHECK(firstDirectCall->sourceLine == secondDirectCall->sourceLine);
   CHECK(firstDirectCall->sourceColumn == secondDirectCall->sourceColumn);
 
-  const auto *firstReturn = findSemanticEntry(
-      first.returnFacts,
+  const auto *firstReturn = findSemanticEntry(primec::semanticProgramReturnFactView(first),
       [](const primec::SemanticProgramReturnFact &entry) { return entry.definitionPath == "/main"; });
-  const auto *secondReturn = findSemanticEntry(
-      second.returnFacts,
+  const auto *secondReturn = findSemanticEntry(primec::semanticProgramReturnFactView(second),
       [](const primec::SemanticProgramReturnFact &entry) { return entry.definitionPath == "/main"; });
   REQUIRE(firstReturn != nullptr);
   REQUIRE(secondReturn != nullptr);
@@ -1346,17 +1310,23 @@ TEST_CASE("semantic product ownership surfaces keep deterministic source order")
   CHECK(fieldOrder == std::vector<std::string>{"zeta", "alpha"});
 
   std::vector<std::string> localBindingOrder;
-  for (const auto &entry : semanticProgram.bindingFacts) {
-    if (entry.scopePath == "/main" && entry.siteKind == "local") {
-      localBindingOrder.push_back(entry.name);
+  for (const auto *entry : primec::semanticProgramBindingFactView(semanticProgram)) {
+    if (entry == nullptr) {
+      continue;
+    }
+    if (entry->scopePath == "/main" && entry->siteKind == "local") {
+      localBindingOrder.push_back(entry->name);
     }
   }
   CHECK(localBindingOrder == std::vector<std::string>{"zeta", "alpha"});
 
   std::vector<std::string> directCallOrder;
-  for (const auto &entry : semanticProgram.directCallTargets) {
-    if (entry.scopePath == "/main" && (entry.callName == "second" || entry.callName == "first")) {
-      directCallOrder.push_back(entry.callName);
+  for (const auto *entry : primec::semanticProgramDirectCallTargetView(semanticProgram)) {
+    if (entry == nullptr) {
+      continue;
+    }
+    if (entry->scopePath == "/main" && (entry->callName == "second" || entry->callName == "first")) {
+      directCallOrder.push_back(entry->callName);
     }
   }
   CHECK(directCallOrder == std::vector<std::string>{"second", "first"});
@@ -1399,22 +1369,22 @@ TEST_CASE("semantic product lowering preserves debug source-map provenance") {
   CHECK(error.empty());
 
   const auto *directCallEntry =
-      findSemanticEntry(semanticProgram.directCallTargets,
+      findSemanticEntry(primec::semanticProgramDirectCallTargetView(semanticProgram),
                         [](const primec::SemanticProgramDirectCallTarget &entry) {
                           return entry.scopePath == "/main" && entry.callName == "pick";
                         });
   const auto *methodCallEntry =
-      findSemanticEntry(semanticProgram.methodCallTargets,
+      findSemanticEntry(primec::semanticProgramMethodCallTargetView(semanticProgram),
                         [](const primec::SemanticProgramMethodCallTarget &entry) {
                           return entry.scopePath == "/main" && entry.methodName == "count";
                         });
   const auto *bridgeEntry =
-      findSemanticEntry(semanticProgram.bridgePathChoices,
+      findSemanticEntry(primec::semanticProgramBridgePathChoiceView(semanticProgram),
                         [](const primec::SemanticProgramBridgePathChoice &entry) {
                           return entry.scopePath == "/main" && entry.helperName == "count";
                         });
   const auto *returnEntry =
-      findSemanticEntry(semanticProgram.returnFacts,
+      findSemanticEntry(primec::semanticProgramReturnFactView(semanticProgram),
                         [](const primec::SemanticProgramReturnFact &entry) {
                           return entry.definitionPath == "/main";
                         });
@@ -1483,22 +1453,22 @@ main() {
   CHECK(error.empty());
 
   const auto *semanticDirectEntry =
-      findSemanticEntry(semanticProgram.directCallTargets,
+      findSemanticEntry(primec::semanticProgramDirectCallTargetView(semanticProgram),
                         [](const primec::SemanticProgramDirectCallTarget &entry) {
                           return entry.scopePath == "/main" && entry.callName == "id";
                         });
   const auto *semanticMethodEntry =
-      findSemanticEntry(semanticProgram.methodCallTargets,
+      findSemanticEntry(primec::semanticProgramMethodCallTargetView(semanticProgram),
                         [](const primec::SemanticProgramMethodCallTarget &entry) {
                           return entry.scopePath == "/main" && entry.methodName == "count";
                         });
   const auto *semanticBridgeEntry =
-      findSemanticEntry(semanticProgram.bridgePathChoices,
+      findSemanticEntry(primec::semanticProgramBridgePathChoiceView(semanticProgram),
                         [](const primec::SemanticProgramBridgePathChoice &entry) {
                           return entry.scopePath == "/main" && entry.helperName == "count";
                         });
   const auto *semanticReturnEntry =
-      findSemanticEntry(semanticProgram.returnFacts,
+      findSemanticEntry(primec::semanticProgramReturnFactView(semanticProgram),
                         [](const primec::SemanticProgramReturnFact &entry) {
                           return entry.definitionPath == "/main";
                         });

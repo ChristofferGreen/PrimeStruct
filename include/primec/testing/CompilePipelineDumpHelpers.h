@@ -51,32 +51,32 @@ struct CompilePipelineBackendConformance {
   const SemanticProgramDirectCallTarget *findDirectCallTarget(std::string_view scopePath,
                                                               std::string_view callName) const {
     const std::string normalizedCallName = detail::normalizeSemanticTargetName(callName);
-    const auto it =
-        std::find_if(output.semanticProgram.directCallTargets.begin(),
-                     output.semanticProgram.directCallTargets.end(),
-                     [&](const SemanticProgramDirectCallTarget &entry) {
-                       return entry.scopePath == scopePath &&
-                              (entry.callName == callName ||
-                               detail::normalizeSemanticTargetName(entry.callName) == normalizedCallName);
-                     });
-    if (it == output.semanticProgram.directCallTargets.end()) {
-      return nullptr;
+    const auto directCallTargets = semanticProgramDirectCallTargetView(output.semanticProgram);
+    for (const auto *entry : directCallTargets) {
+      if (entry == nullptr) {
+        continue;
+      }
+      if (entry->scopePath == scopePath &&
+          (entry->callName == callName ||
+           detail::normalizeSemanticTargetName(entry->callName) == normalizedCallName)) {
+        return entry;
+      }
     }
-    return &*it;
+    return nullptr;
   }
 
   const SemanticProgramMethodCallTarget *findMethodCallTarget(std::string_view scopePath,
                                                               std::string_view methodName) const {
-    const auto it =
-        std::find_if(output.semanticProgram.methodCallTargets.begin(),
-                     output.semanticProgram.methodCallTargets.end(),
-                     [&](const SemanticProgramMethodCallTarget &entry) {
-                       return entry.scopePath == scopePath && entry.methodName == methodName;
-                     });
-    if (it == output.semanticProgram.methodCallTargets.end()) {
-      return nullptr;
+    const auto methodCallTargets = semanticProgramMethodCallTargetView(output.semanticProgram);
+    for (const auto *entry : methodCallTargets) {
+      if (entry == nullptr) {
+        continue;
+      }
+      if (entry->scopePath == scopePath && entry->methodName == methodName) {
+        return entry;
+      }
     }
-    return &*it;
+    return nullptr;
   }
 };
 
