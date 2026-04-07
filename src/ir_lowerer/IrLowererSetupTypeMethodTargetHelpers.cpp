@@ -174,7 +174,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     if (path.rfind("/map/", 0) == 0) {
       const std::string suffix = path.substr(std::string("/map/").size());
       if (isExplicitMapContainsOrTryAtCompatibilityMethodAlias &&
-          (suffix == "contains" || suffix == "tryAt")) {
+          (suffix == "contains" || suffix == "tryAt" || suffix == "insert")) {
         return nullptr;
       }
       const std::string stdlibAlias = "/std/collections/map/" + path.substr(std::string("/map/").size());

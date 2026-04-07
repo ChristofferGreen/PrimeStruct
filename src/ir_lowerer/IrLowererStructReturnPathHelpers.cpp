@@ -21,7 +21,7 @@ bool allowsVectorStdlibCompatibilitySuffix(const std::string &suffix) {
 
 bool isRemovedMapCompatibilityHelper(const std::string &suffix) {
   return suffix == "count" || suffix == "contains" || suffix == "tryAt" ||
-         suffix == "at" || suffix == "at_unsafe";
+         suffix == "at" || suffix == "at_unsafe" || suffix == "insert";
 }
 
 std::string resolveUniqueStructByLeafName(const std::string &typeName,
@@ -215,7 +215,7 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
     }
   } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
-    if (!isRemovedMapCompatibilityHelper(suffix) && suffix != "insert") {
+    if (!isRemovedMapCompatibilityHelper(suffix)) {
       appendUnique("/map/" + suffix);
     }
   }
@@ -278,7 +278,7 @@ std::string preferCollectionHelperPath(const std::string &path,
   }
   if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
-    if (suffix != "insert") {
+    if (!isRemovedMapCompatibilityHelper(suffix)) {
       const std::string mapAlias = "/map/" + suffix;
       if (defMap.count(mapAlias) > 0) {
         preferred = mapAlias;
