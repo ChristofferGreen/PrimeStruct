@@ -1290,11 +1290,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     std::string helperName;
     if (normalized == "map/count" || normalized == "map/contains" || normalized == "map/tryAt" ||
-        normalized == "map/at" || normalized == "map/at_unsafe") {
+        normalized == "map/at" || normalized == "map/at_unsafe" ||
+        normalized == "map/insert") {
       helperName = normalized.substr(std::string("map/").size());
     } else if (normalizedPrefix == "map" &&
                (normalized == "count" || normalized == "contains" || normalized == "tryAt" ||
-                normalized == "at" || normalized == "at_unsafe")) {
+                normalized == "at" || normalized == "at_unsafe" ||
+                normalized == "insert")) {
       helperName = normalized;
     } else {
       const std::string resolvedPath = resolveCalleePath(candidate);
@@ -1308,6 +1310,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         helperName = "at";
       } else if (resolvedPath == "/map/at_unsafe") {
         helperName = "at_unsafe";
+      } else if (resolvedPath == "/map/insert") {
+        helperName = "insert";
       } else {
         return "";
       }
