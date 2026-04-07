@@ -87,8 +87,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_stdlib_collection_shim_templated_return_temp_call_key_mismatch.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_vm_stdlib_collection_shim_templated_return_temp_call_key_mismatch.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " +
+                             quoteShellArg(errPath) + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/at parameter key") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm templated stdlib map wrapper temporary call value mismatch") {
@@ -127,8 +134,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_stdlib_collection_shim_templated_return_temp_unsafe_call_key_mismatch.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_vm_stdlib_collection_shim_templated_return_temp_unsafe_call_key_mismatch.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " +
+                             quoteShellArg(errPath) + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/at_unsafe parameter key") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm templated stdlib map wrapper temporary unsafe call value mismatch") {
@@ -630,4 +644,3 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 2);
 }
-

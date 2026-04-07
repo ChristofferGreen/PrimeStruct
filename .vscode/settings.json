@@ -1,9 +1,19 @@
 {
   "testMate.cpp.test.executables": [
+    "${workspaceFolder}/build-debug/PrimeStruct_*_tests",
+    "${workspaceFolder}/build-release/PrimeStruct_*_tests",
     "${workspaceFolder}/build-debug/PrimeStruct_tests*",
     "${workspaceFolder}/build-release/PrimeStruct_tests*"
   ],
   "testMate.cpp.test.advancedExecutables": [
+    {
+      "pattern": "${workspaceFolder}/build-debug/PrimeStruct_*_tests",
+      "cwd": "${workspaceFolder}/build-debug"
+    },
+    {
+      "pattern": "${workspaceFolder}/build-release/PrimeStruct_*_tests",
+      "cwd": "${workspaceFolder}/build-release"
+    },
     {
       "pattern": "${workspaceFolder}/build-debug/PrimeStruct_tests*",
       "cwd": "${workspaceFolder}/build-debug"

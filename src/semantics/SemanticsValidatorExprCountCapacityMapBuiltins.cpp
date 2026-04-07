@@ -327,7 +327,10 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
           normalizedType = normalizeBindingTypeName(args.front());
           continue;
         }
-        return base == "std/collections/map" || base == "/std/collections/map";
+        return base == "std/collections/map" || base == "/std/collections/map" ||
+               base == "Map" || base == "/Map" ||
+               base == "std/collections/experimental_map/Map" ||
+               base == "/std/collections/experimental_map/Map";
       }
     };
     auto usesCanonicalMapReceiver = [&](const Expr &receiverExpr) {

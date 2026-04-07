@@ -49,6 +49,33 @@ bool getCanonicalMapAccessBuiltinName(const Expr &candidate,
   return false;
 }
 
+bool isExperimentalMapTypeText(const std::string &typeText) {
+  std::string normalizedType = normalizeBindingTypeName(typeText);
+  while (true) {
+    std::string base;
+    std::string arg;
+    if (!splitTemplateTypeName(normalizedType, base, arg)) {
+      return false;
+    }
+    base = normalizeBindingTypeName(base);
+    if (base == "Map" || base == "/Map" ||
+        base == "std/collections/experimental_map/Map" ||
+        base == "/std/collections/experimental_map/Map") {
+      std::vector<std::string> args;
+      return splitTopLevelTemplateArgs(arg, args) && args.size() == 2;
+    }
+    if (base == "Reference" || base == "Pointer") {
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+        return false;
+      }
+      normalizedType = normalizeBindingTypeName(args.front());
+      continue;
+    }
+    return false;
+  }
+}
+
 } // namespace
 
 bool SemanticsValidator::validateExprLateMapAccessBuiltins(
@@ -67,10 +94,16 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     return failExprDiagnostic(expr, std::move(message));
   };
   auto failLateMapAccessKeyMismatch = [&](const std::string &helperName,
-                                          const std::string &mapKeyType) {
+                                          const std::string &mapKeyType,
+                                          const Expr &receiverExpr) {
+    std::string receiverTypeText;
+    const bool receiverIsExperimentalMap =
+        inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
+        isExperimentalMapTypeText(receiverTypeText);
     if (expr.name.rfind("/std/collections/map/", 0) == 0 ||
         expr.namespacePrefix == "/std/collections/map" ||
-        expr.namespacePrefix == "std/collections/map") {
+        expr.namespacePrefix == "std/collections/map" ||
+        receiverIsExperimentalMap) {
       return failLateMapAccessBuiltinDiagnostic(
           "argument type mismatch for /std/collections/map/" + helperName +
           " parameter key");
@@ -334,18 +367,18 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         if (normalizeBindingTypeName(mapKeyType) == "string") {
           if (!this->isStringExprForArgumentValidation(keyExpr,
                                                        *context.dispatchResolvers)) {
-            return failLateMapAccessKeyMismatch(builtinName, mapKeyType);
+            return failLateMapAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
           }
         } else {
           ReturnKind keyKind =
               returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
           if (keyKind != ReturnKind::Unknown) {
             if (context.dispatchResolvers->resolveStringTarget(keyExpr)) {
-              return failLateMapAccessKeyMismatch(builtinName, mapKeyType);
+              return failLateMapAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
             }
             ReturnKind indexKind = inferExprReturnKind(keyExpr, params, locals);
             if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
-              return failLateMapAccessKeyMismatch(builtinName, mapKeyType);
+              return failLateMapAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
             }
           }
         }
@@ -382,18 +415,18 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         if (normalizeBindingTypeName(mapKeyType) == "string") {
           if (!this->isStringExprForArgumentValidation(keyExpr,
                                                        *context.dispatchResolvers)) {
-            return failLateMapAccessKeyMismatch(builtinName, mapKeyType);
+            return failLateMapAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
           }
         } else {
           ReturnKind keyKind =
               returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
           if (keyKind != ReturnKind::Unknown) {
             if (context.dispatchResolvers->resolveStringTarget(keyExpr)) {
-              return failLateMapAccessKeyMismatch(builtinName, mapKeyType);
+              return failLateMapAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
             }
             ReturnKind indexKind = inferExprReturnKind(keyExpr, params, locals);
             if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
-              return failLateMapAccessKeyMismatch(builtinName, mapKeyType);
+              return failLateMapAccessKeyMismatch(builtinName, mapKeyType, receiverExpr);
             }
           }
         }

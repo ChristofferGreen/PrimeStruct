@@ -52,12 +52,19 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     return true;
   }
   auto failPreDispatchDirectCallMapKeyMismatch =
-      [&](const std::string &helperName, const std::string &mapKeyType) {
+      [&](const std::string &helperName,
+          const std::string &mapKeyType,
+          const Expr &receiverExpr) {
         const std::string canonicalPath =
             "/std/collections/map/" + helperName;
+        std::string receiverTypeText;
+        const bool receiverIsExperimentalMap =
+            inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
+            isExperimentalMapTypeText(receiverTypeText);
         if (expr.name.rfind("/std/collections/map/", 0) == 0 ||
             expr.namespacePrefix == "/std/collections/map" ||
-            expr.namespacePrefix == "std/collections/map") {
+            expr.namespacePrefix == "std/collections/map" ||
+            receiverIsExperimentalMap) {
           return failPreDispatchDirectCallDiagnostic(
               "argument type mismatch for " + canonicalPath +
               " parameter key");
@@ -222,7 +229,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
             if (!this->isStringExprForArgumentValidation(
                     keyExpr, dispatchBootstrap.dispatchResolvers)) {
               return failPreDispatchDirectCallMapKeyMismatch(
-                  builtinAccessName, mapKeyType);
+                  builtinAccessName, mapKeyType, receiverExpr);
             }
           } else {
             ReturnKind keyKind =
@@ -231,13 +238,13 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
               if (dispatchBootstrap.dispatchResolvers.resolveStringTarget(
                       keyExpr)) {
                 return failPreDispatchDirectCallMapKeyMismatch(
-                    builtinAccessName, mapKeyType);
+                    builtinAccessName, mapKeyType, receiverExpr);
               }
               ReturnKind indexKind =
                   inferExprReturnKind(keyExpr, params, locals);
               if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
                 return failPreDispatchDirectCallMapKeyMismatch(
-                    builtinAccessName, mapKeyType);
+                    builtinAccessName, mapKeyType, receiverExpr);
               }
             }
           }

@@ -294,8 +294,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_stdlib_collection_shim_templated_return_temp_call_key_mismatch.prime", source);
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_native_stdlib_collection_shim_templated_return_temp_call_key_mismatch.err")
+          .string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " +
+                                 quoteShellArg(errPath) + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/at parameter key") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects native templated stdlib map wrapper temporary call value mismatch") {
@@ -334,8 +341,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_stdlib_collection_shim_templated_return_temp_unsafe_call_key_mismatch.prime", source);
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_native_stdlib_collection_shim_templated_return_temp_unsafe_call_key_mismatch.err")
+          .string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " +
+                                 quoteShellArg(errPath) + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/at_unsafe parameter key") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects native templated stdlib map wrapper temporary unsafe call value mismatch") {
@@ -597,4 +611,3 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
-

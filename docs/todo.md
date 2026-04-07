@@ -115,9 +115,9 @@ Progress note: the first semantic-product publication, dump surface, and tempora
     - ✓ Normalize canonical map helper/access alias families onto stdlib builtin surfaces across validate/infer/lowerer.
     - ✓ Keep value + borrowed helper families aligned for method/direct/args-pack map receiver resolution.
     - ✓ Align bare `contains` / `tryAt` visibility checks across late validation, infer late-fallback inference, and `try(...)` validation.
-    - ○ Land the final runtime parity follow-up for experimental-map receiver metadata in runtime/native execution paths.
-    - ○ Normalize diagnostics for runtime-parity mismatch cases so failures are deterministic.
-    - ○ Add focused conformance coverage that locks runtime parity and rejects regressions back to AST/import fallback behavior.
+    - ✓ Land the final runtime parity follow-up for experimental-map receiver metadata in runtime/native execution paths.
+    - ✓ Normalize diagnostics for runtime-parity mismatch cases so failures are deterministic.
+    - ✓ Add focused conformance coverage that locks runtime parity and rejects regressions back to AST/import fallback behavior.
   - ○ Remove the final AST-derived semantic fallback slices so the AST remains lowering-visible only for provenance/debug/source-map ownership.
     - ○ Inventory each remaining AST/import fallback site used after the lowering boundary.
     - ○ Replace fallback sites in validator-side binding-kind paths with semantic-product facts or explicit failures.
