@@ -108,31 +108,37 @@ bool resolveStdCollectionsVectorWrapperAliasName(std::string helperName, std::st
 bool resolveCollectionsMapWrapperAliasName(std::string helperName, std::string &helperNameOut) {
   helperName = stripGeneratedHelperSuffix(std::move(helperName));
   if (helperName == "count" || helperName == "count_ref" ||
+      helperName == "Count" || helperName == "CountRef" ||
       helperName == "mapCount" || helperName == "mapCountRef") {
     helperNameOut = "count";
     return true;
   }
   if (helperName == "contains" || helperName == "contains_ref" ||
+      helperName == "Contains" || helperName == "ContainsRef" ||
       helperName == "mapContains" || helperName == "mapContainsRef") {
     helperNameOut = "contains";
     return true;
   }
   if (helperName == "tryAt" || helperName == "tryAt_ref" ||
+      helperName == "TryAt" || helperName == "TryAtRef" ||
       helperName == "mapTryAt" || helperName == "mapTryAtRef") {
     helperNameOut = "tryAt";
     return true;
   }
   if (helperName == "at" || helperName == "at_ref" ||
+      helperName == "At" || helperName == "AtRef" ||
       helperName == "mapAt" || helperName == "mapAtRef") {
     helperNameOut = "at";
     return true;
   }
   if (helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
+      helperName == "AtUnsafe" || helperName == "AtUnsafeRef" ||
       helperName == "mapAtUnsafe" || helperName == "mapAtUnsafeRef") {
     helperNameOut = "at_unsafe";
     return true;
   }
   if (helperName == "insert" || helperName == "insert_ref" ||
+      helperName == "Insert" || helperName == "InsertRef" ||
       helperName == "mapInsert" || helperName == "mapInsertRef") {
     helperNameOut = "insert";
     return true;
