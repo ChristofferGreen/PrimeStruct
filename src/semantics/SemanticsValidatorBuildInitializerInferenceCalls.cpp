@@ -549,14 +549,17 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
     return {};
   };
   std::string graphPreferredResolvedInitializer;
-  if (bindingExpr != nullptr && !shouldBypassGraphBindingLookup(*bindingExpr)) {
-    ReturnKind graphDirectCallReturnKind = ReturnKind::Unknown;
-    (void)lookupGraphLocalAutoDirectCallFact(
-        *bindingExpr, graphPreferredResolvedInitializer, graphDirectCallReturnKind);
-  }
+  ReturnKind graphPreferredDirectCallReturnKind = ReturnKind::Unknown;
+  const bool graphDirectCallFactAvailable =
+      bindingExpr != nullptr &&
+      !shouldBypassGraphBindingLookup(*bindingExpr) &&
+      lookupGraphLocalAutoDirectCallFact(
+          *bindingExpr, graphPreferredResolvedInitializer, graphPreferredDirectCallReturnKind);
+  const bool hasGraphPreferredResolvedInitializer =
+      graphDirectCallFactAvailable && !graphPreferredResolvedInitializer.empty();
   const std::string preferredResolvedInitializer =
-      !graphPreferredResolvedInitializer.empty() ? graphPreferredResolvedInitializer
-                                                 : preferredResolvedInitializerPath();
+      hasGraphPreferredResolvedInitializer ? graphPreferredResolvedInitializer
+                                           : preferredResolvedInitializerPath();
   if (!preferredResolvedInitializer.empty()) {
     if (inferResolvedDirectCallBindingType(preferredResolvedInitializer, bindingOut)) {
       return true;
@@ -662,18 +665,22 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
   ReturnKind resolvedKind = inferExprReturnKind(*initializerExprForInference, params, locals);
   if (resolvedKind != ReturnKind::Unknown && resolvedKind != ReturnKind::Void) {
     if (resolvedKind == ReturnKind::Array) {
-      if (inferResolvedDirectCallBindingType(resolveCalleePath(*initializerExprForInference), bindingOut)) {
-        return true;
-      }
-      if (inferDeclaredDirectCallBinding(resolveCalleePath(*initializerExprForInference))) {
-        return true;
+      if (!hasGraphPreferredResolvedInitializer) {
+        if (inferResolvedDirectCallBindingType(resolveCalleePath(*initializerExprForInference), bindingOut)) {
+          return true;
+        }
+        if (inferDeclaredDirectCallBinding(resolveCalleePath(*initializerExprForInference))) {
+          return true;
+        }
       }
     }
-    if (inferResolvedDirectCallBindingType(resolveCalleePath(initializer), bindingOut)) {
-      return true;
-    }
-    if (inferDeclaredDirectCallBinding(resolveCalleePath(initializer))) {
-      return true;
+    if (!hasGraphPreferredResolvedInitializer) {
+      if (inferResolvedDirectCallBindingType(resolveCalleePath(initializer), bindingOut)) {
+        return true;
+      }
+      if (inferDeclaredDirectCallBinding(resolveCalleePath(initializer))) {
+        return true;
+      }
     }
     std::string inferredStruct = inferStructReturnPath(initializer, params, locals);
     if (!inferredStruct.empty()) {
@@ -739,31 +746,23 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
     bindingOut.typeTemplateArg.clear();
     return true;
   }
-  if (inferResolvedDirectCallBindingType(resolveCalleePath(*initializerExprForInference), bindingOut)) {
+  if (!hasGraphPreferredResolvedInitializer &&
+      inferResolvedDirectCallBindingType(resolveCalleePath(*initializerExprForInference), bindingOut)) {
     return true;
   }
-  if (bindingExpr != nullptr && !shouldBypassGraphBindingLookup(*bindingExpr)) {
-    std::string graphDirectCallResolvedPath;
-    ReturnKind graphDirectCallReturnKind = ReturnKind::Unknown;
-    if (lookupGraphLocalAutoDirectCallFact(
-            *bindingExpr, graphDirectCallResolvedPath, graphDirectCallReturnKind)) {
-      if (!graphDirectCallResolvedPath.empty() &&
-          inferResolvedDirectCallBindingType(graphDirectCallResolvedPath, bindingOut)) {
-        return true;
-      }
-      if (graphDirectCallReturnKind != ReturnKind::Unknown &&
-          graphDirectCallReturnKind != ReturnKind::Void &&
-          graphDirectCallReturnKind != ReturnKind::Array) {
-        const std::string inferredType = typeNameForReturnKind(graphDirectCallReturnKind);
-        if (!inferredType.empty()) {
-          bindingOut.typeName = inferredType;
-          bindingOut.typeTemplateArg.clear();
-          return true;
-        }
-      }
+  if (graphDirectCallFactAvailable &&
+      graphPreferredDirectCallReturnKind != ReturnKind::Unknown &&
+      graphPreferredDirectCallReturnKind != ReturnKind::Void &&
+      graphPreferredDirectCallReturnKind != ReturnKind::Array) {
+    const std::string inferredType = typeNameForReturnKind(graphPreferredDirectCallReturnKind);
+    if (!inferredType.empty()) {
+      bindingOut.typeName = inferredType;
+      bindingOut.typeTemplateArg.clear();
+      return true;
     }
   }
-  if (inferDeclaredDirectCallBinding(resolveCalleePath(*initializerExprForInference))) {
+  if (!hasGraphPreferredResolvedInitializer &&
+      inferDeclaredDirectCallBinding(resolveCalleePath(*initializerExprForInference))) {
     return true;
   }
   return false;
