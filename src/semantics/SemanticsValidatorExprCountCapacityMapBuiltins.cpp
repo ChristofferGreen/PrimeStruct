@@ -302,9 +302,13 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
 
   if (expr.isMethodCall && resolvedMethod &&
       (logicalResolvedMethod == "/std/collections/map/contains" ||
+       logicalResolvedMethod == "/std/collections/map/contains_ref" ||
        logicalResolvedMethod == "/std/collections/map/tryAt" ||
+       logicalResolvedMethod == "/std/collections/map/tryAt_ref" ||
        logicalResolvedMethod == "/std/collections/map/at" ||
-       logicalResolvedMethod == "/std/collections/map/at_unsafe")) {
+       logicalResolvedMethod == "/std/collections/map/at_ref" ||
+       logicalResolvedMethod == "/std/collections/map/at_unsafe" ||
+       logicalResolvedMethod == "/std/collections/map/at_unsafe_ref")) {
     handledOut = true;
     auto isCanonicalMapTypeText = [&](const std::string &typeText) {
       std::string normalizedType = normalizeBindingTypeName(typeText);
@@ -359,7 +363,9 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
         [&](const Expr &receiverExpr, const std::string &helperName,
             const std::string &mapKeyType) -> bool {
           if ((logicalResolvedMethod == "/std/collections/map/at" ||
-               logicalResolvedMethod == "/std/collections/map/at_unsafe") &&
+               logicalResolvedMethod == "/std/collections/map/at_ref" ||
+               logicalResolvedMethod == "/std/collections/map/at_unsafe" ||
+               logicalResolvedMethod == "/std/collections/map/at_unsafe_ref") &&
               usesCanonicalMapReceiver(receiverExpr)) {
             return failCountCapacityMapBuiltin("argument type mismatch for " +
                                                logicalResolvedMethod +

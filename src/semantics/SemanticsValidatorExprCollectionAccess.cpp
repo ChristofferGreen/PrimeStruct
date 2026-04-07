@@ -512,50 +512,78 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         return false;
       }
       if (expr.name == "contains" &&
-          methodResolved == "/map/contains" &&
+          (methodResolved == "/map/contains" ||
+           methodResolved == "/std/collections/map/contains_ref") &&
           !hasImportedDefinitionPath("/contains") &&
           !hasDeclaredDefinitionPath("/contains")) {
-        return failCollectionAccessTargetDiagnostic("unknown call target: /std/collections/map/contains");
+        return failCollectionAccessTargetDiagnostic(
+            "unknown call target: " +
+            std::string(methodResolved == "/std/collections/map/contains_ref"
+                            ? "/std/collections/map/contains_ref"
+                            : "/std/collections/map/contains"));
       }
       if (isBuiltinMethod) {
         if (((methodResolved == "/std/collections/map/contains" &&
               hasDeclaredDefinitionPath("/std/collections/map/contains")) ||
+             (methodResolved == "/std/collections/map/contains_ref" &&
+              hasDeclaredDefinitionPath("/std/collections/map/contains_ref")) ||
              (methodResolved == "/std/collections/map/at" &&
               hasDeclaredDefinitionPath("/std/collections/map/at")) ||
+             (methodResolved == "/std/collections/map/at_ref" &&
+              hasDeclaredDefinitionPath("/std/collections/map/at_ref")) ||
              (methodResolved == "/std/collections/map/at_unsafe" &&
-              hasDeclaredDefinitionPath("/std/collections/map/at_unsafe"))) &&
-            !(methodResolved == "/std/collections/map/contains" &&
+              hasDeclaredDefinitionPath("/std/collections/map/at_unsafe")) ||
+             (methodResolved == "/std/collections/map/at_unsafe_ref" &&
+              hasDeclaredDefinitionPath("/std/collections/map/at_unsafe_ref"))) &&
+            !((methodResolved == "/std/collections/map/contains" ||
+               methodResolved == "/std/collections/map/contains_ref") &&
               context.shouldBuiltinValidateBareMapContainsCall) &&
             !((methodResolved == "/std/collections/map/at" ||
-               methodResolved == "/std/collections/map/at_unsafe") &&
+               methodResolved == "/std/collections/map/at_ref" ||
+               methodResolved == "/std/collections/map/at_unsafe" ||
+               methodResolved == "/std/collections/map/at_unsafe_ref") &&
               context.shouldBuiltinValidateBareMapAccessCall) &&
             !context.isIndexedArgsPackMapReceiverTarget(receiverCandidate)) {
           isBuiltinMethod = false;
         }
       }
       if (isBuiltinMethod) {
-        if (methodResolved == "/std/collections/map/contains" &&
+        if ((methodResolved == "/std/collections/map/contains" ||
+             methodResolved == "/std/collections/map/contains_ref") &&
             !context.shouldBuiltinValidateBareMapContainsCall &&
             !context.isIndexedArgsPackMapReceiverTarget(receiverCandidate) &&
-            !hasImportedDefinitionPath("/std/collections/map/contains") &&
-            !hasDeclaredDefinitionPath("/std/collections/map/contains")) {
+            !hasImportedDefinitionPath(methodResolved) &&
+            !hasDeclaredDefinitionPath(methodResolved)) {
           return failCollectionAccessTargetDiagnostic(
-              "unknown call target: /std/collections/map/contains");
+              "unknown call target: " + methodResolved);
         }
         if ((methodResolved == "/map/at" || methodResolved == "/map/at_unsafe" ||
              methodResolved == "/std/collections/map/at" ||
-             methodResolved == "/std/collections/map/at_unsafe") &&
+             methodResolved == "/std/collections/map/at_ref" ||
+             methodResolved == "/std/collections/map/at_unsafe" ||
+             methodResolved == "/std/collections/map/at_unsafe_ref") &&
             !context.shouldBuiltinValidateBareMapAccessCall &&
             !context.isIndexedArgsPackMapReceiverTarget(receiverCandidate) &&
-            !hasImportedDefinitionPath("/std/collections/map/" +
-                                       std::string(methodResolved.find("unsafe") != std::string::npos ? "at_unsafe"
-                                                                                                       : "at")) &&
-            !hasDeclaredDefinitionPath("/std/collections/map/" +
-                                       std::string(methodResolved.find("unsafe") != std::string::npos ? "at_unsafe"
-                                                                                                       : "at"))) {
+            !hasImportedDefinitionPath(methodResolved.rfind("/std/collections/map/", 0) == 0
+                                           ? methodResolved
+                                           : "/std/collections/map/" +
+                                                 std::string(methodResolved.find("unsafe") != std::string::npos
+                                                                 ? "at_unsafe"
+                                                                 : "at")) &&
+            !hasDeclaredDefinitionPath(methodResolved.rfind("/std/collections/map/", 0) == 0
+                                           ? methodResolved
+                                           : "/std/collections/map/" +
+                                                 std::string(methodResolved.find("unsafe") != std::string::npos
+                                                                 ? "at_unsafe"
+                                                                 : "at"))) {
           return failCollectionAccessTargetDiagnostic(
-              "unknown call target: /std/collections/map/" +
-              std::string(methodResolved.find("unsafe") != std::string::npos ? "at_unsafe" : "at"));
+              "unknown call target: " +
+              std::string(methodResolved.rfind("/std/collections/map/", 0) == 0
+                              ? methodResolved
+                              : "/std/collections/map/" +
+                                    std::string(methodResolved.find("unsafe") != std::string::npos
+                                                    ? "at_unsafe"
+                                                    : "at")));
         }
       } else if (defMap_.find(methodResolved) == defMap_.end() &&
                  !context.hasResolvableMapHelperPath(methodResolved)) {

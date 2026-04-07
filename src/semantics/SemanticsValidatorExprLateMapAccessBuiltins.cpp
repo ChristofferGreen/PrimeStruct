@@ -168,7 +168,9 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     return true;
   }
 
-  if (((expr.isMethodCall && resolved == "/std/collections/map/tryAt") ||
+  if (((expr.isMethodCall &&
+        (resolved == "/std/collections/map/tryAt" ||
+         resolved == "/std/collections/map/tryAt_ref")) ||
        (!expr.isMethodCall &&
         (isSimpleCallName(expr, "tryAt") ||
          resolved == "/std/collections/map/tryAt"))) &&
@@ -189,11 +191,19 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         hasBareMapOperands ? expr.args[receiverIndex] : expr.args.front();
     const Expr &keyExpr =
         hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
-    if (!expr.isMethodCall && resolved == "/std/collections/map/tryAt" &&
-        !hasImportedDefinitionPath("/std/collections/map/tryAt") &&
-        !hasDeclaredDefinitionPath("/std/collections/map/tryAt")) {
+    if (((!expr.isMethodCall && resolved == "/std/collections/map/tryAt") ||
+         resolved == "/std/collections/map/tryAt_ref") &&
+        !hasImportedDefinitionPath(resolved == "/std/collections/map/tryAt_ref"
+                                       ? "/std/collections/map/tryAt_ref"
+                                       : "/std/collections/map/tryAt") &&
+        !hasDeclaredDefinitionPath(resolved == "/std/collections/map/tryAt_ref"
+                                       ? "/std/collections/map/tryAt_ref"
+                                       : "/std/collections/map/tryAt")) {
       return failLateMapAccessBuiltinDiagnostic(
-          "unknown call target: /std/collections/map/tryAt");
+          "unknown call target: " +
+          std::string(resolved == "/std/collections/map/tryAt_ref"
+                          ? "/std/collections/map/tryAt_ref"
+                          : "/std/collections/map/tryAt"));
     }
     std::string mapKeyType;
     if (!resolveMapKeyTypeWithInference(receiverExpr, mapKeyType)) {
