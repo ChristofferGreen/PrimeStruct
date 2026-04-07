@@ -862,6 +862,7 @@ main() {
   CHECK(localAutoEntry->bindingTypeText == "int");
   CHECK(localAutoEntry->initializerResolvedPath == "/lookup");
   CHECK(localAutoEntry->initializerDirectCallResolvedPath == "/lookup");
+  CHECK(!localAutoEntry->initializerDirectCallReturnKind.empty());
   CHECK(localAutoEntry->initializerHasTry);
   CHECK(localAutoEntry->initializerTryValueType == "int");
   CHECK(localAutoEntry->initializerTryErrorType == "MyError");

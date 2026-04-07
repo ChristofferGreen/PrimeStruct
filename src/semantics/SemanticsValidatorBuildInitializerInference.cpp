@@ -764,7 +764,7 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     }
     const BindingInfo previousBinding = bindingOut;
     bindingOut = {};
-    if (inferCallInitializerBinding(initializer, params, locals, bindingOut)) {
+    if (inferCallInitializerBinding(initializer, params, locals, bindingOut, bindingExpr)) {
       (void)canonicalizeInferredCollectionBinding(&initializer, params, locals, bindingOut);
       if (!(bindingOut.typeName == "array" && bindingOut.typeTemplateArg.empty())) {
         return true;
@@ -777,7 +777,7 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     if (!(bindingOut.typeName == "array" && bindingOut.typeTemplateArg.empty())) {
       return true;
     }
-    if (inferCallInitializerBinding(initializer, params, locals, bindingOut)) {
+    if (inferCallInitializerBinding(initializer, params, locals, bindingOut, bindingExpr)) {
       (void)canonicalizeInferredCollectionBinding(&initializer, params, locals, bindingOut);
       return true;
     }
@@ -801,7 +801,7 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
       assignBindingTypeFromResultInfo(resultInfo)) {
     return true;
   }
-  if (inferCallInitializerBinding(initializer, params, locals, bindingOut)) {
+  if (inferCallInitializerBinding(initializer, params, locals, bindingOut, bindingExpr)) {
     (void)canonicalizeInferredCollectionBinding(&initializer, params, locals, bindingOut);
     return true;
   }

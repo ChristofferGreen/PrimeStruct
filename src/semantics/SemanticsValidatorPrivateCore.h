@@ -139,13 +139,21 @@
   bool inferCallInitializerBinding(const Expr &initializer,
                                    const std::vector<ParameterInfo> &params,
                                    const std::unordered_map<std::string, BindingInfo> &locals,
-                                   BindingInfo &bindingOut);
+                                   BindingInfo &bindingOut,
+                                   const Expr *bindingExpr = nullptr);
   static std::string graphLocalAutoBindingKey(const std::string &scopePath, int sourceLine, int sourceColumn);
   static std::pair<int, int> graphLocalAutoSourceLocation(const Expr &expr);
   bool lookupGraphLocalAutoBinding(const std::string &scopePath,
                                    const Expr &bindingExpr,
                                    BindingInfo &bindingOut) const;
   bool lookupGraphLocalAutoBinding(const Expr &bindingExpr, BindingInfo &bindingOut) const;
+  bool lookupGraphLocalAutoDirectCallFact(const std::string &scopePath,
+                                          const Expr &bindingExpr,
+                                          std::string &resolvedPathOut,
+                                          ReturnKind &returnKindOut) const;
+  bool lookupGraphLocalAutoDirectCallFact(const Expr &bindingExpr,
+                                          std::string &resolvedPathOut,
+                                          ReturnKind &returnKindOut) const;
   bool inferResolvedDirectCallBindingType(const std::string &resolvedPath, BindingInfo &bindingOut) const;
   bool resolveStructFieldBinding(const Definition &structDef,
                                  const Expr &fieldStmt,

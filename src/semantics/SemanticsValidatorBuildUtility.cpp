@@ -125,4 +125,36 @@ bool SemanticsValidator::lookupGraphLocalAutoBinding(const Expr &bindingExpr, Bi
   return lookupGraphLocalAutoBinding(currentValidationState_.context.definitionPath, bindingExpr, bindingOut);
 }
 
+bool SemanticsValidator::lookupGraphLocalAutoDirectCallFact(const std::string &scopePath,
+                                                            const Expr &bindingExpr,
+                                                            std::string &resolvedPathOut,
+                                                            ReturnKind &returnKindOut) const {
+  resolvedPathOut.clear();
+  returnKindOut = ReturnKind::Unknown;
+  if (scopePath.empty()) {
+    return false;
+  }
+  const auto [sourceLine, sourceColumn] = graphLocalAutoSourceLocation(bindingExpr);
+  const std::string bindingKey = graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn);
+  bool found = false;
+  if (const auto resolvedPathIt = graphLocalAutoDirectCallResolvedPaths_.find(bindingKey);
+      resolvedPathIt != graphLocalAutoDirectCallResolvedPaths_.end()) {
+    resolvedPathOut = resolvedPathIt->second;
+    found = true;
+  }
+  if (const auto returnKindIt = graphLocalAutoDirectCallReturnKinds_.find(bindingKey);
+      returnKindIt != graphLocalAutoDirectCallReturnKinds_.end()) {
+    returnKindOut = returnKindIt->second;
+    found = true;
+  }
+  return found;
+}
+
+bool SemanticsValidator::lookupGraphLocalAutoDirectCallFact(const Expr &bindingExpr,
+                                                            std::string &resolvedPathOut,
+                                                            ReturnKind &returnKindOut) const {
+  return lookupGraphLocalAutoDirectCallFact(
+      currentValidationState_.context.definitionPath, bindingExpr, resolvedPathOut, returnKindOut);
+}
+
 }  // namespace primec::semantics

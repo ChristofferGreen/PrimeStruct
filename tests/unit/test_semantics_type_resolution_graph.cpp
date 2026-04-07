@@ -840,3 +840,42 @@ main() {
   CHECK(localEntry.initializerTryOnErrorErrorTypeText == tryEntry.onErrorErrorTypeText);
   CHECK(localEntry.initializerTryOnErrorBoundArgCount == tryEntry.onErrorBoundArgCount);
 }
+
+TEST_CASE("type resolution local binding snapshot marks direct-call metadata only for direct initializers") {
+  const std::string source = R"(
+[return<i32>]
+id([i32] value) {
+  return(value)
+}
+
+[return<i32>]
+/vector/count([vector<i32>] self) {
+  return(7i32)
+}
+
+[return<i32>]
+main() {
+  [vector<i32>] values{vector<i32>()}
+  [auto] viaDirect{id(1i32)}
+  [auto] viaMethod{values.count()}
+  return(plus(viaDirect, viaMethod))
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionLocalBindingSnapshot snapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  const auto &viaDirect = requireLocalBindingSnapshotEntry(snapshot, "/main", "viaDirect");
+  CHECK(viaDirect.bindingTypeText == "i32");
+  CHECK(viaDirect.initializerResolvedPath == "/id");
+  CHECK(viaDirect.initializerDirectCallResolvedPath == "/id");
+  CHECK(viaDirect.initializerDirectCallReturnKindText == "i32");
+
+  const auto &viaMethod = requireLocalBindingSnapshotEntry(snapshot, "/main", "viaMethod");
+  CHECK(viaMethod.bindingTypeText == "i32");
+  CHECK(viaMethod.initializerDirectCallResolvedPath.empty());
+  CHECK(viaMethod.initializerDirectCallReturnKindText.empty());
+}
