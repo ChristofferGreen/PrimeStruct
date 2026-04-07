@@ -91,6 +91,10 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
            hasImportedDefinitionPath("/contains") ||
            hasDeclaredDefinitionPath("/contains");
   };
+  auto hasVisibleStdlibMapBuiltinDefinition = [&](const std::string &helperName) {
+    const std::string path = "/std/collections/map/" + helperName;
+    return hasImportedDefinitionPath(path) || hasDeclaredDefinitionPath(path);
+  };
 
   std::string builtinName;
   if (!expr.isMethodCall &&
@@ -125,7 +129,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
                                           *context.dispatchResolvers,
                                           rewrittenMapHelperCall)) {
       if (rewrittenMapHelperCall.name == "/std/collections/map/tryAt" &&
-          !hasImportedDefinitionPath("/std/collections/map/tryAt") &&
+          !hasVisibleStdlibMapBuiltinDefinition("tryAt") &&
           !hasDeclaredDefinitionPath("/tryAt")) {
         return failLateMapAccessBuiltinDiagnostic(
             "unknown call target: /std/collections/map/tryAt");
@@ -317,8 +321,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     const Expr &keyExpr =
         hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
     if (expr.name.rfind("/std/collections/map/", 0) == 0 &&
-        !hasImportedDefinitionPath("/std/collections/map/" + builtinName) &&
-        !hasDeclaredDefinitionPath("/std/collections/map/" + builtinName)) {
+        !hasVisibleStdlibMapBuiltinDefinition(builtinName)) {
       return failLateMapAccessBuiltinDiagnostic(
           "unknown call target: /std/collections/map/" + builtinName);
     }
@@ -356,7 +359,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
   if (!expr.isMethodCall &&
       getCanonicalMapAccessBuiltinName(expr, builtinName) &&
       expr.args.size() == 2 && defMap_.find(resolved) == defMap_.end() &&
-      hasImportedDefinitionPath("/std/collections/map/" + builtinName)) {
+      hasVisibleStdlibMapBuiltinDefinition(builtinName)) {
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
     const bool hasBareMapOperands =

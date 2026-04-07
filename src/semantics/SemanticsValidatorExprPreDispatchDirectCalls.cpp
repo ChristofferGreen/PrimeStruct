@@ -194,8 +194,12 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
 
   if (!expr.isMethodCall && expr.args.size() == 2) {
     std::string builtinAccessName;
+    auto hasVisibleStdlibMapAccessDefinition = [&](const std::string &helperName) {
+      const std::string path = "/std/collections/map/" + helperName;
+      return hasImportedDefinitionPath(path) || hasDeclaredDefinitionPath(path);
+    };
     if (getBuiltinArrayAccessName(expr, builtinAccessName) &&
-        hasImportedDefinitionPath("/std/collections/map/" + builtinAccessName) &&
+        hasVisibleStdlibMapAccessDefinition(builtinAccessName) &&
         defMap_.find("/std/collections/map/" + builtinAccessName) == defMap_.end() &&
         !hasDeclaredDefinitionPath("/map/" + builtinAccessName)) {
       size_t receiverIndex = 0;
