@@ -7,8 +7,12 @@ bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
 }
 
 bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
-  return helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
-         helperName == "at" || helperName == "at_unsafe" || helperName == "insert";
+  return helperName == "count" || helperName == "count_ref" ||
+         helperName == "contains" || helperName == "contains_ref" ||
+         helperName == "tryAt" || helperName == "tryAt_ref" ||
+         helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
+         helperName == "insert" || helperName == "insert_ref";
 }
 
 bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverTypeName,
@@ -96,8 +100,7 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
   }
   if (preferred.rfind("/map/", 0) == 0 && defs.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/map/").size());
-    if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-        suffix != "at" && suffix != "at_unsafe") {
+    if (!isRemovedMapCompatibilityHelper(suffix)) {
       const std::string stdlibAlias = "/std/collections/map/" + suffix;
       if (defs.count(stdlibAlias) > 0) {
         preferred = stdlibAlias;
@@ -106,8 +109,7 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
   }
   if (preferred.rfind("/std/collections/map/", 0) == 0 && defs.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
-    if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-        suffix != "at" && suffix != "at_unsafe" && suffix != "insert") {
+    if (suffix != "map" && !isRemovedMapCompatibilityHelper(suffix)) {
       const std::string mapAlias = "/map/" + suffix;
       if (defs.count(mapAlias) > 0) {
         preferred = mapAlias;
@@ -152,8 +154,7 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
   if (path.rfind("/vector/", 0) != 0) {
     if (path.rfind("/map/", 0) == 0) {
       const std::string suffix = path.substr(std::string("/map/").size());
-      if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-          suffix != "at" && suffix != "at_unsafe") {
+      if (!isRemovedMapCompatibilityHelper(suffix)) {
         const std::string stdlibPath = "/std/collections/map/" + suffix;
         if (ctx.sourceDefs.count(stdlibPath) > 0 && ctx.templateDefs.count(stdlibPath) > 0) {
           return stdlibPath;
@@ -162,8 +163,7 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
     }
     if (path.rfind("/std/collections/map/", 0) == 0) {
       const std::string suffix = path.substr(std::string("/std/collections/map/").size());
-      if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-          suffix != "at" && suffix != "at_unsafe" && suffix != "insert") {
+      if (suffix != "map" && !isRemovedMapCompatibilityHelper(suffix)) {
         const std::string mapPath = "/map/" + suffix;
         if (ctx.sourceDefs.count(mapPath) > 0 && ctx.templateDefs.count(mapPath) > 0) {
           return mapPath;
