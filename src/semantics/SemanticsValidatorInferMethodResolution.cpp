@@ -510,7 +510,8 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, normalizedMethodName);
       return true;
     }
-    if ((normalizedMethodName == "contains" || normalizedMethodName == "tryAt") &&
+    if ((normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||
+         normalizedMethodName == "insert") &&
         setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
       return true;
     }

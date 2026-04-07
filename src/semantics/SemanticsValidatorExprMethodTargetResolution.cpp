@@ -1973,11 +1973,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return setPreferredMapMethodTarget(receiver, "count");
     }
   }
-  if (normalizedMethodName == "contains" || normalizedMethodName == "tryAt") {
+  if (normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||
+      normalizedMethodName == "insert") {
     if (setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
       return true;
     }
-    if (resolveMapTarget(receiver)) {
+    if (normalizedMethodName != "insert" && resolveMapTarget(receiver)) {
       return setPreferredMapMethodTarget(receiver, normalizedMethodName);
     }
   }
