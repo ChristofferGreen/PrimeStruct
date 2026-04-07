@@ -68,11 +68,12 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
     return true;
   }
 
-  for (const auto &summary : semanticProgram->callableSummaries) {
-    if (summary.hasResultType && summary.resultTypeHasValue) {
+  const auto callableSummaries = semanticProgramCallableSummaryView(*semanticProgram);
+  for (const auto *summary : callableSummaries) {
+    if (summary->hasResultType && summary->resultTypeHasValue) {
       ResultExprInfo resultInfo;
-      if (!applySemanticResultValueTypeText(summary.resultValueType, resultInfo)) {
-        error = "missing semantic-product callable result metadata: " + summary.fullPath;
+      if (!applySemanticResultValueTypeText(summary->resultValueType, resultInfo)) {
+        error = "missing semantic-product callable result metadata: " + summary->fullPath;
         return false;
       }
     }

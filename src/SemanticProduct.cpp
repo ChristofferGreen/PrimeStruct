@@ -68,7 +68,80 @@ std::string formatSemanticSourceLocation(int line, int column) {
   return std::to_string(line) + ":" + std::to_string(column);
 }
 
+template <typename EntryT, typename ModuleEntriesFn, typename FlatEntriesFn>
+std::vector<const EntryT *> buildModuleOrFlatSemanticView(const SemanticProgram &semanticProgram,
+                                                          ModuleEntriesFn moduleEntries,
+                                                          FlatEntriesFn flatEntries) {
+  std::vector<const EntryT *> entries;
+  if (!semanticProgram.moduleResolvedArtifacts.empty()) {
+    size_t moduleEntryCount = 0;
+    for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
+      moduleEntryCount += moduleEntries(module).size();
+    }
+    entries.reserve(moduleEntryCount);
+    for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
+      for (const auto &entry : moduleEntries(module)) {
+        entries.push_back(&entry);
+      }
+    }
+    if (!entries.empty() || flatEntries(semanticProgram).empty()) {
+      return entries;
+    }
+  }
+
+  const auto &flat = flatEntries(semanticProgram);
+  entries.reserve(flat.size());
+  for (const auto &entry : flat) {
+    entries.push_back(&entry);
+  }
+  return entries;
+}
+
 } // namespace
+
+std::vector<const SemanticProgramDirectCallTarget *>
+semanticProgramDirectCallTargetView(const SemanticProgram &semanticProgram) {
+  return buildModuleOrFlatSemanticView<SemanticProgramDirectCallTarget>(
+      semanticProgram,
+      [](const SemanticProgramModuleResolvedArtifacts &module)
+          -> const std::vector<SemanticProgramDirectCallTarget> & { return module.directCallTargets; },
+      [](const SemanticProgram &program) -> const std::vector<SemanticProgramDirectCallTarget> & {
+        return program.directCallTargets;
+      });
+}
+
+std::vector<const SemanticProgramMethodCallTarget *>
+semanticProgramMethodCallTargetView(const SemanticProgram &semanticProgram) {
+  return buildModuleOrFlatSemanticView<SemanticProgramMethodCallTarget>(
+      semanticProgram,
+      [](const SemanticProgramModuleResolvedArtifacts &module)
+          -> const std::vector<SemanticProgramMethodCallTarget> & { return module.methodCallTargets; },
+      [](const SemanticProgram &program) -> const std::vector<SemanticProgramMethodCallTarget> & {
+        return program.methodCallTargets;
+      });
+}
+
+std::vector<const SemanticProgramBridgePathChoice *>
+semanticProgramBridgePathChoiceView(const SemanticProgram &semanticProgram) {
+  return buildModuleOrFlatSemanticView<SemanticProgramBridgePathChoice>(
+      semanticProgram,
+      [](const SemanticProgramModuleResolvedArtifacts &module)
+          -> const std::vector<SemanticProgramBridgePathChoice> & { return module.bridgePathChoices; },
+      [](const SemanticProgram &program) -> const std::vector<SemanticProgramBridgePathChoice> & {
+        return program.bridgePathChoices;
+      });
+}
+
+std::vector<const SemanticProgramCallableSummary *>
+semanticProgramCallableSummaryView(const SemanticProgram &semanticProgram) {
+  return buildModuleOrFlatSemanticView<SemanticProgramCallableSummary>(
+      semanticProgram,
+      [](const SemanticProgramModuleResolvedArtifacts &module)
+          -> const std::vector<SemanticProgramCallableSummary> & { return module.callableSummaries; },
+      [](const SemanticProgram &program) -> const std::vector<SemanticProgramCallableSummary> & {
+        return program.callableSummaries;
+      });
+}
 
 std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
   std::ostringstream out;

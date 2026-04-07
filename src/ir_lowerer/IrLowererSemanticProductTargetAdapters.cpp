@@ -39,31 +39,35 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
   }
   adapter.hasSemanticProduct = true;
 
-  adapter.directCallTargetsByExpr.reserve(semanticProgram->directCallTargets.size());
-  for (const auto &entry : semanticProgram->directCallTargets) {
-    if (entry.semanticNodeId != 0 && !entry.resolvedPath.empty()) {
-      adapter.directCallTargetsByExpr.insert_or_assign(entry.semanticNodeId, entry.resolvedPath);
+  const auto directCallTargets = semanticProgramDirectCallTargetView(*semanticProgram);
+  adapter.directCallTargetsByExpr.reserve(directCallTargets.size());
+  for (const auto *entry : directCallTargets) {
+    if (entry->semanticNodeId != 0 && !entry->resolvedPath.empty()) {
+      adapter.directCallTargetsByExpr.insert_or_assign(entry->semanticNodeId, entry->resolvedPath);
     }
   }
 
-  adapter.methodCallTargetsByExpr.reserve(semanticProgram->methodCallTargets.size());
-  for (const auto &entry : semanticProgram->methodCallTargets) {
-    if (entry.semanticNodeId != 0 && !entry.resolvedPath.empty()) {
-      adapter.methodCallTargetsByExpr.insert_or_assign(entry.semanticNodeId, entry.resolvedPath);
+  const auto methodCallTargets = semanticProgramMethodCallTargetView(*semanticProgram);
+  adapter.methodCallTargetsByExpr.reserve(methodCallTargets.size());
+  for (const auto *entry : methodCallTargets) {
+    if (entry->semanticNodeId != 0 && !entry->resolvedPath.empty()) {
+      adapter.methodCallTargetsByExpr.insert_or_assign(entry->semanticNodeId, entry->resolvedPath);
     }
   }
 
-  adapter.bridgePathChoicesByExpr.reserve(semanticProgram->bridgePathChoices.size());
-  for (const auto &entry : semanticProgram->bridgePathChoices) {
-    if (entry.semanticNodeId != 0 && !entry.chosenPath.empty()) {
-      adapter.bridgePathChoicesByExpr.insert_or_assign(entry.semanticNodeId, entry.chosenPath);
+  const auto bridgePathChoices = semanticProgramBridgePathChoiceView(*semanticProgram);
+  adapter.bridgePathChoicesByExpr.reserve(bridgePathChoices.size());
+  for (const auto *entry : bridgePathChoices) {
+    if (entry->semanticNodeId != 0 && !entry->chosenPath.empty()) {
+      adapter.bridgePathChoicesByExpr.insert_or_assign(entry->semanticNodeId, entry->chosenPath);
     }
   }
 
-  adapter.callableSummariesByPath.reserve(semanticProgram->callableSummaries.size());
-  for (const auto &entry : semanticProgram->callableSummaries) {
-    if (!entry.fullPath.empty()) {
-      adapter.callableSummariesByPath[entry.fullPath] = &entry;
+  const auto callableSummaries = semanticProgramCallableSummaryView(*semanticProgram);
+  adapter.callableSummariesByPath.reserve(callableSummaries.size());
+  for (const auto *entry : callableSummaries) {
+    if (!entry->fullPath.empty()) {
+      adapter.callableSummariesByPath[entry->fullPath] = entry;
     }
   }
 

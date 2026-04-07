@@ -1209,7 +1209,11 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticProduct.find("struct SemanticProgramDirectCallTarget") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramMethodCallTarget") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramBridgePathChoice") != std::string::npos);
+  CHECK(semanticProduct.find("struct SemanticProgramModuleIdentity") != std::string::npos);
+  CHECK(semanticProduct.find("struct SemanticProgramModuleResolvedArtifacts") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramStructFieldMetadata") != std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramModuleResolvedArtifacts> moduleResolvedArtifacts;") !=
+        std::string::npos);
   CHECK(semanticProduct.find("std::string formatSemanticProgram(const SemanticProgram &semanticProgram);") !=
         std::string::npos);
 
@@ -1231,6 +1235,11 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(compilePipelineSource.find("output.failure.stage = stage;") != std::string::npos);
   CHECK(compilePipelineSource.find("output.failure.message = message;") != std::string::npos);
   CHECK(semanticsValidate.find("*semanticProgramOut = buildSemanticProgram(program, entryPath, validator);") !=
+        std::string::npos);
+  CHECK(semanticsValidate.find("semanticModuleKeyForPath(") != std::string::npos);
+  CHECK(semanticsValidate.find("semanticProgram.moduleResolvedArtifacts.reserve(") != std::string::npos);
+  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(") != std::string::npos);
+  CHECK(semanticsValidate.find("std::sort(semanticProgram.moduleResolvedArtifacts.begin(),") !=
         std::string::npos);
 
   CHECK(semanticTargetAdapterHeader.find("struct SemanticProductTargetAdapter") != std::string::npos);

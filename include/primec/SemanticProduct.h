@@ -214,10 +214,25 @@ struct SemanticProgramOnErrorFact {
   uint64_t provenanceHandle = 0;
 };
 
+struct SemanticProgramModuleIdentity {
+  std::string moduleKey;
+  std::size_t stableOrder = 0;
+};
+
+struct SemanticProgramModuleResolvedArtifacts {
+  SemanticProgramModuleIdentity identity;
+  std::vector<SemanticProgramDirectCallTarget> directCallTargets;
+  std::vector<SemanticProgramMethodCallTarget> methodCallTargets;
+  std::vector<SemanticProgramBridgePathChoice> bridgePathChoices;
+  std::vector<SemanticProgramCallableSummary> callableSummaries;
+  std::vector<SemanticProgramBindingFact> bindingFacts;
+};
+
 struct SemanticProgram {
   std::string entryPath;
   std::vector<std::string> sourceImports;
   std::vector<std::string> imports;
+  std::vector<SemanticProgramModuleResolvedArtifacts> moduleResolvedArtifacts;
   std::vector<SemanticProgramDefinition> definitions;
   std::vector<SemanticProgramExecution> executions;
   std::vector<SemanticProgramDirectCallTarget> directCallTargets;
@@ -233,6 +248,15 @@ struct SemanticProgram {
   std::vector<SemanticProgramTryFact> tryFacts;
   std::vector<SemanticProgramOnErrorFact> onErrorFacts;
 };
+
+std::vector<const SemanticProgramDirectCallTarget *>
+semanticProgramDirectCallTargetView(const SemanticProgram &semanticProgram);
+std::vector<const SemanticProgramMethodCallTarget *>
+semanticProgramMethodCallTargetView(const SemanticProgram &semanticProgram);
+std::vector<const SemanticProgramBridgePathChoice *>
+semanticProgramBridgePathChoiceView(const SemanticProgram &semanticProgram);
+std::vector<const SemanticProgramCallableSummary *>
+semanticProgramCallableSummaryView(const SemanticProgram &semanticProgram);
 
 std::string formatSemanticProgram(const SemanticProgram &semanticProgram);
 

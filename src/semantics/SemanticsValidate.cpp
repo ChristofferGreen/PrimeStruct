@@ -182,6 +182,26 @@ bool runTypeResolutionSnapshot(
 
 namespace {
 
+std::string semanticModuleKeyForPath(const std::string &path) {
+  if (path.empty()) {
+    return "/";
+  }
+
+  std::string normalized = path;
+  if (normalized.front() != '/') {
+    normalized.insert(normalized.begin(), '/');
+  }
+  if (normalized == "/") {
+    return normalized;
+  }
+
+  const size_t nextSlash = normalized.find('/', 1);
+  if (nextSlash == std::string::npos) {
+    return normalized;
+  }
+  return normalized.substr(0, nextSlash);
+}
+
 SemanticProgram buildSemanticProgram(const Program &program,
                                      const std::string &entryPath,
                                      semantics::SemanticsValidator &validator) {
@@ -446,6 +466,56 @@ SemanticProgram buildSemanticProgram(const Program &program,
         semantics::makeSemanticProvenanceHandle(entry.semanticNodeId),
     });
   }
+
+  semanticProgram.moduleResolvedArtifacts.reserve(
+      semanticProgram.definitions.size() + semanticProgram.executions.size());
+  std::unordered_map<std::string, std::size_t> moduleIndexByKey;
+  moduleIndexByKey.reserve(semanticProgram.definitions.size() + semanticProgram.executions.size());
+  auto ensureModuleResolvedArtifacts =
+      [&](const std::string &scopePath) -> SemanticProgramModuleResolvedArtifacts & {
+    const std::string moduleKey = semanticModuleKeyForPath(scopePath);
+    const auto it = moduleIndexByKey.find(moduleKey);
+    if (it != moduleIndexByKey.end()) {
+      return semanticProgram.moduleResolvedArtifacts[it->second];
+    }
+    const std::size_t moduleIndex = semanticProgram.moduleResolvedArtifacts.size();
+    moduleIndexByKey.emplace(moduleKey, moduleIndex);
+    semanticProgram.moduleResolvedArtifacts.push_back(SemanticProgramModuleResolvedArtifacts{});
+    auto &module = semanticProgram.moduleResolvedArtifacts.back();
+    module.identity.moduleKey = moduleKey;
+    module.identity.stableOrder = moduleIndex;
+    return module;
+  };
+
+  for (const auto &entry : semanticProgram.directCallTargets) {
+    ensureModuleResolvedArtifacts(entry.scopePath).directCallTargets.push_back(entry);
+  }
+  for (const auto &entry : semanticProgram.methodCallTargets) {
+    ensureModuleResolvedArtifacts(entry.scopePath).methodCallTargets.push_back(entry);
+  }
+  for (const auto &entry : semanticProgram.bridgePathChoices) {
+    ensureModuleResolvedArtifacts(entry.scopePath).bridgePathChoices.push_back(entry);
+  }
+  for (const auto &entry : semanticProgram.callableSummaries) {
+    ensureModuleResolvedArtifacts(entry.fullPath).callableSummaries.push_back(entry);
+  }
+  for (const auto &entry : semanticProgram.bindingFacts) {
+    ensureModuleResolvedArtifacts(entry.scopePath).bindingFacts.push_back(entry);
+  }
+
+  std::sort(semanticProgram.moduleResolvedArtifacts.begin(),
+            semanticProgram.moduleResolvedArtifacts.end(),
+            [](const SemanticProgramModuleResolvedArtifacts &left,
+               const SemanticProgramModuleResolvedArtifacts &right) {
+              if (left.identity.moduleKey != right.identity.moduleKey) {
+                return left.identity.moduleKey < right.identity.moduleKey;
+              }
+              return left.identity.stableOrder < right.identity.stableOrder;
+            });
+  for (std::size_t moduleIndex = 0; moduleIndex < semanticProgram.moduleResolvedArtifacts.size(); ++moduleIndex) {
+    semanticProgram.moduleResolvedArtifacts[moduleIndex].identity.stableOrder = moduleIndex;
+  }
+
   return semanticProgram;
 }
 
