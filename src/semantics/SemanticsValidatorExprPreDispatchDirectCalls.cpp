@@ -135,11 +135,17 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
 
   if (!expr.isMethodCall &&
       (resolvedOut == "/std/collections/map/count" ||
+       resolvedOut == "/std/collections/map/count_ref" ||
        resolvedOut == "/std/collections/map/contains" ||
+       resolvedOut == "/std/collections/map/contains_ref" ||
        resolvedOut == "/std/collections/map/tryAt" ||
+       resolvedOut == "/std/collections/map/tryAt_ref" ||
        resolvedOut == "/std/collections/map/at" ||
+       resolvedOut == "/std/collections/map/at_ref" ||
        resolvedOut == "/std/collections/map/at_unsafe" ||
-       resolvedOut == "/std/collections/map/insert") &&
+       resolvedOut == "/std/collections/map/at_unsafe_ref" ||
+       resolvedOut == "/std/collections/map/insert" ||
+       resolvedOut == "/std/collections/map/insert_ref") &&
       !hasImportedDefinitionPath(resolvedOut) &&
       !hasDeclaredDefinitionPath(resolvedOut)) {
     const size_t receiverIndex =

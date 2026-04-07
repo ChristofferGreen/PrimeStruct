@@ -10,11 +10,13 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
   if (resolvedPath == "/array/count" || resolvedPath == "/vector/count" ||
       resolvedPath == "/std/collections/vector/count" || resolvedPath == "/string/count" ||
       resolvedPath == "/map/count" || resolvedPath == "/std/collections/map/count" ||
+      resolvedPath == "/std/collections/map/count_ref" ||
       resolvedPath == "/vector/capacity" || resolvedPath == "/std/collections/vector/capacity") {
     kindOut = ReturnKind::Int;
     return true;
   }
-  if (resolvedPath == "/map/contains" || resolvedPath == "/std/collections/map/contains") {
+  if (resolvedPath == "/map/contains" || resolvedPath == "/std/collections/map/contains" ||
+      resolvedPath == "/std/collections/map/contains_ref") {
     kindOut = ReturnKind::Bool;
     return true;
   }
@@ -52,7 +54,9 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     return false;
   }
   if (resolvedPath == "/map/at" || resolvedPath == "/map/at_unsafe" ||
-      resolvedPath == "/std/collections/map/at" || resolvedPath == "/std/collections/map/at_unsafe") {
+      resolvedPath == "/std/collections/map/at" || resolvedPath == "/std/collections/map/at_unsafe" ||
+      resolvedPath == "/std/collections/map/at_ref" ||
+      resolvedPath == "/std/collections/map/at_unsafe_ref") {
     std::string keyType;
     std::string valueType;
     if (resolvers.resolveMapTarget(receiverExpr, keyType, valueType)) {

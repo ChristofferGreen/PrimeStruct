@@ -549,23 +549,42 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return std::string("/std/collections/experimental_soa_vector/soaVectorRefRef");
   };
   auto shouldBuiltinValidateCurrentMapWrapperHelper = [&](std::string_view helperName) {
-    if (helperName == "count") {
+    if (helperName == "count" || helperName == "count_ref") {
+      if (helperName == "count_ref") {
+        return definitionPathContains("/mapCountRef");
+      }
       return definitionPathContains("/mapCount");
     }
-    if (helperName == "contains") {
+    if (helperName == "contains" || helperName == "contains_ref") {
+      if (helperName == "contains_ref") {
+        return definitionPathContains("/mapContainsRef") ||
+               definitionPathContains("/mapTryAtRef");
+      }
       return definitionPathContains("/mapContains") ||
              definitionPathContains("/mapTryAt");
     }
-    if (helperName == "tryAt") {
+    if (helperName == "tryAt" || helperName == "tryAt_ref") {
+      if (helperName == "tryAt_ref") {
+        return definitionPathContains("/mapTryAtRef");
+      }
       return definitionPathContains("/mapTryAt");
     }
-    if (helperName == "at") {
+    if (helperName == "at" || helperName == "at_ref") {
+      if (helperName == "at_ref") {
+        return definitionPathContains("/mapAtRef");
+      }
       return definitionPathContains("/mapAt");
     }
-    if (helperName == "at_unsafe") {
+    if (helperName == "at_unsafe" || helperName == "at_unsafe_ref") {
+      if (helperName == "at_unsafe_ref") {
+        return definitionPathContains("/mapAtUnsafeRef");
+      }
       return definitionPathContains("/mapAtUnsafe");
     }
-    if (helperName == "insert") {
+    if (helperName == "insert" || helperName == "insert_ref") {
+      if (helperName == "insert_ref") {
+        return definitionPathContains("/mapInsertRef");
+      }
       return definitionPathContains("/mapInsert");
     }
     return false;
@@ -1428,10 +1447,15 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return true;
     }
     if ((resolvedOut == "/std/collections/map/count" ||
+         resolvedOut == "/std/collections/map/count_ref" ||
          resolvedOut == "/std/collections/map/contains" ||
+         resolvedOut == "/std/collections/map/contains_ref" ||
          resolvedOut == "/std/collections/map/tryAt" ||
+         resolvedOut == "/std/collections/map/tryAt_ref" ||
          resolvedOut == "/std/collections/map/at" ||
+         resolvedOut == "/std/collections/map/at_ref" ||
          resolvedOut == "/std/collections/map/at_unsafe" ||
+         resolvedOut == "/std/collections/map/at_unsafe_ref" ||
          resolvedOut == "/std/collections/map/insert") &&
         (shouldBuiltinValidateCurrentMapWrapperHelper(
              resolvedOut.substr(std::string("/std/collections/map/").size())) ||
