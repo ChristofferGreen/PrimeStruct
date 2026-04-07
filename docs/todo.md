@@ -16,31 +16,31 @@ Sizing note: each leaf `○` item should fit in one code-affecting commit plus f
 Blocked by Group 13 rollout constraints until the remaining collection-helper/runtime predecessor items are finished and the return-kind pilot path is stable enough to resume broader graph work.
 - ◐ Implement the next non-template inference-island migrations now that the graph-backed cutover contract is documented.
   - ○ Migrate the next direct-call/callee non-template inference island onto the graph path.
-    - ○ Select the first direct-call island and record the exact validator/lowerer touchpoints.
+    - ✓ Select the first direct-call island and record the exact validator/lowerer touchpoints (see `docs/type_graph_migration_touchpoints.md`, section 1).
     - ○ Publish graph facts for that island behind the existing inference path (no behavior change).
     - ○ Switch production inference for that island to consume graph facts.
     - ○ Add positive + negative conformance fixtures for that island.
     - ○ Delete the replaced fallback branch for that island.
   - ○ Migrate the next receiver/method-call non-template inference island onto the graph path.
-    - ○ Select the first receiver/method-call island and record the exact touchpoints.
+    - ✓ Select the first receiver/method-call island and record the exact touchpoints (see `docs/type_graph_migration_touchpoints.md`, section 2).
     - ○ Publish graph facts for that island behind the existing inference path (no behavior change).
     - ○ Switch production inference for that island to consume graph facts.
     - ○ Add positive + negative conformance fixtures for that island.
     - ○ Delete the replaced fallback branch for that island.
   - ○ Migrate the next collection helper/access fallback non-template inference island onto the graph path.
-    - ○ Select the first collection helper/access island and record the exact touchpoints.
+    - ✓ Select the first collection helper/access island and record the exact touchpoints (see `docs/type_graph_migration_touchpoints.md`, section 3).
     - ○ Publish graph facts for that island behind the existing inference path (no behavior change).
     - ○ Switch production inference for that island to consume graph facts.
     - ○ Add positive + negative conformance fixtures for that island.
     - ○ Delete the replaced fallback branch for that island.
 - ◐ Implement the graph/CT-eval interaction contract now that the boundary is documented.
   - ○ Route graph-backed consumers onto shared dependency-state consumption where CT-eval and graph validation overlap.
-    - ○ Identify one dependency state shared by CT-eval and graph validation.
+    - ✓ Identify one dependency state shared by CT-eval and graph validation (see `docs/type_graph_migration_touchpoints.md`, section 4).
     - ○ Publish that dependency state on the shared graph-backed surface.
     - ○ Migrate one graph consumer to the shared state.
     - ○ Remove the migrated consumer's duplicate local state path.
   - ○ Add one explicit adapter for the remaining CT-eval-only paths that still cannot consume shared graph dependency state directly.
-    - ○ Select one CT-eval-only dependency state that needs an adapter.
+    - ✓ Select one CT-eval-only dependency state that needs an adapter (see `docs/type_graph_migration_touchpoints.md`, section 5).
     - ○ Implement a minimal adapter for that dependency state.
     - ○ Wire one CT-eval callsite through the adapter.
     - ○ Add boundary diagnostics for adapter/graph mismatch cases.
@@ -49,29 +49,29 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
     - ○ Add a negative diagnostic fixture that proves boundary mismatch rejection.
 - ◐ Implement the graph-backed explicit/implicit template-inference migrations now that the cutover contract is documented.
   - ○ Migrate the next explicit template-argument inference surface onto the graph path.
-    - ○ Select one explicit template-argument surface.
+    - ✓ Select one explicit template-argument surface (see `docs/type_graph_migration_touchpoints.md`, section 6).
     - ○ Publish graph facts for that surface behind the current path.
     - ○ Switch inference for that surface to graph-backed facts.
     - ○ Add positive + negative conformance fixtures for that surface.
     - ○ Delete the replaced fallback path for that surface.
   - ○ Migrate the next implicit template-inference surface onto the graph path.
-    - ○ Select one implicit template-inference surface.
+    - ✓ Select one implicit template-inference surface (see `docs/type_graph_migration_touchpoints.md`, section 7).
     - ○ Publish graph facts for that surface behind the current path.
     - ○ Switch inference for that surface to graph-backed facts.
     - ○ Add positive + negative conformance fixtures for that surface.
     - ○ Delete the replaced fallback path for that surface.
   - ○ Migrate the matching revalidation/monomorph follow-up for those template-inference surfaces onto the graph path.
-    - ○ Identify the required revalidation/monomorph follow-up for the migrated surfaces.
+    - ✓ Identify the required revalidation/monomorph follow-up for the migrated surfaces (see `docs/type_graph_migration_touchpoints.md`, section 8).
     - ○ Move that follow-up onto graph-backed facts and add conformance coverage.
 - ◐ Implement the next omitted-envelope and local-`auto` graph expansions now that the widening contract is documented.
   - ○ Materialize omitted-envelope graph facts for the next widening slice.
-    - ○ Select the next omitted-envelope family to model in the graph (proposed: omitted struct initializer envelopes).
+    - ✓ Select the next omitted-envelope family to model in the graph (omitted struct initializer envelopes; see `docs/type_graph_migration_touchpoints.md`, section 9).
     - ○ Add graph facts and positive + negative coverage for that family.
   - ○ Expand local-`auto` graph support across the next initializer-family surface.
-    - ○ Select the next initializer-family surface (proposed: `if`-branch local `auto` binds).
+    - ✓ Select the next initializer-family surface (`if`-branch local `auto` binds; see `docs/type_graph_migration_touchpoints.md`, section 10).
     - ○ Land the widening and lock behavior with coverage.
   - ○ Expand local-`auto` graph support across the next control-flow join surface.
-    - ○ Select the next control-flow join surface (proposed: `if` join return inference).
+    - ✓ Select the next control-flow join surface (`if` join return inference; see `docs/type_graph_migration_touchpoints.md`, section 11).
     - ○ Land the widening and lock behavior with coverage.
 
 **Group 12 - Semantics/lowering boundary**
