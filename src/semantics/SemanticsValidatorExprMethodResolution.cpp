@@ -340,31 +340,25 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       }
     }
   }
-  if (((resolved == "/std/collections/map/count" &&
-        !hasImportedDefinitionPath("/std/collections/map/count")) ||
-       (resolved == "/std/collections/map/count_ref" &&
-        !hasImportedDefinitionPath("/std/collections/map/count_ref")) ||
-       (resolved == "/std/collections/map/contains" &&
-        !hasImportedDefinitionPath("/std/collections/map/contains")) ||
-       (resolved == "/std/collections/map/contains_ref" &&
-        !hasImportedDefinitionPath("/std/collections/map/contains_ref")) ||
-       (resolved == "/std/collections/map/tryAt" &&
-        !hasImportedDefinitionPath("/std/collections/map/tryAt")) ||
-       (resolved == "/std/collections/map/tryAt_ref" &&
-        !hasImportedDefinitionPath("/std/collections/map/tryAt_ref")) ||
-       (resolved == "/std/collections/map/at" &&
-        !hasImportedDefinitionPath("/std/collections/map/at")) ||
-       (resolved == "/std/collections/map/at_ref" &&
-        !hasImportedDefinitionPath("/std/collections/map/at_ref")) ||
-       (resolved == "/std/collections/map/at_unsafe" &&
-        !hasImportedDefinitionPath("/std/collections/map/at_unsafe")) ||
-       (resolved == "/std/collections/map/at_unsafe_ref" &&
-        !hasImportedDefinitionPath("/std/collections/map/at_unsafe_ref")) ||
-       (resolved == "/std/collections/map/insert" &&
-        !hasImportedDefinitionPath("/std/collections/map/insert")) ||
-       (resolved == "/std/collections/map/insert_ref" &&
-        !hasImportedDefinitionPath("/std/collections/map/insert_ref"))) &&
-      !hasDeclaredDefinitionPath(resolved) &&
+  auto hasVisibleStdlibMapMethodDefinition = [&](const std::string &path) {
+    return hasImportedDefinitionPath(path) || hasDeclaredDefinitionPath(path);
+  };
+  auto isMissingStdlibMapMethodDefinition = [&](const std::string &path) {
+    return (path == "/std/collections/map/count" ||
+            path == "/std/collections/map/count_ref" ||
+            path == "/std/collections/map/contains" ||
+            path == "/std/collections/map/contains_ref" ||
+            path == "/std/collections/map/tryAt" ||
+            path == "/std/collections/map/tryAt_ref" ||
+            path == "/std/collections/map/at" ||
+            path == "/std/collections/map/at_ref" ||
+            path == "/std/collections/map/at_unsafe" ||
+            path == "/std/collections/map/at_unsafe_ref" ||
+            path == "/std/collections/map/insert" ||
+            path == "/std/collections/map/insert_ref") &&
+           !hasVisibleStdlibMapMethodDefinition(path);
+  };
+  if (isMissingStdlibMapMethodDefinition(resolved) &&
       !keepBuiltinIndexedArgsPackMapMethod) {
     isBuiltinMethod = false;
   }

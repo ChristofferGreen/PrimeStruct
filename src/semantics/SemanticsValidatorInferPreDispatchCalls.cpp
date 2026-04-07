@@ -489,30 +489,42 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
               methodResolved, canonicalMethodResolved)) {
         logicalMethodResolved = canonicalMethodResolved;
       }
+      auto hasVisibleStdlibMapMethodDefinition = [&](const std::string &path) {
+        return hasImportedDefinitionPath(path) || hasDeclaredDefinitionPath(path);
+      };
+      auto isVisibleStdlibMapMethodWithBuiltinReturn = [&](const std::string &path) {
+        return (path == "/std/collections/map/count" ||
+                path == "/std/collections/map/count_ref" ||
+                path == "/std/collections/map/contains" ||
+                path == "/std/collections/map/contains_ref" ||
+                path == "/std/collections/map/tryAt" ||
+                path == "/std/collections/map/tryAt_ref" ||
+                path == "/std/collections/map/at" ||
+                path == "/std/collections/map/at_ref" ||
+                path == "/std/collections/map/at_unsafe" ||
+                path == "/std/collections/map/at_unsafe_ref") &&
+               hasVisibleStdlibMapMethodDefinition(path);
+      };
+      auto isMissingStdlibMapMethodDefinition = [&](const std::string &path) {
+        return (path == "/std/collections/map/count" ||
+                path == "/std/collections/map/count_ref" ||
+                path == "/std/collections/map/contains" ||
+                path == "/std/collections/map/contains_ref" ||
+                path == "/std/collections/map/tryAt" ||
+                path == "/std/collections/map/tryAt_ref" ||
+                path == "/std/collections/map/at" ||
+                path == "/std/collections/map/at_ref" ||
+                path == "/std/collections/map/at_unsafe" ||
+                path == "/std/collections/map/at_unsafe_ref" ||
+                path == "/std/collections/map/insert" ||
+                path == "/std/collections/map/insert_ref") &&
+               !hasVisibleStdlibMapMethodDefinition(path);
+      };
       if (logicalMethodResolved == "/file_error/why" ||
           logicalMethodResolved == "/FileError/why") {
         return finish(ReturnKind::String);
       }
-      if ((logicalMethodResolved == "/std/collections/map/count" &&
-           hasImportedDefinitionPath("/std/collections/map/count")) ||
-          (logicalMethodResolved == "/std/collections/map/count_ref" &&
-           hasImportedDefinitionPath("/std/collections/map/count_ref")) ||
-          (logicalMethodResolved == "/std/collections/map/contains" &&
-           hasImportedDefinitionPath("/std/collections/map/contains")) ||
-          (logicalMethodResolved == "/std/collections/map/contains_ref" &&
-           hasImportedDefinitionPath("/std/collections/map/contains_ref")) ||
-          (logicalMethodResolved == "/std/collections/map/tryAt" &&
-           hasImportedDefinitionPath("/std/collections/map/tryAt")) ||
-          (logicalMethodResolved == "/std/collections/map/tryAt_ref" &&
-           hasImportedDefinitionPath("/std/collections/map/tryAt_ref")) ||
-          (logicalMethodResolved == "/std/collections/map/at" &&
-           hasImportedDefinitionPath("/std/collections/map/at")) ||
-          (logicalMethodResolved == "/std/collections/map/at_ref" &&
-           hasImportedDefinitionPath("/std/collections/map/at_ref")) ||
-          (logicalMethodResolved == "/std/collections/map/at_unsafe" &&
-           hasImportedDefinitionPath("/std/collections/map/at_unsafe")) ||
-          (logicalMethodResolved == "/std/collections/map/at_unsafe_ref" &&
-           hasImportedDefinitionPath("/std/collections/map/at_unsafe_ref"))) {
+      if (isVisibleStdlibMapMethodWithBuiltinReturn(logicalMethodResolved)) {
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
         if (resolveBuiltinCollectionMethodReturnKind(
                 logicalMethodResolved,
@@ -524,31 +536,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
       }
       std::string builtinMapKeyType;
       std::string builtinMapValueType;
-      if (((logicalMethodResolved == "/std/collections/map/count" &&
-            !hasImportedDefinitionPath("/std/collections/map/count")) ||
-           (logicalMethodResolved == "/std/collections/map/count_ref" &&
-            !hasImportedDefinitionPath("/std/collections/map/count_ref")) ||
-           (logicalMethodResolved == "/std/collections/map/contains" &&
-            !hasImportedDefinitionPath("/std/collections/map/contains")) ||
-           (logicalMethodResolved == "/std/collections/map/contains_ref" &&
-            !hasImportedDefinitionPath("/std/collections/map/contains_ref")) ||
-           (logicalMethodResolved == "/std/collections/map/tryAt" &&
-            !hasImportedDefinitionPath("/std/collections/map/tryAt")) ||
-           (logicalMethodResolved == "/std/collections/map/tryAt_ref" &&
-            !hasImportedDefinitionPath("/std/collections/map/tryAt_ref")) ||
-           (logicalMethodResolved == "/std/collections/map/at" &&
-            !hasImportedDefinitionPath("/std/collections/map/at")) ||
-           (logicalMethodResolved == "/std/collections/map/at_ref" &&
-            !hasImportedDefinitionPath("/std/collections/map/at_ref")) ||
-           (logicalMethodResolved == "/std/collections/map/at_unsafe" &&
-            !hasImportedDefinitionPath("/std/collections/map/at_unsafe")) ||
-           (logicalMethodResolved == "/std/collections/map/at_unsafe_ref" &&
-            !hasImportedDefinitionPath("/std/collections/map/at_unsafe_ref")) ||
-           (logicalMethodResolved == "/std/collections/map/insert" &&
-            !hasImportedDefinitionPath("/std/collections/map/insert")) ||
-           (logicalMethodResolved == "/std/collections/map/insert_ref" &&
-            !hasImportedDefinitionPath("/std/collections/map/insert_ref"))) &&
-          !hasDeclaredDefinitionPath(logicalMethodResolved) &&
+      if (isMissingStdlibMapMethodDefinition(logicalMethodResolved) &&
           !hasDefinitionPath(logicalMethodResolved) &&
           !resolveMapTarget(expr.args.front(), builtinMapKeyType, builtinMapValueType)) {
         return failInferPreDispatchDiagnostic(
