@@ -27,12 +27,12 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
     - ✓ Switch production inference for that island to consume graph facts.
     - ✓ Add positive + negative conformance fixtures for that island.
     - ✓ Delete the replaced fallback branch for that island.
-  - ○ Migrate the next collection helper/access fallback non-template inference island onto the graph path.
+  - ✓ Migrate the next collection helper/access fallback non-template inference island onto the graph path.
     - ✓ Select the first collection helper/access island and record the exact touchpoints (see `docs/type_graph_migration_touchpoints.md`, section 3).
-    - ○ Publish graph facts for that island behind the existing inference path (no behavior change).
-    - ○ Switch production inference for that island to consume graph facts.
-    - ○ Add positive + negative conformance fixtures for that island.
-    - ○ Delete the replaced fallback branch for that island.
+    - ✓ Publish graph facts for that island behind the existing inference path (no behavior change).
+    - ✓ Switch production inference for that island to consume graph facts.
+    - ✓ Add positive + negative conformance fixtures for that island.
+    - ✓ Delete the replaced fallback branch for that island.
 - ◐ Implement the graph/CT-eval interaction contract now that the boundary is documented.
   - ○ Route graph-backed consumers onto shared dependency-state consumption where CT-eval and graph validation overlap.
     - ✓ Identify one dependency state shared by CT-eval and graph validation (see `docs/type_graph_migration_touchpoints.md`, section 4).

@@ -68,43 +68,104 @@ bool SemanticsValidator::shouldBypassGraphBindingLookup(const Expr &candidate) c
       (normalizedPrefix == "std/collections/vector" && normalizedName == "vector")) {
     return true;
   }
-  if ((normalizedPrefix == "std/collections/map" &&
-       (normalizedName == "count" || normalizedName == "contains" ||
-        normalizedName == "tryAt" || normalizedName == "at" ||
-        normalizedName == "at_unsafe" || normalizedName == "insert" ||
-        normalizedName == "count_ref" || normalizedName == "contains_ref" ||
-        normalizedName == "tryAt_ref" || normalizedName == "at_ref" ||
-        normalizedName == "at_unsafe_ref" || normalizedName == "insert_ref")) ||
-      normalizedName == "std/collections/map/count" ||
-      normalizedName == "std/collections/map/count_ref" ||
-      normalizedName == "std/collections/map/contains" ||
-      normalizedName == "std/collections/map/contains_ref" ||
-      normalizedName == "std/collections/map/tryAt" ||
-      normalizedName == "std/collections/map/tryAt_ref" ||
-      normalizedName == "std/collections/map/at" ||
-      normalizedName == "std/collections/map/at_ref" ||
-      normalizedName == "std/collections/map/at_unsafe" ||
-      normalizedName == "std/collections/map/at_unsafe_ref" ||
-      normalizedName == "std/collections/map/insert" ||
-      normalizedName == "std/collections/map/insert_ref") {
-    return true;
-  }
-  if ((normalizedPrefix == "std/collections/vector" &&
-       (normalizedName == "at" || normalizedName == "at_unsafe" ||
-        normalizedName == "push" || normalizedName == "pop" ||
-        normalizedName == "reserve" || normalizedName == "clear" ||
-        normalizedName == "remove_at" || normalizedName == "remove_swap")) ||
-      normalizedName == "std/collections/vector/at" ||
-      normalizedName == "std/collections/vector/at_unsafe" ||
-      normalizedName == "std/collections/vector/push" ||
-      normalizedName == "std/collections/vector/pop" ||
-      normalizedName == "std/collections/vector/reserve" ||
-      normalizedName == "std/collections/vector/clear" ||
-      normalizedName == "std/collections/vector/remove_at" ||
-      normalizedName == "std/collections/vector/remove_swap") {
-    return true;
-  }
   return false;
+}
+
+std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
+    const Expr &initializerCall) const {
+  if (initializerCall.kind != Expr::Kind::Call || initializerCall.isMethodCall) {
+    return {};
+  }
+
+  std::string normalizedName = initializerCall.name;
+  if (!normalizedName.empty() && normalizedName.front() == '/') {
+    normalizedName.erase(normalizedName.begin());
+  }
+  std::string normalizedPrefix = initializerCall.namespacePrefix;
+  if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+    normalizedPrefix.erase(normalizedPrefix.begin());
+  }
+
+  auto explicitStdMapHelperName = [&]() -> std::string {
+    if (normalizedPrefix == "std/collections/map" &&
+        (normalizedName == "count" || normalizedName == "count_ref" ||
+         normalizedName == "contains" || normalizedName == "contains_ref" ||
+         normalizedName == "tryAt" || normalizedName == "tryAt_ref" ||
+         normalizedName == "at" || normalizedName == "at_ref" ||
+         normalizedName == "at_unsafe" || normalizedName == "at_unsafe_ref" ||
+         normalizedName == "insert" || normalizedName == "insert_ref")) {
+      return normalizedName;
+    }
+    if (normalizedName.rfind("std/collections/map/", 0) == 0) {
+      const std::string helperName =
+          normalizedName.substr(std::string("std/collections/map/").size());
+      if (helperName == "count" || helperName == "count_ref" ||
+          helperName == "contains" || helperName == "contains_ref" ||
+          helperName == "tryAt" || helperName == "tryAt_ref" ||
+          helperName == "at" || helperName == "at_ref" ||
+          helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
+          helperName == "insert" || helperName == "insert_ref") {
+        return helperName;
+      }
+    }
+    return {};
+  };
+  auto explicitStdVectorHelperName = [&]() -> std::string {
+    if (normalizedPrefix == "std/collections/vector" &&
+        (normalizedName == "at" || normalizedName == "at_unsafe" ||
+         normalizedName == "count" || normalizedName == "capacity" ||
+         normalizedName == "push" || normalizedName == "pop" ||
+         normalizedName == "reserve" || normalizedName == "clear" ||
+         normalizedName == "remove_at" || normalizedName == "remove_swap")) {
+      return normalizedName;
+    }
+    if (normalizedName.rfind("std/collections/vector/", 0) == 0) {
+      const std::string helperName =
+          normalizedName.substr(std::string("std/collections/vector/").size());
+      if (helperName == "at" || helperName == "at_unsafe" ||
+          helperName == "count" || helperName == "capacity" ||
+          helperName == "push" || helperName == "pop" ||
+          helperName == "reserve" || helperName == "clear" ||
+          helperName == "remove_at" || helperName == "remove_swap") {
+        return helperName;
+      }
+    }
+    return {};
+  };
+
+  if (const std::string helperName = explicitStdMapHelperName();
+      !helperName.empty()) {
+    const std::string canonical = "/std/collections/map/" + helperName;
+    const bool prefersAlias = helperName == "at" || helperName == "at_ref" ||
+                              helperName == "at_unsafe" ||
+                              helperName == "at_unsafe_ref";
+    const std::string alias = "/map/" + helperName;
+    if (prefersAlias && defMap_.count(alias) > 0) {
+      return alias;
+    }
+    if (defMap_.count(canonical) > 0) {
+      return canonical;
+    }
+    if (defMap_.count(alias) > 0) {
+      return alias;
+    }
+    return {};
+  }
+
+  if (const std::string helperName = explicitStdVectorHelperName();
+      !helperName.empty()) {
+    const std::string alias = "/vector/" + helperName;
+    if (defMap_.count(alias) > 0) {
+      return alias;
+    }
+    const std::string canonical = "/std/collections/vector/" + helperName;
+    if (defMap_.count(canonical) > 0) {
+      return canonical;
+    }
+    return {};
+  }
+
+  return {};
 }
 
 std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(

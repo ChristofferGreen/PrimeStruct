@@ -465,94 +465,10 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
            inferenceStack_.contains(resolvedPath) ||
            queryTypeInferenceDefinitionStack_.contains(resolvedPath);
   };
-  auto preferredResolvedInitializerPath = [&]() -> std::string {
-    auto normalizedName = initializer.name;
-    if (!normalizedName.empty() && normalizedName.front() == '/') {
-      normalizedName.erase(normalizedName.begin());
-    }
-    auto normalizedPrefix = initializer.namespacePrefix;
-    if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
-      normalizedPrefix.erase(normalizedPrefix.begin());
-    }
-
-    auto explicitStdMapHelperName = [&]() -> std::string {
-      if (normalizedPrefix == "std/collections/map" &&
-          (normalizedName == "count" || normalizedName == "count_ref" ||
-           normalizedName == "contains" || normalizedName == "contains_ref" ||
-           normalizedName == "tryAt" || normalizedName == "tryAt_ref" ||
-           normalizedName == "at" || normalizedName == "at_ref" ||
-           normalizedName == "at_unsafe" || normalizedName == "at_unsafe_ref" ||
-           normalizedName == "insert" || normalizedName == "insert_ref")) {
-        return normalizedName;
-      }
-      if (normalizedName.rfind("std/collections/map/", 0) == 0) {
-        const std::string helperName =
-            normalizedName.substr(std::string("std/collections/map/").size());
-        if (helperName == "count" || helperName == "count_ref" ||
-            helperName == "contains" || helperName == "contains_ref" ||
-            helperName == "tryAt" || helperName == "tryAt_ref" ||
-            helperName == "at" || helperName == "at_ref" ||
-            helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
-            helperName == "insert" || helperName == "insert_ref") {
-          return helperName;
-        }
-      }
-      return {};
-    };
-    auto explicitStdVectorHelperName = [&]() -> std::string {
-      if (normalizedPrefix == "std/collections/vector" &&
-          (normalizedName == "at" || normalizedName == "at_unsafe" ||
-           normalizedName == "count" || normalizedName == "capacity" ||
-           normalizedName == "push" || normalizedName == "pop" ||
-           normalizedName == "reserve" || normalizedName == "clear" ||
-           normalizedName == "remove_at" || normalizedName == "remove_swap")) {
-        return normalizedName;
-      }
-      if (normalizedName.rfind("std/collections/vector/", 0) == 0) {
-        const std::string helperName =
-            normalizedName.substr(std::string("std/collections/vector/").size());
-        if (helperName == "at" || helperName == "at_unsafe" ||
-            helperName == "count" || helperName == "capacity" ||
-            helperName == "push" || helperName == "pop" ||
-            helperName == "reserve" || helperName == "clear" ||
-            helperName == "remove_at" || helperName == "remove_swap") {
-          return helperName;
-        }
-      }
-      return {};
-    };
-    if (const std::string helperName = explicitStdMapHelperName(); !helperName.empty()) {
-      const std::string canonical = "/std/collections/map/" + helperName;
-      const bool prefersAlias = helperName == "at" || helperName == "at_ref" ||
-                                helperName == "at_unsafe" || helperName == "at_unsafe_ref";
-      const std::string alias = "/map/" + helperName;
-      if (prefersAlias && defMap_.count(alias) > 0) {
-        return alias;
-      }
-      if (defMap_.count(canonical) > 0) {
-        return canonical;
-      }
-      if (defMap_.count(alias) > 0) {
-        return alias;
-      }
-    }
-    if (const std::string helperName = explicitStdVectorHelperName(); !helperName.empty()) {
-      const std::string alias = "/vector/" + helperName;
-      if (defMap_.count(alias) > 0) {
-        return alias;
-      }
-      const std::string canonical = "/std/collections/vector/" + helperName;
-      if (defMap_.count(canonical) > 0) {
-        return canonical;
-      }
-    }
-    return {};
-  };
   std::string graphPreferredResolvedInitializer;
   ReturnKind graphPreferredDirectCallReturnKind = ReturnKind::Unknown;
   const bool graphDirectCallFactAvailable =
       bindingExpr != nullptr &&
-      !shouldBypassGraphBindingLookup(*bindingExpr) &&
       lookupGraphLocalAutoDirectCallFact(
           *bindingExpr, graphPreferredResolvedInitializer, graphPreferredDirectCallReturnKind);
   const bool hasGraphPreferredResolvedInitializer =
@@ -566,9 +482,11 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
           *bindingExpr, graphPreferredMethodResolvedInitializer, graphPreferredMethodCallReturnKind);
   const bool hasGraphPreferredMethodResolvedInitializer =
       graphMethodCallFactAvailable && !graphPreferredMethodResolvedInitializer.empty();
-  const std::string preferredResolvedInitializer =
-      hasGraphPreferredResolvedInitializer ? graphPreferredResolvedInitializer
-                                           : preferredResolvedInitializerPath();
+  const std::string preferredResolvedInitializer = hasGraphPreferredResolvedInitializer
+                                                       ? graphPreferredResolvedInitializer
+                                                       : (bindingExpr == nullptr
+                                                              ? preferredCollectionHelperResolvedPath(initializer)
+                                                              : std::string{});
   if (!preferredResolvedInitializer.empty()) {
     if (inferResolvedDirectCallBindingType(preferredResolvedInitializer, bindingOut)) {
       return true;

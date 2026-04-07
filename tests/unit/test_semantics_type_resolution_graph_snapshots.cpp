@@ -957,6 +957,39 @@ main() {
   CHECK(viaMethodEntry->initializerMethodCallReturnKind == "i32");
 }
 
+TEST_CASE("semantic product publishes graph-backed collection helper direct-call facts") {
+  const std::string source = R"(
+[return<i32>]
+/vector/count([vector<i32>] self) {
+  return(17i32)
+}
+
+[return<i32>]
+main() {
+  [vector<i32>] values{vector<i32>()}
+  [auto] viaStd{/std/collections/vector/count(values)}
+  return(viaStd)
+}
+)";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *localAutoEntry = findSemanticEntry(
+      primec::semanticProgramLocalAutoFactView(semanticProgram),
+      [](const primec::SemanticProgramLocalAutoFact &entry) {
+        return entry.scopePath == "/main" && entry.bindingName == "viaStd";
+      });
+  REQUIRE(localAutoEntry != nullptr);
+  CHECK(localAutoEntry->initializerDirectCallResolvedPath == "/vector/count");
+  CHECK(localAutoEntry->initializerDirectCallReturnKind == "i32");
+}
+
 TEST_CASE("semantic product source locations stay aligned with AST-owned lowering facts") {
   const std::string source =
       "Packet {\n"

@@ -474,7 +474,12 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
         if (initializerAnalysisExpr != nullptr &&
             initializerAnalysisExpr->kind == Expr::Kind::Call &&
             !initializerAnalysisExpr->isMethodCall) {
-          const std::string directCallResolvedPath = resolveCalleePath(*initializerAnalysisExpr);
+          std::string directCallResolvedPath = resolveCalleePath(*initializerAnalysisExpr);
+          if (const std::string preferredCollectionPath =
+                  preferredCollectionHelperResolvedPath(*initializerAnalysisExpr);
+              !preferredCollectionPath.empty()) {
+            directCallResolvedPath = preferredCollectionPath;
+          }
           if (!directCallResolvedPath.empty()) {
             graphLocalAutoDirectCallResolvedPaths_[bindingKey] = directCallResolvedPath;
             const auto directCallReturnKindIt = returnKinds_.find(directCallResolvedPath);

@@ -883,3 +883,57 @@ main() {
   CHECK(viaMethod.initializerMethodCallResolvedPath == "/vector/count");
   CHECK(viaMethod.initializerMethodCallReturnKindText == "i32");
 }
+
+TEST_CASE("type resolution local binding snapshot prefers graph-backed vector helper aliases") {
+  const std::string source = R"(
+[return<i32>]
+/vector/count([vector<i32>] self) {
+  return(17i32)
+}
+
+[return<i32>]
+main() {
+  [vector<i32>] values{vector<i32>()}
+  [auto] viaStd{/std/collections/vector/count(values)}
+  return(viaStd)
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionLocalBindingSnapshot snapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  const auto &viaStd = requireLocalBindingSnapshotEntry(snapshot, "/main", "viaStd");
+  CHECK(viaStd.bindingTypeText == "i32");
+  CHECK(viaStd.initializerDirectCallResolvedPath == "/vector/count");
+  CHECK(viaStd.initializerDirectCallReturnKindText == "i32");
+}
+
+TEST_CASE("type resolution local binding snapshot keeps canonical helper path when alias is absent") {
+  const std::string source = R"(
+[return<i32>]
+/std/collections/vector/count([vector<i32>] self) {
+  return(23i32)
+}
+
+[return<i32>]
+main() {
+  [vector<i32>] values{vector<i32>()}
+  [auto] viaStd{/std/collections/vector/count(values)}
+  return(viaStd)
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionLocalBindingSnapshot snapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  const auto &viaStd = requireLocalBindingSnapshotEntry(snapshot, "/main", "viaStd");
+  CHECK(viaStd.bindingTypeText == "i32");
+  CHECK(viaStd.initializerDirectCallResolvedPath == "/std/collections/vector/count");
+  CHECK(viaStd.initializerDirectCallReturnKindText == "i32");
+}
