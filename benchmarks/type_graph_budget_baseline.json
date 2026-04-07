@@ -1,0 +1,42 @@
+{
+  "schema": "primestruct_type_graph_budget_baseline_v1",
+  "notes": "Type-resolution graph budget guardrails for representative corpora.",
+  "entries": [
+    {
+      "name": "identity_call",
+      "source": "examples/0.Concrete/identity_call.prime",
+      "max_prepare_ms": 100,
+      "max_build_ms": 50,
+      "max_invalidation_local_binding": 0,
+      "max_invalidation_control_flow": 0,
+      "max_invalidation_initializer_shape": 0,
+      "max_invalidation_definition_signature": 2,
+      "max_invalidation_import_alias": 0,
+      "max_invalidation_receiver_type": 0
+    },
+    {
+      "name": "infer_method_call",
+      "source": "examples/2.Inference/infer_method_call.prime",
+      "max_prepare_ms": 100,
+      "max_build_ms": 50,
+      "max_invalidation_local_binding": 1,
+      "max_invalidation_control_flow": 0,
+      "max_invalidation_initializer_shape": 1,
+      "max_invalidation_definition_signature": 2,
+      "max_invalidation_import_alias": 0,
+      "max_invalidation_receiver_type": 0
+    },
+    {
+      "name": "features_overview",
+      "source": "examples/3.Surface/features_overview.prime",
+      "max_prepare_ms": 600,
+      "max_build_ms": 50,
+      "max_invalidation_local_binding": 90,
+      "max_invalidation_control_flow": 13,
+      "max_invalidation_initializer_shape": 90,
+      "max_invalidation_definition_signature": 86,
+      "max_invalidation_import_alias": 1,
+      "max_invalidation_receiver_type": 30
+    }
+  ]
+}

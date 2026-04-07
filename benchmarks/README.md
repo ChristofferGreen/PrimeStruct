@@ -94,3 +94,28 @@ Threshold checking is handled by:
 Baseline thresholds are stored in:
 
 - `benchmarks/benchmark_baseline.json`
+
+## Type-Graph Budget Gates
+
+Type-resolution graph budget checks are enforced from a committed baseline file:
+
+- `benchmarks/type_graph_budget_baseline.json`
+
+Run the local checker directly after building `primec`:
+
+- `python3 scripts/check_graph_budget.py --primec build-release/primec --repo-root . --baseline benchmarks/type_graph_budget_baseline.json`
+
+Run it as a build target:
+
+- `cmake --build build-release --target primestruct_graph_budget_check`
+
+CTest includes a default gate named `PrimeStruct_graph_budget`, so CI/`ctest` runs
+fail when graph budget thresholds regress.
+
+If a graph change intentionally shifts budgets, revise the baseline with this flow:
+
+1. Run the checker with a report artifact:
+   - `python3 scripts/check_graph_budget.py --primec build-release/primec --repo-root . --baseline benchmarks/type_graph_budget_baseline.json --report-json build-release/graph_budget_report.json`
+2. Compare `build-release/graph_budget_report.json` against the current baseline.
+3. Update only the needed thresholds in `benchmarks/type_graph_budget_baseline.json`.
+4. Include the baseline update and rationale in the same commit as the graph change.

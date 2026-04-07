@@ -112,11 +112,11 @@ Progress note: the first semantic-product publication, dump surface, and tempora
     - ✓ Migrate lowerer readers first.
     - ✓ Migrate semantic snapshot/testing helpers second.
     - ✓ Delete flat-vector readers once both migrations are complete.
-- ◐ Add CI budget gates for graph invalidation and graph-build metrics using the `type-graph` output.
-  - ○ Select the representative graph corpora and baseline thresholds for prepare/build time and invalidation fan-out.
-  - ○ Add a local/CTest graph-budget checker target that fails on threshold regressions.
-  - ○ Wire the graph-budget checker target into CI so regressions fail by default.
-  - ○ Document the workflow for intentionally revising graph budgets and metric baselines.
+- ✓ Add CI budget gates for graph invalidation and graph-build metrics using the `type-graph` output.
+  - ✓ Select the representative graph corpora and baseline thresholds for prepare/build time and invalidation fan-out.
+  - ✓ Add a local/CTest graph-budget checker target that fails on threshold regressions.
+  - ✓ Wire the graph-budget checker target into CI so regressions fail by default.
+  - ✓ Document the workflow for intentionally revising graph budgets and metric baselines.
 - ✓ Retire AST-derived lowering fallbacks until the AST is provenance-only at the lowering boundary.
   - ✓ Remove the remaining transform-based binding-kind and helper-alias fallback paths once semantic-product fact coverage is complete.
     - ✓ Normalize canonical map helper/access alias families onto stdlib builtin surfaces across validate/infer/lowerer.

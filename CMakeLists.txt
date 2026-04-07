@@ -1027,6 +1027,27 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_include_layers PROPERTIES RUN_SERIAL TRUE TIMEOUT 60)
 
+  add_custom_target(
+    primestruct_graph_budget_check
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_graph_budget.py
+            --primec $<TARGET_FILE:primec>
+            --repo-root ${CMAKE_SOURCE_DIR}
+            --baseline ${CMAKE_SOURCE_DIR}/benchmarks/type_graph_budget_baseline.json
+    DEPENDS primec
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    COMMENT "Checking type-graph budget thresholds"
+    VERBATIM
+  )
+
+  add_test(
+    NAME PrimeStruct_graph_budget
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_graph_budget.py
+            --primec $<TARGET_FILE:primec>
+            --repo-root ${CMAKE_SOURCE_DIR}
+            --baseline ${CMAKE_SOURCE_DIR}/benchmarks/type_graph_budget_baseline.json
+  )
+  set_tests_properties(PrimeStruct_graph_budget PROPERTIES RUN_SERIAL TRUE TIMEOUT 120 LABELS "parallel-safe")
+
   set(PrimeStructCompileRunSuites
     primestruct.compile.run.smoke
     primestruct.compile.run.vm.core
