@@ -116,7 +116,7 @@ std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &
   if (preferred.rfind("/std/collections/map/", 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
     const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
     if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-        suffix != "at" && suffix != "at_unsafe") {
+        suffix != "at" && suffix != "at_unsafe" && suffix != "insert") {
       const std::string mapAlias = "/map/" + suffix;
       if (hasVisibleDefinitionPath(mapAlias)) {
         preferred = mapAlias;

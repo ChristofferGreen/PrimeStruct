@@ -72,7 +72,7 @@ std::vector<std::string> pointerLikeCallPathCandidates(const std::string &path) 
   } else if (canonicalPath.rfind("/std/collections/map/", 0) == 0) {
     const std::string suffix = canonicalPath.substr(std::string("/std/collections/map/").size());
     if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-        suffix != "at" && suffix != "at_unsafe") {
+        suffix != "at" && suffix != "at_unsafe" && suffix != "insert") {
       appendUnique("/map/" + suffix);
     }
   }

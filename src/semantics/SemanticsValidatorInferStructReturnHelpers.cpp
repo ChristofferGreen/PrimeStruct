@@ -255,7 +255,7 @@ std::vector<std::string> SemanticsValidator::inferStructReturnCollectionHelperPa
     }
   } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
-    if (suffix != "map") {
+    if (suffix != "map" && suffix != "insert") {
       appendUnique("/map/" + suffix);
     }
   }
