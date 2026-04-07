@@ -174,7 +174,8 @@
           if (resolveMapHelperAliasName(expr, canonicalMapHelperName) &&
               (canonicalMapHelperName == "count" || canonicalMapHelperName == "contains" ||
                canonicalMapHelperName == "tryAt" || canonicalMapHelperName == "at" ||
-               canonicalMapHelperName == "at_unsafe") &&
+               canonicalMapHelperName == "at_unsafe" ||
+               canonicalMapHelperName == "insert") &&
               ((expr.name.find('/') != std::string::npos) || !expr.namespacePrefix.empty() ||
                !expr.templateArgs.empty())) {
             Expr rewrittenExpr = expr;

@@ -339,7 +339,7 @@
             return resolveBuiltinMapHelperName(candidate, false, helperName) &&
                    (helperName == "count" || helperName == "contains" ||
                     helperName == "tryAt" || helperName == "at" ||
-                    helperName == "at_unsafe");
+                    helperName == "at_unsafe" || helperName == "insert");
           };
 
           if (!shouldRewriteReceiver(callExpr) || !isBorrowedOrPointerMapReceiver(callExpr.args.front())) {

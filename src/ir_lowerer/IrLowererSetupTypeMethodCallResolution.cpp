@@ -499,7 +499,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         }
         auto isRemovedMapCompatibilityHelper = [](const std::string &suffix) {
           return suffix == "count" || suffix == "contains" || suffix == "tryAt" ||
-                 suffix == "at" || suffix == "at_unsafe";
+                 suffix == "at" || suffix == "at_unsafe" || suffix == "insert";
         };
         auto eraseCandidate = [&](const std::string &candidate) {
           for (auto it = receiverPaths.begin(); it != receiverPaths.end();) {
