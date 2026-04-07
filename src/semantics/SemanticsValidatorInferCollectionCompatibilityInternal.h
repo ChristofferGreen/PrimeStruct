@@ -15,29 +15,29 @@ struct ExperimentalMapHelperDescriptor {
   std::string_view experimentalPath;
   bool supportsMethodCompatibility;
   bool requiresValidatedMapReceiverForDirectCompatibility;
-  std::array<std::string_view, 4> wrapperDefinitionNeedles;
+  std::array<std::string_view, 6> wrapperDefinitionNeedles;
   size_t wrapperDefinitionNeedlesCount;
 };
 
 constexpr ExperimentalMapHelperDescriptor kExperimentalMapHelperDescriptors[] = {
     {"count", "/std/collections/map/count", "/map/count", "/std/collections/mapCount",
      "/std/collections/experimental_map/mapCount", true, true,
-     {"/mapCount", "", "", ""}, 1},
+     {"/mapCount", "/Reference/count", "/count_ref", "", "", ""}, 3},
     {"contains", "/std/collections/map/contains", "/map/contains", "/std/collections/mapContains",
      "/std/collections/experimental_map/mapContains", true, true,
-     {"/mapContains", "/mapTryAt", "", ""}, 2},
+     {"/mapContains", "/Reference/contains", "/contains_ref", "/mapTryAt", "", ""}, 4},
     {"tryAt", "/std/collections/map/tryAt", "/map/tryAt", "/std/collections/mapTryAt",
      "/std/collections/experimental_map/mapTryAt", true, true,
-     {"/mapTryAt", "", "", ""}, 1},
+     {"/mapTryAt", "/Reference/tryAt", "/tryAt_ref", "", "", ""}, 3},
     {"at", "/std/collections/map/at", "/map/at", "/std/collections/mapAt",
      "/std/collections/experimental_map/mapAt", true, false,
-     {"/mapAt", "/mapAtUnsafe", "/mapTryAt", "/mapAtRef"}, 4},
+     {"/mapAt", "/mapAtUnsafe", "/mapTryAt", "/mapAtRef", "/Reference/at", "/at_ref"}, 6},
     {"at_unsafe", "/std/collections/map/at_unsafe", "/map/at_unsafe", "/std/collections/mapAtUnsafe",
      "/std/collections/experimental_map/mapAtUnsafe", true, false,
-    {"/mapAt", "/mapAtUnsafe", "/mapTryAt", "/mapAtRef"}, 4},
+    {"/mapAt", "/mapAtUnsafe", "/mapTryAt", "/mapAtRef", "/Reference/at_unsafe", "/at_unsafe_ref"}, 6},
     {"insert", "/std/collections/map/insert", "/map/insert", "/std/collections/mapInsert",
      "/std/collections/experimental_map/mapInsert", true, true,
-     {"/mapInsert", "", "", ""}, 1},
+     {"/mapInsert", "/Reference/insert", "/insert_ref", "", "", ""}, 3},
 };
 
 struct ExperimentalVectorHelperDescriptor {
