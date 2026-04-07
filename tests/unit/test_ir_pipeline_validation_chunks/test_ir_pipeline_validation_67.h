@@ -535,6 +535,70 @@ TEST_CASE("ir lowerer setup inference helper infers body value kinds with locals
   CHECK(applyValueInfoCalls == 1);
 }
 
+TEST_CASE("ir lowerer setup inference helper prefers semantic binding facts for body locals scaffolding") {
+  primec::Expr bindingExpr;
+  bindingExpr.isBinding = true;
+  bindingExpr.name = "x";
+  bindingExpr.semanticNodeId = 321;
+  primec::Expr initializer;
+  initializer.kind = primec::Expr::Kind::Literal;
+  initializer.literalValue = 1;
+  bindingExpr.args = {initializer};
+
+  primec::Expr readExpr;
+  readExpr.kind = primec::Expr::Kind::Name;
+  readExpr.name = "x";
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "x",
+      .resolvedPath = "/main/x",
+      .bindingTypeText = "i64",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 321,
+      .provenanceHandle = 0,
+  });
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  const primec::ir_lowerer::LocalInfo::ValueKind kind =
+      primec::ir_lowerer::inferBodyValueKindWithLocalsScaffolding(
+          {bindingExpr, readExpr},
+          {},
+          [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &locals) {
+            if (expr.kind == primec::Expr::Kind::Name) {
+              auto it = locals.find(expr.name);
+              if (it != locals.end()) {
+                return it->second.valueKind;
+              }
+            }
+            if (expr.kind == primec::Expr::Kind::Literal) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+            }
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          [](const primec::Expr &) { return false; },
+          [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+          [](const primec::Expr &) { return false; },
+          [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+          [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+          [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+          [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+          &semanticTargets);
+
+  CHECK(kind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+}
+
 TEST_CASE("ir lowerer setup inference helper validates body locals scaffolding diagnostics") {
   primec::Expr badBindingExpr;
   badBindingExpr.isBinding = true;
@@ -644,4 +708,3 @@ TEST_CASE("ir lowerer setup inference helper infers math builtin return kinds") 
             kindOut) == Resolution::Resolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
 }
-

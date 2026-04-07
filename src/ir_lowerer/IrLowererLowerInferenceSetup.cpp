@@ -178,6 +178,7 @@ bool runLowerInferenceSetup(const LowerInferenceSetupInput &input,
   if (!runLowerInferenceExprKindCallControlFlowFallbackSetup(
           {
               .defMap = input.defMap,
+              .semanticProductTargets = input.semanticProductTargets,
               .resolveExprPath = input.resolveExprPath,
               .lowerMatchToIf = input.lowerMatchToIf,
               .combineNumericKinds = input.combineNumericKinds,

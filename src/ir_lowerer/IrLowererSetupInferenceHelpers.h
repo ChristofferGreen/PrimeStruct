@@ -8,9 +8,12 @@
 
 namespace primec::ir_lowerer {
 
+struct SemanticProductTargetAdapter;
+
 using GetSetupInferenceBuiltinOperatorNameFn = std::function<bool(const Expr &, std::string &)>;
 using InferSetupInferenceValueKindFn = std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
 using ResolveSetupInferenceExprPathFn = std::function<std::string(const Expr &)>;
+using ResolveSetupInferenceDefinitionCallFn = std::function<const Definition *(const Expr &)>;
 using ResolveSetupInferenceArrayElementKindByPathFn =
     std::function<bool(const std::string &, LocalInfo::ValueKind &)>;
 using ResolveSetupInferenceArrayReturnKindFn =
@@ -114,7 +117,9 @@ LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
     const SetupInferenceBindingValueKindFn &bindingValueKind,
     const ApplySetupInferenceStructInfoFn &applyStructArrayInfo,
     const ApplySetupInferenceStructInfoFn &applyStructValueInfo,
-    const InferSetupInferenceStructExprPathFn &inferStructExprPath);
+    const InferSetupInferenceStructExprPathFn &inferStructExprPath,
+    const ResolveSetupInferenceDefinitionCallFn &resolveDefinitionCall = {},
+    const SemanticProductTargetAdapter *semanticProductTargets = nullptr);
 MathBuiltinReturnKindResolution inferMathBuiltinReturnKind(
     const Expr &expr,
     const LocalMap &localsIn,

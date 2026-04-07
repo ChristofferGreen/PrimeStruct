@@ -514,6 +514,13 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
   if (hasExplicitType && info.kind == LocalInfo::Kind::Buffer && isRawStructBufferInit(init)) {
     info.kind = LocalInfo::Kind::Value;
   }
+  if (!hasExplicitType) {
+    StatementBindingTypeInfo semanticInfo;
+    if (populateBindingTypeInfoFromSemanticBindingFact(
+            stmt, resolveDefinitionCall, semanticProductTargets, semanticInfo)) {
+      return semanticInfo;
+    }
+  }
   LocalInfo::ValueKind inferredInitValueKind = LocalInfo::ValueKind::Unknown;
   if (!hasExplicitType && info.kind == LocalInfo::Kind::Value) {
     if (init.kind == Expr::Kind::Name) {

@@ -130,7 +130,7 @@ Progress note: the first semantic-product publication, dump surface, and tempora
       - ✓ `resolveMethodCallDefinitionFromExpr`: semantic-mode method-call target miss in `defMap` previously fell through to receiver-probing helper alias remaps.
     - ◐ Replace fallback sites in validator-side binding-kind paths with semantic-product facts or explicit failures.
       - ✓ Route lowerer explicit-binding detection for semantic-node bindings through semantic binding/local-`auto` facts instead of AST transform fallback.
-      - ○ Remove remaining transform-driven binding-kind/value fallback decisions from inference/control-flow helpers when semantic facts are present.
+      - ✓ Remove remaining transform-driven binding-kind/value fallback decisions from inference/control-flow helpers when semantic facts are present.
     - ✓ Replace fallback sites in call/helper alias paths with semantic-product facts or explicit failures.
       - ✓ Route semantic-mode method-call path resolution through semantic-product method-call targets (no AST/import alias fallback).
       - ✓ Remove the remaining semantic-mode helper alias remaps that still receiver-probe when semantic targets are absent from the lowered def map.
