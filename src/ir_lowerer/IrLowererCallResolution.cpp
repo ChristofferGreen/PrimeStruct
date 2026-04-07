@@ -19,7 +19,9 @@ bool isBridgeHelperName(std::string_view collectionFamily, std::string_view help
   if (collectionFamily == "map") {
     return helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
            helperName == "at" || helperName == "at_unsafe" || helperName == "insert" ||
-           helperName == "mapInsertRef";
+           helperName == "mapCountRef" || helperName == "mapContainsRef" ||
+           helperName == "mapTryAtRef" || helperName == "mapAtRef" ||
+           helperName == "mapAtUnsafeRef" || helperName == "mapInsertRef";
   }
   if (collectionFamily == "soa_vector") {
     return helperName == "count" || helperName == "get" || helperName == "ref" ||
