@@ -28,7 +28,9 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
   setupOut.shouldBuiltinValidateStdNamespacedVectorCountCall =
       setupOut.isStdNamespacedVectorCountCall && hasStdNamespacedVectorCountDefinition;
   setupOut.isStdNamespacedMapCountCall =
-      !expr.isMethodCall && resolveCalleePath(expr) == "/std/collections/map/count";
+      !expr.isMethodCall &&
+      (resolveCalleePath(expr) == "/std/collections/map/count" ||
+       resolveCalleePath(expr) == "/std/collections/map/count_ref");
   setupOut.isNamespacedMapHelperCall =
       isNamespacedCollectionHelperCall && namespacedCollection == "map";
   const std::string directRemovedMapCompatibilityPath =
@@ -39,7 +41,8 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       directRemovedMapCompatibilityPath == "/map/count";
   setupOut.isNamespacedMapCountCall =
       !expr.isMethodCall && setupOut.isNamespacedMapHelperCall &&
-      setupOut.namespacedHelper == "count" &&
+      (setupOut.namespacedHelper == "count" ||
+       setupOut.namespacedHelper == "count_ref") &&
       !setupOut.isStdNamespacedMapCountCall &&
       !isMapNamespacedCountCompatibilityCall &&
       !hasDefinitionPath(resolved);

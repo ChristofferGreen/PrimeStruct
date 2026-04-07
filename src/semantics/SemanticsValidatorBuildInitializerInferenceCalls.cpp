@@ -151,9 +151,12 @@ bool SemanticsValidator::inferBuiltinCollectionValueBinding(const Expr &expr,
   const bool isCountLike =
       expr.args.size() == 1 &&
       (isSimpleCallName(expr, "count") ||
+       isSimpleCallName(expr, "count_ref") ||
        isSimpleCallName(expr, "capacity") ||
        (resolvedCallPath == "/std/collections/map/count" &&
         defMap_.find("/std/collections/map/count") != defMap_.end()) ||
+       (resolvedCallPath == "/std/collections/map/count_ref" &&
+        defMap_.find("/std/collections/map/count_ref") != defMap_.end()) ||
        resolvedCallPath == "/std/collections/vector/count" ||
        resolvedCallPath == "/std/collections/vector/capacity");
   const bool isMapContainsLike =

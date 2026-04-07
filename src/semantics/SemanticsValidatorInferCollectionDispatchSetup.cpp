@@ -29,7 +29,9 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
   const bool shouldBuiltinValidateStdNamespacedVectorCountCall =
       isStdNamespacedVectorCountCall && hasStdNamespacedVectorCountDefinition;
   const bool isStdNamespacedMapCountCall =
-      !expr.isMethodCall && resolveCalleePath(expr) == "/std/collections/map/count";
+      !expr.isMethodCall &&
+      (resolveCalleePath(expr) == "/std/collections/map/count" ||
+       resolveCalleePath(expr) == "/std/collections/map/count_ref");
   const bool isNamespacedVectorCountCall =
       !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "count" &&
       isVectorBuiltinName(expr, "count") &&
@@ -45,7 +47,8 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       directRemovedMapCompatibilityPath == "/map/at" ||
       directRemovedMapCompatibilityPath == "/map/at_unsafe";
   const bool isNamespacedMapCountCall =
-      !expr.isMethodCall && isNamespacedMapHelperCall && namespacedHelper == "count" &&
+      !expr.isMethodCall && isNamespacedMapHelperCall &&
+      (namespacedHelper == "count" || namespacedHelper == "count_ref") &&
       !isMapNamespacedCountCompatibilityCall && !isStdNamespacedMapCountCall &&
       !hasDefinitionPath(resolved);
   const bool prefersExplicitDirectMapAccessAliasDefinition =

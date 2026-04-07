@@ -192,7 +192,9 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
   }
   const bool isExplicitCanonicalMapCountCall =
       !expr.isMethodCall &&
-      (expr.name.rfind("/std/collections/map/count", 0) == 0 ||
+      (logicalResolvedMethod == "/std/collections/map/count" ||
+       logicalResolvedMethod == "/std/collections/map/count_ref" ||
+       expr.name.rfind("/std/collections/map/count", 0) == 0 ||
        expr.namespacePrefix == "/std/collections/map" ||
        expr.namespacePrefix == "std/collections/map");
 
@@ -203,28 +205,33 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
                          logicalResolvedMethod == "/std/collections/soa_vector/count" ||
                          logicalResolvedMethod == "/string/count" ||
                          logicalResolvedMethod == "/map/count" ||
-                         logicalResolvedMethod == "/std/collections/map/count")) {
+                         logicalResolvedMethod == "/std/collections/map/count" ||
+                         logicalResolvedMethod == "/std/collections/map/count_ref")) {
     handledOut = true;
-    if (logicalResolvedMethod == "/std/collections/map/count" &&
+    if ((logicalResolvedMethod == "/std/collections/map/count" ||
+         logicalResolvedMethod == "/std/collections/map/count_ref") &&
         isExplicitCanonicalMapCountCall &&
-        !hasImportedDefinitionPath("/std/collections/map/count") &&
-        !hasDeclaredDefinitionPath("/std/collections/map/count")) {
+        !hasImportedDefinitionPath(logicalResolvedMethod) &&
+        !hasDeclaredDefinitionPath(logicalResolvedMethod)) {
       return failCountCapacityMapBuiltin(
-          "unknown call target: /std/collections/map/count");
+          "unknown call target: " + logicalResolvedMethod);
     }
+    const std::string countHelperName =
+        logicalResolvedMethod == "/std/collections/map/count_ref" ? "count_ref" : "count";
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      return failCountCapacityMapBuiltin("count does not accept block arguments");
+      return failCountCapacityMapBuiltin(countHelperName + " does not accept block arguments");
     }
     if (expr.args.size() != 1) {
-      return failCountCapacityMapBuiltin("argument count mismatch for builtin count");
+      return failCountCapacityMapBuiltin("argument count mismatch for builtin " + countHelperName);
     }
     if (logicalResolvedMethod == "/map/count" ||
-        logicalResolvedMethod == "/std/collections/map/count") {
+        logicalResolvedMethod == "/std/collections/map/count" ||
+        logicalResolvedMethod == "/std/collections/map/count_ref") {
       if (!context.resolveMapTarget(expr.args.front())) {
         if (!validateExpr(params, locals, expr.args.front())) {
           return false;
         }
-        return failCountCapacityMapBuiltin("count requires map target");
+        return failCountCapacityMapBuiltin(countHelperName + " requires map target");
       }
     } else if (logicalResolvedMethod == "/soa_vector/count" ||
                logicalResolvedMethod == "/std/collections/soa_vector/count") {
@@ -260,26 +267,35 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
   if (shouldBuiltinValidateMapCountCall && it == defMap_.end()) {
     handledOut = true;
     if (isExplicitCanonicalMapCountCall &&
-        !hasImportedDefinitionPath("/std/collections/map/count") &&
-        !hasDeclaredDefinitionPath("/std/collections/map/count")) {
+        !hasImportedDefinitionPath(logicalResolvedMethod == "/std/collections/map/count_ref"
+                                       ? "/std/collections/map/count_ref"
+                                       : "/std/collections/map/count") &&
+        !hasDeclaredDefinitionPath(logicalResolvedMethod == "/std/collections/map/count_ref"
+                                       ? "/std/collections/map/count_ref"
+                                       : "/std/collections/map/count")) {
       return failCountCapacityMapBuiltin(
-          "unknown call target: /std/collections/map/count");
+          std::string("unknown call target: ") +
+          (logicalResolvedMethod == "/std/collections/map/count_ref"
+               ? "/std/collections/map/count_ref"
+               : "/std/collections/map/count"));
     }
+    const std::string countHelperName =
+        logicalResolvedMethod == "/std/collections/map/count_ref" ? "count_ref" : "count";
     if (!expr.templateArgs.empty()) {
       return failCountCapacityMapBuiltin(
-          "count does not accept template arguments");
+          countHelperName + " does not accept template arguments");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      return failCountCapacityMapBuiltin("count does not accept block arguments");
+      return failCountCapacityMapBuiltin(countHelperName + " does not accept block arguments");
     }
     if (expr.args.size() != 1) {
-      return failCountCapacityMapBuiltin("argument count mismatch for builtin count");
+      return failCountCapacityMapBuiltin("argument count mismatch for builtin " + countHelperName);
     }
     if (!context.resolveMapTarget(expr.args.front())) {
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
       }
-      return failCountCapacityMapBuiltin("count requires map target");
+      return failCountCapacityMapBuiltin(countHelperName + " requires map target");
     }
     return validateExpr(params, locals, expr.args.front());
   }
