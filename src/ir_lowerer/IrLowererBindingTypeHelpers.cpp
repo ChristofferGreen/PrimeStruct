@@ -393,13 +393,13 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
         localAutoFact != nullptr) {
       return false;
     }
-    if (const SemanticProgramBindingFact *bindingFact =
-            findSemanticProductBindingFact(semanticProductTargets, expr);
-        bindingFact != nullptr && !bindingFact->bindingTypeText.empty()) {
-      return true;
-    }
     if (requiresSemanticBindingFact(semanticProductTargets, expr)) {
-      return false;
+      const SemanticProgramBindingFact *bindingFact =
+          findSemanticProductBindingFact(semanticProductTargets, expr);
+      if (bindingFact == nullptr || bindingFact->bindingTypeText.empty()) {
+        return false;
+      }
+      return true;
     }
     return primec::ir_lowerer::hasExplicitBindingTypeTransform(expr);
   };

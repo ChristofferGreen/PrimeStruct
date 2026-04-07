@@ -136,6 +136,40 @@
       applySpecializedWrappedMapBindingInfo(bindingTypeExprRef, info);
       applyStructArrayInfo(bindingTypeExprRef, info);
       applyStructValueInfo(bindingTypeExprRef, info);
+      if (info.kind == LocalInfo::Kind::Value && info.structTypeName.empty() &&
+          callResolutionAdapters.semanticProductTargets.hasSemanticProduct && stmt.semanticNodeId != 0) {
+        if (const SemanticProgramBindingFact *bindingFact =
+                findSemanticProductBindingFact(callResolutionAdapters.semanticProductTargets, stmt);
+            bindingFact != nullptr && !bindingFact->bindingTypeText.empty()) {
+          std::string semanticTypeText = trimTemplateTypeText(bindingFact->bindingTypeText);
+          if (!semanticTypeText.empty() &&
+              valueKindFromTypeName(semanticTypeText) == LocalInfo::ValueKind::Unknown) {
+            std::string base;
+            std::string argText;
+            if (splitTemplateTypeName(semanticTypeText, base, argText)) {
+              const std::string normalizedBase =
+                  normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+              if (normalizedBase == "Pointer" || normalizedBase == "Reference") {
+                semanticTypeText =
+                    unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(argText));
+              } else if (normalizedBase == "array" || normalizedBase == "vector" ||
+                         normalizedBase == "map" || normalizedBase == "soa_vector" ||
+                         normalizedBase == "Buffer" || normalizedBase == "Result" ||
+                         normalizedBase == "File") {
+                semanticTypeText.clear();
+              }
+            }
+            if (!semanticTypeText.empty()) {
+              std::string resolvedStructPath;
+              if (resolveStructTypeName(semanticTypeText, stmt.namespacePrefix, resolvedStructPath)) {
+                info.structTypeName = std::move(resolvedStructPath);
+              } else if (semanticTypeText.front() == '/') {
+                info.structTypeName = semanticTypeText;
+              }
+            }
+          }
+        }
+      }
       for (const auto &transform : bindingTypeExprRef.transforms) {
         if ((transform.name == "Reference" || transform.name == "Pointer") && transform.templateArgs.size() == 1) {
           std::string targetType;

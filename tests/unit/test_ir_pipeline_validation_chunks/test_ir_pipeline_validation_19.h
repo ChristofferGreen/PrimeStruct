@@ -684,7 +684,39 @@ TEST_CASE("ir lowerer call helpers require semantic-product direct-call targets"
   CHECK(populatedResolveExprPath(callExpr) == "/callee");
 }
 
-TEST_CASE("ir lowerer call helpers keep semantic-product direct-call target when rooted call path differs") {
+TEST_CASE("ir lowerer call helpers remap unresolved rooted semantic operator targets through imports") {
+  primec::Definition importedMultiply;
+  importedMultiply.fullPath = "/std/math/multiply";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/std/math/multiply", &importedMultiply},
+  };
+  const std::unordered_map<std::string, std::string> importAliases = {
+      {"multiply", "/std/math/multiply"},
+  };
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "multiply";
+  callExpr.semanticNodeId = 71;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      "/main",
+      "multiply",
+      "/multiply",
+      0,
+      0,
+      71,
+  });
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto resolveExprPath =
+      primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, semanticTargets);
+
+  CHECK(resolveExprPath(callExpr) == "/std/math/multiply");
+}
+
+TEST_CASE("ir lowerer call helpers prefer rooted rewritten direct-call paths over stale semantic-product targets") {
   primec::Definition legacyRootedCall;
   legacyRootedCall.fullPath = "/legacy";
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
@@ -711,7 +743,7 @@ TEST_CASE("ir lowerer call helpers keep semantic-product direct-call target when
   const auto resolveExprPath =
       primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, semanticTargets);
 
-  CHECK(resolveExprPath(callExpr) == "/semantic/target");
+  CHECK(resolveExprPath(callExpr) == "/legacy");
 }
 
 TEST_CASE("ir lowerer call helpers keep rewritten rooted direct-call paths without semantic targets") {
@@ -934,6 +966,39 @@ TEST_CASE("ir lowerer call helpers resolve definition calls through slashless ma
   callExpr.kind = primec::Expr::Kind::Call;
   callExpr.name = "count_alias";
   CHECK(primec::ir_lowerer::resolveDefinitionCall(callExpr, defMap, resolveExprPath) == &canonicalMapCountDef);
+}
+
+TEST_CASE("ir lowerer call helpers prefer rooted rewritten helper paths over stale semantic direct-call targets") {
+  primec::Definition quatMultiplyDef;
+  quatMultiplyDef.fullPath = "/std/math/quat_multiply_internal";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/std/math/quat_multiply_internal", &quatMultiplyDef},
+  };
+  const std::unordered_map<std::string, std::string> importAliases = {};
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      "/main",
+      "multiply",
+      "/multiply",
+      12,
+      3,
+      42,
+  });
+
+  const auto resolveExprPath =
+      primec::ir_lowerer::makeResolveCallPathFromScope(
+          defMap,
+          importAliases,
+          primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram));
+
+  primec::Expr rewrittenExpr;
+  rewrittenExpr.kind = primec::Expr::Kind::Call;
+  rewrittenExpr.name = "/std/math/quat_multiply_internal";
+  rewrittenExpr.semanticNodeId = 42;
+
+  CHECK(resolveExprPath(rewrittenExpr) == "/std/math/quat_multiply_internal");
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(rewrittenExpr, defMap, resolveExprPath) == &quatMultiplyDef);
 }
 
 TEST_CASE("ir lowerer call helpers resolve definition namespace prefixes") {

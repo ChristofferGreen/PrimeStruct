@@ -53,6 +53,7 @@ bool rewriteMathArithmeticCall(const Expr &expr,
   }
   const std::string leftType = inferStructExprPath(expr.args[0], localsIn);
   const std::string rightType = inferStructExprPath(expr.args[1], localsIn);
+  const std::string resultType = inferStructExprPath(expr, localsIn);
   const std::string leftMatrixBase = matrixHelperBaseForPath(leftType);
   const std::string rightMatrixBase = matrixHelperBaseForPath(rightType);
   const std::string leftQuaternionBase = quaternionHelperBaseForPath(leftType);
@@ -128,6 +129,42 @@ bool rewriteMathArithmeticCall(const Expr &expr,
     return true;
   }
   if (leftType == "/std/math/Quat" && rightType == "/std/math/Vec3") {
+    rewriteHelperCall(expr, "/std/math/quat_rotate_vec3_internal", rewrittenExpr);
+    return true;
+  }
+  // Semantic-product call targets can preserve builtin names (for example
+  // "/multiply") while still publishing a concrete struct return type. Use
+  // that return type to recover struct math rewrites when operand struct
+  // inference is incomplete.
+  if (builtin == "multiply" && leftType == "/std/math/Mat2" && resultType == "/std/math/Vec2") {
+    rewriteHelperCall(expr, "/std/math/mat2_mul_vec2_internal", rewrittenExpr);
+    return true;
+  }
+  if (builtin == "multiply" && leftType == "/std/math/Mat3" && resultType == "/std/math/Vec3") {
+    rewriteHelperCall(expr, "/std/math/mat3_mul_vec3_internal", rewrittenExpr);
+    return true;
+  }
+  if (builtin == "multiply" && leftType == "/std/math/Mat4" && resultType == "/std/math/Vec4") {
+    rewriteHelperCall(expr, "/std/math/mat4_mul_vec4_internal", rewrittenExpr);
+    return true;
+  }
+  if (builtin == "multiply" && leftType == "/std/math/Mat2" && resultType == "/std/math/Mat2") {
+    rewriteHelperCall(expr, "/std/math/mat2_mul_mat2_internal", rewrittenExpr);
+    return true;
+  }
+  if (builtin == "multiply" && leftType == "/std/math/Mat3" && resultType == "/std/math/Mat3") {
+    rewriteHelperCall(expr, "/std/math/mat3_mul_mat3_internal", rewrittenExpr);
+    return true;
+  }
+  if (builtin == "multiply" && leftType == "/std/math/Mat4" && resultType == "/std/math/Mat4") {
+    rewriteHelperCall(expr, "/std/math/mat4_mul_mat4_internal", rewrittenExpr);
+    return true;
+  }
+  if (builtin == "multiply" && leftType == "/std/math/Quat" && resultType == "/std/math/Quat") {
+    rewriteHelperCall(expr, "/std/math/quat_multiply_internal", rewrittenExpr);
+    return true;
+  }
+  if (builtin == "multiply" && leftType == "/std/math/Quat" && resultType == "/std/math/Vec3") {
     rewriteHelperCall(expr, "/std/math/quat_rotate_vec3_internal", rewrittenExpr);
     return true;
   }

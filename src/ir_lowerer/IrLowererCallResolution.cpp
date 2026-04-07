@@ -446,7 +446,7 @@ ResolveExprPathFn makeResolveCallPathFromScope(
   static const std::unordered_map<std::string, std::string> noImportAliases;
   const auto &semanticAwareImportAliases =
       semanticProductTargets.hasSemanticProduct ? noImportAliases : importAliases;
-  return [defMap, semanticProductTargets, semanticAwareImportAliases](const Expr &expr) {
+  return [defMap, importAliases, semanticProductTargets, semanticAwareImportAliases](const Expr &expr) {
     if (const std::string chosenPath = findSemanticProductBridgePathChoice(semanticProductTargets, expr);
         !chosenPath.empty()) {
       return chosenPath;
@@ -458,6 +458,27 @@ ResolveExprPathFn makeResolveCallPathFromScope(
       if (const std::string resolvedPath =
               findSemanticProductDirectCallTarget(semanticProductTargets, expr);
           !resolvedPath.empty() && !isResolvedBridgeHelperPath(resolvedPath)) {
+        // Lowering can rewrite a semantic call node to an explicit rooted
+        // helper (for example "/std/math/quat_multiply_internal") while the
+        // semantic direct-call target on that node remains the pre-rewrite
+        // builtin token (for example "/multiply"). Prefer the rewritten rooted
+        // helper path when it resolves to a definition.
+        if (!expr.name.empty() && expr.name.front() == '/' && expr.name != resolvedPath &&
+            defMap.count(expr.name) > 0) {
+          return expr.name;
+        }
+        // Some overloaded helper calls can carry a semantic target equal to
+        // the unresolved rooted call token (for example "/multiply") even
+        // when the lowered definition map only contains the imported helper
+        // path. Keep semantic targets authoritative, but allow a narrow
+        // import-alias fallback for that unresolved rooted-token form.
+        if (!expr.name.empty() && expr.name.front() != '/' &&
+            resolvedPath == "/" + expr.name && defMap.count(resolvedPath) == 0) {
+          const std::string importResolved = resolveCallPathFromScope(expr, defMap, importAliases);
+          if (!importResolved.empty() && defMap.count(importResolved) > 0) {
+            return importResolved;
+          }
+        }
         return resolvedPath;
       }
       // Lowering sometimes rewrites validated operators/helpers into rooted direct

@@ -83,6 +83,121 @@ TEST_CASE("ir lowerer arithmetic helper emits integer add opcode") {
   CHECK(instructions.back().op == primec::IrOpcode::AddI32);
 }
 
+TEST_CASE("ir lowerer arithmetic helper rewrites quaternion multiply from result-type fallback") {
+  primec::Expr left;
+  left.kind = primec::Expr::Kind::Name;
+  left.name = "lhs";
+  primec::Expr right;
+  right.kind = primec::Expr::Kind::Name;
+  right.name = "rhs";
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "multiply";
+  expr.args = {left, right};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo leftInfo;
+  leftInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  leftInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  leftInfo.structTypeName = "/std/math/Quat";
+  locals.emplace("lhs", leftInfo);
+  primec::ir_lowerer::LocalInfo rightInfo;
+  rightInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  rightInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  locals.emplace("rhs", rightInfo);
+
+  std::string forwardedName;
+  std::string error;
+  auto result = primec::ir_lowerer::emitArithmeticOperatorExpr(
+      expr,
+      locals,
+      [&](const primec::Expr &forwardedExpr, const primec::ir_lowerer::LocalMap &) {
+        forwardedName = forwardedExpr.name;
+        return true;
+      },
+      [](const primec::Expr &candidate, const primec::ir_lowerer::LocalMap &) {
+        if (candidate.kind == primec::Expr::Kind::Name && candidate.name == "lhs") {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+        }
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &candidate, const primec::ir_lowerer::LocalMap &localsIn) {
+        if (candidate.kind == primec::Expr::Kind::Name) {
+          auto it = localsIn.find(candidate.name);
+          return it == localsIn.end() ? std::string{} : it->second.structTypeName;
+        }
+        if (candidate.kind == primec::Expr::Kind::Call && candidate.name == "multiply") {
+          return std::string("/std/math/Quat");
+        }
+        return std::string{};
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind leftKind, primec::ir_lowerer::LocalInfo::ValueKind rightKind) {
+        return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](primec::IrOpcode, uint64_t) {},
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorArithmeticEmitResult::Handled);
+  CHECK(error.empty());
+  CHECK(forwardedName == "/std/math/quat_multiply_internal");
+}
+
+TEST_CASE("ir lowerer arithmetic helper rewrites mat3 vec3 multiply from result-type fallback") {
+  primec::Expr left;
+  left.kind = primec::Expr::Kind::Name;
+  left.name = "lhs";
+  primec::Expr right;
+  right.kind = primec::Expr::Kind::Name;
+  right.name = "rhs";
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "multiply";
+  expr.args = {left, right};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo leftInfo;
+  leftInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  leftInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  leftInfo.structTypeName = "/std/math/Mat3";
+  locals.emplace("lhs", leftInfo);
+  primec::ir_lowerer::LocalInfo rightInfo;
+  rightInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  rightInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  locals.emplace("rhs", rightInfo);
+
+  std::string forwardedName;
+  std::string error;
+  auto result = primec::ir_lowerer::emitArithmeticOperatorExpr(
+      expr,
+      locals,
+      [&](const primec::Expr &forwardedExpr, const primec::ir_lowerer::LocalMap &) {
+        forwardedName = forwardedExpr.name;
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &candidate, const primec::ir_lowerer::LocalMap &localsIn) {
+        if (candidate.kind == primec::Expr::Kind::Name) {
+          auto it = localsIn.find(candidate.name);
+          return it == localsIn.end() ? std::string{} : it->second.structTypeName;
+        }
+        if (candidate.kind == primec::Expr::Kind::Call && candidate.name == "multiply") {
+          return std::string("/std/math/Vec3");
+        }
+        return std::string{};
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind leftKind, primec::ir_lowerer::LocalInfo::ValueKind rightKind) {
+        return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](primec::IrOpcode, uint64_t) {},
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorArithmeticEmitResult::Handled);
+  CHECK(error.empty());
+  CHECK(forwardedName == "/std/math/mat3_mul_vec3_internal");
+}
+
 TEST_CASE("ir lowerer arithmetic helper validates pointer operand side") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo pointerInfo;
@@ -626,4 +741,3 @@ TEST_CASE("ir lowerer pow helper emits integer multiply opcode") {
                     instructions.end(),
                     [](const primec::IrInstruction &inst) { return inst.op == primec::IrOpcode::MulI32; }));
 }
-
