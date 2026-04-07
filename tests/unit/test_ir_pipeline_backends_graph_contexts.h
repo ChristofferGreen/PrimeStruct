@@ -683,6 +683,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irMethodResolution.find("missing semantic-product method-call target: ") !=
         std::string::npos);
+  CHECK(irMethodResolution.find("semantic-product method-call target missing lowered definition: ") !=
+        std::string::npos);
   CHECK(irMethodResolution.find("const auto &semanticAwareImportAliases =") != std::string::npos);
   CHECK(irMethodResolution.find("resolveMethodReceiverTarget(*receiver,") != std::string::npos);
   CHECK(irMethodResolution.find("semanticAwareImportAliases,") != std::string::npos);

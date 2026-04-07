@@ -176,6 +176,58 @@ TEST_CASE("ir lowerer setup type helper requires semantic-product method targets
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer setup type helper rejects semantic-product method targets without lowered definitions") {
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {};
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "contains";
+  methodCall.isMethodCall = true;
+  methodCall.semanticNodeId = 91;
+  methodCall.args.push_back(receiverExpr);
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesLocal;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  locals.emplace("values", valuesLocal);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
+      "/main",
+      "contains",
+      "",
+      "/std/collections/map/contains",
+      0,
+      0,
+      91,
+  });
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return std::string(); },
+      &semanticTargets,
+      defMap,
+      error);
+  CHECK(resolved == nullptr);
+  CHECK(error == "semantic-product method-call target missing lowered definition: /std/collections/map/contains");
+}
+
 TEST_CASE("ir lowerer setup type helper rejects alias receiver call return fallback to canonical stdlib defs") {
   primec::Definition canonicalAtDef;
   canonicalAtDef.fullPath = "/std/collections/vector/at";

@@ -125,10 +125,11 @@ Progress note: the first semantic-product publication, dump surface, and tempora
     - ✓ Land the final runtime parity follow-up for experimental-map receiver metadata in runtime/native execution paths.
     - ✓ Normalize diagnostics for runtime-parity mismatch cases so failures are deterministic.
     - ✓ Add focused conformance coverage that locks runtime parity and rejects regressions back to AST/import fallback behavior.
-  - ○ Remove the final AST-derived semantic fallback slices so the AST remains lowering-visible only for provenance/debug/source-map ownership.
-    - ○ Inventory each remaining AST/import fallback site used after the lowering boundary.
+  - ◐ Remove the final AST-derived semantic fallback slices so the AST remains lowering-visible only for provenance/debug/source-map ownership.
+    - ◐ Inventory each remaining AST/import fallback site used after the lowering boundary.
+      - ✓ `resolveMethodCallDefinitionFromExpr`: semantic-mode method-call target miss in `defMap` previously fell through to receiver-probing helper alias remaps.
     - ○ Replace fallback sites in validator-side binding-kind paths with semantic-product facts or explicit failures.
-    - ◐ Replace fallback sites in call/helper alias paths with semantic-product facts or explicit failures.
+    - ✓ Replace fallback sites in call/helper alias paths with semantic-product facts or explicit failures.
       - ✓ Route semantic-mode method-call path resolution through semantic-product method-call targets (no AST/import alias fallback).
-      - ○ Remove the remaining semantic-mode helper alias remaps that still receiver-probe when semantic targets are absent from the lowered def map.
+      - ✓ Remove the remaining semantic-mode helper alias remaps that still receiver-probe when semantic targets are absent from the lowered def map.
     - ○ Delete obsolete fallback codepaths and transitional adapters after coverage lands.
