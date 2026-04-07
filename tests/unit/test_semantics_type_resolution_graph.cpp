@@ -873,9 +873,13 @@ main() {
   CHECK(viaDirect.initializerResolvedPath == "/id");
   CHECK(viaDirect.initializerDirectCallResolvedPath == "/id");
   CHECK(viaDirect.initializerDirectCallReturnKindText == "i32");
+  CHECK(viaDirect.initializerMethodCallResolvedPath.empty());
+  CHECK(viaDirect.initializerMethodCallReturnKindText.empty());
 
   const auto &viaMethod = requireLocalBindingSnapshotEntry(snapshot, "/main", "viaMethod");
   CHECK(viaMethod.bindingTypeText == "i32");
   CHECK(viaMethod.initializerDirectCallResolvedPath.empty());
   CHECK(viaMethod.initializerDirectCallReturnKindText.empty());
+  CHECK(viaMethod.initializerMethodCallResolvedPath == "/vector/count");
+  CHECK(viaMethod.initializerMethodCallReturnKindText == "i32");
 }

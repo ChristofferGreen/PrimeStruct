@@ -120,6 +120,8 @@ struct TypeResolutionLocalBindingSnapshotEntry {
   size_t initializerTryOnErrorBoundArgCount = 0;
   std::string initializerDirectCallResolvedPath;
   std::string initializerDirectCallReturnKindText;
+  std::string initializerMethodCallResolvedPath;
+  std::string initializerMethodCallReturnKindText;
 };
 
 struct TypeResolutionLocalBindingSnapshot {

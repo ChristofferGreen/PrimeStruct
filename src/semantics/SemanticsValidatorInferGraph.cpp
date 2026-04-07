@@ -85,6 +85,8 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
   graphLocalAutoTryValues_.clear();
   graphLocalAutoDirectCallResolvedPaths_.clear();
   graphLocalAutoDirectCallReturnKinds_.clear();
+  graphLocalAutoMethodCallResolvedPaths_.clear();
+  graphLocalAutoMethodCallReturnKinds_.clear();
   const TypeResolutionGraph graph = buildTypeResolutionGraph(program_);
   const CondensationDag dag = computeTypeResolutionDependencyDag(graph);
 
@@ -488,6 +490,38 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
         } else {
           graphLocalAutoDirectCallResolvedPaths_.erase(bindingKey);
           graphLocalAutoDirectCallReturnKinds_.erase(bindingKey);
+        }
+        if (initializerAnalysisExpr != nullptr &&
+            initializerAnalysisExpr->kind == Expr::Kind::Call &&
+            initializerAnalysisExpr->isMethodCall &&
+            !initializerAnalysisExpr->args.empty() &&
+            !initializerAnalysisExpr->name.empty()) {
+          std::string resolvedMethodTarget;
+          bool isBuiltinMethod = false;
+          if (withPreservedError([&]() {
+                return resolveMethodTarget(defParams,
+                                           activeLocals,
+                                           initializerAnalysisExpr->namespacePrefix,
+                                           initializerAnalysisExpr->args.front(),
+                                           initializerAnalysisExpr->name,
+                                           resolvedMethodTarget,
+                                           isBuiltinMethod);
+              }) &&
+              !resolvedMethodTarget.empty()) {
+            graphLocalAutoMethodCallResolvedPaths_[bindingKey] = resolvedMethodTarget;
+            const auto methodCallReturnKindIt = returnKinds_.find(resolvedMethodTarget);
+            if (methodCallReturnKindIt != returnKinds_.end()) {
+              graphLocalAutoMethodCallReturnKinds_[bindingKey] = methodCallReturnKindIt->second;
+            } else {
+              graphLocalAutoMethodCallReturnKinds_.erase(bindingKey);
+            }
+          } else {
+            graphLocalAutoMethodCallResolvedPaths_.erase(bindingKey);
+            graphLocalAutoMethodCallReturnKinds_.erase(bindingKey);
+          }
+        } else {
+          graphLocalAutoMethodCallResolvedPaths_.erase(bindingKey);
+          graphLocalAutoMethodCallReturnKinds_.erase(bindingKey);
         }
         QuerySnapshotData initializerQueryData;
         if (initializerAnalysisExpr != nullptr &&

@@ -54,6 +54,8 @@ public:
     uint64_t semanticNodeId = 0;
     std::string initializerDirectCallResolvedPath;
     ReturnKind initializerDirectCallReturnKind = ReturnKind::Unknown;
+    std::string initializerMethodCallResolvedPath;
+    ReturnKind initializerMethodCallReturnKind = ReturnKind::Unknown;
   };
 
   struct LocalAutoTrySnapshotData {
@@ -468,6 +470,8 @@ private:
   std::unordered_map<std::string, LocalAutoTrySnapshotData> graphLocalAutoTryValues_;
   std::unordered_map<std::string, std::string> graphLocalAutoDirectCallResolvedPaths_;
   std::unordered_map<std::string, ReturnKind> graphLocalAutoDirectCallReturnKinds_;
+  std::unordered_map<std::string, std::string> graphLocalAutoMethodCallResolvedPaths_;
+  std::unordered_map<std::string, ReturnKind> graphLocalAutoMethodCallReturnKinds_;
   std::unordered_set<std::string> structNames_;
   std::unordered_set<std::string> publicDefinitions_;
   std::unordered_map<std::string, std::vector<ParameterInfo>> paramsByDef_;

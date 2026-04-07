@@ -442,6 +442,10 @@ SemanticProgram buildSemanticProgram(const Program &program,
         snapshotEntry.initializerDirectCallReturnKind != ReturnKind::Unknown
             ? semantics::returnKindSnapshotName(snapshotEntry.initializerDirectCallReturnKind)
             : std::string{},
+        snapshotEntry.initializerMethodCallResolvedPath,
+        snapshotEntry.initializerMethodCallReturnKind != ReturnKind::Unknown
+            ? semantics::returnKindSnapshotName(snapshotEntry.initializerMethodCallReturnKind)
+            : std::string{},
     });
     const auto &entry = semanticProgram.localAutoFacts.back();
     ensureModuleResolvedArtifacts(entry.scopePath).localAutoFacts.push_back(entry);
@@ -5679,6 +5683,10 @@ bool semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
           entry.initializerDirectCallResolvedPath,
           entry.initializerDirectCallReturnKind != ReturnKind::Unknown
               ? returnKindSnapshotName(entry.initializerDirectCallReturnKind)
+              : std::string{},
+          entry.initializerMethodCallResolvedPath,
+          entry.initializerMethodCallReturnKind != ReturnKind::Unknown
+              ? returnKindSnapshotName(entry.initializerMethodCallReturnKind)
               : std::string{},
       });
     }

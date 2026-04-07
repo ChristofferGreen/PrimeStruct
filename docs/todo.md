@@ -21,9 +21,9 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
     - ✓ Switch production inference for that island to consume graph facts.
     - ✓ Add positive + negative conformance fixtures for that island.
     - ✓ Delete the replaced fallback branch for that island.
-  - ○ Migrate the next receiver/method-call non-template inference island onto the graph path.
+  - ◐ Migrate the next receiver/method-call non-template inference island onto the graph path.
     - ✓ Select the first receiver/method-call island and record the exact touchpoints (see `docs/type_graph_migration_touchpoints.md`, section 2).
-    - ○ Publish graph facts for that island behind the existing inference path (no behavior change).
+    - ✓ Publish graph facts for that island behind the existing inference path (no behavior change).
     - ○ Switch production inference for that island to consume graph facts.
     - ○ Add positive + negative conformance fixtures for that island.
     - ○ Delete the replaced fallback branch for that island.

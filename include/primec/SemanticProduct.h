@@ -165,6 +165,8 @@ struct SemanticProgramLocalAutoFact {
   uint64_t provenanceHandle = 0;
   std::string initializerDirectCallResolvedPath;
   std::string initializerDirectCallReturnKind;
+  std::string initializerMethodCallResolvedPath;
+  std::string initializerMethodCallReturnKind;
 };
 
 struct SemanticProgramQueryFact {

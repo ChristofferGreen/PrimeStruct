@@ -413,6 +413,10 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   quoteSemanticString(entry.initializerDirectCallResolvedPath) +
                                   " initializer_direct_call_return_kind=" +
                                   quoteSemanticString(entry.initializerDirectCallReturnKind) +
+                                  " initializer_method_call_resolved_path=" +
+                                  quoteSemanticString(entry.initializerMethodCallResolvedPath) +
+                                  " initializer_method_call_return_kind=" +
+                                  quoteSemanticString(entry.initializerMethodCallReturnKind) +
                                   " provenance_handle=" + std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
