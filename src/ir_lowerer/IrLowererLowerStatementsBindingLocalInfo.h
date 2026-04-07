@@ -94,7 +94,46 @@
           info.isSoaVector = true;
         }
       }
+      auto applySpecializedWrappedMapBindingInfo = [&](const Expr &bindingExpr, LocalInfo &bindingInfo) {
+        if ((bindingInfo.kind != LocalInfo::Kind::Reference &&
+             bindingInfo.kind != LocalInfo::Kind::Pointer) ||
+            bindingInfo.referenceToMap || bindingInfo.pointerToMap) {
+          return;
+        }
+        for (const auto &transform : bindingExpr.transforms) {
+          if ((bindingInfo.kind == LocalInfo::Kind::Reference && transform.name != "Reference") ||
+              (bindingInfo.kind == LocalInfo::Kind::Pointer && transform.name != "Pointer") ||
+              transform.templateArgs.size() != 1) {
+            continue;
+          }
+          const std::string targetType =
+              ir_lowerer::unwrapTopLevelUninitializedTypeText(transform.templateArgs.front());
+          LocalInfo::ValueKind keyKind = LocalInfo::ValueKind::Unknown;
+          LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+          if (!ir_lowerer::resolveSpecializedExperimentalMapTypeKindsForBindingType(
+                  targetType,
+                  [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+                  keyKind,
+                  valueKind)) {
+            continue;
+          }
+          if (bindingInfo.kind == LocalInfo::Kind::Reference) {
+            bindingInfo.referenceToMap = true;
+          } else {
+            bindingInfo.pointerToMap = true;
+          }
+          bindingInfo.mapKeyKind = keyKind;
+          bindingInfo.mapValueKind = valueKind;
+          bindingInfo.valueKind = valueKind;
+          if (bindingInfo.structTypeName.empty()) {
+            ir_lowerer::resolveSpecializedExperimentalMapStructPathForBindingType(
+                targetType, bindingInfo.structTypeName);
+          }
+          return;
+        }
+      };
       setReferenceArrayInfo(bindingTypeExprRef, info);
+      applySpecializedWrappedMapBindingInfo(bindingTypeExprRef, info);
       applyStructArrayInfo(bindingTypeExprRef, info);
       applyStructValueInfo(bindingTypeExprRef, info);
       for (const auto &transform : bindingTypeExprRef.transforms) {

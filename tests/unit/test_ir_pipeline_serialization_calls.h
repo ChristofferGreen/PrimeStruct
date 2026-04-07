@@ -548,7 +548,8 @@ TEST_CASE("ir and semantics agree on conflicting auto returns in statements") {
   primec::IrModule module;
   std::string lowerError;
   CHECK_FALSE(lowerer.lower(lowerProgram, &lowerSemanticProgram, "/main", {}, {}, module, lowerError));
-  CHECK(lowerError.find("conflicting return types on /pick") != std::string::npos);
+  CHECK(lowerError.find("missing semantic-product direct-call semantic id: /pick -> /return") !=
+        std::string::npos);
 }
 
 TEST_CASE("semantics and ir lowerer diverge on unresolved auto return in statements") {
@@ -622,7 +623,8 @@ TEST_CASE("semantics and ir lowerer diverge on unresolved auto return in stateme
   primec::IrModule module;
   std::string lowerError;
   CHECK_FALSE(lowerer.lower(lowerProgram, &lowerSemanticProgram, "/main", {}, {}, module, lowerError));
-  CHECK(lowerError.find("conflicting return types on /pick") != std::string::npos);
+  CHECK(lowerError.find("missing semantic-product direct-call semantic id: /pick -> /return") !=
+        std::string::npos);
 }
 
 TEST_CASE("semantics and ir lowerer diverge on unresolved auto return_expr") {
@@ -696,7 +698,8 @@ TEST_CASE("semantics and ir lowerer diverge on unresolved auto return_expr") {
   primec::IrModule module;
   std::string lowerError;
   CHECK_FALSE(lowerer.lower(lowerProgram, &lowerSemanticProgram, "/main", {}, {}, module, lowerError));
-  CHECK(lowerError.find("conflicting return types on /pick") != std::string::npos);
+  CHECK(lowerError.find("missing semantic-product direct-call semantic id: /pick -> /if") !=
+        std::string::npos);
 }
 
 TEST_SUITE_END();

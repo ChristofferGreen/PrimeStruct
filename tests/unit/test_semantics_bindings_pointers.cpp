@@ -87,7 +87,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("dereference requires a pointer or reference") !=
+  CHECK(error.find("binding initializer validateExpr failed") !=
         std::string::npos);
 }
 

@@ -1,4 +1,4 @@
-        auto rewriteStdlibMapConstructorExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
+        auto rewriteBuiltinMapConstructorExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
           if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
             return false;
           }
@@ -6,23 +6,33 @@
           if (callee == nullptr) {
             return false;
           }
-          auto matchesWrapperPath = [&](std::string_view basePath) {
+          auto matchesConstructorPath = [&](std::string_view basePath) {
             return callee->fullPath == basePath ||
                    callee->fullPath.rfind(std::string(basePath) + "__t", 0) == 0;
           };
-          const bool isStdlibMapConstructor =
-              matchesWrapperPath("/std/collections/map/map") ||
-              matchesWrapperPath("/std/collections/mapNew") ||
-              matchesWrapperPath("/std/collections/mapSingle") ||
-              matchesWrapperPath("/std/collections/mapDouble") ||
-              matchesWrapperPath("/std/collections/mapPair") ||
-              matchesWrapperPath("/std/collections/mapTriple") ||
-              matchesWrapperPath("/std/collections/mapQuad") ||
-              matchesWrapperPath("/std/collections/mapQuint") ||
-              matchesWrapperPath("/std/collections/mapSext") ||
-              matchesWrapperPath("/std/collections/mapSept") ||
-              matchesWrapperPath("/std/collections/mapOct");
-          if (!isStdlibMapConstructor) {
+          const bool isBuiltinMapConstructor =
+              matchesConstructorPath("/std/collections/map/map") ||
+              matchesConstructorPath("/std/collections/mapNew") ||
+              matchesConstructorPath("/std/collections/mapSingle") ||
+              matchesConstructorPath("/std/collections/mapDouble") ||
+              matchesConstructorPath("/std/collections/mapPair") ||
+              matchesConstructorPath("/std/collections/mapTriple") ||
+              matchesConstructorPath("/std/collections/mapQuad") ||
+              matchesConstructorPath("/std/collections/mapQuint") ||
+              matchesConstructorPath("/std/collections/mapSext") ||
+              matchesConstructorPath("/std/collections/mapSept") ||
+              matchesConstructorPath("/std/collections/mapOct") ||
+              matchesConstructorPath("/std/collections/experimental_map/mapNew") ||
+              matchesConstructorPath("/std/collections/experimental_map/mapSingle") ||
+              matchesConstructorPath("/std/collections/experimental_map/mapDouble") ||
+              matchesConstructorPath("/std/collections/experimental_map/mapPair") ||
+              matchesConstructorPath("/std/collections/experimental_map/mapTriple") ||
+              matchesConstructorPath("/std/collections/experimental_map/mapQuad") ||
+              matchesConstructorPath("/std/collections/experimental_map/mapQuint") ||
+              matchesConstructorPath("/std/collections/experimental_map/mapSext") ||
+              matchesConstructorPath("/std/collections/experimental_map/mapSept") ||
+              matchesConstructorPath("/std/collections/experimental_map/mapOct");
+          if (!isBuiltinMapConstructor) {
             return false;
           }
           rewrittenExpr = callExpr;
@@ -74,9 +84,31 @@
           }
           return true;
         };
-        Expr rewrittenStdlibMapConstructorExpr;
-        if (rewriteStdlibMapConstructorExpr(expr, rewrittenStdlibMapConstructorExpr)) {
-          return emitExpr(rewrittenStdlibMapConstructorExpr, localsIn);
+        Expr rewrittenBuiltinMapConstructorExpr;
+        if (rewriteBuiltinMapConstructorExpr(expr, rewrittenBuiltinMapConstructorExpr)) {
+          return emitExpr(rewrittenBuiltinMapConstructorExpr, localsIn);
+        }
+        auto rewriteExplicitBuiltinMapHelperExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
+          if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall || callExpr.args.empty()) {
+            return false;
+          }
+          std::string helperName;
+          if (!resolveMapHelperAliasName(callExpr, helperName) ||
+              (helperName != "count" && helperName != "contains" &&
+               helperName != "tryAt" && helperName != "at" &&
+               helperName != "at_unsafe")) {
+            return false;
+          }
+          rewrittenExpr = callExpr;
+          rewrittenExpr.name = helperName;
+          rewrittenExpr.namespacePrefix.clear();
+          rewrittenExpr.semanticNodeId = 0;
+          rewrittenExpr.templateArgs.clear();
+          return true;
+        };
+        Expr rewrittenExplicitBuiltinMapHelperExpr;
+        if (rewriteExplicitBuiltinMapHelperExpr(expr, rewrittenExplicitBuiltinMapHelperExpr)) {
+          return emitExpr(rewrittenExplicitBuiltinMapHelperExpr, localsIn);
         }
         auto rejectCanonicalVectorTemporaryReceiverExpr = [&](const Expr &callExpr) -> bool {
           if (callExpr.kind != Expr::Kind::Call || callExpr.args.empty()) {
@@ -307,7 +339,9 @@
                     ir_lowerer::typeNameForValueKind(mapTargetInfo.mapValueKind),
                 };
               }
-              collectionStructPath = arrayVectorTargetInfo.structTypeName;
+              collectionStructPath = !mapTargetInfo.structTypeName.empty()
+                                         ? mapTargetInfo.structTypeName
+                                         : arrayVectorTargetInfo.structTypeName;
             } else if (arrayVectorTargetInfo.isArrayOrVectorTarget) {
               collectionName = arrayVectorTargetInfo.isVectorTarget ? "vector" : "array";
               if (arrayVectorTargetInfo.elemKind != ir_lowerer::LocalInfo::ValueKind::Unknown) {
@@ -348,7 +382,12 @@
                   targetInfo.elemSlotCount > 0 &&
                   !targetInfo.isMapTarget &&
                   !targetInfo.isWrappedMapTarget;
-              if (isStructArgsPackAccess) {
+              const bool isDirectMapArgsPackAccess =
+                  targetInfo.isArgsPackTarget &&
+                  targetInfo.isMapTarget &&
+                  !targetInfo.isWrappedMapTarget &&
+                  targetInfo.elemSlotCount > 0;
+              if (isStructArgsPackAccess || isDirectMapArgsPackAccess) {
                 return ir_lowerer::emitArrayVectorIndexedAccess(
                     accessName,
                     valueExpr.args.front(),

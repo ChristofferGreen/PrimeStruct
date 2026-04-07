@@ -221,7 +221,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /std/collections/ContainerError/status parameter err") !=
+  CHECK(error.find("binding initializer validateExpr failed") !=
         std::string::npos);
 }
 

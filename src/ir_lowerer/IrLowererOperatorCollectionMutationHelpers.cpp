@@ -189,6 +189,102 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         return false;
       }
 
+      const std::string mapStructPath = inferStructExprPath(expr, localsIn);
+      const bool useExperimentalMapLayout =
+          mapStructPath.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
+          (keyKind != LocalInfo::ValueKind::Unknown && valueKind != LocalInfo::ValueKind::Unknown);
+      if (useExperimentalMapLayout) {
+        const int32_t baseLocal = nextLocal;
+        nextLocal += 8;
+
+        const int32_t pairCount = static_cast<int32_t>(expr.args.size() / 2);
+        auto emitExperimentalVectorHeader = [&](int32_t headerBaseLocal) {
+          instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(pairCount)});
+          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(headerBaseLocal)});
+          instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(pairCount)});
+          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(headerBaseLocal + 1)});
+          if (pairCount == 0) {
+            instructions.push_back({IrOpcode::PushI64, 0});
+          } else {
+            instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(pairCount)});
+            instructions.push_back({IrOpcode::HeapAlloc, 0});
+          }
+          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(headerBaseLocal + 2)});
+          instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(pairCount == 0 ? 0 : 1)});
+          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(headerBaseLocal + 3)});
+        };
+        auto emitExperimentalVectorElementStore = [&](int32_t dataPtrLocal,
+                                                      size_t elementIndex,
+                                                      const Expr &valueExpr,
+                                                      LocalInfo::ValueKind expectedKind,
+                                                      const char *typeMismatchError) -> bool {
+          if (expectedKind == LocalInfo::ValueKind::String) {
+            int32_t stringIndex = -1;
+            size_t length = 0;
+            if (resolveStringTableTarget(valueExpr, localsIn, stringIndex, length)) {
+              instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataPtrLocal)});
+              const uint64_t offsetBytes = static_cast<uint64_t>(elementIndex) * IrSlotBytes;
+              if (offsetBytes != 0) {
+                instructions.push_back({IrOpcode::PushI64, offsetBytes});
+                instructions.push_back({IrOpcode::AddI64, 0});
+              }
+              instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});
+              instructions.push_back({IrOpcode::StoreIndirect, 0});
+              instructions.push_back({IrOpcode::Pop, 0});
+              return true;
+            }
+          }
+
+          LocalInfo::ValueKind argKind = inferExprKind(valueExpr, localsIn);
+          if (argKind == LocalInfo::ValueKind::Unknown ||
+              (expectedKind != LocalInfo::ValueKind::String && argKind == LocalInfo::ValueKind::String)) {
+            error = "native backend requires map literal arguments to be numeric/bool values";
+            return false;
+          }
+          if (argKind != expectedKind) {
+            error = typeMismatchError;
+            return false;
+          }
+          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataPtrLocal)});
+          const uint64_t offsetBytes = static_cast<uint64_t>(elementIndex) * IrSlotBytes;
+          if (offsetBytes != 0) {
+            instructions.push_back({IrOpcode::PushI64, offsetBytes});
+            instructions.push_back({IrOpcode::AddI64, 0});
+          }
+          if (!emitExpr(valueExpr, localsIn)) {
+            return false;
+          }
+          instructions.push_back({IrOpcode::StoreIndirect, 0});
+          instructions.push_back({IrOpcode::Pop, 0});
+          return true;
+        };
+
+        emitExperimentalVectorHeader(baseLocal);
+        emitExperimentalVectorHeader(baseLocal + 4);
+
+        for (size_t pairIndex = 0; pairIndex < expr.args.size() / 2; ++pairIndex) {
+          if (!emitExperimentalVectorElementStore(
+                  baseLocal + 2,
+                  pairIndex,
+                  expr.args[pairIndex * 2],
+                  keyKind,
+                  "map literal key type mismatch")) {
+            return false;
+          }
+          if (!emitExperimentalVectorElementStore(
+                  baseLocal + 6,
+                  pairIndex,
+                  expr.args[pairIndex * 2 + 1],
+                  valueKind,
+                  "map literal value type mismatch")) {
+            return false;
+          }
+        }
+
+        instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+        return true;
+      }
+
       const int32_t baseLocal = nextLocal;
       nextLocal += static_cast<int32_t>(1 + expr.args.size());
 

@@ -82,6 +82,15 @@ struct StatementBindingTypeInfo {
   std::string structTypeName;
 };
 
+bool resolveSpecializedExperimentalMapTypeKindsForBindingType(
+    const std::string &typeText,
+    const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
+    LocalInfo::ValueKind &keyKindOut,
+    LocalInfo::ValueKind &valueKindOut);
+bool resolveSpecializedExperimentalMapStructPathForBindingType(
+    const std::string &typeText,
+    std::string &structPathOut);
+
 StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
                                                        const Expr &init,
                                                        const LocalMap &localsIn,

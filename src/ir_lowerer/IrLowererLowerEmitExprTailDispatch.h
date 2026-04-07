@@ -108,6 +108,11 @@
           if (callExpr.args.size() != expectedArgCount) {
             return false;
           }
+          const auto receiverMapTargetInfo =
+              ir_lowerer::resolveMapAccessTargetInfo(callExpr.args.front(), localsIn);
+          if (receiverMapTargetInfo.isWrappedMapTarget) {
+            return false;
+          }
 
           auto inferExperimentalMapStructPath = [&](const Expr &receiverExpr) {
             if (receiverExpr.kind == Expr::Kind::Name) {
@@ -208,11 +213,20 @@
         auto rewriteExplicitMapHelperBuiltinExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
           std::string helperName;
           if (!resolveBuiltinMapHelperName(callExpr, false, helperName) ||
-              (helperName != "count" && helperName != "at" && helperName != "at_unsafe")) {
+              (helperName != "count" && helperName != "contains" &&
+               helperName != "tryAt" && helperName != "at" &&
+               helperName != "at_unsafe")) {
             return false;
           }
+          const auto mapTargetInfo =
+              ir_lowerer::resolveMapAccessTargetInfo(callExpr.args.front(), localsIn);
           const auto receiverTargetInfo =
               ir_lowerer::resolveArrayVectorAccessTargetInfo(callExpr.args.front(), localsIn);
+          std::string receiverAccessName;
+          const bool receiverIsIndexedArgsPackElement =
+              callExpr.args.front().kind == Expr::Kind::Call &&
+              getBuiltinArrayAccessName(callExpr.args.front(), receiverAccessName) &&
+              callExpr.args.front().args.size() == 2;
           if (helperName == "at" &&
               receiverTargetInfo.isArgsPackTarget &&
               receiverTargetInfo.argsPackElementKind == LocalInfo::Kind::Map) {
@@ -222,22 +236,20 @@
             return true;
           }
           if (receiverTargetInfo.isArgsPackTarget &&
-              receiverTargetInfo.argsPackElementKind == LocalInfo::Kind::Map) {
+              receiverTargetInfo.argsPackElementKind == LocalInfo::Kind::Map &&
+              !receiverIsIndexedArgsPackElement) {
             return false;
           }
-          if (receiverTargetInfo.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
-            return false;
-          }
-          const std::string receiverStructPath = inferStructExprPath(callExpr.args.front(), localsIn);
-          if (receiverStructPath.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
-            return false;
-          }
-          if (!ir_lowerer::resolveMapAccessTargetInfo(callExpr.args.front(), localsIn).isMapTarget) {
+          if (!mapTargetInfo.isMapTarget) {
             return false;
           }
           rewrittenExpr = callExpr;
           rewrittenExpr.name = helperName;
           rewrittenExpr.namespacePrefix.clear();
+          // Force later call resolution to use the rewritten builtin helper
+          // shape instead of stale semantic-product direct-call targets.
+          rewrittenExpr.semanticNodeId = 0;
+          rewrittenExpr.templateArgs.clear();
           return true;
         };
         Expr inlineDispatchExpr = expr;
@@ -249,6 +261,11 @@
         if (rewriteCanonicalMapHelperForExperimentalReceiverExpr(
                 inlineDispatchExpr, rewrittenCanonicalExperimentalMapHelperExpr)) {
           inlineDispatchExpr = rewrittenCanonicalExperimentalMapHelperExpr;
+        }
+        Expr rewrittenInlineExplicitMapHelperExpr;
+        if (rewriteExplicitMapHelperBuiltinExpr(
+                inlineDispatchExpr, rewrittenInlineExplicitMapHelperExpr)) {
+          inlineDispatchExpr = rewrittenInlineExplicitMapHelperExpr;
         }
         const auto inlineDispatchResult = ir_lowerer::tryEmitInlineCallDispatchWithLocals(
             inlineDispatchExpr,
@@ -311,6 +328,12 @@
               return candidate.name == "count" || candidate.name == "contains" ||
                      candidate.name == "tryAt" || candidate.name == "at" ||
                      candidate.name == "at_unsafe";
+            }
+            if (!candidate.args.empty() &&
+                (candidate.name == "count" || candidate.name == "contains" ||
+                 candidate.name == "tryAt" || candidate.name == "at" ||
+                 candidate.name == "at_unsafe")) {
+              return ir_lowerer::resolveMapAccessTargetInfo(candidate.args.front(), localsIn).isMapTarget;
             }
             std::string helperName;
             return resolveBuiltinMapHelperName(candidate, false, helperName) &&

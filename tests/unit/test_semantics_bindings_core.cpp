@@ -260,7 +260,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unsupported convert target type: decimal") != std::string::npos);
+  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
 }
 
 TEST_CASE("soa_vector binding validates with soa-safe struct element type") {

@@ -479,6 +479,9 @@ bool emitInlineDefinitionCallParameters(
       }
       LocalInfo aliasedParamInfo = paramInfo;
       aliasedParamInfo.kind = LocalInfo::Kind::Reference;
+      if (paramInfo.kind == LocalInfo::Kind::Map) {
+        aliasedParamInfo.referenceToMap = true;
+      }
       calleeLocals.emplace(param.name, aliasedParamInfo);
       emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(aliasedParamInfo.index));
       continue;

@@ -10,6 +10,12 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+bool hasInferredTypedWrappedMap(const LocalInfo &localInfo, LocalInfo::Kind kind) {
+  return (kind == LocalInfo::Kind::Reference || kind == LocalInfo::Kind::Pointer) &&
+         localInfo.mapKeyKind != LocalInfo::ValueKind::Unknown &&
+         localInfo.mapValueKind != LocalInfo::ValueKind::Unknown;
+}
+
 std::string mapKindTypeName(LocalInfo::ValueKind kind) {
   switch (kind) {
   case LocalInfo::ValueKind::Int32:
@@ -220,43 +226,54 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     const LocalMap &localsIn,
     const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo) {
   MapAccessTargetInfo info;
-  auto populateFromDirectLocal = [&](const LocalInfo &localInfo) {
+  auto populateFromDirectLocal = [&](const LocalInfo &localInfo, bool dereferenced) {
+    const bool inferredWrappedMap = hasInferredTypedWrappedMap(localInfo, localInfo.kind);
     if (localInfo.kind != LocalInfo::Kind::Map &&
         !(localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToMap) &&
-        !(localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToMap)) {
+        !(localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToMap) &&
+        !inferredWrappedMap) {
       return false;
     }
     info.isMapTarget = true;
     info.mapKeyKind = localInfo.mapKeyKind;
     info.mapValueKind = localInfo.mapValueKind;
-    info.isWrappedMapTarget =
+    const bool isWrappedMap =
         (localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToMap) ||
-        (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToMap);
-    info.structTypeName = localInfo.structTypeName;
+        (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToMap) ||
+        inferredWrappedMap;
+    info.isWrappedMapTarget = isWrappedMap && !dereferenced;
+    if (!info.isWrappedMapTarget || dereferenced) {
+      info.structTypeName = localInfo.structTypeName;
+    }
     return true;
   };
-  auto populateFromArgsPackElement = [&](const LocalInfo &localInfo) {
+  auto populateFromArgsPackElement = [&](const LocalInfo &localInfo, bool dereferenced) {
     if (!localInfo.isArgsPack) {
       return false;
     }
     const bool isDirectMap = localInfo.argsPackElementKind == LocalInfo::Kind::Map;
+    const bool inferredWrappedMap =
+        hasInferredTypedWrappedMap(localInfo, localInfo.argsPackElementKind);
     const bool isWrappedMap =
         (localInfo.argsPackElementKind == LocalInfo::Kind::Reference && localInfo.referenceToMap) ||
-        (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer && localInfo.pointerToMap);
+        (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer && localInfo.pointerToMap) ||
+        inferredWrappedMap;
     if (!isDirectMap && !isWrappedMap) {
       return false;
     }
     info.isMapTarget = true;
     info.mapKeyKind = localInfo.mapKeyKind;
     info.mapValueKind = localInfo.mapValueKind;
-    info.isWrappedMapTarget = isWrappedMap;
-    info.structTypeName = localInfo.structTypeName;
+    info.isWrappedMapTarget = isWrappedMap && !dereferenced;
+    if (!info.isWrappedMapTarget || dereferenced) {
+      info.structTypeName = localInfo.structTypeName;
+    }
     return true;
   };
   if (target.kind == Expr::Kind::Name) {
     auto it = localsIn.find(target.name);
     if (it != localsIn.end()) {
-      populateFromDirectLocal(it->second);
+      populateFromDirectLocal(it->second, false);
     }
     return info;
   }
@@ -265,7 +282,7 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
       const Expr &derefTarget = target.args.front();
       if (derefTarget.kind == Expr::Kind::Name) {
         auto it = localsIn.find(derefTarget.name);
-        if (it != localsIn.end() && populateFromDirectLocal(it->second)) {
+        if (it != localsIn.end() && populateFromDirectLocal(it->second, true)) {
           return info;
         }
       }
@@ -273,7 +290,7 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
       if (derefTarget.kind == Expr::Kind::Call && getBuiltinArrayAccessName(derefTarget, derefAccessName) &&
           derefTarget.args.size() == 2 && derefTarget.args.front().kind == Expr::Kind::Name) {
         auto it = localsIn.find(derefTarget.args.front().name);
-        if (it != localsIn.end() && populateFromArgsPackElement(it->second)) {
+        if (it != localsIn.end() && populateFromArgsPackElement(it->second, true)) {
           return info;
         }
       }
@@ -288,7 +305,7 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
       const Expr &accessReceiver = target.args.front();
       if (accessReceiver.kind == Expr::Kind::Name) {
         auto it = localsIn.find(accessReceiver.name);
-        if (it != localsIn.end() && populateFromArgsPackElement(it->second)) {
+        if (it != localsIn.end() && populateFromArgsPackElement(it->second, false)) {
           return info;
         }
       }
@@ -422,7 +439,11 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
          localInfo.referenceToMap || !localInfo.structTypeName.empty())) {
       info.isArrayOrVectorTarget = true;
       info.isVectorTarget = localInfo.referenceToVector;
-      info.isWrappedMapTarget = localInfo.referenceToMap;
+      info.isMapTarget = localInfo.referenceToMap && dereferenced;
+      info.isWrappedMapTarget = localInfo.referenceToMap && !dereferenced;
+      if (localInfo.referenceToMap && dereferenced) {
+        info.structTypeName = localInfo.structTypeName;
+      }
       return true;
     }
     if (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer &&
@@ -430,7 +451,11 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
          localInfo.pointerToMap || !localInfo.structTypeName.empty())) {
       info.isArrayOrVectorTarget = true;
       info.isVectorTarget = localInfo.pointerToVector;
-      info.isWrappedMapTarget = localInfo.pointerToMap;
+      info.isMapTarget = localInfo.pointerToMap && dereferenced;
+      info.isWrappedMapTarget = localInfo.pointerToMap && !dereferenced;
+      if (localInfo.pointerToMap && dereferenced) {
+        info.structTypeName = localInfo.structTypeName;
+      }
       return true;
     }
     return false;

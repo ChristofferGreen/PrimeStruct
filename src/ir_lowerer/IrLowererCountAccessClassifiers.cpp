@@ -17,6 +17,12 @@ std::string stripGeneratedHelperSuffix(std::string helperName) {
   return helperName;
 }
 
+bool hasInferredTypedWrappedMap(const LocalInfo &info, LocalInfo::Kind kind) {
+  return (kind == LocalInfo::Kind::Reference || kind == LocalInfo::Kind::Pointer) &&
+         info.mapKeyKind != LocalInfo::ValueKind::Unknown &&
+         info.mapValueKind != LocalInfo::ValueKind::Unknown;
+}
+
 bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
   return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
          helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
@@ -146,7 +152,8 @@ bool isDereferencedCollectionCountTarget(const Expr &countExpr, const Expr &targ
         (kind == LocalInfo::Kind::Pointer && info.pointerToBuffer);
     const bool isMapTarget =
         (kind == LocalInfo::Kind::Reference && info.referenceToMap) ||
-        (kind == LocalInfo::Kind::Pointer && info.pointerToMap);
+        (kind == LocalInfo::Kind::Pointer && info.pointerToMap) ||
+        hasInferredTypedWrappedMap(info, kind);
     if (!isArrayTarget && !isVectorTarget && !isBufferTarget && !isMapTarget) {
       return false;
     }

@@ -1,4 +1,35 @@
-  emitStatement = [&](const Expr &stmt, LocalMap &localsIn) -> bool {
+  emitStatement = [&](const Expr &stmtInput, LocalMap &localsIn) -> bool {
+    Expr normalizedStmt = stmtInput;
+    std::function<void(Expr &)> canonicalizeExplicitBuiltinMapHelpers =
+        [&](Expr &exprIn) {
+          for (auto &argExpr : exprIn.args) {
+            canonicalizeExplicitBuiltinMapHelpers(argExpr);
+          }
+          for (auto &bodyExpr : exprIn.bodyArguments) {
+            canonicalizeExplicitBuiltinMapHelpers(bodyExpr);
+          }
+          if (exprIn.kind != Expr::Kind::Call || exprIn.isMethodCall || exprIn.args.empty()) {
+            return;
+          }
+          std::string helperName;
+          if (!resolveMapHelperAliasName(exprIn, helperName) ||
+              (helperName != "count" && helperName != "contains" &&
+               helperName != "tryAt" && helperName != "at" &&
+               helperName != "at_unsafe")) {
+            return;
+          }
+          if (exprIn.name.find('/') == std::string::npos &&
+              exprIn.namespacePrefix.empty() &&
+              exprIn.templateArgs.empty()) {
+            return;
+          }
+          exprIn.name = helperName;
+          exprIn.namespacePrefix.clear();
+          exprIn.semanticNodeId = 0;
+          exprIn.templateArgs.clear();
+        };
+    canonicalizeExplicitBuiltinMapHelpers(normalizedStmt);
+    const Expr &stmt = normalizedStmt;
     auto rewriteBuiltinMapConstructorExpr = [&](const Expr &callExpr,
                                                 const std::vector<std::string> &declaredTemplateArgs,
                                                 LocalInfo::ValueKind fallbackKeyKind,

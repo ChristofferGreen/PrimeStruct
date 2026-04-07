@@ -12,6 +12,7 @@
             return false;
           }
           ResultExprInfo resultInfo;
+          std::string semanticTryFactError;
           auto applySemanticTryValueType = [&](const std::string &valueTypeText,
                                                ResultExprInfo &resultInfoOut) {
             const std::string trimmedValueType = trimTemplateTypeText(valueTypeText);
@@ -48,16 +49,16 @@
           if (callResolutionAdapters.semanticProductTargets.hasSemanticProduct && expr.semanticNodeId != 0) {
             const auto *tryFact =
                 findSemanticProductTryFact(callResolutionAdapters.semanticProductTargets, expr);
-            if (tryFact == nullptr) {
-              error = "missing semantic-product try fact: try";
-              return false;
-            }
-            resultInfo.isResult = true;
-            resultInfo.hasValue = true;
-            resultInfo.errorType = tryFact->errorType;
-            if (!applySemanticTryValueType(tryFact->valueType, resultInfo)) {
-              error = "incomplete semantic-product try fact: try";
-              return false;
+            if (tryFact != nullptr) {
+              resultInfo.isResult = true;
+              resultInfo.hasValue = true;
+              resultInfo.errorType = tryFact->errorType;
+              if (!applySemanticTryValueType(tryFact->valueType, resultInfo)) {
+                semanticTryFactError = "incomplete semantic-product try fact: try";
+                resultInfo = ResultExprInfo{};
+              }
+            } else {
+              semanticTryFactError = "missing semantic-product try fact: try";
             }
           }
           auto resolveResultFieldInfo = [&](const Expr &valueExpr, ResultExprInfo &fieldResultOut) {
@@ -132,7 +133,8 @@
                !resultInfo.isResult) &&
               !resolveResultFieldInfo(expr.args.front(), resultInfo)) {
             if (error.empty()) {
-              error = "try requires Result argument";
+              error = !semanticTryFactError.empty() ? semanticTryFactError
+                                                    : "try requires Result argument";
             }
             return false;
           }

@@ -48,6 +48,9 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
   auto failPreDispatchDirectCallDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(expr, std::move(message));
   };
+  if (expr.isFieldAccess) {
+    return true;
+  }
   auto failPreDispatchDirectCallMapKeyMismatch =
       [&](const std::string &helperName, const std::string &mapKeyType) {
         const std::string canonicalPath =

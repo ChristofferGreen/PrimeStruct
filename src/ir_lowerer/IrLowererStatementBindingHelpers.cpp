@@ -456,6 +456,21 @@ bool inferExprBindingTypeInfo(const Expr &expr,
 
 } // namespace
 
+bool resolveSpecializedExperimentalMapTypeKindsForBindingType(
+    const std::string &typeText,
+    const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
+    LocalInfo::ValueKind &keyKindOut,
+    LocalInfo::ValueKind &valueKindOut) {
+  return resolveSpecializedExperimentalMapTypeKinds(
+      typeText, resolveDefinitionCall, keyKindOut, valueKindOut);
+}
+
+bool resolveSpecializedExperimentalMapStructPathForBindingType(
+    const std::string &typeText,
+    std::string &structPathOut) {
+  return resolveSpecializedExperimentalMapStructPathFromTypeText(typeText, structPathOut);
+}
+
 StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
                                                        const Expr &init,
                                                        const LocalMap &localsIn,
@@ -554,11 +569,22 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
         if (normalizedName == "map" && transform.templateArgs.size() == 2) {
           info.mapKeyKind = valueKindFromTypeName(transform.templateArgs[0]);
           info.mapValueKind = valueKindFromTypeName(transform.templateArgs[1]);
+          if (info.structTypeName.empty()) {
+            std::string declaredType = transform.name + "<" +
+                                       trimTemplateTypeText(transform.templateArgs[0]) + ", " +
+                                       trimTemplateTypeText(transform.templateArgs[1]) + ">";
+            resolveSpecializedExperimentalMapStructPathFromTypeText(
+                declaredType, info.structTypeName);
+          }
           break;
         }
         if (normalizedName == "map" && transform.templateArgs.empty() &&
             resolveSpecializedExperimentalMapTypeKinds(
                 transform.name, resolveDefinitionCall, info.mapKeyKind, info.mapValueKind)) {
+          if (info.structTypeName.empty()) {
+            resolveSpecializedExperimentalMapStructPathFromTypeText(
+                transform.name, info.structTypeName);
+          }
           break;
         }
       }
@@ -567,12 +593,21 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
       if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Map) {
         info.mapKeyKind = it->second.mapKeyKind;
         info.mapValueKind = it->second.mapValueKind;
+        if (info.structTypeName.empty()) {
+          info.structTypeName = it->second.structTypeName;
+        }
       }
     } else if (init.kind == Expr::Kind::Call) {
       std::string collection;
       if (getBuiltinCollectionName(init, collection) && collection == "map" && init.templateArgs.size() == 2) {
         info.mapKeyKind = valueKindFromTypeName(init.templateArgs[0]);
         info.mapValueKind = valueKindFromTypeName(init.templateArgs[1]);
+        if (info.structTypeName.empty()) {
+          std::string initType = "map<" + trimTemplateTypeText(init.templateArgs[0]) + ", " +
+                                 trimTemplateTypeText(init.templateArgs[1]) + ">";
+          resolveSpecializedExperimentalMapStructPathFromTypeText(
+              initType, info.structTypeName);
+        }
       }
     }
     info.valueKind = info.mapValueKind;
@@ -868,7 +903,42 @@ bool inferCallParameterLocalInfo(const Expr &param,
   }
 
   infoOut.isFileError = infoOut.isFileError || isFileErrorBinding(param);
+  auto applySpecializedWrappedMapBindingInfo = [&](const Expr &bindingExpr, LocalInfo &bindingInfo) {
+    if ((bindingInfo.kind != LocalInfo::Kind::Reference &&
+         bindingInfo.kind != LocalInfo::Kind::Pointer) ||
+        bindingInfo.referenceToMap || bindingInfo.pointerToMap) {
+      return;
+    }
+    for (const auto &transform : bindingExpr.transforms) {
+      if ((bindingInfo.kind == LocalInfo::Kind::Reference && transform.name != "Reference") ||
+          (bindingInfo.kind == LocalInfo::Kind::Pointer && transform.name != "Pointer") ||
+          transform.templateArgs.size() != 1) {
+        continue;
+      }
+      const std::string targetType = unwrapTopLevelUninitializedTypeText(transform.templateArgs.front());
+      LocalInfo::ValueKind keyKind = LocalInfo::ValueKind::Unknown;
+      LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+      if (!resolveSpecializedExperimentalMapTypeKindsForBindingType(
+              targetType, resolveDefinitionCall, keyKind, valueKind)) {
+        continue;
+      }
+      if (bindingInfo.kind == LocalInfo::Kind::Reference) {
+        bindingInfo.referenceToMap = true;
+      } else {
+        bindingInfo.pointerToMap = true;
+      }
+      bindingInfo.mapKeyKind = keyKind;
+      bindingInfo.mapValueKind = valueKind;
+      bindingInfo.valueKind = valueKind;
+      if (bindingInfo.structTypeName.empty()) {
+        resolveSpecializedExperimentalMapStructPathForBindingType(
+            targetType, bindingInfo.structTypeName);
+      }
+      return;
+    }
+  };
   setReferenceArrayInfo(param, infoOut);
+  applySpecializedWrappedMapBindingInfo(param, infoOut);
   applyStructArrayInfo(param, infoOut);
   applyStructValueInfo(param, infoOut);
   if (infoOut.kind == LocalInfo::Kind::Value && !infoOut.structTypeName.empty()) {

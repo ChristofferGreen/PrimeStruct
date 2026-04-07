@@ -193,6 +193,34 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
         }
       }
     }
+    if (path.rfind("/soa_vector/", 0) == 0) {
+      const std::string suffix = path.substr(std::string("/soa_vector/").size());
+      const std::string canonicalAlias = "/std/collections/soa_vector/" + suffix;
+      defIt = defMap.find(canonicalAlias);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+    }
+    if (path.rfind("/std/collections/soa_vector/", 0) == 0) {
+      const std::string suffix = path.substr(std::string("/std/collections/soa_vector/").size());
+      const std::string samePathAlias = "/soa_vector/" + suffix;
+      defIt = defMap.find(samePathAlias);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+      if (suffix == "to_aos") {
+        defIt = defMap.find("/to_aos");
+        if (defIt != defMap.end()) {
+          return defIt->second;
+        }
+      }
+    }
+    if (path == "/to_aos") {
+      defIt = defMap.find("/std/collections/soa_vector/to_aos");
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+    }
     if (path.rfind("/Buffer/", 0) == 0) {
       const std::string suffix = path.substr(std::string("/Buffer/").size());
       const std::string canonicalAlias = "/std/gfx/Buffer/" + suffix;

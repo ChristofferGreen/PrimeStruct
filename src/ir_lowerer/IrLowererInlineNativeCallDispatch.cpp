@@ -347,6 +347,13 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     return emitInlineDefinitionCallFn(callExpr, callee, localsIn);
   };
   if (!expr.isMethodCall) {
+    std::string mapHelperName;
+    if (!expr.args.empty() &&
+        (resolveMapHelperAliasName(expr, mapHelperName) ||
+         (getBuiltinArrayAccessName(expr, mapHelperName) && expr.args.size() == 2)) &&
+        resolveMapAccessTargetInfo(expr.args.front(), localsIn).isMapTarget) {
+      return InlineCallDispatchResult::NotHandled;
+    }
     std::string accessName;
     if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2) {
       const auto targetInfo = resolveArrayVectorAccessTargetInfo(expr.args.front(), localsIn);
@@ -468,6 +475,11 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
           }
           if (info.kind == LocalInfo::Kind::Reference &&
               (info.referenceToArray || info.referenceToVector || info.referenceToMap)) {
+            return true;
+          }
+          if (info.kind == LocalInfo::Kind::Pointer &&
+              (info.pointerToArray || info.pointerToVector || info.pointerToMap ||
+               info.pointerToBuffer)) {
             return true;
           }
           return info.valueKind == LocalInfo::ValueKind::String;

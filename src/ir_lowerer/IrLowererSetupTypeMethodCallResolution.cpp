@@ -159,12 +159,13 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       return nullptr;
     }
     auto defIt = defMap.find(resolvedPath);
-    if (defIt == defMap.end() || defIt->second == nullptr) {
-      errorOut = "missing definition for semantic-product method-call target: " +
-                 resolvedPath;
-      return nullptr;
+    if (defIt != defMap.end() && defIt->second != nullptr) {
+      return defIt->second;
     }
-    return defIt->second;
+    // Semantic-product method targets can point at canonical helper aliases that
+    // are intentionally absent from the lowered definition map. Fall through to
+    // receiver-based resolution so lowering can remap those aliases onto the
+    // available imported helper surface.
   }
 
   std::string accessName;

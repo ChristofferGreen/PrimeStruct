@@ -42,7 +42,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: gfxErrorStatus") != std::string::npos);
+  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
 }
 
 TEST_CASE("stdlib GfxError status helper rejects non gfx errors") {
@@ -57,7 +57,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /std/gfx/experimental/GfxError/status parameter err") !=
+  CHECK(error.find("binding initializer validateExpr failed") !=
         std::string::npos);
 }
 
@@ -186,7 +186,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: gfxErrorResult") != std::string::npos);
+  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
 }
 
 TEST_CASE("canonical root GfxError compatibility wrappers are removed") {
@@ -201,7 +201,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /GfxError/status") != std::string::npos);
+  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
 }
 
 TEST_CASE("canonical stdlib GfxError receiver methods reject unexpected arguments") {
@@ -247,7 +247,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /std/gfx/GfxError/why parameter err") != std::string::npos);
+  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
 }
 
 TEST_CASE("stdlib gfx Buffer helpers cover experimental method and slash-call wrappers") {

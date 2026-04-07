@@ -38,6 +38,7 @@ bool SemanticsValidator::validateExprFieldAccess(const std::vector<ParameterInfo
     }
     return failExprDiagnostic(expr, error_);
   }
+  error_.clear();
   return true;
 }
 
@@ -45,6 +46,17 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
                                                         const std::unordered_map<std::string, BindingInfo> &locals,
                                                         const Expr &receiverExpr,
                                                         std::string &structPathOut) {
+  const std::string currentDefinitionNamespace = [&]() -> std::string {
+    auto currentDefIt = defMap_.find(currentValidationState_.context.definitionPath);
+    if (currentDefIt != defMap_.end() && currentDefIt->second != nullptr) {
+      return currentDefIt->second->namespacePrefix;
+    }
+    const size_t slash = currentValidationState_.context.definitionPath.find_last_of('/');
+    if (slash == std::string::npos || slash == 0) {
+      return std::string{};
+    }
+    return currentValidationState_.context.definitionPath.substr(0, slash);
+  }();
   auto resolveFieldBindingTarget = [&](const Expr &target, BindingInfo &bindingOut) -> bool {
     if (!(target.kind == Expr::Kind::Call && target.isFieldAccess && target.args.size() == 1)) {
       return false;
@@ -54,12 +66,20 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
   auto resolveStructPathFromType = [&](const std::string &typeName,
                                        const std::string &namespacePrefix,
                                        std::string &resolvedStructPathOut) -> bool {
-      if (typeName.empty() || isPrimitiveBindingTypeName(typeName)) {
+      std::string normalizedTypeName = normalizeBindingTypeName(typeName);
+      if (normalizedTypeName.empty() || isPrimitiveBindingTypeName(normalizedTypeName)) {
         return false;
       }
-      if (!typeName.empty() && typeName[0] == '/') {
-        if (structNames_.count(typeName) > 0) {
-          resolvedStructPathOut = typeName;
+      std::string lookupTypeName = normalizedTypeName;
+      std::string baseTypeName;
+      std::string templateArgText;
+      if (splitTemplateTypeName(normalizedTypeName, baseTypeName, templateArgText) &&
+          !baseTypeName.empty()) {
+        lookupTypeName = normalizeBindingTypeName(baseTypeName);
+      }
+      if (!lookupTypeName.empty() && lookupTypeName[0] == '/') {
+        if (structNames_.count(lookupTypeName) > 0) {
+          resolvedStructPathOut = lookupTypeName;
           return true;
         }
         return false;
@@ -67,22 +87,22 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
       std::string current = namespacePrefix;
       while (true) {
         if (!current.empty()) {
-          std::string scoped = current + "/" + typeName;
+          std::string scoped = current + "/" + lookupTypeName;
           if (structNames_.count(scoped) > 0) {
             resolvedStructPathOut = scoped;
             return true;
           }
-          if (current.size() > typeName.size()) {
-            const size_t start = current.size() - typeName.size();
+          if (current.size() > lookupTypeName.size()) {
+            const size_t start = current.size() - lookupTypeName.size();
             if (start > 0 && current[start - 1] == '/' &&
-                current.compare(start, typeName.size(), typeName) == 0 &&
+                current.compare(start, lookupTypeName.size(), lookupTypeName) == 0 &&
                 structNames_.count(current) > 0) {
               resolvedStructPathOut = current;
               return true;
             }
           }
         } else {
-          std::string root = "/" + typeName;
+          std::string root = "/" + lookupTypeName;
           if (structNames_.count(root) > 0) {
             resolvedStructPathOut = root;
             return true;
@@ -98,7 +118,7 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
           current.erase(slash);
         }
       }
-      auto importIt = importAliases_.find(typeName);
+      auto importIt = importAliases_.find(lookupTypeName);
       if (importIt != importAliases_.end() && structNames_.count(importIt->second) > 0) {
         resolvedStructPathOut = importIt->second;
         return true;
@@ -233,16 +253,20 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
         binding = &it->second;
       }
     }
+    const std::string receiverNamespace =
+        !receiverExpr.namespacePrefix.empty() ? receiverExpr.namespacePrefix : currentDefinitionNamespace;
     if (binding) {
       std::string typeName = binding->typeName;
       if ((typeName == "Reference" || typeName == "Pointer") && !binding->typeTemplateArg.empty()) {
         typeName = binding->typeTemplateArg;
       }
-      (void)resolveStructPathFromType(typeName, receiverExpr.namespacePrefix, structPathOut);
+      (void)resolveStructPathFromType(typeName, receiverNamespace, structPathOut);
     } else {
-      (void)resolveStructPathFromType(receiverExpr.name, receiverExpr.namespacePrefix, structPathOut);
+      (void)resolveStructPathFromType(receiverExpr.name, receiverNamespace, structPathOut);
     }
   } else if (receiverExpr.kind == Expr::Kind::Call && !receiverExpr.isBinding) {
+    const std::string receiverNamespace =
+        !receiverExpr.namespacePrefix.empty() ? receiverExpr.namespacePrefix : currentDefinitionNamespace;
     std::string accessName;
     if (getBuiltinArrayAccessName(receiverExpr, accessName) && receiverExpr.args.size() == 2) {
       std::string elemType;
@@ -250,7 +274,7 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
           resolveArrayTarget(receiverExpr.args.front(), elemType) ||
           resolveVectorTarget(receiverExpr.args.front(), elemType)) {
         const std::string unwrappedElemType = unwrapReferencePointerTypeText(elemType);
-        (void)resolveStructPathFromType(unwrappedElemType, receiverExpr.namespacePrefix, structPathOut);
+        (void)resolveStructPathFromType(unwrappedElemType, receiverNamespace, structPathOut);
       }
     }
     std::string inferredStruct = inferStructReturnPath(receiverExpr, params, locals);
@@ -261,7 +285,7 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
       if (inferQueryExprTypeText(receiverExpr, params, locals, inferredTypeText)) {
         const std::string inferredValueType =
             unwrapReferencePointerTypeText(normalizeBindingTypeName(inferredTypeText));
-        (void)resolveStructPathFromType(inferredValueType, receiverExpr.namespacePrefix, structPathOut);
+        (void)resolveStructPathFromType(inferredValueType, receiverNamespace, structPathOut);
       }
     }
     if (structPathOut.empty()) {
@@ -364,6 +388,17 @@ bool SemanticsValidator::resolveStructFieldBinding(const std::vector<ParameterIn
     }
     return false;
   };
+  const std::string currentDefinitionNamespace = [&]() -> std::string {
+    auto currentDefIt = defMap_.find(currentValidationState_.context.definitionPath);
+    if (currentDefIt != defMap_.end() && currentDefIt->second != nullptr) {
+      return currentDefIt->second->namespacePrefix;
+    }
+    const size_t slash = currentValidationState_.context.definitionPath.find_last_of('/');
+    if (slash == std::string::npos || slash == 0) {
+      return std::string{};
+    }
+    return currentValidationState_.context.definitionPath.substr(0, slash);
+  }();
 
   std::string structPath;
   const bool isTypeReceiver = isTypeNamespaceFieldReceiver(params, locals, receiver, structPath);
@@ -417,9 +452,11 @@ bool SemanticsValidator::resolveStructFieldBinding(const std::vector<ParameterIn
     std::string receiverBase;
     std::string receiverArgText;
     if (splitTemplateTypeName(normalizeBindingTypeName(receiverTypeText), receiverBase, receiverArgText)) {
-      std::string resolvedReceiverBase = resolveStructTypePath(receiverBase, receiver.namespacePrefix, structNames_);
+      const std::string receiverNamespace =
+          !receiver.namespacePrefix.empty() ? receiver.namespacePrefix : currentDefinitionNamespace;
+      std::string resolvedReceiverBase = resolveStructTypePath(receiverBase, receiverNamespace, structNames_);
       if (resolvedReceiverBase.empty()) {
-        resolvedReceiverBase = resolveTypePath(receiverBase, receiver.namespacePrefix);
+        resolvedReceiverBase = resolveTypePath(receiverBase, receiverNamespace);
       }
       std::vector<std::string> receiverArgs;
       if ((resolvedReceiverBase == templateSourceDef->fullPath || resolvedReceiverBase == fieldSourceDef->fullPath ||

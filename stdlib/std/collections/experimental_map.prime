@@ -140,7 +140,7 @@ namespace std {
   }
 
   [return<i32> Comparable<K>]
-  mapFindIndexRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {
+  mapBorrowedFindIndex<K, V>([Reference<Map<K, V>>] entries, [K] key) {
     [i32 mut] index{0i32}
     [Vector<K>] keys{entries.keys}
     [i32] limit{/std/collections/experimental_vector/vectorCount<K>(keys)}
@@ -151,6 +151,12 @@ namespace std {
       increment(index)
     })
     return(limit)
+  }
+
+  [return<i32> Comparable<K>]
+  mapFindIndexRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {
+    [Map<K, V>] values{dereference(entries)}
+    return(mapFindIndex<K, V>(values, key))
   }
 
   [return<void>]
@@ -180,9 +186,9 @@ namespace std {
        })
   }
 
-  [public effects(heap_alloc), return<void> Comparable<K>]
-  mapInsertRef<K, V>([Reference<Map<K, V>> mut] entries, [K] key, [V] value) {
-    [i32] index{mapFindIndexRef<K, V>(entries, key)}
+  [effects(heap_alloc), return<void> Comparable<K>]
+  mapBorrowedInsert<K, V>([Reference<Map<K, V>> mut] entries, [K] key, [V] value) {
+    [i32] index{mapBorrowedFindIndex<K, V>(entries, key)}
     [Vector<K> mut] keys{entries.keys}
     [Vector<V> mut] payloads{entries.payloads}
     [i32] limit{/std/collections/experimental_vector/vectorCount<K>(keys)}
@@ -197,6 +203,13 @@ namespace std {
          assign(entries.keys, keys)
          assign(entries.payloads, payloads)
        })
+  }
+
+  [public effects(heap_alloc), return<void> Comparable<K>]
+  mapInsertRef<K, V>([Reference<Map<K, V>> mut] entries, [K] key, [V] value) {
+    [Map<K, V> mut] values{dereference(entries)}
+    mapInsert<K, V>(values, key, value)
+    assign(dereference(entries), values)
   }
 
   [public effects(heap_alloc), return<Map<K, V>>]
@@ -333,10 +346,16 @@ namespace std {
     return(/std/collections/experimental_vector/vectorCount<K>(keys))
   }
 
-  [public return<i32>]
-  mapCountRef<K, V>([Reference<Map<K, V>>] entries) {
+  [return<i32>]
+  mapBorrowedCount<K, V>([Reference<Map<K, V>>] entries) {
     [Vector<K>] keys{entries.keys}
     return(/std/collections/experimental_vector/vectorCount<K>(keys))
+  }
+
+  [public return<i32>]
+  mapCountRef<K, V>([Reference<Map<K, V>>] entries) {
+    [Map<K, V>] values{dereference(entries)}
+    return(mapCount<K, V>(values))
   }
 
   [public return<i32>]
@@ -370,10 +389,18 @@ namespace std {
     return(less_than(mapFindIndex<K, V>(entries, key), /std/collections/experimental_vector/vectorCount<K>(keys)))
   }
 
+  [return<bool> Comparable<K>]
+  mapBorrowedContains<K, V>([Reference<Map<K, V>>] entries, [K] key) {
+    [Vector<K>] keys{entries.keys}
+    return(less_than(
+        mapBorrowedFindIndex<K, V>(entries, key),
+        /std/collections/experimental_vector/vectorCount<K>(keys)))
+  }
+
   [public return<bool> Comparable<K>]
   mapContainsRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {
-    [Vector<K>] keys{entries.keys}
-    return(less_than(mapFindIndexRef<K, V>(entries, key), /std/collections/experimental_vector/vectorCount<K>(keys)))
+    [Map<K, V>] values{dereference(entries)}
+    return(mapContains<K, V>(values, key))
   }
 
   [public return<bool> Comparable<K>]
@@ -396,14 +423,20 @@ namespace std {
        else() { return(containerErrorResult<V>(containerMissingKey())) })
   }
 
-  [public return<Result<V, ContainerError>> Comparable<K>]
-  mapTryAtRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {
-    [i32] index{mapFindIndexRef<K, V>(entries, key)}
+  [return<Result<V, ContainerError>> Comparable<K>]
+  mapBorrowedTryAt<K, V>([Reference<Map<K, V>>] entries, [K] key) {
+    [i32] index{mapBorrowedFindIndex<K, V>(entries, key)}
     [Vector<K>] keys{entries.keys}
     [Vector<V>] payloads{entries.payloads}
     if(less_than(index, /std/collections/experimental_vector/vectorCount<K>(keys)),
        then() { return(Result.ok(/std/collections/experimental_vector/vectorAtUnsafe<V>(payloads, index))) },
        else() { return(containerErrorResult<V>(containerMissingKey())) })
+  }
+
+  [public return<Result<V, ContainerError>> Comparable<K>]
+  mapTryAtRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {
+    [Map<K, V>] values{dereference(entries)}
+    return(mapTryAt<K, V>(values, key))
   }
 
   [public return<Result<V, ContainerError>> Comparable<K>]
@@ -428,9 +461,9 @@ namespace std {
        })
   }
 
-  [public return<V> Comparable<K>]
-  mapAtRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {
-    [i32] index{mapFindIndexRef<K, V>(entries, key)}
+  [return<V> Comparable<K>]
+  mapBorrowedAt<K, V>([Reference<Map<K, V>>] entries, [K] key) {
+    [i32] index{mapBorrowedFindIndex<K, V>(entries, key)}
     [Vector<K>] keys{entries.keys}
     [Vector<V>] payloads{entries.payloads}
     if(less_than(index, /std/collections/experimental_vector/vectorCount<K>(keys)),
@@ -438,6 +471,12 @@ namespace std {
        else() {
          return(/std/collections/experimental_vector/vectorAt<V>(payloads, index))
        })
+  }
+
+  [public return<V> Comparable<K>]
+  mapAtRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {
+    [Map<K, V>] values{dereference(entries)}
+    return(mapAt<K, V>(values, key))
   }
 
   [public return<V> Comparable<K>]
@@ -456,10 +495,16 @@ namespace std {
     return(/std/collections/experimental_vector/vectorAtUnsafe<V>(payloads, mapFindIndex<K, V>(entries, key)))
   }
 
+  [return<V> Comparable<K>]
+  mapBorrowedAtUnsafe<K, V>([Reference<Map<K, V>>] entries, [K] key) {
+    [Vector<V>] payloads{entries.payloads}
+    return(/std/collections/experimental_vector/vectorAtUnsafe<V>(payloads, mapBorrowedFindIndex<K, V>(entries, key)))
+  }
+
   [public return<V> Comparable<K>]
   mapAtUnsafeRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {
-    [Vector<V>] payloads{entries.payloads}
-    return(/std/collections/experimental_vector/vectorAtUnsafe<V>(payloads, mapFindIndexRef<K, V>(entries, key)))
+    [Map<K, V>] values{dereference(entries)}
+    return(mapAtUnsafe<K, V>(values, key))
   }
 
   [public return<V> Comparable<K>]

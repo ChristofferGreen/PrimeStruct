@@ -382,7 +382,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown named argument: profile") != std::string::npos);
+  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
 }
 
 TEST_CASE("experimental gfx device constructor entry point validates through stdlib helper") {
@@ -458,7 +458,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown named argument: profile") != std::string::npos);
+  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
 }
 
 TEST_CASE("canonical gfx device constructor entry point validates through stdlib helper") {

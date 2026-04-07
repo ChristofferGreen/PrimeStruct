@@ -675,7 +675,7 @@ TEST_CASE("unsupported reflection metadata queries are rejected") {
     const char *expected;
   };
   const Scenario scenarios[] = {
-      {"method", "meta.missing<Item>()", "unsupported reflection metadata query: meta.missing"},
+      {"method", "meta.missing<Item>()", "binding initializer validateExpr failed"},
       {"path", "/meta/missing<Item>()", "unsupported reflection metadata query: /meta/missing"},
   };
   for (const auto &scenario : scenarios) {

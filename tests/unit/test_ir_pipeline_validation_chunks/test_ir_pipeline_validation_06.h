@@ -444,10 +444,10 @@ TEST_CASE("ir lowerer inference preserves map reference parameter info for canon
   program.definitions.emplace_back();
   primec::Definition &canonicalCountDef = program.definitions[0];
   primec::Definition &projectDef = program.definitions[1];
-  canonicalCountDef.fullPath = "/std/collections/map/count";
+  canonicalCountDef.fullPath = "/std/collections/map/count_ref";
   primec::Transform countReturnTransform;
   countReturnTransform.name = "return";
-  countReturnTransform.templateArgs = {"int"};
+  countReturnTransform.templateArgs = {"i32"};
   canonicalCountDef.transforms.push_back(countReturnTransform);
 
   projectDef.fullPath = "/project";
@@ -467,14 +467,11 @@ TEST_CASE("ir lowerer inference preserves map reference parameter info for canon
 
   primec::Expr countCall;
   countCall.kind = primec::Expr::Kind::Call;
-  countCall.name = "/std/collections/map/count";
+  countCall.name = "/std/collections/map/count_ref";
   primec::Expr refName;
   refName.kind = primec::Expr::Kind::Name;
   refName.name = "ref";
-  primec::Expr markerArg;
-  markerArg.kind = primec::Expr::Kind::BoolLiteral;
-  markerArg.boolValue = true;
-  countCall.args = {refName, markerArg};
+  countCall.args = {refName};
   projectDef.returnExpr = countCall;
 
   std::unordered_map<std::string, const primec::Definition *> defMap = {

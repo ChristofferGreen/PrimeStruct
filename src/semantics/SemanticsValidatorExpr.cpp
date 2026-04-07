@@ -351,6 +351,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (isSimpleCallName(expr, "buffer_store")) {
       return failExprRootDiagnostic("buffer_store is only supported as a statement");
     }
+    if (expr.isFieldAccess) {
+      return validateExprFieldAccess(params, locals, expr);
+    }
     bool hasVectorHelperCallResolution = false;
     std::string vectorHelperCallResolvedPath;
     size_t vectorHelperCallReceiverIndex = 0;
@@ -473,9 +476,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     bool usedMethodTarget = methodCompatibilitySetup.usedMethodTarget;
     bool hasMethodReceiverIndex = methodCompatibilitySetup.hasMethodReceiverIndex;
     size_t methodReceiverIndex = methodCompatibilitySetup.methodReceiverIndex;
-    if (expr.isFieldAccess) {
-      return validateExprFieldAccess(params, locals, expr);
-    }
     ExprCollectionDispatchSetup collectionDispatchSetup;
     if (!prepareExprCollectionDispatchSetup(
             params,

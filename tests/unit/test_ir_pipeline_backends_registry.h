@@ -123,6 +123,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product direct-call targets") {
 
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 81;
   primec::Expr callExpr;
   callExpr.kind = primec::Expr::Kind::Call;
   callExpr.name = "callee";
@@ -176,6 +177,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product method-call targets") {
 
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 81;
   primec::Expr receiverExpr;
   receiverExpr.kind = primec::Expr::Kind::Name;
   receiverExpr.name = "values";
@@ -291,11 +293,12 @@ TEST_CASE("ir lowerer rejects missing semantic-product binding facts") {
   CHECK(diagnosticInfo.message == error);
 }
 
-TEST_CASE("ir lowerer rejects missing semantic-product local-auto facts") {
+TEST_CASE("ir lowerer rejects missing semantic-product local binding facts") {
   primec::Program program;
 
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 81;
 
   primec::Expr initializerExpr;
   initializerExpr.kind = primec::Expr::Kind::Literal;
@@ -312,28 +315,44 @@ TEST_CASE("ir lowerer rejects missing semantic-product local-auto facts") {
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
-  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
-      "/main",
-      "local",
-      "selected",
-      "/main/selected",
-      "i32",
-      false,
-      false,
-      false,
-      "",
-      1,
-      1,
-      43,
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .fullPath = "/main",
+      .isExecution = false,
+      .returnKind = "void",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 81,
   });
-
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .definitionPath = "/main",
+      .returnKind = "void",
+      .structPath = "",
+      .bindingTypeText = "void",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 81,
+  });
   primec::IrLowerer lowerer;
   primec::IrModule module;
   primec::DiagnosticSinkReport diagnosticInfo;
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product local-auto fact: /main -> local selected");
+  CHECK(error == "missing semantic-product binding fact: /main -> local selected");
   CHECK(diagnosticInfo.message == error);
 }
 

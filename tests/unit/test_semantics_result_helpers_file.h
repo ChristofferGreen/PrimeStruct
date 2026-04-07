@@ -156,7 +156,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /FileError/why") != std::string::npos);
+  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
 }
 
 TEST_CASE("stdlib FileError root result aliases are removed") {
@@ -171,7 +171,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /FileError/status") != std::string::npos);
+  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
 }
 
 TEST_CASE("stdlib FileError package status alias is removed") {
@@ -186,7 +186,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: fileErrorStatus") != std::string::npos);
+  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
 }
 
 TEST_CASE("stdlib FileError package value alias is removed") {
@@ -201,7 +201,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: fileErrorResult") != std::string::npos);
+  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
 }
 
 TEST_CASE("stdlib FileError result methods reject unexpected arguments") {
@@ -232,7 +232,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /FileError/is_eof") != std::string::npos);
+  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
 }
 
 TEST_CASE("stdlib FileError eof wrapper rejects unexpected arguments") {

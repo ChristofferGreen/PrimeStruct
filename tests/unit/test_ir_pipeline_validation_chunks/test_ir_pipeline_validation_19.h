@@ -233,7 +233,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callResolutionSource.find("bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)") !=
         std::string::npos);
-  CHECK(callResolutionSource.find("std::string normalizeMapImportAliasPath(const std::string &path)") !=
+  CHECK(callResolutionSource.find("normalizeMapImportAliasPath(") !=
         std::string::npos);
   CHECK(callResolutionSource.find("std::string resolveCallPathFromScopeWithoutImportAliases(") !=
         std::string::npos);

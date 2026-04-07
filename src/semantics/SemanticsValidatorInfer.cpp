@@ -95,12 +95,20 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         auto resolveStructPathFromType = [&](const std::string &typeName,
                                              const std::string &namespacePrefix,
                                              std::string &structPathOut) -> bool {
-          if (typeName.empty() || isPrimitiveBindingTypeName(typeName)) {
+          std::string normalizedTypeName = normalizeBindingTypeName(typeName);
+          if (normalizedTypeName.empty() || isPrimitiveBindingTypeName(normalizedTypeName)) {
             return false;
           }
-          if (!typeName.empty() && typeName[0] == '/') {
-            if (structNames_.count(typeName) > 0) {
-              structPathOut = typeName;
+          std::string lookupTypeName = normalizedTypeName;
+          std::string baseTypeName;
+          std::string templateArgText;
+          if (splitTemplateTypeName(normalizedTypeName, baseTypeName, templateArgText) &&
+              !baseTypeName.empty()) {
+            lookupTypeName = normalizeBindingTypeName(baseTypeName);
+          }
+          if (!lookupTypeName.empty() && lookupTypeName[0] == '/') {
+            if (structNames_.count(lookupTypeName) > 0) {
+              structPathOut = lookupTypeName;
               return true;
             }
             return false;
@@ -108,22 +116,22 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           std::string current = namespacePrefix;
           while (true) {
             if (!current.empty()) {
-              std::string scoped = current + "/" + typeName;
+              std::string scoped = current + "/" + lookupTypeName;
               if (structNames_.count(scoped) > 0) {
                 structPathOut = scoped;
                 return true;
               }
-              if (current.size() > typeName.size()) {
-                const size_t start = current.size() - typeName.size();
+              if (current.size() > lookupTypeName.size()) {
+                const size_t start = current.size() - lookupTypeName.size();
                 if (start > 0 && current[start - 1] == '/' &&
-                    current.compare(start, typeName.size(), typeName) == 0 &&
+                    current.compare(start, lookupTypeName.size(), lookupTypeName) == 0 &&
                     structNames_.count(current) > 0) {
                   structPathOut = current;
                   return true;
                 }
               }
             } else {
-              std::string root = "/" + typeName;
+              std::string root = "/" + lookupTypeName;
               if (structNames_.count(root) > 0) {
                 structPathOut = root;
                 return true;
@@ -139,7 +147,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
               current.erase(slash);
             }
           }
-          auto importIt = importAliases_.find(typeName);
+          auto importIt = importAliases_.find(lookupTypeName);
           if (importIt != importAliases_.end() && structNames_.count(importIt->second) > 0) {
             structPathOut = importIt->second;
             return true;

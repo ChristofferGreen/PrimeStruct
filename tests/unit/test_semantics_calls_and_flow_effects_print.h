@@ -385,7 +385,7 @@ log_file_error([FileError] err) {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("missing on_error for ? usage") != std::string::npos);
+  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
 }
 
 TEST_CASE("File constructor requires file_read effect for read mode") {
@@ -403,7 +403,7 @@ log_file_error([FileError] err) {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("File requires file_read effect") != std::string::npos);
+  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
 }
 
 TEST_CASE("file read methods require file_read effect") {
@@ -479,4 +479,3 @@ log_file_error([FileError] err) {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
-

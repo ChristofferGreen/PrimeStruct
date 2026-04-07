@@ -117,6 +117,49 @@ bool isFreeMemoryIntrinsicCall(const Expr &expr) {
   return expr.kind == Expr::Kind::Call && getBuiltinMemoryName(expr, builtinName) && builtinName == "free";
 }
 
+std::string makeSpecializedExperimentalMapHelperPath(std::string_view helperStem,
+                                                     LocalInfo::ValueKind keyKind,
+                                                     LocalInfo::ValueKind valueKind) {
+  const std::string keyTypeText = typeNameForValueKind(keyKind);
+  const std::string valueTypeText = typeNameForValueKind(valueKind);
+  if (keyTypeText.empty() || valueTypeText.empty()) {
+    return {};
+  }
+
+  std::string canonicalArgs;
+  auto appendCanonicalType = [&](const std::string &typeText) {
+    for (char ch : typeText) {
+      if (ch != ' ' && ch != '\t' && ch != '\n' && ch != '\r' && ch != '\f' && ch != '\v') {
+        canonicalArgs.push_back(ch);
+      }
+    }
+  };
+  appendCanonicalType(keyTypeText);
+  canonicalArgs.push_back(',');
+  appendCanonicalType(valueTypeText);
+
+  uint64_t hash = 1469598103934665603ULL;
+  for (unsigned char ch : canonicalArgs) {
+    hash ^= static_cast<uint64_t>(ch);
+    hash *= 1099511628211ULL;
+  }
+
+  std::string suffix;
+  do {
+    constexpr char HexDigits[] = "0123456789abcdef";
+    suffix.push_back(HexDigits[hash & 0xfu]);
+    hash >>= 4u;
+  } while (hash != 0);
+
+  std::string fullPath = "/std/collections/experimental_map/";
+  fullPath += helperStem;
+  fullPath += "__t";
+  for (auto it = suffix.rbegin(); it != suffix.rend(); ++it) {
+    fullPath.push_back(*it);
+  }
+  return fullPath;
+}
+
 static bool resolveStatementVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   if (expr.name.empty()) {
     return false;
@@ -281,23 +324,38 @@ static bool rewriteMapInsertHelperStatementToBuiltinPending(
     return false;
   }
   const auto targetInfo = resolveMapAccessTargetInfo(stmt.args[receiverIndex], localsIn);
-  if (!targetInfo.isMapTarget) {
+  if (!targetInfo.isMapTarget || !targetInfo.isWrappedMapTarget) {
     return false;
   }
 
   rewrittenStmt = stmt;
-  rewrittenStmt.name = "/std/collections/map/insert_builtin_pending";
+  const bool rewriteWrappedInsertToSpecializedExperimentalHelper =
+      targetInfo.mapKeyKind != LocalInfo::ValueKind::Unknown &&
+      targetInfo.mapValueKind != LocalInfo::ValueKind::Unknown;
+  rewrittenStmt.name = rewriteWrappedInsertToSpecializedExperimentalHelper
+                           ? makeSpecializedExperimentalMapHelperPath(
+                                 "mapInsert", targetInfo.mapKeyKind, targetInfo.mapValueKind)
+                           : "/std/collections/map/insert_builtin_pending";
   rewrittenStmt.namespacePrefix.clear();
   rewrittenStmt.isMethodCall = false;
   rewrittenStmt.isFieldAccess = false;
   rewrittenStmt.semanticNodeId = 0;
-  if (rewrittenStmt.templateArgs.empty() &&
+  if (!rewriteWrappedInsertToSpecializedExperimentalHelper &&
+      rewrittenStmt.templateArgs.empty() &&
       targetInfo.mapKeyKind != LocalInfo::ValueKind::Unknown &&
       targetInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
     rewrittenStmt.templateArgs = {
         typeNameForValueKind(targetInfo.mapKeyKind),
         typeNameForValueKind(targetInfo.mapValueKind),
     };
+  }
+  if (targetInfo.isWrappedMapTarget) {
+    Expr rewrittenReceiver;
+    rewrittenReceiver.kind = Expr::Kind::Call;
+    rewrittenReceiver.name = "dereference";
+    rewrittenReceiver.args.push_back(rewrittenStmt.args[receiverIndex]);
+    rewrittenReceiver.semanticNodeId = 0;
+    rewrittenStmt.args[receiverIndex] = std::move(rewrittenReceiver);
   }
   return true;
 }

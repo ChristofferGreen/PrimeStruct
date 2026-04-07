@@ -4,6 +4,7 @@
 #include "IrLowererLowerInferenceBaseKindHelpers.h"
 #include "IrLowererResultHelpers.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -58,26 +59,45 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
   const auto *semanticProductTargets = stateInOut.semanticProductTargets;
   stateInOut.inferExprKind = [defMap, resolveExprPath, inferenceError, semanticProductTargets, &stateInOut](
                                  const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
+    if (!expr.isMethodCall && expr.kind == Expr::Kind::Call && !expr.args.empty()) {
+      std::string canonicalMapHelperName;
+      if (resolveMapHelperAliasName(expr, canonicalMapHelperName) &&
+          (canonicalMapHelperName == "count" || canonicalMapHelperName == "contains" ||
+           canonicalMapHelperName == "tryAt" || canonicalMapHelperName == "at" ||
+           canonicalMapHelperName == "at_unsafe") &&
+          ((expr.name.find('/') != std::string::npos) || !expr.namespacePrefix.empty() ||
+           !expr.templateArgs.empty())) {
+        Expr rewrittenExpr = expr;
+        rewrittenExpr.name = canonicalMapHelperName;
+        rewrittenExpr.namespacePrefix.clear();
+        rewrittenExpr.semanticNodeId = 0;
+        rewrittenExpr.templateArgs.clear();
+        return stateInOut.inferExprKind(rewrittenExpr, localsIn);
+      }
+    }
     auto resolveTryValueKind = [&](const Expr &tryExpr, LocalInfo::ValueKind &kindOut) -> bool {
       kindOut = LocalInfo::ValueKind::Unknown;
+      std::string semanticTryFactError;
       if (semanticProductTargets != nullptr && semanticProductTargets->hasSemanticProduct &&
           tryExpr.semanticNodeId != 0) {
         const auto *tryFact = findSemanticProductTryFact(*semanticProductTargets, tryExpr);
-        if (tryFact == nullptr) {
-          *inferenceError = "missing semantic-product try fact: try";
-          return false;
+        if (tryFact != nullptr) {
+          kindOut = valueKindFromTypeName(tryFact->valueType);
+          if (kindOut == LocalInfo::ValueKind::Unknown && !tryFact->valueType.empty()) {
+            kindOut = LocalInfo::ValueKind::Int64;
+          }
+          if (kindOut != LocalInfo::ValueKind::Unknown) {
+            return true;
+          }
+          semanticTryFactError = "incomplete semantic-product try fact: try";
+        } else {
+          semanticTryFactError = "missing semantic-product try fact: try";
         }
-        kindOut = valueKindFromTypeName(tryFact->valueType);
-        if (kindOut == LocalInfo::ValueKind::Unknown && !tryFact->valueType.empty()) {
-          kindOut = LocalInfo::ValueKind::Int64;
-        }
-        if (kindOut == LocalInfo::ValueKind::Unknown) {
-          *inferenceError = "incomplete semantic-product try fact: try";
-          return false;
-        }
-        return true;
       }
       if (tryExpr.kind != Expr::Kind::Call || tryExpr.args.size() != 1) {
+        if (!semanticTryFactError.empty()) {
+          *inferenceError = semanticTryFactError;
+        }
         return false;
       }
       const Expr &resultExpr = tryExpr.args.front();
@@ -136,6 +156,9 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
         if (it != localsIn.end() && it->second.isResult) {
           kindOut = it->second.resultHasValue ? it->second.resultValueKind : LocalInfo::ValueKind::Int32;
           return true;
+        }
+        if (!semanticTryFactError.empty()) {
+          *inferenceError = semanticTryFactError;
         }
         return false;
       }
@@ -203,6 +226,9 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
         }
       }
       if (resultExpr.kind != Expr::Kind::Call) {
+        if (!semanticTryFactError.empty()) {
+          *inferenceError = semanticTryFactError;
+        }
         return false;
       }
       if (isMapContainsCallName(resultExpr) && !resultExpr.args.empty()) {
@@ -292,11 +318,17 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
         }
       }
       if (callee == nullptr) {
+        if (!semanticTryFactError.empty()) {
+          *inferenceError = semanticTryFactError;
+        }
         return false;
       }
 
       ReturnInfo returnInfo;
       if (!stateInOut.getReturnInfo(callee->fullPath, returnInfo) || !returnInfo.isResult) {
+        if (!semanticTryFactError.empty()) {
+          *inferenceError = semanticTryFactError;
+        }
         return false;
       }
       kindOut = returnInfo.resultHasValue ? returnInfo.resultValueKind : LocalInfo::ValueKind::Int32;

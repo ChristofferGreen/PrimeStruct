@@ -278,6 +278,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
                                                 const std::vector<ParameterInfo> &params,
                                                 const std::unordered_map<std::string, BindingInfo> &locals,
                                                 std::string &typeTextOut) {
+  error_.clear();
   auto resolveBindingTypeText = [&](const std::string &name, std::string &resolvedTypeTextOut) -> bool {
     resolvedTypeTextOut.clear();
     if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
@@ -357,6 +358,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
         return false;
       }
       currentTypeTextOut = bindingTypeText(fieldBinding);
+      error_.clear();
       return !currentTypeTextOut.empty();
     }
     if (isSimpleCallName(candidate, "move") && candidate.args.size() == 1) {

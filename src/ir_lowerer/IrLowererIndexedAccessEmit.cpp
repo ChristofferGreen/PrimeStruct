@@ -365,10 +365,16 @@ bool emitArrayVectorIndexedAccess(
       !arrayVectorTargetInfo.structTypeName.empty() &&
       arrayVectorTargetInfo.elemSlotCount > 0 &&
       !isWrappedStructArgsPackTarget;
+  const bool isInlineMapArgsPackTarget =
+      arrayVectorTargetInfo.isArgsPackTarget &&
+      arrayVectorTargetInfo.isMapTarget &&
+      !arrayVectorTargetInfo.isWrappedMapTarget &&
+      arrayVectorTargetInfo.elemSlotCount > 0;
   const bool targetUsesVectorStorageLayout =
       arrayVectorTargetInfo.isVectorTarget && !arrayVectorTargetInfo.isArgsPackTarget;
   const bool loadElementValue =
       !isInlineStructArgsPackTarget &&
+      !isInlineMapArgsPackTarget &&
       (arrayVectorTargetInfo.structTypeName.empty() ||
        arrayVectorTargetInfo.isMapTarget ||
        arrayVectorTargetInfo.isWrappedMapTarget ||

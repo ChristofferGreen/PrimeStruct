@@ -148,7 +148,7 @@ main() {
   return(count(values))
 }
 )",
-          false,
+          true,
       },
       {
           "direct_local_auto_vector_helper_call_success",
@@ -432,7 +432,7 @@ main() {
   return(count(values))
 }
 )",
-          false,
+          true,
       },
       {
           "ambiguous_omitted_field_envelope",
@@ -530,7 +530,7 @@ main() {
 }
 )",
           false,
-          "unknown call target: do",
+          "unknown method: /array/count",
       },
       {
           "query_map_receiver_type_text",

@@ -169,6 +169,22 @@
           }
           return true;
         }
+        if (!expr.isMethodCall && !expr.args.empty()) {
+          std::string canonicalMapHelperName;
+          if (resolveMapHelperAliasName(expr, canonicalMapHelperName) &&
+              (canonicalMapHelperName == "count" || canonicalMapHelperName == "contains" ||
+               canonicalMapHelperName == "tryAt" || canonicalMapHelperName == "at" ||
+               canonicalMapHelperName == "at_unsafe") &&
+              ((expr.name.find('/') != std::string::npos) || !expr.namespacePrefix.empty() ||
+               !expr.templateArgs.empty())) {
+            Expr rewrittenExpr = expr;
+            rewrittenExpr.name = canonicalMapHelperName;
+            rewrittenExpr.namespacePrefix.clear();
+            rewrittenExpr.semanticNodeId = 0;
+            rewrittenExpr.templateArgs.clear();
+            return emitExpr(rewrittenExpr, localsIn);
+          }
+        }
         #include "IrLowererLowerEmitExprStorageHelpers.h"
         #include "IrLowererLowerEmitExprTryHelpers.h"
         auto isFileHandleExpr = [&](const Expr &valueExpr, const LocalMap &valueLocals) {

@@ -19,10 +19,10 @@ bool isBridgeHelperName(std::string_view collectionFamily, std::string_view help
   }
   if (collectionFamily == "map") {
     return helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
-           helperName == "at" || helperName == "at_unsafe" || helperName == "insert" ||
+           helperName == "at" || helperName == "at_unsafe" ||
            helperName == "mapCountRef" || helperName == "mapContainsRef" ||
            helperName == "mapTryAtRef" || helperName == "mapAtRef" ||
-           helperName == "mapAtUnsafeRef" || helperName == "mapInsertRef";
+           helperName == "mapAtUnsafeRef";
   }
   if (collectionFamily == "soa_vector") {
     return helperName == "count" || helperName == "get" || helperName == "ref" ||
@@ -130,13 +130,6 @@ bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)
                matchesResolvedPath("/std/collections/mapAtUnsafe") ||
                matchesResolvedPath("/std/collections/experimental_map/mapAtUnsafe") ||
                matchesResolvedPath("/std/collections/experimental_map/mapAtUnsafeRef");
-      }
-      if (aliasName == "insert" && expr.args.size() == 3) {
-        return matchesResolvedPath("/std/collections/map/insert") ||
-               matchesResolvedPath("/std/collections/map/insert_ref") ||
-               matchesResolvedPath("/std/collections/mapInsert") ||
-               matchesResolvedPath("/std/collections/experimental_map/mapInsert") ||
-               matchesResolvedPath("/std/collections/experimental_map/mapInsertRef");
       }
     }
     std::string normalizedName = expr.name;

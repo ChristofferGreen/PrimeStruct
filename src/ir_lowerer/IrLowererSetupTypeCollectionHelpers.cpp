@@ -487,11 +487,6 @@ bool isExplicitMapContainsOrTryAtCompatibilityMethodAliasPath(const std::string 
     return resolveCollectionsMapWrapperAliasName(normalized.substr(mapPrefix.size()), helperName) &&
            (helperName == "contains" || helperName == "tryAt");
   }
-  if (normalized.rfind(stdMapPrefix, 0) == 0) {
-    std::string helperName;
-    return resolveCollectionsMapWrapperAliasName(normalized.substr(stdMapPrefix.size()), helperName) &&
-           (helperName == "contains" || helperName == "tryAt");
-  }
   return false;
 }
 
