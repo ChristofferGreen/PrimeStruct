@@ -156,7 +156,8 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       isStdNamespacedCanonicalMapAccessPath(resolveCalleePath(expr));
   setupOut.hasStdNamespacedMapAccessDefinition =
       setupOut.isStdNamespacedMapAccessSpelling &&
-      hasImportedDefinitionPath(resolveCalleePath(expr));
+      (hasImportedDefinitionPath(resolveCalleePath(expr)) ||
+       hasDeclaredDefinitionPath(resolveCalleePath(expr)));
   const bool isResolvedMapAccessCall =
       !expr.isMethodCall &&
       isMapAccessCompatibilityPath(resolved) &&

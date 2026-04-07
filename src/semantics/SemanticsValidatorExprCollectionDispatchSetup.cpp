@@ -157,7 +157,8 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       isStdNamespacedCanonicalMapAccessPath(resolveCalleePath(expr));
   setupOut.hasStdNamespacedMapAccessDefinition =
       setupOut.isStdNamespacedMapAccessCall &&
-      hasImportedDefinitionPath(resolveCalleePath(expr));
+      (hasImportedDefinitionPath(resolveCalleePath(expr)) ||
+       hasDeclaredDefinitionPath(resolveCalleePath(expr)));
   setupOut.shouldAllowStdAccessCompatibilityFallback = false;
   setupOut.isDirectStdNamespacedVectorCountWrapperMapTarget =
       !expr.isMethodCall && setupOut.isStdNamespacedVectorCountCall &&
