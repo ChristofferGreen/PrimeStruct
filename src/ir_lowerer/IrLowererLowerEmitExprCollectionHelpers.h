@@ -139,6 +139,8 @@
           }
           std::string helperName;
           const Expr *receiverExpr = nullptr;
+          bool materializedWrappedMapReceiver = false;
+          ir_lowerer::LocalInfo::Kind materializedMapReceiverKind = ir_lowerer::LocalInfo::Kind::Map;
           auto matchesDirectHelperName = [&](const Expr &candidate, std::string_view bareName) {
             auto matchesResolvedPath = [&](std::string_view basePath) {
               const std::string resolvedPath = resolveExprPath(candidate);
@@ -275,24 +277,9 @@
             const auto mapTargetInfo = ir_lowerer::resolveMapAccessTargetInfo(*receiverExpr, localsIn);
             const auto arrayVectorTargetInfo =
                 ir_lowerer::resolveArrayVectorAccessTargetInfo(*receiverExpr, localsIn);
-            const bool isWrappedMapReceiverExpr = [&]() {
-              if (arrayVectorTargetInfo.isWrappedMapTarget) {
-                return true;
-              }
-              if (receiverExpr->kind != Expr::Kind::Name) {
-                return false;
-              }
-              auto localIt = localsIn.find(receiverExpr->name);
-              if (localIt == localsIn.end()) {
-                return false;
-              }
-              return (localIt->second.kind == ir_lowerer::LocalInfo::Kind::Reference &&
-                      localIt->second.referenceToMap) ||
-                     (localIt->second.kind == ir_lowerer::LocalInfo::Kind::Pointer &&
-                      localIt->second.pointerToMap);
-            }();
-            if (mapTargetInfo.isMapTarget && isWrappedMapReceiverExpr) {
-              return std::nullopt;
+            if (mapTargetInfo.isMapTarget && arrayVectorTargetInfo.isWrappedMapTarget) {
+              materializedWrappedMapReceiver = true;
+              materializedMapReceiverKind = arrayVectorTargetInfo.argsPackElementKind;
             }
             if (mapTargetInfo.isMapTarget) {
               collectionName = "map";
@@ -414,10 +401,18 @@
 
           if (collectionName == "map") {
             if (collectionArgs.size() == 2) {
-              materializedInfo.kind = ir_lowerer::LocalInfo::Kind::Map;
+              materializedInfo.kind = materializedWrappedMapReceiver
+                                          ? materializedMapReceiverKind
+                                          : ir_lowerer::LocalInfo::Kind::Map;
               materializedInfo.mapKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
               materializedInfo.mapValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs.back());
               materializedInfo.valueKind = materializedInfo.mapValueKind;
+              materializedInfo.referenceToMap =
+                  materializedWrappedMapReceiver &&
+                  materializedMapReceiverKind == ir_lowerer::LocalInfo::Kind::Reference;
+              materializedInfo.pointerToMap =
+                  materializedWrappedMapReceiver &&
+                  materializedMapReceiverKind == ir_lowerer::LocalInfo::Kind::Pointer;
               if (collectionStructPath.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
                 materializedInfo.structTypeName = collectionStructPath;
                 if (materializedInfo.structSlotCount <= 0) {
@@ -456,29 +451,6 @@
           rewrittenReceiver.kind = Expr::Kind::Name;
           rewrittenReceiver.name = "__collection_receiver_" + std::to_string(materializedInfo.index);
           rewrittenExpr.args.front() = rewrittenReceiver;
-          if (collectionName == "map" &&
-              collectionStructPath.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
-            const size_t suffixStart = collectionStructPath.find("__");
-            std::string helperStem;
-            if (helperName == "count") {
-              helperStem = "mapCount";
-            } else if (helperName == "contains") {
-              helperStem = "mapContains";
-            } else if (helperName == "tryAt") {
-              helperStem = "mapTryAt";
-            } else if (helperName == "at") {
-              helperStem = "mapAt";
-            } else if (helperName == "at_unsafe") {
-              helperStem = "mapAtUnsafe";
-            }
-            if (!helperStem.empty() && suffixStart != std::string::npos) {
-              rewrittenExpr.name =
-                  "/std/collections/experimental_map/" + helperStem + collectionStructPath.substr(suffixStart);
-              rewrittenExpr.namespacePrefix.clear();
-              rewrittenExpr.isMethodCall = false;
-              rewrittenExpr.templateArgs.clear();
-            }
-          }
 
           ir_lowerer::LocalMap rewrittenLocals = localsIn;
           rewrittenLocals.emplace(rewrittenReceiver.name, materializedInfo);
