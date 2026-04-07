@@ -52,7 +52,8 @@ std::vector<std::string> SemanticsValidator::effectFreeMethodPathCandidatesForRe
     return {"/array/" + methodName, "/vector/" + methodName, "/std/collections/vector/" + methodName};
   }
   if (receiverPath == "/map") {
-    if (methodName == "count" || methodName == "at" || methodName == "at_unsafe") {
+    if (methodName == "count" || methodName == "contains" || methodName == "tryAt" ||
+        methodName == "at" || methodName == "at_unsafe" || methodName == "insert") {
       return {"/std/collections/map/" + methodName, "/map/" + methodName};
     }
     return {"/map/" + methodName, "/std/collections/map/" + methodName};

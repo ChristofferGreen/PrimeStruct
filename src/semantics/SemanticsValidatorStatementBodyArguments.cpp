@@ -15,7 +15,8 @@ bool isRemovedVectorCompatibilityHelper(std::string_view helperName) {
 }
 
 bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
-  return helperName == "count" || helperName == "at" || helperName == "at_unsafe";
+  return helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
+         helperName == "at" || helperName == "at_unsafe" || helperName == "insert";
 }
 
 void appendUniqueReceiverIndex(std::vector<size_t> &receiverIndices, size_t index, size_t limit) {
@@ -91,7 +92,9 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
   auto preferredMapBodyArgumentTarget = [&](const std::string &helperName) {
     const std::string canonical = "/std/collections/map/" + helperName;
     const std::string alias = "/map/" + helperName;
-    if (helperName == "at" || helperName == "at_unsafe") {
+    if (helperName == "contains" || helperName == "tryAt" ||
+        helperName == "at" || helperName == "at_unsafe" ||
+        helperName == "insert") {
       return canonical;
     }
     if (defMap_.count(canonical) > 0) {
@@ -242,7 +245,8 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
         return;
       }
       if (!isExplicitMethodPath &&
-          (methodName == "count" || methodName == "at" || methodName == "at_unsafe") &&
+          (methodName == "count" || methodName == "contains" || methodName == "tryAt" ||
+           methodName == "at" || methodName == "at_unsafe" || methodName == "insert") &&
           isMapReceiverExpr(receiver)) {
         resolvedOut = "/std/collections/map/" + methodName;
         return;
@@ -285,7 +289,8 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
       if (isExplicitMethodPath) {
         return false;
       }
-      if (methodName != "count" && methodName != "at" && methodName != "at_unsafe") {
+      if (methodName != "count" && methodName != "contains" && methodName != "tryAt" &&
+          methodName != "at" && methodName != "at_unsafe" && methodName != "insert") {
         return false;
       }
       std::string normalized = normalizeBindingTypeName(candidateType);
@@ -305,7 +310,8 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
 
     if (typeName == "Pointer" || typeName == "Reference") {
       if (!isExplicitMethodPath &&
-          (methodName == "count" || methodName == "at" || methodName == "at_unsafe") &&
+          (methodName == "count" || methodName == "contains" || methodName == "tryAt" ||
+           methodName == "at" || methodName == "at_unsafe" || methodName == "insert") &&
           isMapReceiverExpr(receiver)) {
         resolvedOut = preferredMapBodyArgumentTarget(methodName);
         return;

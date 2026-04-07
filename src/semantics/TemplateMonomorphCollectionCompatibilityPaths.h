@@ -7,7 +7,8 @@ bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
 }
 
 bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
-  return helperName == "count" || helperName == "at" || helperName == "at_unsafe";
+  return helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
+         helperName == "at" || helperName == "at_unsafe" || helperName == "insert";
 }
 
 bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverTypeName,

@@ -292,7 +292,8 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
              helperName == "remove_swap";
     };
     auto isRemovedMapCompatibilityHelper = [](std::string_view helperName) {
-      return helperName == "count" || helperName == "at" || helperName == "at_unsafe";
+      return helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
+             helperName == "at" || helperName == "at_unsafe" || helperName == "insert";
     };
     const size_t lastSlash = normalizedPrefix.find_last_of('/');
     const std::string_view suffix = lastSlash == std::string::npos

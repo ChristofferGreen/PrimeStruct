@@ -264,7 +264,8 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
         return true;
       }
       if (collectionTypePath == "/map" &&
-          (helperName == "count" || helperName == "at" || helperName == "at_unsafe" ||
+          (helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
+           helperName == "at" || helperName == "at_unsafe" ||
            helperName == "insert")) {
         resolvedOut = preferredBareMapHelperTarget(helperName);
         return true;
@@ -307,7 +308,8 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       return false;
     }
     if ((resolvedType == "/map" || isMapCollectionTypeName(normalizedTypeName)) &&
-        (helperName == "count" || helperName == "at" || helperName == "at_unsafe" ||
+        (helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
+         helperName == "at" || helperName == "at_unsafe" ||
          helperName == "insert")) {
       resolvedOut = preferredBareMapHelperTarget(helperName);
       return true;
