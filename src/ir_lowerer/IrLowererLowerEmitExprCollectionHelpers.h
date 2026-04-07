@@ -96,7 +96,7 @@
           if (!resolveMapHelperAliasName(callExpr, helperName) ||
               (helperName != "count" && helperName != "contains" &&
                helperName != "tryAt" && helperName != "at" &&
-               helperName != "at_unsafe")) {
+               helperName != "at_unsafe" && helperName != "insert")) {
             return false;
           }
           rewrittenExpr = callExpr;
@@ -226,6 +226,7 @@
                       matchesDirectHelperName(callExpr, "at_unsafe") ||
                       matchesDirectHelperName(callExpr, "contains") ||
                       matchesDirectHelperName(callExpr, "tryAt") ||
+                      matchesDirectHelperName(callExpr, "insert") ||
                       matchesDirectHelperName(callExpr, "capacity")) &&
                      !callExpr.args.empty()) {
             helperName = callExpr.name;
@@ -244,23 +245,37 @@
               helperName = "count";
             } else if (helperName == "mapCountRef") {
               helperName = "count";
+            } else if (helperName == "count_ref") {
+              helperName = "count";
             } else if (helperName == "mapContains") {
               helperName = "contains";
             } else if (helperName == "mapContainsRef") {
+              helperName = "contains";
+            } else if (helperName == "contains_ref") {
               helperName = "contains";
             } else if (helperName == "mapTryAt") {
               helperName = "tryAt";
             } else if (helperName == "mapTryAtRef") {
               helperName = "tryAt";
+            } else if (helperName == "tryAt_ref") {
+              helperName = "tryAt";
             } else if (helperName == "mapAt") {
               helperName = "at";
             } else if (helperName == "mapAtRef") {
+              helperName = "at";
+            } else if (helperName == "at_ref") {
               helperName = "at";
             } else if (helperName == "mapAtUnsafe") {
               helperName = "at_unsafe";
             } else if (helperName == "mapAtUnsafeRef") {
               helperName = "at_unsafe";
+            } else if (helperName == "at_unsafe_ref") {
+              helperName = "at_unsafe";
+            } else if (helperName == "mapInsert") {
+              helperName = "insert";
             } else if (helperName == "mapInsertRef") {
+              helperName = "insert";
+            } else if (helperName == "insert_ref") {
               helperName = "insert";
             }
             receiverExpr = &callExpr.args.front();
@@ -356,7 +371,7 @@
           auto supportsHelperForCollection = [&](const std::string &name) {
             if (collectionName == "map") {
               return name == "count" || name == "contains" || name == "tryAt" ||
-                     name == "at" || name == "at_unsafe";
+                     name == "at" || name == "at_unsafe" || name == "insert";
             }
             if (collectionName == "array") {
               return name == "count" || name == "capacity" ||
