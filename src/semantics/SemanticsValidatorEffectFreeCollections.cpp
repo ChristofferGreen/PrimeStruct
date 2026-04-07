@@ -4,6 +4,19 @@
 
 namespace primec::semantics {
 
+namespace {
+
+bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
+  return helperName == "count" || helperName == "count_ref" ||
+         helperName == "contains" || helperName == "contains_ref" ||
+         helperName == "tryAt" || helperName == "tryAt_ref" ||
+         helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
+         helperName == "insert" || helperName == "insert_ref";
+}
+
+} // namespace
+
 std::string SemanticsValidator::normalizeEffectFreeCollectionMethodName(const std::string &receiverPath,
                                                                         std::string methodName) const {
   if (!methodName.empty() && methodName.front() == '/') {
@@ -52,8 +65,7 @@ std::vector<std::string> SemanticsValidator::effectFreeMethodPathCandidatesForRe
     return {"/array/" + methodName, "/vector/" + methodName, "/std/collections/vector/" + methodName};
   }
   if (receiverPath == "/map") {
-    if (methodName == "count" || methodName == "contains" || methodName == "tryAt" ||
-        methodName == "at" || methodName == "at_unsafe" || methodName == "insert") {
+    if (isRemovedMapCompatibilityHelper(methodName)) {
       return {"/std/collections/map/" + methodName, "/map/" + methodName};
     }
     return {"/map/" + methodName, "/std/collections/map/" + methodName};
@@ -116,7 +128,7 @@ std::string SemanticsValidator::preferEffectFreeCollectionHelperPath(const std::
   }
   if (preferred.rfind("/map/", 0) == 0 && defMap_.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/map/").size());
-    if (suffix != "count" && suffix != "contains" && suffix != "tryAt") {
+    if (!isRemovedMapCompatibilityHelper(suffix)) {
       const std::string stdlibAlias = "/std/collections/map/" + suffix;
       if (defMap_.count(stdlibAlias) > 0) {
         preferred = stdlibAlias;
@@ -125,8 +137,7 @@ std::string SemanticsValidator::preferEffectFreeCollectionHelperPath(const std::
   }
   if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
-    if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-        suffix != "at" && suffix != "at_unsafe" && suffix != "insert") {
+    if (suffix != "map" && !isRemovedMapCompatibilityHelper(suffix)) {
       const std::string mapAlias = "/map/" + suffix;
       if (defMap_.count(mapAlias) > 0) {
         preferred = mapAlias;
@@ -195,13 +206,12 @@ std::vector<std::string> SemanticsValidator::effectFreeCollectionHelperPathCandi
     }
   } else if (normalizedPath.rfind("/map/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-    if (suffix != "count" && suffix != "contains" && suffix != "tryAt") {
+    if (!isRemovedMapCompatibilityHelper(suffix)) {
       appendUnique("/std/collections/map/" + suffix);
     }
   } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
-    if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-        suffix != "at" && suffix != "at_unsafe" && suffix != "insert") {
+    if (suffix != "map" && !isRemovedMapCompatibilityHelper(suffix)) {
       appendUnique("/map/" + suffix);
     }
   }

@@ -8,6 +8,15 @@ namespace primec::semantics {
 
 namespace {
 
+bool isRemovedMapCompatibilitySuffix(std::string_view suffix) {
+  return suffix == "count" || suffix == "count_ref" ||
+         suffix == "contains" || suffix == "contains_ref" ||
+         suffix == "tryAt" || suffix == "tryAt_ref" ||
+         suffix == "at" || suffix == "at_ref" ||
+         suffix == "at_unsafe" || suffix == "at_unsafe_ref" ||
+         suffix == "insert" || suffix == "insert_ref";
+}
+
 std::string bindingTypeText(const BindingInfo &binding) {
   if (binding.typeTemplateArg.empty()) {
     return binding.typeName;
@@ -250,12 +259,12 @@ std::vector<std::string> SemanticsValidator::inferStructReturnCollectionHelperPa
     }
   } else if (normalizedPath.rfind("/map/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-    if (suffix != "count" && suffix != "contains" && suffix != "tryAt") {
+    if (!isRemovedMapCompatibilitySuffix(suffix)) {
       appendUnique("/std/collections/map/" + suffix);
     }
   } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
-    if (suffix != "map" && suffix != "insert") {
+    if (suffix != "map" && !isRemovedMapCompatibilitySuffix(suffix)) {
       appendUnique("/map/" + suffix);
     }
   }
@@ -268,14 +277,16 @@ void SemanticsValidator::pruneInferStructReturnMapAccessCompatibilityCandidates(
   const std::string normalizedPath = normalizeStructReturnHelperPath(path);
   if (normalizedPath.rfind("/map/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-    if (suffix == "at" || suffix == "at_unsafe") {
+    if (suffix == "at" || suffix == "at_ref" ||
+        suffix == "at_unsafe" || suffix == "at_unsafe_ref") {
       eraseStructReturnCandidate(candidates, "/std/collections/map/" + suffix);
     }
     return;
   }
   if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
-    if (suffix == "at" || suffix == "at_unsafe") {
+    if (suffix == "at" || suffix == "at_ref" ||
+        suffix == "at_unsafe" || suffix == "at_unsafe_ref") {
       eraseStructReturnCandidate(candidates, "/map/" + suffix);
     }
   }

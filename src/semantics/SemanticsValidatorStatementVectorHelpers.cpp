@@ -26,6 +26,15 @@ bool allowsVectorStdlibCompatibilitySuffix(const std::string &suffix) {
          suffix != "remove_at" && suffix != "remove_swap";
 }
 
+bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
+  return helperName == "count" || helperName == "count_ref" ||
+         helperName == "contains" || helperName == "contains_ref" ||
+         helperName == "tryAt" || helperName == "tryAt_ref" ||
+         helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
+         helperName == "insert" || helperName == "insert_ref";
+}
+
 bool isSoaMutatorName(std::string_view helperName) {
   return helperName == "push" || helperName == "reserve";
 }
@@ -106,7 +115,7 @@ std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &
   }
   if (preferred.rfind("/map/", 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
     const std::string suffix = preferred.substr(std::string("/map/").size());
-    if (suffix != "count" && suffix != "contains" && suffix != "tryAt") {
+    if (!isRemovedMapCompatibilityHelper(suffix)) {
       const std::string stdlibAlias = "/std/collections/map/" + suffix;
       if (hasVisibleDefinitionPath(stdlibAlias)) {
         preferred = stdlibAlias;
@@ -115,8 +124,7 @@ std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &
   }
   if (preferred.rfind("/std/collections/map/", 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
     const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
-    if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-        suffix != "at" && suffix != "at_unsafe" && suffix != "insert") {
+    if (!isRemovedMapCompatibilityHelper(suffix)) {
       const std::string mapAlias = "/map/" + suffix;
       if (hasVisibleDefinitionPath(mapAlias)) {
         preferred = mapAlias;

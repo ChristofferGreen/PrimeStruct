@@ -18,6 +18,15 @@ bool allowsVectorStdlibCompatibilitySuffix(const std::string &suffix) {
          suffix != "remove_at" && suffix != "remove_swap";
 }
 
+bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
+  return helperName == "count" || helperName == "count_ref" ||
+         helperName == "contains" || helperName == "contains_ref" ||
+         helperName == "tryAt" || helperName == "tryAt_ref" ||
+         helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
+         helperName == "insert" || helperName == "insert_ref";
+}
+
 std::vector<std::string> pointerLikeCallPathCandidates(const std::string &path) {
   std::vector<std::string> candidates;
   auto appendUnique = [&](const std::string &candidate) {
@@ -66,13 +75,12 @@ std::vector<std::string> pointerLikeCallPathCandidates(const std::string &path) 
     }
   } else if (canonicalPath.rfind("/map/", 0) == 0) {
     const std::string suffix = canonicalPath.substr(std::string("/map/").size());
-    if (suffix != "count" && suffix != "contains" && suffix != "tryAt") {
+    if (!isRemovedMapCompatibilityHelper(suffix)) {
       appendUnique("/std/collections/map/" + suffix);
     }
   } else if (canonicalPath.rfind("/std/collections/map/", 0) == 0) {
     const std::string suffix = canonicalPath.substr(std::string("/std/collections/map/").size());
-    if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-        suffix != "at" && suffix != "at_unsafe" && suffix != "insert") {
+    if (!isRemovedMapCompatibilityHelper(suffix)) {
       appendUnique("/map/" + suffix);
     }
   }

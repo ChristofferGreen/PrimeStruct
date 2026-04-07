@@ -48,6 +48,14 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
     (void)failExprDiagnostic(expr, std::move(message));
     return finish(ReturnKind::Unknown);
   };
+  auto isRemovedMapCompatibilityHelper = [](std::string_view helperName) {
+    return helperName == "count" || helperName == "count_ref" ||
+           helperName == "contains" || helperName == "contains_ref" ||
+           helperName == "tryAt" || helperName == "tryAt_ref" ||
+           helperName == "at" || helperName == "at_ref" ||
+           helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
+           helperName == "insert" || helperName == "insert_ref";
+  };
 
   Expr rewrittenCanonicalExperimentalVectorHelperCall;
   if (tryRewriteCanonicalExperimentalVectorHelperCall(
@@ -233,15 +241,13 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
     } else if (normalizedPath.rfind("/map/", 0) == 0) {
       const std::string suffix =
           normalizedPath.substr(std::string("/map/").size());
-      if (suffix != "count" && suffix != "contains" && suffix != "tryAt") {
+      if (!isRemovedMapCompatibilityHelper(suffix)) {
         appendUnique("/std/collections/map/" + suffix);
       }
     } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(
           std::string("/std/collections/map/").size());
-      if (suffix != "map" && suffix != "count" && suffix != "contains" &&
-          suffix != "tryAt" && suffix != "at" && suffix != "at_unsafe" &&
-          suffix != "insert") {
+      if (suffix != "map" && !isRemovedMapCompatibilityHelper(suffix)) {
         appendUnique("/map/" + suffix);
       }
     }
