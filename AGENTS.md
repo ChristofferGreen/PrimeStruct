@@ -53,6 +53,8 @@ build and layout solidify.
 - **Optional Wasm runtime checks:** `./scripts/run_wasm_runtime_checks.sh` executes Wasm outputs with `wasmtime` when available and emits an explicit skip message otherwise.
 - **Coverage helper:** `./scripts/code_coverage.sh` runs a clean debug coverage build, prints total function/line coverage, and writes reports to `build-debug/coverage/coverage.txt` plus `build-debug/coverage/html/`.
 - **Lines-of-code helper:** `./scripts/lines_of_code.sh` reports line totals for `src/` and `include/`.
+- **Test-count helper:** `./scripts/test_count.sh` reports total defined `TEST_CASE` macros under `tests/` and, when test binaries exist, sums doctest `--count` output across `build-release/PrimeStruct_*_tests`.
+- **Top-lines helper:** `./scripts/top_lines_of_code.sh` reports the top files by line count across `src/`, `include/`, and `tests/` (default: top 10).
 - **CTest:** prefer running from `build-release/` via `ctest --output-on-failure`; use `build-debug/` when investigating failures in more detail.
 - **Direct test binary runs:** prefer executing `build-release/PrimeStruct_backend_tests` from `build-release/` so compile-run suites can resolve `./primec`; use the matching `PrimeStruct_misc_tests`, `PrimeStruct_semantics_tests`, `PrimeStruct_text_filter_tests`, or `PrimeStruct_parser_tests` binaries there for narrower doctest runs. Switch to the `build-debug/` binaries when deeper debugging is needed.
 - **Failure triage rule:** if the full release gate fails, diagnose with the smallest relevant release-mode rerun (single `ctest` case or one release test binary slice), fix the issue, then return to the full `./scripts/compile.sh --release --fast` gate instead of camping on long serial debug sweeps.
