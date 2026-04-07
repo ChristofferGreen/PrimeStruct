@@ -663,6 +663,53 @@ TEST_CASE("ir lowerer call helpers require semantic-product direct-call targets"
   CHECK(populatedResolveExprPath(callExpr) == "/callee");
 }
 
+TEST_CASE("ir lowerer call helpers keep semantic-product direct-call target when rooted call path differs") {
+  primec::Definition legacyRootedCall;
+  legacyRootedCall.fullPath = "/legacy";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/legacy", &legacyRootedCall},
+  };
+  const std::unordered_map<std::string, std::string> importAliases = {};
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "/legacy";
+  callExpr.semanticNodeId = 19;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      "/main",
+      "/legacy",
+      "/semantic/target",
+      0,
+      0,
+      19,
+  });
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto resolveExprPath =
+      primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, semanticTargets);
+
+  CHECK(resolveExprPath(callExpr) == "/semantic/target");
+}
+
+TEST_CASE("ir lowerer call helpers keep rewritten rooted direct-call paths without semantic targets") {
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {};
+  const std::unordered_map<std::string, std::string> importAliases = {};
+
+  primec::Expr rewrittenExpr;
+  rewrittenExpr.kind = primec::Expr::Kind::Call;
+  rewrittenExpr.name = "/operator/add";
+
+  primec::SemanticProgram semanticProgram;
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto resolveExprPath =
+      primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, semanticTargets);
+
+  CHECK(resolveExprPath(rewrittenExpr) == "/operator/add");
+}
+
 TEST_CASE("ir lowerer call helpers require semantic-product bridge-path choices") {
   const std::unordered_map<std::string, const primec::Definition *> defMap;
   const std::unordered_map<std::string, std::string> importAliases;

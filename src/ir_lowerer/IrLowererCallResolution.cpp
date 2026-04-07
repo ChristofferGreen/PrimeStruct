@@ -465,16 +465,12 @@ ResolveExprPathFn makeResolveCallPathFromScope(
         expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
       if (const std::string resolvedPath = findSemanticProductDirectCallTarget(semanticProductTargets, expr);
           !resolvedPath.empty() && !isResolvedBridgeHelperPath(resolvedPath)) {
-        if (resolveDefinitionByPath(defMap, resolvedPath) != nullptr ||
-            expr.name.empty() || expr.name.front() != '/') {
-          return resolvedPath;
-        }
-        return resolveCallPathFromScopeWithoutImportAliases(expr, defMap);
+        return resolvedPath;
       }
       // Lowering sometimes rewrites validated operators/helpers into rooted direct
       // calls that do not have their own semantic-product direct-call fact.
       if (!expr.name.empty() && expr.name.front() == '/') {
-        return resolveCallPathFromScopeWithoutImportAliases(expr, defMap);
+        return expr.name;
       }
       return std::string{};
     }
