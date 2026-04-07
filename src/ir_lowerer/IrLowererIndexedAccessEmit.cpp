@@ -490,22 +490,6 @@ bool emitBuiltinArrayAccess(
         error);
   }
 
-  if ((accessName == "at" || accessName == "at_unsafe") &&
-      mapTargetInfo.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
-    const size_t suffixStart = mapTargetInfo.structTypeName.find("__");
-    if (suffixStart == std::string::npos) {
-      error = "experimental map helper missing specialization suffix";
-      return false;
-    }
-    Expr helperExpr;
-    helperExpr.kind = Expr::Kind::Call;
-    helperExpr.name =
-        "/std/collections/experimental_map/" +
-        std::string(accessName == "at" ? "mapAt" : "mapAtUnsafe") +
-        mapTargetInfo.structTypeName.substr(suffixStart);
-    helperExpr.args = {targetExpr, indexExpr};
-    return emitExpr(helperExpr, localsIn);
-  }
   const auto mapLookupResult = tryEmitMapAccessLookup(
       accessName,
       targetExpr,
