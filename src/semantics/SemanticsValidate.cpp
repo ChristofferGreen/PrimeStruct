@@ -5014,6 +5014,33 @@ constexpr std::string_view kBuiltinCanonicalMapInsertPath = "/std/collections/ma
 constexpr std::string_view kBuiltinCanonicalMapInsertRefPath = "/std/collections/map/insert_ref";
 constexpr std::string_view kBuiltinCanonicalMapInsertBuiltinPath =
     "/std/collections/map/insert_builtin";
+constexpr std::string_view kBuiltinMapInsertAliasPath = "/map/insert";
+constexpr std::string_view kBuiltinMapInsertRefAliasPath = "/map/insert_ref";
+constexpr std::string_view kBuiltinMapInsertWrapperPath = "/std/collections/mapInsert";
+constexpr std::string_view kBuiltinMapInsertRefWrapperPath = "/std/collections/mapInsertRef";
+constexpr std::string_view kBuiltinExperimentalMapInsertPath =
+    "/std/collections/experimental_map/mapInsert";
+constexpr std::string_view kBuiltinExperimentalMapInsertRefPath =
+    "/std/collections/experimental_map/mapInsertRef";
+
+bool isBuiltinMapInsertValueHelperName(std::string_view name) {
+  return name == "insert" || name == kBuiltinCanonicalMapInsertPath ||
+         name == kBuiltinMapInsertAliasPath || name == "mapInsert" ||
+         name == kBuiltinMapInsertWrapperPath ||
+         name == kBuiltinExperimentalMapInsertPath;
+}
+
+bool isBuiltinMapInsertReferenceHelperName(std::string_view name) {
+  return name == "insert_ref" || name == kBuiltinCanonicalMapInsertRefPath ||
+         name == kBuiltinMapInsertRefAliasPath || name == "mapInsertRef" ||
+         name == kBuiltinMapInsertRefWrapperPath ||
+         name == kBuiltinExperimentalMapInsertRefPath;
+}
+
+bool isBuiltinMapInsertHelperName(std::string_view name) {
+  return isBuiltinMapInsertValueHelperName(name) ||
+         isBuiltinMapInsertReferenceHelperName(name);
+}
 
 std::optional<semantics::BindingInfo> resolveBuiltinMapInsertReceiverBinding(
     const Expr &expr,
@@ -5098,15 +5125,9 @@ void rewriteBuiltinMapInsertExpr(
   }
 
   const bool matchesBuiltinInsertMethod =
-      expr.isMethodCall &&
-      (expr.name == "insert" || expr.name == kBuiltinCanonicalMapInsertPath ||
-       expr.name == kBuiltinCanonicalMapInsertRefPath);
+      expr.isMethodCall && isBuiltinMapInsertHelperName(expr.name);
   const bool matchesBuiltinInsertCall =
-      !expr.isMethodCall &&
-      (semantics::isSimpleCallName(expr, "insert") ||
-       semantics::isSimpleCallName(expr, "insert_ref") ||
-       expr.name == kBuiltinCanonicalMapInsertPath ||
-       expr.name == kBuiltinCanonicalMapInsertRefPath);
+      !expr.isMethodCall && isBuiltinMapInsertHelperName(expr.name);
   if (!matchesBuiltinInsertMethod && !matchesBuiltinInsertCall) {
     return;
   }
@@ -5119,13 +5140,9 @@ void rewriteBuiltinMapInsertExpr(
   }
   const bool receiverIsReference = isBuiltinMapReferenceBinding(*receiverBinding);
   const bool expectsReferenceSurface =
-      !expr.isMethodCall &&
-      (semantics::isSimpleCallName(expr, "insert_ref") ||
-       expr.name == kBuiltinCanonicalMapInsertRefPath);
+      !expr.isMethodCall && isBuiltinMapInsertReferenceHelperName(expr.name);
   const bool expectsValueSurface =
-      !expr.isMethodCall &&
-      (semantics::isSimpleCallName(expr, "insert") ||
-       expr.name == kBuiltinCanonicalMapInsertPath);
+      !expr.isMethodCall && isBuiltinMapInsertValueHelperName(expr.name);
   if ((expectsReferenceSurface && !receiverIsReference) ||
       (expectsValueSurface && receiverIsReference)) {
     return;
