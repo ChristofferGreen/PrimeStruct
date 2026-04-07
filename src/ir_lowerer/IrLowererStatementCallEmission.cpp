@@ -4,6 +4,7 @@
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 
 #include <optional>
@@ -116,7 +117,7 @@ bool isFreeMemoryIntrinsicCall(const Expr &expr) {
   return expr.kind == Expr::Kind::Call && getBuiltinMemoryName(expr, builtinName) && builtinName == "free";
 }
 
-static bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
+static bool resolveStatementVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   if (expr.name.empty()) {
     return false;
   }
@@ -152,12 +153,12 @@ static bool isVectorBuiltinName(const Expr &expr, const char *name) {
     return true;
   }
   std::string aliasName;
-  return resolveVectorHelperAliasName(expr, aliasName) && aliasName == name;
+  return resolveStatementVectorHelperAliasName(expr, aliasName) && aliasName == name;
 }
 
 static bool isExplicitVectorMutatorHelperCall(const Expr &expr) {
   std::string aliasName;
-  if (!resolveVectorHelperAliasName(expr, aliasName)) {
+  if (!resolveStatementVectorHelperAliasName(expr, aliasName)) {
     return false;
   }
   const bool isExplicitHelperPath =
@@ -243,6 +244,64 @@ static std::optional<LocalInfo::ValueKind> resolveBufferTargetElementKind(
   return std::nullopt;
 }
 
+static bool rewriteMapInsertHelperStatementToBuiltinPending(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    Expr &rewrittenStmt) {
+  if (stmt.kind != Expr::Kind::Call || stmt.args.size() != 3) {
+    return false;
+  }
+
+  size_t receiverIndex = 0;
+  if (stmt.isMethodCall) {
+    std::string normalizedName = stmt.name;
+    if (!normalizedName.empty() && normalizedName.front() == '/') {
+      normalizedName.erase(normalizedName.begin());
+    }
+    if (normalizedName != "insert") {
+      return false;
+    }
+  } else {
+    std::string helperName;
+    if (!resolveMapHelperAliasName(stmt, helperName) || helperName != "insert") {
+      return false;
+    }
+    if (hasNamedArguments(stmt.argNames)) {
+      for (size_t i = 0; i < stmt.args.size(); ++i) {
+        if (i < stmt.argNames.size() && stmt.argNames[i].has_value() &&
+            *stmt.argNames[i] == "values") {
+          receiverIndex = i;
+          break;
+        }
+      }
+    }
+  }
+
+  if (receiverIndex >= stmt.args.size()) {
+    return false;
+  }
+  const auto targetInfo = resolveMapAccessTargetInfo(stmt.args[receiverIndex], localsIn);
+  if (!targetInfo.isMapTarget) {
+    return false;
+  }
+
+  rewrittenStmt = stmt;
+  rewrittenStmt.name = "/std/collections/map/insert_builtin_pending";
+  rewrittenStmt.namespacePrefix.clear();
+  rewrittenStmt.isMethodCall = false;
+  rewrittenStmt.isFieldAccess = false;
+  rewrittenStmt.semanticNodeId = 0;
+  if (rewrittenStmt.templateArgs.empty() &&
+      targetInfo.mapKeyKind != LocalInfo::ValueKind::Unknown &&
+      targetInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
+    rewrittenStmt.templateArgs = {
+        typeNameForValueKind(targetInfo.mapKeyKind),
+        typeNameForValueKind(targetInfo.mapValueKind),
+    };
+  }
+  return true;
+}
+
 static DirectCallStatementEmitResult tryEmitVectorHelperCallFormStatement(
     const Expr &stmt,
     const LocalMap &localsIn,
@@ -261,7 +320,7 @@ static DirectCallStatementEmitResult tryEmitVectorHelperCallFormStatement(
   }
   std::string explicitStdlibHelperName;
   const bool isExplicitStdlibVectorHelper =
-      resolveVectorHelperAliasName(stmt, explicitStdlibHelperName) &&
+      resolveStatementVectorHelperAliasName(stmt, explicitStdlibHelperName) &&
       stmt.name.rfind("/std/collections/vector/", 0) == 0;
 
   std::vector<size_t> receiverIndices;
@@ -311,7 +370,7 @@ static DirectCallStatementEmitResult tryEmitVectorHelperCallFormStatement(
     Expr methodStmt = stmt;
     methodStmt.isMethodCall = true;
     std::string normalizedHelperName;
-    if (resolveVectorHelperAliasName(methodStmt, normalizedHelperName)) {
+    if (resolveStatementVectorHelperAliasName(methodStmt, normalizedHelperName)) {
       methodStmt.name = normalizedHelperName;
     }
     if (receiverIndex != 0) {
@@ -629,6 +688,10 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     return true;
   };
   Expr directStmt = stmt;
+  Expr rewrittenMapInsertStmt;
+  if (rewriteMapInsertHelperStatementToBuiltinPending(stmt, localsIn, rewrittenMapInsertStmt)) {
+    directStmt = rewrittenMapInsertStmt;
+  }
   bool rewrittenExplicitVectorMutatorToBuiltinCall = false;
   Expr rewrittenBareVectorMethodStmt;
   if (!explicitVectorMutatorHelperCall &&
@@ -637,7 +700,7 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   }
   if (explicitVectorMutatorHelperCall && explicitVectorHelperUsesBuiltinVectorReceiver(directStmt)) {
     std::string helperName;
-    if (resolveVectorHelperAliasName(directStmt, helperName)) {
+    if (resolveStatementVectorHelperAliasName(directStmt, helperName)) {
       const size_t receiverIndex = explicitVectorHelperReceiverIndex(directStmt);
       directStmt.name = helperName;
       directStmt.namespacePrefix.clear();
