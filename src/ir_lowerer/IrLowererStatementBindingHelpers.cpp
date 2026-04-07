@@ -477,25 +477,6 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
                                                        const HasExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransform,
                                                        const BindingKindFn &bindingKind,
                                                        const BindingValueKindFn &bindingValueKind,
-                                                       const InferBindingExprKindFn &inferExprKind) {
-  const ResolveDefinitionCallForStatementFn noopResolveDefinitionCall =
-      [](const Expr &) -> const Definition * { return nullptr; };
-  return inferStatementBindingTypeInfo(stmt,
-                                       init,
-                                       localsIn,
-                                       hasExplicitBindingTypeTransform,
-                                       bindingKind,
-                                       bindingValueKind,
-                                       inferExprKind,
-                                       noopResolveDefinitionCall);
-}
-
-StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
-                                                       const Expr &init,
-                                                       const LocalMap &localsIn,
-                                                       const HasExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransform,
-                                                       const BindingKindFn &bindingKind,
-                                                       const BindingValueKindFn &bindingValueKind,
                                                        const InferBindingExprKindFn &inferExprKind,
                                                        const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
                                                        const SemanticProductTargetAdapter *semanticProductTargets) {

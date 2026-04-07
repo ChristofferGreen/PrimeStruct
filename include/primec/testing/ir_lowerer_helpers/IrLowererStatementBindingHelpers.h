@@ -77,15 +77,8 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
                                                        const HasExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransform,
                                                        const BindingKindFn &bindingKind,
                                                        const BindingValueKindFn &bindingValueKind,
-                                                       const InferBindingExprKindFn &inferExprKind);
-StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
-                                                       const Expr &init,
-                                                       const LocalMap &localsIn,
-                                                       const HasExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransform,
-                                                       const BindingKindFn &bindingKind,
-                                                       const BindingValueKindFn &bindingValueKind,
                                                        const InferBindingExprKindFn &inferExprKind,
-                                                       const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
+                                                       const ResolveDefinitionCallForStatementFn &resolveDefinitionCall = {},
                                                        const SemanticProductTargetAdapter *semanticProductTargets = nullptr);
 bool isPointerMemoryIntrinsicCall(const Expr &expr);
 bool inferPointerMemoryIntrinsicTargetsUninitializedStorage(const Expr &expr, const LocalMap &localsIn);

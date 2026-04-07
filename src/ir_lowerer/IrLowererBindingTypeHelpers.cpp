@@ -451,36 +451,6 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
   return adapters;
 }
 
-BindingKindFromTransformsFn makeBindingKindFromTransforms() {
-  return [](const Expr &expr) {
-    return bindingKindFromTransforms(expr);
-  };
-}
-
-IsBindingTypeFn makeIsStringBindingType() {
-  return [](const Expr &expr) {
-    return isStringBindingType(expr);
-  };
-}
-
-IsBindingTypeFn makeIsFileErrorBindingType() {
-  return [](const Expr &expr) {
-    return isFileErrorBindingType(expr);
-  };
-}
-
-BindingValueKindFromTransformsFn makeBindingValueKindFromTransforms() {
-  return [](const Expr &expr, LocalInfo::Kind kind) {
-    return bindingValueKindFromTransforms(expr, kind);
-  };
-}
-
-SetReferenceArrayInfoFn makeSetReferenceArrayInfoFromTransforms() {
-  return [](const Expr &expr, LocalInfo &info) {
-    setReferenceArrayInfoFromTransforms(expr, info);
-  };
-}
-
 LocalInfo::Kind bindingKindFromTransforms(const Expr &expr) {
   for (const auto &transform : expr.transforms) {
     const std::string normalizedName = normalizeCollectionBindingTypeName(transform.name);

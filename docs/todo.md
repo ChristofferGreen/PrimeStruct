@@ -117,21 +117,21 @@ Progress note: the first semantic-product publication, dump surface, and tempora
   - ○ Add a local/CTest graph-budget checker target that fails on threshold regressions.
   - ○ Wire the graph-budget checker target into CI so regressions fail by default.
   - ○ Document the workflow for intentionally revising graph budgets and metric baselines.
-- ◐ Retire AST-derived lowering fallbacks until the AST is provenance-only at the lowering boundary.
-  - ◐ Remove the remaining transform-based binding-kind and helper-alias fallback paths once semantic-product fact coverage is complete.
+- ✓ Retire AST-derived lowering fallbacks until the AST is provenance-only at the lowering boundary.
+  - ✓ Remove the remaining transform-based binding-kind and helper-alias fallback paths once semantic-product fact coverage is complete.
     - ✓ Normalize canonical map helper/access alias families onto stdlib builtin surfaces across validate/infer/lowerer.
     - ✓ Keep value + borrowed helper families aligned for method/direct/args-pack map receiver resolution.
     - ✓ Align bare `contains` / `tryAt` visibility checks across late validation, infer late-fallback inference, and `try(...)` validation.
     - ✓ Land the final runtime parity follow-up for experimental-map receiver metadata in runtime/native execution paths.
     - ✓ Normalize diagnostics for runtime-parity mismatch cases so failures are deterministic.
     - ✓ Add focused conformance coverage that locks runtime parity and rejects regressions back to AST/import fallback behavior.
-  - ◐ Remove the final AST-derived semantic fallback slices so the AST remains lowering-visible only for provenance/debug/source-map ownership.
-    - ◐ Inventory each remaining AST/import fallback site used after the lowering boundary.
+  - ✓ Remove the final AST-derived semantic fallback slices so the AST remains lowering-visible only for provenance/debug/source-map ownership.
+    - ✓ Inventory each remaining AST/import fallback site used after the lowering boundary.
       - ✓ `resolveMethodCallDefinitionFromExpr`: semantic-mode method-call target miss in `defMap` previously fell through to receiver-probing helper alias remaps.
-    - ◐ Replace fallback sites in validator-side binding-kind paths with semantic-product facts or explicit failures.
+    - ✓ Replace fallback sites in validator-side binding-kind paths with semantic-product facts or explicit failures.
       - ✓ Route lowerer explicit-binding detection for semantic-node bindings through semantic binding/local-`auto` facts instead of AST transform fallback.
       - ✓ Remove remaining transform-driven binding-kind/value fallback decisions from inference/control-flow helpers when semantic facts are present.
     - ✓ Replace fallback sites in call/helper alias paths with semantic-product facts or explicit failures.
       - ✓ Route semantic-mode method-call path resolution through semantic-product method-call targets (no AST/import alias fallback).
       - ✓ Remove the remaining semantic-mode helper alias remaps that still receiver-probe when semantic targets are absent from the lowered def map.
-    - ○ Delete obsolete fallback codepaths and transitional adapters after coverage lands.
+    - ✓ Delete obsolete fallback codepaths and transitional adapters after coverage lands.

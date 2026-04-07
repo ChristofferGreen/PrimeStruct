@@ -380,49 +380,6 @@ TEST_CASE("ir lowerer binding type helpers mark reference-to-array metadata") {
   CHECK(presetInfo.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 
-TEST_CASE("ir lowerer binding type helpers build setup adapter factories") {
-  auto bindingKind = primec::ir_lowerer::makeBindingKindFromTransforms();
-  auto isStringBinding = primec::ir_lowerer::makeIsStringBindingType();
-  auto isFileErrorBinding = primec::ir_lowerer::makeIsFileErrorBindingType();
-  auto bindingValueKind = primec::ir_lowerer::makeBindingValueKindFromTransforms();
-  auto setReferenceArrayInfo = primec::ir_lowerer::makeSetReferenceArrayInfoFromTransforms();
-
-  primec::Expr vectorExpr;
-  primec::Transform vectorTransform;
-  vectorTransform.name = "vector";
-  vectorTransform.templateArgs = {"i64"};
-  vectorExpr.transforms.push_back(vectorTransform);
-  CHECK(bindingKind(vectorExpr) == primec::ir_lowerer::LocalInfo::Kind::Vector);
-
-  primec::Expr stringExpr;
-  primec::Transform stringTransform;
-  stringTransform.name = "string";
-  stringExpr.transforms.push_back(stringTransform);
-  CHECK(isStringBinding(stringExpr));
-  CHECK_FALSE(isFileErrorBinding(stringExpr));
-
-  primec::Expr mapExpr;
-  primec::Transform mapTransform;
-  mapTransform.name = "map";
-  mapTransform.templateArgs = {"bool", "f64"};
-  mapExpr.transforms.push_back(mapTransform);
-  CHECK(bindingValueKind(mapExpr, primec::ir_lowerer::LocalInfo::Kind::Map) ==
-        primec::ir_lowerer::LocalInfo::ValueKind::Float64);
-
-  primec::Expr referenceArrayExpr;
-  primec::Transform referenceArrayTransform;
-  referenceArrayTransform.name = "Reference";
-  referenceArrayTransform.templateArgs = {"array<i64>"};
-  referenceArrayExpr.transforms.push_back(referenceArrayTransform);
-
-  primec::ir_lowerer::LocalInfo info;
-  info.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  info.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  setReferenceArrayInfo(referenceArrayExpr, info);
-  CHECK(info.referenceToArray);
-  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
-}
-
 TEST_CASE("ir lowerer binding type helpers build bundled setup adapters") {
   auto adapters = primec::ir_lowerer::makeBindingTypeAdapters();
 

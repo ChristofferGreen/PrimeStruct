@@ -24,11 +24,6 @@ bool validateSemanticProductLocalAutoCoverage(const Program &program,
                                               const SemanticProgram *semanticProgram,
                                               std::string &error);
 BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgram = nullptr);
-BindingKindFromTransformsFn makeBindingKindFromTransforms();
-IsBindingTypeFn makeIsStringBindingType();
-IsBindingTypeFn makeIsFileErrorBindingType();
-BindingValueKindFromTransformsFn makeBindingValueKindFromTransforms();
-SetReferenceArrayInfoFn makeSetReferenceArrayInfoFromTransforms();
 
 std::string normalizeCollectionBindingTypeName(const std::string &name);
 LocalInfo::Kind bindingKindFromTransforms(const Expr &expr);
