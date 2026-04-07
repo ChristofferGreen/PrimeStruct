@@ -252,9 +252,12 @@ bool SemanticsValidator::validateExprMethodCallTarget(
                                   isBuiltinMethod)) {
     auto resolveInferredMapMethodFallback = [&]() -> bool {
       const std::string helperName = expr.name;
-      if (!(helperName == "count" || helperName == "contains" ||
-            helperName == "tryAt" || helperName == "at" ||
-            helperName == "at_unsafe" || helperName == "insert") ||
+      if (!(helperName == "count" || helperName == "count_ref" ||
+            helperName == "contains" || helperName == "contains_ref" ||
+            helperName == "tryAt" || helperName == "tryAt_ref" ||
+            helperName == "at" || helperName == "at_ref" ||
+            helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
+            helperName == "insert" || helperName == "insert_ref") ||
           !resolveMapTarget(expr.args.front())) {
         return false;
       }

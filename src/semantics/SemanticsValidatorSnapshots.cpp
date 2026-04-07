@@ -17,9 +17,12 @@ bool isBridgeHelperName(std::string_view collectionFamily, std::string_view help
            helperName == "remove_swap";
   }
   if (collectionFamily == "map") {
-    return helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
-           helperName == "at" || helperName == "at_unsafe" || helperName == "insert" ||
-           helperName == "insert_ref" || helperName == "mapInsert" ||
+    return helperName == "count" || helperName == "count_ref" ||
+           helperName == "contains" || helperName == "contains_ref" ||
+           helperName == "tryAt" || helperName == "tryAt_ref" ||
+           helperName == "at" || helperName == "at_ref" ||
+           helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
+           helperName == "insert" || helperName == "insert_ref" || helperName == "mapInsert" ||
            helperName == "mapCountRef" || helperName == "mapContainsRef" ||
            helperName == "mapTryAtRef" || helperName == "mapAtRef" ||
            helperName == "mapAtUnsafeRef" || helperName == "mapInsertRef";

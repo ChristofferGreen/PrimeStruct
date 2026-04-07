@@ -476,17 +476,23 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
 
     auto explicitStdMapHelperName = [&]() -> std::string {
       if (normalizedPrefix == "std/collections/map" &&
-          (normalizedName == "count" || normalizedName == "contains" ||
-           normalizedName == "tryAt" || normalizedName == "at" ||
-           normalizedName == "at_unsafe" || normalizedName == "insert")) {
+          (normalizedName == "count" || normalizedName == "count_ref" ||
+           normalizedName == "contains" || normalizedName == "contains_ref" ||
+           normalizedName == "tryAt" || normalizedName == "tryAt_ref" ||
+           normalizedName == "at" || normalizedName == "at_ref" ||
+           normalizedName == "at_unsafe" || normalizedName == "at_unsafe_ref" ||
+           normalizedName == "insert" || normalizedName == "insert_ref")) {
         return normalizedName;
       }
       if (normalizedName.rfind("std/collections/map/", 0) == 0) {
         const std::string helperName =
             normalizedName.substr(std::string("std/collections/map/").size());
-        if (helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
-            helperName == "at" || helperName == "at_unsafe" ||
-            helperName == "insert") {
+        if (helperName == "count" || helperName == "count_ref" ||
+            helperName == "contains" || helperName == "contains_ref" ||
+            helperName == "tryAt" || helperName == "tryAt_ref" ||
+            helperName == "at" || helperName == "at_ref" ||
+            helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
+            helperName == "insert" || helperName == "insert_ref") {
           return helperName;
         }
       }

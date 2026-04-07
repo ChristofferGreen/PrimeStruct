@@ -264,9 +264,12 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
         return true;
       }
       if (collectionTypePath == "/map" &&
-          (helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
-           helperName == "at" || helperName == "at_unsafe" ||
-           helperName == "insert")) {
+          (helperName == "count" || helperName == "count_ref" ||
+           helperName == "contains" || helperName == "contains_ref" ||
+           helperName == "tryAt" || helperName == "tryAt_ref" ||
+           helperName == "at" || helperName == "at_ref" ||
+           helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
+           helperName == "insert" || helperName == "insert_ref")) {
         resolvedOut = preferredBareMapHelperTarget(helperName);
         return true;
       }
@@ -308,9 +311,12 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       return false;
     }
     if ((resolvedType == "/map" || isMapCollectionTypeName(normalizedTypeName)) &&
-        (helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
-         helperName == "at" || helperName == "at_unsafe" ||
-         helperName == "insert")) {
+        (helperName == "count" || helperName == "count_ref" ||
+         helperName == "contains" || helperName == "contains_ref" ||
+         helperName == "tryAt" || helperName == "tryAt_ref" ||
+         helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
+         helperName == "insert" || helperName == "insert_ref")) {
       resolvedOut = preferredBareMapHelperTarget(helperName);
       return true;
     }
