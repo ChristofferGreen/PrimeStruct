@@ -276,28 +276,23 @@ TEST_CASE("ir lowerer runtime error helpers build scoped emitters") {
 
   auto emitArrayIndexOutOfBounds = primec::ir_lowerer::makeEmitArrayIndexOutOfBounds(function, internString);
   auto emitMapKeyNotFound = primec::ir_lowerer::makeEmitMapKeyNotFound(function, internString);
-  auto emitBuiltinCanonicalMapInsertPending =
-      primec::ir_lowerer::makeEmitBuiltinCanonicalMapInsertPending(function, internString);
   auto emitFloatToIntNonFinite = primec::ir_lowerer::makeEmitFloatToIntNonFinite(function, internString);
 
   emitArrayIndexOutOfBounds();
   emitMapKeyNotFound();
-  emitBuiltinCanonicalMapInsertPending();
   emitFloatToIntNonFinite();
   emitArrayIndexOutOfBounds();
 
   const std::vector<std::string> expectedMessages = {
       "array index out of bounds",
       "map key not found",
-      "builtin canonical map insert pending",
       "float to int conversion requires finite value"};
   CHECK(stringTable == expectedMessages);
-  REQUIRE(function.instructions.size() == 15);
+  REQUIRE(function.instructions.size() == 12);
   CHECK(primec::decodePrintStringIndex(function.instructions[0].imm) == 0);
   CHECK(primec::decodePrintStringIndex(function.instructions[3].imm) == 1);
   CHECK(primec::decodePrintStringIndex(function.instructions[6].imm) == 2);
-  CHECK(primec::decodePrintStringIndex(function.instructions[9].imm) == 3);
-  CHECK(primec::decodePrintStringIndex(function.instructions[12].imm) == 0);
+  CHECK(primec::decodePrintStringIndex(function.instructions[9].imm) == 0);
 }
 
 TEST_CASE("ir lowerer runtime error helpers build bundled emitters") {
@@ -317,23 +312,20 @@ TEST_CASE("ir lowerer runtime error helpers build bundled emitters") {
   emitters.emitStringIndexOutOfBounds();
   emitters.emitPointerIndexOutOfBounds();
   emitters.emitVectorPopOnEmpty();
-  emitters.emitBuiltinCanonicalMapInsertPending();
   emitters.emitLoopCountNegative();
   emitters.emitStringIndexOutOfBounds();
 
   const std::vector<std::string> expectedMessages = {"string index out of bounds",
                                                      "pointer index out of bounds",
                                                      "container empty",
-                                                     "builtin canonical map insert pending",
                                                      "loop count must be non-negative"};
   CHECK(stringTable == expectedMessages);
-  REQUIRE(function.instructions.size() == 18);
+  REQUIRE(function.instructions.size() == 15);
   CHECK(primec::decodePrintStringIndex(function.instructions[0].imm) == 0);
   CHECK(primec::decodePrintStringIndex(function.instructions[3].imm) == 1);
   CHECK(primec::decodePrintStringIndex(function.instructions[6].imm) == 2);
   CHECK(primec::decodePrintStringIndex(function.instructions[9].imm) == 3);
-  CHECK(primec::decodePrintStringIndex(function.instructions[12].imm) == 4);
-  CHECK(primec::decodePrintStringIndex(function.instructions[15].imm) == 0);
+  CHECK(primec::decodePrintStringIndex(function.instructions[12].imm) == 0);
 }
 
 TEST_CASE("ir lowerer runtime error helpers build bundled string-literal and emitters setup") {

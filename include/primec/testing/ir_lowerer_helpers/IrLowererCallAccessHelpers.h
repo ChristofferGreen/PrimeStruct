@@ -270,7 +270,6 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
     int32_t valueLocal,
     LocalInfo::ValueKind mapKeyKind,
     const std::function<int32_t()> &allocTempLocal,
-    const std::function<void()> &emitPending,
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm);

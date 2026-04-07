@@ -252,7 +252,6 @@ TEST_CASE("ir lowerer result helpers emit resolved Result.why calls") {
 TEST_CASE("ir lowerer map insert helper writes grown pointers back through wrapper locals") {
   std::vector<primec::IrInstruction> instructions;
   int32_t nextLocal = 30;
-  bool pendingCalled = false;
 
   CHECK(primec::ir_lowerer::emitBuiltinCanonicalMapInsertOverwriteOrPending(
       -1,
@@ -262,12 +261,9 @@ TEST_CASE("ir lowerer map insert helper writes grown pointers back through wrapp
       5,
       primec::ir_lowerer::LocalInfo::ValueKind::Int32,
       [&]() { return nextLocal++; },
-      [&]() { pendingCalled = true; },
       [&]() { return instructions.size(); },
       [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
       [&](size_t indexToPatch, uint64_t target) { instructions[indexToPatch].imm = target; }));
-
-  CHECK(pendingCalled);
 
   bool sawWrapperWriteBack = false;
   for (size_t i = 0; i + 3 < instructions.size(); ++i) {

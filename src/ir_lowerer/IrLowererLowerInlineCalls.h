@@ -233,7 +233,6 @@
               valueIt->second.index,
               valuesIt->second.mapKeyKind,
               [&]() { return allocTempLocal(); },
-              [&]() { emitBuiltinCanonicalMapInsertPending(); },
               [&]() { return function.instructions.size(); },
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
               [&](size_t indexToPatch, uint64_t target) { function.instructions[indexToPatch].imm = target; })) {
