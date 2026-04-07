@@ -281,10 +281,11 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     const bool isBuiltinCapacityName = isSimpleCallName(expr, "capacity") && expr.args.size() == 1;
     const bool isBuiltinMapContainsName = isMapContainsHelperName(expr) && expr.args.size() == 2;
     const bool isBuiltinMapTryAtName = isMapTryAtHelperName(expr) && expr.args.size() == 2;
+    const bool isBuiltinMapInsertName = isSimpleCallName(expr, "insert") && expr.args.size() == 3;
     const bool isBuiltinCountLikeMethod =
         isBuiltinCountName || isBuiltinCapacityName || isArrayCountCall(expr) || isStringCountCall(expr) ||
         isVectorCapacityCall(expr) || isBuiltinAccessMethod || isBuiltinMapContainsName ||
-        isBuiltinMapTryAtName;
+        isBuiltinMapTryAtName || isBuiltinMapInsertName;
     const Definition *callee = resolveMethodCallDefinition(expr);
     if (callee != nullptr) {
       if (isCollectionAccessReceiverExpr && !expr.args.empty() &&
