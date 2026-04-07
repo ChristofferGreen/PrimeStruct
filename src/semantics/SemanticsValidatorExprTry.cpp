@@ -57,15 +57,25 @@ bool SemanticsValidator::validateExprTryBuiltin(
         shouldBuiltinValidateCurrentMapWrapperHelper("tryAt") ||
         shouldBuiltinValidateCurrentMapWrapperHelper("at") ||
         shouldBuiltinValidateCurrentMapWrapperHelper("at_unsafe");
-    if ((tryTargetPath == "/std/collections/map/tryAt" || isBareMapTryAtFallback) &&
+    if ((tryTargetPath == "/std/collections/map/tryAt" ||
+         tryTargetPath == "/std/collections/map/tryAt_ref" ||
+         isBareMapTryAtFallback) &&
         !allowCurrentMapWrapperTryAt &&
-        !hasImportedDefinitionPath("/std/collections/map/tryAt") &&
-        !hasDeclaredDefinitionPath("/std/collections/map/tryAt") &&
+        !hasImportedDefinitionPath(tryTargetPath == "/std/collections/map/tryAt_ref"
+                                       ? "/std/collections/map/tryAt_ref"
+                                       : "/std/collections/map/tryAt") &&
+        !hasDeclaredDefinitionPath(tryTargetPath == "/std/collections/map/tryAt_ref"
+                                       ? "/std/collections/map/tryAt_ref"
+                                       : "/std/collections/map/tryAt") &&
         !hasDeclaredDefinitionPath("/tryAt") &&
         !(context.isIndexedArgsPackMapReceiverTarget != nullptr &&
           !tryTargetExpr.args.empty() &&
           context.isIndexedArgsPackMapReceiverTarget(tryTargetExpr.args.front()))) {
-      return failTryDiagnostic("unknown call target: /std/collections/map/tryAt");
+      return failTryDiagnostic(
+          "unknown call target: " +
+          std::string(tryTargetPath == "/std/collections/map/tryAt_ref"
+                          ? "/std/collections/map/tryAt_ref"
+                          : "/std/collections/map/tryAt"));
     }
   }
 

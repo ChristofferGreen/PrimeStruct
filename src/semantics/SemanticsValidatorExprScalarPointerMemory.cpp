@@ -235,6 +235,8 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
     }
     const std::string resolved = resolveCalleePath(candidate);
     return resolved == "/map/at" || resolved == "/map/at_unsafe" ||
+           resolved == "/std/collections/map/at_ref" ||
+           resolved == "/std/collections/map/at_unsafe_ref" ||
            resolved == "/std/collections/map/at" ||
            resolved == "/std/collections/map/at_unsafe";
   };

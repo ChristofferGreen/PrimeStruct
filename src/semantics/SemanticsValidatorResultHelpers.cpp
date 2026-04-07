@@ -845,7 +845,11 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     if (it != defMap_.end() && it->second != nullptr) {
       return resolveDefinitionResultType(*it->second, out);
     }
-    if ((resolved == "/std/collections/map/tryAt" || resolved == "/map/tryAt" || isSimpleCallName(expr, "tryAt")) &&
+    if ((resolved == "/std/collections/map/tryAt" ||
+         resolved == "/std/collections/map/tryAt_ref" ||
+         resolved == "/map/tryAt" ||
+         isSimpleCallName(expr, "tryAt") ||
+         isSimpleCallName(expr, "tryAt_ref")) &&
         !expr.args.empty()) {
       const Expr *receiverExpr = &expr.args.front();
       if (hasNamedArguments(expr.argNames)) {
