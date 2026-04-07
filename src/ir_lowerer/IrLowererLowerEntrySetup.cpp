@@ -4,7 +4,9 @@
 
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
+#include "IrLowererCountAccessHelpers.h"
 #include "IrLowererLowerEffects.h"
+#include "IrLowererOnErrorHelpers.h"
 #include "IrLowererResultHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -13,6 +15,7 @@ namespace {
 
 struct SemanticProductCompletenessContext {
   const Program &program;
+  const Definition *entryDef = nullptr;
   const SemanticProgram *semanticProgram = nullptr;
 };
 
@@ -54,16 +57,46 @@ bool validateResultMetadataFactFamily(const SemanticProductCompletenessContext &
   return validateSemanticProductResultMetadataCompleteness(context.semanticProgram, error);
 }
 
-const std::array<SemanticProductCompletenessCheck, 6> kSemanticProductCompletenessMatrix = {{
+bool validateEntryParameterFactFamily(const SemanticProductCompletenessContext &context,
+                                      std::string &error) {
+  if (context.semanticProgram == nullptr || context.entryDef == nullptr) {
+    return true;
+  }
+  bool hasEntryArgs = false;
+  std::string entryArgsName;
+  return resolveEntryArgsParameter(
+      *context.entryDef, context.semanticProgram, hasEntryArgs, entryArgsName, error);
+}
+
+bool validateOnErrorFactFamily(const SemanticProductCompletenessContext &context,
+                               std::string &error) {
+  if (context.semanticProgram == nullptr) {
+    return true;
+  }
+  const ResolveExprPathFn unusedResolveExprPath;
+  const DefinitionExistsFn unusedDefinitionExists;
+  OnErrorByDefinition ignoredOnErrorByDefinition;
+  return buildOnErrorByDefinition(context.program,
+                                  context.semanticProgram,
+                                  unusedResolveExprPath,
+                                  unusedDefinitionExists,
+                                  ignoredOnErrorByDefinition,
+                                  error);
+}
+
+const std::array<SemanticProductCompletenessCheck, 8> kSemanticProductCompletenessMatrix = {{
     {"routing.direct-call", validateDirectCallFactFamily},
     {"routing.bridge-path", validateBridgePathFactFamily},
     {"routing.method-call", validateMethodCallFactFamily},
     {"type-shape.binding", validateBindingFactFamily},
     {"type-shape.local-auto", validateLocalAutoFactFamily},
+    {"result-control.entry-args", validateEntryParameterFactFamily},
+    {"result-control.on-error", validateOnErrorFactFamily},
     {"result-control.metadata", validateResultMetadataFactFamily},
 }};
 
 bool validateSemanticProductCompletenessMatrix(const Program &program,
+                                               const Definition &entryDef,
                                                const SemanticProgram *semanticProgram,
                                                std::string &error) {
   if (semanticProgram == nullptr) {
@@ -72,6 +105,7 @@ bool validateSemanticProductCompletenessMatrix(const Program &program,
 
   const SemanticProductCompletenessContext context{
       .program = program,
+      .entryDef = &entryDef,
       .semanticProgram = semanticProgram,
   };
   for (const auto &check : kSemanticProductCompletenessMatrix) {
@@ -116,7 +150,7 @@ bool runLowerEntrySetup(const Program &program,
   if (!validateNoRuntimeReflectionQueries(program, error)) {
     return false;
   }
-  if (!validateSemanticProductCompletenessMatrix(program, semanticProgram, error)) {
+  if (!validateSemanticProductCompletenessMatrix(program, *entryDefOut, semanticProgram, error)) {
     return false;
   }
   if (!validateProgramEffects(program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error)) {

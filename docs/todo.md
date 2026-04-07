@@ -96,9 +96,10 @@ Progress note: the first semantic-product publication, dump surface, and tempora
       - ✓ Keep rewritten rooted direct-call paths explicit instead of routing through scope-probing fallback helpers.
       - ✓ Keep semantic-product generic path canonical without scope/root fallback probes.
     - ✓ Delete the fallback probe helpers once all callers are migrated.
-- ◐ Make graph-backed local-`auto`, query, `try(...)`, and `on_error` facts required lowering inputs.
+- ✓ Make graph-backed local-`auto`, query, `try(...)`, and `on_error` facts required lowering inputs.
   - ✓ Make graph-backed local-`auto` facts required for lowerer local type setup.
   - ✓ Make graph-backed query and `try(...)` facts required for lowerer call/result setup.
+  - ✓ Make graph-backed `on_error` and entry-parameter facts required during lower entry setup.
 - ◐ Reshape `SemanticProgram` into module-scoped resolved artifacts instead of one flat whole-program fact bag.
   - ○ Define the module-scoped semantic-product container shape and deterministic module ordering contract.
     - ○ Define the module identity key and sort order contract.
