@@ -17,6 +17,7 @@ using SetReferenceArrayInfoFn = std::function<void(const Expr &, LocalInfo &)>;
 
 struct BindingTypeAdapters {
   BindingKindFromTransformsFn bindingKind{};
+  IsBindingTypeFn hasExplicitBindingTypeTransform{};
   IsBindingTypeFn isStringBinding{};
   IsBindingTypeFn isFileErrorBinding{};
   BindingValueKindFromTransformsFn bindingValueKind{};

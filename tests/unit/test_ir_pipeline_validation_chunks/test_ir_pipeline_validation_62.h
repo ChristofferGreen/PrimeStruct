@@ -437,6 +437,7 @@ TEST_CASE("ir lowerer binding type helpers build bundled setup adapters") {
   primec::Transform stringTransform;
   stringTransform.name = "string";
   stringExpr.transforms.push_back(stringTransform);
+  CHECK(adapters.hasExplicitBindingTypeTransform(stringExpr));
   CHECK(adapters.isStringBinding(stringExpr));
   CHECK_FALSE(adapters.isFileErrorBinding(stringExpr));
 
@@ -500,6 +501,7 @@ TEST_CASE("ir lowerer binding type helpers prefer semantic product temporary fac
   tempVectorCall.semanticNodeId = 17;
   tempVectorCall.sourceLine = 12;
   tempVectorCall.sourceColumn = 7;
+  CHECK(adapters.hasExplicitBindingTypeTransform(tempVectorCall));
   CHECK(adapters.bindingKind(tempVectorCall) == primec::ir_lowerer::LocalInfo::Kind::Vector);
   CHECK(adapters.bindingValueKind(tempVectorCall, primec::ir_lowerer::LocalInfo::Kind::Vector) ==
         primec::ir_lowerer::LocalInfo::ValueKind::Int64);
@@ -531,6 +533,7 @@ TEST_CASE("ir lowerer binding type helpers stop using transform fallback for sem
   vectorTransform.name = "vector";
   vectorTransform.templateArgs = {"i64"};
   tempVectorCall.transforms.push_back(vectorTransform);
+  CHECK_FALSE(adapters.hasExplicitBindingTypeTransform(tempVectorCall));
   CHECK(adapters.bindingKind(tempVectorCall) == primec::ir_lowerer::LocalInfo::Kind::Value);
   CHECK(adapters.bindingValueKind(tempVectorCall, primec::ir_lowerer::LocalInfo::Kind::Value) ==
         primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
@@ -547,8 +550,64 @@ TEST_CASE("ir lowerer binding type helpers stop using transform fallback for sem
   info.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
   info.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   adapters.setReferenceArrayInfo(tempRefCall, info);
+  CHECK_FALSE(adapters.hasExplicitBindingTypeTransform(tempRefCall));
   CHECK_FALSE(info.referenceToArray);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
+TEST_CASE("ir lowerer binding type helpers treat semantic local-auto facts as non-explicit bindings") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      "/main",
+      "local",
+      "selected",
+      "/id",
+      "i32",
+      false,
+      false,
+      false,
+      "",
+      11,
+      5,
+      114,
+  });
+  semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
+      "/main",
+      "selected",
+      "i32",
+      "/id",
+      "i32",
+      "",
+      "i32",
+      false,
+      "",
+      "",
+      false,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "return",
+      "",
+      "",
+      0,
+      11,
+      5,
+      114,
+  });
+  auto adapters = primec::ir_lowerer::makeBindingTypeAdapters(&semanticProgram);
+
+  primec::Expr localAutoBinding;
+  localAutoBinding.kind = primec::Expr::Kind::Call;
+  localAutoBinding.name = "selected";
+  localAutoBinding.isBinding = true;
+  localAutoBinding.semanticNodeId = 114;
+  primec::Transform explicitTransform;
+  explicitTransform.name = "i32";
+  localAutoBinding.transforms.push_back(explicitTransform);
+  CHECK_FALSE(adapters.hasExplicitBindingTypeTransform(localAutoBinding));
 }
 
 TEST_CASE("ir lowerer count access helpers classify entry args and count calls") {

@@ -219,6 +219,8 @@ TEST_CASE("public lowerer testing headers stay in sync with semantic-product hel
   CHECK(lowerInference.find("const SemanticProductTargetAdapter *semanticProductTargets = nullptr;") !=
         std::string::npos);
   CHECK(lowerLocals.find("const SemanticProgram *semanticProgram,") != std::string::npos);
+  CHECK(lowerLocals.find("auto hasExplicitBindingTypeTransform = bindingTypeAdapters.hasExplicitBindingTypeTransform;") !=
+        std::string::npos);
   CHECK(resultHelpers.find("using InferExprKindWithLocalsFn") != std::string::npos);
   CHECK(resultHelpers.find("struct PackedResultStructPayloadInfo") != std::string::npos);
   CHECK(resultHelpers.find("const SemanticProductTargetAdapter *semanticProductTargets = nullptr") !=
@@ -846,6 +848,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(bindingTypeHelpersHeader.find("BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgram = nullptr);") !=
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find("findSemanticProductBindingFact(semanticProductTargets, expr)") !=
+        std::string::npos);
+  CHECK(bindingTypeHelpersSource.find("findSemanticProductLocalAutoFact(semanticProductTargets, expr)") !=
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find("requiresSemanticBindingFact(semanticProductTargets, expr)") !=
         std::string::npos);

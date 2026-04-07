@@ -387,6 +387,22 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
     }
     return bindingKindFromTransforms(expr);
   };
+  adapters.hasExplicitBindingTypeTransform = [semanticProductTargets](const Expr &expr) {
+    if (const SemanticProgramLocalAutoFact *localAutoFact =
+            findSemanticProductLocalAutoFact(semanticProductTargets, expr);
+        localAutoFact != nullptr) {
+      return false;
+    }
+    if (const SemanticProgramBindingFact *bindingFact =
+            findSemanticProductBindingFact(semanticProductTargets, expr);
+        bindingFact != nullptr && !bindingFact->bindingTypeText.empty()) {
+      return true;
+    }
+    if (requiresSemanticBindingFact(semanticProductTargets, expr)) {
+      return false;
+    }
+    return primec::ir_lowerer::hasExplicitBindingTypeTransform(expr);
+  };
   adapters.isStringBinding = [semanticProductTargets](const Expr &expr) {
     if (const SemanticProgramBindingFact *bindingFact =
             findSemanticProductBindingFact(semanticProductTargets, expr);

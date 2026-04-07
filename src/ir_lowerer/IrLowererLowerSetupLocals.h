@@ -102,6 +102,12 @@
   const auto &bindingTypeAdapters = setupLocalsOrchestration.bindingTypeAdapters;
   auto setReferenceArrayInfo = bindingTypeAdapters.setReferenceArrayInfo;
   auto bindingKind = bindingTypeAdapters.bindingKind;
+  auto hasExplicitBindingTypeTransform = bindingTypeAdapters.hasExplicitBindingTypeTransform;
+  if (!hasExplicitBindingTypeTransform) {
+    hasExplicitBindingTypeTransform = [](const Expr &expr) {
+      return ir_lowerer::hasExplicitBindingTypeTransform(expr);
+    };
+  }
   auto isStringBinding = bindingTypeAdapters.isStringBinding;
   auto isFileErrorBinding = bindingTypeAdapters.isFileErrorBinding;
   auto bindingValueKind = bindingTypeAdapters.bindingValueKind;
