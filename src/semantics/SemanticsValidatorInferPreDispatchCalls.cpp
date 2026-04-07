@@ -517,7 +517,9 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
            (logicalMethodResolved == "/std/collections/map/at" &&
             !hasImportedDefinitionPath("/std/collections/map/at")) ||
            (logicalMethodResolved == "/std/collections/map/at_unsafe" &&
-            !hasImportedDefinitionPath("/std/collections/map/at_unsafe"))) &&
+            !hasImportedDefinitionPath("/std/collections/map/at_unsafe")) ||
+           (logicalMethodResolved == "/std/collections/map/insert" &&
+            !hasImportedDefinitionPath("/std/collections/map/insert"))) &&
           !hasDeclaredDefinitionPath(logicalMethodResolved) &&
           !hasDefinitionPath(logicalMethodResolved) &&
           !resolveMapTarget(expr.args.front(), builtinMapKeyType, builtinMapValueType)) {

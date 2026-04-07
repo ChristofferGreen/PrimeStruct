@@ -339,7 +339,9 @@ bool SemanticsValidator::validateExprMethodCallTarget(
        (resolved == "/std/collections/map/at" &&
         !hasImportedDefinitionPath("/std/collections/map/at")) ||
        (resolved == "/std/collections/map/at_unsafe" &&
-        !hasImportedDefinitionPath("/std/collections/map/at_unsafe"))) &&
+        !hasImportedDefinitionPath("/std/collections/map/at_unsafe")) ||
+       (resolved == "/std/collections/map/insert" &&
+        !hasImportedDefinitionPath("/std/collections/map/insert"))) &&
       !hasDeclaredDefinitionPath(resolved) &&
       !keepBuiltinIndexedArgsPackMapMethod) {
     isBuiltinMethod = false;

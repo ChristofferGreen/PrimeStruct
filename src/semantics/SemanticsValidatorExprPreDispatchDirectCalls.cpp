@@ -138,7 +138,8 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
        resolvedOut == "/std/collections/map/contains" ||
        resolvedOut == "/std/collections/map/tryAt" ||
        resolvedOut == "/std/collections/map/at" ||
-       resolvedOut == "/std/collections/map/at_unsafe") &&
+       resolvedOut == "/std/collections/map/at_unsafe" ||
+       resolvedOut == "/std/collections/map/insert") &&
       !hasImportedDefinitionPath(resolvedOut) &&
       !hasDeclaredDefinitionPath(resolvedOut)) {
     const size_t receiverIndex =
