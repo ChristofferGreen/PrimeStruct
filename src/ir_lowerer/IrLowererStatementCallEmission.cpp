@@ -299,14 +299,6 @@ static bool rewriteMapInsertHelperStatementToBuiltinPending(
         typeNameForValueKind(targetInfo.mapValueKind),
     };
   }
-  if (targetInfo.isWrappedMapTarget) {
-    Expr rewrittenReceiver;
-    rewrittenReceiver.kind = Expr::Kind::Call;
-    rewrittenReceiver.name = "dereference";
-    rewrittenReceiver.args.push_back(rewrittenStmt.args[receiverIndex]);
-    rewrittenReceiver.semanticNodeId = 0;
-    rewrittenStmt.args[receiverIndex] = std::move(rewrittenReceiver);
-  }
   return true;
 }
 

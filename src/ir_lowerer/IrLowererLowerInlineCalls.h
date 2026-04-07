@@ -194,10 +194,26 @@
       int32_t valuesLocal = -1;
       int32_t valuesWrapperLocal = -1;
       int32_t ptrLocal = valuesIt->second.index;
-      if (!orderedArgs.empty() && orderedArgs.front() != nullptr && orderedArgs.front()->kind == Expr::Kind::Name) {
-        auto callerValuesIt = callerLocals.find(orderedArgs.front()->name);
-        if (callerValuesIt != callerLocals.end() && callerValuesIt->second.kind == LocalInfo::Kind::Map) {
-          valuesLocal = callerValuesIt->second.index;
+      if (!orderedArgs.empty() && orderedArgs.front() != nullptr) {
+        const Expr *originalValuesArg = orderedArgs.front();
+        if (originalValuesArg->kind == Expr::Kind::Call &&
+            isSimpleCallName(*originalValuesArg, "dereference") &&
+            originalValuesArg->args.size() == 1 &&
+            originalValuesArg->args.front().kind == Expr::Kind::Name) {
+          originalValuesArg = &originalValuesArg->args.front();
+        }
+        if (originalValuesArg->kind == Expr::Kind::Name) {
+          auto callerValuesIt = callerLocals.find(originalValuesArg->name);
+          if (callerValuesIt != callerLocals.end()) {
+            if (callerValuesIt->second.kind == LocalInfo::Kind::Map) {
+              valuesLocal = callerValuesIt->second.index;
+            } else if ((callerValuesIt->second.kind == LocalInfo::Kind::Reference &&
+                        callerValuesIt->second.referenceToMap) ||
+                       (callerValuesIt->second.kind == LocalInfo::Kind::Pointer &&
+                        callerValuesIt->second.pointerToMap)) {
+              valuesWrapperLocal = callerValuesIt->second.index;
+            }
+          }
         }
       }
       if (valuesIt->second.kind == LocalInfo::Kind::Reference ||
