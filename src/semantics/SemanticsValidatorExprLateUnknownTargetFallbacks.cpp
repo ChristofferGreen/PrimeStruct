@@ -1,8 +1,22 @@
 #include "SemanticsValidator.h"
 
 #include <string>
+#include <string_view>
 
 namespace primec::semantics {
+
+namespace {
+
+bool isCanonicalMapMethodHelper(std::string_view helperName) {
+  return helperName == "count" || helperName == "count_ref" ||
+         helperName == "contains" || helperName == "contains_ref" ||
+         helperName == "tryAt" || helperName == "tryAt_ref" ||
+         helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
+         helperName == "insert" || helperName == "insert_ref";
+}
+
+} // namespace
 
 bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
     const std::vector<ParameterInfo> &params,
@@ -14,25 +28,21 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
     return failExprDiagnostic(expr, std::move(message));
   };
   handledOut = false;
+  std::string normalizedMethodName = expr.name;
+  if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
+    normalizedMethodName.erase(normalizedMethodName.begin());
+  }
   if (context.resolveMapTarget != nullptr && expr.isMethodCall &&
-      (expr.name == "count" || expr.name == "contains" ||
-       expr.name == "tryAt" || expr.name == "at" ||
-       expr.name == "at_unsafe" || expr.name == "insert") &&
-      !expr.args.empty() && context.resolveMapTarget(expr.args.front())) {
-    const std::string canonicalMapMethodTarget =
-        "/std/collections/map/" + expr.name;
-    const std::string aliasMapMethodTarget = "/map/" + expr.name;
+      isCanonicalMapMethodHelper(normalizedMethodName) && !expr.args.empty() &&
+      context.resolveMapTarget(expr.args.front())) {
     Expr rewrittenMapMethodCall = expr;
     rewrittenMapMethodCall.isMethodCall = false;
     rewrittenMapMethodCall.namespacePrefix.clear();
-    if (hasDeclaredDefinitionPath(canonicalMapMethodTarget) ||
-        hasImportedDefinitionPath(canonicalMapMethodTarget)) {
-      rewrittenMapMethodCall.name = canonicalMapMethodTarget;
-    } else if (hasDeclaredDefinitionPath(aliasMapMethodTarget) ||
-               hasImportedDefinitionPath(aliasMapMethodTarget)) {
-      rewrittenMapMethodCall.name = aliasMapMethodTarget;
-    } else {
-      rewrittenMapMethodCall.name = canonicalMapMethodTarget;
+    rewrittenMapMethodCall.name = preferredMapMethodTargetForCall(
+        params, locals, expr.args.front(), normalizedMethodName);
+    if (rewrittenMapMethodCall.name.empty()) {
+      rewrittenMapMethodCall.name =
+          "/std/collections/map/" + normalizedMethodName;
     }
     handledOut = true;
     return validateExpr(params, locals, rewrittenMapMethodCall);
