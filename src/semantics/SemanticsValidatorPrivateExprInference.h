@@ -67,6 +67,8 @@
                                           std::string &helperNameOut) const;
   bool canonicalizeExperimentalMapHelperResolvedPath(const std::string &resolvedPath,
                                                      std::string &canonicalPathOut) const;
+  bool shouldLogicalCanonicalizeDefinedExperimentalMapHelperPath(
+      const std::string &resolvedPath) const;
   bool shouldBuiltinValidateCurrentMapWrapperHelper(std::string_view helperName) const;
   std::string mapNamespacedMethodCompatibilityPath(
       const Expr &candidate,

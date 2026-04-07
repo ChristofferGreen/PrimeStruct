@@ -277,7 +277,9 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
 
   std::string resolvedCallee = resolveCalleePath(expr);
   std::string canonicalExperimentalMapHelperResolved;
-  if (!expr.isMethodCall && defMap_.count(resolvedCallee) == 0 &&
+  if (!expr.isMethodCall &&
+      (defMap_.count(resolvedCallee) == 0 ||
+       shouldLogicalCanonicalizeDefinedExperimentalMapHelperPath(resolvedCallee)) &&
       canonicalizeExperimentalMapHelperResolvedPath(
           resolvedCallee, canonicalExperimentalMapHelperResolved)) {
     resolvedCallee = canonicalExperimentalMapHelperResolved;

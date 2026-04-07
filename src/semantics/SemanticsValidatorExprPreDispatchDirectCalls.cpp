@@ -97,7 +97,9 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
   };
 
   std::string canonicalExperimentalMapHelperResolved;
-  if (!expr.isMethodCall && defMap_.count(resolvedOut) == 0 &&
+  if (!expr.isMethodCall &&
+      (defMap_.count(resolvedOut) == 0 ||
+       this->shouldLogicalCanonicalizeDefinedExperimentalMapHelperPath(resolvedOut)) &&
       this->canonicalizeExperimentalMapHelperResolvedPath(
           resolvedOut, canonicalExperimentalMapHelperResolved)) {
     resolvedOut = canonicalExperimentalMapHelperResolved;

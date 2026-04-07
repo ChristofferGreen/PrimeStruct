@@ -314,7 +314,41 @@ bool SemanticsValidator::canonicalizeExperimentalMapHelperResolvedPath(const std
       return true;
     }
   }
+  if (matchesResolvedPath(resolvedPath, "/std/collections/experimental_map/mapCountRef")) {
+    canonicalPathOut = "/std/collections/map/count";
+    return true;
+  }
+  if (matchesResolvedPath(resolvedPath, "/std/collections/experimental_map/mapContainsRef")) {
+    canonicalPathOut = "/std/collections/map/contains";
+    return true;
+  }
+  if (matchesResolvedPath(resolvedPath, "/std/collections/experimental_map/mapTryAtRef")) {
+    canonicalPathOut = "/std/collections/map/tryAt";
+    return true;
+  }
+  if (matchesResolvedPath(resolvedPath, "/std/collections/experimental_map/mapAtRef")) {
+    canonicalPathOut = "/std/collections/map/at";
+    return true;
+  }
+  if (matchesResolvedPath(resolvedPath, "/std/collections/experimental_map/mapAtUnsafeRef")) {
+    canonicalPathOut = "/std/collections/map/at_unsafe";
+    return true;
+  }
+  if (matchesResolvedPath(resolvedPath, "/std/collections/experimental_map/mapInsertRef")) {
+    canonicalPathOut = "/std/collections/map/insert_ref";
+    return true;
+  }
   return false;
+}
+
+bool SemanticsValidator::shouldLogicalCanonicalizeDefinedExperimentalMapHelperPath(
+    const std::string &resolvedPath) const {
+  return matchesResolvedPath(resolvedPath, "/std/collections/experimental_map/mapCountRef") ||
+         matchesResolvedPath(resolvedPath, "/std/collections/experimental_map/mapContainsRef") ||
+         matchesResolvedPath(resolvedPath, "/std/collections/experimental_map/mapTryAtRef") ||
+         matchesResolvedPath(resolvedPath, "/std/collections/experimental_map/mapAtRef") ||
+         matchesResolvedPath(resolvedPath, "/std/collections/experimental_map/mapAtUnsafeRef") ||
+         matchesResolvedPath(resolvedPath, "/std/collections/experimental_map/mapInsertRef");
 }
 
 bool SemanticsValidator::shouldBuiltinValidateCurrentMapWrapperHelper(std::string_view helperName) const {
