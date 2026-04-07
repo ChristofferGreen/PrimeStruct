@@ -31,6 +31,7 @@
       rewrittenExpr.name = "/map/map";
       rewrittenExpr.namespacePrefix.clear();
       rewrittenExpr.isMethodCall = false;
+      rewrittenExpr.semanticNodeId = 0;
       if (rewrittenExpr.templateArgs.empty()) {
         if (declaredTemplateArgs.size() == 2) {
           rewrittenExpr.templateArgs = declaredTemplateArgs;

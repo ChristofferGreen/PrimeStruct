@@ -40,6 +40,7 @@ bool rewritePackedResultMapConstructorExpr(const Expr &callExpr,
   rewrittenExpr.name = "/map/map";
   rewrittenExpr.namespacePrefix.clear();
   rewrittenExpr.isMethodCall = false;
+  rewrittenExpr.semanticNodeId = 0;
   if (!rewrittenExpr.templateArgs.empty()) {
     return rewrittenExpr.templateArgs.size() == 2;
   }

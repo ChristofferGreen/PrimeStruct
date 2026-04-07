@@ -195,6 +195,7 @@ bool rewriteBuiltinMapConstructorExpr(const Expr &callExpr,
   rewrittenExpr.name = "/map/map";
   rewrittenExpr.namespacePrefix.clear();
   rewrittenExpr.isMethodCall = false;
+  rewrittenExpr.semanticNodeId = 0;
   if (rewrittenExpr.templateArgs.empty() &&
       fallbackKeyKind != LocalInfo::ValueKind::Unknown &&
       fallbackValueKind != LocalInfo::ValueKind::Unknown) {

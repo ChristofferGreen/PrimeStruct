@@ -29,6 +29,7 @@
           rewrittenExpr.name = "/map/map";
           rewrittenExpr.namespacePrefix.clear();
           rewrittenExpr.isMethodCall = false;
+          rewrittenExpr.semanticNodeId = 0;
           if (rewrittenExpr.templateArgs.empty()) {
             std::string collectionName;
             std::vector<std::string> collectionArgs;
