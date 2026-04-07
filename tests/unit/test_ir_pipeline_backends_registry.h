@@ -356,6 +356,111 @@ TEST_CASE("ir lowerer rejects missing semantic-product local binding facts") {
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order") {
+  primec::Program program;
+
+  primec::Definition callee;
+  callee.fullPath = "/callee";
+  program.definitions.push_back(callee);
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 81;
+
+  primec::Expr param;
+  param.name = "value";
+  param.semanticNodeId = 45;
+  mainDef.parameters.push_back(param);
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "callee";
+  callExpr.semanticNodeId = 46;
+  mainDef.statements.push_back(callExpr);
+
+  primec::Expr initializerExpr;
+  initializerExpr.kind = primec::Expr::Kind::Literal;
+  initializerExpr.literalValue = 1;
+  initializerExpr.intWidth = 32;
+
+  primec::Expr bindingExpr;
+  bindingExpr.isBinding = true;
+  bindingExpr.name = "selected";
+  bindingExpr.semanticNodeId = 47;
+  bindingExpr.args.push_back(initializerExpr);
+  mainDef.statements.push_back(bindingExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::IrLowerer lowerer;
+  auto lowerWithSemanticProduct = [&](primec::SemanticProgram &semanticProgram,
+                                      std::string &errorOut,
+                                      primec::DiagnosticSinkReport &diagnosticOut) {
+    primec::IrModule module;
+    return lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, errorOut, &diagnosticOut);
+  };
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+
+  std::string error;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
+  CHECK(error == "missing semantic-product direct-call target: /main -> callee");
+  CHECK(diagnosticInfo.message == error);
+
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "callee",
+      .resolvedPath = "/callee",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 46,
+  });
+
+  error.clear();
+  diagnosticInfo = {};
+  CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
+  CHECK(error == "missing semantic-product binding fact: /main -> parameter value");
+  CHECK(diagnosticInfo.message == error);
+
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "parameter",
+      .name = "value",
+      .resolvedPath = "/main/value",
+      .bindingTypeText = "i32",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 45,
+      .provenanceHandle = 0,
+  });
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "selected",
+      .resolvedPath = "/main/selected",
+      .bindingTypeText = "i32",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 47,
+      .provenanceHandle = 0,
+  });
+
+  error.clear();
+  diagnosticInfo = {};
+  CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
+  CHECK(error == "missing semantic-product local-auto fact: /main -> local selected");
+  CHECK(diagnosticInfo.message == error);
+}
+
 TEST_CASE("ir lowerer rejects missing semantic-product callable summaries") {
   primec::Program program;
 

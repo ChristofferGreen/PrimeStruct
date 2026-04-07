@@ -1,11 +1,91 @@
 #include "IrLowererLowerEntrySetup.h"
 
+#include <array>
+
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
 #include "IrLowererLowerEffects.h"
 #include "IrLowererResultHelpers.h"
 
 namespace primec::ir_lowerer {
+
+namespace {
+
+struct SemanticProductCompletenessContext {
+  const Program &program;
+  const SemanticProgram *semanticProgram = nullptr;
+};
+
+using SemanticProductCompletenessCheckFn =
+    bool (*)(const SemanticProductCompletenessContext &, std::string &error);
+
+struct SemanticProductCompletenessCheck {
+  const char *factFamily = "";
+  SemanticProductCompletenessCheckFn validate = nullptr;
+};
+
+bool validateDirectCallFactFamily(const SemanticProductCompletenessContext &context,
+                                  std::string &error) {
+  return validateSemanticProductDirectCallCoverage(context.program, context.semanticProgram, error);
+}
+
+bool validateBridgePathFactFamily(const SemanticProductCompletenessContext &context,
+                                  std::string &error) {
+  return validateSemanticProductBridgePathCoverage(context.program, context.semanticProgram, error);
+}
+
+bool validateMethodCallFactFamily(const SemanticProductCompletenessContext &context,
+                                  std::string &error) {
+  return validateSemanticProductMethodCallCoverage(context.program, context.semanticProgram, error);
+}
+
+bool validateBindingFactFamily(const SemanticProductCompletenessContext &context,
+                               std::string &error) {
+  return validateSemanticProductBindingCoverage(context.program, context.semanticProgram, error);
+}
+
+bool validateLocalAutoFactFamily(const SemanticProductCompletenessContext &context,
+                                 std::string &error) {
+  return validateSemanticProductLocalAutoCoverage(context.program, context.semanticProgram, error);
+}
+
+bool validateResultMetadataFactFamily(const SemanticProductCompletenessContext &context,
+                                      std::string &error) {
+  return validateSemanticProductResultMetadataCompleteness(context.semanticProgram, error);
+}
+
+const std::array<SemanticProductCompletenessCheck, 6> kSemanticProductCompletenessMatrix = {{
+    {"routing.direct-call", validateDirectCallFactFamily},
+    {"routing.bridge-path", validateBridgePathFactFamily},
+    {"routing.method-call", validateMethodCallFactFamily},
+    {"type-shape.binding", validateBindingFactFamily},
+    {"type-shape.local-auto", validateLocalAutoFactFamily},
+    {"result-control.metadata", validateResultMetadataFactFamily},
+}};
+
+bool validateSemanticProductCompletenessMatrix(const Program &program,
+                                               const SemanticProgram *semanticProgram,
+                                               std::string &error) {
+  if (semanticProgram == nullptr) {
+    return true;
+  }
+
+  const SemanticProductCompletenessContext context{
+      .program = program,
+      .semanticProgram = semanticProgram,
+  };
+  for (const auto &check : kSemanticProductCompletenessMatrix) {
+    if (check.validate == nullptr) {
+      continue;
+    }
+    if (!check.validate(context, error)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+} // namespace
 
 bool runLowerEntrySetup(const Program &program,
                         const SemanticProgram *semanticProgram,
@@ -36,22 +116,7 @@ bool runLowerEntrySetup(const Program &program,
   if (!validateNoRuntimeReflectionQueries(program, error)) {
     return false;
   }
-  if (!validateSemanticProductDirectCallCoverage(program, semanticProgram, error)) {
-    return false;
-  }
-  if (!validateSemanticProductBridgePathCoverage(program, semanticProgram, error)) {
-    return false;
-  }
-  if (!validateSemanticProductMethodCallCoverage(program, semanticProgram, error)) {
-    return false;
-  }
-  if (!validateSemanticProductBindingCoverage(program, semanticProgram, error)) {
-    return false;
-  }
-  if (!validateSemanticProductLocalAutoCoverage(program, semanticProgram, error)) {
-    return false;
-  }
-  if (!validateSemanticProductResultMetadataCompleteness(semanticProgram, error)) {
+  if (!validateSemanticProductCompletenessMatrix(program, semanticProgram, error)) {
     return false;
   }
   if (!validateProgramEffects(program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error)) {

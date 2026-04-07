@@ -78,11 +78,11 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
 Progress note: the first semantic-product publication, dump surface, and temporary lowerer adapter are finished. The remaining live boundary work is to make `SemanticProgram` the only lowering truth, retire the remaining AST-derived fallbacks, and finish the graph-backed fact handoff needed by later Group 11 migrations.
 - ◐ Turn missing semantic-product facts into explicit conformance failures instead of silent AST fallbacks.
   - ◐ Add compile-pipeline/backend conformance checks that assert the required semantic-product fact families are present before lowering starts.
-    - ○ Add a per-fact-family completeness matrix for lowering-required facts.
+    - ✓ Add a per-fact-family completeness matrix for lowering-required facts.
     - ○ Add negative fixtures for routing fact families (direct-call, method-call, bridge-path).
     - ○ Add negative fixtures for type/shape fact families (bindings, local-`auto`, return metadata).
     - ○ Add negative fixtures for result/control fact families (`query`, `try(...)`, `on_error`, entry args).
-    - ○ Add one aggregate fixture that validates deterministic first-failure ordering when multiple families are missing.
+    - ✓ Add one aggregate fixture that validates deterministic first-failure ordering when multiple families are missing.
 - ✓ Move resolved call routing to semantic-product-only ownership.
   - ✓ Move receiver/method-call target routing to semantic-product-only ownership.
   - ✓ Move helper-vs-canonical bridge-path routing to semantic-product-only ownership, including same-path helper-shadow choices.

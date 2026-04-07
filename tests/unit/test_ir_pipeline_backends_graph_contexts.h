@@ -639,6 +639,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irEntrySetupSource.find("validateSemanticProductResultMetadataCompleteness(semanticProgram, error)") !=
         std::string::npos);
+  CHECK(irEntrySetupSource.find("kSemanticProductCompletenessMatrix") != std::string::npos);
+  CHECK(irEntrySetupSource.find("validateSemanticProductCompletenessMatrix(program, semanticProgram, error)") !=
+        std::string::npos);
   CHECK(irCallHelpers.find("SemanticProductTargetAdapter semanticProductTargets{};") != std::string::npos);
   CHECK(irCallResolution.find("buildSemanticProductTargetAdapter(semanticProgram)") != std::string::npos);
   CHECK(irCallResolution.find("findSemanticProductDirectCallTarget(semanticProductTargets, expr)") !=
