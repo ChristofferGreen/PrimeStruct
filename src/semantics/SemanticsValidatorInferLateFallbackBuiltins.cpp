@@ -339,37 +339,46 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       std::string methodResolved;
       if (context.resolveMethodCallPath != nullptr &&
           context.resolveMethodCallPath(expr.name, methodResolved)) {
-        if (methodResolved == "/std/collections/map/contains" &&
+        if ((methodResolved == "/std/collections/map/contains" ||
+             methodResolved == "/std/collections/map/contains_ref") &&
             !inferCollectionDispatchSetup.shouldInferBuiltinBareMapContainsCall &&
             !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
                 receiverExpr) &&
-            !hasImportedDefinitionPath("/std/collections/map/contains") &&
-            !hasDeclaredDefinitionPath("/std/collections/map/contains")) {
+            !hasImportedDefinitionPath(methodResolved) &&
+            !hasDeclaredDefinitionPath(methodResolved)) {
           return failInferLateFallbackDiagnostic(
-              "unknown call target: /std/collections/map/contains");
+              "unknown call target: " + methodResolved);
         }
-        if (methodResolved == "/std/collections/map/tryAt" &&
+        if ((methodResolved == "/std/collections/map/tryAt" ||
+             methodResolved == "/std/collections/map/tryAt_ref") &&
             !inferCollectionDispatchSetup.shouldInferBuiltinBareMapTryAtCall &&
             !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
                 receiverExpr) &&
-            !hasImportedDefinitionPath("/std/collections/map/tryAt") &&
-            !hasDeclaredDefinitionPath("/std/collections/map/tryAt")) {
+            !hasImportedDefinitionPath(methodResolved) &&
+            !hasDeclaredDefinitionPath(methodResolved)) {
           return failInferLateFallbackDiagnostic(
-              "unknown call target: /std/collections/map/tryAt");
+              "unknown call target: " + methodResolved);
         }
         if ((methodResolved == "/map/at" ||
+             methodResolved == "/std/collections/map/at_ref" ||
              methodResolved == "/map/at_unsafe" ||
              methodResolved == "/std/collections/map/at" ||
-             methodResolved == "/std/collections/map/at_unsafe") &&
+             methodResolved == "/std/collections/map/at_unsafe" ||
+             methodResolved == "/std/collections/map/at_unsafe_ref") &&
             !inferCollectionDispatchSetup.shouldInferBuiltinBareMapAccessCall &&
             !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
                 receiverExpr) &&
-            !hasImportedDefinitionPath("/std/collections/map/" +
-                                       builtinAccessName) &&
-            !hasDeclaredDefinitionPath("/std/collections/map/" +
-                                       builtinAccessName)) {
+            !hasImportedDefinitionPath(methodResolved.rfind("/std/collections/map/", 0) == 0
+                                           ? methodResolved
+                                           : "/std/collections/map/" + builtinAccessName) &&
+            !hasDeclaredDefinitionPath(methodResolved.rfind("/std/collections/map/", 0) == 0
+                                           ? methodResolved
+                                           : "/std/collections/map/" + builtinAccessName)) {
           return failInferLateFallbackDiagnostic(
-              "unknown call target: /std/collections/map/" + builtinAccessName);
+              "unknown call target: " +
+              std::string(methodResolved.rfind("/std/collections/map/", 0) == 0
+                              ? methodResolved
+                              : "/std/collections/map/" + builtinAccessName));
         }
         auto methodIt = defMap_.find(methodResolved);
         if (methodIt != defMap_.end()) {

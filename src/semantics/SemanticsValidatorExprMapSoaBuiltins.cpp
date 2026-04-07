@@ -312,9 +312,12 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     return validateContainsBuiltin("contains");
   }
 
-  if (resolvedMethod && resolved == "/std/collections/map/contains") {
+  if (resolvedMethod &&
+      (resolved == "/std/collections/map/contains" ||
+       resolved == "/std/collections/map/contains_ref")) {
     handledOut = true;
-    return validateContainsBuiltin("contains");
+    return validateContainsBuiltin(
+        resolved == "/std/collections/map/contains_ref" ? "contains_ref" : "contains");
   }
 
   const bool isCanonicalSoaToAosResolved =
