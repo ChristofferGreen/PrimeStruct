@@ -130,6 +130,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
                                           rewrittenMapHelperCall)) {
       if (rewrittenMapHelperCall.name == "/std/collections/map/tryAt" &&
           !hasVisibleStdlibMapBuiltinDefinition("tryAt") &&
+          !hasImportedDefinitionPath("/tryAt") &&
           !hasDeclaredDefinitionPath("/tryAt")) {
         return failLateMapAccessBuiltinDiagnostic(
             "unknown call target: /std/collections/map/tryAt");

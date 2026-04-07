@@ -69,6 +69,7 @@ bool SemanticsValidator::validateExprTryBuiltin(
         !hasDeclaredDefinitionPath(tryTargetPath == "/std/collections/map/tryAt_ref"
                                        ? "/std/collections/map/tryAt_ref"
                                        : "/std/collections/map/tryAt") &&
+        !hasImportedDefinitionPath("/tryAt") &&
         !hasDeclaredDefinitionPath("/tryAt") &&
         !(context.isIndexedArgsPackMapReceiverTarget != nullptr &&
           !tryTargetExpr.args.empty() &&
