@@ -1,35 +1,58 @@
+        auto matchesGeneratedMapHelperPath = [&](const Expr &callExpr, const char *basePath) {
+          const std::string base(basePath == nullptr ? "" : basePath);
+          return callExpr.name == base ||
+                 callExpr.name.rfind(base + "__t", 0) == 0;
+        };
+        auto resolveBuiltinMapHelperName =
+            [&](const Expr &callExpr, bool allowMethodCall, std::string &helperNameOut) {
+              helperNameOut.clear();
+              if (callExpr.kind != Expr::Kind::Call || callExpr.args.empty()) {
+                return false;
+              }
+              if (allowMethodCall && callExpr.isMethodCall) {
+                if (callExpr.name == "count" || callExpr.name == "contains" ||
+                    callExpr.name == "tryAt" || callExpr.name == "at" ||
+                    callExpr.name == "at_unsafe") {
+                  helperNameOut = callExpr.name;
+                  return true;
+                }
+                return false;
+              }
+              if (callExpr.isMethodCall) {
+                return false;
+              }
+              if (ir_lowerer::resolveMapHelperAliasName(callExpr, helperNameOut)) {
+                return true;
+              }
+              if (matchesGeneratedMapHelperPath(callExpr, "/std/collections/mapCount")) {
+                helperNameOut = "count";
+                return true;
+              }
+              if (matchesGeneratedMapHelperPath(callExpr, "/std/collections/mapContains")) {
+                helperNameOut = "contains";
+                return true;
+              }
+              if (matchesGeneratedMapHelperPath(callExpr, "/std/collections/mapTryAt")) {
+                helperNameOut = "tryAt";
+                return true;
+              }
+              if (matchesGeneratedMapHelperPath(callExpr, "/std/collections/mapAt")) {
+                helperNameOut = "at";
+                return true;
+              }
+              if (matchesGeneratedMapHelperPath(callExpr, "/std/collections/mapAtUnsafe")) {
+                helperNameOut = "at_unsafe";
+                return true;
+              }
+              return false;
+            };
         auto rewriteCanonicalMapHelperForExperimentalReceiverExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
-          if (callExpr.kind != Expr::Kind::Call || callExpr.args.empty()) {
+          std::string helperName;
+          if (!resolveBuiltinMapHelperName(callExpr, true, helperName)) {
             return false;
           }
-
-          std::string helperName;
-          if (callExpr.isMethodCall &&
-              (callExpr.name == "count" || callExpr.name == "contains" ||
-               callExpr.name == "tryAt" || callExpr.name == "at" ||
-               callExpr.name == "at_unsafe")) {
-            helperName = callExpr.name;
-          } else if ((callExpr.name == "/map/count" || callExpr.name == "/std/collections/map/count" ||
-                      callExpr.name == "/std/collections/mapCount") &&
-                     callExpr.args.size() == 1) {
-            helperName = "count";
-          } else if ((callExpr.name == "/map/contains" || callExpr.name == "/std/collections/map/contains" ||
-                      callExpr.name == "/std/collections/mapContains") &&
-                     callExpr.args.size() == 2) {
-            helperName = "contains";
-          } else if ((callExpr.name == "/map/tryAt" || callExpr.name == "/std/collections/map/tryAt" ||
-                      callExpr.name == "/std/collections/mapTryAt") &&
-                     callExpr.args.size() == 2) {
-            helperName = "tryAt";
-          } else if ((callExpr.name == "/map/at" || callExpr.name == "/std/collections/map/at" ||
-                      callExpr.name == "/std/collections/mapAt") &&
-                     callExpr.args.size() == 2) {
-            helperName = "at";
-          } else if ((callExpr.name == "/map/at_unsafe" || callExpr.name == "/std/collections/map/at_unsafe" ||
-                      callExpr.name == "/std/collections/mapAtUnsafe") &&
-                     callExpr.args.size() == 2) {
-            helperName = "at_unsafe";
-          } else {
+          const size_t expectedArgCount = helperName == "count" ? 1u : 2u;
+          if (callExpr.args.size() != expectedArgCount) {
             return false;
           }
 
@@ -128,17 +151,9 @@
                  structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
         };
         auto rewriteExplicitMapHelperBuiltinExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
-          if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall || callExpr.args.empty()) {
-            return false;
-          }
           std::string helperName;
-          if (callExpr.name == "/std/collections/map/count") {
-            helperName = "count";
-          } else if (callExpr.name == "/std/collections/map/at") {
-            helperName = "at";
-          } else if (callExpr.name == "/std/collections/map/at_unsafe") {
-            helperName = "at_unsafe";
-          } else {
+          if (!resolveBuiltinMapHelperName(callExpr, false, helperName) ||
+              (helperName != "count" && helperName != "at" && helperName != "at_unsafe")) {
             return false;
           }
           const auto receiverTargetInfo =
@@ -233,16 +248,15 @@
 
           auto shouldRewriteReceiver = [&](const Expr &candidate) {
             if (candidate.isMethodCall) {
-              return candidate.name == "contains" || candidate.name == "tryAt" ||
-                     candidate.name == "at" || candidate.name == "at_unsafe";
+              return candidate.name == "count" || candidate.name == "contains" ||
+                     candidate.name == "tryAt" || candidate.name == "at" ||
+                     candidate.name == "at_unsafe";
             }
-            if (candidate.name == "contains" || candidate.name == "tryAt" ||
-                candidate.name == "/map/contains" || candidate.name == "/std/collections/map/contains" ||
-                candidate.name == "/map/tryAt" || candidate.name == "/std/collections/map/tryAt" ||
-                candidate.name == "at" || candidate.name == "at_unsafe") {
-              return true;
-            }
-            return false;
+            std::string helperName;
+            return resolveBuiltinMapHelperName(candidate, false, helperName) &&
+                   (helperName == "count" || helperName == "contains" ||
+                    helperName == "tryAt" || helperName == "at" ||
+                    helperName == "at_unsafe");
           };
 
           if (!shouldRewriteReceiver(callExpr) || !isBorrowedOrPointerMapReceiver(callExpr.args.front())) {

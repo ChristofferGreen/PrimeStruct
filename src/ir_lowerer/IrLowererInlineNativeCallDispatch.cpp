@@ -97,11 +97,19 @@ Expr makeInlineEmitDirectTypeNamespaceCall(const Expr &callExpr, const Definitio
 } // namespace
 
 bool isMapContainsHelperName(const Expr &expr) {
-  return isSimpleCallName(expr, "contains");
+  if (isSimpleCallName(expr, "contains")) {
+    return true;
+  }
+  std::string aliasName;
+  return resolveMapHelperAliasName(expr, aliasName) && aliasName == "contains";
 }
 
 bool isMapTryAtHelperName(const Expr &expr) {
-  return isSimpleCallName(expr, "tryAt");
+  if (isSimpleCallName(expr, "tryAt")) {
+    return true;
+  }
+  std::string aliasName;
+  return resolveMapHelperAliasName(expr, aliasName) && aliasName == "tryAt";
 }
 
 bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn);
