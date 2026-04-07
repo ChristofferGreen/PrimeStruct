@@ -286,7 +286,7 @@ static bool rewriteMapInsertHelperStatementToBuiltinPending(
   }
 
   rewrittenStmt = stmt;
-  rewrittenStmt.name = "/std/collections/map/insert_builtin_pending";
+  rewrittenStmt.name = "/std/collections/map/insert_builtin";
   rewrittenStmt.namespacePrefix.clear();
   rewrittenStmt.isMethodCall = false;
   rewrittenStmt.isFieldAccess = false;

@@ -5012,8 +5012,8 @@ semantics::BindingInfo bindingInfoFromTypeText(const std::string &typeText) {
 
 constexpr std::string_view kBuiltinCanonicalMapInsertPath = "/std/collections/map/insert";
 constexpr std::string_view kBuiltinCanonicalMapInsertRefPath = "/std/collections/map/insert_ref";
-constexpr std::string_view kBuiltinCanonicalMapInsertPendingPath =
-    "/std/collections/map/insert_builtin_pending";
+constexpr std::string_view kBuiltinCanonicalMapInsertBuiltinPath =
+    "/std/collections/map/insert_builtin";
 
 std::optional<semantics::BindingInfo> resolveBuiltinMapInsertReceiverBinding(
     const Expr &expr,
@@ -5139,7 +5139,7 @@ void rewriteBuiltinMapInsertExpr(
   }
   expr.isMethodCall = false;
   expr.isFieldAccess = false;
-  expr.name = std::string(kBuiltinCanonicalMapInsertPendingPath);
+  expr.name = std::string(kBuiltinCanonicalMapInsertBuiltinPath);
   expr.namespacePrefix.clear();
   if (expr.templateArgs.empty()) {
     expr.templateArgs = {keyType, valueType};

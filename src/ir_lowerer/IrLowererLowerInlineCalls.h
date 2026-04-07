@@ -176,18 +176,18 @@
       return false;
     }
 
-    if (callee.fullPath == "/std/collections/map/insert_builtin_pending" ||
-        callee.fullPath.rfind("/std/collections/map/insert_builtin_pending__", 0) == 0) {
+    if (callee.fullPath == "/std/collections/map/insert_builtin" ||
+        callee.fullPath.rfind("/std/collections/map/insert_builtin__", 0) == 0) {
       auto valuesIt = calleeLocals.find("values");
       auto keyIt = calleeLocals.find("key");
       auto valueIt = calleeLocals.find("value");
       if (valuesIt == calleeLocals.end() || keyIt == calleeLocals.end() || valueIt == calleeLocals.end()) {
-        error = "builtin canonical map insert pending lowering requires values/key/value locals";
+        error = "builtin canonical map insert lowering requires values/key/value locals";
         inlineStack.erase(callee.fullPath);
         return false;
       }
       if (valuesIt->second.mapKeyKind == LocalInfo::ValueKind::Unknown) {
-        error = "builtin canonical map insert pending lowering requires typed map bindings";
+        error = "builtin canonical map insert lowering requires typed map bindings";
         inlineStack.erase(callee.fullPath);
         return false;
       }
@@ -236,7 +236,7 @@
               [&]() { return function.instructions.size(); },
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
               [&](size_t indexToPatch, uint64_t target) { function.instructions[indexToPatch].imm = target; })) {
-        error = "failed to lower builtin canonical map insert pending helper";
+        error = "failed to lower builtin canonical map insert helper";
         inlineStack.erase(callee.fullPath);
         return false;
       }

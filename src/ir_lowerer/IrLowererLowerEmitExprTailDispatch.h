@@ -82,7 +82,7 @@
           }
 
           rewrittenExpr = callExpr;
-          rewrittenExpr.name = "/std/collections/map/insert_builtin_pending";
+          rewrittenExpr.name = "/std/collections/map/insert_builtin";
           rewrittenExpr.namespacePrefix.clear();
           rewrittenExpr.isMethodCall = false;
           rewrittenExpr.isFieldAccess = false;

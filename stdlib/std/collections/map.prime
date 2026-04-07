@@ -350,7 +350,7 @@ import /std/collections/experimental_map/*
 }
 
 [public effects(heap_alloc), return<void> Comparable<K>]
-/std/collections/map/insert_builtin_pending<K, V>([map<K, V> mut] values, [K] key, [V] value) {
+/std/collections/map/insert_builtin<K, V>([map<K, V> mut] values, [K] key, [V] value) {
   [array<i32>] trap{array<i32>()}
   at(trap, 0i32)
 }
