@@ -281,7 +281,7 @@ static bool rewriteMapInsertHelperStatementToBuiltinPending(
     return false;
   }
   const auto targetInfo = resolveMapAccessTargetInfo(stmt.args[receiverIndex], localsIn);
-  if (!targetInfo.isMapTarget || !targetInfo.isWrappedMapTarget) {
+  if (!targetInfo.isMapTarget) {
     return false;
   }
 
