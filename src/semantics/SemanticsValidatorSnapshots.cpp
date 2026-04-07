@@ -267,6 +267,18 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
             pathIt != graphLocalAutoResolvedPaths_.end()) {
           initializerResolvedPath = pathIt->second;
         }
+        std::string initializerDirectCallResolvedPath;
+        if (const auto directCallPathIt = graphLocalAutoDirectCallResolvedPaths_.find(
+                graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn));
+            directCallPathIt != graphLocalAutoDirectCallResolvedPaths_.end()) {
+          initializerDirectCallResolvedPath = directCallPathIt->second;
+        }
+        ReturnKind initializerDirectCallReturnKind = ReturnKind::Unknown;
+        if (const auto directCallReturnKindIt = graphLocalAutoDirectCallReturnKinds_.find(
+                graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn));
+            directCallReturnKindIt != graphLocalAutoDirectCallReturnKinds_.end()) {
+          initializerDirectCallReturnKind = directCallReturnKindIt->second;
+        }
         BindingInfo initializerBinding;
         if (const auto bindingInfoIt = graphLocalAutoInitializerBindings_.find(
                 graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn));
@@ -346,6 +358,8 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
             std::move(initializerTryOnErrorErrorType),
             initializerTryOnErrorBoundArgCount,
             expr.semanticNodeId,
+            std::move(initializerDirectCallResolvedPath),
+            initializerDirectCallReturnKind,
         });
       }
     }

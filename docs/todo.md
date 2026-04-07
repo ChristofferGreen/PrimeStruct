@@ -15,9 +15,9 @@ Sizing note: each leaf `○` item should fit in one code-affecting commit plus f
 **Group 11 - Near-term graph queue**
 Blocked by Group 13 rollout constraints until the remaining collection-helper/runtime predecessor items are finished and the return-kind pilot path is stable enough to resume broader graph work.
 - ◐ Implement the next non-template inference-island migrations now that the graph-backed cutover contract is documented.
-  - ○ Migrate the next direct-call/callee non-template inference island onto the graph path.
+  - ◐ Migrate the next direct-call/callee non-template inference island onto the graph path.
     - ✓ Select the first direct-call island and record the exact validator/lowerer touchpoints (see `docs/type_graph_migration_touchpoints.md`, section 1).
-    - ○ Publish graph facts for that island behind the existing inference path (no behavior change).
+    - ✓ Publish graph facts for that island behind the existing inference path (no behavior change).
     - ○ Switch production inference for that island to consume graph facts.
     - ○ Add positive + negative conformance fixtures for that island.
     - ○ Delete the replaced fallback branch for that island.

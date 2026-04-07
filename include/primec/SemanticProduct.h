@@ -163,6 +163,8 @@ struct SemanticProgramLocalAutoFact {
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
   uint64_t provenanceHandle = 0;
+  std::string initializerDirectCallResolvedPath;
+  std::string initializerDirectCallReturnKind;
 };
 
 struct SemanticProgramQueryFact {

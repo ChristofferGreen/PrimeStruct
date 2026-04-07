@@ -438,6 +438,10 @@ SemanticProgram buildSemanticProgram(const Program &program,
         snapshotEntry.sourceColumn,
         snapshotEntry.semanticNodeId,
         semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId),
+        snapshotEntry.initializerDirectCallResolvedPath,
+        snapshotEntry.initializerDirectCallReturnKind != ReturnKind::Unknown
+            ? semantics::returnKindSnapshotName(snapshotEntry.initializerDirectCallReturnKind)
+            : std::string{},
     });
     const auto &entry = semanticProgram.localAutoFacts.back();
     ensureModuleResolvedArtifacts(entry.scopePath).localAutoFacts.push_back(entry);
@@ -5672,6 +5676,10 @@ bool semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
           entry.initializerTryOnErrorHandlerPath,
           entry.initializerTryOnErrorErrorType,
           entry.initializerTryOnErrorBoundArgCount,
+          entry.initializerDirectCallResolvedPath,
+          entry.initializerDirectCallReturnKind != ReturnKind::Unknown
+              ? returnKindSnapshotName(entry.initializerDirectCallReturnKind)
+              : std::string{},
       });
     }
   });

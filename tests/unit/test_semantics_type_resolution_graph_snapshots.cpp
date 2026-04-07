@@ -861,6 +861,7 @@ main() {
   REQUIRE(localAutoEntry != nullptr);
   CHECK(localAutoEntry->bindingTypeText == "int");
   CHECK(localAutoEntry->initializerResolvedPath == "/lookup");
+  CHECK(localAutoEntry->initializerDirectCallResolvedPath == "/lookup");
   CHECK(localAutoEntry->initializerHasTry);
   CHECK(localAutoEntry->initializerTryValueType == "int");
   CHECK(localAutoEntry->initializerTryErrorType == "MyError");
@@ -1800,6 +1801,8 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       9,
       22,
       112,
+      "",
+      "",
   });
   semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
       "/main",
@@ -1864,7 +1867,7 @@ TEST_CASE("semantic product formatter exact golden is stable") {
   struct_field_metadata[1]: struct_path="/Particle" field_name="right" field_index=1 binding_type_text="i64" provenance_handle=109 source="13:7"
   binding_facts[0]: scope_path="/main" site_kind="local" name="value" resolved_path="/main/value" binding_type_text="i32" is_mutable=true is_entry_arg_string=false is_unsafe_reference=false reference_root="" provenance_handle=110 source="12:7"
   return_facts[0]: definition_path="/main" return_kind="return" struct_path="/i32" binding_type_text="i32" is_mutable=false is_entry_arg_string=false is_unsafe_reference=false reference_root="" provenance_handle=111 source="13:3"
-  local_auto_facts[0]: scope_path="/main" binding_name="selected" binding_type_text="i32" initializer_resolved_path="/id" initializer_binding_type_text="i32" initializer_receiver_binding_type_text="" initializer_query_type_text="i32" initializer_result_has_value=false initializer_result_value_type="" initializer_result_error_type="" initializer_has_try=false initializer_try_operand_resolved_path="" initializer_try_operand_binding_type_text="" initializer_try_operand_receiver_binding_type_text="" initializer_try_operand_query_type_text="" initializer_try_value_type="" initializer_try_error_type="" initializer_try_context_return_kind="return" initializer_try_on_error_handler_path="" initializer_try_on_error_error_type="" initializer_try_on_error_bound_arg_count=0 provenance_handle=112 source="14:9"
+  local_auto_facts[0]: scope_path="/main" binding_name="selected" binding_type_text="i32" initializer_resolved_path="/id" initializer_binding_type_text="i32" initializer_receiver_binding_type_text="" initializer_query_type_text="i32" initializer_result_has_value=false initializer_result_value_type="" initializer_result_error_type="" initializer_has_try=false initializer_try_operand_resolved_path="" initializer_try_operand_binding_type_text="" initializer_try_operand_receiver_binding_type_text="" initializer_try_operand_query_type_text="" initializer_try_value_type="" initializer_try_error_type="" initializer_try_context_return_kind="return" initializer_try_on_error_handler_path="" initializer_try_on_error_error_type="" initializer_try_on_error_bound_arg_count=0 initializer_direct_call_resolved_path="" initializer_direct_call_return_kind="" provenance_handle=112 source="14:9"
   query_facts[0]: scope_path="/main" call_name="lookup" resolved_path="/lookup" query_type_text="Result<i32, MyError>" binding_type_text="Result<i32, MyError>" receiver_binding_type_text="" has_result_type=true result_type_has_value=true result_value_type="i32" result_error_type="MyError" provenance_handle=113 source="15:4"
   try_facts[0]: scope_path="/main" operand_resolved_path="/lookup" operand_binding_type_text="Result<i32, MyError>" operand_receiver_binding_type_text="" operand_query_type_text="Result<i32, MyError>" value_type="i32" error_type="MyError" context_return_kind="return" on_error_handler_path="/unexpectedError" on_error_error_type="MyError" on_error_bound_arg_count=1 provenance_handle=114 source="16:8"
   on_error_facts[0]: definition_path="/main" return_kind="return" handler_path="/unexpectedError" error_type="MyError" bound_arg_count=1 bound_arg_texts=["err"] return_result_has_value=true return_result_value_type="i32" return_result_error_type="MyError" provenance_handle=115

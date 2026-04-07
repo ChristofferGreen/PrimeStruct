@@ -409,6 +409,10 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   quoteSemanticString(entry.initializerTryOnErrorErrorType) +
                                   " initializer_try_on_error_bound_arg_count=" +
                                   std::to_string(entry.initializerTryOnErrorBoundArgCount) +
+                                  " initializer_direct_call_resolved_path=" +
+                                  quoteSemanticString(entry.initializerDirectCallResolvedPath) +
+                                  " initializer_direct_call_return_kind=" +
+                                  quoteSemanticString(entry.initializerDirectCallReturnKind) +
                                   " provenance_handle=" + std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }

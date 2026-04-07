@@ -83,6 +83,8 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
   graphLocalAutoQueryTypeTexts_.clear();
   graphLocalAutoResultTypes_.clear();
   graphLocalAutoTryValues_.clear();
+  graphLocalAutoDirectCallResolvedPaths_.clear();
+  graphLocalAutoDirectCallReturnKinds_.clear();
   const TypeResolutionGraph graph = buildTypeResolutionGraph(program_);
   const CondensationDag dag = computeTypeResolutionDependencyDag(graph);
 
@@ -466,6 +468,26 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
         } else {
           graphLocalAutoResolvedPaths_.erase(bindingKey);
           graphLocalAutoInitializerBindings_.erase(bindingKey);
+        }
+        if (initializerAnalysisExpr != nullptr &&
+            initializerAnalysisExpr->kind == Expr::Kind::Call &&
+            !initializerAnalysisExpr->isMethodCall) {
+          const std::string directCallResolvedPath = resolveCalleePath(*initializerAnalysisExpr);
+          if (!directCallResolvedPath.empty()) {
+            graphLocalAutoDirectCallResolvedPaths_[bindingKey] = directCallResolvedPath;
+            const auto directCallReturnKindIt = returnKinds_.find(directCallResolvedPath);
+            if (directCallReturnKindIt != returnKinds_.end()) {
+              graphLocalAutoDirectCallReturnKinds_[bindingKey] = directCallReturnKindIt->second;
+            } else {
+              graphLocalAutoDirectCallReturnKinds_.erase(bindingKey);
+            }
+          } else {
+            graphLocalAutoDirectCallResolvedPaths_.erase(bindingKey);
+            graphLocalAutoDirectCallReturnKinds_.erase(bindingKey);
+          }
+        } else {
+          graphLocalAutoDirectCallResolvedPaths_.erase(bindingKey);
+          graphLocalAutoDirectCallReturnKinds_.erase(bindingKey);
         }
         QuerySnapshotData initializerQueryData;
         if (initializerAnalysisExpr != nullptr &&

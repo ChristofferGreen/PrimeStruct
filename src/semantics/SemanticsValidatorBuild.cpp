@@ -27,6 +27,8 @@ bool SemanticsValidator::buildDefinitionMaps() {
   graphLocalAutoQueryTypeTexts_.clear();
   graphLocalAutoResultTypes_.clear();
   graphLocalAutoTryValues_.clear();
+  graphLocalAutoDirectCallResolvedPaths_.clear();
+  graphLocalAutoDirectCallReturnKinds_.clear();
   publicDefinitions_.clear();
   paramsByDef_.clear();
   currentValidationState_ = {};

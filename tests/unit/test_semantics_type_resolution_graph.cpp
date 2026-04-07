@@ -786,6 +786,7 @@ main() {
 
   const auto &selectedEntry = requireLocalBindingSnapshotEntry(snapshot, "/main", "selected");
   CHECK(selectedEntry.initializerResolvedPath == "/lookup");
+  CHECK(selectedEntry.initializerDirectCallResolvedPath == "/lookup");
   CHECK(selectedEntry.initializerHasTry);
   CHECK(selectedEntry.initializerTryOperandResolvedPath == "/lookup");
   CHECK(selectedEntry.initializerTryOnErrorHandlerPath == "/unexpectedError");
