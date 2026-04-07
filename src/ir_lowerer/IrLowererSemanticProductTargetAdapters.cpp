@@ -71,10 +71,11 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
     }
   }
 
-  adapter.onErrorFactsByDefinitionId.reserve(semanticProgram->onErrorFacts.size());
-  for (const auto &entry : semanticProgram->onErrorFacts) {
-    if (entry.semanticNodeId != 0) {
-      adapter.onErrorFactsByDefinitionId.insert_or_assign(entry.semanticNodeId, &entry);
+  const auto onErrorFacts = semanticProgramOnErrorFactView(*semanticProgram);
+  adapter.onErrorFactsByDefinitionId.reserve(onErrorFacts.size());
+  for (const auto *entry : onErrorFacts) {
+    if (entry->semanticNodeId != 0) {
+      adapter.onErrorFactsByDefinitionId.insert_or_assign(entry->semanticNodeId, entry);
     }
   }
 
@@ -109,38 +110,43 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
                      });
   }
 
-  adapter.returnFactsByDefinitionId.reserve(semanticProgram->returnFacts.size());
-  for (const auto &entry : semanticProgram->returnFacts) {
-    if (entry.semanticNodeId != 0) {
-      adapter.returnFactsByDefinitionId.insert_or_assign(entry.semanticNodeId, &entry);
+  const auto returnFacts = semanticProgramReturnFactView(*semanticProgram);
+  adapter.returnFactsByDefinitionId.reserve(returnFacts.size());
+  for (const auto *entry : returnFacts) {
+    if (entry->semanticNodeId != 0) {
+      adapter.returnFactsByDefinitionId.insert_or_assign(entry->semanticNodeId, entry);
     }
   }
 
-  adapter.localAutoFactsByExpr.reserve(semanticProgram->localAutoFacts.size());
-  for (const auto &entry : semanticProgram->localAutoFacts) {
-    if (entry.semanticNodeId != 0) {
-      adapter.localAutoFactsByExpr.insert_or_assign(entry.semanticNodeId, &entry);
+  const auto localAutoFacts = semanticProgramLocalAutoFactView(*semanticProgram);
+  adapter.localAutoFactsByExpr.reserve(localAutoFacts.size());
+  for (const auto *entry : localAutoFacts) {
+    if (entry->semanticNodeId != 0) {
+      adapter.localAutoFactsByExpr.insert_or_assign(entry->semanticNodeId, entry);
     }
   }
 
-  adapter.queryFactsByExpr.reserve(semanticProgram->queryFacts.size());
-  for (const auto &entry : semanticProgram->queryFacts) {
-    if (entry.semanticNodeId != 0) {
-      adapter.queryFactsByExpr.insert_or_assign(entry.semanticNodeId, &entry);
+  const auto queryFacts = semanticProgramQueryFactView(*semanticProgram);
+  adapter.queryFactsByExpr.reserve(queryFacts.size());
+  for (const auto *entry : queryFacts) {
+    if (entry->semanticNodeId != 0) {
+      adapter.queryFactsByExpr.insert_or_assign(entry->semanticNodeId, entry);
     }
   }
 
-  adapter.tryFactsByExpr.reserve(semanticProgram->tryFacts.size());
-  for (const auto &entry : semanticProgram->tryFacts) {
-    if (entry.semanticNodeId != 0) {
-      adapter.tryFactsByExpr.insert_or_assign(entry.semanticNodeId, &entry);
+  const auto tryFacts = semanticProgramTryFactView(*semanticProgram);
+  adapter.tryFactsByExpr.reserve(tryFacts.size());
+  for (const auto *entry : tryFacts) {
+    if (entry->semanticNodeId != 0) {
+      adapter.tryFactsByExpr.insert_or_assign(entry->semanticNodeId, entry);
     }
   }
 
-  adapter.bindingFactsByExpr.reserve(semanticProgram->bindingFacts.size());
-  for (const auto &entry : semanticProgram->bindingFacts) {
-    if (entry.semanticNodeId != 0) {
-      adapter.bindingFactsByExpr.insert_or_assign(entry.semanticNodeId, &entry);
+  const auto bindingFacts = semanticProgramBindingFactView(*semanticProgram);
+  adapter.bindingFactsByExpr.reserve(bindingFacts.size());
+  for (const auto *entry : bindingFacts) {
+    if (entry->semanticNodeId != 0) {
+      adapter.bindingFactsByExpr.insert_or_assign(entry->semanticNodeId, entry);
     }
   }
 

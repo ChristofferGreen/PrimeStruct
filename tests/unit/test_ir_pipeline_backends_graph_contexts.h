@@ -739,8 +739,18 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterSource.find("buildSemanticProductTargetAdapter(const SemanticProgram *semanticProgram)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.hasSemanticProduct = true;") != std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("semanticProgramDirectCallTargetView(*semanticProgram)") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("semanticProgramMethodCallTargetView(*semanticProgram)") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("semanticProgramBridgePathChoiceView(*semanticProgram)") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("semanticProgramCallableSummaryView(*semanticProgram)") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.callableSummariesByPath.reserve(") != std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.onErrorFactsByDefinitionId.reserve(semanticProgram->onErrorFacts.size())") !=
+  CHECK(semanticTargetAdapterSource.find("semanticProgramOnErrorFactView(*semanticProgram)") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.onErrorFactsByDefinitionId.reserve(onErrorFacts.size())") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.onErrorFactsByDefinitionPath.reserve(semanticProgram->onErrorFacts.size())") ==
         std::string::npos);
@@ -753,16 +763,26 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterSource.find("adapter.structFieldMetadataByStructPath.reserve(semanticProgram->structFieldMetadata.size())") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("std::stable_sort(entries.begin(),") != std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.returnFactsByDefinitionId.reserve(semanticProgram->returnFacts.size())") !=
+  CHECK(semanticTargetAdapterSource.find("semanticProgramReturnFactView(*semanticProgram)") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.returnFactsByDefinitionId.reserve(returnFacts.size())") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.returnFactsByDefinitionPath.reserve(") == std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.localAutoFactsByExpr.reserve(semanticProgram->localAutoFacts.size())") !=
+  CHECK(semanticTargetAdapterSource.find("semanticProgramLocalAutoFactView(*semanticProgram)") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.queryFactsByExpr.reserve(semanticProgram->queryFacts.size())") !=
+  CHECK(semanticTargetAdapterSource.find("adapter.localAutoFactsByExpr.reserve(localAutoFacts.size())") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.tryFactsByExpr.reserve(semanticProgram->tryFacts.size())") !=
+  CHECK(semanticTargetAdapterSource.find("semanticProgramQueryFactView(*semanticProgram)") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.bindingFactsByExpr.reserve(semanticProgram->bindingFacts.size())") !=
+  CHECK(semanticTargetAdapterSource.find("adapter.queryFactsByExpr.reserve(queryFacts.size())") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("semanticProgramTryFactView(*semanticProgram)") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.tryFactsByExpr.reserve(tryFacts.size())") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("semanticProgramBindingFactView(*semanticProgram)") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.bindingFactsByExpr.reserve(bindingFacts.size())") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("definition.fullPath.empty()") == std::string::npos);
   CHECK(semanticTargetAdapterSource.find("expr.semanticNodeId") != std::string::npos);
@@ -1214,6 +1234,17 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticProduct.find("struct SemanticProgramStructFieldMetadata") != std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramModuleResolvedArtifacts> moduleResolvedArtifacts;") !=
         std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramReturnFact> returnFacts;") != std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramLocalAutoFact> localAutoFacts;") != std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramQueryFact> queryFacts;") != std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramTryFact> tryFacts;") != std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramOnErrorFact> onErrorFacts;") != std::string::npos);
+  CHECK(semanticProduct.find("semanticProgramBindingFactView(const SemanticProgram &semanticProgram);") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("semanticProgramReturnFactView(const SemanticProgram &semanticProgram);") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("semanticProgramOnErrorFactView(const SemanticProgram &semanticProgram);") !=
+        std::string::npos);
   CHECK(semanticProduct.find("std::string formatSemanticProgram(const SemanticProgram &semanticProgram);") !=
         std::string::npos);
 
@@ -1240,6 +1271,16 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticsValidate.find("semanticProgram.moduleResolvedArtifacts.reserve(") != std::string::npos);
   CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(") != std::string::npos);
   CHECK(semanticsValidate.find("std::sort(semanticProgram.moduleResolvedArtifacts.begin(),") !=
+        std::string::npos);
+  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(entry.definitionPath).returnFacts.push_back(entry);") !=
+        std::string::npos);
+  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(entry.scopePath).localAutoFacts.push_back(entry);") !=
+        std::string::npos);
+  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(entry.scopePath).queryFacts.push_back(entry);") !=
+        std::string::npos);
+  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(entry.scopePath).tryFacts.push_back(entry);") !=
+        std::string::npos);
+  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(entry.definitionPath).onErrorFacts.push_back(entry);") !=
         std::string::npos);
 
   CHECK(semanticTargetAdapterHeader.find("struct SemanticProductTargetAdapter") != std::string::npos);

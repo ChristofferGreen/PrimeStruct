@@ -79,25 +79,28 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
     }
   }
 
-  for (const auto &returnFact : semanticProgram->returnFacts) {
-    if (returnFact.bindingTypeText.empty()) {
-      error = "missing semantic-product return binding type: " + returnFact.definitionPath;
+  const auto returnFacts = semanticProgramReturnFactView(*semanticProgram);
+  for (const auto *returnFact : returnFacts) {
+    if (returnFact->bindingTypeText.empty()) {
+      error = "missing semantic-product return binding type: " + returnFact->definitionPath;
       return false;
     }
   }
 
-  for (const auto &queryFact : semanticProgram->queryFacts) {
-    if (queryFact.hasResultType && queryFact.resultTypeHasValue) {
+  const auto queryFacts = semanticProgramQueryFactView(*semanticProgram);
+  for (const auto *queryFact : queryFacts) {
+    if (queryFact->hasResultType && queryFact->resultTypeHasValue) {
       ResultExprInfo resultInfo;
-      if (!applySemanticResultValueTypeText(queryFact.resultValueType, resultInfo)) {
-        error = "incomplete semantic-product query fact: " + queryFact.callName;
+      if (!applySemanticResultValueTypeText(queryFact->resultValueType, resultInfo)) {
+        error = "incomplete semantic-product query fact: " + queryFact->callName;
         return false;
       }
     }
   }
 
-  for (const auto &tryFact : semanticProgram->tryFacts) {
-    if (trimTemplateTypeText(tryFact.valueType).empty()) {
+  const auto tryFacts = semanticProgramTryFactView(*semanticProgram);
+  for (const auto *tryFact : tryFacts) {
+    if (trimTemplateTypeText(tryFact->valueType).empty()) {
       error = "incomplete semantic-product try fact: try";
       return false;
     }

@@ -143,6 +143,72 @@ semanticProgramCallableSummaryView(const SemanticProgram &semanticProgram) {
       });
 }
 
+std::vector<const SemanticProgramBindingFact *>
+semanticProgramBindingFactView(const SemanticProgram &semanticProgram) {
+  return buildModuleOrFlatSemanticView<SemanticProgramBindingFact>(
+      semanticProgram,
+      [](const SemanticProgramModuleResolvedArtifacts &module)
+          -> const std::vector<SemanticProgramBindingFact> & { return module.bindingFacts; },
+      [](const SemanticProgram &program) -> const std::vector<SemanticProgramBindingFact> & {
+        return program.bindingFacts;
+      });
+}
+
+std::vector<const SemanticProgramReturnFact *>
+semanticProgramReturnFactView(const SemanticProgram &semanticProgram) {
+  return buildModuleOrFlatSemanticView<SemanticProgramReturnFact>(
+      semanticProgram,
+      [](const SemanticProgramModuleResolvedArtifacts &module)
+          -> const std::vector<SemanticProgramReturnFact> & { return module.returnFacts; },
+      [](const SemanticProgram &program) -> const std::vector<SemanticProgramReturnFact> & {
+        return program.returnFacts;
+      });
+}
+
+std::vector<const SemanticProgramLocalAutoFact *>
+semanticProgramLocalAutoFactView(const SemanticProgram &semanticProgram) {
+  return buildModuleOrFlatSemanticView<SemanticProgramLocalAutoFact>(
+      semanticProgram,
+      [](const SemanticProgramModuleResolvedArtifacts &module)
+          -> const std::vector<SemanticProgramLocalAutoFact> & { return module.localAutoFacts; },
+      [](const SemanticProgram &program) -> const std::vector<SemanticProgramLocalAutoFact> & {
+        return program.localAutoFacts;
+      });
+}
+
+std::vector<const SemanticProgramQueryFact *>
+semanticProgramQueryFactView(const SemanticProgram &semanticProgram) {
+  return buildModuleOrFlatSemanticView<SemanticProgramQueryFact>(
+      semanticProgram,
+      [](const SemanticProgramModuleResolvedArtifacts &module)
+          -> const std::vector<SemanticProgramQueryFact> & { return module.queryFacts; },
+      [](const SemanticProgram &program) -> const std::vector<SemanticProgramQueryFact> & {
+        return program.queryFacts;
+      });
+}
+
+std::vector<const SemanticProgramTryFact *>
+semanticProgramTryFactView(const SemanticProgram &semanticProgram) {
+  return buildModuleOrFlatSemanticView<SemanticProgramTryFact>(
+      semanticProgram,
+      [](const SemanticProgramModuleResolvedArtifacts &module)
+          -> const std::vector<SemanticProgramTryFact> & { return module.tryFacts; },
+      [](const SemanticProgram &program) -> const std::vector<SemanticProgramTryFact> & {
+        return program.tryFacts;
+      });
+}
+
+std::vector<const SemanticProgramOnErrorFact *>
+semanticProgramOnErrorFactView(const SemanticProgram &semanticProgram) {
+  return buildModuleOrFlatSemanticView<SemanticProgramOnErrorFact>(
+      semanticProgram,
+      [](const SemanticProgramModuleResolvedArtifacts &module)
+          -> const std::vector<SemanticProgramOnErrorFact> & { return module.onErrorFacts; },
+      [](const SemanticProgram &program) -> const std::vector<SemanticProgramOnErrorFact> & {
+        return program.onErrorFacts;
+      });
+}
+
 std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
   std::ostringstream out;
   out << "semantic_product {\n";

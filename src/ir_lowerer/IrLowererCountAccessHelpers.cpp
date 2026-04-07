@@ -6,6 +6,7 @@
 
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererHelpers.h"
+#include "primec/SemanticProduct.h"
 
 namespace primec::ir_lowerer {
 using count_access_detail::isDereferencedCollectionCountTarget;
@@ -36,13 +37,14 @@ bool resolveEntryArgsParameterFromSemanticProduct(const Definition &entryDef,
 
   const SemanticProgramBindingFact *entryParamFact = nullptr;
   std::size_t entryParamCount = 0;
-  for (const auto &entry : semanticProgram->bindingFacts) {
-    if (entry.scopePath != entryDef.fullPath || entry.siteKind != "parameter") {
+  const auto bindingFacts = semanticProgramBindingFactView(*semanticProgram);
+  for (const auto *entry : bindingFacts) {
+    if (entry->scopePath != entryDef.fullPath || entry->siteKind != "parameter") {
       continue;
     }
     ++entryParamCount;
     if (entryParamFact == nullptr) {
-      entryParamFact = &entry;
+      entryParamFact = entry;
     }
   }
 

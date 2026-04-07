@@ -502,6 +502,21 @@ SemanticProgram buildSemanticProgram(const Program &program,
   for (const auto &entry : semanticProgram.bindingFacts) {
     ensureModuleResolvedArtifacts(entry.scopePath).bindingFacts.push_back(entry);
   }
+  for (const auto &entry : semanticProgram.returnFacts) {
+    ensureModuleResolvedArtifacts(entry.definitionPath).returnFacts.push_back(entry);
+  }
+  for (const auto &entry : semanticProgram.localAutoFacts) {
+    ensureModuleResolvedArtifacts(entry.scopePath).localAutoFacts.push_back(entry);
+  }
+  for (const auto &entry : semanticProgram.queryFacts) {
+    ensureModuleResolvedArtifacts(entry.scopePath).queryFacts.push_back(entry);
+  }
+  for (const auto &entry : semanticProgram.tryFacts) {
+    ensureModuleResolvedArtifacts(entry.scopePath).tryFacts.push_back(entry);
+  }
+  for (const auto &entry : semanticProgram.onErrorFacts) {
+    ensureModuleResolvedArtifacts(entry.definitionPath).onErrorFacts.push_back(entry);
+  }
 
   std::sort(semanticProgram.moduleResolvedArtifacts.begin(),
             semanticProgram.moduleResolvedArtifacts.end(),

@@ -226,6 +226,11 @@ struct SemanticProgramModuleResolvedArtifacts {
   std::vector<SemanticProgramBridgePathChoice> bridgePathChoices;
   std::vector<SemanticProgramCallableSummary> callableSummaries;
   std::vector<SemanticProgramBindingFact> bindingFacts;
+  std::vector<SemanticProgramReturnFact> returnFacts;
+  std::vector<SemanticProgramLocalAutoFact> localAutoFacts;
+  std::vector<SemanticProgramQueryFact> queryFacts;
+  std::vector<SemanticProgramTryFact> tryFacts;
+  std::vector<SemanticProgramOnErrorFact> onErrorFacts;
 };
 
 struct SemanticProgram {
@@ -257,6 +262,18 @@ std::vector<const SemanticProgramBridgePathChoice *>
 semanticProgramBridgePathChoiceView(const SemanticProgram &semanticProgram);
 std::vector<const SemanticProgramCallableSummary *>
 semanticProgramCallableSummaryView(const SemanticProgram &semanticProgram);
+std::vector<const SemanticProgramBindingFact *>
+semanticProgramBindingFactView(const SemanticProgram &semanticProgram);
+std::vector<const SemanticProgramReturnFact *>
+semanticProgramReturnFactView(const SemanticProgram &semanticProgram);
+std::vector<const SemanticProgramLocalAutoFact *>
+semanticProgramLocalAutoFactView(const SemanticProgram &semanticProgram);
+std::vector<const SemanticProgramQueryFact *>
+semanticProgramQueryFactView(const SemanticProgram &semanticProgram);
+std::vector<const SemanticProgramTryFact *>
+semanticProgramTryFactView(const SemanticProgram &semanticProgram);
+std::vector<const SemanticProgramOnErrorFact *>
+semanticProgramOnErrorFactView(const SemanticProgram &semanticProgram);
 
 std::string formatSemanticProgram(const SemanticProgram &semanticProgram);
 
