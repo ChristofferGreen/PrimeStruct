@@ -125,15 +125,20 @@ path (based on current recognition hooks):
   that same rewrite path by reusing resolved callee receiver parameter typing
   when template arguments are omitted (IR coverage:
   `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`).
+- Dereference-wrapped helper-return receiver forms (for example
+  `dereference(makeValuesRef())`) now route through that same rewrite path by
+  inferring map typing from resolved helper return collection declarations when
+  template arguments are omitted (IR coverage:
+  `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`).
 - Dereference-wrapped field-access/non-local receiver forms (for example
   `dereference(holder.valuesRef)`) now route through that same rewrite path by
   reusing resolved canonical/helper-alias callee receiver parameter typing when
   template arguments are omitted (IR coverage:
   `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`).
 - Remaining non-local lvalue receiver shapes that do not currently route through
-  that same path (for example non-local receiver forms beyond field-access and
-  dereference-wrapped field-access that still bypass canonical/helper alias
-  receiver-typing inference before rewrite).
+  that same path (for example non-local receiver forms beyond field-access,
+  helper-return-dereference, and dereference-wrapped field-access that still
+  bypass canonical/helper alias receiver-typing inference before rewrite).
 - Temporary/helper-return receiver shapes that do not provide a stable writable
   lvalue target for pointer write-back now have deterministic compile-diagnostic
   coverage for both direct canonical and method-sugar insert forms (see

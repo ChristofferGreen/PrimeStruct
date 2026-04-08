@@ -408,6 +408,12 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
   mapValuesFactoryReturn.name = "return";
   mapValuesFactoryReturn.templateArgs = {"map<i32, i32>"};
   mapValuesFactoryDef.transforms.push_back(mapValuesFactoryReturn);
+  primec::Definition mapValuesRefFactoryDef;
+  mapValuesRefFactoryDef.fullPath = "/main/makeValuesRef";
+  primec::Transform mapValuesRefFactoryReturn;
+  mapValuesRefFactoryReturn.name = "return";
+  mapValuesRefFactoryReturn.templateArgs = {"Reference<map<i32, i32>>"};
+  mapValuesRefFactoryDef.transforms.push_back(mapValuesRefFactoryReturn);
 
   primec::Definition mapInsertBuiltinDef;
   mapInsertBuiltinDef.fullPath = "/std/collections/map/insert_builtin";
@@ -749,6 +755,123 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
               return nullptr;
             },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
+              if (callExpr.name == "/std/collections/map/insert_builtin") {
+                return &mapInsertBuiltinDef;
+              }
+              return nullptr;
+            },
+            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
+              if (path == "/std/collections/map/insert_builtin") {
+                info.returnsVoid = true;
+                return true;
+              }
+              return false;
+            },
+            [&](const primec::Expr &callExpr,
+                const primec::Definition &callee,
+                const primec::ir_lowerer::LocalMap &,
+                bool expectValue) {
+              ++inlineCalls;
+              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
+              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(callExpr.isMethodCall);
+              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(expectValue);
+              CHECK(callExpr.templateArgs == expectedTemplateArgs);
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(inlineCalls == 1);
+  CHECK(instructions.empty());
+
+  primec::Expr valuesRefFactoryCall;
+  valuesRefFactoryCall.kind = primec::Expr::Kind::Call;
+  valuesRefFactoryCall.name = "/main/makeValuesRef";
+  primec::Expr valuesRefDerefExpr;
+  valuesRefDerefExpr.kind = primec::Expr::Kind::Call;
+  valuesRefDerefExpr.name = "dereference";
+  valuesRefDerefExpr.args = {valuesRefFactoryCall};
+  valuesRefDerefExpr.argNames = {std::nullopt};
+
+  primec::Expr mapInsertDerefHelperStmt = mapInsertStmt;
+  mapInsertDerefHelperStmt.args = {valuesRefDerefExpr, keyArg, valueArg};
+  mapInsertDerefHelperStmt.argNames = {std::nullopt, std::nullopt, std::nullopt};
+  mapInsertDerefHelperStmt.templateArgs.clear();
+
+  inlineCalls = 0;
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            mapInsertDerefHelperStmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &callExpr) -> const primec::Definition * {
+              if (callExpr.name == "/main/makeValuesRef") {
+                return &mapValuesRefFactoryDef;
+              }
+              if (callExpr.name == "/std/collections/map/insert_builtin") {
+                return &mapInsertBuiltinDef;
+              }
+              return nullptr;
+            },
+            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
+              if (path == "/std/collections/map/insert_builtin") {
+                info.returnsVoid = true;
+                return true;
+              }
+              return false;
+            },
+            [&](const primec::Expr &callExpr,
+                const primec::Definition &callee,
+                const primec::ir_lowerer::LocalMap &,
+                bool expectValue) {
+              ++inlineCalls;
+              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
+              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(callExpr.isMethodCall);
+              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(expectValue);
+              CHECK(callExpr.templateArgs == expectedTemplateArgs);
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(inlineCalls == 1);
+  CHECK(instructions.empty());
+
+  primec::Expr mapInsertDerefHelperMethodStmt;
+  mapInsertDerefHelperMethodStmt.kind = primec::Expr::Kind::Call;
+  mapInsertDerefHelperMethodStmt.name = "insert";
+  mapInsertDerefHelperMethodStmt.isMethodCall = true;
+  mapInsertDerefHelperMethodStmt.args = {valuesRefDerefExpr, keyArg, valueArg};
+  mapInsertDerefHelperMethodStmt.argNames = {std::nullopt, std::nullopt, std::nullopt};
+
+  inlineCalls = 0;
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            mapInsertDerefHelperMethodStmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &callExpr,
+                const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              if (callExpr.isMethodCall && callExpr.name == "insert" && callExpr.args.size() == 3) {
+                return &mapInsertAliasDef;
+              }
+              return nullptr;
+            },
+            [&](const primec::Expr &callExpr) -> const primec::Definition * {
+              if (callExpr.name == "/main/makeValuesRef") {
+                return &mapValuesRefFactoryDef;
+              }
               if (callExpr.name == "/std/collections/map/insert_builtin") {
                 return &mapInsertBuiltinDef;
               }

@@ -3017,6 +3017,9 @@ bad_use_after_take() {
     field-access receiver-typing inference when template arguments are omitted, so alias-resolved
     non-local receiver forms route through `insert_builtin` instead of falling back to pending
     runtime paths.
+    Dereference-wrapped helper-return receivers (for example
+    `dereference(makeValuesRef())`) now also route through that path by inferring map typing from
+    resolved helper return collection declarations when template arguments are omitted.
     Dereference-wrapped non-local field-access receivers (for example
     `dereference(holder.valuesRef)`) now also share that same canonical/helper-alias callee
     receiver-typing inference when template arguments are omitted, so those non-local borrowed

@@ -379,11 +379,13 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
     }
 
     targetInfoOut = {};
-    const Definition *callee = resolveDefinitionCall(targetExpr);
-    if (callee != nullptr) {
+    auto tryPopulateFromResolvedCallee = [&](const Definition *resolvedCallee) {
+      if (resolvedCallee == nullptr) {
+        return false;
+      }
       std::string collectionName;
       std::vector<std::string> collectionArgs;
-      if (!inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) ||
+      if (!inferDeclaredReturnCollection(*resolvedCallee, collectionName, collectionArgs) ||
           collectionName != "map" ||
           collectionArgs.size() != 2) {
         return false;
@@ -393,6 +395,21 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
       targetInfoOut.mapValueKind = valueKindFromTypeName(collectionArgs.back());
       return targetInfoOut.mapKeyKind != LocalInfo::ValueKind::Unknown &&
              targetInfoOut.mapValueKind != LocalInfo::ValueKind::Unknown;
+    };
+
+    const Definition *callee = resolveDefinitionCall(targetExpr);
+    if (tryPopulateFromResolvedCallee(callee)) {
+      return true;
+    }
+
+    if (targetExpr.kind == Expr::Kind::Call &&
+        isSimpleCallName(targetExpr, "dereference") &&
+        targetExpr.args.size() == 1) {
+      const Expr &derefTarget = targetExpr.args.front();
+      if (derefTarget.kind == Expr::Kind::Call &&
+          tryPopulateFromResolvedCallee(resolveDefinitionCall(derefTarget))) {
+        return true;
+      }
     }
 
     // Direct canonical insert calls on non-local field receivers already carry
