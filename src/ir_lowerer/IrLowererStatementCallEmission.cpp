@@ -384,6 +384,18 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
 
     const Expr *canonicalReceiverExpr = peelReceiverWrappers(targetExpr);
 
+    // Reuse the core access-target resolver on the peeled receiver shape so
+    // wrapped args-pack map-access forms (for example stacked
+    // location/dereference around /map/at(argsPack, ...)) can flow through the
+    // same typed map-target inference used by direct receivers.
+    const auto canonicalTargetInfo = resolveMapAccessTargetInfo(*canonicalReceiverExpr, localsIn);
+    if (canonicalTargetInfo.isMapTarget &&
+        canonicalTargetInfo.mapKeyKind != LocalInfo::ValueKind::Unknown &&
+        canonicalTargetInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
+      targetInfoOut = canonicalTargetInfo;
+      return true;
+    }
+
     const Expr *nonLocalFieldReceiver = nullptr;
     if (canonicalReceiverExpr->kind == Expr::Kind::Call &&
         canonicalReceiverExpr->isFieldAccess &&
