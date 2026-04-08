@@ -17,14 +17,14 @@ Sizing note: each leaf `○` item should fit in one code-affecting commit plus f
   - ✓ Publish decomposed live checklist items below.
 
 **Group 13 - Ownership/runtime substrate**
-- ○ Move the canonical imported vector constructor surface from fixed-arity wrapper helpers to variadic `vector(values...)`.
+- ◐ Move the canonical imported vector constructor surface from fixed-arity wrapper helpers to variadic `vector(values...)`.
   - ✓ Inventory remaining fixed-arity vector constructor wrappers and callsites (see `docs/ownership_runtime_soa_touchpoints.md`, section 1).
-  - ○ Route canonical imported constructor calls and literal rewrite targets to the variadic helper surface.
+  - ✓ Route canonical imported constructor calls and literal rewrite targets to the variadic helper surface (`stdlib/std/collections/vector.prime` now forwards canonical constructor overloads to `/std/collections/experimental_vector/vector<T>(...)`).
   - ○ Add focused conformance coverage for constructor/literal parity across direct and imported forms.
   - ○ Delete the replaced fixed-arity wrapper constructor surface after parity is locked.
-- ○ Move the canonical imported map constructor surface from fixed-arity wrapper helpers to variadic `map(entry(...), ...)`.
+- ◐ Move the canonical imported map constructor surface from fixed-arity wrapper helpers to variadic `map(entry(...), ...)`.
   - ✓ Inventory remaining fixed-arity map constructor wrappers and callsites (see `docs/ownership_runtime_soa_touchpoints.md`, section 2).
-  - ○ Route canonical imported constructor calls and literal rewrite targets to the variadic entry-based helper surface.
+  - ✓ Route canonical imported constructor calls and literal rewrite targets to the variadic entry-based helper surface (`stdlib/std/collections/map.prime` canonical constructor overloads now build `/std/collections/experimental_map/entry<K, V>(...)` tuples and forward to variadic `/std/collections/experimental_map/map<K, V>(...)`).
   - ○ Add focused conformance coverage for constructor/literal parity across direct and imported forms.
   - ○ Delete the replaced fixed-arity wrapper constructor surface after parity is locked.
 - ○ Route the remaining builtin canonical `map<K, V>` borrowed/non-local growth mutation surfaces through the shared grown-pointer write-back/repoint path.

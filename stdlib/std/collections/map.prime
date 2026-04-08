@@ -7,19 +7,24 @@ import /std/collections/experimental_map/*
 
 [public effects(heap_alloc), return<map<K, V>>]
 /std/collections/map/map<K, V>([K] key, [V] value) {
-  return(/std/collections/experimental_map/mapSingle<K, V>(key, value))
+  return(/std/collections/experimental_map/map<K, V>(
+      /std/collections/experimental_map/entry<K, V>(key, value)))
 }
 
 [public effects(heap_alloc), return<map<K, V>>]
 /std/collections/map/map<K, V>([K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue) {
-  return(/std/collections/experimental_map/mapPair<K, V>(firstKey, firstValue, secondKey, secondValue))
+  return(/std/collections/experimental_map/map<K, V>(
+      /std/collections/experimental_map/entry<K, V>(firstKey, firstValue),
+      /std/collections/experimental_map/entry<K, V>(secondKey, secondValue)))
 }
 
 [public effects(heap_alloc), return<map<K, V>>]
 /std/collections/map/map<K, V>(
     [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue) {
-  return(/std/collections/experimental_map/mapTriple<K, V>(
-      firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue))
+  return(/std/collections/experimental_map/map<K, V>(
+      /std/collections/experimental_map/entry<K, V>(firstKey, firstValue),
+      /std/collections/experimental_map/entry<K, V>(secondKey, secondValue),
+      /std/collections/experimental_map/entry<K, V>(thirdKey, thirdValue)))
 }
 
 [public effects(heap_alloc), return<map<K, V>>]
@@ -32,8 +37,11 @@ import /std/collections/experimental_map/*
     [V] thirdValue,
     [K] fourthKey,
     [V] fourthValue) {
-  return(/std/collections/experimental_map/mapQuad<K, V>(
-      firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue))
+  return(/std/collections/experimental_map/map<K, V>(
+      /std/collections/experimental_map/entry<K, V>(firstKey, firstValue),
+      /std/collections/experimental_map/entry<K, V>(secondKey, secondValue),
+      /std/collections/experimental_map/entry<K, V>(thirdKey, thirdValue),
+      /std/collections/experimental_map/entry<K, V>(fourthKey, fourthValue)))
 }
 
 [public effects(heap_alloc), return<map<K, V>>]
@@ -48,17 +56,12 @@ import /std/collections/experimental_map/*
     [V] fourthValue,
     [K] fifthKey,
     [V] fifthValue) {
-  return(/std/collections/experimental_map/mapQuint<K, V>(
-      firstKey,
-      firstValue,
-      secondKey,
-      secondValue,
-      thirdKey,
-      thirdValue,
-      fourthKey,
-      fourthValue,
-      fifthKey,
-      fifthValue))
+  return(/std/collections/experimental_map/map<K, V>(
+      /std/collections/experimental_map/entry<K, V>(firstKey, firstValue),
+      /std/collections/experimental_map/entry<K, V>(secondKey, secondValue),
+      /std/collections/experimental_map/entry<K, V>(thirdKey, thirdValue),
+      /std/collections/experimental_map/entry<K, V>(fourthKey, fourthValue),
+      /std/collections/experimental_map/entry<K, V>(fifthKey, fifthValue)))
 }
 
 [public effects(heap_alloc), return<map<K, V>>]
@@ -75,19 +78,13 @@ import /std/collections/experimental_map/*
     [V] fifthValue,
     [K] sixthKey,
     [V] sixthValue) {
-  return(/std/collections/experimental_map/mapSext<K, V>(
-      firstKey,
-      firstValue,
-      secondKey,
-      secondValue,
-      thirdKey,
-      thirdValue,
-      fourthKey,
-      fourthValue,
-      fifthKey,
-      fifthValue,
-      sixthKey,
-      sixthValue))
+  return(/std/collections/experimental_map/map<K, V>(
+      /std/collections/experimental_map/entry<K, V>(firstKey, firstValue),
+      /std/collections/experimental_map/entry<K, V>(secondKey, secondValue),
+      /std/collections/experimental_map/entry<K, V>(thirdKey, thirdValue),
+      /std/collections/experimental_map/entry<K, V>(fourthKey, fourthValue),
+      /std/collections/experimental_map/entry<K, V>(fifthKey, fifthValue),
+      /std/collections/experimental_map/entry<K, V>(sixthKey, sixthValue)))
 }
 
 [public effects(heap_alloc), return<map<K, V>>]
@@ -106,21 +103,14 @@ import /std/collections/experimental_map/*
     [V] sixthValue,
     [K] seventhKey,
     [V] seventhValue) {
-  return(/std/collections/experimental_map/mapSept<K, V>(
-      firstKey,
-      firstValue,
-      secondKey,
-      secondValue,
-      thirdKey,
-      thirdValue,
-      fourthKey,
-      fourthValue,
-      fifthKey,
-      fifthValue,
-      sixthKey,
-      sixthValue,
-      seventhKey,
-      seventhValue))
+  return(/std/collections/experimental_map/map<K, V>(
+      /std/collections/experimental_map/entry<K, V>(firstKey, firstValue),
+      /std/collections/experimental_map/entry<K, V>(secondKey, secondValue),
+      /std/collections/experimental_map/entry<K, V>(thirdKey, thirdValue),
+      /std/collections/experimental_map/entry<K, V>(fourthKey, fourthValue),
+      /std/collections/experimental_map/entry<K, V>(fifthKey, fifthValue),
+      /std/collections/experimental_map/entry<K, V>(sixthKey, sixthValue),
+      /std/collections/experimental_map/entry<K, V>(seventhKey, seventhValue)))
 }
 
 [public effects(heap_alloc), return<map<K, V>>]
@@ -141,23 +131,15 @@ import /std/collections/experimental_map/*
     [V] seventhValue,
     [K] eighthKey,
     [V] eighthValue) {
-  return(/std/collections/experimental_map/mapOct<K, V>(
-      firstKey,
-      firstValue,
-      secondKey,
-      secondValue,
-      thirdKey,
-      thirdValue,
-      fourthKey,
-      fourthValue,
-      fifthKey,
-      fifthValue,
-      sixthKey,
-      sixthValue,
-      seventhKey,
-      seventhValue,
-      eighthKey,
-      eighthValue))
+  return(/std/collections/experimental_map/map<K, V>(
+      /std/collections/experimental_map/entry<K, V>(firstKey, firstValue),
+      /std/collections/experimental_map/entry<K, V>(secondKey, secondValue),
+      /std/collections/experimental_map/entry<K, V>(thirdKey, thirdValue),
+      /std/collections/experimental_map/entry<K, V>(fourthKey, fourthValue),
+      /std/collections/experimental_map/entry<K, V>(fifthKey, fifthValue),
+      /std/collections/experimental_map/entry<K, V>(sixthKey, sixthValue),
+      /std/collections/experimental_map/entry<K, V>(seventhKey, seventhValue),
+      /std/collections/experimental_map/entry<K, V>(eighthKey, eighthValue)))
 }
 
 [public effects(heap_alloc), return<map<K, V>>]
