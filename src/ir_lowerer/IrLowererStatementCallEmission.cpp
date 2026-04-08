@@ -269,7 +269,8 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
     helperName = stripGeneratedHelperSuffix(std::move(helperName));
     return helperName == "insert" || helperName == "insert_ref" ||
            helperName == "Insert" || helperName == "InsertRef" ||
-           helperName == "mapInsert" || helperName == "mapInsertRef";
+           helperName == "mapInsert" || helperName == "mapInsertRef" ||
+           helperName == "MapInsert" || helperName == "MapInsertRef";
   };
 
   size_t receiverIndex = 0;
@@ -324,7 +325,8 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
       const std::string helperStem = normalizeInsertHelperStem(callee.fullPath);
       if (helperStem == "insert" || helperStem == "insert_ref" ||
           helperStem == "Insert" || helperStem == "InsertRef" ||
-          helperStem == "mapInsert" || helperStem == "mapInsertRef") {
+          helperStem == "mapInsert" || helperStem == "mapInsertRef" ||
+          helperStem == "MapInsert" || helperStem == "MapInsertRef") {
         return true;
       }
       Expr calleeExpr;
