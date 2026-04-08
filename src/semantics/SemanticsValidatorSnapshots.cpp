@@ -258,66 +258,55 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
   visitExpr = [&](const std::string &scopePath, const Expr &expr) {
     if (expr.isBinding && isLocalAutoCandidate(expr)) {
       const auto [sourceLine, sourceColumn] = graphLocalAutoSourceLocation(expr);
-      const auto bindingIt = graphLocalAutoBindings_.find(
-          graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn));
+      const std::string bindingKey = graphLocalAutoBindingKey(
+          scopePath, sourceLine, sourceColumn);
+      const auto bindingIt = graphLocalAutoBindings_.find(bindingKey);
       if (bindingIt != graphLocalAutoBindings_.end()) {
         std::string initializerResolvedPath;
-        if (const auto pathIt = graphLocalAutoResolvedPaths_.find(
-                graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn));
+        if (const auto pathIt = graphLocalAutoResolvedPaths_.find(bindingKey);
             pathIt != graphLocalAutoResolvedPaths_.end()) {
           initializerResolvedPath = pathIt->second;
         }
         std::string initializerDirectCallResolvedPath;
-        if (const auto directCallPathIt = graphLocalAutoDirectCallResolvedPaths_.find(
-                graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn));
+        if (const auto directCallPathIt = graphLocalAutoDirectCallResolvedPaths_.find(bindingKey);
             directCallPathIt != graphLocalAutoDirectCallResolvedPaths_.end()) {
           initializerDirectCallResolvedPath = directCallPathIt->second;
         }
         ReturnKind initializerDirectCallReturnKind = ReturnKind::Unknown;
-        if (const auto directCallReturnKindIt = graphLocalAutoDirectCallReturnKinds_.find(
-                graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn));
+        if (const auto directCallReturnKindIt = graphLocalAutoDirectCallReturnKinds_.find(bindingKey);
             directCallReturnKindIt != graphLocalAutoDirectCallReturnKinds_.end()) {
           initializerDirectCallReturnKind = directCallReturnKindIt->second;
         }
         std::string initializerMethodCallResolvedPath;
-        if (const auto methodCallPathIt = graphLocalAutoMethodCallResolvedPaths_.find(
-                graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn));
+        if (const auto methodCallPathIt = graphLocalAutoMethodCallResolvedPaths_.find(bindingKey);
             methodCallPathIt != graphLocalAutoMethodCallResolvedPaths_.end()) {
           initializerMethodCallResolvedPath = methodCallPathIt->second;
         }
         ReturnKind initializerMethodCallReturnKind = ReturnKind::Unknown;
-        if (const auto methodCallReturnKindIt = graphLocalAutoMethodCallReturnKinds_.find(
-                graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn));
+        if (const auto methodCallReturnKindIt = graphLocalAutoMethodCallReturnKinds_.find(bindingKey);
             methodCallReturnKindIt != graphLocalAutoMethodCallReturnKinds_.end()) {
           initializerMethodCallReturnKind = methodCallReturnKindIt->second;
         }
         BindingInfo initializerBinding;
-        if (const auto bindingInfoIt = graphLocalAutoInitializerBindings_.find(
-                graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn));
+        if (const auto bindingInfoIt = graphLocalAutoInitializerBindings_.find(bindingKey);
             bindingInfoIt != graphLocalAutoInitializerBindings_.end()) {
           initializerBinding = bindingInfoIt->second;
         }
         BindingInfo initializerReceiverBinding;
-        if (const auto receiverIt = graphLocalAutoReceiverBindings_.find(
-                graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn));
-            receiverIt != graphLocalAutoReceiverBindings_.end()) {
-          initializerReceiverBinding = receiverIt->second;
-        }
         std::string initializerQueryTypeText;
-        if (const auto queryIt = graphLocalAutoQueryTypeTexts_.find(
-                graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn));
-            queryIt != graphLocalAutoQueryTypeTexts_.end()) {
-          initializerQueryTypeText = queryIt->second;
-        }
         bool initializerResultHasValue = false;
         std::string initializerResultValueType;
         std::string initializerResultErrorType;
-        if (const auto resultIt = graphLocalAutoResultTypes_.find(
-                graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn));
-            resultIt != graphLocalAutoResultTypes_.end()) {
-          initializerResultHasValue = resultIt->second.hasValue;
-          initializerResultValueType = resultIt->second.valueType;
-          initializerResultErrorType = resultIt->second.errorType;
+        if (const auto querySnapshotIt = graphLocalAutoQuerySnapshots_.find(bindingKey);
+            querySnapshotIt != graphLocalAutoQuerySnapshots_.end()) {
+          const QuerySnapshotData &querySnapshot = querySnapshotIt->second;
+          initializerReceiverBinding = querySnapshot.receiverBinding;
+          initializerQueryTypeText = querySnapshot.typeText;
+          if (querySnapshot.resultInfo.isResult) {
+            initializerResultHasValue = querySnapshot.resultInfo.hasValue;
+            initializerResultValueType = querySnapshot.resultInfo.valueType;
+            initializerResultErrorType = querySnapshot.resultInfo.errorType;
+          }
         }
         bool initializerHasTry = false;
         std::string initializerTryOperandResolvedPath;
@@ -330,8 +319,7 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
         std::string initializerTryOnErrorHandlerPath;
         std::string initializerTryOnErrorErrorType;
         size_t initializerTryOnErrorBoundArgCount = 0;
-        if (const auto tryIt = graphLocalAutoTryValues_.find(
-                graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn));
+        if (const auto tryIt = graphLocalAutoTryValues_.find(bindingKey);
             tryIt != graphLocalAutoTryValues_.end()) {
           initializerHasTry = true;
           initializerTryOperandResolvedPath = tryIt->second.operandResolvedPath;

@@ -875,6 +875,15 @@ main() {
         return entry.scopePath == "/main" && entry.resolvedPath == "/lookup";
       });
   REQUIRE(queryEntry != nullptr);
+  CHECK(localAutoEntry->initializerReceiverBindingTypeText ==
+        queryEntry->receiverBindingTypeText);
+  CHECK(localAutoEntry->initializerQueryTypeText == queryEntry->queryTypeText);
+  CHECK(localAutoEntry->initializerResultHasValue ==
+        queryEntry->resultTypeHasValue);
+  CHECK(localAutoEntry->initializerResultValueType ==
+        queryEntry->resultValueType);
+  CHECK(localAutoEntry->initializerResultErrorType ==
+        queryEntry->resultErrorType);
   CHECK(queryEntry->bindingTypeText == "Result<int, MyError>");
   CHECK(queryEntry->hasResultType);
   CHECK(queryEntry->resultTypeHasValue);

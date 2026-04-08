@@ -464,9 +464,7 @@ private:
   std::unordered_map<std::string, BindingInfo> graphLocalAutoBindings_;
   std::unordered_map<std::string, std::string> graphLocalAutoResolvedPaths_;
   std::unordered_map<std::string, BindingInfo> graphLocalAutoInitializerBindings_;
-  std::unordered_map<std::string, BindingInfo> graphLocalAutoReceiverBindings_;
-  std::unordered_map<std::string, std::string> graphLocalAutoQueryTypeTexts_;
-  std::unordered_map<std::string, ResultTypeInfo> graphLocalAutoResultTypes_;
+  std::unordered_map<std::string, QuerySnapshotData> graphLocalAutoQuerySnapshots_;
   std::unordered_map<std::string, LocalAutoTrySnapshotData> graphLocalAutoTryValues_;
   std::unordered_map<std::string, std::string> graphLocalAutoDirectCallResolvedPaths_;
   std::unordered_map<std::string, ReturnKind> graphLocalAutoDirectCallReturnKinds_;

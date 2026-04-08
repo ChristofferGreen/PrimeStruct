@@ -34,11 +34,11 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
     - ✓ Add positive + negative conformance fixtures for that island.
     - ✓ Delete the replaced fallback branch for that island.
 - ◐ Implement the graph/CT-eval interaction contract now that the boundary is documented.
-  - ○ Route graph-backed consumers onto shared dependency-state consumption where CT-eval and graph validation overlap.
+  - ✓ Route graph-backed consumers onto shared dependency-state consumption where CT-eval and graph validation overlap.
     - ✓ Identify one dependency state shared by CT-eval and graph validation (see `docs/type_graph_migration_touchpoints.md`, section 4).
-    - ○ Publish that dependency state on the shared graph-backed surface.
-    - ○ Migrate one graph consumer to the shared state.
-    - ○ Remove the migrated consumer's duplicate local state path.
+    - ✓ Publish that dependency state on the shared graph-backed surface.
+    - ✓ Migrate one graph consumer to the shared state.
+    - ✓ Remove the migrated consumer's duplicate local state path.
   - ○ Add one explicit adapter for the remaining CT-eval-only paths that still cannot consume shared graph dependency state directly.
     - ✓ Select one CT-eval-only dependency state that needs an adapter (see `docs/type_graph_migration_touchpoints.md`, section 5).
     - ○ Implement a minimal adapter for that dependency state.

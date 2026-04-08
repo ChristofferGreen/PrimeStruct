@@ -79,9 +79,7 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
   graphLocalAutoBindings_.clear();
   graphLocalAutoResolvedPaths_.clear();
   graphLocalAutoInitializerBindings_.clear();
-  graphLocalAutoReceiverBindings_.clear();
-  graphLocalAutoQueryTypeTexts_.clear();
-  graphLocalAutoResultTypes_.clear();
+  graphLocalAutoQuerySnapshots_.clear();
   graphLocalAutoTryValues_.clear();
   graphLocalAutoDirectCallResolvedPaths_.clear();
   graphLocalAutoDirectCallReturnKinds_.clear();
@@ -531,25 +529,9 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
         QuerySnapshotData initializerQueryData;
         if (initializerAnalysisExpr != nullptr &&
             inferQuerySnapshotData(defParams, activeLocals, *initializerAnalysisExpr, initializerQueryData)) {
-          if (!initializerQueryData.receiverBinding.typeName.empty()) {
-            graphLocalAutoReceiverBindings_[bindingKey] = std::move(initializerQueryData.receiverBinding);
-          } else {
-            graphLocalAutoReceiverBindings_.erase(bindingKey);
-          }
-          if (!initializerQueryData.typeText.empty()) {
-            graphLocalAutoQueryTypeTexts_[bindingKey] = std::move(initializerQueryData.typeText);
-          } else {
-            graphLocalAutoQueryTypeTexts_.erase(bindingKey);
-          }
-          if (initializerQueryData.resultInfo.isResult) {
-            graphLocalAutoResultTypes_[bindingKey] = std::move(initializerQueryData.resultInfo);
-          } else {
-            graphLocalAutoResultTypes_.erase(bindingKey);
-          }
+          graphLocalAutoQuerySnapshots_[bindingKey] = std::move(initializerQueryData);
         } else {
-          graphLocalAutoReceiverBindings_.erase(bindingKey);
-          graphLocalAutoQueryTypeTexts_.erase(bindingKey);
-          graphLocalAutoResultTypes_.erase(bindingKey);
+          graphLocalAutoQuerySnapshots_.erase(bindingKey);
         }
         LocalAutoTrySnapshotData initializerTryValue;
         if (expr.args.size() == 1 &&
