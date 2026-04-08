@@ -18,24 +18,24 @@ Sizing note: each leaf `○` item should fit in one code-affecting commit plus f
 
 **Group 13 - Ownership/runtime substrate**
 - ○ Move the canonical imported vector constructor surface from fixed-arity wrapper helpers to variadic `vector(values...)`.
-  - ○ Inventory remaining fixed-arity vector constructor wrappers and callsites.
+  - ✓ Inventory remaining fixed-arity vector constructor wrappers and callsites (see `docs/ownership_runtime_soa_touchpoints.md`, section 1).
   - ○ Route canonical imported constructor calls and literal rewrite targets to the variadic helper surface.
   - ○ Add focused conformance coverage for constructor/literal parity across direct and imported forms.
   - ○ Delete the replaced fixed-arity wrapper constructor surface after parity is locked.
 - ○ Move the canonical imported map constructor surface from fixed-arity wrapper helpers to variadic `map(entry(...), ...)`.
-  - ○ Inventory remaining fixed-arity map constructor wrappers and callsites.
+  - ✓ Inventory remaining fixed-arity map constructor wrappers and callsites (see `docs/ownership_runtime_soa_touchpoints.md`, section 2).
   - ○ Route canonical imported constructor calls and literal rewrite targets to the variadic entry-based helper surface.
   - ○ Add focused conformance coverage for constructor/literal parity across direct and imported forms.
   - ○ Delete the replaced fixed-arity wrapper constructor surface after parity is locked.
 - ○ Route the remaining builtin canonical `map<K, V>` borrowed/non-local growth mutation surfaces through the shared grown-pointer write-back/repoint path.
-  - ○ Inventory each remaining borrowed/non-local mutation receiver family still pinned to the pending runtime boundary.
+  - ✓ Inventory each remaining borrowed/non-local mutation receiver family still pinned to the pending runtime boundary (see `docs/ownership_runtime_soa_touchpoints.md`, section 3).
   - ○ Migrate one receiver family at a time onto the shared grown-pointer write-back/repoint primitive.
   - ○ Add focused runtime + conformance coverage that locks growth behavior and deterministic failure diagnostics.
   - ○ Remove the migrated pending runtime fallback branches after coverage lands.
 
 **Group 14 - SoA bring-up and end-state cleanup**
 - ○ Retire remaining compiler-owned builtin `soa_vector` semantics/lowering/backend scaffolding as the stdlib `.prime` substrate becomes authoritative.
-  - ○ Inventory the remaining compiler-owned fallback/special-case sites by layer (semantics, lowerer, emitter/backend/runtime helpers).
+  - ✓ Inventory the remaining compiler-owned fallback/special-case sites by layer (semantics, lowerer, emitter/backend/runtime helpers) (see `docs/ownership_runtime_soa_touchpoints.md`, section 4).
   - ○ Migrate one fallback family at a time onto shared stdlib helper/conversion paths.
   - ○ Add focused parity coverage for direct/imported/helper-return receiver forms on each migrated family.
   - ○ Delete migrated fallback branches after parity coverage is in place.
