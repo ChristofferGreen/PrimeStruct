@@ -2977,6 +2977,14 @@ TEST_CASE("compiles and runs builtin canonical map helper-return borrowed method
   expectBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConformance("exe");
 }
 
+TEST_CASE("rejects builtin canonical map direct insert on helper-return value receivers in C++ emitter") {
+  expectBuiltinCanonicalMapInsertHelperReturnValueDirectReject("exe");
+}
+
+TEST_CASE("rejects builtin canonical map method insert on helper-return value receivers in C++ emitter") {
+  expectBuiltinCanonicalMapInsertHelperReturnValueMethodReject("exe");
+}
+
 TEST_CASE("rejects canonical map constructor ownership growth in C++ emitter") {
   expectCanonicalMapNamespaceOwnershipReject("exe");
 }

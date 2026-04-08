@@ -111,7 +111,11 @@ path (based on current recognition hooks):
 - Remaining field-access/non-local lvalue receiver shapes that do not currently
   surface as map-returning helper calls.
 - Temporary/helper-return receiver shapes that do not provide a stable writable
-  lvalue target for pointer write-back.
+  lvalue target for pointer write-back now have deterministic compile-diagnostic
+  coverage for both direct canonical and method-sugar insert forms (see
+  `tests/unit/test_compile_run_map_conformance_sources.h`,
+  `tests/unit/test_compile_run_map_conformance_expectations.h`, and the
+  native/C++/VM conformance harness suites).
 
 ## 4) SoA compiler-owned fallback inventory by layer
 

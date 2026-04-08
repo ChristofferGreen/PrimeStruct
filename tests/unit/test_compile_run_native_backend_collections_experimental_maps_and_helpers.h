@@ -3018,6 +3018,14 @@ TEST_CASE("compiles and runs native builtin canonical map helper-return borrowed
   expectBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConformance("native");
 }
 
+TEST_CASE("rejects native builtin canonical map direct insert on helper-return value receivers") {
+  expectBuiltinCanonicalMapInsertHelperReturnValueDirectReject("native");
+}
+
+TEST_CASE("rejects native builtin canonical map method insert on helper-return value receivers") {
+  expectBuiltinCanonicalMapInsertHelperReturnValueMethodReject("native");
+}
+
 TEST_CASE("rejects native canonical map constructor ownership growth") {
   expectCanonicalMapNamespaceOwnershipReject("native");
 }

@@ -2750,6 +2750,14 @@ TEST_CASE("runs vm builtin canonical map helper-return borrowed method inserts")
   expectBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConformance("vm");
 }
 
+TEST_CASE("rejects vm builtin canonical map direct insert on helper-return value receivers") {
+  expectBuiltinCanonicalMapInsertHelperReturnValueDirectReject("vm");
+}
+
+TEST_CASE("rejects vm builtin canonical map method insert on helper-return value receivers") {
+  expectBuiltinCanonicalMapInsertHelperReturnValueMethodReject("vm");
+}
+
 TEST_CASE("rejects vm canonical map constructor ownership growth") {
   expectCanonicalMapNamespaceOwnershipReject("vm");
 }
