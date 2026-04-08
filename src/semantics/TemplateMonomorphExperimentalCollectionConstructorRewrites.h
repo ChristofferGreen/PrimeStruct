@@ -68,24 +68,6 @@ bool inferExperimentalCollectionConstructorTemplateArgs(const std::string &origi
     valueExpr.templateArgs = std::move(inferredArgs);
     return true;
   }
-  defIt = ctx.sourceDefs.find(helperPath);
-  if (defIt == ctx.sourceDefs.end()) {
-    return false;
-  }
-  if (inferError.empty() &&
-      inferStdlibCollectionHelperTemplateArgs(defIt->second,
-                                              valueExpr,
-                                              locals,
-                                              params,
-                                              mapping,
-                                              allowedParams,
-                                              namespacePrefix,
-                                              ctx,
-                                              allowMathBare,
-                                              inferredArgs)) {
-    valueExpr.templateArgs = std::move(inferredArgs);
-    return true;
-  }
   if (inferError.empty()) {
     return true;
   }

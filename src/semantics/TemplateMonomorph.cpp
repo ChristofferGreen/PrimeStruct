@@ -196,7 +196,6 @@ bool rewriteExpr(Expr &expr,
 #include "TemplateMonomorphBindingCallInference.h"
 #include "TemplateMonomorphBindingBlockInference.h"
 #include "TemplateMonomorphTypeResolution.h"
-#include "TemplateMonomorphCollectionHelperInference.h"
 #include "TemplateMonomorphAssignmentTargetResolution.h"
 #include "TemplateMonomorphExperimentalCollectionArgumentRewrites.h"
 #include "TemplateMonomorphExperimentalCollectionConstructorPaths.h"

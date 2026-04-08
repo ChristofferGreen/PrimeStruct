@@ -168,8 +168,6 @@ TEST_CASE("template monomorph source delegation stays stable") {
       repoRoot / "src" / "semantics" / "TemplateMonomorphMethodTargets.h";
   const std::filesystem::path templateMonomorphTypeResolutionPath =
       repoRoot / "src" / "semantics" / "TemplateMonomorphTypeResolution.h";
-  const std::filesystem::path templateMonomorphCollectionHelperInferencePath =
-      repoRoot / "src" / "semantics" / "TemplateMonomorphCollectionHelperInference.h";
   const std::filesystem::path templateMonomorphAssignmentTargetResolutionPath =
       repoRoot / "src" / "semantics" / "TemplateMonomorphAssignmentTargetResolution.h";
   const std::filesystem::path templateMonomorphExperimentalCollectionArgumentRewritesPath =
@@ -208,7 +206,6 @@ TEST_CASE("template monomorph source delegation stays stable") {
   REQUIRE(std::filesystem::exists(templateMonomorphBindingBlockPath));
   REQUIRE(std::filesystem::exists(templateMonomorphMethodTargetsPath));
   REQUIRE(std::filesystem::exists(templateMonomorphTypeResolutionPath));
-  REQUIRE(std::filesystem::exists(templateMonomorphCollectionHelperInferencePath));
   REQUIRE(std::filesystem::exists(templateMonomorphAssignmentTargetResolutionPath));
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionArgumentRewritesPath));
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionConstructorRewritesPath));
@@ -231,8 +228,6 @@ TEST_CASE("template monomorph source delegation stays stable") {
   const std::string templateMonomorphBindingBlockSource = readText(templateMonomorphBindingBlockPath);
   const std::string templateMonomorphMethodTargetsSource = readText(templateMonomorphMethodTargetsPath);
   const std::string templateMonomorphTypeResolutionSource = readText(templateMonomorphTypeResolutionPath);
-  const std::string templateMonomorphCollectionHelperInferenceSource =
-      readText(templateMonomorphCollectionHelperInferencePath);
   const std::string templateMonomorphAssignmentTargetResolutionSource =
       readText(templateMonomorphAssignmentTargetResolutionPath);
   const std::string templateMonomorphExperimentalCollectionArgumentRewritesSource =
@@ -274,8 +269,6 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphMethodTargets.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphTypeResolution.h\"") !=
-        std::string::npos);
-  CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphCollectionHelperInference.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphAssignmentTargetResolution.h\"") !=
         std::string::npos);
@@ -564,11 +557,6 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphTypeResolutionSource.find(
             "std::string resolveCalleePath(const Expr &expr, const std::string &namespacePrefix, const Context &ctx)") !=
-        std::string::npos);
-  CHECK(templateMonomorphCollectionHelperInferenceSource.find(
-            "bool inferStdlibCollectionHelperTemplateArgs(const Definition &def,") !=
-        std::string::npos);
-  CHECK(templateMonomorphCollectionHelperInferenceSource.find("enum class HelperFamily { None, Vector, Map };") !=
         std::string::npos);
   CHECK(templateMonomorphAssignmentTargetResolutionSource.find(
             "bool inferCallTargetBinding(const Expr &bindingExpr,") !=

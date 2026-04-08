@@ -831,23 +831,8 @@ bool rewriteExpr(Expr &expr,
                                         error)) {
             expr.templateArgs = std::move(inferredArgs);
             allConcrete = true;
-          } else {
-            if (error.empty() &&
-                inferStdlibCollectionHelperTemplateArgs(defIt->second,
-                                                        expr,
-                                                        locals,
-                                                        params,
-                                                        mapping,
-                                                        allowedParams,
-                                                        namespacePrefix,
-                                                        ctx,
-                                                        allowMathBare,
-                                                        inferredArgs)) {
-              allConcrete = inferredTemplateArgsAreConcrete(defIt->second, inferredArgs);
-              expr.templateArgs = std::move(inferredArgs);
-            } else if (!error.empty()) {
-              return false;
-            }
+          } else if (!error.empty()) {
+            return false;
           }
         }
       }
@@ -1101,23 +1086,8 @@ bool rewriteExpr(Expr &expr,
                                           error)) {
               expr.templateArgs = std::move(inferredArgs);
               allConcrete = true;
-            } else {
-              if (error.empty() &&
-                  inferStdlibCollectionHelperTemplateArgs(defIt->second,
-                                                          expr,
-                                                          locals,
-                                                          params,
-                                                          mapping,
-                                                          allowedParams,
-                                                          namespacePrefix,
-                                                          ctx,
-                                                          allowMathBare,
-                                                          inferredArgs)) {
-                allConcrete = inferredTemplateArgsAreConcrete(defIt->second, inferredArgs);
-                expr.templateArgs = std::move(inferredArgs);
-              } else if (!error.empty()) {
-                return false;
-              }
+            } else if (!error.empty()) {
+              return false;
             }
           }
         }

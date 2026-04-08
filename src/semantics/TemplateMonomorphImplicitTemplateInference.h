@@ -639,8 +639,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
   for (const auto &paramName : def.templateArgs) {
     auto it = inferred.find(paramName);
     if (it == inferred.end()) {
-      // Leave error empty so specialized fallback inference can run (for example,
-      // stdlib collection helpers that infer T from vector<T> receiver shape).
+      // Leave error empty so deferred helper-template rewrite gates can decide
+      // whether this callsite must remain unresolved in this pass.
       return false;
     }
     outArgs.push_back(it->second);
