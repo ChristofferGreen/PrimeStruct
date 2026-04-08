@@ -261,6 +261,7 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
     if (!normalizedName.empty() && normalizedName.front() == '/') {
       normalizedName.erase(normalizedName.begin());
     }
+    normalizedName = stripGeneratedHelperSuffix(std::move(normalizedName));
     if (normalizedName != "insert") {
       return false;
     }

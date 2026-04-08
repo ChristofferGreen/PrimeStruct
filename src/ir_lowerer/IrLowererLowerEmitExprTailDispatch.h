@@ -53,7 +53,15 @@
 
           size_t receiverIndex = 0;
           if (callExpr.isMethodCall) {
-            if (callExpr.name != "insert") {
+            std::string normalizedMethodName = callExpr.name;
+            if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
+              normalizedMethodName.erase(normalizedMethodName.begin());
+            }
+            const size_t generatedSuffix = normalizedMethodName.find("__");
+            if (generatedSuffix != std::string::npos) {
+              normalizedMethodName.erase(generatedSuffix);
+            }
+            if (normalizedMethodName != "insert") {
               return false;
             }
           } else {

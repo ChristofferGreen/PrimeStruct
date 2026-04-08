@@ -233,12 +233,22 @@ path (based on current recognition hooks):
   after stripping generated suffixes when resolved receiver parameter typing is
   args-pack based (IR coverage:
   `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`).
+- Non-local method-sugar args-pack map-access receiver-source chains now also
+  route through that same rewrite path when the mutating method call itself
+  carries generated helper suffixes (for example
+  `location(holder.mapsPack).mapAt__generated(0i32).insert__generated(...)`)
+  by matching method-form insert helper stems after stripping generated
+  suffixes in both statement and tail-dispatch rewrite paths (IR coverage:
+  `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`;
+  rewrite parity touchpoints:
+  `src/ir_lowerer/IrLowererStatementCallEmission.cpp` and
+  `src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h`).
 - Remaining non-local lvalue receiver shapes that do not currently route
   through that same path (for example non-local receiver forms beyond
   field-access, helper-return, and args-pack map-access receiver-source `at` /
   `at_unsafe` / `at_ref` / `at_unsafe_ref` + compatibility-alias path/stem
   call/method chains (including PascalCase/PascalCase `_ref` and
-  generated-suffix variants)).
+  generated-suffix variants on receiver-access + mutating-insert stems)).
 - Temporary/helper-return receiver shapes that do not provide a stable writable
   lvalue target for pointer write-back now have deterministic compile-diagnostic
   coverage for both direct canonical and method-sugar insert forms (see
