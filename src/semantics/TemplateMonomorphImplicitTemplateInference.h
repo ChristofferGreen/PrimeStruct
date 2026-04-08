@@ -411,11 +411,24 @@ bool inferImplicitTemplateArgs(const Definition &def,
                         params,
                         allowMathBare) &&
             inferBindingTypeForMonomorph(rewrittenArg, params, locals, allowMathBare, ctx, argInfo);
+        TemplatedFallbackQueryStateAdapterData fallbackQueryState;
+        const bool inferredFromFallbackQueryState =
+            !inferredFromRewrittenArg &&
+            inferTemplatedFallbackQueryStateAdapter(
+                *argExpr, locals, params, namespacePrefix, ctx, allowMathBare, fallbackQueryState);
+        if (inferredFromFallbackQueryState && !fallbackQueryState.mismatchDiagnostic.empty()) {
+          error = "template fallback adapter mismatch on " + def.fullPath + ": " +
+                  fallbackQueryState.mismatchDiagnostic;
+          return false;
+        }
         const std::string fallbackTypeText =
-            inferredFromRewrittenArg
-                ? std::string{}
-                : inferExprTypeTextForTemplatedVectorFallback(*argExpr, locals, namespacePrefix, ctx, allowMathBare);
+            inferredFromFallbackQueryState ? fallbackQueryState.queryTypeText : std::string{};
         if (!inferredFromRewrittenArg && !assignBindingFromTypeText(fallbackTypeText, argInfo)) {
+          if (inferredFromFallbackQueryState && !fallbackTypeText.empty()) {
+            error = "template fallback adapter mismatch on " + def.fullPath +
+                    ": unable to materialize binding type from query type `" + fallbackTypeText + "`";
+            return false;
+          }
           if (const std::string diagnostic = unsupportedBuiltinSoaPendingDiagnostic(*argExpr);
               !diagnostic.empty()) {
             error = diagnostic;

@@ -269,6 +269,16 @@ bool resolvesExperimentalMapValueTypeText(const std::string &typeText,
   return normalized.rfind("std/collections/experimental_map/Map__", 0) == 0;
 }
 
+struct TemplatedFallbackQueryStateAdapterData {
+  std::string queryTypeText;
+  BindingInfo receiverBinding;
+  bool hasResultType = false;
+  bool resultTypeHasValue = false;
+  std::string resultValueType;
+  std::string resultErrorType;
+  std::string mismatchDiagnostic;
+};
+
 bool inferDefinitionReturnBindingForTemplatedFallback(const Definition &def,
                                                       bool allowMathBare,
                                                       Context &ctx,
@@ -403,6 +413,65 @@ std::string inferExprTypeTextForTemplatedVectorFallback(const Expr &expr,
     return bindingTypeToString(inferredReturn);
   }
   return {};
+}
+
+bool inferTemplatedFallbackQueryStateAdapter(const Expr &expr,
+                                             const LocalTypeMap &locals,
+                                             const std::vector<ParameterInfo> &params,
+                                             const std::string &namespacePrefix,
+                                             Context &ctx,
+                                             bool allowMathBare,
+                                             TemplatedFallbackQueryStateAdapterData &out) {
+  out = {};
+  out.queryTypeText =
+      inferExprTypeTextForTemplatedVectorFallback(expr, locals, namespacePrefix, ctx, allowMathBare);
+  if (out.queryTypeText.empty()) {
+    return false;
+  }
+
+  if (expr.kind == Expr::Kind::Call && expr.isMethodCall && !expr.args.empty()) {
+    BindingInfo receiverBinding;
+    if (inferBindingTypeForMonomorph(expr.args.front(), params, locals, allowMathBare, ctx, receiverBinding) &&
+        !receiverBinding.typeName.empty()) {
+      out.receiverBinding = std::move(receiverBinding);
+    }
+  }
+
+  std::string normalizedQueryType = normalizeBindingTypeName(out.queryTypeText);
+  std::string resultBase;
+  std::string resultArgText;
+  if (!splitTemplateTypeName(normalizedQueryType, resultBase, resultArgText)) {
+    if (normalizeBindingTypeName(normalizedQueryType) == "Result") {
+      out.mismatchDiagnostic =
+          "result query type missing template arguments: " + out.queryTypeText;
+    }
+    return true;
+  }
+
+  resultBase = normalizeBindingTypeName(resultBase);
+  if (!resultBase.empty() && resultBase.front() == '/') {
+    resultBase.erase(resultBase.begin());
+  }
+  if (resultBase != "Result") {
+    return true;
+  }
+
+  std::vector<std::string> resultArgs;
+  if (!splitTopLevelTemplateArgs(resultArgText, resultArgs) || resultArgs.empty() || resultArgs.size() > 2) {
+    out.mismatchDiagnostic = "invalid Result query type envelope: " + out.queryTypeText;
+    return true;
+  }
+
+  out.hasResultType = true;
+  if (resultArgs.size() == 2) {
+    out.resultTypeHasValue = true;
+    out.resultValueType = normalizeBindingTypeName(resultArgs.front());
+    out.resultErrorType = normalizeBindingTypeName(resultArgs.back());
+  } else {
+    out.resultTypeHasValue = false;
+    out.resultErrorType = normalizeBindingTypeName(resultArgs.front());
+  }
+  return true;
 }
 
 bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,

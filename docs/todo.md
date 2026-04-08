@@ -39,11 +39,11 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
     - ✓ Publish that dependency state on the shared graph-backed surface.
     - ✓ Migrate one graph consumer to the shared state.
     - ✓ Remove the migrated consumer's duplicate local state path.
-  - ○ Add one explicit adapter for the remaining CT-eval-only paths that still cannot consume shared graph dependency state directly.
+  - ✓ Add one explicit adapter for the remaining CT-eval-only paths that still cannot consume shared graph dependency state directly.
     - ✓ Select one CT-eval-only dependency state that needs an adapter (see `docs/type_graph_migration_touchpoints.md`, section 5).
-    - ○ Implement a minimal adapter for that dependency state.
-    - ○ Wire one CT-eval callsite through the adapter.
-    - ○ Add boundary diagnostics for adapter/graph mismatch cases.
+    - ✓ Implement a minimal adapter for that dependency state.
+    - ✓ Wire one CT-eval callsite through the adapter.
+    - ✓ Add boundary diagnostics for adapter/graph mismatch cases.
   - ○ Add conformance coverage for the graph/CT-eval handoff boundary.
     - ○ Add a positive fixture that exercises the adapter seam.
     - ○ Add a negative diagnostic fixture that proves boundary mismatch rejection.
