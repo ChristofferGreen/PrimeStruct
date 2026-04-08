@@ -852,6 +852,34 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib canonical map insert resolves on helper-return borrowed method receivers") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct]
+Holder() {
+  [map<i32, i32> mut] values{map<i32, i32>()}
+}
+
+[return<Reference<map<i32, i32>>>]
+borrowValues([Holder mut] holder) {
+  return(location(holder.values))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder mut] holder{Holder()}
+  borrowValues(holder).insert(1i32, 4i32)
+  borrowValues(holder).insert(2i32, 7i32)
+  borrowValues(holder).insert(1i32, 9i32)
+  return(plus(holder.values.count(), plus(holder.values.at(1i32), holder.values.at_unsafe(2i32))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib canonical map helper resolves method-call sugar for slash return type") {
   const std::string source = R"(
 [return<int>]

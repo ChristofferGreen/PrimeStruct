@@ -2973,6 +2973,10 @@ TEST_CASE("compiles and runs builtin canonical map nested non-local growth in C+
   expectBuiltinCanonicalMapInsertNestedNonLocalGrowthConformance("exe");
 }
 
+TEST_CASE("compiles and runs builtin canonical map helper-return borrowed method inserts in C++ emitter") {
+  expectBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConformance("exe");
+}
+
 TEST_CASE("rejects canonical map constructor ownership growth in C++ emitter") {
   expectCanonicalMapNamespaceOwnershipReject("exe");
 }

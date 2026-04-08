@@ -75,8 +75,27 @@
           if (receiverIndex >= callExpr.args.size()) {
             return false;
           }
+          const auto inferCallMapTargetInfo = [&](const Expr &targetExpr, ir_lowerer::MapAccessTargetInfo &out) {
+            out = {};
+            const Definition *callee = resolveDefinitionCall(targetExpr);
+            if (callee == nullptr) {
+              return false;
+            }
+            std::string collectionName;
+            std::vector<std::string> collectionArgs;
+            if (!ir_lowerer::inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) ||
+                collectionName != "map" ||
+                collectionArgs.size() != 2) {
+              return false;
+            }
+            out.isMapTarget = true;
+            out.mapKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
+            out.mapValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs.back());
+            return out.mapKeyKind != ir_lowerer::LocalInfo::ValueKind::Unknown &&
+                   out.mapValueKind != ir_lowerer::LocalInfo::ValueKind::Unknown;
+          };
           const auto targetInfo =
-              ir_lowerer::resolveMapAccessTargetInfo(callExpr.args[receiverIndex], localsIn);
+              ir_lowerer::resolveMapAccessTargetInfo(callExpr.args[receiverIndex], localsIn, inferCallMapTargetInfo);
           if (!targetInfo.isMapTarget) {
             return false;
           }

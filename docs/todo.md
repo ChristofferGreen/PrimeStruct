@@ -31,9 +31,11 @@ Sizing note: each leaf `○` item should fit in one code-affecting commit plus f
   - ✓ Inventory each remaining borrowed/non-local mutation receiver family still pinned to the pending runtime boundary (see `docs/ownership_runtime_soa_touchpoints.md`, section 3).
   - ◐ Migrate one receiver family at a time onto the shared grown-pointer write-back/repoint primitive.
     - ✓ Route direct canonical `map/insert` rewrites through builtin `insert_builtin` when the receiver is a map-returning helper call (including nested field-access helper returns) instead of requiring only direct local/dereference probes (`src/ir_lowerer/IrLowererStatementCallEmission.cpp` + `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`).
-    - ○ Migrate the remaining method-sugar and non-local receiver families that still miss this shared rewrite/lowering path.
+    - ✓ Route method-sugar `insert(...)` rewrites through builtin `insert_builtin` when the receiver is a map-returning helper call instead of requiring only direct local/dereference probes (`src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h` + `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`).
+    - ○ Migrate the remaining non-local receiver families that still miss this shared rewrite/lowering path.
   - ◐ Add focused runtime + conformance coverage that locks growth behavior and deterministic failure diagnostics.
     - ✓ Add nested non-local growth conformance coverage across native/C++/VM plus matching semantics acceptance for helper-return borrowed receivers (`tests/unit/test_compile_run_map_conformance_sources.h`, `tests/unit/test_compile_run_map_conformance_expectations.h`, and backend harness suites).
+    - ✓ Add helper-return borrowed method-insert conformance coverage across native/C++/VM plus matching semantics acceptance (`tests/unit/test_compile_run_map_conformance_sources.h`, `tests/unit/test_compile_run_map_conformance_expectations.h`, and backend harness suites).
     - ○ Add deterministic failure-diagnostic coverage for the still-unmigrated receiver shapes.
   - ○ Remove the migrated pending runtime fallback branches after coverage lands.
 

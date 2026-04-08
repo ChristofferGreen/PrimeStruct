@@ -79,7 +79,9 @@ Current lowering path for canonical insert rewrite:
   map-returning helper receivers through `resolveDefinitionCall(...)` +
   `inferDeclaredReturnCollection(...)` before deciding whether to rewrite.
 - Expression/tail-dispatch path performs the same rewrite in
-  `src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h`.
+  `src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h`, and now likewise
+  probes map-returning helper receivers through `resolveDefinitionCall(...)` +
+  `inferDeclaredReturnCollection(...)` before deciding whether to rewrite.
 - Lowering for rewritten calls enters the inline builtin map insert path in
   `src/ir_lowerer/IrLowererLowerInlineCalls.h`.
 - Grow/copy/repoint + write-back logic is centralized in
@@ -101,6 +103,11 @@ path (based on current recognition hooks):
   runtime coverage:
   `tests/unit/test_compile_run_map_conformance_sources.h` +
   backend expectation suites).
+- Helper-return borrowed method-sugar receiver forms now route through that
+  same rewrite path as well (coverage:
+  `tests/unit/test_semantics_calls_and_flow_collections_chunks/test_semantics_calls_and_flow_collections_17.h` and
+  `tests/unit/test_compile_run_map_conformance_sources.h` + backend
+  expectation suites).
 - Remaining field-access/non-local lvalue receiver shapes that do not currently
   surface as map-returning helper calls.
 - Temporary/helper-return receiver shapes that do not provide a stable writable

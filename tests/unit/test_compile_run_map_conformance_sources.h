@@ -788,6 +788,28 @@ inline std::string makeBuiltinCanonicalMapInsertNestedNonLocalGrowthConformanceS
   return source;
 }
 
+inline std::string makeBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[struct]\n";
+  source += "Holder() {\n";
+  source += "  [map<i32, i32> mut] values{map<i32, i32>()}\n";
+  source += "}\n\n";
+  source += "[return<Reference<map<i32, i32>>>]\n";
+  source += "borrowValues([Holder mut] holder) {\n";
+  source += "  return(location(holder.values))\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Holder mut] holder{Holder()}\n";
+  source += "  borrowValues(holder).insert(1i32, 4i32)\n";
+  source += "  borrowValues(holder).insert(2i32, 7i32)\n";
+  source += "  borrowValues(holder).insert(1i32, 9i32)\n";
+  source += "  return(plus(holder.values.count(), plus(holder.values.at(1i32), holder.values.at_unsafe(2i32))))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeExperimentalMapOwnershipMethodConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
