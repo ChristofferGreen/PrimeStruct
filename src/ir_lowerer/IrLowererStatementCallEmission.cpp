@@ -407,6 +407,19 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
       if (expr.kind != Expr::Kind::Call || expr.args.size() != 2) {
         return false;
       }
+      auto isDirectMapArgsPackStem = [&](const char *stem) {
+        if (stem == nullptr || expr.isMethodCall || expr.name.empty()) {
+          return false;
+        }
+        std::string directName = expr.name;
+        if (!directName.empty() && directName.front() == '/') {
+          directName.erase(directName.begin());
+        }
+        if (directName.find('/') != std::string::npos) {
+          return false;
+        }
+        return stripGeneratedHelperSuffix(std::move(directName)) == stem;
+      };
       auto isMapArgsPackMethodStem = [&](const char *stem) {
         if (isSimpleCallName(expr, stem)) {
           return true;
@@ -432,6 +445,14 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
             isMapArgsPackMethodStem("AtRef") || isMapArgsPackMethodStem("AtUnsafeRef")) {
           return true;
         }
+      }
+      if (isDirectMapArgsPackStem("at") || isDirectMapArgsPackStem("at_unsafe") ||
+          isDirectMapArgsPackStem("at_ref") || isDirectMapArgsPackStem("at_unsafe_ref") ||
+          isDirectMapArgsPackStem("mapAt") || isDirectMapArgsPackStem("mapAtUnsafe") ||
+          isDirectMapArgsPackStem("mapAtRef") || isDirectMapArgsPackStem("mapAtUnsafeRef") ||
+          isDirectMapArgsPackStem("At") || isDirectMapArgsPackStem("AtUnsafe") ||
+          isDirectMapArgsPackStem("AtRef") || isDirectMapArgsPackStem("AtUnsafeRef")) {
+        return true;
       }
       if (expr.name == "/map/at" || expr.name == "/std/collections/map/at" ||
           expr.name == "/map/at_ref" || expr.name == "/std/collections/map/at_ref" ||

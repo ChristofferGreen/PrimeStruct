@@ -255,6 +255,16 @@ path (based on current recognition hooks):
   rewrite parity touchpoints:
   `src/ir_lowerer/IrLowererAccessTargetResolution.cpp` and
   `src/ir_lowerer/IrLowererStatementCallEmission.cpp`).
+- Non-local direct-call args-pack map-access receiver-source chains now also
+  route through that same rewrite path when using bare helper stems (for
+  example `at_ref(location(holder.mapsPack), 0i32)` and
+  `mapAtUnsafeRef__generated(location(holder.mapsPack), 0i32)`) by extending
+  direct-call args-pack access recognition parity from path-qualified call
+  forms to bare helper-stem call forms (including generated suffixes) when
+  resolved receiver parameter typing is args-pack based (IR coverage:
+  `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`;
+  rewrite parity touchpoint:
+  `src/ir_lowerer/IrLowererStatementCallEmission.cpp`).
 - Remaining non-local lvalue receiver shapes that do not currently route
   through that same path (for example non-local receiver forms beyond
   field-access, helper-return, and args-pack map-access receiver-source `at` /
