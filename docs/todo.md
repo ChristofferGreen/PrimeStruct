@@ -54,6 +54,6 @@ Sizing note: each leaf `○` item should fit in one code-affecting commit plus f
   - ○ Add focused parity coverage for direct/imported/helper-return receiver forms on each migrated family.
   - ○ Delete migrated fallback branches after parity coverage is in place.
 - ○ Replace the current non-empty `soa_vector` literal runtime rejection with a deterministic substrate-backed lowering/runtime path.
-  - ✓ Route non-empty literal lowering through the current stdlib `soa_vector` helper substrate instead of the direct unsupported diagnostic path.
-  - ○ Add runtime coverage for successful non-empty literal materialization on supported backends.
+  - ✓ Route non-empty literal lowering through deterministic builtin `soa_vector` literal materialization (struct-element storage + copy path) instead of the direct unsupported diagnostic path.
+  - ✓ Add runtime coverage for successful non-empty literal materialization on supported backends (`tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.h`: `native materializes non-empty root soa_vector struct literals`; `tests/unit/test_compile_run_vm_collections_wrapper_temporaries_a.h`: `vm materializes non-empty root soa_vector struct literals`).
   - ○ Add deterministic diagnostic coverage for unsupported element envelopes and allocation-failure boundaries.

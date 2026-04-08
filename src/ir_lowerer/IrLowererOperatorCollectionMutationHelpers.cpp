@@ -65,21 +65,25 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
 
       const bool isSoaVector = (builtin == "soa_vector");
       const bool isVectorLike = (builtin == "vector" || isSoaVector);
-      if (isSoaVector && !expr.args.empty()) {
-        Expr vectorValuesExpr;
-        vectorValuesExpr.kind = Expr::Kind::Call;
-        vectorValuesExpr.name = "/std/collections/experimental_vector/vector";
-        vectorValuesExpr.templateArgs = expr.templateArgs;
-        vectorValuesExpr.args = expr.args;
-
-        Expr soaFromAosExpr;
-        soaFromAosExpr.kind = Expr::Kind::Call;
-        soaFromAosExpr.name = "/std/collections/experimental_soa_vector/soaVectorFromAos";
-        soaFromAosExpr.templateArgs = expr.templateArgs;
-        soaFromAosExpr.args.push_back(vectorValuesExpr);
-        return emitExpr(soaFromAosExpr, localsIn);
-      }
       LocalInfo::ValueKind elemKind = valueKindFromTypeName(expr.templateArgs.front());
+      const bool isSoaStructLiteral =
+          isSoaVector && !expr.args.empty() && elemKind == LocalInfo::ValueKind::Unknown;
+      std::string soaStructPath;
+      int32_t soaStructSlotCount = 0;
+      if (isSoaStructLiteral) {
+        soaStructPath = inferStructExprPath(expr.args.front(), localsIn);
+        if (soaStructPath.empty()) {
+          error = "native backend requires soa_vector literal elements to be struct values";
+          return false;
+        }
+        if (!resolveStructSlotCount(soaStructPath, soaStructSlotCount)) {
+          return false;
+        }
+      }
+      if (isSoaVector && !expr.args.empty() && !isSoaStructLiteral) {
+        error = "native backend currently supports non-empty soa_vector literals only for struct element types";
+        return false;
+      }
       const bool isEmptyOpaqueVectorLiteral =
           builtin == "vector" && elemKind == LocalInfo::ValueKind::Unknown &&
           expr.args.empty();
@@ -110,10 +114,14 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       if (isVectorLike) {
         instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(literalCount)});
         instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
-        if (isSoaVector || isEmptyOpaqueVectorLiteral) {
+        if ((isSoaVector && literalCount == 0) || isEmptyOpaqueVectorLiteral) {
           instructions.push_back({IrOpcode::PushI64, 0});
         } else {
-          instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(storageCapacity)});
+          int32_t heapAllocSlots = storageCapacity;
+          if (isSoaStructLiteral) {
+            heapAllocSlots *= soaStructSlotCount;
+          }
+          instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(heapAllocSlots)});
           instructions.push_back({IrOpcode::HeapAlloc, 0});
         }
         instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 2)});
@@ -121,6 +129,31 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
 
       for (size_t i = 0; i < expr.args.size(); ++i) {
         const Expr &arg = expr.args[i];
+        if (isSoaStructLiteral) {
+          const std::string argStructPath = inferStructExprPath(arg, localsIn);
+          if (argStructPath.empty() || !areCompatibleStructPaths(argStructPath, soaStructPath)) {
+            error = "soa_vector literal element type mismatch";
+            return false;
+          }
+          const int32_t destPtrLocal = allocTempLocal();
+          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(baseLocal + 2)});
+          const uint64_t offsetBytes =
+              static_cast<uint64_t>(i) * static_cast<uint64_t>(soaStructSlotCount) * IrSlotBytes;
+          if (offsetBytes != 0) {
+            instructions.push_back({IrOpcode::PushI64, offsetBytes});
+            instructions.push_back({IrOpcode::AddI64, 0});
+          }
+          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+          if (!emitExpr(arg, localsIn)) {
+            return false;
+          }
+          const int32_t srcPtrLocal = allocTempLocal();
+          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+          if (!emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, soaStructSlotCount)) {
+            return false;
+          }
+          continue;
+        }
         if (elemKind == LocalInfo::ValueKind::String) {
           int32_t stringIndex = -1;
           size_t length = 0;

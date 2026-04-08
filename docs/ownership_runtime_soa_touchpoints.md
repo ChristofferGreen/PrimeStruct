@@ -185,8 +185,8 @@ Semantics-layer pending fallback diagnostics:
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:
   - `src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp`
-    (rewritten via `experimental_vector/vector<T>(...)` into
-    `experimental_soa_vector/soaVectorFromAos<T>(...)`)
+    (direct struct-element literal materialization with heap-backed payload
+    slots and explicit struct-slot copy into contiguous SoA-compatible storage)
 - Arbitrary-width pending helper path still exists in:
   - `src/ir_lowerer/IrLowererLowerInlineCalls.h`
     (`/std/collections/experimental_soa_storage/soaArbitraryWidthPending`)

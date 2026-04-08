@@ -533,6 +533,25 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 0);
 }
+
+TEST_CASE("vm materializes non-empty root soa_vector struct literals") {
+  const std::string source = R"(
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>(Particle(7i32), Particle(9i32))}
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_root_soa_vector_non_empty_literal.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("vm runs experimental soa_vector stdlib non-empty to-aos helper") {
   const std::string source = R"(
 import /std/collections/*
