@@ -450,7 +450,8 @@ main() {
   CHECK(runCommand(exePath) == 34);
 }
 
-TEST_CASE("native rejects experimental soa_vector stdlib wide structs on pending width boundary") {
+TEST_CASE(
+    "native rejects experimental soa_vector stdlib wide structs on pending width boundary across imported/direct/helper-return forms") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -476,22 +477,55 @@ Particle17() {
 }
 
 [effects(heap_alloc), return<int>]
-main() {
+runImported() {
   [SoaVector<Particle17>] values{soaVectorNew<Particle17>()}
   return(soaVectorCount<Particle17>(values))
 }
+
+[effects(heap_alloc), return<int>]
+runDirectCanonical() {
+  [SoaVector<Particle17>] values{/std/collections/experimental_soa_vector/soaVectorNew<Particle17>()}
+  return(/std/collections/experimental_soa_vector/soaVectorCount<Particle17>(values))
+}
+
+[return<SoaVector<Particle17>> effects(heap_alloc)]
+makeWideValues() {
+  return(soaVectorNew<Particle17>())
+}
+
+[effects(heap_alloc), return<int>]
+runHelperReturn() {
+  return(soaVectorCount<Particle17>(makeWideValues()))
+}
 )";
   const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_vector_wide_pending.prime", source);
+      writeTemp("compile_native_experimental_soa_vector_wide_pending_forms.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_vector_wide_pending_exe").string();
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_experimental_soa_vector_wide_pending_err.txt").string();
+      (testScratchPath("") / "primec_native_experimental_soa_vector_wide_pending_forms_exe").string();
+  const std::string importedErrPath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_wide_pending_imported_err.txt").string();
+  const std::string directErrPath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_wide_pending_direct_err.txt").string();
+  const std::string helperReturnErrPath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_wide_pending_helper_return_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " 2> " + errPath) == 3);
-  CHECK(readFile(errPath) == "array index out of bounds\n");
+  const std::string compileImportedCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /runImported";
+  CHECK(runCommand(compileImportedCmd) == 0);
+  CHECK(runCommand(exePath + " 2> " + importedErrPath) == 3);
+  CHECK(readFile(importedErrPath) == "array index out of bounds\n");
+
+  const std::string compileDirectCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /runDirectCanonical";
+  CHECK(runCommand(compileDirectCmd) == 0);
+  CHECK(runCommand(exePath + " 2> " + directErrPath) == 3);
+  CHECK(readFile(directErrPath) == "array index out of bounds\n");
+
+  const std::string compileHelperReturnCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /runHelperReturn";
+  CHECK(runCommand(compileHelperReturnCmd) == 0);
+  CHECK(runCommand(exePath + " 2> " + helperReturnErrPath) == 3);
+  CHECK(readFile(helperReturnErrPath) == "array index out of bounds\n");
 }
 
 TEST_CASE("native rejects experimental soa_vector stdlib from-aos helper before typed bindings support") {

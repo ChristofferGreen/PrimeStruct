@@ -383,7 +383,8 @@ main() {
   CHECK(runCommand(runCmd) == 34);
 }
 
-TEST_CASE("vm rejects experimental soa_vector stdlib wide structs on pending width boundary") {
+TEST_CASE(
+    "vm rejects experimental soa_vector stdlib wide structs on pending width boundary across imported/direct/helper-return forms") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -409,17 +410,49 @@ Particle17() {
 }
 
 [effects(heap_alloc), return<int>]
-main() {
+runImported() {
   [SoaVector<Particle17>] values{soaVectorNew<Particle17>()}
   return(soaVectorCount<Particle17>(values))
 }
+
+[effects(heap_alloc), return<int>]
+runDirectCanonical() {
+  [SoaVector<Particle17>] values{/std/collections/experimental_soa_vector/soaVectorNew<Particle17>()}
+  return(/std/collections/experimental_soa_vector/soaVectorCount<Particle17>(values))
+}
+
+[return<SoaVector<Particle17>> effects(heap_alloc)]
+makeWideValues() {
+  return(soaVectorNew<Particle17>())
+}
+
+[effects(heap_alloc), return<int>]
+runHelperReturn() {
+  return(soaVectorCount<Particle17>(makeWideValues()))
+}
 )";
-  const std::string srcPath = writeTemp("vm_experimental_soa_vector_wide_pending.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_experimental_soa_vector_wide_pending_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "array index out of bounds\n");
+  const std::string srcPath = writeTemp("vm_experimental_soa_vector_wide_pending_forms.prime", source);
+  const std::string importedErrPath =
+      (testScratchPath("") / "primec_vm_experimental_soa_vector_wide_pending_imported_err.txt").string();
+  const std::string directErrPath =
+      (testScratchPath("") / "primec_vm_experimental_soa_vector_wide_pending_direct_err.txt").string();
+  const std::string helperReturnErrPath =
+      (testScratchPath("") / "primec_vm_experimental_soa_vector_wide_pending_helper_return_err.txt").string();
+
+  const std::string runImportedCmd =
+      "./primec --emit=vm " + srcPath + " --entry /runImported 2> " + importedErrPath;
+  CHECK(runCommand(runImportedCmd) == 3);
+  CHECK(readFile(importedErrPath) == "array index out of bounds\n");
+
+  const std::string runDirectCmd =
+      "./primec --emit=vm " + srcPath + " --entry /runDirectCanonical 2> " + directErrPath;
+  CHECK(runCommand(runDirectCmd) == 3);
+  CHECK(readFile(directErrPath) == "array index out of bounds\n");
+
+  const std::string runHelperReturnCmd =
+      "./primec --emit=vm " + srcPath + " --entry /runHelperReturn 2> " + helperReturnErrPath;
+  CHECK(runCommand(runHelperReturnCmd) == 3);
+  CHECK(readFile(helperReturnErrPath) == "array index out of bounds\n");
 }
 
 TEST_CASE("vm rejects experimental soa_vector stdlib from-aos helper before typed bindings support") {
