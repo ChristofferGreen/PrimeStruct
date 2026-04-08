@@ -39,10 +39,12 @@ helpers to variadic `vector(values...)`.
 Goal reference: move canonical imported map constructor usage from fixed-arity
 helpers to variadic `map(entry(...), ...)`.
 
-- Stdlib fixed-arity constructor overloads currently live in
-  `stdlib/std/collections/map.prime` as
-  `/std/collections/map/map<K, V>(...)` key/value arity-specific overloads.
-- Fixed-arity compatibility wrappers still exist in the same file:
+- Stdlib canonical constructor routing in `stdlib/std/collections/map.prime`
+  now exposes variadic `/std/collections/map/map<K, V>([args<Entry<K, V>>] entries)`
+  plus `/std/collections/map/entry<K, V>(...)`; the previous key/value
+  arity-specific canonical overloads were removed.
+- Fixed-arity compatibility wrappers still exist in the same file and now route
+  through canonical `/std/collections/map/entry<K, V>(...)`:
   `mapSingle`, `mapDouble`, `mapPair`, ..., `mapOct`.
 - Experimental fixed-arity compatibility helpers still exist in
   `stdlib/std/collections/experimental_map.prime`
