@@ -362,19 +362,31 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
       return std::string{};
     };
 
+    auto peelLocationWrappers = [&](const Expr &expr) {
+      const Expr *current = &expr;
+      while (current->kind == Expr::Kind::Call &&
+             isSimpleCallName(*current, "location") &&
+             current->args.size() == 1) {
+        current = &current->args.front();
+      }
+      return current;
+    };
+
+    const Expr *targetExprSansLocation = peelLocationWrappers(targetExpr);
+
     const Expr *nonLocalFieldReceiver = nullptr;
-    if (targetExpr.kind == Expr::Kind::Call &&
-        targetExpr.isFieldAccess &&
-        targetExpr.args.size() == 1) {
-      nonLocalFieldReceiver = &targetExpr;
-    } else if (targetExpr.kind == Expr::Kind::Call &&
-               isSimpleCallName(targetExpr, "dereference") &&
-               targetExpr.args.size() == 1) {
-      const Expr &derefTarget = targetExpr.args.front();
-      if (derefTarget.kind == Expr::Kind::Call &&
-          derefTarget.isFieldAccess &&
-          derefTarget.args.size() == 1) {
-        nonLocalFieldReceiver = &derefTarget;
+    if (targetExprSansLocation->kind == Expr::Kind::Call &&
+        targetExprSansLocation->isFieldAccess &&
+        targetExprSansLocation->args.size() == 1) {
+      nonLocalFieldReceiver = targetExprSansLocation;
+    } else if (targetExprSansLocation->kind == Expr::Kind::Call &&
+               isSimpleCallName(*targetExprSansLocation, "dereference") &&
+               targetExprSansLocation->args.size() == 1) {
+      const Expr *derefTarget = peelLocationWrappers(targetExprSansLocation->args.front());
+      if (derefTarget->kind == Expr::Kind::Call &&
+          derefTarget->isFieldAccess &&
+          derefTarget->args.size() == 1) {
+        nonLocalFieldReceiver = derefTarget;
       }
     }
 
@@ -397,17 +409,17 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
              targetInfoOut.mapValueKind != LocalInfo::ValueKind::Unknown;
     };
 
-    const Definition *callee = resolveDefinitionCall(targetExpr);
+    const Definition *callee = resolveDefinitionCall(*targetExprSansLocation);
     if (tryPopulateFromResolvedCallee(callee)) {
       return true;
     }
 
-    if (targetExpr.kind == Expr::Kind::Call &&
-        isSimpleCallName(targetExpr, "dereference") &&
-        targetExpr.args.size() == 1) {
-      const Expr &derefTarget = targetExpr.args.front();
-      if (derefTarget.kind == Expr::Kind::Call &&
-          tryPopulateFromResolvedCallee(resolveDefinitionCall(derefTarget))) {
+    if (targetExprSansLocation->kind == Expr::Kind::Call &&
+        isSimpleCallName(*targetExprSansLocation, "dereference") &&
+        targetExprSansLocation->args.size() == 1) {
+      const Expr *derefTarget = peelLocationWrappers(targetExprSansLocation->args.front());
+      if (derefTarget->kind == Expr::Kind::Call &&
+          tryPopulateFromResolvedCallee(resolveDefinitionCall(*derefTarget))) {
         return true;
       }
     }
