@@ -303,11 +303,28 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
     return false;
   }
   const auto inferCallMapTargetInfo = [&](const Expr &targetExpr, MapAccessTargetInfo &targetInfoOut) {
+    auto normalizeInsertHelperStem = [&](const std::string &path) {
+      std::string helperName = path;
+      if (!helperName.empty() && helperName.front() == '/') {
+        helperName.erase(helperName.begin());
+      }
+      const size_t lastSlash = helperName.find_last_of('/');
+      if (lastSlash != std::string::npos) {
+        helperName = helperName.substr(lastSlash + 1);
+      }
+      return stripGeneratedHelperSuffix(std::move(helperName));
+    };
     auto isMapInsertLikeCallee = [&](const Definition &callee) {
       if (callee.fullPath == "/std/collections/map/insert" ||
           callee.fullPath.rfind("/std/collections/map/insert__", 0) == 0 ||
           callee.fullPath == "/std/collections/map/insert_builtin" ||
           callee.fullPath.rfind("/std/collections/map/insert_builtin__", 0) == 0) {
+        return true;
+      }
+      const std::string helperStem = normalizeInsertHelperStem(callee.fullPath);
+      if (helperStem == "insert" || helperStem == "insert_ref" ||
+          helperStem == "Insert" || helperStem == "InsertRef" ||
+          helperStem == "mapInsert" || helperStem == "mapInsertRef") {
         return true;
       }
       Expr calleeExpr;

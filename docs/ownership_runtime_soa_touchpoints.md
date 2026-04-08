@@ -278,6 +278,15 @@ path (based on current recognition hooks):
   rewrite parity touchpoints:
   `src/ir_lowerer/IrLowererStatementCallEmission.cpp` and
   `src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h`).
+- Non-local field-access receiver chains now also route through that same
+  rewrite path when resolved mutating helper callee paths use bare generated
+  insert helper stems (for example `/insert__generated` and
+  `/mapInsert__generated`) by extending map-insert-like callee classification
+  parity from path-qualified/helper-alias forms to bare generated helper-path
+  forms for receiver-typing inference (IR coverage:
+  `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`;
+  rewrite parity touchpoint:
+  `src/ir_lowerer/IrLowererStatementCallEmission.cpp`).
 - Remaining non-local lvalue receiver shapes that do not currently route
   through that same path (for example non-local receiver forms beyond
   field-access, helper-return, and args-pack map-access receiver-source `at` /
