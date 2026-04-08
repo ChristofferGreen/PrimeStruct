@@ -6,6 +6,7 @@
 #include "IrLowererIndexKindHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 #include <optional>
 #include <utility>
@@ -247,6 +248,7 @@ static std::optional<LocalInfo::ValueKind> resolveBufferTargetElementKind(
 static bool rewriteMapInsertHelperStatementToBuiltin(
     const Expr &stmt,
     const LocalMap &localsIn,
+    const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     Expr &rewrittenStmt) {
   if (stmt.kind != Expr::Kind::Call || stmt.args.size() != 3) {
@@ -282,6 +284,71 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
     return false;
   }
   const auto inferCallMapTargetInfo = [&](const Expr &targetExpr, MapAccessTargetInfo &targetInfoOut) {
+    std::function<bool(const std::string &, LocalInfo::ValueKind &, LocalInfo::ValueKind &)>
+        inferMapKindsFromTypeText;
+    inferMapKindsFromTypeText = [&](const std::string &typeText,
+                                    LocalInfo::ValueKind &keyKindOut,
+                                    LocalInfo::ValueKind &valueKindOut) {
+      keyKindOut = LocalInfo::ValueKind::Unknown;
+      valueKindOut = LocalInfo::ValueKind::Unknown;
+
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
+        return false;
+      }
+
+      const std::string normalizedBase = trimTemplateTypeText(base);
+      if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
+        return inferMapKindsFromTypeText(argText, keyKindOut, valueKindOut);
+      }
+
+      const bool isMapBase =
+          normalizedBase == "map" || normalizedBase == "/map" ||
+          normalizedBase == "std/collections/map" || normalizedBase == "/std/collections/map" ||
+          normalizedBase == "Map" || normalizedBase == "/Map" ||
+          normalizedBase == "std/collections/experimental_map/Map" ||
+          normalizedBase == "/std/collections/experimental_map/Map";
+      if (!isMapBase) {
+        return false;
+      }
+
+      std::vector<std::string> mapArgs;
+      if (!splitTemplateArgs(argText, mapArgs) || mapArgs.size() != 2) {
+        return false;
+      }
+      keyKindOut = valueKindFromTypeName(trimTemplateTypeText(mapArgs.front()));
+      valueKindOut = valueKindFromTypeName(trimTemplateTypeText(mapArgs.back()));
+      return keyKindOut != LocalInfo::ValueKind::Unknown &&
+             valueKindOut != LocalInfo::ValueKind::Unknown;
+    };
+    auto extractParameterTypeName = [&](const Expr &paramExpr) {
+      for (const auto &transform : paramExpr.transforms) {
+        if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
+            transform.name == "static" || transform.name == "shared" || transform.name == "placement" ||
+            transform.name == "align" || transform.name == "packed" || transform.name == "reflection" ||
+            transform.name == "effects" || transform.name == "capabilities") {
+          continue;
+        }
+        if (!transform.arguments.empty()) {
+          continue;
+        }
+        std::string typeName = transform.name;
+        if (!transform.templateArgs.empty()) {
+          typeName += "<";
+          for (size_t index = 0; index < transform.templateArgs.size(); ++index) {
+            if (index != 0) {
+              typeName += ", ";
+            }
+            typeName += trimTemplateTypeText(transform.templateArgs[index]);
+          }
+          typeName += ">";
+        }
+        return typeName;
+      }
+      return std::string{};
+    };
+
     targetInfoOut = {};
     const Definition *callee = resolveDefinitionCall(targetExpr);
     if (callee != nullptr) {
@@ -312,6 +379,27 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
       targetInfoOut.mapValueKind = valueKindFromTypeName(stmt.templateArgs.back());
       return targetInfoOut.mapKeyKind != LocalInfo::ValueKind::Unknown &&
              targetInfoOut.mapValueKind != LocalInfo::ValueKind::Unknown;
+    }
+
+    if (stmt.isMethodCall &&
+        targetExpr.kind == Expr::Kind::Call &&
+        targetExpr.isFieldAccess &&
+        targetExpr.args.size() == 1) {
+      const Definition *methodCallee = resolveMethodCallDefinition(stmt, localsIn);
+      if (methodCallee != nullptr &&
+          (methodCallee->fullPath == "/std/collections/map/insert" ||
+           methodCallee->fullPath.rfind("/std/collections/map/insert__", 0) == 0 ||
+           methodCallee->fullPath == "/std/collections/map/insert_builtin" ||
+           methodCallee->fullPath.rfind("/std/collections/map/insert_builtin__", 0) == 0) &&
+          !methodCallee->parameters.empty()) {
+        const std::string receiverTypeText = extractParameterTypeName(methodCallee->parameters.front());
+        if (inferMapKindsFromTypeText(receiverTypeText,
+                                     targetInfoOut.mapKeyKind,
+                                     targetInfoOut.mapValueKind)) {
+          targetInfoOut.isMapTarget = true;
+          return true;
+        }
+      }
     }
     return false;
   };
@@ -726,7 +814,7 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   Expr directStmt = stmt;
   Expr rewrittenMapInsertStmt;
   if (rewriteMapInsertHelperStatementToBuiltin(
-          stmt, localsIn, resolveDefinitionCall, rewrittenMapInsertStmt)) {
+          stmt, localsIn, resolveMethodCallDefinition, resolveDefinitionCall, rewrittenMapInsertStmt)) {
     directStmt = rewrittenMapInsertStmt;
   }
   bool rewrittenExplicitVectorMutatorToBuiltinCall = false;

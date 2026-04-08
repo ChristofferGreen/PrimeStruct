@@ -3009,6 +3009,9 @@ bad_use_after_take() {
     map-returning helper receivers (including nested field-access helper returns) onto that same
     rewrite path. Direct canonical field-access non-local receivers (for example `holder.values`) now
     also route through that path when explicit helper template arguments provide map typing.
+    Method-sugar field-access receivers now also route through that path by inferring receiver map
+    typing from resolved canonical method-callee receiver parameter types when method template
+    arguments are omitted.
     Temporary helper-return value receivers that do not provide a stable writable lvalue target now
     have deterministic compile-time rejects in conformance coverage (direct canonical and method-sugar
     forms). The remaining public

@@ -113,9 +113,14 @@ path (based on current recognition hooks):
   shared rewrite path by reusing explicit call-template map typing when the
   receiver expression itself is not a standalone call target (IR coverage:
   `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`).
+- Method-sugar field-access/non-local receiver forms (`holder.values.insert(...)`)
+  now route through that same rewrite path by inferring receiver map typing from
+  resolved canonical method-callee receiver parameter types when method template
+  arguments are omitted (IR coverage:
+  `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`).
 - Remaining field-access/non-local lvalue receiver shapes that do not currently
-  route through that same path (for example method-sugar-only shapes that still
-  depend on receiver-local map typing).
+  route through that same path (for example surfaces that still bypass canonical
+  insert helper classification before rewrite).
 - Temporary/helper-return receiver shapes that do not provide a stable writable
   lvalue target for pointer write-back now have deterministic compile-diagnostic
   coverage for both direct canonical and method-sugar insert forms (see
