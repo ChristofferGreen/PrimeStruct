@@ -243,6 +243,18 @@ path (based on current recognition hooks):
   rewrite parity touchpoints:
   `src/ir_lowerer/IrLowererStatementCallEmission.cpp` and
   `src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h`).
+- Non-local direct-call args-pack map-access `_ref` receiver-source chains now
+  route through that same rewrite path as well (for example
+  `/map/at_ref(location(holder.mapsPack), 0i32)`,
+  `/map/at_unsafe_ref(location(holder.mapsPack), 0i32)`, and
+  `/std/collections/mapAtUnsafeRef__generated(location(holder.mapsPack), 0i32)`)
+  by extending direct-call args-pack access recognition/rewrite inference
+  parity from `at` / `at_unsafe` + compatibility alias forms to `_ref`
+  canonical + compatibility generated-suffix variants (IR coverage:
+  `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`;
+  rewrite parity touchpoints:
+  `src/ir_lowerer/IrLowererAccessTargetResolution.cpp` and
+  `src/ir_lowerer/IrLowererStatementCallEmission.cpp`).
 - Remaining non-local lvalue receiver shapes that do not currently route
   through that same path (for example non-local receiver forms beyond
   field-access, helper-return, and args-pack map-access receiver-source `at` /

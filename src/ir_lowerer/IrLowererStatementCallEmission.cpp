@@ -434,7 +434,9 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
         }
       }
       if (expr.name == "/map/at" || expr.name == "/std/collections/map/at" ||
-          expr.name == "/map/at_unsafe" || expr.name == "/std/collections/map/at_unsafe") {
+          expr.name == "/map/at_ref" || expr.name == "/std/collections/map/at_ref" ||
+          expr.name == "/map/at_unsafe" || expr.name == "/std/collections/map/at_unsafe" ||
+          expr.name == "/map/at_unsafe_ref" || expr.name == "/std/collections/map/at_unsafe_ref") {
         return true;
       }
       std::string accessName;
@@ -443,7 +445,8 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
       }
       std::string helperName;
       return resolveMapHelperAliasName(expr, helperName) &&
-             (helperName == "at" || helperName == "at_unsafe");
+             (helperName == "at" || helperName == "at_ref" ||
+              helperName == "at_unsafe" || helperName == "at_unsafe_ref");
     };
 
     const Expr *canonicalReceiverExpr = peelReceiverWrappers(targetExpr);

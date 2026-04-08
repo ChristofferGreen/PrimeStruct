@@ -309,11 +309,14 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     std::string helperName;
     const bool isAliasMapArgsPackAccess =
         resolveMapHelperAliasName(target, helperName) &&
-        (helperName == "at" || helperName == "at_unsafe");
+        (helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref");
     const bool isExplicitMapArgsPackAccess =
         !target.isMethodCall &&
         (target.name == "/map/at" || target.name == "/std/collections/map/at" ||
+         target.name == "/map/at_ref" || target.name == "/std/collections/map/at_ref" ||
          target.name == "/map/at_unsafe" || target.name == "/std/collections/map/at_unsafe" ||
+         target.name == "/map/at_unsafe_ref" || target.name == "/std/collections/map/at_unsafe_ref" ||
          isAliasMapArgsPackAccess) &&
         target.args.size() == 2;
     if ((getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) ||
