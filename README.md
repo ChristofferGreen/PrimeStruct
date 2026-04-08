@@ -99,7 +99,7 @@ semantics and deterministic behavior across targets.
 
 Release build and test:
 
-    ./scripts/compile.sh --release --fast
+    ./scripts/compile.sh --release
 
 Optional Wasm runtime checks (auto-skip when `wasmtime` is unavailable):
 

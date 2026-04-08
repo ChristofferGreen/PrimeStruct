@@ -917,7 +917,7 @@ main() {
   const auto &selected = requireLocalBindingSnapshotEntry(snapshot, "/main", "selected");
   CHECK(selected.sourceLine > 0);
   CHECK(selected.sourceColumn > 0);
-  CHECK(selected.bindingTypeText == "Vec3" || selected.bindingTypeText == "/Vec3");
+  CHECK((selected.bindingTypeText == "Vec3" || selected.bindingTypeText == "/Vec3"));
 }
 
 TEST_CASE("type resolution local binding snapshot preserves if-join incompatibility diagnostics with branch locals") {
@@ -984,7 +984,7 @@ main() {
   const auto &center = requireLocalBindingSnapshotEntry(snapshot, "/Sphere", "center");
   CHECK(center.sourceLine > 0);
   CHECK(center.sourceColumn > 0);
-  CHECK(center.bindingTypeText == "Vec3" || center.bindingTypeText == "/Vec3");
+  CHECK((center.bindingTypeText == "Vec3" || center.bindingTypeText == "/Vec3"));
 }
 
 TEST_CASE("type resolution local binding snapshot preserves omitted struct envelope ambiguity diagnostics") {

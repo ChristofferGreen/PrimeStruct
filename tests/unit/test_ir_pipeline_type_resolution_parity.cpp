@@ -530,7 +530,7 @@ main() {
 }
 )",
           false,
-          "unknown method: /Result/count",
+          "unknown method: /array/count",
       },
       {
           "query_map_receiver_type_text",
@@ -670,9 +670,10 @@ main() {
       CHECK(snapshot.error.empty());
     } else {
       CHECK_FALSE(snapshot.error.empty());
-      CHECK(snapshot.error.find(testCase.errorSubstring) != std::string::npos);
+      CHECK_MESSAGE(snapshot.error.find(testCase.errorSubstring) != std::string::npos, snapshot.error);
       if (testCase.expectDiagnosticSnapshot) {
-        CHECK(diagnosticReportContainsMessage(snapshot.diagnosticInfo, testCase.errorSubstring));
+        CHECK_MESSAGE(diagnosticReportContainsMessage(snapshot.diagnosticInfo, testCase.errorSubstring),
+                      snapshot.diagnosticInfo.message);
       }
     }
   }

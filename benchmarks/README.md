@@ -16,7 +16,7 @@ Files:
 Default N is 5,000,000 in all implementations.
 
 Run after a release build via:
-- `./scripts/compile.sh --release --fast`
+- `./scripts/compile.sh --release`
 - `./scripts/benchmark.sh --build-dir ./build-release`
 - `./scripts/benchmark.sh --build-dir ./build-release --report-json ./build-release/benchmarks/benchmark_report.json --baseline-json ./benchmarks/benchmark_baseline.json`
 

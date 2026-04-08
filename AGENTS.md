@@ -43,12 +43,12 @@ build and layout solidify.
   outside the struct should use an explicit `self` parameter if they want method-call sugar.
 
 ## Build/test workflow
-- Prefer compiling the project and running tests in release mode via `./scripts/compile.sh --release --fast`; use debug builds only when deeper debugging is needed.
-- Default validation gate: run `./scripts/compile.sh --release --fast` first and keep routine test verification in `build-release/`. Do not switch to `build-debug/` just to rerun ordinary failures faster; only do that when you specifically need debugger-oriented investigation or debug-only instrumentation.
-- **Primary entry:** `./scripts/compile.sh --release --fast` (Release build in `build-release`, runs tests).
+- Prefer compiling the project and running tests in release mode via `./scripts/compile.sh --release`; use debug builds only when deeper debugging is needed.
+- Default validation gate: run `./scripts/compile.sh --release` first and keep routine test verification in `build-release/`. Do not switch to `build-debug/` just to rerun ordinary failures faster; only do that when you specifically need debugger-oriented investigation or debug-only instrumentation.
+- **Primary entry:** `./scripts/compile.sh --release` (Release build in `build-release`, runs tests with expensive tests excluded unless explicitly opted in).
 - **Debug entry:** `./scripts/compile.sh` (Debug build in `build-debug`, runs tests).
-- **`compile.sh` options:** `--release` selects `build-release`; `--fast` skips tests whose recorded runtime exceeds the current fast threshold; `--fast-threshold <seconds>` overrides that cutoff and implies `--fast`; `--skip-tests` keeps configure/build but skips `ctest`; `--include-expensive-tests` also runs tests marked as expensive (they run serially).
-- **`compile.sh` stability rule:** keep `scripts/compile.sh` limited to its current contract (default debug build+test plus the documented `--release`, `--fast`, `--fast-threshold`, `--skip-tests`, and `--include-expensive-tests` options) and do not expand or refactor it unless the user explicitly asks for that change.
+- **`compile.sh` options:** `--release` selects `build-release`; `--runtime-threshold <seconds>` overrides the runtime cutoff used to classify/exclude expensive tests; `--skip-tests` keeps configure/build but skips `ctest`; `--include-expensive-tests` also runs tests marked as expensive (they run serially and are opt-in by default).
+- **`compile.sh` stability rule:** keep `scripts/compile.sh` limited to its current contract (default debug build+test plus the documented `--release`, `--runtime-threshold`, `--skip-tests`, and `--include-expensive-tests` options) and do not expand or refactor it unless the user explicitly asks for that change.
 - **Benchmark helper:** `./scripts/benchmark.sh --build-dir build-release` runs the benchmark suite against an existing build. Add `--report-json build-release/benchmarks/benchmark_report.json --baseline-json benchmarks/benchmark_baseline.json` for regression checks.
 - **Optional Wasm runtime checks:** `./scripts/run_wasm_runtime_checks.sh` executes Wasm outputs with `wasmtime` when available and emits an explicit skip message otherwise.
 - **Coverage helper:** `./scripts/code_coverage.sh` runs a clean debug coverage build, prints total function/line coverage, and writes reports to `build-debug/coverage/coverage.txt` plus `build-debug/coverage/html/`.
@@ -57,7 +57,7 @@ build and layout solidify.
 - **Top-lines helper:** `./scripts/top_lines_of_code.sh` reports the top files by line count across `src/`, `include/`, and `tests/` (default: top 10).
 - **CTest:** prefer running from `build-release/` via `ctest --output-on-failure`; use `build-debug/` when investigating failures in more detail.
 - **Direct test binary runs:** prefer executing `build-release/PrimeStruct_backend_tests` from `build-release/` so compile-run suites can resolve `./primec`; use the matching `PrimeStruct_misc_tests`, `PrimeStruct_semantics_tests`, `PrimeStruct_text_filter_tests`, or `PrimeStruct_parser_tests` binaries there for narrower doctest runs. Switch to the `build-debug/` binaries when deeper debugging is needed.
-- **Failure triage rule:** if the full release gate fails, diagnose with the smallest relevant release-mode rerun (single `ctest` case or one release test binary slice), fix the issue, then return to the full `./scripts/compile.sh --release --fast` gate instead of camping on long serial debug sweeps.
+- **Failure triage rule:** if the full release gate fails, diagnose with the smallest relevant release-mode rerun (single `ctest` case or one release test binary slice), fix the issue, then return to the full `./scripts/compile.sh --release` gate instead of camping on long serial debug sweeps.
 - **Expensive test offender policy:** tests with observed runtime > 3 seconds or observed peak command RSS > 500 MB must be marked as expensive. Expensive tests must run serially (`RUN_SERIAL` and/or serial compile.sh expensive phase) and should carry the `expensive` label so default local runs can skip them safely.
 - **Automatic offender tracking:** `compile.sh` auto-records runtime/memory offenders in `build-*/Testing/Temporary/PrimeStructAutoExpensiveTests.txt` and reports each offender when detected. Promote recurring offenders into CMake labels/properties so they are explicitly tracked in-source.
 
@@ -139,8 +139,8 @@ build and layout solidify.
 
 ## Bug-fix workflow
 - Before fixing a bug, find a concrete way to reproduce it.
-- Reproduce and validate bugs in release mode first (`./scripts/compile.sh --release --fast`, `build-release/ctest`, or the matching `build-release` test binary). Use debug-mode reruns only when the release path does not provide enough information to finish the fix.
-- If the current `./scripts/compile.sh --release --fast` or focused release `ctest` run has failing targets, prioritize reducing those failures before starting new TODO implementation slices.
+- Reproduce and validate bugs in release mode first (`./scripts/compile.sh --release`, `build-release/ctest`, or the matching `build-release` test binary). Use debug-mode reruns only when the release path does not provide enough information to finish the fix.
+- If the current `./scripts/compile.sh --release` or focused release `ctest` run has failing targets, prioritize reducing those failures before starting new TODO implementation slices.
 - Do not claim a bug is fixed unless you can no longer reproduce it after the change.
 
 ## Git commit guidelines

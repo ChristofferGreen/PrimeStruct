@@ -4,8 +4,6 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="$ROOT_DIR/build-debug"
 BUILD_TYPE="Debug"
-FAST_MODE=0
-FAST_TEST_THRESHOLD_SECONDS=10
 SKIP_TESTS=0
 INCLUDE_EXPENSIVE_TESTS=0
 EXPENSIVE_RUNTIME_THRESHOLD_SECONDS=3
@@ -13,7 +11,7 @@ EXPENSIVE_MEMORY_THRESHOLD_MB=500
 DEFAULT_TEST_MEMORY_GUARD_MB=4096
 
 usage() {
-  echo "Usage: ./scripts/compile.sh [--release] [--fast] [--fast-threshold <seconds>] [--skip-tests] [--include-expensive-tests]" >&2
+  echo "Usage: ./scripts/compile.sh [--release] [--runtime-threshold <seconds>] [--skip-tests] [--include-expensive-tests]" >&2
 }
 
 detect_jobs() {
@@ -45,17 +43,12 @@ while [[ $# -gt 0 ]]; do
       BUILD_TYPE="Release"
       shift
       ;;
-    --fast)
-      FAST_MODE=1
-      shift
-      ;;
-    --fast-threshold)
-      if [[ $# -lt 2 || ! "$2" =~ ^[1-9][0-9]*$ ]]; then
+    --runtime-threshold)
+      if [[ $# -lt 2 || ! "$2" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
         usage
         exit 2
       fi
-      FAST_MODE=1
-      FAST_TEST_THRESHOLD_SECONDS="$2"
+      EXPENSIVE_RUNTIME_THRESHOLD_SECONDS="$2"
       shift 2
       ;;
     --skip-tests)
@@ -97,8 +90,6 @@ export PRIMESTRUCT_TEST_MEMORY_GUARD_MB="${PRIMESTRUCT_TEST_MEMORY_GUARD_MB:-$DE
 
 python3 "$ROOT_DIR/scripts/manage_expensive_tests.py" run-gate \
   --build-dir "$BUILD_DIR" \
-  --fast-mode "$FAST_MODE" \
-  --fast-threshold "$FAST_TEST_THRESHOLD_SECONDS" \
   --include-expensive-tests "$INCLUDE_EXPENSIVE_TESTS" \
   --runtime-threshold "$EXPENSIVE_RUNTIME_THRESHOLD_SECONDS" \
   --memory-threshold "$EXPENSIVE_MEMORY_THRESHOLD_MB"

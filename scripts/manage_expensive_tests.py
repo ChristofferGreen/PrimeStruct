@@ -263,9 +263,7 @@ def cmd_update_auto(args: argparse.Namespace) -> int:
 
 def cmd_run_gate(args: argparse.Namespace) -> int:
     build_dir = Path(args.build_dir)
-    fast_mode = int(args.fast_mode) == 1
     include_expensive = int(args.include_expensive_tests) == 1
-    fast_threshold = float(args.fast_threshold)
     runtime_threshold = float(args.runtime_threshold)
     memory_threshold = int(args.memory_threshold)
 
@@ -295,21 +293,26 @@ def cmd_run_gate(args: argparse.Namespace) -> int:
                 print("Marked expensive tests: "
                       f"{len(marked)} (excluded by default; pass --include-expensive-tests to run).", flush=True)
 
-        if fast_mode:
-            with tempfile.NamedTemporaryFile(prefix="primestruct-fast-tests-", delete=False) as tmp_fast:
-                fast_exclude_file = Path(tmp_fast.name)
-            cost_file = build_fast_exclude_file(build_dir, fast_threshold, fast_exclude_file)
-            if cost_file is None:
-                print("Fast mode: no CTest timing data found locally or in the main worktree; running full suite.", file=sys.stderr)
+        with tempfile.NamedTemporaryFile(prefix="primestruct-fast-tests-", delete=False) as tmp_fast:
+            fast_exclude_file = Path(tmp_fast.name)
+        cost_file = build_fast_exclude_file(build_dir, runtime_threshold, fast_exclude_file)
+        if cost_file is None:
+            print(
+                "Default gate: no CTest timing data found locally or in the main worktree; running full suite.",
+                file=sys.stderr,
+            )
+        else:
+            excluded_count = len(read_line_set(fast_exclude_file))
+            local_cost_file = build_dir / "Testing" / "Temporary" / "CTestCostData.txt"
+            if cost_file != local_cost_file:
+                print(f"Default gate: using fallback timing data from {cost_file}.", flush=True)
+            if excluded_count > 0:
+                print(
+                    f"Default gate: excluding {excluded_count} tests with historical runtime > {runtime_threshold:g}s.",
+                    flush=True,
+                )
             else:
-                excluded_count = len(read_line_set(fast_exclude_file))
-                local_cost_file = build_dir / "Testing" / "Temporary" / "CTestCostData.txt"
-                if cost_file != local_cost_file:
-                    print(f"Fast mode: using fallback timing data from {cost_file}.", flush=True)
-                if excluded_count > 0:
-                    print(f"Fast mode: excluding {excluded_count} tests with historical runtime > {fast_threshold:g}s.", flush=True)
-                else:
-                    print(f"Fast mode: no historical tests exceed {fast_threshold:g}s.", flush=True)
+                print(f"Default gate: no historical tests exceed {runtime_threshold:g}s.", flush=True)
 
         non_expensive_status = run_non_expensive_suite(build_dir, marked_file, fast_exclude_file)
         update_auto(build_dir, auto_file, runtime_threshold, memory_threshold)
@@ -353,8 +356,6 @@ def build_parser() -> argparse.ArgumentParser:
 
     run_gate = sub.add_parser("run-gate", help="Run ctest with expensive test management.")
     run_gate.add_argument("--build-dir", required=True)
-    run_gate.add_argument("--fast-mode", required=True)
-    run_gate.add_argument("--fast-threshold", required=True)
     run_gate.add_argument("--include-expensive-tests", required=True)
     run_gate.add_argument("--runtime-threshold", required=True)
     run_gate.add_argument("--memory-threshold", required=True)

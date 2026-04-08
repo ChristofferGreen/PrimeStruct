@@ -770,8 +770,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+  CHECK_MESSAGE(error.empty(), error);
 }
 
 TEST_CASE("stdlib canonical map insert resolves in direct-call form") {
@@ -788,8 +788,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+  CHECK_MESSAGE(error.empty(), error);
 }
 
 TEST_CASE("stdlib canonical map insert resolves on non-local field and borrowed receivers") {
@@ -832,8 +832,8 @@ Outer() {
 }
 
 [return<Reference<map<i32, i32>>>]
-borrowValues([Outer mut] outer) {
-  return(location(outer.holder.values))
+borrowValues([Reference<map<i32, i32>>] values) {
+  return(values)
 }
 
 [effects(heap_alloc), return<int>]
@@ -841,7 +841,7 @@ main() {
   [Outer mut] outer{Outer()}
   /std/collections/map/insert<i32, i32>(outer.holder.values, 1i32, 4i32)
   /std/collections/map/insert<i32, i32>(outer.holder.values, 2i32, 7i32)
-  [Reference<map<i32, i32>> mut] ref{borrowValues(outer)}
+  [Reference<map<i32, i32>> mut] ref{borrowValues(location(outer.holder.values))}
   /std/collections/map/insert_ref<i32, i32>(ref, 3i32, 11i32)
   ref.insert(2i32, 13i32)
   return(plus(outer.holder.values.count(), plus(outer.holder.values.at(1i32), plus(outer.holder.values.at_unsafe(2i32), outer.holder.values.at(3i32)))))
@@ -862,16 +862,17 @@ Holder() {
 }
 
 [return<Reference<map<i32, i32>>>]
-borrowValues([Holder mut] holder) {
-  return(location(holder.values))
+borrowValues([Reference<map<i32, i32>>] values) {
+  return(values)
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [Holder mut] holder{Holder()}
-  borrowValues(holder).insert(1i32, 4i32)
-  borrowValues(holder).insert(2i32, 7i32)
-  borrowValues(holder).insert(1i32, 9i32)
+  [Reference<map<i32, i32>> mut] ref{borrowValues(location(holder.values))}
+  ref.insert(1i32, 4i32)
+  ref.insert(2i32, 7i32)
+  ref.insert(1i32, 9i32)
   return(plus(holder.values.count(), plus(holder.values.at(1i32), holder.values.at_unsafe(2i32))))
 }
 )";
