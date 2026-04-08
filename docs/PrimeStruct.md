@@ -3013,6 +3013,10 @@ bad_use_after_take() {
     Method-sugar field-access receivers now also route through that path by inferring receiver map
     typing from resolved canonical method-callee receiver parameter types when method template
     arguments are omitted.
+    Compatibility helper alias `insert` surfaces (for example `mapInsert`) now share that same
+    field-access receiver-typing inference when template arguments are omitted, so alias-resolved
+    non-local receiver forms route through `insert_builtin` instead of falling back to pending
+    runtime paths.
     Temporary helper-return value receivers that do not provide a stable writable lvalue target now
     have deterministic compile-time rejects in conformance coverage (direct canonical and method-sugar
     forms). The remaining public

@@ -284,6 +284,19 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
     return false;
   }
   const auto inferCallMapTargetInfo = [&](const Expr &targetExpr, MapAccessTargetInfo &targetInfoOut) {
+    auto isMapInsertLikeCallee = [&](const Definition &callee) {
+      if (callee.fullPath == "/std/collections/map/insert" ||
+          callee.fullPath.rfind("/std/collections/map/insert__", 0) == 0 ||
+          callee.fullPath == "/std/collections/map/insert_builtin" ||
+          callee.fullPath.rfind("/std/collections/map/insert_builtin__", 0) == 0) {
+        return true;
+      }
+      Expr calleeExpr;
+      calleeExpr.kind = Expr::Kind::Call;
+      calleeExpr.name = callee.fullPath;
+      std::string helperName;
+      return resolveMapHelperAliasName(calleeExpr, helperName) && helperName == "insert";
+    };
     std::function<bool(const std::string &, LocalInfo::ValueKind &, LocalInfo::ValueKind &)>
         inferMapKindsFromTypeText;
     inferMapKindsFromTypeText = [&](const std::string &typeText,
@@ -387,10 +400,7 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
         targetExpr.args.size() == 1) {
       const Definition *directCallee = resolveDefinitionCall(stmt);
       if (directCallee != nullptr &&
-          (directCallee->fullPath == "/std/collections/map/insert" ||
-           directCallee->fullPath.rfind("/std/collections/map/insert__", 0) == 0 ||
-           directCallee->fullPath == "/std/collections/map/insert_builtin" ||
-           directCallee->fullPath.rfind("/std/collections/map/insert_builtin__", 0) == 0) &&
+          isMapInsertLikeCallee(*directCallee) &&
           !directCallee->parameters.empty()) {
         const std::string receiverTypeText = extractParameterTypeName(directCallee->parameters.front());
         if (inferMapKindsFromTypeText(receiverTypeText,
@@ -408,10 +418,7 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
         targetExpr.args.size() == 1) {
       const Definition *methodCallee = resolveMethodCallDefinition(stmt, localsIn);
       if (methodCallee != nullptr &&
-          (methodCallee->fullPath == "/std/collections/map/insert" ||
-           methodCallee->fullPath.rfind("/std/collections/map/insert__", 0) == 0 ||
-           methodCallee->fullPath == "/std/collections/map/insert_builtin" ||
-           methodCallee->fullPath.rfind("/std/collections/map/insert_builtin__", 0) == 0) &&
+          isMapInsertLikeCallee(*methodCallee) &&
           !methodCallee->parameters.empty()) {
         const std::string receiverTypeText = extractParameterTypeName(methodCallee->parameters.front());
         if (inferMapKindsFromTypeText(receiverTypeText,

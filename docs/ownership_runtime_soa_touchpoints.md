@@ -119,9 +119,15 @@ path (based on current recognition hooks):
   resolved canonical method-callee receiver parameter types when method template
   arguments are omitted (IR coverage:
   `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`).
-- Remaining field-access/non-local lvalue receiver shapes that do not currently
-  route through that same path (for example surfaces that still bypass canonical
-  insert helper classification before rewrite).
+- Compatibility helper alias field-access/non-local receiver forms (for example
+  `/std/collections/mapInsert(..., holder.values, ...)` and method-sugar
+  `holder.values.insert(...)` resolved through alias callees) now route through
+  that same rewrite path by reusing resolved callee receiver parameter typing
+  when template arguments are omitted (IR coverage:
+  `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`).
+- Remaining non-local lvalue receiver shapes that do not currently route through
+  that same path (for example non-field-access receiver forms that still bypass
+  canonical/helper alias receiver-typing inference before rewrite).
 - Temporary/helper-return receiver shapes that do not provide a stable writable
   lvalue target for pointer write-back now have deterministic compile-diagnostic
   coverage for both direct canonical and method-sugar insert forms (see
