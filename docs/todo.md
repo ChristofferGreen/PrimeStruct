@@ -14,7 +14,7 @@ Sizing note: each leaf `○` item should fit in one code-affecting commit plus f
 **Architecture / Type-resolution graph**
 **Group 11 - Near-term graph queue**
 Blocked by Group 13 rollout constraints until the remaining collection-helper/runtime predecessor items are finished and the return-kind pilot path is stable enough to resume broader graph work.
-- ◐ Implement the next non-template inference-island migrations now that the graph-backed cutover contract is documented.
+- ✓ Implement the next non-template inference-island migrations now that the graph-backed cutover contract is documented.
   - ✓ Migrate the next direct-call/callee non-template inference island onto the graph path.
     - ✓ Select the first direct-call island and record the exact validator/lowerer touchpoints (see `docs/type_graph_migration_touchpoints.md`, section 1).
     - ✓ Publish graph facts for that island behind the existing inference path (no behavior change).
@@ -33,7 +33,7 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
     - ✓ Switch production inference for that island to consume graph facts.
     - ✓ Add positive + negative conformance fixtures for that island.
     - ✓ Delete the replaced fallback branch for that island.
-- ◐ Implement the graph/CT-eval interaction contract now that the boundary is documented.
+- ✓ Implement the graph/CT-eval interaction contract now that the boundary is documented.
   - ✓ Route graph-backed consumers onto shared dependency-state consumption where CT-eval and graph validation overlap.
     - ✓ Identify one dependency state shared by CT-eval and graph validation (see `docs/type_graph_migration_touchpoints.md`, section 4).
     - ✓ Publish that dependency state on the shared graph-backed surface.
@@ -47,7 +47,7 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
   - ✓ Add conformance coverage for the graph/CT-eval handoff boundary.
     - ✓ Add a positive fixture that exercises the adapter seam.
     - ✓ Add a negative diagnostic fixture that proves boundary mismatch rejection.
-- ◐ Implement the graph-backed explicit/implicit template-inference migrations now that the cutover contract is documented.
+- ✓ Implement the graph-backed explicit/implicit template-inference migrations now that the cutover contract is documented.
   - ✓ Migrate the next explicit template-argument inference surface onto the graph path.
     - ✓ Select one explicit template-argument surface (see `docs/type_graph_migration_touchpoints.md`, section 6).
     - ✓ Publish graph facts for that surface behind the current path.
