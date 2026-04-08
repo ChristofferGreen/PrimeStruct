@@ -87,7 +87,7 @@ Current lowering path for canonical insert rewrite:
 - Lowering for rewritten calls enters the inline builtin map insert path in
   `src/ir_lowerer/IrLowererLowerInlineCalls.h`.
 - Grow/copy/repoint + write-back logic is centralized in
-  `emitBuiltinCanonicalMapInsertOverwriteOrPending(...)` in
+  `emitBuiltinCanonicalMapInsertOverwriteOrGrow(...)` in
   `src/ir_lowerer/IrLowererAccessLoadHelpers.cpp`.
 
 Receiver recognition boundary used by rewrite/lowering:

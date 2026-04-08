@@ -253,7 +253,7 @@ TEST_CASE("ir lowerer map insert helper writes grown pointers back through wrapp
   std::vector<primec::IrInstruction> instructions;
   int32_t nextLocal = 30;
 
-  CHECK(primec::ir_lowerer::emitBuiltinCanonicalMapInsertOverwriteOrPending(
+  CHECK(primec::ir_lowerer::emitBuiltinCanonicalMapInsertOverwriteOrGrow(
       -1,
       9,
       3,

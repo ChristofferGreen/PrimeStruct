@@ -45,7 +45,7 @@ Sizing note: each leaf `○` item should fit in one code-affecting commit plus f
     - ✓ Add nested non-local growth conformance coverage across native/C++/VM plus matching semantics acceptance for helper-return borrowed receivers (`tests/unit/test_compile_run_map_conformance_sources.h`, `tests/unit/test_compile_run_map_conformance_expectations.h`, and backend harness suites).
     - ✓ Add helper-return borrowed method-insert conformance coverage across native/C++/VM plus matching semantics acceptance (`tests/unit/test_compile_run_map_conformance_sources.h`, `tests/unit/test_compile_run_map_conformance_expectations.h`, and backend harness suites).
     - ✓ Add deterministic failure-diagnostic coverage for still-unmigrated helper-return value receiver shapes (direct canonical + method-sugar forms) across native/C++/VM (`tests/unit/test_compile_run_map_conformance_sources.h`, `tests/unit/test_compile_run_map_conformance_expectations.h`, and backend harness suites).
-  - ○ Remove the migrated pending runtime fallback branches after coverage lands.
+  - ✓ Remove the migrated pending runtime fallback branches after coverage lands (`emitBuiltinCanonicalMapInsertOverwriteOrGrow` now always emits the shared grow/overwrite path and no longer keeps a separate no-writeback pending fallback return branch).
 
 **Group 14 - SoA bring-up and end-state cleanup**
 - ○ Retire remaining compiler-owned builtin `soa_vector` semantics/lowering/backend scaffolding as the stdlib `.prime` substrate becomes authoritative.

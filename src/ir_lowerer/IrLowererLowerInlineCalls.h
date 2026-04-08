@@ -225,7 +225,7 @@
         function.instructions.push_back({IrOpcode::LoadIndirect, 0});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
       }
-      if (!ir_lowerer::emitBuiltinCanonicalMapInsertOverwriteOrPending(
+      if (!ir_lowerer::emitBuiltinCanonicalMapInsertOverwriteOrGrow(
               valuesLocal,
               valuesWrapperLocal,
               ptrLocal,

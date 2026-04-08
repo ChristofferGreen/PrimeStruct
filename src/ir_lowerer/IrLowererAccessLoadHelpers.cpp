@@ -653,7 +653,7 @@ bool emitMapLookupTryAt(
   return true;
 }
 
-bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
+bool emitBuiltinCanonicalMapInsertOverwriteOrGrow(
     int32_t valuesLocal,
     int32_t valuesWrapperLocal,
     int32_t ptrLocal,
@@ -674,9 +674,7 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
   emitInstruction(IrOpcode::JumpIfZero, 0);
 
   size_t jumpAfterGenericGrow = 0;
-  bool hasGenericGrowJump = false;
-  if (valuesLocal >= 0 || valuesWrapperLocal >= 0) {
-    constexpr uint64_t kHeapAddressTag = 1ull << 63;
+  constexpr uint64_t kHeapAddressTag = 1ull << 63;
 
     const int32_t genericNewCountLocal = allocTempLocal();
     const int32_t genericNewSlotCountLocal = allocTempLocal();
@@ -805,23 +803,17 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
     emitInstruction(IrOpcode::StoreIndirect, 0);
     emitInstruction(IrOpcode::Pop, 0);
 
-    if (valuesLocal >= 0) {
-      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericGrownPtrLocal));
-      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(valuesLocal));
-    } else {
-      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(valuesWrapperLocal));
-      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericGrownPtrLocal));
-      emitInstruction(IrOpcode::StoreIndirect, 0);
-      emitInstruction(IrOpcode::Pop, 0);
-    }
-    jumpAfterGenericGrow = instructionCount();
-    emitInstruction(IrOpcode::Jump, 0);
-    hasGenericGrowJump = true;
+  if (valuesLocal >= 0) {
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericGrownPtrLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(valuesLocal));
+  } else if (valuesWrapperLocal >= 0) {
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(valuesWrapperLocal));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(genericGrownPtrLocal));
+    emitInstruction(IrOpcode::StoreIndirect, 0);
+    emitInstruction(IrOpcode::Pop, 0);
   }
-
-  if (!hasGenericGrowJump) {
-    return false;
-  }
+  jumpAfterGenericGrow = instructionCount();
+  emitInstruction(IrOpcode::Jump, 0);
 
   const size_t foundIndex = instructionCount();
   patchInstructionImm(jumpFound, static_cast<uint64_t>(foundIndex));
@@ -839,9 +831,7 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
   emitInstruction(IrOpcode::StoreIndirect, 0);
   emitInstruction(IrOpcode::Pop, 0);
 
-  if (hasGenericGrowJump) {
-    patchInstructionImm(jumpAfterGenericGrow, static_cast<uint64_t>(instructionCount()));
-  }
+  patchInstructionImm(jumpAfterGenericGrow, static_cast<uint64_t>(instructionCount()));
   return true;
 }
 

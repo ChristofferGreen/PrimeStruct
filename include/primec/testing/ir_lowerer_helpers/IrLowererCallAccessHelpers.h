@@ -262,7 +262,7 @@ bool emitMapLookupContains(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error);
-bool emitBuiltinCanonicalMapInsertOverwriteOrPending(
+bool emitBuiltinCanonicalMapInsertOverwriteOrGrow(
     int32_t valuesLocal,
     int32_t valuesWrapperLocal,
     int32_t ptrLocal,

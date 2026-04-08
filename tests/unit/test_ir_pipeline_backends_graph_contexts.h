@@ -1321,7 +1321,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(functionTableStepHeader.find("const SemanticProgram *semanticProgram = nullptr;") !=
         std::string::npos);
   CHECK(callAccessHelpersHeader.find("bool emitMapLookupContains(") != std::string::npos);
-  CHECK(callAccessHelpersHeader.find("bool emitBuiltinCanonicalMapInsertOverwriteOrPending(") !=
+  CHECK(callAccessHelpersHeader.find("bool emitBuiltinCanonicalMapInsertOverwriteOrGrow(") !=
         std::string::npos);
   CHECK(structLayoutHelpersHeader.find("const SemanticProductTargetAdapter *semanticProductTargets,") !=
         std::string::npos);
