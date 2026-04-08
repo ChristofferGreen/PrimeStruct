@@ -51,22 +51,44 @@
             return false;
           }
 
+          auto stripGeneratedHelperSuffix = [](std::string helperName) {
+            const size_t generatedSuffix = helperName.find("__");
+            if (generatedSuffix != std::string::npos) {
+              helperName.erase(generatedSuffix);
+            }
+            return helperName;
+          };
+          auto isDirectBareMapInsertHelperStem = [&](const Expr &candidate) {
+            if (candidate.isMethodCall || candidate.name.empty()) {
+              return false;
+            }
+            std::string helperName = candidate.name;
+            if (!helperName.empty() && helperName.front() == '/') {
+              helperName.erase(helperName.begin());
+            }
+            if (helperName.find('/') != std::string::npos) {
+              return false;
+            }
+            helperName = stripGeneratedHelperSuffix(std::move(helperName));
+            return helperName == "insert" || helperName == "insert_ref" ||
+                   helperName == "Insert" || helperName == "InsertRef" ||
+                   helperName == "mapInsert" || helperName == "mapInsertRef";
+          };
+
           size_t receiverIndex = 0;
           if (callExpr.isMethodCall) {
             std::string normalizedMethodName = callExpr.name;
             if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
               normalizedMethodName.erase(normalizedMethodName.begin());
             }
-            const size_t generatedSuffix = normalizedMethodName.find("__");
-            if (generatedSuffix != std::string::npos) {
-              normalizedMethodName.erase(generatedSuffix);
-            }
+            normalizedMethodName = stripGeneratedHelperSuffix(std::move(normalizedMethodName));
             if (normalizedMethodName != "insert") {
               return false;
             }
           } else {
             std::string helperName;
-            if (!ir_lowerer::resolveMapHelperAliasName(callExpr, helperName) || helperName != "insert") {
+            if ((!ir_lowerer::resolveMapHelperAliasName(callExpr, helperName) || helperName != "insert") &&
+                !isDirectBareMapInsertHelperStem(callExpr)) {
               return false;
             }
             if (hasNamedArguments(callExpr.argNames)) {

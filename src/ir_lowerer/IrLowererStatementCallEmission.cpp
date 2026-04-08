@@ -255,6 +255,23 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
     return false;
   }
 
+  auto isDirectBareMapInsertHelperStem = [&](const Expr &callExpr) {
+    if (callExpr.isMethodCall || callExpr.name.empty()) {
+      return false;
+    }
+    std::string helperName = callExpr.name;
+    if (!helperName.empty() && helperName.front() == '/') {
+      helperName.erase(helperName.begin());
+    }
+    if (helperName.find('/') != std::string::npos) {
+      return false;
+    }
+    helperName = stripGeneratedHelperSuffix(std::move(helperName));
+    return helperName == "insert" || helperName == "insert_ref" ||
+           helperName == "Insert" || helperName == "InsertRef" ||
+           helperName == "mapInsert" || helperName == "mapInsertRef";
+  };
+
   size_t receiverIndex = 0;
   if (stmt.isMethodCall) {
     std::string normalizedName = stmt.name;
@@ -267,7 +284,8 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
     }
   } else {
     std::string helperName;
-    if (!resolveMapHelperAliasName(stmt, helperName) || helperName != "insert") {
+    if ((!resolveMapHelperAliasName(stmt, helperName) || helperName != "insert") &&
+        !isDirectBareMapInsertHelperStem(stmt)) {
       return false;
     }
     if (hasNamedArguments(stmt.argNames)) {

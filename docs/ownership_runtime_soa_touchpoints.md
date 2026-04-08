@@ -265,6 +265,19 @@ path (based on current recognition hooks):
   `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`;
   rewrite parity touchpoint:
   `src/ir_lowerer/IrLowererStatementCallEmission.cpp`).
+- Non-local direct-call args-pack map-access receiver-source chains now also
+  route through that same rewrite path when the mutating insert call uses bare
+  helper stems with generated suffixes (for example
+  `insert__generated(at_ref(location(holder.mapsPack), 0i32), ...)` and
+  `mapInsert__generated(mapAtUnsafeRef__generated(location(holder.mapsPack), 0i32), ...)`)
+  by extending direct-call mutating insert recognition parity from
+  path-qualified/helper-alias forms to bare helper-stem forms (including
+  generated suffixes) while preserving args-pack receiver-source typing
+  inference (IR coverage:
+  `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`;
+  rewrite parity touchpoints:
+  `src/ir_lowerer/IrLowererStatementCallEmission.cpp` and
+  `src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h`).
 - Remaining non-local lvalue receiver shapes that do not currently route
   through that same path (for example non-local receiver forms beyond
   field-access, helper-return, and args-pack map-access receiver-source `at` /
