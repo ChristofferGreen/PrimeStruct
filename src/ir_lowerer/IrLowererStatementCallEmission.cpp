@@ -280,7 +280,12 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
       normalizedName.erase(normalizedName.begin());
     }
     normalizedName = stripGeneratedHelperSuffix(std::move(normalizedName));
-    if (normalizedName != "insert") {
+    const bool isMethodInsertStem =
+        normalizedName == "insert" || normalizedName == "insert_ref" ||
+        normalizedName == "Insert" || normalizedName == "InsertRef" ||
+        normalizedName == "mapInsert" || normalizedName == "mapInsertRef" ||
+        normalizedName == "MapInsert" || normalizedName == "MapInsertRef";
+    if (!isMethodInsertStem) {
       return false;
     }
   } else {

@@ -83,7 +83,16 @@
               normalizedMethodName.erase(normalizedMethodName.begin());
             }
             normalizedMethodName = stripGeneratedHelperSuffix(std::move(normalizedMethodName));
-            if (normalizedMethodName != "insert") {
+            const bool isMethodInsertStem =
+                normalizedMethodName == "insert" ||
+                normalizedMethodName == "insert_ref" ||
+                normalizedMethodName == "Insert" ||
+                normalizedMethodName == "InsertRef" ||
+                normalizedMethodName == "mapInsert" ||
+                normalizedMethodName == "mapInsertRef" ||
+                normalizedMethodName == "MapInsert" ||
+                normalizedMethodName == "MapInsertRef";
+            if (!isMethodInsertStem) {
               return false;
             }
           } else {
