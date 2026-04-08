@@ -786,6 +786,126 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
   CHECK(inlineCalls == 1);
   CHECK(instructions.empty());
 
+  primec::Expr localMapValuesName;
+  localMapValuesName.kind = primec::Expr::Kind::Name;
+  localMapValuesName.name = "valuesLocal";
+  primec::Expr localMapValuesLocationExpr;
+  localMapValuesLocationExpr.kind = primec::Expr::Kind::Call;
+  localMapValuesLocationExpr.name = "location";
+  localMapValuesLocationExpr.args = {localMapValuesName};
+  localMapValuesLocationExpr.argNames = {std::nullopt};
+  primec::ir_lowerer::LocalMap localMapLocals;
+  primec::ir_lowerer::LocalInfo localMapInfo;
+  localMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  localMapInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  localMapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  localMapInfo.index = 4;
+  localMapLocals.emplace("valuesLocal", localMapInfo);
+
+  primec::Expr mapInsertLocationLocalMapInferredStmt = mapInsertStmt;
+  mapInsertLocationLocalMapInferredStmt.args = {localMapValuesLocationExpr, keyArg, valueArg};
+  mapInsertLocationLocalMapInferredStmt.argNames = {std::nullopt, std::nullopt, std::nullopt};
+  mapInsertLocationLocalMapInferredStmt.templateArgs.clear();
+
+  inlineCalls = 0;
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            mapInsertLocationLocalMapInferredStmt,
+            localMapLocals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &callExpr) -> const primec::Definition * {
+              if (callExpr.name == "/std/collections/map/insert_builtin") {
+                return &mapInsertBuiltinDef;
+              }
+              return nullptr;
+            },
+            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
+              if (path == "/std/collections/map/insert_builtin") {
+                info.returnsVoid = true;
+                return true;
+              }
+              return false;
+            },
+            [&](const primec::Expr &callExpr,
+                const primec::Definition &callee,
+                const primec::ir_lowerer::LocalMap &localsIn,
+                bool expectValue) {
+              ++inlineCalls;
+              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
+              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(callExpr.isMethodCall);
+              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(expectValue);
+              CHECK(callExpr.templateArgs == expectedTemplateArgs);
+              CHECK(localsIn.find("valuesLocal") != localsIn.end());
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(inlineCalls == 1);
+  CHECK(instructions.empty());
+
+  primec::Expr mapInsertLocationLocalMapMethodStmt;
+  mapInsertLocationLocalMapMethodStmt.kind = primec::Expr::Kind::Call;
+  mapInsertLocationLocalMapMethodStmt.name = "insert";
+  mapInsertLocationLocalMapMethodStmt.isMethodCall = true;
+  mapInsertLocationLocalMapMethodStmt.args = {localMapValuesLocationExpr, keyArg, valueArg};
+  mapInsertLocationLocalMapMethodStmt.argNames = {std::nullopt, std::nullopt, std::nullopt};
+
+  inlineCalls = 0;
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            mapInsertLocationLocalMapMethodStmt,
+            localMapLocals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &callExpr,
+                const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              if (callExpr.isMethodCall && callExpr.name == "insert" && callExpr.args.size() == 3) {
+                return &mapInsertAliasDef;
+              }
+              return nullptr;
+            },
+            [&](const primec::Expr &callExpr) -> const primec::Definition * {
+              if (callExpr.name == "/std/collections/map/insert_builtin") {
+                return &mapInsertBuiltinDef;
+              }
+              return nullptr;
+            },
+            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
+              if (path == "/std/collections/map/insert_builtin") {
+                info.returnsVoid = true;
+                return true;
+              }
+              return false;
+            },
+            [&](const primec::Expr &callExpr,
+                const primec::Definition &callee,
+                const primec::ir_lowerer::LocalMap &localsIn,
+                bool expectValue) {
+              ++inlineCalls;
+              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
+              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(callExpr.isMethodCall);
+              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(expectValue);
+              CHECK(callExpr.templateArgs == expectedTemplateArgs);
+              CHECK(localsIn.find("valuesLocal") != localsIn.end());
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(inlineCalls == 1);
+  CHECK(instructions.empty());
+
   primec::Expr valuesFactoryLocationExpr;
   valuesFactoryLocationExpr.kind = primec::Expr::Kind::Call;
   valuesFactoryLocationExpr.name = "location";

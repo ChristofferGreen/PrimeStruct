@@ -392,6 +392,31 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
     }
 
     targetInfoOut = {};
+    if (canonicalReceiverExpr->kind == Expr::Kind::Name) {
+      auto localIt = localsIn.find(canonicalReceiverExpr->name);
+      if (localIt != localsIn.end()) {
+        const LocalInfo &localInfo = localIt->second;
+        const bool directMap = localInfo.kind == LocalInfo::Kind::Map;
+        const bool wrappedMap =
+            (localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToMap) ||
+            (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToMap);
+        const bool argsPackMap =
+            localInfo.isArgsPack &&
+            (localInfo.argsPackElementKind == LocalInfo::Kind::Map ||
+             (localInfo.argsPackElementKind == LocalInfo::Kind::Reference && localInfo.referenceToMap) ||
+             (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer && localInfo.pointerToMap));
+        if (directMap || wrappedMap || argsPackMap) {
+          targetInfoOut.isMapTarget = true;
+          targetInfoOut.mapKeyKind = localInfo.mapKeyKind;
+          targetInfoOut.mapValueKind = localInfo.mapValueKind;
+          if (targetInfoOut.mapKeyKind != LocalInfo::ValueKind::Unknown &&
+              targetInfoOut.mapValueKind != LocalInfo::ValueKind::Unknown) {
+            return true;
+          }
+        }
+      }
+    }
+
     auto tryPopulateFromResolvedCallee = [&](const Definition *resolvedCallee) {
       if (resolvedCallee == nullptr) {
         return false;

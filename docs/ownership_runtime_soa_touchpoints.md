@@ -130,6 +130,11 @@ path (based on current recognition hooks):
   `location(...)` wrappers before canonical/helper-alias receiver-typing and
   helper-return collection inference when template arguments are omitted (IR coverage:
   `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`).
+- Location-wrapped local-map receiver forms (for example `location(valuesLocal)`)
+  now route through that same rewrite path by peeling `location(...)` wrappers
+  before local map-kind probing and reusing local map key/value metadata when
+  template arguments are omitted (IR coverage:
+  `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`).
 - Dereference-wrapped helper-return receiver forms (for example
   `dereference(makeValuesRef())`) now route through that same rewrite path by
   inferring map typing from resolved helper return collection declarations when

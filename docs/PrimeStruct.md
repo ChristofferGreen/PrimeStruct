@@ -3021,6 +3021,9 @@ bad_use_after_take() {
     `location(holder.values)` and `location(makeValues())`) now also route through that path by
     peeling `location(...)` wrappers before canonical/helper-alias receiver-typing and helper-return
     collection inference when template arguments are omitted.
+    Location-wrapped local-map receivers (for example `location(valuesLocal)`) now also route
+    through that path by peeling `location(...)` wrappers before local map-kind probing so omitted
+    template arguments can reuse local map key/value metadata.
     Dereference-wrapped helper-return receivers (for example
     `dereference(makeValuesRef())`) now also route through that path by inferring map typing from
     resolved helper return collection declarations when template arguments are omitted.
