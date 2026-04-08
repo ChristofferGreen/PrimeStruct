@@ -411,6 +411,18 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
 
   primec::Definition mapInsertBuiltinDef;
   mapInsertBuiltinDef.fullPath = "/std/collections/map/insert_builtin";
+  primec::Definition mapInsertMethodDef;
+  mapInsertMethodDef.fullPath = "/std/collections/map/insert";
+  primec::Expr mapInsertMethodValuesParam;
+  mapInsertMethodValuesParam.kind = primec::Expr::Kind::Name;
+  mapInsertMethodValuesParam.name = "values";
+  primec::Transform mapInsertMethodMutTransform;
+  mapInsertMethodMutTransform.name = "mut";
+  primec::Transform mapInsertMethodTypeTransform;
+  mapInsertMethodTypeTransform.name = "map";
+  mapInsertMethodTypeTransform.templateArgs = {"i32", "i32"};
+  mapInsertMethodValuesParam.transforms = {mapInsertMethodMutTransform, mapInsertMethodTypeTransform};
+  mapInsertMethodDef.parameters = {mapInsertMethodValuesParam};
 
   inlineCalls = 0;
   instructions.clear();
@@ -533,6 +545,9 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
               return nullptr;
             },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
+              if (callExpr.name == "/std/collections/map/insert") {
+                return &mapInsertMethodDef;
+              }
               if (callExpr.name == "/std/collections/map/insert_builtin") {
                 return &mapInsertBuiltinDef;
               }
@@ -562,18 +577,54 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
   CHECK(inlineCalls == 1);
   CHECK(instructions.empty());
 
-  primec::Definition mapInsertMethodDef;
-  mapInsertMethodDef.fullPath = "/std/collections/map/insert";
-  primec::Expr mapInsertMethodValuesParam;
-  mapInsertMethodValuesParam.kind = primec::Expr::Kind::Name;
-  mapInsertMethodValuesParam.name = "values";
-  primec::Transform mapInsertMethodMutTransform;
-  mapInsertMethodMutTransform.name = "mut";
-  primec::Transform mapInsertMethodTypeTransform;
-  mapInsertMethodTypeTransform.name = "map";
-  mapInsertMethodTypeTransform.templateArgs = {"i32", "i32"};
-  mapInsertMethodValuesParam.transforms = {mapInsertMethodMutTransform, mapInsertMethodTypeTransform};
-  mapInsertMethodDef.parameters = {mapInsertMethodValuesParam};
+  primec::Expr mapInsertFieldAccessInferredStmt = mapInsertFieldAccessStmt;
+  mapInsertFieldAccessInferredStmt.templateArgs.clear();
+
+  inlineCalls = 0;
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            mapInsertFieldAccessInferredStmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &callExpr) -> const primec::Definition * {
+              if (callExpr.name == "/std/collections/map/insert") {
+                return &mapInsertMethodDef;
+              }
+              if (callExpr.name == "/std/collections/map/insert_builtin") {
+                return &mapInsertBuiltinDef;
+              }
+              return nullptr;
+            },
+            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
+              if (path == "/std/collections/map/insert_builtin") {
+                info.returnsVoid = true;
+                return true;
+              }
+              return false;
+            },
+            [&](const primec::Expr &callExpr,
+                const primec::Definition &callee,
+                const primec::ir_lowerer::LocalMap &,
+                bool expectValue) {
+              ++inlineCalls;
+              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
+              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(callExpr.isMethodCall);
+              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(expectValue);
+              CHECK(callExpr.templateArgs == expectedTemplateArgs);
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(inlineCalls == 1);
+  CHECK(instructions.empty());
 
   primec::Expr mapInsertFieldAccessMethodStmt;
   mapInsertFieldAccessMethodStmt.kind = primec::Expr::Kind::Call;

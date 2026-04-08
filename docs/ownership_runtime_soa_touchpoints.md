@@ -110,8 +110,9 @@ path (based on current recognition hooks):
   expectation suites).
 - Direct canonical field-access/non-local lvalue receiver forms (for example
   `/std/collections/map/insert(..., holder.values, ...)`) now route through the
-  shared rewrite path by reusing explicit call-template map typing when the
-  receiver expression itself is not a standalone call target (IR coverage:
+  shared rewrite path by reusing explicit call-template map typing or inferred
+  canonical callee receiver typing when the receiver expression itself is not a
+  standalone call target (IR coverage:
   `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`).
 - Method-sugar field-access/non-local receiver forms (`holder.values.insert(...)`)
   now route through that same rewrite path by inferring receiver map typing from

@@ -3008,7 +3008,8 @@ bad_use_after_take() {
     `/std/collections/map/insert(...)` plus method-sugar `receiver.insert(...)` calls now also route
     map-returning helper receivers (including nested field-access helper returns) onto that same
     rewrite path. Direct canonical field-access non-local receivers (for example `holder.values`) now
-    also route through that path when explicit helper template arguments provide map typing.
+    also route through that path when explicit helper template arguments or inferred canonical
+    callee receiver typing provide map typing.
     Method-sugar field-access receivers now also route through that path by inferring receiver map
     typing from resolved canonical method-callee receiver parameter types when method template
     arguments are omitted.

@@ -381,6 +381,27 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
              targetInfoOut.mapValueKind != LocalInfo::ValueKind::Unknown;
     }
 
+    if (!stmt.isMethodCall &&
+        targetExpr.kind == Expr::Kind::Call &&
+        targetExpr.isFieldAccess &&
+        targetExpr.args.size() == 1) {
+      const Definition *directCallee = resolveDefinitionCall(stmt);
+      if (directCallee != nullptr &&
+          (directCallee->fullPath == "/std/collections/map/insert" ||
+           directCallee->fullPath.rfind("/std/collections/map/insert__", 0) == 0 ||
+           directCallee->fullPath == "/std/collections/map/insert_builtin" ||
+           directCallee->fullPath.rfind("/std/collections/map/insert_builtin__", 0) == 0) &&
+          !directCallee->parameters.empty()) {
+        const std::string receiverTypeText = extractParameterTypeName(directCallee->parameters.front());
+        if (inferMapKindsFromTypeText(receiverTypeText,
+                                      targetInfoOut.mapKeyKind,
+                                      targetInfoOut.mapValueKind)) {
+          targetInfoOut.isMapTarget = true;
+          return true;
+        }
+      }
+    }
+
     if (stmt.isMethodCall &&
         targetExpr.kind == Expr::Kind::Call &&
         targetExpr.isFieldAccess &&
