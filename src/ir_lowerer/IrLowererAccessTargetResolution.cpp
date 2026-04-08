@@ -226,6 +226,15 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     const LocalMap &localsIn,
     const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo) {
   MapAccessTargetInfo info;
+  const auto peelLocationWrappers = [&](const Expr &expr) {
+    const Expr *current = &expr;
+    while (current->kind == Expr::Kind::Call &&
+           isSimpleCallName(*current, "location") &&
+           current->args.size() == 1) {
+      current = &current->args.front();
+    }
+    return current;
+  };
   auto populateFromDirectLocal = [&](const LocalInfo &localInfo, bool dereferenced) {
     const bool inferredWrappedMap = hasInferredTypedWrappedMap(localInfo, localInfo.kind);
     if (localInfo.kind != LocalInfo::Kind::Map &&
@@ -302,10 +311,19 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
         target.args.size() == 2;
     if ((getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) ||
         isExplicitMapArgsPackAt) {
-      const Expr &accessReceiver = target.args.front();
-      if (accessReceiver.kind == Expr::Kind::Name) {
-        auto it = localsIn.find(accessReceiver.name);
+      const Expr *accessReceiver = peelLocationWrappers(target.args.front());
+      bool receiverDereferenced = false;
+      while (accessReceiver->kind == Expr::Kind::Call &&
+             isSimpleCallName(*accessReceiver, "dereference") &&
+             accessReceiver->args.size() == 1) {
+        receiverDereferenced = true;
+        accessReceiver = peelLocationWrappers(accessReceiver->args.front());
+      }
+
+      if (accessReceiver->kind == Expr::Kind::Name) {
+        auto it = localsIn.find(accessReceiver->name);
         if (it != localsIn.end() && populateFromArgsPackElement(it->second, false)) {
+          info.isWrappedMapTarget = info.isWrappedMapTarget && !receiverDereferenced;
           return info;
         }
       }
