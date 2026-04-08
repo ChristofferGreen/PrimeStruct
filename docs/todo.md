@@ -20,12 +20,12 @@ Sizing note: each leaf `○` item should fit in one code-affecting commit plus f
 - ◐ Move the canonical imported vector constructor surface from fixed-arity wrapper helpers to variadic `vector(values...)`.
   - ✓ Inventory remaining fixed-arity vector constructor wrappers and callsites (see `docs/ownership_runtime_soa_touchpoints.md`, section 1).
   - ✓ Route canonical imported constructor calls and literal rewrite targets to the variadic helper surface (`stdlib/std/collections/vector.prime` now forwards canonical constructor overloads to `/std/collections/experimental_vector/vector<T>(...)`).
-  - ○ Add focused conformance coverage for constructor/literal parity across direct and imported forms.
+  - ✓ Add focused conformance coverage for constructor/literal parity across direct and imported forms (`tests/unit/test_compile_run_native_backend_map_and_vector_variadics.h`: `native keeps vector constructor and literal parity across direct and canonical forms`).
   - ○ Delete the replaced fixed-arity wrapper constructor surface after parity is locked.
 - ◐ Move the canonical imported map constructor surface from fixed-arity wrapper helpers to variadic `map(entry(...), ...)`.
   - ✓ Inventory remaining fixed-arity map constructor wrappers and callsites (see `docs/ownership_runtime_soa_touchpoints.md`, section 2).
   - ✓ Route canonical imported constructor calls and literal rewrite targets to the variadic entry-based helper surface (`stdlib/std/collections/map.prime` canonical constructor overloads now build `/std/collections/experimental_map/entry<K, V>(...)` tuples and forward to variadic `/std/collections/experimental_map/map<K, V>(...)`).
-  - ○ Add focused conformance coverage for constructor/literal parity across direct and imported forms.
+  - ✓ Add focused conformance coverage for constructor/literal parity across direct and imported forms (`tests/unit/test_compile_run_native_backend_map_and_vector_variadics.h`: `native keeps map constructor and literal parity across direct and canonical forms`).
   - ○ Delete the replaced fixed-arity wrapper constructor surface after parity is locked.
 - ○ Route the remaining builtin canonical `map<K, V>` borrowed/non-local growth mutation surfaces through the shared grown-pointer write-back/repoint path.
   - ✓ Inventory each remaining borrowed/non-local mutation receiver family still pinned to the pending runtime boundary (see `docs/ownership_runtime_soa_touchpoints.md`, section 3).

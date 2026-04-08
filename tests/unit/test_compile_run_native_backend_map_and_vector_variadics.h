@@ -640,3 +640,70 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 16);
 }
+
+TEST_CASE("native keeps vector constructor and literal parity across direct and canonical forms") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] literal{vector<i32>{1i32, 2i32, 3i32}}
+  [vector<i32>] directCtor{vector<i32>(4i32, 5i32, 6i32)}
+  [vector<i32>] canonicalCtor{/std/collections/vector/vector<i32>(7i32, 8i32, 9i32)}
+  [vector<i32>] canonicalEmpty{/std/collections/vector/vector<i32>()}
+  return(
+      plus(
+          plus(/std/collections/vector/count<i32>(literal),
+               /std/collections/vector/count<i32>(directCtor)),
+          plus(
+              plus(/std/collections/vector/count<i32>(canonicalCtor),
+                   /std/collections/vector/count<i32>(canonicalEmpty)),
+              plus(
+                  plus(/std/collections/vector/at_unsafe<i32>(literal, 2i32),
+                       /std/collections/vector/at_unsafe<i32>(directCtor, 1i32)),
+                  /std/collections/vector/at_unsafe<i32>(canonicalCtor, 0i32)))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_ctor_literal_parity.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_vector_ctor_literal_parity").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 24);
+}
+
+TEST_CASE("native keeps map constructor and literal parity across direct and canonical forms") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] literal{map<i32, i32>{1i32=11i32, 2i32=13i32}}
+  [map<i32, i32>] directCtor{map<i32, i32>(3i32, 17i32, 4i32, 19i32)}
+  [map<i32, i32>] canonicalCtor{/std/collections/map/map<i32, i32>(5i32, 23i32, 6i32, 29i32)}
+  [map<i32, i32>] canonicalSingle{/std/collections/map/map<i32, i32>(7i32, 31i32)}
+  return(
+      plus(
+          plus(/std/collections/map/count<i32, i32>(literal),
+               /std/collections/map/count<i32, i32>(directCtor)),
+          plus(
+              plus(/std/collections/map/count<i32, i32>(canonicalCtor),
+                   /std/collections/map/count<i32, i32>(canonicalSingle)),
+              plus(
+                  /std/collections/map/at_unsafe<i32, i32>(literal, 1i32),
+                  plus(
+                      /std/collections/map/at_unsafe<i32, i32>(directCtor, 4i32),
+                      plus(
+                          /std/collections/map/at_unsafe<i32, i32>(canonicalCtor, 6i32),
+                          /std/collections/map/at_unsafe<i32, i32>(canonicalSingle, 7i32)))))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_map_ctor_literal_parity.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_map_ctor_literal_parity").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 97);
+}
