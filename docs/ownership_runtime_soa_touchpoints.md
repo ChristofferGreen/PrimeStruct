@@ -187,11 +187,12 @@ IR-lowerer/runtime special-case boundaries:
   - `src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp`
     (direct struct-element literal materialization with heap-backed payload
     slots and explicit struct-slot copy into contiguous SoA-compatible storage)
-- Arbitrary-width pending helper path still exists in:
-  - `src/ir_lowerer/IrLowererLowerInlineCalls.h`
-    (`/std/collections/experimental_soa_storage/soaArbitraryWidthPending`)
-  - `src/ir_lowerer/IrLowererRuntimeErrorHelpers.cpp`
-    (`experimental soa storage arbitrary-width schemas pending`)
+- Arbitrary-width pending width checks now route through the stdlib helper trap
+  path instead of compiler-owned lowerer/runtime special-casing:
+  - `stdlib/std/collections/experimental_soa_storage.prime`
+    (`soaSupportedFieldCount<T>()` -> `soaArbitraryWidthPending<T>(...)`)
+  - Lowerer/runtime no longer contain a dedicated
+    `soaArbitraryWidthPending` special-case branch or runtime-error emitter.
 
 Stdlib surfaces already acting as the canonical SoA bridge:
 - `stdlib/std/collections/soa_vector.prime`

@@ -48,9 +48,11 @@ Sizing note: each leaf `○` item should fit in one code-affecting commit plus f
   - ✓ Remove the migrated pending runtime fallback branches after coverage lands (`emitBuiltinCanonicalMapInsertOverwriteOrGrow` now always emits the shared grow/overwrite path and no longer keeps a separate no-writeback pending fallback return branch).
 
 **Group 14 - SoA bring-up and end-state cleanup**
-- ○ Retire remaining compiler-owned builtin `soa_vector` semantics/lowering/backend scaffolding as the stdlib `.prime` substrate becomes authoritative.
+- ◐ Retire remaining compiler-owned builtin `soa_vector` semantics/lowering/backend scaffolding as the stdlib `.prime` substrate becomes authoritative.
   - ✓ Inventory the remaining compiler-owned fallback/special-case sites by layer (semantics, lowerer, emitter/backend/runtime helpers) (see `docs/ownership_runtime_soa_touchpoints.md`, section 4).
-  - ○ Migrate one fallback family at a time onto shared stdlib helper/conversion paths.
+  - ◐ Migrate one fallback family at a time onto shared stdlib helper/conversion paths.
+    - ✓ Migrate `/std/collections/experimental_soa_storage/soaArbitraryWidthPending` off compiler-owned lowerer/runtime special-casing so arbitrary-width failures now flow through the shared stdlib trap path (`src/ir_lowerer/IrLowererLowerInlineCalls.h`, `src/ir_lowerer/IrLowererLowerSetupLocals.h`, and `src/ir_lowerer/IrLowererRuntimeErrorHelpers.{h,cpp}`).
+    - ○ Migrate the next compiler-owned SoA fallback family onto shared stdlib helper/conversion paths.
   - ○ Add focused parity coverage for direct/imported/helper-return receiver forms on each migrated family.
   - ○ Delete migrated fallback branches after parity coverage is in place.
 - ○ Replace the current non-empty `soa_vector` literal runtime rejection with a deterministic substrate-backed lowering/runtime path.

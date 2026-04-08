@@ -34,7 +34,6 @@ RuntimeErrorEmitters makeRuntimeErrorEmitters(IrFunction &function, const Intern
   emitters.emitPointerIndexOutOfBounds = makeEmitPointerIndexOutOfBounds(function, internString);
   emitters.emitStringIndexOutOfBounds = makeEmitStringIndexOutOfBounds(function, internString);
   emitters.emitMapKeyNotFound = makeEmitMapKeyNotFound(function, internString);
-  emitters.emitSoaArbitraryWidthPending = makeEmitSoaArbitraryWidthPending(function, internString);
   emitters.emitVectorIndexOutOfBounds = makeEmitVectorIndexOutOfBounds(function, internString);
   emitters.emitVectorPopOnEmpty = makeEmitVectorPopOnEmpty(function, internString);
   emitters.emitVectorCapacityExceeded = makeEmitVectorCapacityExceeded(function, internString);
@@ -78,15 +77,6 @@ EmitRuntimeErrorFn makeEmitMapKeyNotFound(IrFunction &function, const InternRunt
   auto internStringFn = internString;
   return [functionPtr, internStringFn]() {
     emitMapKeyNotFound(*functionPtr, internStringFn);
-  };
-}
-
-EmitRuntimeErrorFn makeEmitSoaArbitraryWidthPending(IrFunction &function,
-                                                    const InternRuntimeErrorStringFn &internString) {
-  auto *functionPtr = &function;
-  auto internStringFn = internString;
-  return [functionPtr, internStringFn]() {
-    emitSoaArbitraryWidthPending(*functionPtr, internStringFn);
   };
 }
 
@@ -174,10 +164,6 @@ void emitStringIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorSt
 
 void emitMapKeyNotFound(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
   emitRuntimeError(function, "map key not found", internString);
-}
-
-void emitSoaArbitraryWidthPending(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
-  emitRuntimeError(function, "experimental soa storage arbitrary-width schemas pending", internString);
 }
 
 void emitVectorIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString) {

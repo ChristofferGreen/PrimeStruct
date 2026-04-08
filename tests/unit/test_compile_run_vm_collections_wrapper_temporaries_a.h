@@ -419,7 +419,7 @@ main() {
       (testScratchPath("") / "primec_vm_experimental_soa_vector_wide_pending_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "experimental soa storage arbitrary-width schemas pending\n");
+  CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
 TEST_CASE("vm rejects experimental soa_vector stdlib from-aos helper before typed bindings support") {

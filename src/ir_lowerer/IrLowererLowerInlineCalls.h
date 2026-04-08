@@ -246,15 +246,6 @@
       return true;
     }
 
-    if (callee.fullPath == "/std/collections/experimental_soa_storage/soaArbitraryWidthPending" ||
-        callee.fullPath.rfind("/std/collections/experimental_soa_storage/soaArbitraryWidthPending__", 0) == 0) {
-      emitSoaArbitraryWidthPending();
-      emitFileScopeCleanup(fileScopeStack.back());
-      popFileScope();
-      inlineStack.erase(callee.fullPath);
-      return true;
-    }
-
     InlineContext context;
     context.defPath = callee.fullPath;
     ir_lowerer::LowerInlineCallContextSetupStepOutput contextSetup;
