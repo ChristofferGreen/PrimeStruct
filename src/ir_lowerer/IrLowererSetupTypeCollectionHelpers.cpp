@@ -139,7 +139,8 @@ bool resolveCollectionsMapWrapperAliasName(std::string helperName, std::string &
   }
   if (helperName == "insert" || helperName == "insert_ref" ||
       helperName == "Insert" || helperName == "InsertRef" ||
-      helperName == "mapInsert" || helperName == "mapInsertRef") {
+      helperName == "mapInsert" || helperName == "mapInsertRef" ||
+      helperName == "MapInsert" || helperName == "MapInsertRef") {
     helperNameOut = "insert";
     return true;
   }
@@ -168,7 +169,8 @@ bool resolveCollectionsBorrowedMapWrapperAliasName(std::string helperName, std::
     helperNameOut = "at_unsafe_ref";
     return true;
   }
-  if (helperName == "insert_ref" || helperName == "InsertRef" || helperName == "mapInsertRef") {
+  if (helperName == "insert_ref" || helperName == "InsertRef" ||
+      helperName == "mapInsertRef" || helperName == "MapInsertRef") {
     helperNameOut = "insert_ref";
     return true;
   }
@@ -195,7 +197,8 @@ bool isBorrowedMapHelperSurface(const Expr &expr) {
          helperName == "AtUnsafeRef" || helperName == "InsertRef" ||
          helperName == "mapCountRef" || helperName == "mapContainsRef" ||
          helperName == "mapTryAtRef" || helperName == "mapAtRef" ||
-         helperName == "mapAtUnsafeRef" || helperName == "mapInsertRef";
+         helperName == "mapAtUnsafeRef" || helperName == "mapInsertRef" ||
+         helperName == "MapInsertRef";
 }
 
 } // namespace

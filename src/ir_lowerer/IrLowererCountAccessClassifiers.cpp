@@ -104,7 +104,8 @@ bool resolveCollectionsMapWrapperAliasName(std::string helperName, std::string &
   }
   if (helperName == "insert" || helperName == "insert_ref" ||
       helperName == "Insert" || helperName == "InsertRef" ||
-      helperName == "mapInsert" || helperName == "mapInsertRef") {
+      helperName == "mapInsert" || helperName == "mapInsertRef" ||
+      helperName == "MapInsert" || helperName == "MapInsertRef") {
     helperNameOut = "insert";
     return true;
   }
