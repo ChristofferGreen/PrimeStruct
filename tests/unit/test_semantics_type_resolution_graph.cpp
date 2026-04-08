@@ -884,6 +884,78 @@ main() {
   CHECK(viaMethod.initializerMethodCallReturnKindText == "i32");
 }
 
+TEST_CASE("type resolution local binding snapshot captures if-join local auto bindings with branch locals") {
+  const std::string source = R"(
+[struct]
+Vec3() {
+  [i32] x{7i32}
+}
+
+[return<i32>]
+main() {
+  [auto] selected{
+    if(true,
+      then(){
+        [auto] left{Vec3()}
+        return(left)
+      },
+      else(){
+        [auto] right{Vec3()}
+        return(right)
+      })
+  }
+  return(selected.x)
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionLocalBindingSnapshot snapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  const auto &selected = requireLocalBindingSnapshotEntry(snapshot, "/main", "selected");
+  CHECK(selected.sourceLine > 0);
+  CHECK(selected.sourceColumn > 0);
+  CHECK(selected.bindingTypeText == "Vec3" || selected.bindingTypeText == "/Vec3");
+}
+
+TEST_CASE("type resolution local binding snapshot preserves if-join incompatibility diagnostics with branch locals") {
+  const std::string source = R"(
+[struct]
+Vec2() {
+  [i32] x{1i32}
+}
+
+[struct]
+Vec3() {
+  [i32] x{2i32}
+}
+
+[return<i32>]
+main() {
+  [auto] selected{
+    if(true,
+      then(){
+        [auto] left{Vec2()}
+        return(left)
+      },
+      else(){
+        [auto] right{Vec3()}
+        return(right)
+      })
+  }
+  return(0i32)
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionLocalBindingSnapshot snapshot;
+  CHECK_FALSE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.find("if branches must return compatible types") != std::string::npos);
+}
+
 TEST_CASE("type resolution local binding snapshot captures omitted struct initializer envelope facts") {
   const std::string source = R"(
 [struct]

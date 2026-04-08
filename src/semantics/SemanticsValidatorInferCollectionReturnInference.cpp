@@ -332,16 +332,82 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     if (isIfCall(candidate) && candidate.args.size() == 3) {
       const Expr &thenArg = candidate.args[1];
       const Expr &elseArg = candidate.args[2];
-      const Expr *thenValue = this->getEnvelopeValueExpr(thenArg, true);
-      const Expr *elseValue = this->getEnvelopeValueExpr(elseArg, true);
+      auto inferIfBranchTypeText = [&](const Expr &branchExpr, std::string &branchTypeTextOut) -> bool {
+        branchTypeTextOut.clear();
+        if (!this->isEnvelopeValueExpr(branchExpr, true)) {
+          return inferExprTypeText(branchExpr, branchTypeTextOut);
+        }
+        std::unordered_map<std::string, BindingInfo> branchLocals = locals;
+        const Expr *valueExpr = nullptr;
+        bool sawReturn = false;
+        for (const auto &bodyExpr : branchExpr.bodyArguments) {
+          if (isSyntheticBlockValueBinding(bodyExpr)) {
+            if (!sawReturn) {
+              valueExpr = &bodyExpr.args.front();
+            }
+            continue;
+          }
+          if (bodyExpr.isBinding) {
+            BindingInfo binding;
+            std::optional<std::string> restrictType;
+            if (!parseBindingInfo(bodyExpr,
+                                  branchExpr.namespacePrefix,
+                                  structNames_,
+                                  importAliases_,
+                                  binding,
+                                  restrictType,
+                                  error_)) {
+              return false;
+            }
+            const bool hasExplicitType = hasExplicitBindingTypeTransform(bodyExpr);
+            const bool explicitAutoType =
+                hasExplicitType && normalizeBindingTypeName(binding.typeName) == "auto";
+            if (bodyExpr.args.size() == 1 && (!hasExplicitType || explicitAutoType)) {
+              (void)inferBindingTypeFromInitializer(
+                  bodyExpr.args.front(), params, branchLocals, binding, &bodyExpr);
+            }
+            if (restrictType.has_value()) {
+              const bool hasTemplate = !binding.typeTemplateArg.empty();
+              if (!restrictMatchesBinding(*restrictType,
+                                          binding.typeName,
+                                          binding.typeTemplateArg,
+                                          hasTemplate,
+                                          branchExpr.namespacePrefix)) {
+                return false;
+              }
+            }
+            branchLocals.emplace(bodyExpr.name, std::move(binding));
+            continue;
+          }
+          if (isReturnCall(bodyExpr) && bodyExpr.args.size() == 1) {
+            valueExpr = &bodyExpr.args.front();
+            sawReturn = true;
+            continue;
+          }
+          if (!sawReturn) {
+            valueExpr = &bodyExpr;
+          }
+        }
+        if (valueExpr == nullptr) {
+          return false;
+        }
+        return inferQueryExprTypeText(*valueExpr, params, branchLocals, branchTypeTextOut);
+      };
       std::string thenTypeText;
       std::string elseTypeText;
-      if (!inferExprTypeText(thenValue ? *thenValue : thenArg, thenTypeText) ||
-          !inferExprTypeText(elseValue ? *elseValue : elseArg, elseTypeText)) {
+      if (!inferIfBranchTypeText(thenArg, thenTypeText) ||
+          !inferIfBranchTypeText(elseArg, elseTypeText)) {
         return false;
       }
       if (normalizeBindingTypeName(thenTypeText) != normalizeBindingTypeName(elseTypeText)) {
-        return false;
+        const ReturnKind thenKind = returnKindForTypeName(normalizeBindingTypeName(thenTypeText));
+        const ReturnKind elseKind = returnKindForTypeName(normalizeBindingTypeName(elseTypeText));
+        const ReturnKind widenedKind = combineInferredNumericKinds(thenKind, elseKind);
+        if (widenedKind == ReturnKind::Unknown || widenedKind == ReturnKind::Array || widenedKind == ReturnKind::Void) {
+          return false;
+        }
+        currentTypeTextOut = typeNameForReturnKind(widenedKind);
+        return !currentTypeTextOut.empty();
       }
       currentTypeTextOut = thenTypeText;
       return true;

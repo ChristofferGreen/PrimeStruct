@@ -63,16 +63,16 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
   - ✓ Migrate the matching revalidation/monomorph follow-up for those template-inference surfaces onto the graph path.
     - ✓ Identify the required revalidation/monomorph follow-up for the migrated surfaces (see `docs/type_graph_migration_touchpoints.md`, section 8).
     - ✓ Move that follow-up onto graph-backed facts and add conformance coverage.
-- ◐ Implement the next omitted-envelope and local-`auto` graph expansions now that the widening contract is documented.
+- ✓ Implement the next omitted-envelope and local-`auto` graph expansions now that the widening contract is documented.
   - ✓ Materialize omitted-envelope graph facts for the next widening slice.
     - ✓ Select the next omitted-envelope family to model in the graph (omitted struct initializer envelopes; see `docs/type_graph_migration_touchpoints.md`, section 9).
     - ✓ Add graph facts and positive + negative coverage for that family.
-  - ○ Expand local-`auto` graph support across the next initializer-family surface.
+  - ✓ Expand local-`auto` graph support across the next initializer-family surface.
     - ✓ Select the next initializer-family surface (`if`-branch local `auto` binds; see `docs/type_graph_migration_touchpoints.md`, section 10).
-    - ○ Land the widening and lock behavior with coverage.
-  - ○ Expand local-`auto` graph support across the next control-flow join surface.
+    - ✓ Land the widening and lock behavior with coverage.
+  - ✓ Expand local-`auto` graph support across the next control-flow join surface.
     - ✓ Select the next control-flow join surface (`if` join return inference; see `docs/type_graph_migration_touchpoints.md`, section 11).
-    - ○ Land the widening and lock behavior with coverage.
+    - ✓ Land the widening and lock behavior with coverage.
 
 **Group 12 - Semantics/lowering boundary**
 Progress note: the first semantic-product publication, dump surface, and temporary lowerer adapter are finished. The remaining live boundary work is to make `SemanticProgram` the only lowering truth, retire the remaining AST-derived fallbacks, and finish the graph-backed fact handoff needed by later Group 11 migrations.

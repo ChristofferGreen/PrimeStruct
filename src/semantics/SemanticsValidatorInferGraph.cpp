@@ -368,12 +368,10 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
     if (initializer.kind != Expr::Kind::Call || initializer.isBinding) {
       return true;
     }
-    if (dependencyIt->second == 1 && !isIfCall(initializer) &&
-        !isMatchCall(initializer) && !isBuiltinBlockCall(initializer)) {
+    if (isIfCall(initializer) || isMatchCall(initializer) || isBuiltinBlockCall(initializer)) {
       return true;
     }
-    return dependencyIt->second > 0 &&
-           (isIfCall(initializer) || isMatchCall(initializer) || isBuiltinBlockCall(initializer));
+    return dependencyIt->second == 1;
   };
 
   auto inferBindingForLocals = [&](const Definition &def,

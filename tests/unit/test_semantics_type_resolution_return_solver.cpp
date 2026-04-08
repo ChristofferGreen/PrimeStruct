@@ -218,6 +218,41 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("graph type resolver infers if-join return from branch-local auto collection values") {
+  const std::string source = R"(
+[return<array<i32>>]
+valuesA() {
+  return(array<i32>(1i32, 2i32))
+}
+
+[return<array<i32>>]
+valuesB() {
+  return(array<i32>(3i32, 4i32))
+}
+
+[return<auto>]
+wrapValues() {
+  return(if(true,
+    then(){
+      [auto] left{valuesA()}
+      return(left)
+    },
+    else(){
+      [auto] right{valuesB()}
+      return(right)
+    }))
+}
+
+[return<i32>]
+main() {
+  return(count(wrapValues()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("graph type resolver infers omitted struct field envelope from block-valued helper") {
   const std::string source = R"(
 [struct]
