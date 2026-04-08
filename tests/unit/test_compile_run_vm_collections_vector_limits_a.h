@@ -626,6 +626,5 @@ main([array<string>] args) {
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "vector reserve allocation failed (out of memory)\n");
+  CHECK(readFile(errPath) == "array index out of bounds\n");
 }
-

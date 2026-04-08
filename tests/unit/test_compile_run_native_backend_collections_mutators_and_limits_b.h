@@ -265,7 +265,7 @@ main([array<string>] args) {
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = exePath + " 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "vector reserve allocation failed (out of memory)\n");
+  CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
 TEST_CASE("rejects native vector push beyond local dynamic limit") {
@@ -318,4 +318,3 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 4);
 }
-

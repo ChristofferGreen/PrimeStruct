@@ -175,14 +175,14 @@ namespace std {
     vectorCheckShape<T>(values)
     if(less_than(capacity, 0i32),
        then() {
-         [vector<i32> mut] empty{/vector/vector<i32>()}
-         /std/collections/vector/reserve(empty, capacity)
+         [array<i32>] empty{array<i32>()}
+         empty[capacity]
        },
        else() { })
     if(greater_than(capacity, 1073741823i32),
        then() {
-         [vector<i32> mut] empty{/vector/vector<i32>()}
-         /std/collections/vector/reserve(empty, capacity)
+         [array<i32>] empty{array<i32>()}
+         empty[capacity]
        },
        else() { })
     if(not(greater_than(capacity, 1073741823i32)),
@@ -340,8 +340,8 @@ namespace std {
     vectorCheckShape<T>(values)
     if(equal(values.field_count(), 0i32),
        then() {
-         [vector<i32> mut] empty{/vector/vector<i32>()}
-         /std/collections/vector/pop(empty)
+         [array<i32>] empty{array<i32>()}
+         empty[0i32]
        },
        else() {
          [i32] lastIndex{minus(values.field_count(), 1i32)}

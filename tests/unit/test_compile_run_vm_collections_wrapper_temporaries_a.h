@@ -2145,7 +2145,7 @@ main() {
       (testScratchPath("") / "primec_vm_experimental_soa_storage_reserve_overflow_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "vector reserve allocation failed (out of memory)\n");
+  CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
 TEST_CASE("runs vm experimental two-column soa storage helpers") {

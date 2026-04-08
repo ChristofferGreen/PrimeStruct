@@ -1570,14 +1570,14 @@ namespace std {
     soaColumnCheckShape<T>(values)
     if(less_than(capacity, 0i32),
        then() {
-         [vector<i32> mut] empty{/vector/vector<i32>()}
-         /std/collections/vector/reserve(empty, capacity)
+         [array<i32>] empty{array<i32>()}
+         empty[capacity]
        },
        else() { })
     if(greater_than(capacity, 1073741823i32),
        then() {
-         [vector<i32> mut] empty{/vector/vector<i32>()}
-         /std/collections/vector/reserve(empty, capacity)
+         [array<i32>] empty{array<i32>()}
+         empty[capacity]
        },
        else() { })
     if(not(greater_than(capacity, values.field_capacity())),

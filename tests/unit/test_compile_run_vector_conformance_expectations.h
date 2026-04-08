@@ -726,7 +726,7 @@ inline void expectVectorHelperRuntimeContract(const std::string &emitMode,
   const std::string expectedError = mode == "pop_empty"         ? "container empty\n"
                                     : mode == "reserve_negative" ? "vector reserve expects non-negative capacity\n"
                                     : mode == "reserve_growth_overflow"
-                                        ? "vector reserve allocation failed (out of memory)\n"
+                                        ? "array index out of bounds\n"
                                     : mode == "push_growth_overflow"
                                         ? (experimentalPath ? "array index out of bounds\n"
                                                             : "vector reserve expects non-negative capacity\n")

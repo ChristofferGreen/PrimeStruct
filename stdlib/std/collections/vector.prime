@@ -12,6 +12,11 @@ import /std/collections/experimental_vector/*
   return(out)
 }
 
+[public effects(heap_alloc), return<Vector<T>>]
+/std/collections/vector/vector<T>([T] first, [T] second) {
+  return(/std/collections/experimental_vector/vectorPair<T>(first, second))
+}
+
 [public return<i32>]
 /std/collections/vector/count<T>([Vector<T>] values) {
   return(/std/collections/experimental_vector/vectorCount<T>(values))
