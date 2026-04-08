@@ -81,6 +81,8 @@ struct TypeResolutionGraphSnapshot {
   uint64_t invalidationDefinitionSignatureCount = 0;
   uint64_t invalidationImportAliasCount = 0;
   uint64_t invalidationReceiverTypeCount = 0;
+  uint64_t explicitTemplateArgInferenceFactHitCount = 0;
+  uint64_t implicitTemplateArgInferenceFactHitCount = 0;
 };
 
 struct TypeResolutionReturnSnapshotEntry {

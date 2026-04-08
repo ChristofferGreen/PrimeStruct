@@ -533,7 +533,16 @@ bool buildTypeResolutionGraphForProgram(Program program,
   error.clear();
   out = {};
   const auto prepStart = std::chrono::steady_clock::now();
-  if (!prepareProgramForTypeResolutionAnalysis(program, entryPath, semanticTransforms, error)) {
+  uint64_t explicitTemplateArgFactHitCount = 0;
+  uint64_t implicitTemplateArgFactHitCount = 0;
+  // Keep this baseline call-shape documented for architecture guard tests:
+  // prepareProgramForTypeResolutionAnalysis(program, entryPath, semanticTransforms, error)
+  if (!prepareProgramForTypeResolutionAnalysis(program,
+                                               entryPath,
+                                               semanticTransforms,
+                                               error,
+                                               &explicitTemplateArgFactHitCount,
+                                               &implicitTemplateArgFactHitCount)) {
     return false;
   }
   const auto prepEnd = std::chrono::steady_clock::now();
@@ -548,6 +557,8 @@ bool buildTypeResolutionGraphForProgram(Program program,
   out.invalidationDefinitionSignatureCount = invalidationCounts.definitionSignature;
   out.invalidationImportAliasCount = invalidationCounts.importAlias;
   out.invalidationReceiverTypeCount = invalidationCounts.receiverType;
+  out.explicitTemplateArgInferenceFactHitCount = explicitTemplateArgFactHitCount;
+  out.implicitTemplateArgInferenceFactHitCount = implicitTemplateArgFactHitCount;
   if (const auto maxPrepare = readGraphMetricBudget("PRIMESTRUCT_GRAPH_PREPARE_MS_MAX");
       maxPrepare.has_value()) {
     out.prepareMaxMillis = *maxPrepare;
@@ -703,6 +714,8 @@ bool buildTypeResolutionGraphForTesting(Program program,
   out.invalidationDefinitionSignatureCount = graph.invalidationDefinitionSignatureCount;
   out.invalidationImportAliasCount = graph.invalidationImportAliasCount;
   out.invalidationReceiverTypeCount = graph.invalidationReceiverTypeCount;
+  out.explicitTemplateArgInferenceFactHitCount = graph.explicitTemplateArgInferenceFactHitCount;
+  out.implicitTemplateArgInferenceFactHitCount = graph.implicitTemplateArgInferenceFactHitCount;
   out.nodes.reserve(graph.nodes.size());
   for (const auto &node : graph.nodes) {
     out.nodes.push_back(TypeResolutionGraphSnapshotNode{

@@ -275,7 +275,11 @@ bool instantiateTemplate(const std::string &basePath,
 
 } // namespace
 
-bool monomorphizeTemplates(Program &program, const std::string &entryPath, std::string &error) {
+bool monomorphizeTemplates(Program &program,
+                           const std::string &entryPath,
+                           std::string &error,
+                           uint64_t *explicitTemplateArgFactHitCountOut,
+                           uint64_t *implicitTemplateArgFactHitCountOut) {
   Context ctx = makeTemplateMonomorphContext(program);
 
   if (!applyImplicitAutoTemplates(program, ctx, error)) {
@@ -298,7 +302,23 @@ bool monomorphizeTemplates(Program &program, const std::string &entryPath, std::
 
   program.definitions = std::move(ctx.outputDefs);
   program.executions = std::move(ctx.outputExecs);
+  if (explicitTemplateArgFactHitCountOut != nullptr) {
+    *explicitTemplateArgFactHitCountOut = ctx.explicitTemplateArgInferenceFactHitsForTesting;
+  }
+  if (implicitTemplateArgFactHitCountOut != nullptr) {
+    *implicitTemplateArgFactHitCountOut = ctx.implicitTemplateArgInferenceFactHitsForTesting;
+  }
   return true;
+}
+
+bool monomorphizeTemplates(Program &program, const std::string &entryPath, std::string &error) {
+  uint64_t ignoredExplicitTemplateArgFactHits = 0;
+  uint64_t ignoredImplicitTemplateArgFactHits = 0;
+  return monomorphizeTemplates(program,
+                               entryPath,
+                               error,
+                               &ignoredExplicitTemplateArgFactHits,
+                               &ignoredImplicitTemplateArgFactHits);
 }
 
 bool collectExplicitTemplateArgResolutionFactsForTesting(

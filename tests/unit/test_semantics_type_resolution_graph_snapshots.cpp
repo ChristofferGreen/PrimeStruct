@@ -394,6 +394,36 @@ TEST_CASE("implicit template-arg graph facts are consumed by inference cache") {
   CHECK(metrics.hitCount > 0u);
 }
 
+TEST_CASE("type-resolution preparation reports template fact-cache hits") {
+  const std::string source =
+      "[return<T>]\n"
+      "id_explicit<T>([T] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<T>]\n"
+      "id_implicit<T>([T] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [auto] e0{id_explicit<i32>(1i32)}\n"
+      "  [auto] e1{id_explicit<i32>(2i32)}\n"
+      "  [auto] i0{id_implicit(3i32)}\n"
+      "  [auto] i1{id_implicit(4i32)}\n"
+      "  return(plus(plus(e0, e1), plus(i0, i1)))\n"
+      "}\n";
+
+  std::string error;
+  primec::semantics::TypeResolutionGraphSnapshot snapshot;
+  REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+  CHECK(snapshot.explicitTemplateArgInferenceFactHitCount > 0u);
+  CHECK(snapshot.implicitTemplateArgInferenceFactHitCount > 0u);
+}
+
 TEST_CASE("type resolution graph snapshot records timing metrics") {
   const std::string source = R"(
 Pair {
