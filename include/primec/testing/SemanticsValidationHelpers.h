@@ -26,6 +26,13 @@ struct ExplicitTemplateArgResolutionFactForTesting {
   bool resolvedConcrete = false;
 };
 
+struct ImplicitTemplateArgResolutionFactForTesting {
+  std::string scopePath;
+  std::string callName;
+  std::string targetPath;
+  std::string inferredArgsText;
+};
+
 std::vector<std::string> runSemanticsValidatorExprCaptureSplitStep(const std::string &text);
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
 std::optional<uint64_t> runSemanticsValidatorStatementKnownIterationCountStep(const Expr &countExpr,
@@ -53,5 +60,10 @@ bool collectExplicitTemplateArgResolutionFactsForTesting(
     const std::string &entryPath,
     std::string &error,
     std::vector<ExplicitTemplateArgResolutionFactForTesting> &out);
+bool collectImplicitTemplateArgResolutionFactsForTesting(
+    Program program,
+    const std::string &entryPath,
+    std::string &error,
+    std::vector<ImplicitTemplateArgResolutionFactForTesting> &out);
 
 } // namespace primec::semantics

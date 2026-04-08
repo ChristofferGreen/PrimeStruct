@@ -550,5 +550,14 @@ bool inferImplicitTemplateArgs(const Definition &def,
     }
     outArgs.push_back(it->second);
   }
+  if (ctx.collectImplicitTemplateArgFactsForTesting) {
+    ctx.implicitTemplateArgFactsForTesting.push_back(
+        ImplicitTemplateArgResolutionFactForTesting{
+            namespacePrefix.empty() ? std::string("/") : namespacePrefix,
+            callExpr.name,
+            def.fullPath,
+            joinTemplateArgs(outArgs),
+        });
+  }
   return true;
 }

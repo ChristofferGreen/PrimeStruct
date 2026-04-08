@@ -50,6 +50,8 @@ struct Context {
   std::unordered_set<std::string> returnInferenceStack;
   bool collectExplicitTemplateArgFactsForTesting = false;
   std::vector<ExplicitTemplateArgResolutionFactForTesting> explicitTemplateArgFactsForTesting;
+  bool collectImplicitTemplateArgFactsForTesting = false;
+  std::vector<ImplicitTemplateArgResolutionFactForTesting> implicitTemplateArgFactsForTesting;
 };
 
 using LocalTypeMap = std::unordered_map<std::string, BindingInfo>;
@@ -314,6 +316,37 @@ bool collectExplicitTemplateArgResolutionFactsForTesting(
   }
 
   out = std::move(ctx.explicitTemplateArgFactsForTesting);
+  return true;
+}
+
+bool collectImplicitTemplateArgResolutionFactsForTesting(
+    Program program,
+    const std::string &entryPath,
+    std::string &error,
+    std::vector<ImplicitTemplateArgResolutionFactForTesting> &out) {
+  out.clear();
+  Context ctx = makeTemplateMonomorphContext(program);
+  ctx.collectImplicitTemplateArgFactsForTesting = true;
+
+  if (!applyImplicitAutoTemplates(program, ctx, error)) {
+    return false;
+  }
+
+  std::unordered_set<std::string> templateRoots;
+  if (!initializeTemplateMonomorphSourceDefinitions(ctx, entryPath, templateRoots, error)) {
+    return false;
+  }
+
+  buildImportAliases(ctx);
+
+  if (!rewriteMonomorphizedDefinitions(ctx, templateRoots, error)) {
+    return false;
+  }
+  if (!rewriteMonomorphizedExecutions(ctx, error)) {
+    return false;
+  }
+
+  out = std::move(ctx.implicitTemplateArgFactsForTesting);
   return true;
 }
 
