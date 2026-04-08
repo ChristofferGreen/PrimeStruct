@@ -305,12 +305,13 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
       }
     }
     std::string accessName;
-    const bool isExplicitMapArgsPackAt =
+    const bool isExplicitMapArgsPackAccess =
         !target.isMethodCall &&
-        (target.name == "/map/at" || target.name == "/std/collections/map/at") &&
+        (target.name == "/map/at" || target.name == "/std/collections/map/at" ||
+         target.name == "/map/at_unsafe" || target.name == "/std/collections/map/at_unsafe") &&
         target.args.size() == 2;
     if ((getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) ||
-        isExplicitMapArgsPackAt) {
+        isExplicitMapArgsPackAccess) {
       const Expr *accessReceiver = peelLocationWrappers(target.args.front());
       bool receiverDereferenced = false;
       while (accessReceiver->kind == Expr::Kind::Call &&

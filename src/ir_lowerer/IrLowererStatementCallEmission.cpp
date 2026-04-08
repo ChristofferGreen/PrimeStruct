@@ -406,7 +406,8 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
       if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.args.size() != 2) {
         return false;
       }
-      if (expr.name == "/map/at" || expr.name == "/std/collections/map/at") {
+      if (expr.name == "/map/at" || expr.name == "/std/collections/map/at" ||
+          expr.name == "/map/at_unsafe" || expr.name == "/std/collections/map/at_unsafe") {
         return true;
       }
       std::string accessName;
