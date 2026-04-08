@@ -18,6 +18,14 @@ struct TemplatedFallbackQueryStateEnvelopeSnapshotForTesting {
   std::string mismatchDiagnostic;
 };
 
+struct ExplicitTemplateArgResolutionFactForTesting {
+  std::string scopePath;
+  std::string targetPath;
+  std::string explicitArgsText;
+  std::string resolvedTypeText;
+  bool resolvedConcrete = false;
+};
+
 std::vector<std::string> runSemanticsValidatorExprCaptureSplitStep(const std::string &text);
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
 std::optional<uint64_t> runSemanticsValidatorStatementKnownIterationCountStep(const Expr &countExpr,
@@ -40,5 +48,10 @@ std::string runSemanticsReturnKindNameStep(const Definition &def,
 void classifyTemplatedFallbackQueryTypeTextForTesting(
     const std::string &queryTypeText,
     TemplatedFallbackQueryStateEnvelopeSnapshotForTesting &out);
+bool collectExplicitTemplateArgResolutionFactsForTesting(
+    Program program,
+    const std::string &entryPath,
+    std::string &error,
+    std::vector<ExplicitTemplateArgResolutionFactForTesting> &out);
 
 } // namespace primec::semantics

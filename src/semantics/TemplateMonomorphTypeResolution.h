@@ -80,12 +80,27 @@ ResolvedType resolveTypeStringImpl(std::string input,
     }
     resolvedArgs.push_back(resolved.text);
   }
+  const auto recordExplicitTemplateArgFact = [&](const std::string &targetPath,
+                                                 const ResolvedType &resolvedType) {
+    if (!ctx.collectExplicitTemplateArgFactsForTesting) {
+      return;
+    }
+    ctx.explicitTemplateArgFactsForTesting.push_back(
+        ExplicitTemplateArgResolutionFactForTesting{
+            namespacePrefix,
+            targetPath,
+            joinTemplateArgs(resolvedArgs),
+            resolvedType.text,
+            resolvedType.concrete,
+        });
+  };
   if (isBuiltinTemplateContainer(base) || isBuiltinCollectionTemplateBase(base, resolvedArgs.size())) {
     const std::string normalizedBase = isBuiltinTemplateContainer(base)
                                            ? base
                                            : normalizeBuiltinCollectionTemplateBase(base);
     result.text = normalizedBase + "<" + joinTemplateArgs(resolvedArgs) + ">";
     result.concrete = allConcrete;
+    recordExplicitTemplateArgFact(normalizedBase, result);
     return result;
   }
   std::string resolvedBasePath = resolveNameToPath(base, namespacePrefix, ctx.importAliases, ctx.sourceDefs);
@@ -98,6 +113,7 @@ ResolvedType resolveTypeStringImpl(std::string input,
   if (!allConcrete) {
     result.text = base + "<" + joinTemplateArgs(resolvedArgs) + ">";
     result.concrete = false;
+    recordExplicitTemplateArgFact(resolvedBasePath, result);
     return result;
   }
   std::string specializedPath;
@@ -108,6 +124,7 @@ ResolvedType resolveTypeStringImpl(std::string input,
   }
   result.text = specializedPath;
   result.concrete = true;
+  recordExplicitTemplateArgFact(resolvedBasePath, result);
   return result;
 }
 

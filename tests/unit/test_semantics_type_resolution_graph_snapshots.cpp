@@ -233,6 +233,56 @@ TEST_CASE("templated fallback adapter seam rejects missing Result envelope argum
   CHECK(snapshot.mismatchDiagnostic == "result query type missing template arguments: Result");
 }
 
+TEST_CASE("explicit template-arg graph facts publish resolved specialization facts") {
+  const std::string source =
+      "[return<T>]\n"
+      "id<T>([T] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [auto] value{id<i32>(1i32)}\n"
+      "  return(value)\n"
+      "}\n";
+
+  std::string error;
+  std::vector<primec::semantics::ExplicitTemplateArgResolutionFactForTesting> facts;
+  REQUIRE(primec::semantics::collectExplicitTemplateArgResolutionFactsForTesting(
+      parseProgram(source), "/main", error, facts));
+  CHECK(error.empty());
+
+  const auto it = std::find_if(facts.begin(), facts.end(), [](const auto &fact) {
+    return fact.targetPath == "/id" &&
+           fact.explicitArgsText == "i32";
+  });
+  REQUIRE(it != facts.end());
+  CHECK(it->resolvedConcrete);
+  CHECK(it->resolvedTypeText.rfind("/id__t", 0) == 0);
+}
+
+TEST_CASE("explicit template-arg graph facts publish builtin container template facts") {
+  const std::string source =
+      "[return<vector<i32>>]\n"
+      "main() {\n"
+      "  return(vector<i32>(1i32))\n"
+      "}\n";
+
+  std::string error;
+  std::vector<primec::semantics::ExplicitTemplateArgResolutionFactForTesting> facts;
+  REQUIRE(primec::semantics::collectExplicitTemplateArgResolutionFactsForTesting(
+      parseProgram(source), "/main", error, facts));
+  CHECK(error.empty());
+
+  const auto it = std::find_if(facts.begin(), facts.end(), [](const auto &fact) {
+    return fact.targetPath == "vector" &&
+           fact.explicitArgsText == "i32" &&
+           fact.resolvedTypeText == "vector<i32>";
+  });
+  REQUIRE(it != facts.end());
+  CHECK(it->resolvedConcrete);
+}
+
 TEST_CASE("type resolution graph snapshot records timing metrics") {
   const std::string source = R"(
 Pair {
