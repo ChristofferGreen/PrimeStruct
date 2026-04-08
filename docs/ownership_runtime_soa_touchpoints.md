@@ -75,7 +75,9 @@ write-back/repoint path.
 Current lowering path for canonical insert rewrite:
 - Statement path rewrites map insert helpers to
   `/std/collections/map/insert_builtin` in
-  `src/ir_lowerer/IrLowererStatementCallEmission.cpp`.
+  `src/ir_lowerer/IrLowererStatementCallEmission.cpp`, and now also probes
+  map-returning helper receivers through `resolveDefinitionCall(...)` +
+  `inferDeclaredReturnCollection(...)` before deciding whether to rewrite.
 - Expression/tail-dispatch path performs the same rewrite in
   `src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h`.
 - Lowering for rewritten calls enters the inline builtin map insert path in
@@ -92,8 +94,15 @@ Receiver recognition boundary used by rewrite/lowering:
 
 Receiver families to track as potentially still outside the shared write-back
 path (based on current recognition hooks):
-- Field-access/non-local lvalue receivers that are neither direct locals nor
-  `dereference(name)` forms (for example nested owner-field mutation surfaces).
+- Nested field-access/non-local lvalue receivers reached through map-returning
+  helper calls now route through the shared rewrite path on direct canonical
+  `/std/collections/map/insert(...)` calls (IR coverage:
+  `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`;
+  runtime coverage:
+  `tests/unit/test_compile_run_map_conformance_sources.h` +
+  backend expectation suites).
+- Remaining field-access/non-local lvalue receiver shapes that do not currently
+  surface as map-returning helper calls.
 - Temporary/helper-return receiver shapes that do not provide a stable writable
   lvalue target for pointer write-back.
 

@@ -2742,6 +2742,10 @@ TEST_CASE("runs vm builtin canonical map non-local growth") {
   expectBuiltinCanonicalMapInsertNonLocalGrowthConformance("vm");
 }
 
+TEST_CASE("runs vm builtin canonical map nested non-local growth") {
+  expectBuiltinCanonicalMapInsertNestedNonLocalGrowthConformance("vm");
+}
+
 TEST_CASE("rejects vm canonical map constructor ownership growth") {
   expectCanonicalMapNamespaceOwnershipReject("vm");
 }

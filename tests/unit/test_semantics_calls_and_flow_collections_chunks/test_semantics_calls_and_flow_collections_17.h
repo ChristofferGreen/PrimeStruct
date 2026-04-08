@@ -817,6 +817,41 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib canonical map insert resolves on nested non-local and helper-return borrowed receivers") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct]
+Holder() {
+  [map<i32, i32> mut] values{map<i32, i32>()}
+}
+
+[struct]
+Outer() {
+  [Holder mut] holder{Holder()}
+}
+
+[return<Reference<map<i32, i32>>>]
+borrowValues([Outer mut] outer) {
+  return(location(outer.holder.values))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Outer mut] outer{Outer()}
+  /std/collections/map/insert<i32, i32>(outer.holder.values, 1i32, 4i32)
+  /std/collections/map/insert<i32, i32>(outer.holder.values, 2i32, 7i32)
+  [Reference<map<i32, i32>> mut] ref{borrowValues(outer)}
+  /std/collections/map/insert_ref<i32, i32>(ref, 3i32, 11i32)
+  ref.insert(2i32, 13i32)
+  return(plus(outer.holder.values.count(), plus(outer.holder.values.at(1i32), plus(outer.holder.values.at_unsafe(2i32), outer.holder.values.at(3i32)))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib canonical map helper resolves method-call sugar for slash return type") {
   const std::string source = R"(
 [return<int>]

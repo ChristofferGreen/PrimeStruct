@@ -759,6 +759,35 @@ inline std::string makeBuiltinCanonicalMapInsertNonLocalGrowthConformanceSource(
   return source;
 }
 
+inline std::string makeBuiltinCanonicalMapInsertNestedNonLocalGrowthConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[struct]\n";
+  source += "Holder() {\n";
+  source += "  [map<i32, i32> mut] values{map<i32, i32>()}\n";
+  source += "}\n\n";
+  source += "[struct]\n";
+  source += "Outer() {\n";
+  source += "  [Holder mut] holder{Holder()}\n";
+  source += "}\n\n";
+  source += "[return<Reference<map<i32, i32>>>]\n";
+  source += "borrowValues([Outer mut] outer) {\n";
+  source += "  return(location(outer.holder.values))\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Outer mut] outer{Outer()}\n";
+  source += "  /std/collections/map/insert<i32, i32>(outer.holder.values, 1i32, 4i32)\n";
+  source += "  /std/collections/map/insert<i32, i32>(outer.holder.values, 2i32, 7i32)\n";
+  source += "  [Reference<map<i32, i32>> mut] ref{borrowValues(outer)}\n";
+  source += "  /std/collections/map/insert_ref<i32, i32>(ref, 3i32, 11i32)\n";
+  source += "  /std/collections/map/insert_ref<i32, i32>(ref, 2i32, 13i32)\n";
+  source +=
+      "  return(plus(outer.holder.values.count(), plus(outer.holder.values.at(1i32), plus(outer.holder.values.at_unsafe(2i32), outer.holder.values.at(3i32)))))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeExperimentalMapOwnershipMethodConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";

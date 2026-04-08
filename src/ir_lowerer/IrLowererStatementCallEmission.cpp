@@ -247,6 +247,7 @@ static std::optional<LocalInfo::ValueKind> resolveBufferTargetElementKind(
 static bool rewriteMapInsertHelperStatementToBuiltin(
     const Expr &stmt,
     const LocalMap &localsIn,
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     Expr &rewrittenStmt) {
   if (stmt.kind != Expr::Kind::Call || stmt.args.size() != 3) {
     return false;
@@ -280,7 +281,27 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
   if (receiverIndex >= stmt.args.size()) {
     return false;
   }
-  const auto targetInfo = resolveMapAccessTargetInfo(stmt.args[receiverIndex], localsIn);
+  const auto inferCallMapTargetInfo = [&](const Expr &targetExpr, MapAccessTargetInfo &targetInfoOut) {
+    targetInfoOut = {};
+    const Definition *callee = resolveDefinitionCall(targetExpr);
+    if (callee == nullptr) {
+      return false;
+    }
+    std::string collectionName;
+    std::vector<std::string> collectionArgs;
+    if (!inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) ||
+        collectionName != "map" ||
+        collectionArgs.size() != 2) {
+      return false;
+    }
+    targetInfoOut.isMapTarget = true;
+    targetInfoOut.mapKeyKind = valueKindFromTypeName(collectionArgs.front());
+    targetInfoOut.mapValueKind = valueKindFromTypeName(collectionArgs.back());
+    return targetInfoOut.mapKeyKind != LocalInfo::ValueKind::Unknown &&
+           targetInfoOut.mapValueKind != LocalInfo::ValueKind::Unknown;
+  };
+
+  const auto targetInfo = resolveMapAccessTargetInfo(stmt.args[receiverIndex], localsIn, inferCallMapTargetInfo);
   if (!targetInfo.isMapTarget) {
     return false;
   }
@@ -689,7 +710,8 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   };
   Expr directStmt = stmt;
   Expr rewrittenMapInsertStmt;
-  if (rewriteMapInsertHelperStatementToBuiltin(stmt, localsIn, rewrittenMapInsertStmt)) {
+  if (rewriteMapInsertHelperStatementToBuiltin(
+          stmt, localsIn, resolveDefinitionCall, rewrittenMapInsertStmt)) {
     directStmt = rewrittenMapInsertStmt;
   }
   bool rewrittenExplicitVectorMutatorToBuiltinCall = false;

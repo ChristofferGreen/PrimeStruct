@@ -3004,7 +3004,9 @@ bad_use_after_take() {
     indexed-removal surface yet.
   - Remaining live ownership/runtime migration work is now the builtin canonical `map<K, V>` growth
     surface follow-up beyond the current owning local numeric-map path. The lowerer now has a shared
-    non-local grown-pointer write-back/repoint primitive for wrapper targets, but the remaining public
+    non-local grown-pointer write-back/repoint primitive for wrapper targets, and direct canonical
+    `/std/collections/map/insert(...)` calls now also route map-returning helper receivers (including
+    nested field-access helper returns) onto that same rewrite path. The remaining public
     builtin borrowed/non-local mutation surfaces still need to route onto that path instead of the
     current pending runtime boundary.
   - Current relocation contract: builtin `push` and `reserve` are only defined for relocation-trivial element types

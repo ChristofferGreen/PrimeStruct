@@ -382,6 +382,80 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
   REQUIRE(instructions.size() == 1);
   CHECK(instructions.front().op == primec::IrOpcode::Pop);
 
+  primec::Expr valuesFactoryCall;
+  valuesFactoryCall.kind = primec::Expr::Kind::Call;
+  valuesFactoryCall.name = "/main/makeValues";
+
+  primec::Expr keyArg;
+  keyArg.kind = primec::Expr::Kind::Literal;
+  keyArg.literalValue = 1;
+  keyArg.intWidth = 32;
+  primec::Expr valueArg;
+  valueArg.kind = primec::Expr::Kind::Literal;
+  valueArg.literalValue = 4;
+  valueArg.intWidth = 32;
+
+  primec::Expr mapInsertStmt;
+  mapInsertStmt.kind = primec::Expr::Kind::Call;
+  mapInsertStmt.name = "/std/collections/map/insert";
+  mapInsertStmt.args = {valuesFactoryCall, keyArg, valueArg};
+  mapInsertStmt.argNames = {std::nullopt, std::nullopt, std::nullopt};
+  mapInsertStmt.templateArgs = {"i32", "i32"};
+
+  primec::Definition mapValuesFactoryDef;
+  mapValuesFactoryDef.fullPath = "/main/makeValues";
+  primec::Transform mapValuesFactoryReturn;
+  mapValuesFactoryReturn.name = "return";
+  mapValuesFactoryReturn.templateArgs = {"map<i32, i32>"};
+  mapValuesFactoryDef.transforms.push_back(mapValuesFactoryReturn);
+
+  primec::Definition mapInsertBuiltinDef;
+  mapInsertBuiltinDef.fullPath = "/std/collections/map/insert_builtin";
+
+  inlineCalls = 0;
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            mapInsertStmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &callExpr) -> const primec::Definition * {
+              if (callExpr.name == "/main/makeValues") {
+                return &mapValuesFactoryDef;
+              }
+              if (callExpr.name == "/std/collections/map/insert_builtin") {
+                return &mapInsertBuiltinDef;
+              }
+              return nullptr;
+            },
+            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
+              if (path == "/std/collections/map/insert_builtin") {
+                info.returnsVoid = true;
+                return true;
+              }
+              return false;
+            },
+            [&](const primec::Expr &callExpr,
+                const primec::Definition &callee,
+                const primec::ir_lowerer::LocalMap &,
+                bool expectValue) {
+              ++inlineCalls;
+              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(callExpr.isMethodCall);
+              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(expectValue);
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(inlineCalls == 1);
+  CHECK(instructions.empty());
+
   primec::Expr soaFieldStmt;
   soaFieldStmt.kind = primec::Expr::Kind::Call;
   soaFieldStmt.name = "x";
@@ -578,4 +652,3 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
   runExplicitVectorMutatorDirectDefinitionCase(
       "/std/collections/vector/clear", {makeValuesArg()});
 }
-

@@ -3010,6 +3010,10 @@ TEST_CASE("compiles and runs native builtin canonical map non-local growth") {
   expectBuiltinCanonicalMapInsertNonLocalGrowthConformance("native");
 }
 
+TEST_CASE("compiles and runs native builtin canonical map nested non-local growth") {
+  expectBuiltinCanonicalMapInsertNestedNonLocalGrowthConformance("native");
+}
+
 TEST_CASE("rejects native canonical map constructor ownership growth") {
   expectCanonicalMapNamespaceOwnershipReject("native");
 }

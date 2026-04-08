@@ -454,6 +454,14 @@ inline void expectBuiltinCanonicalMapInsertNonLocalGrowthConformance(const std::
                                             "");
 }
 
+inline void expectBuiltinCanonicalMapInsertNestedNonLocalGrowthConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertNestedNonLocalGrowthConformanceSource(),
+                                            "map_builtin_canonical_insert_nested_non_local_growth_" + emitMode,
+                                            emitMode,
+                                            31,
+                                            "");
+}
+
 inline void expectExperimentalMapIndexConformance(const std::string &emitMode) {
   expectMapConformanceCompileReject(makeExperimentalMapIndexConformanceSource(),
                                     "experimental_map_index",
