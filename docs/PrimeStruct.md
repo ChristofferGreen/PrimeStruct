@@ -3017,6 +3017,10 @@ bad_use_after_take() {
     field-access receiver-typing inference when template arguments are omitted, so alias-resolved
     non-local receiver forms route through `insert_builtin` instead of falling back to pending
     runtime paths.
+    Dereference-wrapped non-local field-access receivers (for example
+    `dereference(holder.valuesRef)`) now also share that same canonical/helper-alias callee
+    receiver-typing inference when template arguments are omitted, so those non-local borrowed
+    receiver forms route through `insert_builtin` as well.
     Temporary helper-return value receivers that do not provide a stable writable lvalue target now
     have deterministic compile-time rejects in conformance coverage (direct canonical and method-sugar
     forms). The remaining public

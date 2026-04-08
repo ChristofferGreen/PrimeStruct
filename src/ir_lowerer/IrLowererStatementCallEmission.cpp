@@ -362,6 +362,22 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
       return std::string{};
     };
 
+    const Expr *nonLocalFieldReceiver = nullptr;
+    if (targetExpr.kind == Expr::Kind::Call &&
+        targetExpr.isFieldAccess &&
+        targetExpr.args.size() == 1) {
+      nonLocalFieldReceiver = &targetExpr;
+    } else if (targetExpr.kind == Expr::Kind::Call &&
+               isSimpleCallName(targetExpr, "dereference") &&
+               targetExpr.args.size() == 1) {
+      const Expr &derefTarget = targetExpr.args.front();
+      if (derefTarget.kind == Expr::Kind::Call &&
+          derefTarget.isFieldAccess &&
+          derefTarget.args.size() == 1) {
+        nonLocalFieldReceiver = &derefTarget;
+      }
+    }
+
     targetInfoOut = {};
     const Definition *callee = resolveDefinitionCall(targetExpr);
     if (callee != nullptr) {
@@ -383,9 +399,7 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
     // explicit template arguments; use those to route the receiver through the
     // builtin rewrite path even when the receiver does not resolve as a
     // standalone call target (for example `holder.values`).
-    if (targetExpr.kind == Expr::Kind::Call &&
-        targetExpr.isFieldAccess &&
-        targetExpr.args.size() == 1 &&
+    if (nonLocalFieldReceiver != nullptr &&
         stmt.templateArgs.size() == 2) {
       targetInfoOut.isMapTarget = true;
       targetInfoOut.mapKeyKind = valueKindFromTypeName(stmt.templateArgs.front());
@@ -395,9 +409,7 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
     }
 
     if (!stmt.isMethodCall &&
-        targetExpr.kind == Expr::Kind::Call &&
-        targetExpr.isFieldAccess &&
-        targetExpr.args.size() == 1) {
+        nonLocalFieldReceiver != nullptr) {
       const Definition *directCallee = resolveDefinitionCall(stmt);
       if (directCallee != nullptr &&
           isMapInsertLikeCallee(*directCallee) &&
@@ -413,9 +425,7 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
     }
 
     if (stmt.isMethodCall &&
-        targetExpr.kind == Expr::Kind::Call &&
-        targetExpr.isFieldAccess &&
-        targetExpr.args.size() == 1) {
+        nonLocalFieldReceiver != nullptr) {
       const Definition *methodCallee = resolveMethodCallDefinition(stmt, localsIn);
       if (methodCallee != nullptr &&
           isMapInsertLikeCallee(*methodCallee) &&
