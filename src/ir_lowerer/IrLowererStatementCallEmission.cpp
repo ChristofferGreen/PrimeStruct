@@ -372,22 +372,23 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
       return current;
     };
 
-    const Expr *targetExprSansLocation = peelLocationWrappers(targetExpr);
+    auto peelReceiverWrappers = [&](const Expr &expr) {
+      const Expr *current = peelLocationWrappers(expr);
+      while (current->kind == Expr::Kind::Call &&
+             isSimpleCallName(*current, "dereference") &&
+             current->args.size() == 1) {
+        current = peelLocationWrappers(current->args.front());
+      }
+      return current;
+    };
+
+    const Expr *canonicalReceiverExpr = peelReceiverWrappers(targetExpr);
 
     const Expr *nonLocalFieldReceiver = nullptr;
-    if (targetExprSansLocation->kind == Expr::Kind::Call &&
-        targetExprSansLocation->isFieldAccess &&
-        targetExprSansLocation->args.size() == 1) {
-      nonLocalFieldReceiver = targetExprSansLocation;
-    } else if (targetExprSansLocation->kind == Expr::Kind::Call &&
-               isSimpleCallName(*targetExprSansLocation, "dereference") &&
-               targetExprSansLocation->args.size() == 1) {
-      const Expr *derefTarget = peelLocationWrappers(targetExprSansLocation->args.front());
-      if (derefTarget->kind == Expr::Kind::Call &&
-          derefTarget->isFieldAccess &&
-          derefTarget->args.size() == 1) {
-        nonLocalFieldReceiver = derefTarget;
-      }
+    if (canonicalReceiverExpr->kind == Expr::Kind::Call &&
+        canonicalReceiverExpr->isFieldAccess &&
+        canonicalReceiverExpr->args.size() == 1) {
+      nonLocalFieldReceiver = canonicalReceiverExpr;
     }
 
     targetInfoOut = {};
@@ -409,19 +410,8 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
              targetInfoOut.mapValueKind != LocalInfo::ValueKind::Unknown;
     };
 
-    const Definition *callee = resolveDefinitionCall(*targetExprSansLocation);
-    if (tryPopulateFromResolvedCallee(callee)) {
+    if (tryPopulateFromResolvedCallee(resolveDefinitionCall(*canonicalReceiverExpr))) {
       return true;
-    }
-
-    if (targetExprSansLocation->kind == Expr::Kind::Call &&
-        isSimpleCallName(*targetExprSansLocation, "dereference") &&
-        targetExprSansLocation->args.size() == 1) {
-      const Expr *derefTarget = peelLocationWrappers(targetExprSansLocation->args.front());
-      if (derefTarget->kind == Expr::Kind::Call &&
-          tryPopulateFromResolvedCallee(resolveDefinitionCall(*derefTarget))) {
-        return true;
-      }
     }
 
     // Direct canonical insert calls on non-local field receivers already carry

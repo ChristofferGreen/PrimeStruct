@@ -1019,6 +1019,129 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
   valuesRefDerefExpr.name = "dereference";
   valuesRefDerefExpr.args = {valuesRefFactoryCall};
   valuesRefDerefExpr.argNames = {std::nullopt};
+  primec::Expr valuesRefLocationExpr;
+  valuesRefLocationExpr.kind = primec::Expr::Kind::Call;
+  valuesRefLocationExpr.name = "location";
+  valuesRefLocationExpr.args = {valuesRefFactoryCall};
+  valuesRefLocationExpr.argNames = {std::nullopt};
+  primec::Expr valuesRefLocationDerefExpr;
+  valuesRefLocationDerefExpr.kind = primec::Expr::Kind::Call;
+  valuesRefLocationDerefExpr.name = "dereference";
+  valuesRefLocationDerefExpr.args = {valuesRefLocationExpr};
+  valuesRefLocationDerefExpr.argNames = {std::nullopt};
+  primec::Expr valuesRefNestedLocationDerefExpr;
+  valuesRefNestedLocationDerefExpr.kind = primec::Expr::Kind::Call;
+  valuesRefNestedLocationDerefExpr.name = "location";
+  valuesRefNestedLocationDerefExpr.args = {valuesRefLocationDerefExpr};
+  valuesRefNestedLocationDerefExpr.argNames = {std::nullopt};
+
+  primec::Expr mapInsertNestedLocationDerefHelperStmt = mapInsertStmt;
+  mapInsertNestedLocationDerefHelperStmt.args = {valuesRefNestedLocationDerefExpr, keyArg, valueArg};
+  mapInsertNestedLocationDerefHelperStmt.argNames = {std::nullopt, std::nullopt, std::nullopt};
+  mapInsertNestedLocationDerefHelperStmt.templateArgs.clear();
+
+  inlineCalls = 0;
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            mapInsertNestedLocationDerefHelperStmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &callExpr) -> const primec::Definition * {
+              if (callExpr.name == "/main/makeValuesRef") {
+                return &mapValuesRefFactoryDef;
+              }
+              if (callExpr.name == "/std/collections/map/insert_builtin") {
+                return &mapInsertBuiltinDef;
+              }
+              return nullptr;
+            },
+            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
+              if (path == "/std/collections/map/insert_builtin") {
+                info.returnsVoid = true;
+                return true;
+              }
+              return false;
+            },
+            [&](const primec::Expr &callExpr,
+                const primec::Definition &callee,
+                const primec::ir_lowerer::LocalMap &,
+                bool expectValue) {
+              ++inlineCalls;
+              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
+              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(callExpr.isMethodCall);
+              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(expectValue);
+              CHECK(callExpr.templateArgs == expectedTemplateArgs);
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(inlineCalls == 1);
+  CHECK(instructions.empty());
+
+  primec::Expr mapInsertNestedLocationDerefHelperMethodStmt;
+  mapInsertNestedLocationDerefHelperMethodStmt.kind = primec::Expr::Kind::Call;
+  mapInsertNestedLocationDerefHelperMethodStmt.name = "insert";
+  mapInsertNestedLocationDerefHelperMethodStmt.isMethodCall = true;
+  mapInsertNestedLocationDerefHelperMethodStmt.args = {valuesRefNestedLocationDerefExpr, keyArg, valueArg};
+  mapInsertNestedLocationDerefHelperMethodStmt.argNames = {std::nullopt, std::nullopt, std::nullopt};
+
+  inlineCalls = 0;
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            mapInsertNestedLocationDerefHelperMethodStmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &callExpr,
+                const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              if (callExpr.isMethodCall && callExpr.name == "insert" && callExpr.args.size() == 3) {
+                return &mapInsertAliasDef;
+              }
+              return nullptr;
+            },
+            [&](const primec::Expr &callExpr) -> const primec::Definition * {
+              if (callExpr.name == "/main/makeValuesRef") {
+                return &mapValuesRefFactoryDef;
+              }
+              if (callExpr.name == "/std/collections/map/insert_builtin") {
+                return &mapInsertBuiltinDef;
+              }
+              return nullptr;
+            },
+            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
+              if (path == "/std/collections/map/insert_builtin") {
+                info.returnsVoid = true;
+                return true;
+              }
+              return false;
+            },
+            [&](const primec::Expr &callExpr,
+                const primec::Definition &callee,
+                const primec::ir_lowerer::LocalMap &,
+                bool expectValue) {
+              ++inlineCalls;
+              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
+              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(callExpr.isMethodCall);
+              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(expectValue);
+              CHECK(callExpr.templateArgs == expectedTemplateArgs);
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(inlineCalls == 1);
+  CHECK(instructions.empty());
 
   primec::Expr mapInsertDerefHelperStmt = mapInsertStmt;
   mapInsertDerefHelperStmt.args = {valuesRefDerefExpr, keyArg, valueArg};
@@ -1140,6 +1263,126 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
   holderValuesRefDerefExpr.name = "dereference";
   holderValuesRefDerefExpr.args = {holderValuesRefFieldExpr};
   holderValuesRefDerefExpr.argNames = {std::nullopt};
+  primec::Expr holderValuesRefLocationExpr;
+  holderValuesRefLocationExpr.kind = primec::Expr::Kind::Call;
+  holderValuesRefLocationExpr.name = "location";
+  holderValuesRefLocationExpr.args = {holderValuesRefFieldExpr};
+  holderValuesRefLocationExpr.argNames = {std::nullopt};
+  primec::Expr holderValuesRefLocationDerefExpr;
+  holderValuesRefLocationDerefExpr.kind = primec::Expr::Kind::Call;
+  holderValuesRefLocationDerefExpr.name = "dereference";
+  holderValuesRefLocationDerefExpr.args = {holderValuesRefLocationExpr};
+  holderValuesRefLocationDerefExpr.argNames = {std::nullopt};
+  primec::Expr holderValuesRefNestedLocationDerefExpr;
+  holderValuesRefNestedLocationDerefExpr.kind = primec::Expr::Kind::Call;
+  holderValuesRefNestedLocationDerefExpr.name = "location";
+  holderValuesRefNestedLocationDerefExpr.args = {holderValuesRefLocationDerefExpr};
+  holderValuesRefNestedLocationDerefExpr.argNames = {std::nullopt};
+
+  primec::Expr mapInsertNestedLocationDerefFieldAccessStmt = mapInsertStmt;
+  mapInsertNestedLocationDerefFieldAccessStmt.args = {holderValuesRefNestedLocationDerefExpr, keyArg, valueArg};
+  mapInsertNestedLocationDerefFieldAccessStmt.argNames = {std::nullopt, std::nullopt, std::nullopt};
+  mapInsertNestedLocationDerefFieldAccessStmt.templateArgs.clear();
+
+  inlineCalls = 0;
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            mapInsertNestedLocationDerefFieldAccessStmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &callExpr) -> const primec::Definition * {
+              if (callExpr.name == "/std/collections/map/insert") {
+                return &mapInsertMethodDef;
+              }
+              if (callExpr.name == "/std/collections/map/insert_builtin") {
+                return &mapInsertBuiltinDef;
+              }
+              return nullptr;
+            },
+            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
+              if (path == "/std/collections/map/insert_builtin") {
+                info.returnsVoid = true;
+                return true;
+              }
+              return false;
+            },
+            [&](const primec::Expr &callExpr,
+                const primec::Definition &callee,
+                const primec::ir_lowerer::LocalMap &,
+                bool expectValue) {
+              ++inlineCalls;
+              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
+              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(callExpr.isMethodCall);
+              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(expectValue);
+              CHECK(callExpr.templateArgs == expectedTemplateArgs);
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(inlineCalls == 1);
+  CHECK(instructions.empty());
+
+  primec::Expr mapInsertNestedLocationDerefFieldAccessMethodStmt;
+  mapInsertNestedLocationDerefFieldAccessMethodStmt.kind = primec::Expr::Kind::Call;
+  mapInsertNestedLocationDerefFieldAccessMethodStmt.name = "insert";
+  mapInsertNestedLocationDerefFieldAccessMethodStmt.isMethodCall = true;
+  mapInsertNestedLocationDerefFieldAccessMethodStmt.args = {holderValuesRefNestedLocationDerefExpr, keyArg, valueArg};
+  mapInsertNestedLocationDerefFieldAccessMethodStmt.argNames = {std::nullopt, std::nullopt, std::nullopt};
+
+  inlineCalls = 0;
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            mapInsertNestedLocationDerefFieldAccessMethodStmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &callExpr,
+                const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              if (callExpr.isMethodCall && callExpr.name == "insert" && callExpr.args.size() == 3) {
+                return &mapInsertAliasDef;
+              }
+              return nullptr;
+            },
+            [&](const primec::Expr &callExpr) -> const primec::Definition * {
+              if (callExpr.name == "/std/collections/map/insert_builtin") {
+                return &mapInsertBuiltinDef;
+              }
+              return nullptr;
+            },
+            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
+              if (path == "/std/collections/map/insert_builtin") {
+                info.returnsVoid = true;
+                return true;
+              }
+              return false;
+            },
+            [&](const primec::Expr &callExpr,
+                const primec::Definition &callee,
+                const primec::ir_lowerer::LocalMap &,
+                bool expectValue) {
+              ++inlineCalls;
+              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
+              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(callExpr.isMethodCall);
+              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(expectValue);
+              CHECK(callExpr.templateArgs == expectedTemplateArgs);
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(inlineCalls == 1);
+  CHECK(instructions.empty());
 
   primec::Expr mapInsertDerefFieldAccessInferredStmt = mapInsertStmt;
   mapInsertDerefFieldAccessInferredStmt.args = {holderValuesRefDerefExpr, keyArg, valueArg};

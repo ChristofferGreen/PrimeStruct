@@ -3028,6 +3028,11 @@ bad_use_after_take() {
     `dereference(holder.valuesRef)`) now also share that same canonical/helper-alias callee
     receiver-typing inference when template arguments are omitted, so those non-local borrowed
     receiver forms route through `insert_builtin` as well.
+    Nested location+dereference receiver chains (for example
+    `location(dereference(location(makeValuesRef())))` and
+    `location(dereference(location(holder.valuesRef)))`) now route through that same path by
+    peeling stacked wrappers before helper-return and field-access receiver typing inference when
+    template arguments are omitted.
     Temporary helper-return value receivers that do not provide a stable writable lvalue target now
     have deterministic compile-time rejects in conformance coverage (direct canonical and method-sugar
     forms). The remaining public
