@@ -372,6 +372,27 @@ TEST_CASE("explicit template-arg graph facts are consumed by inference cache") {
   CHECK(metrics.hitCount > 0u);
 }
 
+TEST_CASE("explicit template-arg graph facts are consumed by transform rewrites") {
+  const std::string source =
+      "Box<T>() {\n"
+      "  [T] value{0i32}\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [Box<i32>] left{Box<i32>(1i32)}\n"
+      "  [Box<i32>] right{left}\n"
+      "  return(plus(left.value, right.value))\n"
+      "}\n";
+
+  std::string error;
+  primec::semantics::ExplicitTemplateArgFactConsumptionMetricsForTesting metrics;
+  REQUIRE(primec::semantics::collectExplicitTemplateArgFactConsumptionMetricsForTesting(
+      parseProgram(source), "/main", error, metrics));
+  CHECK(error.empty());
+  CHECK(metrics.hitCount > 0u);
+}
+
 TEST_CASE("implicit template-arg graph facts are consumed by inference cache") {
   const std::string source =
       "[return<T>]\n"

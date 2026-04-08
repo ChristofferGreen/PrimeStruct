@@ -223,16 +223,6 @@ bool rewriteTransforms(std::vector<Transform> &transforms,
           transform.name = resolvedPath;
           continue;
         }
-        if (!isBuiltinTemplateContainer(transform.name) && ctx.templateDefs.count(resolvedPath) > 0 &&
-            allConcreteTemplateArgs) {
-          std::string specializedPath;
-          if (!instantiateTemplate(resolvedPath, transform.templateArgs, ctx, error, specializedPath)) {
-            return false;
-          }
-          transform.name = specializedPath;
-          transform.templateArgs.clear();
-          continue;
-        }
         const bool canResolveTemplatedName =
             isBuiltinTemplateContainer(transform.name) || ctx.templateDefs.count(resolvedPath) > 0;
         if (canResolveTemplatedName) {
