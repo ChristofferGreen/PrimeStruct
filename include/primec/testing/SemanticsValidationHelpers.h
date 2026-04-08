@@ -37,6 +37,10 @@ struct ExplicitTemplateArgFactConsumptionMetricsForTesting {
   uint64_t hitCount = 0;
 };
 
+struct ImplicitTemplateArgFactConsumptionMetricsForTesting {
+  uint64_t hitCount = 0;
+};
+
 std::vector<std::string> runSemanticsValidatorExprCaptureSplitStep(const std::string &text);
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
 std::optional<uint64_t> runSemanticsValidatorStatementKnownIterationCountStep(const Expr &countExpr,
@@ -74,5 +78,10 @@ bool collectExplicitTemplateArgFactConsumptionMetricsForTesting(
     const std::string &entryPath,
     std::string &error,
     ExplicitTemplateArgFactConsumptionMetricsForTesting &out);
+bool collectImplicitTemplateArgFactConsumptionMetricsForTesting(
+    Program program,
+    const std::string &entryPath,
+    std::string &error,
+    ImplicitTemplateArgFactConsumptionMetricsForTesting &out);
 
 } // namespace primec::semantics

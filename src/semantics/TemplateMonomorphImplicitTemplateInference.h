@@ -305,6 +305,101 @@ bool inferImplicitTemplateArgs(const Definition &def,
     }
     return false;
   }
+  std::string implicitInferenceFactKey;
+  bool canConsumeImplicitInferenceFact = true;
+  {
+    std::ostringstream key;
+    key << (namespacePrefix.empty() ? std::string("/") : namespacePrefix)
+        << "|" << def.fullPath
+        << "|template:"
+        << joinTemplateArgs(callExpr.templateArgs)
+        << "|ordered:";
+    for (size_t argIndex = 0; argIndex < orderedArgs.size(); ++argIndex) {
+      if (argIndex > 0) {
+        key << ";";
+      }
+      const bool hasArgName =
+          orderedCallArgNames != nullptr &&
+          !orderedCallArgNames->empty() &&
+          argIndex < orderedCallArgNames->size() &&
+          (*orderedCallArgNames)[argIndex].has_value();
+      if (hasArgName) {
+        key << *(*orderedCallArgNames)[argIndex] << "=";
+      }
+      const Expr *argExpr = orderedArgs[argIndex];
+      if (!argExpr) {
+        key << "<default>";
+        continue;
+      }
+      BindingInfo argInfo;
+      if (!inferBindingTypeForMonomorph(*argExpr, params, locals, allowMathBare, ctx, argInfo)) {
+        if (!assignBindingFromTypeText(
+                inferExprTypeTextForTemplatedVectorFallback(
+                    *argExpr, locals, namespacePrefix, ctx, allowMathBare),
+                argInfo)) {
+          canConsumeImplicitInferenceFact = false;
+          break;
+        }
+      }
+      const std::string normalizedArgType = normalizeBindingTypeName(bindingTypeToString(argInfo));
+      if (normalizedArgType.empty()) {
+        canConsumeImplicitInferenceFact = false;
+        break;
+      }
+      key << normalizedArgType;
+    }
+    if (canConsumeImplicitInferenceFact) {
+      key << "|packed:";
+      for (size_t argIndex = 0; argIndex < packedArgs.size(); ++argIndex) {
+        if (argIndex > 0) {
+          key << ";";
+        }
+        const Expr *argExpr = packedArgs[argIndex];
+        if (!argExpr) {
+          key << "<empty>";
+          continue;
+        }
+        BindingInfo argInfo;
+        if (!inferBindingTypeForMonomorph(*argExpr, params, locals, allowMathBare, ctx, argInfo)) {
+          if (!assignBindingFromTypeText(
+                  inferExprTypeTextForTemplatedVectorFallback(
+                      *argExpr, locals, namespacePrefix, ctx, allowMathBare),
+                  argInfo)) {
+            canConsumeImplicitInferenceFact = false;
+            break;
+          }
+        }
+        const std::string normalizedArgType = normalizeBindingTypeName(bindingTypeToString(argInfo));
+        if (normalizedArgType.empty()) {
+          canConsumeImplicitInferenceFact = false;
+          break;
+        }
+        key << normalizedArgType;
+      }
+    }
+    if (canConsumeImplicitInferenceFact) {
+      key << "|packed_index:" << packedParamIndex;
+      implicitInferenceFactKey = key.str();
+    }
+  }
+  if (canConsumeImplicitInferenceFact) {
+    const auto factIt = ctx.implicitTemplateArgInferenceFacts.find(implicitInferenceFactKey);
+    if (factIt != ctx.implicitTemplateArgInferenceFacts.end() &&
+        factIt->second.inferredArgs.size() == def.templateArgs.size()) {
+      outArgs = factIt->second.inferredArgs;
+      ++ctx.implicitTemplateArgInferenceFactHitsForTesting;
+      if (ctx.collectImplicitTemplateArgFactsForTesting) {
+        ctx.implicitTemplateArgFactsForTesting.push_back(
+            ImplicitTemplateArgResolutionFactForTesting{
+                namespacePrefix.empty() ? std::string("/") : namespacePrefix,
+                callExpr.name,
+                def.fullPath,
+                joinTemplateArgs(outArgs),
+            });
+      }
+      return true;
+    }
+  }
 
   for (size_t i = 0; i < def.parameters.size(); ++i) {
     const Expr &param = def.parameters[i];
@@ -549,6 +644,10 @@ bool inferImplicitTemplateArgs(const Definition &def,
       return false;
     }
     outArgs.push_back(it->second);
+  }
+  if (canConsumeImplicitInferenceFact) {
+    ctx.implicitTemplateArgInferenceFacts[implicitInferenceFactKey] =
+        ImplicitTemplateArgInferenceFact{outArgs};
   }
   if (ctx.collectImplicitTemplateArgFactsForTesting) {
     ctx.implicitTemplateArgFactsForTesting.push_back(
