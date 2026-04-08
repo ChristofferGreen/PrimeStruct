@@ -1,63 +1,15 @@
 import /std/collections/experimental_vector/*
 
 [public effects(heap_alloc), return<Vector<T>>]
-/std/collections/vector/vector<T>() {
-  return(/std/collections/experimental_vector/vector<T>())
-}
-
-[public effects(heap_alloc), return<Vector<T>>]
-/std/collections/vector/vector<T>([T] value) {
-  return(/std/collections/experimental_vector/vector<T>(value))
-}
-
-[public effects(heap_alloc), return<Vector<T>>]
-/std/collections/vector/vector<T>([T] first, [T] second) {
-  return(/std/collections/experimental_vector/vector<T>(first, second))
-}
-
-[public effects(heap_alloc), return<Vector<T>>]
-/std/collections/vector/vector<T>([T] first, [T] second, [T] third) {
-  return(/std/collections/experimental_vector/vector<T>(first, second, third))
-}
-
-[public effects(heap_alloc), return<Vector<T>>]
-/std/collections/vector/vector<T>([T] first, [T] second, [T] third, [T] fourth) {
-  return(/std/collections/experimental_vector/vector<T>(first, second, third, fourth))
-}
-
-[public effects(heap_alloc), return<Vector<T>>]
-/std/collections/vector/vector<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth) {
-  return(/std/collections/experimental_vector/vector<T>(first, second, third, fourth, fifth))
-}
-
-[public effects(heap_alloc), return<Vector<T>>]
-/std/collections/vector/vector<T>([T] first, [T] second, [T] third, [T] fourth, [T] fifth, [T] sixth) {
-  return(/std/collections/experimental_vector/vector<T>(first, second, third, fourth, fifth, sixth))
-}
-
-[public effects(heap_alloc), return<Vector<T>>]
-/std/collections/vector/vector<T>(
-    [T] first,
-    [T] second,
-    [T] third,
-    [T] fourth,
-    [T] fifth,
-    [T] sixth,
-    [T] seventh) {
-  return(/std/collections/experimental_vector/vector<T>(first, second, third, fourth, fifth, sixth, seventh))
-}
-
-[public effects(heap_alloc), return<Vector<T>>]
-/std/collections/vector/vector<T>(
-    [T] first,
-    [T] second,
-    [T] third,
-    [T] fourth,
-    [T] fifth,
-    [T] sixth,
-    [T] seventh,
-    [T] eighth) {
-  return(/std/collections/experimental_vector/vector<T>(first, second, third, fourth, fifth, sixth, seventh, eighth))
+/std/collections/vector/vector<T>([args<T>] values) {
+  [Vector<T> mut] out{/std/collections/experimental_vector/vector<T>()}
+  [i32] valueCount{count(values)}
+  [i32 mut] index{0i32}
+  while(less_than(index, valueCount), do() {
+    /std/collections/experimental_vector/vectorPush<T>(out, values[index])
+    increment(index)
+  })
+  return(out)
 }
 
 [public return<i32>]

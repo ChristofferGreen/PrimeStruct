@@ -8,9 +8,9 @@ TODO queues in `docs/todo.md`.
 Goal reference: move canonical imported vector constructor usage from fixed-arity
 helpers to variadic `vector(values...)`.
 
-- Stdlib fixed-arity constructor overloads currently live in
-  `stdlib/std/collections/vector.prime` as
-  `/std/collections/vector/vector<T>(...)` arity-specific overloads.
+- Stdlib canonical constructor routing in `stdlib/std/collections/vector.prime`
+  now exposes only variadic `/std/collections/vector/vector<T>([args<T>] values)`;
+  the previous arity-specific wrapper overloads were removed.
 - Compatibility wrapper helper families still expose fixed-arity constructor
   spellings in `stdlib/std/collections/collections.prime`
   (`vectorSingle`, `vectorPair`, ..., `vectorOct`).
