@@ -411,7 +411,8 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
             isSimpleCallName(expr, "mapAt") || isSimpleCallName(expr, "mapAtUnsafe") ||
             isSimpleCallName(expr, "at_ref") || isSimpleCallName(expr, "at_unsafe_ref") ||
             isSimpleCallName(expr, "mapAtRef") || isSimpleCallName(expr, "mapAtUnsafeRef") ||
-            isSimpleCallName(expr, "At") || isSimpleCallName(expr, "AtUnsafe")) {
+            isSimpleCallName(expr, "At") || isSimpleCallName(expr, "AtUnsafe") ||
+            isSimpleCallName(expr, "AtRef") || isSimpleCallName(expr, "AtUnsafeRef")) {
           return true;
         }
       }
