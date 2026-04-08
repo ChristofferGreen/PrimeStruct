@@ -283,6 +283,26 @@ TEST_CASE("explicit template-arg graph facts publish builtin container template 
   CHECK(it->resolvedConcrete);
 }
 
+TEST_CASE("explicit template-arg graph facts keep mismatch diagnostics for invalid arity") {
+  const std::string source =
+      "[return<T>]\n"
+      "id<T>([T] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [auto] value{id<i32, i32>(1i32)}\n"
+      "  return(value)\n"
+      "}\n";
+
+  std::string error;
+  std::vector<primec::semantics::ExplicitTemplateArgResolutionFactForTesting> facts;
+  CHECK_FALSE(primec::semantics::collectExplicitTemplateArgResolutionFactsForTesting(
+      parseProgram(source), "/main", error, facts));
+  CHECK(error.find("template argument count mismatch for /id") != std::string::npos);
+}
+
 TEST_CASE("type resolution graph snapshot records timing metrics") {
   const std::string source = R"(
 Pair {
