@@ -330,6 +330,26 @@ TEST_CASE("implicit template-arg graph facts publish inferred argument facts") {
   REQUIRE(it != facts.end());
 }
 
+TEST_CASE("implicit template-arg graph facts keep conflict diagnostics") {
+  const std::string source =
+      "[return<T>]\n"
+      "pair<T>([T] left, [T] right) {\n"
+      "  return(left)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [auto] value{pair(1i32, true)}\n"
+      "  return(value)\n"
+      "}\n";
+
+  std::string error;
+  std::vector<primec::semantics::ImplicitTemplateArgResolutionFactForTesting> facts;
+  CHECK_FALSE(primec::semantics::collectImplicitTemplateArgResolutionFactsForTesting(
+      parseProgram(source), "/main", error, facts));
+  CHECK(error.find("implicit template arguments conflict on /pair") != std::string::npos);
+}
+
 TEST_CASE("type resolution graph snapshot records timing metrics") {
   const std::string source = R"(
 Pair {
