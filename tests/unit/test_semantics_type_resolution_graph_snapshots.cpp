@@ -350,6 +350,28 @@ TEST_CASE("implicit template-arg graph facts keep conflict diagnostics") {
   CHECK(error.find("implicit template arguments conflict on /pair") != std::string::npos);
 }
 
+TEST_CASE("explicit template-arg graph facts are consumed by inference cache") {
+  const std::string source =
+      "[return<T>]\n"
+      "id<T>([T] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [auto] left{id<i32>(1i32)}\n"
+      "  [auto] right{id<i32>(2i32)}\n"
+      "  return(plus(left, right))\n"
+      "}\n";
+
+  std::string error;
+  primec::semantics::ExplicitTemplateArgFactConsumptionMetricsForTesting metrics;
+  REQUIRE(primec::semantics::collectExplicitTemplateArgFactConsumptionMetricsForTesting(
+      parseProgram(source), "/main", error, metrics));
+  CHECK(error.empty());
+  CHECK(metrics.hitCount > 0u);
+}
+
 TEST_CASE("type resolution graph snapshot records timing metrics") {
   const std::string source = R"(
 Pair {

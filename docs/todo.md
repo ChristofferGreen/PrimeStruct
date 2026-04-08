@@ -51,7 +51,7 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
   - ○ Migrate the next explicit template-argument inference surface onto the graph path.
     - ✓ Select one explicit template-argument surface (see `docs/type_graph_migration_touchpoints.md`, section 6).
     - ✓ Publish graph facts for that surface behind the current path.
-    - ○ Switch inference for that surface to graph-backed facts.
+    - ✓ Switch inference for that surface to graph-backed facts.
     - ✓ Add positive + negative conformance fixtures for that surface.
     - ○ Delete the replaced fallback path for that surface.
   - ○ Migrate the next implicit template-inference surface onto the graph path.

@@ -80,6 +80,24 @@ ResolvedType resolveTypeStringImpl(std::string input,
     }
     resolvedArgs.push_back(resolved.text);
   }
+  const auto explicitTemplateArgFactKey = [&](const std::string &targetPath) {
+    return targetPath + "<" + joinTemplateArgs(resolvedArgs) + ">";
+  };
+  const auto consumeExplicitTemplateArgFact = [&](const std::string &targetPath, ResolvedType &resolvedOut) {
+    const std::string factKey = explicitTemplateArgFactKey(targetPath);
+    const auto factIt = ctx.explicitTemplateArgInferenceFacts.find(factKey);
+    if (factIt == ctx.explicitTemplateArgInferenceFacts.end()) {
+      return false;
+    }
+    resolvedOut.text = factIt->second.resolvedTypeText;
+    resolvedOut.concrete = factIt->second.resolvedConcrete;
+    ++ctx.explicitTemplateArgInferenceFactHitsForTesting;
+    return true;
+  };
+  const auto publishExplicitTemplateArgFact = [&](const std::string &targetPath, const ResolvedType &resolvedType) {
+    ctx.explicitTemplateArgInferenceFacts[explicitTemplateArgFactKey(targetPath)] =
+        ExplicitTemplateArgInferenceFact{resolvedType.text, resolvedType.concrete};
+  };
   const auto recordExplicitTemplateArgFact = [&](const std::string &targetPath,
                                                  const ResolvedType &resolvedType) {
     if (!ctx.collectExplicitTemplateArgFactsForTesting) {
@@ -98,8 +116,15 @@ ResolvedType resolveTypeStringImpl(std::string input,
     const std::string normalizedBase = isBuiltinTemplateContainer(base)
                                            ? base
                                            : normalizeBuiltinCollectionTemplateBase(base);
+    if (allConcrete && consumeExplicitTemplateArgFact(normalizedBase, result)) {
+      recordExplicitTemplateArgFact(normalizedBase, result);
+      return result;
+    }
     result.text = normalizedBase + "<" + joinTemplateArgs(resolvedArgs) + ">";
     result.concrete = allConcrete;
+    if (allConcrete) {
+      publishExplicitTemplateArgFact(normalizedBase, result);
+    }
     recordExplicitTemplateArgFact(normalizedBase, result);
     return result;
   }
@@ -116,6 +141,10 @@ ResolvedType resolveTypeStringImpl(std::string input,
     recordExplicitTemplateArgFact(resolvedBasePath, result);
     return result;
   }
+  if (consumeExplicitTemplateArgFact(resolvedBasePath, result)) {
+    recordExplicitTemplateArgFact(resolvedBasePath, result);
+    return result;
+  }
   std::string specializedPath;
   if (!instantiateTemplate(resolvedBasePath, resolvedArgs, ctx, error, specializedPath)) {
     result.text.clear();
@@ -124,6 +153,7 @@ ResolvedType resolveTypeStringImpl(std::string input,
   }
   result.text = specializedPath;
   result.concrete = true;
+  publishExplicitTemplateArgFact(resolvedBasePath, result);
   recordExplicitTemplateArgFact(resolvedBasePath, result);
   return result;
 }

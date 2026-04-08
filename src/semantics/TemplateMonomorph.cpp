@@ -34,6 +34,11 @@ struct HelperOverloadEntry {
   size_t parameterCount = 0;
 };
 
+struct ExplicitTemplateArgInferenceFact {
+  std::string resolvedTypeText;
+  bool resolvedConcrete = false;
+};
+
 struct Context {
   Program &program;
   std::unordered_map<std::string, Definition> sourceDefs;
@@ -50,6 +55,8 @@ struct Context {
   std::unordered_set<std::string> returnInferenceStack;
   bool collectExplicitTemplateArgFactsForTesting = false;
   std::vector<ExplicitTemplateArgResolutionFactForTesting> explicitTemplateArgFactsForTesting;
+  std::unordered_map<std::string, ExplicitTemplateArgInferenceFact> explicitTemplateArgInferenceFacts;
+  uint64_t explicitTemplateArgInferenceFactHitsForTesting = 0;
   bool collectImplicitTemplateArgFactsForTesting = false;
   std::vector<ImplicitTemplateArgResolutionFactForTesting> implicitTemplateArgFactsForTesting;
 };
@@ -347,6 +354,36 @@ bool collectImplicitTemplateArgResolutionFactsForTesting(
   }
 
   out = std::move(ctx.implicitTemplateArgFactsForTesting);
+  return true;
+}
+
+bool collectExplicitTemplateArgFactConsumptionMetricsForTesting(
+    Program program,
+    const std::string &entryPath,
+    std::string &error,
+    ExplicitTemplateArgFactConsumptionMetricsForTesting &out) {
+  out = {};
+  Context ctx = makeTemplateMonomorphContext(program);
+
+  if (!applyImplicitAutoTemplates(program, ctx, error)) {
+    return false;
+  }
+
+  std::unordered_set<std::string> templateRoots;
+  if (!initializeTemplateMonomorphSourceDefinitions(ctx, entryPath, templateRoots, error)) {
+    return false;
+  }
+
+  buildImportAliases(ctx);
+
+  if (!rewriteMonomorphizedDefinitions(ctx, templateRoots, error)) {
+    return false;
+  }
+  if (!rewriteMonomorphizedExecutions(ctx, error)) {
+    return false;
+  }
+
+  out.hitCount = ctx.explicitTemplateArgInferenceFactHitsForTesting;
   return true;
 }
 
