@@ -279,6 +279,10 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
     if (!normalizedName.empty() && normalizedName.front() == '/') {
       normalizedName.erase(normalizedName.begin());
     }
+    const size_t lastSlash = normalizedName.find_last_of('/');
+    if (lastSlash != std::string::npos) {
+      normalizedName = normalizedName.substr(lastSlash + 1);
+    }
     normalizedName = stripGeneratedHelperSuffix(std::move(normalizedName));
     const bool isMethodInsertStem =
         normalizedName == "insert" || normalizedName == "insert_ref" ||

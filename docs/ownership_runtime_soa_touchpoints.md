@@ -311,6 +311,18 @@ path (based on current recognition hooks):
   rewrite parity touchpoints:
   `src/ir_lowerer/IrLowererStatementCallEmission.cpp` and
   `src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h`).
+- Non-local field-access receiver chains now also route through that same
+  rewrite path when mutating slash-method helper names themselves are
+  path-qualified generated compatibility insert stems (for example
+  `holder.values./std/collections/mapInsert__generated(...)` and
+  `holder.values./std/collections/MapInsertRef__generated(...)`) by extending
+  method-form insert stem normalization to strip helper path segments before
+  generated-suffix matching in statement and tail-dispatch rewrite paths (IR
+  coverage:
+  `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`;
+  rewrite parity touchpoints:
+  `src/ir_lowerer/IrLowererStatementCallEmission.cpp` and
+  `src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h`).
 - Remaining non-local lvalue receiver shapes that do not currently route
   through that same path (for example non-local receiver forms beyond
   field-access, helper-return, and args-pack map-access receiver-source `at` /

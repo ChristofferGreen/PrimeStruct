@@ -82,6 +82,10 @@
             if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
               normalizedMethodName.erase(normalizedMethodName.begin());
             }
+            const size_t lastSlash = normalizedMethodName.find_last_of('/');
+            if (lastSlash != std::string::npos) {
+              normalizedMethodName = normalizedMethodName.substr(lastSlash + 1);
+            }
             normalizedMethodName = stripGeneratedHelperSuffix(std::move(normalizedMethodName));
             const bool isMethodInsertStem =
                 normalizedMethodName == "insert" ||
