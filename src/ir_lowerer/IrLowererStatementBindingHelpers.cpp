@@ -480,6 +480,9 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
                                                        const InferBindingExprKindFn &inferExprKind,
                                                        const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
                                                        const SemanticProductTargetAdapter *semanticProductTargets) {
+  const ResolveDefinitionCallForStatementFn safeResolveDefinitionCall =
+      resolveDefinitionCall ? resolveDefinitionCall
+                            : ResolveDefinitionCallForStatementFn([](const Expr &) { return nullptr; });
   StatementBindingTypeInfo info;
   info.kind = bindingKind(stmt);
   const bool hasExplicitType = hasExplicitBindingTypeTransform(stmt);
@@ -498,7 +501,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
   if (!hasExplicitType) {
     StatementBindingTypeInfo semanticInfo;
     if (populateBindingTypeInfoFromSemanticBindingFact(
-            stmt, resolveDefinitionCall, semanticProductTargets, semanticInfo)) {
+            stmt, safeResolveDefinitionCall, semanticProductTargets, semanticInfo)) {
       return semanticInfo;
     }
   }
@@ -531,7 +534,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
   if (!hasExplicitType) {
     StatementBindingTypeInfo inferredExprInfo;
     if (inferExprBindingTypeInfo(
-            init, localsIn, inferExprKind, resolveDefinitionCall, semanticProductTargets, inferredExprInfo)) {
+            init, localsIn, inferExprKind, safeResolveDefinitionCall, semanticProductTargets, inferredExprInfo)) {
       if (info.kind == LocalInfo::Kind::Value) {
         info.kind = inferredExprInfo.kind;
       }
@@ -568,7 +571,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
         }
         if (normalizedName == "map" && transform.templateArgs.empty() &&
             resolveSpecializedExperimentalMapTypeKinds(
-                transform.name, resolveDefinitionCall, info.mapKeyKind, info.mapValueKind)) {
+                transform.name, safeResolveDefinitionCall, info.mapKeyKind, info.mapValueKind)) {
           if (info.structTypeName.empty()) {
             resolveSpecializedExperimentalMapStructPathFromTypeText(
                 transform.name, info.structTypeName);

@@ -168,48 +168,6 @@ ResolvedType resolveTypeString(std::string input,
   return resolveTypeStringImpl(input, mapping, allowedParams, namespacePrefix, ctx, error, substitutionStack);
 }
 
-bool typeTextReferencesTemplateParam(const std::string &typeText,
-                                     const std::unordered_set<std::string> &templateParams) {
-  const std::string trimmed = trimWhitespace(typeText);
-  if (trimmed.empty()) {
-    return false;
-  }
-  if (templateParams.count(trimmed) > 0) {
-    return true;
-  }
-  std::string base;
-  std::string argText;
-  if (!splitTemplateTypeName(trimmed, base, argText)) {
-    return false;
-  }
-  if (typeTextReferencesTemplateParam(base, templateParams)) {
-    return true;
-  }
-  std::vector<std::string> args;
-  if (!splitTopLevelTemplateArgs(argText, args)) {
-    return false;
-  }
-  for (const auto &arg : args) {
-    if (typeTextReferencesTemplateParam(arg, templateParams)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-bool inferredTemplateArgsAreConcrete(const Definition &def, const std::vector<std::string> &args) {
-  if (def.templateArgs.empty()) {
-    return true;
-  }
-  std::unordered_set<std::string> templateParams(def.templateArgs.begin(), def.templateArgs.end());
-  for (const auto &arg : args) {
-    if (typeTextReferencesTemplateParam(arg, templateParams)) {
-      return false;
-    }
-  }
-  return true;
-}
-
 bool rewriteTransforms(std::vector<Transform> &transforms,
                        const SubstMap &mapping,
                        const std::unordered_set<std::string> &allowedParams,

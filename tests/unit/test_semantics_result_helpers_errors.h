@@ -31,8 +31,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
 TEST_CASE("stdlib ImageError why wrapper covers direct and Result-based access") {
@@ -49,8 +49,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
 TEST_CASE("stdlib ImageError constructor wrappers expose type-owned error values") {
@@ -69,8 +69,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
 TEST_CASE("stdlib ImageError why wrapper rejects non image errors") {

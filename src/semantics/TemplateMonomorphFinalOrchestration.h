@@ -1,7 +1,7 @@
 #pragma once
 
 Context makeTemplateMonomorphContext(Program &program) {
-  return Context{program, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}};
+  return Context(program);
 }
 
 void buildImportAliases(Context &ctx) {

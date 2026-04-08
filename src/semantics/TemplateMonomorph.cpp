@@ -44,6 +44,9 @@ struct ImplicitTemplateArgInferenceFact {
 };
 
 struct Context {
+  explicit Context(Program &inputProgram)
+      : program(inputProgram) {}
+
   Program &program;
   std::unordered_map<std::string, Definition> sourceDefs;
   std::unordered_set<std::string> templateDefs;

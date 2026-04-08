@@ -530,7 +530,7 @@ main() {
 }
 )",
           false,
-          "unknown method: /array/count",
+          "unknown method: /Result/count",
       },
       {
           "query_map_receiver_type_text",

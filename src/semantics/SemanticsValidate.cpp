@@ -439,11 +439,11 @@ SemanticProgram buildSemanticProgram(const Program &program,
         snapshotEntry.semanticNodeId,
         semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId),
         snapshotEntry.initializerDirectCallResolvedPath,
-        snapshotEntry.initializerDirectCallReturnKind != ReturnKind::Unknown
+        snapshotEntry.initializerDirectCallReturnKind != semantics::ReturnKind::Unknown
             ? semantics::returnKindSnapshotName(snapshotEntry.initializerDirectCallReturnKind)
             : std::string{},
         snapshotEntry.initializerMethodCallResolvedPath,
-        snapshotEntry.initializerMethodCallReturnKind != ReturnKind::Unknown
+        snapshotEntry.initializerMethodCallReturnKind != semantics::ReturnKind::Unknown
             ? semantics::returnKindSnapshotName(snapshotEntry.initializerMethodCallReturnKind)
             : std::string{},
     });

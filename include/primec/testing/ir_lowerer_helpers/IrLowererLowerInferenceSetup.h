@@ -89,6 +89,7 @@ struct LowerInferenceExprKindCallOperatorFallbackSetupInput {
 };
 struct LowerInferenceExprKindCallControlFlowFallbackSetupInput {
   const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
+  const SemanticProductTargetAdapter *semanticProductTargets = nullptr;
   ResolveSetupInferenceExprPathFn resolveExprPath = {};
   LowerSetupInferenceMatchToIfFn lowerMatchToIf = {};
   SetupInferenceCombineNumericKindsFn combineNumericKinds = {};

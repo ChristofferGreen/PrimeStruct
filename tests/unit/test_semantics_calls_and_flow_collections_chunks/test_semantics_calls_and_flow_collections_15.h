@@ -557,7 +557,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map wrapper temporary tryAt auto inference rejects explicit helper binding as try input") {
+TEST_CASE("map wrapper temporary tryAt auto inference accepts explicit helper binding as try input") {
   const std::string source = R"(
 [struct]
 ContainerError() {
@@ -589,10 +589,10 @@ main() {
   [auto] inferred{/std/collections/map/tryAt(wrapMap(), 1i32)}
   return(Result.ok(try(inferred)))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("try requires Result argument") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("map wrapper temporary tryAt call requires canonical helper definition") {

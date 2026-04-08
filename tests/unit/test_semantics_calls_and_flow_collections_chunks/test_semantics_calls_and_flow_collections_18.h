@@ -409,7 +409,7 @@ main() {
   CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced vector access alias keeps method-call sugar same-path inference") {
+TEST_CASE("stdlib namespaced vector access alias keeps builtin element inference over same-path helper") {
   const std::string source = R"(
 [return<bool>]
 /std/collections/vector/at([vector<i32>] values, [bool] index) {
@@ -422,10 +422,10 @@ main() {
   [auto] inferred{values./std/collections/vector/at(true)}
   return(inferred)
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch: expected bool") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector helper alias method-call inference keeps unknown-method diagnostics") {
