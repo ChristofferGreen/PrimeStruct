@@ -5,6 +5,22 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Cleanup (April 8, 2026)**
+
+**Group 11 - Near-term graph queue**
+- ✓ Implement the next non-template inference-island migrations now that the graph-backed cutover contract is documented. Completed: direct-call/callee, receiver/method-call, and collection-helper/access islands all now publish and consume graph facts with focused positive/negative conformance coverage, and the replaced fallback branches are removed.
+- ✓ Implement the graph/CT-eval interaction contract now that the boundary is documented. Completed: one shared dependency-state seam now flows through graph-backed consumers, one CT-eval-only adapter seam is explicit and covered, and boundary mismatch diagnostics are locked by conformance fixtures.
+- ✓ Implement the graph-backed explicit/implicit template-inference migrations now that the cutover contract is documented. Completed: explicit and implicit template-inference surfaces now consume graph facts, required revalidation/monomorph follow-up moved onto graph facts, and fallback paths are removed with coverage.
+- ✓ Implement the next omitted-envelope and local-`auto` graph expansions now that the widening contract is documented. Completed: omitted struct-initializer envelopes plus local-`auto` `if` initializer/join widening are graph-backed and locked with positive/negative coverage.
+
+**Group 12 - Semantics/lowering boundary**
+- ✓ Turn missing semantic-product facts into explicit conformance failures instead of silent AST fallbacks. Completed: lowering-required fact-family completeness checks now fail deterministically with focused negative fixtures.
+- ✓ Move resolved call routing to semantic-product-only ownership. Completed: direct-call, method-call, helper/canonical bridge-path, and generic routing now stay semantic-product-authoritative with remaining semantic-id-present scope/import fallback probes removed.
+- ✓ Make graph-backed local-`auto`, query, `try(...)`, and `on_error` facts required lowering inputs. Completed: lowering now requires those graph-backed semantic facts for local/result/handler setup whenever semantic products are present.
+- ✓ Reshape `SemanticProgram` into module-scoped resolved artifacts instead of one flat whole-program fact bag. Completed: module identity/order and module-scoped fact ownership are established, lowerer/testing consumers read module-scoped artifacts, and flat-vector compatibility readers are deleted.
+- ✓ Add CI budget gates for graph invalidation and graph-build metrics using the `type-graph` output. Completed: corpora baselines, regression checker target, CI wiring, and budget-revision workflow documentation are all in place.
+- ✓ Retire AST-derived lowering fallbacks until the AST is provenance-only at the lowering boundary. Completed: binding-kind/helper-alias and semantic-mode method-call fallback paths are removed or hardened to explicit failures, with runtime-parity diagnostics and conformance coverage locking the behavior.
+
 **Todo Cleanup (April 7, 2026)**
 
 **Group 12 - Semantics/lowering boundary**
