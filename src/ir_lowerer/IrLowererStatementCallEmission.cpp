@@ -408,7 +408,9 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
       }
       if (expr.isMethodCall) {
         if (isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe") ||
-            isSimpleCallName(expr, "mapAt") || isSimpleCallName(expr, "mapAtUnsafe")) {
+            isSimpleCallName(expr, "mapAt") || isSimpleCallName(expr, "mapAtUnsafe") ||
+            isSimpleCallName(expr, "at_ref") || isSimpleCallName(expr, "at_unsafe_ref") ||
+            isSimpleCallName(expr, "mapAtRef") || isSimpleCallName(expr, "mapAtUnsafeRef")) {
           return true;
         }
       }

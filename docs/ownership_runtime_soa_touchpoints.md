@@ -198,10 +198,22 @@ path (based on current recognition hooks):
   from `at`/`at_unsafe` to compatibility alias helper stems when resolved
   receiver parameter typing is args-pack based (IR coverage:
   `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`).
+- Non-local method-sugar args-pack map-access compatibility `_ref` receiver
+  sources using canonical + alias stems (for example
+  `location(holder.mapsPack).at_ref(0i32)`,
+  `location(holder.mapsPack).at_unsafe_ref(0i32)`,
+  `location(holder.mapsPack).mapAtRef(0i32)`, and
+  `location(holder.mapsPack).mapAtUnsafeRef(0i32)`) now route through that
+  same rewrite path by extending method-form args-pack access recognition
+  parity from `at`/`at_unsafe` + `mapAt`/`mapAtUnsafe` to `_ref` helper
+  variants when resolved receiver parameter typing is args-pack based (IR
+  coverage:
+  `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`).
 - Remaining non-local lvalue receiver shapes that do not currently route
   through that same path (for example non-local receiver forms beyond
   field-access, helper-return, and args-pack map-access receiver-source `at` /
-  `at_unsafe` + compatibility-alias path/stem call/method chains).
+  `at_unsafe` / `at_ref` / `at_unsafe_ref` + compatibility-alias path/stem
+  call/method chains).
 - Temporary/helper-return receiver shapes that do not provide a stable writable
   lvalue target for pointer write-back now have deterministic compile-diagnostic
   coverage for both direct canonical and method-sugar insert forms (see
