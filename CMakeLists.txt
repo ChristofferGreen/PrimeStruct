@@ -1388,4 +1388,12 @@ if(PRIMESTRUCT_BUILD_TESTS)
     expected_text_filter_doctest_suites.txt
     ${PrimeStructTextFilterTestSuites}
   )
+
+  # Attach each CTest test name to its environment so helper wrappers can
+  # attribute runtime/memory observations to the owning CTest registration.
+  get_property(allPrimeStructTests DIRECTORY PROPERTY TESTS)
+  foreach(testName IN LISTS allPrimeStructTests)
+    set_property(TEST "${testName}" APPEND PROPERTY ENVIRONMENT
+                 "PRIMESTRUCT_CURRENT_CTEST_NAME=${testName}")
+  endforeach()
 endif()

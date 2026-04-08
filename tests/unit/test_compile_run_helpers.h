@@ -35,8 +35,30 @@ inline std::string writeTemp(const std::string &name, const std::string &content
   return path.string();
 }
 
+inline std::string quoteShellArg(const std::string &value) {
+  std::string quoted = "'";
+  for (char c : value) {
+    if (c == '\'') {
+      quoted += "'\\''";
+    } else {
+      quoted += c;
+    }
+  }
+  quoted += "'";
+  return quoted;
+}
+
+inline std::string wrappedCommand(const std::string &command) {
+  const char *wrapperPath = std::getenv("PRIMESTRUCT_RUN_COMMAND_WRAPPER");
+  if (wrapperPath == nullptr || wrapperPath[0] == '\0') {
+    return command;
+  }
+  return quoteShellArg(wrapperPath) + " " + quoteShellArg(command);
+}
+
 inline int runCommand(const std::string &command) {
-  int code = std::system(command.c_str());
+  const std::string commandToRun = wrappedCommand(command);
+  int code = std::system(commandToRun.c_str());
 #if defined(__unix__) || defined(__APPLE__)
   if (code == -1) {
     return -1;
@@ -69,19 +91,6 @@ inline std::vector<unsigned char> readBinaryFile(const std::string &path) {
   std::ifstream file(path, std::ios::binary);
   return std::vector<unsigned char>((std::istreambuf_iterator<char>(file)),
                                     std::istreambuf_iterator<char>());
-}
-
-inline std::string quoteShellArg(const std::string &value) {
-  std::string quoted = "'";
-  for (char c : value) {
-    if (c == '\'') {
-      quoted += "'\\''";
-    } else {
-      quoted += c;
-    }
-  }
-  quoted += "'";
-  return quoted;
 }
 
 inline bool hasZipTools() {

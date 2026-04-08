@@ -7,9 +7,13 @@ BUILD_TYPE="Debug"
 FAST_MODE=0
 FAST_TEST_THRESHOLD_SECONDS=10
 SKIP_TESTS=0
+INCLUDE_EXPENSIVE_TESTS=0
+EXPENSIVE_RUNTIME_THRESHOLD_SECONDS=3
+EXPENSIVE_MEMORY_THRESHOLD_MB=500
+DEFAULT_TEST_MEMORY_GUARD_MB=4096
 
 usage() {
-  echo "Usage: ./scripts/compile.sh [--release] [--fast] [--fast-threshold <seconds>] [--skip-tests]" >&2
+  echo "Usage: ./scripts/compile.sh [--release] [--fast] [--fast-threshold <seconds>] [--skip-tests] [--include-expensive-tests]" >&2
 }
 
 detect_jobs() {
@@ -32,54 +36,6 @@ detect_jobs() {
   fi
 
   printf '%s\n' "$jobs"
-}
-
-find_fast_cost_file() {
-  local build_dir="$1"
-  local local_cost_file="$build_dir/Testing/Temporary/CTestCostData.txt"
-
-  if [[ -f "$local_cost_file" ]]; then
-    printf '%s\n' "$local_cost_file"
-    return 0
-  fi
-
-  local build_dir_name
-  build_dir_name="$(basename "$build_dir")"
-
-  local main_worktree=""
-  if command -v git >/dev/null 2>&1; then
-    main_worktree="$(git -C "$ROOT_DIR" worktree list --porcelain 2>/dev/null |
-      awk '/^worktree / { print substr($0, 10); exit }')"
-  fi
-
-  if [[ -n "$main_worktree" ]]; then
-    local fallback_cost_file="$main_worktree/$build_dir_name/Testing/Temporary/CTestCostData.txt"
-    if [[ -f "$fallback_cost_file" ]]; then
-      printf '%s\n' "$fallback_cost_file"
-      return 0
-    fi
-  fi
-
-  return 1
-}
-
-build_fast_exclude_file() {
-  local build_dir="$1"
-  local threshold_seconds="$2"
-  local output_file="$3"
-  local cost_file=""
-  cost_file="$(find_fast_cost_file "$build_dir")" || {
-    return 1
-  }
-
-  awk -v threshold="$threshold_seconds" '
-    NF >= 3 && ($3 + 0) > threshold {
-      print $1
-    }
-  ' "$cost_file" > "$output_file"
-
-  FAST_COST_FILE="$cost_file"
-  return 0
 }
 
 while [[ $# -gt 0 ]]; do
@@ -106,6 +62,10 @@ while [[ $# -gt 0 ]]; do
       SKIP_TESTS=1
       shift
       ;;
+    --include-expensive-tests)
+      INCLUDE_EXPENSIVE_TESTS=1
+      shift
+      ;;
     *)
       usage
       exit 2
@@ -126,30 +86,19 @@ if [[ "$SKIP_TESTS" -eq 1 ]]; then
   exit 0
 fi
 
-ctest_args=(
-  --test-dir "$BUILD_DIR"
-  --output-on-failure
-  --parallel 2
-)
-
-if [[ "$FAST_MODE" -eq 1 ]]; then
-  FAST_EXCLUDE_FILE="$(mktemp "${TMPDIR:-/tmp}/primestruct-fast-tests.XXXXXX")"
-  trap 'rm -f "$FAST_EXCLUDE_FILE"' EXIT
-
-  if build_fast_exclude_file "$BUILD_DIR" "$FAST_TEST_THRESHOLD_SECONDS" "$FAST_EXCLUDE_FILE"; then
-    excluded_count="$(wc -l < "$FAST_EXCLUDE_FILE" | tr -d '[:space:]')"
-    if [[ "$FAST_COST_FILE" != "$BUILD_DIR/Testing/Temporary/CTestCostData.txt" ]]; then
-      echo "Fast mode: using fallback timing data from $FAST_COST_FILE."
-    fi
-    if [[ "$excluded_count" -gt 0 ]]; then
-      echo "Fast mode: excluding $excluded_count tests with historical runtime > ${FAST_TEST_THRESHOLD_SECONDS}s."
-      ctest_args+=(--exclude-from-file "$FAST_EXCLUDE_FILE")
-    else
-      echo "Fast mode: no historical tests exceed ${FAST_TEST_THRESHOLD_SECONDS}s."
-    fi
-  else
-    echo "Fast mode: no CTest timing data found locally or in the main worktree; running full suite." >&2
-  fi
+export PRIMESTRUCT_RUN_COMMAND_WRAPPER="$ROOT_DIR/scripts/test_command_wrapper.sh"
+if [[ ! -x "$PRIMESTRUCT_RUN_COMMAND_WRAPPER" ]]; then
+  echo "error: command wrapper is missing or not executable: $PRIMESTRUCT_RUN_COMMAND_WRAPPER" >&2
+  exit 1
 fi
 
-ctest "${ctest_args[@]}"
+export PRIMESTRUCT_EXPENSIVE_MEMORY_THRESHOLD_MB="${PRIMESTRUCT_EXPENSIVE_MEMORY_THRESHOLD_MB:-$EXPENSIVE_MEMORY_THRESHOLD_MB}"
+export PRIMESTRUCT_TEST_MEMORY_GUARD_MB="${PRIMESTRUCT_TEST_MEMORY_GUARD_MB:-$DEFAULT_TEST_MEMORY_GUARD_MB}"
+
+python3 "$ROOT_DIR/scripts/manage_expensive_tests.py" run-gate \
+  --build-dir "$BUILD_DIR" \
+  --fast-mode "$FAST_MODE" \
+  --fast-threshold "$FAST_TEST_THRESHOLD_SECONDS" \
+  --include-expensive-tests "$INCLUDE_EXPENSIVE_TESTS" \
+  --runtime-threshold "$EXPENSIVE_RUNTIME_THRESHOLD_SECONDS" \
+  --memory-threshold "$EXPENSIVE_MEMORY_THRESHOLD_MB"
