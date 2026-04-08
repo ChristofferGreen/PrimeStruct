@@ -403,8 +403,13 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
       return current;
     };
     auto isMapArgsPackAccessCall = [&](const Expr &expr) {
-      if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.args.size() != 2) {
+      if (expr.kind != Expr::Kind::Call || expr.args.size() != 2) {
         return false;
+      }
+      if (expr.isMethodCall) {
+        if (isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe")) {
+          return true;
+        }
       }
       if (expr.name == "/map/at" || expr.name == "/std/collections/map/at" ||
           expr.name == "/map/at_unsafe" || expr.name == "/std/collections/map/at_unsafe") {
