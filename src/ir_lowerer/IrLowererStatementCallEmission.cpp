@@ -406,13 +406,29 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
       if (expr.kind != Expr::Kind::Call || expr.args.size() != 2) {
         return false;
       }
+      auto isMapArgsPackMethodStem = [&](const char *stem) {
+        if (isSimpleCallName(expr, stem)) {
+          return true;
+        }
+        if (!expr.isMethodCall || expr.name.empty()) {
+          return false;
+        }
+        std::string methodName = expr.name;
+        if (!methodName.empty() && methodName.front() == '/') {
+          methodName.erase(methodName.begin());
+        }
+        if (methodName.find('/') != std::string::npos) {
+          return false;
+        }
+        return stripGeneratedHelperSuffix(std::move(methodName)) == stem;
+      };
       if (expr.isMethodCall) {
-        if (isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe") ||
-            isSimpleCallName(expr, "mapAt") || isSimpleCallName(expr, "mapAtUnsafe") ||
-            isSimpleCallName(expr, "at_ref") || isSimpleCallName(expr, "at_unsafe_ref") ||
-            isSimpleCallName(expr, "mapAtRef") || isSimpleCallName(expr, "mapAtUnsafeRef") ||
-            isSimpleCallName(expr, "At") || isSimpleCallName(expr, "AtUnsafe") ||
-            isSimpleCallName(expr, "AtRef") || isSimpleCallName(expr, "AtUnsafeRef")) {
+        if (isMapArgsPackMethodStem("at") || isMapArgsPackMethodStem("at_unsafe") ||
+            isMapArgsPackMethodStem("mapAt") || isMapArgsPackMethodStem("mapAtUnsafe") ||
+            isMapArgsPackMethodStem("at_ref") || isMapArgsPackMethodStem("at_unsafe_ref") ||
+            isMapArgsPackMethodStem("mapAtRef") || isMapArgsPackMethodStem("mapAtUnsafeRef") ||
+            isMapArgsPackMethodStem("At") || isMapArgsPackMethodStem("AtUnsafe") ||
+            isMapArgsPackMethodStem("AtRef") || isMapArgsPackMethodStem("AtUnsafeRef")) {
           return true;
         }
       }
