@@ -411,7 +411,12 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
         return true;
       }
       std::string accessName;
-      return getBuiltinArrayAccessName(expr, accessName) && accessName == "map";
+      if (getBuiltinArrayAccessName(expr, accessName) && accessName == "map") {
+        return true;
+      }
+      std::string helperName;
+      return resolveMapHelperAliasName(expr, helperName) &&
+             (helperName == "at" || helperName == "at_unsafe");
     };
 
     const Expr *canonicalReceiverExpr = peelReceiverWrappers(targetExpr);

@@ -176,10 +176,17 @@ path (based on current recognition hooks):
   same rewrite path by extending args-pack map-target recognition and
   receiver-typing inference parity with `at` (IR coverage:
   `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`).
+- Non-local args-pack map-access compatibility-alias receiver sources (for
+  example `/std/collections/mapAt(location(holder.mapsPack), 0i32)` and
+  `/std/collections/mapAtUnsafe(location(holder.mapsPack), 0i32)`) now route
+  through that same rewrite path by extending args-pack receiver-source
+  map-target recognition/rewrite inference parity from `/map/at` /
+  `/map/at_unsafe` to alias helper paths (IR coverage:
+  `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`).
 - Remaining non-local lvalue receiver shapes that do not currently route
   through that same path (for example non-local receiver forms beyond
   field-access, helper-return, and args-pack map-access receiver-source `at` /
-  `at_unsafe` chains).
+  `at_unsafe` + compatibility-alias chains).
 - Temporary/helper-return receiver shapes that do not provide a stable writable
   lvalue target for pointer write-back now have deterministic compile-diagnostic
   coverage for both direct canonical and method-sugar insert forms (see

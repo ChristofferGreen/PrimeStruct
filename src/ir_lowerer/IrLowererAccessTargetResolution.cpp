@@ -4,6 +4,7 @@
 
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -305,10 +306,15 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
       }
     }
     std::string accessName;
+    std::string helperName;
+    const bool isAliasMapArgsPackAccess =
+        resolveMapHelperAliasName(target, helperName) &&
+        (helperName == "at" || helperName == "at_unsafe");
     const bool isExplicitMapArgsPackAccess =
         !target.isMethodCall &&
         (target.name == "/map/at" || target.name == "/std/collections/map/at" ||
-         target.name == "/map/at_unsafe" || target.name == "/std/collections/map/at_unsafe") &&
+         target.name == "/map/at_unsafe" || target.name == "/std/collections/map/at_unsafe" ||
+         isAliasMapArgsPackAccess) &&
         target.args.size() == 2;
     if ((getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) ||
         isExplicitMapArgsPackAccess) {

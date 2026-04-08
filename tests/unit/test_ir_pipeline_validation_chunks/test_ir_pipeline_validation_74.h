@@ -425,6 +425,10 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
   mapAtArgsPackDef.fullPath = "/map/at";
   primec::Definition mapAtArgsPackUnsafeDef;
   mapAtArgsPackUnsafeDef.fullPath = "/map/at_unsafe";
+  primec::Definition mapAtAliasArgsPackDef;
+  mapAtAliasArgsPackDef.fullPath = "/std/collections/mapAt";
+  primec::Definition mapAtUnsafeAliasArgsPackDef;
+  mapAtUnsafeAliasArgsPackDef.fullPath = "/std/collections/mapAtUnsafe";
   primec::Expr mapInsertMethodValuesParam;
   mapInsertMethodValuesParam.kind = primec::Expr::Kind::Name;
   mapInsertMethodValuesParam.name = "values";
@@ -445,6 +449,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
   mapAtArgsPackValuesParam.transforms = {mapAtArgsPackValuesTypeTransform};
   mapAtArgsPackDef.parameters = {mapAtArgsPackValuesParam};
   mapAtArgsPackUnsafeDef.parameters = {mapAtArgsPackValuesParam};
+  mapAtAliasArgsPackDef.parameters = {mapAtArgsPackValuesParam};
+  mapAtUnsafeAliasArgsPackDef.parameters = {mapAtArgsPackValuesParam};
 
   inlineCalls = 0;
   instructions.clear();
@@ -1389,6 +1395,235 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/map/at_unsafe") {
                 return &mapAtArgsPackUnsafeDef;
+              }
+              if (callExpr.name == "/std/collections/map/insert_builtin") {
+                return &mapInsertBuiltinDef;
+              }
+              return nullptr;
+            },
+            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
+              if (path == "/std/collections/map/insert_builtin") {
+                info.returnsVoid = true;
+                return true;
+              }
+              return false;
+            },
+            [&](const primec::Expr &callExpr,
+                const primec::Definition &callee,
+                const primec::ir_lowerer::LocalMap &,
+                bool expectValue) {
+              ++inlineCalls;
+              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
+              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(callExpr.isMethodCall);
+              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(expectValue);
+              CHECK(callExpr.templateArgs == expectedTemplateArgs);
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(inlineCalls == 1);
+  CHECK(instructions.empty());
+
+  primec::Expr mapsPackAtAliasNonLocalReceiverExpr;
+  mapsPackAtAliasNonLocalReceiverExpr.kind = primec::Expr::Kind::Call;
+  mapsPackAtAliasNonLocalReceiverExpr.name = "/std/collections/mapAt";
+  mapsPackAtAliasNonLocalReceiverExpr.args = {holderMapsPackFieldLocationExpr, mapsPackSlotIndex};
+  mapsPackAtAliasNonLocalReceiverExpr.argNames = {std::nullopt, std::nullopt};
+
+  primec::Expr mapInsertArgsPackAliasNonLocalReceiverInferredStmt = mapInsertStmt;
+  mapInsertArgsPackAliasNonLocalReceiverInferredStmt.args = {mapsPackAtAliasNonLocalReceiverExpr, keyArg, valueArg};
+  mapInsertArgsPackAliasNonLocalReceiverInferredStmt.argNames = {std::nullopt, std::nullopt, std::nullopt};
+  mapInsertArgsPackAliasNonLocalReceiverInferredStmt.templateArgs.clear();
+
+  inlineCalls = 0;
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            mapInsertArgsPackAliasNonLocalReceiverInferredStmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &callExpr) -> const primec::Definition * {
+              if (callExpr.name == "/std/collections/mapAt") {
+                return &mapAtAliasArgsPackDef;
+              }
+              if (callExpr.name == "/std/collections/map/insert_builtin") {
+                return &mapInsertBuiltinDef;
+              }
+              return nullptr;
+            },
+            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
+              if (path == "/std/collections/map/insert_builtin") {
+                info.returnsVoid = true;
+                return true;
+              }
+              return false;
+            },
+            [&](const primec::Expr &callExpr,
+                const primec::Definition &callee,
+                const primec::ir_lowerer::LocalMap &,
+                bool expectValue) {
+              ++inlineCalls;
+              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
+              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(callExpr.isMethodCall);
+              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(expectValue);
+              CHECK(callExpr.templateArgs == expectedTemplateArgs);
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(inlineCalls == 1);
+  CHECK(instructions.empty());
+
+  primec::Expr mapInsertArgsPackAliasNonLocalReceiverMethodStmt;
+  mapInsertArgsPackAliasNonLocalReceiverMethodStmt.kind = primec::Expr::Kind::Call;
+  mapInsertArgsPackAliasNonLocalReceiverMethodStmt.name = "insert";
+  mapInsertArgsPackAliasNonLocalReceiverMethodStmt.isMethodCall = true;
+  mapInsertArgsPackAliasNonLocalReceiverMethodStmt.args = {mapsPackAtAliasNonLocalReceiverExpr, keyArg, valueArg};
+  mapInsertArgsPackAliasNonLocalReceiverMethodStmt.argNames = {std::nullopt, std::nullopt, std::nullopt};
+
+  inlineCalls = 0;
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            mapInsertArgsPackAliasNonLocalReceiverMethodStmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &callExpr,
+                const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              if (callExpr.isMethodCall && callExpr.name == "insert" && callExpr.args.size() == 3) {
+                return &mapInsertAliasDef;
+              }
+              return nullptr;
+            },
+            [&](const primec::Expr &callExpr) -> const primec::Definition * {
+              if (callExpr.name == "/std/collections/mapAt") {
+                return &mapAtAliasArgsPackDef;
+              }
+              if (callExpr.name == "/std/collections/map/insert_builtin") {
+                return &mapInsertBuiltinDef;
+              }
+              return nullptr;
+            },
+            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
+              if (path == "/std/collections/map/insert_builtin") {
+                info.returnsVoid = true;
+                return true;
+              }
+              return false;
+            },
+            [&](const primec::Expr &callExpr,
+                const primec::Definition &callee,
+                const primec::ir_lowerer::LocalMap &,
+                bool expectValue) {
+              ++inlineCalls;
+              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
+              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(callExpr.isMethodCall);
+              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(expectValue);
+              CHECK(callExpr.templateArgs == expectedTemplateArgs);
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(inlineCalls == 1);
+  CHECK(instructions.empty());
+
+  primec::Expr mapsPackAtUnsafeAliasNonLocalReceiverExpr;
+  mapsPackAtUnsafeAliasNonLocalReceiverExpr.kind = primec::Expr::Kind::Call;
+  mapsPackAtUnsafeAliasNonLocalReceiverExpr.name = "/std/collections/mapAtUnsafe";
+  mapsPackAtUnsafeAliasNonLocalReceiverExpr.args = {holderMapsPackFieldLocationExpr, mapsPackSlotIndex};
+  mapsPackAtUnsafeAliasNonLocalReceiverExpr.argNames = {std::nullopt, std::nullopt};
+
+  primec::Expr mapInsertArgsPackUnsafeAliasNonLocalReceiverInferredStmt = mapInsertStmt;
+  mapInsertArgsPackUnsafeAliasNonLocalReceiverInferredStmt.args = {mapsPackAtUnsafeAliasNonLocalReceiverExpr, keyArg, valueArg};
+  mapInsertArgsPackUnsafeAliasNonLocalReceiverInferredStmt.argNames = {std::nullopt, std::nullopt, std::nullopt};
+  mapInsertArgsPackUnsafeAliasNonLocalReceiverInferredStmt.templateArgs.clear();
+
+  inlineCalls = 0;
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            mapInsertArgsPackUnsafeAliasNonLocalReceiverInferredStmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &callExpr) -> const primec::Definition * {
+              if (callExpr.name == "/std/collections/mapAtUnsafe") {
+                return &mapAtUnsafeAliasArgsPackDef;
+              }
+              if (callExpr.name == "/std/collections/map/insert_builtin") {
+                return &mapInsertBuiltinDef;
+              }
+              return nullptr;
+            },
+            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
+              if (path == "/std/collections/map/insert_builtin") {
+                info.returnsVoid = true;
+                return true;
+              }
+              return false;
+            },
+            [&](const primec::Expr &callExpr,
+                const primec::Definition &callee,
+                const primec::ir_lowerer::LocalMap &,
+                bool expectValue) {
+              ++inlineCalls;
+              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
+              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(callExpr.isMethodCall);
+              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(expectValue);
+              CHECK(callExpr.templateArgs == expectedTemplateArgs);
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(inlineCalls == 1);
+  CHECK(instructions.empty());
+
+  primec::Expr mapInsertArgsPackUnsafeAliasNonLocalReceiverMethodStmt;
+  mapInsertArgsPackUnsafeAliasNonLocalReceiverMethodStmt.kind = primec::Expr::Kind::Call;
+  mapInsertArgsPackUnsafeAliasNonLocalReceiverMethodStmt.name = "insert";
+  mapInsertArgsPackUnsafeAliasNonLocalReceiverMethodStmt.isMethodCall = true;
+  mapInsertArgsPackUnsafeAliasNonLocalReceiverMethodStmt.args = {mapsPackAtUnsafeAliasNonLocalReceiverExpr, keyArg,
+                                                                 valueArg};
+  mapInsertArgsPackUnsafeAliasNonLocalReceiverMethodStmt.argNames = {std::nullopt, std::nullopt, std::nullopt};
+
+  inlineCalls = 0;
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            mapInsertArgsPackUnsafeAliasNonLocalReceiverMethodStmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &callExpr,
+                const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              if (callExpr.isMethodCall && callExpr.name == "insert" && callExpr.args.size() == 3) {
+                return &mapInsertAliasDef;
+              }
+              return nullptr;
+            },
+            [&](const primec::Expr &callExpr) -> const primec::Definition * {
+              if (callExpr.name == "/std/collections/mapAtUnsafe") {
+                return &mapAtUnsafeAliasArgsPackDef;
               }
               if (callExpr.name == "/std/collections/map/insert_builtin") {
                 return &mapInsertBuiltinDef;
