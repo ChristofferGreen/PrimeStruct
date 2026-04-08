@@ -266,6 +266,7 @@ bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   const std::string mapPrefix = "map/";
   const std::string stdMapPrefix = "std/collections/map/";
   const std::string collectionsMapWrapperPrefix = "std/collections/map";
+  const std::string collectionsMapPascalWrapperPrefix = "std/collections/Map";
   const std::string experimentalMapPrefix = "std/collections/experimental_map/";
   if (normalized.rfind(mapPrefix, 0) == 0) {
     return resolveCollectionsMapWrapperAliasName(
@@ -279,6 +280,10 @@ bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
       normalized.rfind(stdMapPrefix, 0) != 0) {
     return resolveCollectionsMapWrapperAliasName(
         normalized.substr(collectionsMapWrapperPrefix.size()), helperNameOut);
+  }
+  if (normalized.rfind(collectionsMapPascalWrapperPrefix, 0) == 0) {
+    return resolveCollectionsMapWrapperAliasName(
+        normalized.substr(collectionsMapPascalWrapperPrefix.size()), helperNameOut);
   }
   if (normalized.rfind(experimentalMapPrefix, 0) == 0) {
     return resolveCollectionsMapWrapperAliasName(

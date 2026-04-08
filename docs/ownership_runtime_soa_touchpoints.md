@@ -337,6 +337,20 @@ path (based on current recognition hooks):
   `src/ir_lowerer/IrLowererCountAccessClassifiers.cpp`,
   `src/ir_lowerer/IrLowererStatementCallEmission.cpp`, and
   `src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h`).
+- Non-local field-access receiver chains now also route through that same
+  rewrite path when direct-call helper names use path-qualified PascalCase
+  stdlib map-wrapper prefixes (for example
+  `/std/collections/MapInsert__generated(...)` and
+  `/std/collections/MapInsertRef__generated(...)`) by extending map-helper
+  alias/classifier wrapper-prefix matching parity from lowercase
+  `std/collections/map...` to PascalCase `std/collections/Map...` before
+  canonical insert rewrite matching (IR coverage:
+  `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`;
+  rewrite parity touchpoints:
+  `src/ir_lowerer/IrLowererSetupTypeCollectionHelpers.cpp`,
+  `src/ir_lowerer/IrLowererCountAccessClassifiers.cpp`,
+  `src/ir_lowerer/IrLowererStatementCallEmission.cpp`, and
+  `src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h`).
 - Remaining non-local lvalue receiver shapes that do not currently route
   through that same path (for example non-local receiver forms beyond
   field-access, helper-return, and args-pack map-access receiver-source `at` /
