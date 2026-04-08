@@ -65,6 +65,20 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
 
       const bool isSoaVector = (builtin == "soa_vector");
       const bool isVectorLike = (builtin == "vector" || isSoaVector);
+      if (isSoaVector && !expr.args.empty()) {
+        Expr vectorValuesExpr;
+        vectorValuesExpr.kind = Expr::Kind::Call;
+        vectorValuesExpr.name = "/std/collections/experimental_vector/vector";
+        vectorValuesExpr.templateArgs = expr.templateArgs;
+        vectorValuesExpr.args = expr.args;
+
+        Expr soaFromAosExpr;
+        soaFromAosExpr.kind = Expr::Kind::Call;
+        soaFromAosExpr.name = "/std/collections/experimental_soa_vector/soaVectorFromAos";
+        soaFromAosExpr.templateArgs = expr.templateArgs;
+        soaFromAosExpr.args.push_back(vectorValuesExpr);
+        return emitExpr(soaFromAosExpr, localsIn);
+      }
       LocalInfo::ValueKind elemKind = valueKindFromTypeName(expr.templateArgs.front());
       const bool isEmptyOpaqueVectorLiteral =
           builtin == "vector" && elemKind == LocalInfo::ValueKind::Unknown &&
@@ -72,10 +86,6 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       if (!isSoaVector && elemKind == LocalInfo::ValueKind::Unknown &&
           !isEmptyOpaqueVectorLiteral) {
         error = "native backend only supports numeric/bool/string " + builtin + " literals";
-        return false;
-      }
-      if (isSoaVector && !expr.args.empty()) {
-        error = "native backend does not support non-empty soa_vector literals";
         return false;
       }
 

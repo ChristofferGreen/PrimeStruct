@@ -489,7 +489,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowerer rejects non-empty soa_vector literals with deterministic diagnostic") {
+TEST_CASE("ir lowerer lowers non-empty soa_vector literals through substrate helper routing") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -509,8 +509,10 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error == "native backend does not support non-empty soa_vector literals");
+  CHECK(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Any, error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("root get helper forms lower through canonical helper routing") {

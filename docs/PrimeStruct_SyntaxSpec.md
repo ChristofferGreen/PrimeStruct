@@ -1133,8 +1133,10 @@ outside the experimental helper path. The remaining invalidation boundary now
 starts at later whole-value `ref(...)` shrink/motion, storage-replacement/destruction,
 and provenance/escape rules after the later standalone borrowed field-view values
 themselves land.
-Non-empty literals still emit the deterministic unsupported diagnostic
-`native backend does not support non-empty soa_vector literals`.
+Non-empty `soa_vector` literals now lower through the shared stdlib substrate
+path (`experimental_vector/vector<T>(...)` into
+`experimental_soa_vector/soaVectorFromAos<T>(...)`) instead of the former
+direct unsupported diagnostic boundary.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the
 stdlib `.prime` implementation replace them.
 Draft example source: `examples/3.Surface/soa_vector_ecs_draft.prime` (semantic/example-only until SoA runtime support

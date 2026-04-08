@@ -183,9 +183,10 @@ Semantics-layer pending fallback diagnostics:
   - `src/semantics/TemplateMonomorphImplicitTemplateInference.h`
 
 IR-lowerer/runtime special-case boundaries:
-- Non-empty literal rejection remains explicit in:
+- Non-empty `soa_vector` literal lowering now routes through:
   - `src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp`
-    (`native backend does not support non-empty soa_vector literals`)
+    (rewritten via `experimental_vector/vector<T>(...)` into
+    `experimental_soa_vector/soaVectorFromAos<T>(...)`)
 - Arbitrary-width pending helper path still exists in:
   - `src/ir_lowerer/IrLowererLowerInlineCalls.h`
     (`/std/collections/experimental_soa_storage/soaArbitraryWidthPending`)
