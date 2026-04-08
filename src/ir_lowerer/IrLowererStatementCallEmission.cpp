@@ -335,6 +335,27 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
       return keyKindOut != LocalInfo::ValueKind::Unknown &&
              valueKindOut != LocalInfo::ValueKind::Unknown;
     };
+    auto inferMapKindsFromArgsPackTypeText = [&](const std::string &typeText,
+                                                 LocalInfo::ValueKind &keyKindOut,
+                                                 LocalInfo::ValueKind &valueKindOut) {
+      keyKindOut = LocalInfo::ValueKind::Unknown;
+      valueKindOut = LocalInfo::ValueKind::Unknown;
+
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
+        return false;
+      }
+
+      const std::string normalizedBase = trimTemplateTypeText(base);
+      const bool isArgsPackBase =
+          normalizedBase == "args" || normalizedBase == "/args" ||
+          normalizedBase == "Args" || normalizedBase == "/Args";
+      if (!isArgsPackBase) {
+        return false;
+      }
+      return inferMapKindsFromTypeText(argText, keyKindOut, valueKindOut);
+    };
     auto extractParameterTypeName = [&](const Expr &paramExpr) {
       for (const auto &transform : paramExpr.transforms) {
         if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
@@ -380,6 +401,16 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
         current = peelLocationWrappers(current->args.front());
       }
       return current;
+    };
+    auto isMapArgsPackAccessCall = [&](const Expr &expr) {
+      if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.args.size() != 2) {
+        return false;
+      }
+      if (expr.name == "/map/at" || expr.name == "/std/collections/map/at") {
+        return true;
+      }
+      std::string accessName;
+      return getBuiltinArrayAccessName(expr, accessName) && accessName == "map";
     };
 
     const Expr *canonicalReceiverExpr = peelReceiverWrappers(targetExpr);
@@ -449,6 +480,22 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
 
     if (tryPopulateFromResolvedCallee(resolveDefinitionCall(*canonicalReceiverExpr))) {
       return true;
+    }
+
+    if (isMapArgsPackAccessCall(*canonicalReceiverExpr) &&
+        canonicalReceiverExpr->args.front().kind != Expr::Kind::Name) {
+      const Definition *mapAccessCallee = resolveDefinitionCall(*canonicalReceiverExpr);
+      if (mapAccessCallee != nullptr &&
+          !mapAccessCallee->parameters.empty()) {
+        const std::string receiverTypeText =
+            extractParameterTypeName(mapAccessCallee->parameters.front());
+        if (inferMapKindsFromArgsPackTypeText(receiverTypeText,
+                                              targetInfoOut.mapKeyKind,
+                                              targetInfoOut.mapValueKind)) {
+          targetInfoOut.isMapTarget = true;
+          return true;
+        }
+      }
     }
 
     // Direct canonical insert calls on non-local field receivers already carry
