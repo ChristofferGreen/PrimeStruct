@@ -44,9 +44,9 @@ Blocked by Group 13 rollout constraints until the remaining collection-helper/ru
     - ✓ Implement a minimal adapter for that dependency state.
     - ✓ Wire one CT-eval callsite through the adapter.
     - ✓ Add boundary diagnostics for adapter/graph mismatch cases.
-  - ○ Add conformance coverage for the graph/CT-eval handoff boundary.
-    - ○ Add a positive fixture that exercises the adapter seam.
-    - ○ Add a negative diagnostic fixture that proves boundary mismatch rejection.
+  - ✓ Add conformance coverage for the graph/CT-eval handoff boundary.
+    - ✓ Add a positive fixture that exercises the adapter seam.
+    - ✓ Add a negative diagnostic fixture that proves boundary mismatch rejection.
 - ◐ Implement the graph-backed explicit/implicit template-inference migrations now that the cutover contract is documented.
   - ○ Migrate the next explicit template-argument inference surface onto the graph path.
     - ✓ Select one explicit template-argument surface (see `docs/type_graph_migration_touchpoints.md`, section 6).

@@ -1,6 +1,7 @@
 #include "SemanticsHelpers.h"
 #include "MapConstructorHelpers.h"
 #include "primec/Ast.h"
+#include "primec/testing/SemanticsValidationHelpers.h"
 
 #include <algorithm>
 #include <cctype>
@@ -281,6 +282,19 @@ bool monomorphizeTemplates(Program &program, const std::string &entryPath, std::
   program.definitions = std::move(ctx.outputDefs);
   program.executions = std::move(ctx.outputExecs);
   return true;
+}
+
+void classifyTemplatedFallbackQueryTypeTextForTesting(
+    const std::string &queryTypeText,
+    TemplatedFallbackQueryStateEnvelopeSnapshotForTesting &out) {
+  TemplatedFallbackQueryStateAdapterData adapter;
+  adapter.queryTypeText = queryTypeText;
+  populateTemplatedFallbackQueryStateAdapterFromQueryTypeText(queryTypeText, adapter);
+  out.hasResultType = adapter.hasResultType;
+  out.resultTypeHasValue = adapter.resultTypeHasValue;
+  out.resultValueType = std::move(adapter.resultValueType);
+  out.resultErrorType = std::move(adapter.resultErrorType);
+  out.mismatchDiagnostic = std::move(adapter.mismatchDiagnostic);
 }
 
 } // namespace primec::semantics

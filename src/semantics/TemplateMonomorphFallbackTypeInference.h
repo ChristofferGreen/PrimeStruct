@@ -279,6 +279,50 @@ struct TemplatedFallbackQueryStateAdapterData {
   std::string mismatchDiagnostic;
 };
 
+void populateTemplatedFallbackQueryStateAdapterFromQueryTypeText(
+    const std::string &queryTypeText,
+    TemplatedFallbackQueryStateAdapterData &out) {
+  out.hasResultType = false;
+  out.resultTypeHasValue = false;
+  out.resultValueType.clear();
+  out.resultErrorType.clear();
+  out.mismatchDiagnostic.clear();
+
+  std::string normalizedQueryType = normalizeBindingTypeName(queryTypeText);
+  std::string resultBase;
+  std::string resultArgText;
+  if (!splitTemplateTypeName(normalizedQueryType, resultBase, resultArgText)) {
+    if (normalizeBindingTypeName(normalizedQueryType) == "Result") {
+      out.mismatchDiagnostic = "result query type missing template arguments: " + queryTypeText;
+    }
+    return;
+  }
+
+  resultBase = normalizeBindingTypeName(resultBase);
+  if (!resultBase.empty() && resultBase.front() == '/') {
+    resultBase.erase(resultBase.begin());
+  }
+  if (resultBase != "Result") {
+    return;
+  }
+
+  std::vector<std::string> resultArgs;
+  if (!splitTopLevelTemplateArgs(resultArgText, resultArgs) || resultArgs.empty() || resultArgs.size() > 2) {
+    out.mismatchDiagnostic = "invalid Result query type envelope: " + queryTypeText;
+    return;
+  }
+
+  out.hasResultType = true;
+  if (resultArgs.size() == 2) {
+    out.resultTypeHasValue = true;
+    out.resultValueType = normalizeBindingTypeName(resultArgs.front());
+    out.resultErrorType = normalizeBindingTypeName(resultArgs.back());
+  } else {
+    out.resultTypeHasValue = false;
+    out.resultErrorType = normalizeBindingTypeName(resultArgs.front());
+  }
+}
+
 bool inferDefinitionReturnBindingForTemplatedFallback(const Definition &def,
                                                       bool allowMathBare,
                                                       Context &ctx,
@@ -436,41 +480,7 @@ bool inferTemplatedFallbackQueryStateAdapter(const Expr &expr,
       out.receiverBinding = std::move(receiverBinding);
     }
   }
-
-  std::string normalizedQueryType = normalizeBindingTypeName(out.queryTypeText);
-  std::string resultBase;
-  std::string resultArgText;
-  if (!splitTemplateTypeName(normalizedQueryType, resultBase, resultArgText)) {
-    if (normalizeBindingTypeName(normalizedQueryType) == "Result") {
-      out.mismatchDiagnostic =
-          "result query type missing template arguments: " + out.queryTypeText;
-    }
-    return true;
-  }
-
-  resultBase = normalizeBindingTypeName(resultBase);
-  if (!resultBase.empty() && resultBase.front() == '/') {
-    resultBase.erase(resultBase.begin());
-  }
-  if (resultBase != "Result") {
-    return true;
-  }
-
-  std::vector<std::string> resultArgs;
-  if (!splitTopLevelTemplateArgs(resultArgText, resultArgs) || resultArgs.empty() || resultArgs.size() > 2) {
-    out.mismatchDiagnostic = "invalid Result query type envelope: " + out.queryTypeText;
-    return true;
-  }
-
-  out.hasResultType = true;
-  if (resultArgs.size() == 2) {
-    out.resultTypeHasValue = true;
-    out.resultValueType = normalizeBindingTypeName(resultArgs.front());
-    out.resultErrorType = normalizeBindingTypeName(resultArgs.back());
-  } else {
-    out.resultTypeHasValue = false;
-    out.resultErrorType = normalizeBindingTypeName(resultArgs.front());
-  }
+  populateTemplatedFallbackQueryStateAdapterFromQueryTypeText(out.queryTypeText, out);
   return true;
 }
 

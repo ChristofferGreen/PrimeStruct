@@ -6,6 +6,7 @@
 #include "primec/IrSerializer.h"
 #include "primec/testing/CompilePipelineDumpHelpers.h"
 #include "primec/testing/SemanticsGraphHelpers.h"
+#include "primec/testing/SemanticsValidationHelpers.h"
 
 #include "third_party/doctest.h"
 #include "test_semantics_helpers.h"
@@ -207,6 +208,29 @@ main() {
   CHECK(tryEntry.operandQueryTypeText == callEntry.typeText);
   CHECK(tryEntry.valueTypeText == resultEntry.valueTypeText);
   CHECK(tryEntry.errorTypeText == resultEntry.errorTypeText);
+}
+
+TEST_CASE("templated fallback adapter seam classifies Result value and error envelope") {
+  primec::semantics::TemplatedFallbackQueryStateEnvelopeSnapshotForTesting snapshot;
+  primec::semantics::classifyTemplatedFallbackQueryTypeTextForTesting(
+      "Result<int, MyError>", snapshot);
+
+  CHECK(snapshot.hasResultType);
+  CHECK(snapshot.resultTypeHasValue);
+  CHECK(snapshot.resultValueType == "int");
+  CHECK(snapshot.resultErrorType == "MyError");
+  CHECK(snapshot.mismatchDiagnostic.empty());
+}
+
+TEST_CASE("templated fallback adapter seam rejects missing Result envelope arguments") {
+  primec::semantics::TemplatedFallbackQueryStateEnvelopeSnapshotForTesting snapshot;
+  primec::semantics::classifyTemplatedFallbackQueryTypeTextForTesting("Result", snapshot);
+
+  CHECK_FALSE(snapshot.hasResultType);
+  CHECK_FALSE(snapshot.resultTypeHasValue);
+  CHECK(snapshot.resultValueType.empty());
+  CHECK(snapshot.resultErrorType.empty());
+  CHECK(snapshot.mismatchDiagnostic == "result query type missing template arguments: Result");
 }
 
 TEST_CASE("type resolution graph snapshot records timing metrics") {

@@ -10,6 +10,14 @@
 
 namespace primec::semantics {
 
+struct TemplatedFallbackQueryStateEnvelopeSnapshotForTesting {
+  bool hasResultType = false;
+  bool resultTypeHasValue = false;
+  std::string resultValueType;
+  std::string resultErrorType;
+  std::string mismatchDiagnostic;
+};
+
 std::vector<std::string> runSemanticsValidatorExprCaptureSplitStep(const std::string &text);
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
 std::optional<uint64_t> runSemanticsValidatorStatementKnownIterationCountStep(const Expr &countExpr,
@@ -29,5 +37,8 @@ std::string runSemanticsReturnKindNameStep(const Definition &def,
                                            const std::unordered_set<std::string> &structNames,
                                            const std::unordered_map<std::string, std::string> &importAliases,
                                            std::string &error);
+void classifyTemplatedFallbackQueryTypeTextForTesting(
+    const std::string &queryTypeText,
+    TemplatedFallbackQueryStateEnvelopeSnapshotForTesting &out);
 
 } // namespace primec::semantics
