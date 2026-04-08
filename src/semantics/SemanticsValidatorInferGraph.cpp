@@ -350,6 +350,13 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
     const auto [sourceLine, sourceColumn] = graphLocalAutoSourceLocation(bindingExpr);
     const std::string bindingKey =
         graphLocalAutoBindingKey(def.fullPath, sourceLine, sourceColumn);
+    const bool isStructFieldOmittedEnvelope =
+        structNames_.count(def.fullPath) > 0 &&
+        !hasExplicitBindingTypeTransform(bindingExpr) &&
+        bindingExpr.args.size() == 1;
+    if (isStructFieldOmittedEnvelope) {
+      return true;
+    }
     const auto dependencyIt = dependencyCountByBindingKey.find(bindingKey);
     if (dependencyIt == dependencyCountByBindingKey.end()) {
       return false;
@@ -434,7 +441,7 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
       if (!inferBindingForLocals(def, defParams, activeLocals, expr, binding)) {
         return;
       }
-      if (shouldCaptureGraphBinding(def, expr)) {
+      if (shouldCaptureGraphBinding(def, expr) && graphBindingIsUsable(binding)) {
         const auto [sourceLine, sourceColumn] = graphLocalAutoSourceLocation(expr);
         const std::string bindingKey =
             graphLocalAutoBindingKey(def.fullPath, sourceLine, sourceColumn);

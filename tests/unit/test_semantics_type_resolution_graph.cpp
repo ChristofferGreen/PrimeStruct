@@ -884,6 +884,72 @@ main() {
   CHECK(viaMethod.initializerMethodCallReturnKindText == "i32");
 }
 
+TEST_CASE("type resolution local binding snapshot captures omitted struct initializer envelope facts") {
+  const std::string source = R"(
+[struct]
+Vec3() {
+  [i32] x{7i32}
+}
+
+[struct]
+Sphere() {
+  center{Vec3()}
+}
+
+[return<i32>]
+main() {
+  [Sphere] sphere{Sphere()}
+  return(sphere.center.x)
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionLocalBindingSnapshot snapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  const auto &center = requireLocalBindingSnapshotEntry(snapshot, "/Sphere", "center");
+  CHECK(center.sourceLine > 0);
+  CHECK(center.sourceColumn > 0);
+  CHECK(center.bindingTypeText == "Vec3" || center.bindingTypeText == "/Vec3");
+}
+
+TEST_CASE("type resolution local binding snapshot preserves omitted struct envelope ambiguity diagnostics") {
+  const std::string source = R"(
+[struct]
+Vec2() {
+  [i32] x{1i32}
+}
+
+[struct]
+Vec3() {
+  [i32] x{2i32}
+}
+
+[struct]
+Shape() {
+  center{
+    if(true,
+      then(){ return(Vec2()) },
+      else(){ return(Vec3()) })
+  }
+}
+
+[return<i32>]
+main() {
+  return(0i32)
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionLocalBindingSnapshot snapshot;
+  CHECK_FALSE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.find("unresolved or ambiguous omitted struct field envelope: /Shape/center") !=
+        std::string::npos);
+}
+
 TEST_CASE("type resolution local binding snapshot prefers graph-backed vector helper aliases") {
   const std::string source = R"(
 [return<i32>]

@@ -20,7 +20,10 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
     }
     return true;
   }
-  if (lookupGraphLocalAutoBinding(structDef.fullPath, fieldStmt, bindingOut)) {
+  BindingInfo graphBinding = bindingOut;
+  if (lookupGraphLocalAutoBinding(structDef.fullPath, fieldStmt, graphBinding) &&
+      graphBindingIsUsable(graphBinding)) {
+    bindingOut = std::move(graphBinding);
     if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {
       return failExprDiagnostic(fieldStmt, error_);
     }
