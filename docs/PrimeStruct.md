@@ -3007,9 +3007,11 @@ bad_use_after_take() {
     non-local grown-pointer write-back/repoint primitive for wrapper targets, and direct canonical
     `/std/collections/map/insert(...)` plus method-sugar `receiver.insert(...)` calls now also route
     map-returning helper receivers (including nested field-access helper returns) onto that same
-    rewrite path. Temporary helper-return value receivers that do not provide a stable writable lvalue
-    target now have deterministic compile-time rejects in conformance coverage (direct canonical and
-    method-sugar forms). The remaining public
+    rewrite path. Direct canonical field-access non-local receivers (for example `holder.values`) now
+    also route through that path when explicit helper template arguments provide map typing.
+    Temporary helper-return value receivers that do not provide a stable writable lvalue target now
+    have deterministic compile-time rejects in conformance coverage (direct canonical and method-sugar
+    forms). The remaining public
     builtin borrowed/non-local mutation surfaces still need to route onto that path instead of the
     current pending runtime boundary.
   - Current relocation contract: builtin `push` and `reserve` are only defined for relocation-trivial element types

@@ -284,21 +284,36 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
   const auto inferCallMapTargetInfo = [&](const Expr &targetExpr, MapAccessTargetInfo &targetInfoOut) {
     targetInfoOut = {};
     const Definition *callee = resolveDefinitionCall(targetExpr);
-    if (callee == nullptr) {
-      return false;
+    if (callee != nullptr) {
+      std::string collectionName;
+      std::vector<std::string> collectionArgs;
+      if (!inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) ||
+          collectionName != "map" ||
+          collectionArgs.size() != 2) {
+        return false;
+      }
+      targetInfoOut.isMapTarget = true;
+      targetInfoOut.mapKeyKind = valueKindFromTypeName(collectionArgs.front());
+      targetInfoOut.mapValueKind = valueKindFromTypeName(collectionArgs.back());
+      return targetInfoOut.mapKeyKind != LocalInfo::ValueKind::Unknown &&
+             targetInfoOut.mapValueKind != LocalInfo::ValueKind::Unknown;
     }
-    std::string collectionName;
-    std::vector<std::string> collectionArgs;
-    if (!inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) ||
-        collectionName != "map" ||
-        collectionArgs.size() != 2) {
-      return false;
+
+    // Direct canonical insert calls on non-local field receivers already carry
+    // explicit template arguments; use those to route the receiver through the
+    // builtin rewrite path even when the receiver does not resolve as a
+    // standalone call target (for example `holder.values`).
+    if (targetExpr.kind == Expr::Kind::Call &&
+        targetExpr.isFieldAccess &&
+        targetExpr.args.size() == 1 &&
+        stmt.templateArgs.size() == 2) {
+      targetInfoOut.isMapTarget = true;
+      targetInfoOut.mapKeyKind = valueKindFromTypeName(stmt.templateArgs.front());
+      targetInfoOut.mapValueKind = valueKindFromTypeName(stmt.templateArgs.back());
+      return targetInfoOut.mapKeyKind != LocalInfo::ValueKind::Unknown &&
+             targetInfoOut.mapValueKind != LocalInfo::ValueKind::Unknown;
     }
-    targetInfoOut.isMapTarget = true;
-    targetInfoOut.mapKeyKind = valueKindFromTypeName(collectionArgs.front());
-    targetInfoOut.mapValueKind = valueKindFromTypeName(collectionArgs.back());
-    return targetInfoOut.mapKeyKind != LocalInfo::ValueKind::Unknown &&
-           targetInfoOut.mapValueKind != LocalInfo::ValueKind::Unknown;
+    return false;
   };
 
   const auto targetInfo = resolveMapAccessTargetInfo(stmt.args[receiverIndex], localsIn, inferCallMapTargetInfo);

@@ -108,8 +108,14 @@ path (based on current recognition hooks):
   `tests/unit/test_semantics_calls_and_flow_collections_chunks/test_semantics_calls_and_flow_collections_17.h` and
   `tests/unit/test_compile_run_map_conformance_sources.h` + backend
   expectation suites).
+- Direct canonical field-access/non-local lvalue receiver forms (for example
+  `/std/collections/map/insert(..., holder.values, ...)`) now route through the
+  shared rewrite path by reusing explicit call-template map typing when the
+  receiver expression itself is not a standalone call target (IR coverage:
+  `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_74.h`).
 - Remaining field-access/non-local lvalue receiver shapes that do not currently
-  surface as map-returning helper calls.
+  route through that same path (for example method-sugar-only shapes that still
+  depend on receiver-local map typing).
 - Temporary/helper-return receiver shapes that do not provide a stable writable
   lvalue target for pointer write-back now have deterministic compile-diagnostic
   coverage for both direct canonical and method-sugar insert forms (see
