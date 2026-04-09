@@ -453,6 +453,11 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
             (candidate.isMethodCall && candidate.name == "get") ||
             resolvedCandidate == "/soa_vector/get" ||
             resolvedCandidate == "/std/collections/soa_vector/get")) ||
+          (*soaAccessHelper == "get_ref" &&
+           (isSimpleCallName(candidate, "get_ref") ||
+            (candidate.isMethodCall && candidate.name == "get_ref") ||
+            resolvedCandidate == "/soa_vector/get_ref" ||
+            resolvedCandidate == "/std/collections/soa_vector/get_ref")) ||
           (*soaAccessHelper == "ref" &&
            (isSimpleCallName(candidate, "ref") ||
             (candidate.isMethodCall && candidate.name == "ref") ||

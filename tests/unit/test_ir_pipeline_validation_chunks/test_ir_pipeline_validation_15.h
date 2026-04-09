@@ -815,6 +815,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprMapSoaBuiltinsSource.find(
             "builtinSoaAccessHelperName(expr, params, locals)") !=
         std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find("(helperName == \"get_ref\" &&") !=
+        std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
             "!resolvedMethod && (expr.name == \"get\" || expr.name == \"ref\") && resolvedMissing") ==
         std::string::npos);
@@ -1061,6 +1063,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
             "const bool oldSurfaceCallShape =") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "(*soaAccessHelper == \"get_ref\" &&") !=
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
             "usesVisibleSamePathSoaHelper(candidate, resolvedCandidate, \"get\")") ==

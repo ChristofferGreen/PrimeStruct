@@ -592,7 +592,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector-target count get and ref keep same-path soa helpers") {
+TEST_CASE("vector-target count get get_ref and ref keep same-path soa helpers") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -609,6 +609,11 @@ Particle() {
 }
 
 [return<int>]
+/soa_vector/get_ref([Reference<vector<Particle>>] values, [i32] index) {
+  return(11i32)
+}
+
+[return<int>]
 /soa_vector/ref([vector<Particle>] values, [i32] index) {
   return(8i32)
 }
@@ -619,9 +624,11 @@ main() {
   [int mut] total{plus(count(values), values.count())}
   assign(total, plus(total, values./soa_vector/count()))
   assign(total, plus(total, get(values, 0i32)))
+  assign(total, plus(total, get_ref(location(values), 0i32)))
   assign(total, plus(total, ref(values, 0i32)))
   assign(total, plus(total, values.get(0i32)))
   assign(total, plus(total, values./soa_vector/get(0i32)))
+  assign(total, plus(total, /soa_vector/get_ref(location(values), 0i32)))
   assign(total, plus(total, values.ref(0i32)))
   assign(total, plus(total, values./soa_vector/ref(0i32)))
   return(total)
