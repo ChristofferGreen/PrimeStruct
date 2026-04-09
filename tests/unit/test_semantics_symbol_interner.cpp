@@ -2,6 +2,8 @@
 
 #include "primec/SymbolInterner.h"
 
+#include <algorithm>
+#include <array>
 #include <string>
 #include <vector>
 
@@ -273,6 +275,121 @@ TEST_CASE("symbol interner N-worker merge preserves canonical first-seen orderin
   REQUIRE(remapC.size() == 2);
   CHECK(remapC[0] == 3);
   CHECK(remapC[1] == 4);
+}
+
+TEST_CASE("symbol interner N-worker merge is permutation and repeat-run deterministic") {
+  primec::SymbolInterner workerA;
+  CHECK(workerA.intern("/std/math/x") == 1);
+  CHECK(workerA.intern("/std/math/y") == 2);
+  CHECK(workerA.intern("/std/math/p") == 3);
+
+  primec::SymbolInterner workerB;
+  CHECK(workerB.intern("/std/math/a") == 1);
+  CHECK(workerB.intern("/std/math/x") == 2);
+  CHECK(workerB.intern("/std/math/z") == 3);
+
+  primec::SymbolInterner workerC;
+  CHECK(workerC.intern("/std/math/b") == 1);
+  CHECK(workerC.intern("/std/math/y") == 2);
+  CHECK(workerC.intern("/std/math/a") == 3);
+
+  primec::SymbolInterner workerD;
+  CHECK(workerD.intern("/std/math/c") == 1);
+  CHECK(workerD.intern("/std/math/z") == 2);
+  CHECK(workerD.intern("/std/math/w") == 3);
+
+  const std::array<primec::WorkerSymbolInternerSnapshot, 4> snapshots = {
+      workerA.snapshotForWorker(30),
+      workerB.snapshotForWorker(10),
+      workerC.snapshotForWorker(20),
+      workerD.snapshotForWorker(40),
+  };
+
+  std::array<std::size_t, 4> permutation = {0, 1, 2, 3};
+  std::vector<std::string> baselineSymbols;
+  std::array<std::vector<primec::SymbolId>, 4> baselineRemaps;
+  bool hasBaseline = false;
+  int permutationsChecked = 0;
+
+  do {
+    std::vector<primec::WorkerSymbolInternerSnapshot> input;
+    input.reserve(permutation.size());
+    for (std::size_t index : permutation) {
+      input.push_back(snapshots[index]);
+    }
+
+    const primec::SymbolInterner merged =
+        primec::SymbolInterner::mergeWorkerSnapshotsDeterministic(std::move(input));
+    const std::vector<std::string> mergedSymbols = resolveSymbolTable(merged);
+    const std::array<std::vector<primec::SymbolId>, 4> remaps = {
+        primec::SymbolInterner::remapLocalIdsToMerged(snapshots[0], merged),
+        primec::SymbolInterner::remapLocalIdsToMerged(snapshots[1], merged),
+        primec::SymbolInterner::remapLocalIdsToMerged(snapshots[2], merged),
+        primec::SymbolInterner::remapLocalIdsToMerged(snapshots[3], merged),
+    };
+
+    if (!hasBaseline) {
+      baselineSymbols = mergedSymbols;
+      baselineRemaps = remaps;
+      hasBaseline = true;
+    } else {
+      CHECK(mergedSymbols == baselineSymbols);
+      CHECK(remaps == baselineRemaps);
+    }
+
+    ++permutationsChecked;
+  } while (std::next_permutation(permutation.begin(), permutation.end()));
+
+  CHECK(permutationsChecked == 24);
+}
+
+TEST_CASE("symbol interner N-worker merge tie-breaks equal worker ids lexicographically") {
+  const std::array<primec::WorkerSymbolInternerSnapshot, 3> snapshots = {
+      primec::WorkerSymbolInternerSnapshot{
+          .workerId = 9,
+          .symbolsByLocalId = {"/std/math/gamma", "/std/math/shared-a"},
+      },
+      primec::WorkerSymbolInternerSnapshot{
+          .workerId = 9,
+          .symbolsByLocalId = {"/std/math/alpha", "/std/math/shared-b"},
+      },
+      primec::WorkerSymbolInternerSnapshot{
+          .workerId = 9,
+          .symbolsByLocalId = {"/std/math/beta", "/std/math/shared-a"},
+      },
+  };
+
+  std::array<std::size_t, 3> permutation = {0, 1, 2};
+  std::vector<std::string> baselineSymbols;
+  bool hasBaseline = false;
+  int permutationsChecked = 0;
+
+  do {
+    std::vector<primec::WorkerSymbolInternerSnapshot> input;
+    input.reserve(permutation.size());
+    for (std::size_t index : permutation) {
+      input.push_back(snapshots[index]);
+    }
+
+    const primec::SymbolInterner merged =
+        primec::SymbolInterner::mergeWorkerSnapshotsDeterministic(std::move(input));
+    const std::vector<std::string> mergedSymbols = resolveSymbolTable(merged);
+
+    if (!hasBaseline) {
+      baselineSymbols = mergedSymbols;
+      hasBaseline = true;
+    } else {
+      CHECK(mergedSymbols == baselineSymbols);
+    }
+
+    ++permutationsChecked;
+  } while (std::next_permutation(permutation.begin(), permutation.end()));
+
+  CHECK(permutationsChecked == 6);
+  CHECK(baselineSymbols == std::vector<std::string>{
+                              "/std/math/alpha", "/std/math/shared-b",
+                              "/std/math/beta",  "/std/math/shared-a",
+                              "/std/math/gamma"});
 }
 
 TEST_SUITE_END();
