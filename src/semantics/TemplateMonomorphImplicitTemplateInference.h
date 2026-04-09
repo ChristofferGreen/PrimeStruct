@@ -190,43 +190,83 @@ bool inferImplicitTemplateArgs(const Definition &def,
     if (!resolvesBuiltinSoaReceiver(candidate.args.front())) {
       return {};
     }
+    auto hasVisibleSoaBorrowedHelper = [&](std::string_view helperName) {
+      const std::string samePath = "/soa_vector/" + std::string(helperName);
+      const std::string canonicalPath =
+          "/std/collections/soa_vector/" + std::string(helperName);
+      return ctx.sourceDefs.count(samePath) > 0 ||
+             ctx.helperOverloads.count(samePath) > 0 ||
+             ctx.sourceDefs.count(canonicalPath) > 0 ||
+             ctx.helperOverloads.count(canonicalPath) > 0;
+    };
+    auto hasVisibleSoaBorrowedHelperForPath = [&](std::string_view path) {
+      if (path == "/soa_vector/ref_ref" ||
+          path == "/std/collections/soa_vector/ref_ref") {
+        return hasVisibleSoaBorrowedHelper("ref_ref");
+      }
+      return hasVisibleSoaBorrowedHelper("ref");
+    };
     const bool hasVisibleSoaRefHelper =
-        ctx.sourceDefs.count("/soa_vector/ref") > 0 ||
-        ctx.helperOverloads.count("/soa_vector/ref") > 0 ||
-        ctx.sourceDefs.count("/std/collections/soa_vector/ref") > 0 ||
-        ctx.helperOverloads.count("/std/collections/soa_vector/ref") > 0;
+        hasVisibleSoaBorrowedHelper("ref");
+    const bool hasVisibleSoaRefRefHelper =
+        hasVisibleSoaBorrowedHelper("ref_ref");
     if (candidate.isMethodCall) {
       if (const auto pending = soaPendingUnavailableMethodDiagnostic(
-              resolvedPath, hasVisibleSoaRefHelper)) {
+              resolvedPath,
+              hasVisibleSoaBorrowedHelperForPath(resolvedPath))) {
         return *pending;
       }
     }
     const bool isCanonicalBuiltinSoaRefCall =
         normalizedName == "std/collections/soa_vector/ref" ||
         resolvedPath == "/std/collections/soa_vector/ref";
+    const bool isCanonicalBuiltinSoaRefRefCall =
+        normalizedName == "std/collections/soa_vector/ref_ref" ||
+        resolvedPath == "/std/collections/soa_vector/ref_ref";
     const bool isOldSurfaceBuiltinSoaRefCall =
         normalizedName == "soa_vector/ref" || resolvedPath == "/soa_vector/ref";
-    if (normalizedName == "ref" || isCanonicalBuiltinSoaRefCall ||
-        isOldSurfaceBuiltinSoaRefCall) {
-      if (hasVisibleSoaRefHelper) {
+    const bool isOldSurfaceBuiltinSoaRefRefCall =
+        normalizedName == "soa_vector/ref_ref" ||
+        resolvedPath == "/soa_vector/ref_ref";
+    if (normalizedName == "ref" || normalizedName == "ref_ref" ||
+        isCanonicalBuiltinSoaRefCall || isCanonicalBuiltinSoaRefRefCall ||
+        isOldSurfaceBuiltinSoaRefCall || isOldSurfaceBuiltinSoaRefRefCall) {
+      const bool isRefRefCall =
+          normalizedName == "ref_ref" || isCanonicalBuiltinSoaRefRefCall ||
+          isOldSurfaceBuiltinSoaRefRefCall;
+      if (isRefRefCall ? hasVisibleSoaRefRefHelper : hasVisibleSoaRefHelper) {
         return {};
       }
-      if (isCanonicalBuiltinSoaRefCall &&
+      if ((isCanonicalBuiltinSoaRefCall || isCanonicalBuiltinSoaRefRefCall) &&
           !candidate.args.empty() &&
           candidate.args.front().kind == Expr::Kind::Call) {
-        return soaDirectPendingUnavailableMethodDiagnostic("/soa_vector/ref");
+        return soaDirectPendingUnavailableMethodDiagnostic(
+            isRefRefCall ? "/soa_vector/ref_ref" : "/soa_vector/ref");
       }
       const bool isExplicitSoaRefCall =
           (!candidate.isMethodCall && normalizedPrefix == "soa_vector" &&
            normalizedName == "ref") ||
           normalizedName == "soa_vector/ref";
+      const bool isExplicitSoaRefRefCall =
+          (!candidate.isMethodCall && normalizedPrefix == "soa_vector" &&
+           normalizedName == "ref_ref") ||
+          normalizedName == "soa_vector/ref_ref";
       const bool isBuiltinSoaRefMethod = candidate.isMethodCall && normalizedName == "ref";
+      const bool isBuiltinSoaRefRefMethod =
+          candidate.isMethodCall && normalizedName == "ref_ref";
       if (resolvedPath == "/soa_vector/ref" ||
           resolvedPath == "/std/collections/soa_vector/ref" ||
+          resolvedPath == "/soa_vector/ref_ref" ||
+          resolvedPath == "/std/collections/soa_vector/ref_ref" ||
           isExplicitSoaRefCall ||
+          isExplicitSoaRefRefCall ||
           isBuiltinSoaRefMethod ||
-          (!candidate.isMethodCall && isSimpleCallName(candidate, "ref"))) {
-        return soaDirectPendingUnavailableMethodDiagnostic("/soa_vector/ref");
+          isBuiltinSoaRefRefMethod ||
+          (!candidate.isMethodCall &&
+           (isSimpleCallName(candidate, "ref") ||
+            isSimpleCallName(candidate, "ref_ref")))) {
+        return soaDirectPendingUnavailableMethodDiagnostic(
+            isRefRefCall ? "/soa_vector/ref_ref" : "/soa_vector/ref");
       }
       return {};
     }

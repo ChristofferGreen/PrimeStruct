@@ -481,6 +481,15 @@ Semantics-layer pending fallback diagnostics:
     `src/semantics/SemanticsValidatorInferLateFallbackBuiltins.cpp`,
     `src/semantics/SemanticsValidatorExprMapSoaBuiltins.cpp`, and
     `src/semantics/SemanticsValidatorInferCollectionReturnInference.cpp`).
+  - Template-monomorph SoA borrowed-view pending fallback gates now treat
+    `ref_ref` helper call/method shapes as equivalent to `ref` across
+    same-path and canonical helper visibility checks (including method-call
+    pending diagnostics, old-surface fallback escape hatches, and direct
+    pending-diagnostic path selection), so canonical `ref_ref` helper
+    visibility no longer falls back to compiler-owned `ref`-only pending
+    handling during implicit template inference
+    (`src/semantics/TemplateMonomorphImplicitTemplateInference.h` and
+    `src/semantics/TemplateMonomorphFallbackTypeInference.h`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:
