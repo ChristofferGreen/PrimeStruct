@@ -78,7 +78,7 @@ P3 - Interning/ID migration for hot paths
 - ◐ [P3-01] Add deterministic compilation-local string interning (`SymbolId`) with explicit lifetime/ownership rules.
 - ◐ [P3-02] Add repeat-run determinism tests that identical single-thread inputs produce identical `SymbolId` assignments.
 - ◐ [P3-03] Add worker-local interner API boundaries (no shared mutex in hot paths) plus deterministic merge hooks.
-- ○ [P3-04] Migrate call-target path keys from `std::string` to `SymbolId` while keeping diagnostics text unchanged.
+- ◐ [P3-04] Migrate call-target path keys from `std::string` to `SymbolId` while keeping diagnostics text unchanged.
 - ○ [P3-05] Migrate method-target keys from `std::string` to `SymbolId` while keeping diagnostics text unchanged.
 - ○ [P3-06] Migrate direct/method call-target semantic-product facts to ID-backed internal storage with unchanged dump output.
 - ○ [P3-07] Migrate one additional semantic-product fact family to ID-backed internal storage with unchanged dump output.

@@ -74,11 +74,17 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   };
   auto lookupNormalizedMethodName = [&](const std::string &rawMethodName,
                                         std::string &normalizedMethodNameOut) {
-    for (const auto &entry : callTargetResolutionScratch_.normalizedMethodNameCache) {
-      if (entry.first == rawMethodName) {
-        normalizedMethodNameOut = entry.second;
-        return true;
-      }
+    if (!hasScopedOwner) {
+      return false;
+    }
+    const SymbolId rawMethodNameKey = callTargetResolutionScratch_.keyInterner.intern(rawMethodName);
+    if (rawMethodNameKey == InvalidSymbolId) {
+      return false;
+    }
+    if (const auto cacheIt = callTargetResolutionScratch_.normalizedMethodNameCache.find(rawMethodNameKey);
+        cacheIt != callTargetResolutionScratch_.normalizedMethodNameCache.end()) {
+      normalizedMethodNameOut = cacheIt->second;
+      return true;
     }
     return false;
   };
@@ -86,22 +92,32 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   if (hasScopedOwner) {
     if (!lookupNormalizedMethodName(methodName, normalizedMethodName)) {
       normalizedMethodName = normalizeMethodName(methodName);
-      callTargetResolutionScratch_.normalizedMethodNameCache.emplace_back(methodName, normalizedMethodName);
+      const SymbolId rawMethodNameKey = callTargetResolutionScratch_.keyInterner.intern(methodName);
+      if (rawMethodNameKey != InvalidSymbolId) {
+        callTargetResolutionScratch_.normalizedMethodNameCache.emplace(rawMethodNameKey,
+                                                                       normalizedMethodName);
+      }
     }
   } else {
     normalizedMethodName = normalizeMethodName(methodName);
   }
+  const SymbolId normalizedMethodNameKey =
+      hasScopedOwner ? callTargetResolutionScratch_.keyInterner.intern(normalizedMethodName)
+                     : InvalidSymbolId;
   auto rootedPathFragment = [&](std::string_view token) -> std::string {
     if (!hasScopedOwner) {
       return "/" + std::string(token);
     }
-    const std::string key(token);
+    const SymbolId key = callTargetResolutionScratch_.keyInterner.intern(token);
+    if (key == InvalidSymbolId) {
+      return "/" + std::string(token);
+    }
     if (const auto cacheIt = callTargetResolutionScratch_.rootedCallNamePathCache.find(key);
         cacheIt != callTargetResolutionScratch_.rootedCallNamePathCache.end()) {
       return cacheIt->second;
     }
     auto [insertIt, inserted] =
-        callTargetResolutionScratch_.rootedCallNamePathCache.emplace(key, "/" + key);
+        callTargetResolutionScratch_.rootedCallNamePathCache.emplace(key, "/" + std::string(token));
     (void)inserted;
     return insertIt->second;
   };
@@ -109,16 +125,19 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if (!hasScopedOwner) {
       return std::string(pathPrefix) + "/" + std::string(methodFragment);
     }
-    std::string joinKey(pathPrefix);
-    joinKey.push_back('\x1f');
-    joinKey.append(methodFragment);
+    const SymbolId prefixKey = callTargetResolutionScratch_.keyInterner.intern(pathPrefix);
+    const SymbolId methodKey = callTargetResolutionScratch_.keyInterner.intern(methodFragment);
+    if (prefixKey == InvalidSymbolId || methodKey == InvalidSymbolId) {
+      return std::string(pathPrefix) + "/" + std::string(methodFragment);
+    }
+    const CallTargetResolutionScratch::SymbolPairKey joinKey{prefixKey, methodKey};
     if (const auto cacheIt = callTargetResolutionScratch_.joinedCallPathCache.find(joinKey);
         cacheIt != callTargetResolutionScratch_.joinedCallPathCache.end()) {
       return cacheIt->second;
     }
     std::string joined = std::string(pathPrefix) + "/" + std::string(methodFragment);
     auto [insertIt, inserted] =
-        callTargetResolutionScratch_.joinedCallPathCache.emplace(std::move(joinKey), std::move(joined));
+        callTargetResolutionScratch_.joinedCallPathCache.emplace(joinKey, std::move(joined));
     (void)inserted;
     return insertIt->second;
   };
@@ -131,36 +150,45 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   };
   std::string explicitRemovedMethodPath;
   if (hasScopedOwner) {
-    const std::string cacheKey = methodName + "\x1f" + expr.namespacePrefix;
-    if (const auto cacheIt = callTargetResolutionScratch_.explicitRemovedMethodPathCache.find(cacheKey);
-        cacheIt != callTargetResolutionScratch_.explicitRemovedMethodPathCache.end()) {
-      explicitRemovedMethodPath = cacheIt->second;
+    const SymbolId methodNameKey = callTargetResolutionScratch_.keyInterner.intern(methodName);
+    const SymbolId namespaceKey = callTargetResolutionScratch_.keyInterner.intern(expr.namespacePrefix);
+    if (methodNameKey != InvalidSymbolId && namespaceKey != InvalidSymbolId) {
+      const CallTargetResolutionScratch::SymbolPairKey cacheKey{methodNameKey, namespaceKey};
+      if (const auto cacheIt = callTargetResolutionScratch_.explicitRemovedMethodPathCache.find(cacheKey);
+          cacheIt != callTargetResolutionScratch_.explicitRemovedMethodPathCache.end()) {
+        explicitRemovedMethodPath = cacheIt->second;
+      } else {
+        explicitRemovedMethodPath = explicitRemovedCollectionMethodPath(methodName, expr.namespacePrefix);
+        callTargetResolutionScratch_.explicitRemovedMethodPathCache.emplace(cacheKey, explicitRemovedMethodPath);
+      }
     } else {
       explicitRemovedMethodPath = explicitRemovedCollectionMethodPath(methodName, expr.namespacePrefix);
-      callTargetResolutionScratch_.explicitRemovedMethodPathCache.emplace(cacheKey, explicitRemovedMethodPath);
     }
   } else {
     explicitRemovedMethodPath = explicitRemovedCollectionMethodPath(methodName, expr.namespacePrefix);
   }
-  auto methodTargetMemoKey = [&](std::string_view receiverTypeText) -> std::string {
-    if (!hasScopedOwner || expr.semanticNodeId == 0 || receiverTypeText.empty()) {
-      return {};
+  auto methodTargetMemoKey = [&](std::string_view receiverTypeText)
+      -> std::optional<CallTargetResolutionScratch::MethodTargetMemoKey> {
+    if (!hasScopedOwner || expr.semanticNodeId == 0 || receiverTypeText.empty() ||
+        normalizedMethodNameKey == InvalidSymbolId) {
+      return std::nullopt;
     }
-    std::string key = std::to_string(expr.semanticNodeId);
-    key.push_back('\x1f');
-    key.append(receiverTypeText);
-    key.push_back('\x1f');
-    key.append(normalizedMethodName);
-    return key;
+    const SymbolId receiverTypeTextKey =
+        callTargetResolutionScratch_.keyInterner.intern(receiverTypeText);
+    if (receiverTypeTextKey == InvalidSymbolId) {
+      return std::nullopt;
+    }
+    return CallTargetResolutionScratch::MethodTargetMemoKey{
+        expr.semanticNodeId, receiverTypeTextKey, normalizedMethodNameKey};
   };
   auto lookupMethodTargetMemo = [&](std::string_view receiverTypeText,
                                     std::string &resolvedPathOut,
                                     bool &successOut) -> bool {
-    const std::string key = methodTargetMemoKey(receiverTypeText);
-    if (key.empty()) {
+    const auto key = methodTargetMemoKey(receiverTypeText);
+    if (!key.has_value()) {
       return false;
     }
-    const auto memoIt = callTargetResolutionScratch_.methodTargetMemoCache.find(key);
+    const auto memoIt = callTargetResolutionScratch_.methodTargetMemoCache.find(*key);
     if (memoIt == callTargetResolutionScratch_.methodTargetMemoCache.end()) {
       return false;
     }
@@ -169,15 +197,15 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     return true;
   };
   auto storeMethodTargetMemo = [&](std::string_view receiverTypeText, bool success) {
-    const std::string key = methodTargetMemoKey(receiverTypeText);
-    if (key.empty()) {
+    const auto key = methodTargetMemoKey(receiverTypeText);
+    if (!key.has_value()) {
       return;
     }
     if (!success) {
-      callTargetResolutionScratch_.methodTargetMemoCache.insert_or_assign(key, std::string());
+      callTargetResolutionScratch_.methodTargetMemoCache.insert_or_assign(*key, std::string());
       return;
     }
-    callTargetResolutionScratch_.methodTargetMemoCache.insert_or_assign(key, resolvedOut);
+    callTargetResolutionScratch_.methodTargetMemoCache.insert_or_assign(*key, resolvedOut);
   };
   auto resolveCollectionMethodFromTypePath = [&](const std::string &collectionTypePath) -> bool {
     if (!explicitRemovedMethodPath.empty() && hasDefinitionPath(explicitRemovedMethodPath)) {

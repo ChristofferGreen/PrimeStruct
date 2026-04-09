@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "SemanticsHelpers.h"
+#include "primec/SymbolInterner.h"
 #include "primec/Semantics.h"
 
 namespace primec::semantics {
@@ -470,24 +471,64 @@ private:
   };
 
   struct CallTargetResolutionScratch {
-    using PmrBoolMap = std::pmr::unordered_map<std::string, bool>;
-    using PmrStringMap = std::pmr::unordered_map<std::string, std::string>;
-    using PmrStringPairVec = std::pmr::vector<std::pair<std::string, std::string>>;
+    struct SymbolPairKey {
+      SymbolId first = InvalidSymbolId;
+      SymbolId second = InvalidSymbolId;
+
+      bool operator==(const SymbolPairKey &other) const {
+        return first == other.first && second == other.second;
+      }
+    };
+
+    struct SymbolPairKeyHash {
+      std::size_t operator()(const SymbolPairKey &key) const {
+        std::size_t hash = std::hash<SymbolId>{}(key.first);
+        hash ^= std::hash<SymbolId>{}(key.second) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+        return hash;
+      }
+    };
+
+    struct MethodTargetMemoKey {
+      uint64_t semanticNodeId = 0;
+      SymbolId receiverTypeText = InvalidSymbolId;
+      SymbolId methodName = InvalidSymbolId;
+
+      bool operator==(const MethodTargetMemoKey &other) const {
+        return semanticNodeId == other.semanticNodeId &&
+               receiverTypeText == other.receiverTypeText &&
+               methodName == other.methodName;
+      }
+    };
+
+    struct MethodTargetMemoKeyHash {
+      std::size_t operator()(const MethodTargetMemoKey &key) const {
+        std::size_t hash = std::hash<uint64_t>{}(key.semanticNodeId);
+        hash ^= std::hash<SymbolId>{}(key.receiverTypeText) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+        hash ^= std::hash<SymbolId>{}(key.methodName) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+        return hash;
+      }
+    };
+
+    using PmrBoolMap = std::pmr::unordered_map<SymbolId, bool>;
+    using PmrSymbolStringMap = std::pmr::unordered_map<SymbolId, std::string>;
+    using PmrPairStringMap = std::pmr::unordered_map<SymbolPairKey, std::string, SymbolPairKeyHash>;
+    using PmrMethodMemoMap = std::pmr::unordered_map<MethodTargetMemoKey, std::string, MethodTargetMemoKeyHash>;
 
     const Definition *definitionOwner = nullptr;
     const Execution *executionOwner = nullptr;
+    SymbolInterner keyInterner;
     std::array<std::byte, 8192> inlineArenaBuffer{};
     std::pmr::monotonic_buffer_resource arenaResource{
         inlineArenaBuffer.data(),
         inlineArenaBuffer.size(),
         std::pmr::new_delete_resource()};
     PmrBoolMap definitionFamilyPathCache{&arenaResource};
-    PmrStringMap rootedCallNamePathCache{&arenaResource};
-    PmrStringMap normalizedNamespacePrefixCache{&arenaResource};
-    PmrStringMap joinedCallPathCache{&arenaResource};
-    PmrStringPairVec normalizedMethodNameCache{&arenaResource};
-    PmrStringMap explicitRemovedMethodPathCache{&arenaResource};
-    PmrStringMap methodTargetMemoCache{&arenaResource};
+    PmrSymbolStringMap rootedCallNamePathCache{&arenaResource};
+    PmrSymbolStringMap normalizedNamespacePrefixCache{&arenaResource};
+    PmrPairStringMap joinedCallPathCache{&arenaResource};
+    PmrSymbolStringMap normalizedMethodNameCache{&arenaResource};
+    PmrPairStringMap explicitRemovedMethodPathCache{&arenaResource};
+    PmrMethodMemoMap methodTargetMemoCache{&arenaResource};
 
     void resetArena() {
       this->~CallTargetResolutionScratch();

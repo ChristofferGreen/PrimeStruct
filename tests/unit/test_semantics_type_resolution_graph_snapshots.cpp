@@ -695,6 +695,60 @@ TEST_CASE("semantic product publishes resolved method-call targets") {
   CHECK(targetEntry->sourceColumn > 0);
 }
 
+TEST_CASE("semantic product method-call targets stay separated by receiver type") {
+  const std::string source =
+      "struct A {\n"
+      "  [i32] x\n"
+      "}\n"
+      "\n"
+      "struct B {\n"
+      "  [i32] y\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "/A/id([A] self) {\n"
+      "  return(self.x)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "/B/id([B] self) {\n"
+      "  return(self.y)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [A] a{A([x] 1i32)}\n"
+      "  [B] b{B([y] 2i32)}\n"
+      "  return(plus(a.id(), b.id()))\n"
+      "}\n";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto methodTargets = primec::semanticProgramMethodCallTargetView(semanticProgram);
+  const auto hasAIdTarget = std::any_of(
+      methodTargets.begin(),
+      methodTargets.end(),
+      [](const primec::SemanticProgramMethodCallTarget *entry) {
+        return entry->scopePath == "/main" && entry->methodName == "id" &&
+               entry->resolvedPath == "/A/id";
+      });
+  const auto hasBIdTarget = std::any_of(
+      methodTargets.begin(),
+      methodTargets.end(),
+      [](const primec::SemanticProgramMethodCallTarget *entry) {
+        return entry->scopePath == "/main" && entry->methodName == "id" &&
+               entry->resolvedPath == "/B/id";
+      });
+  CHECK(hasAIdTarget);
+  CHECK(hasBIdTarget);
+}
+
 TEST_CASE("semantic product publishes specialized SoaColumn field access targets") {
   const std::string source = R"(
 import /std/collections/experimental_soa_storage/*
