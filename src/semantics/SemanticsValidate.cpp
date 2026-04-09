@@ -2899,11 +2899,13 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
     return;
   }
   const std::string helperPath = "/soa_vector/" + helperName;
+  const bool hasVisibleSamePathHelper =
+      visibleSoaHelpers.count(helperPath) > 0;
 
   std::optional<semantics::BindingInfo> receiverBinding;
   std::optional<Expr> canonicalReceiverExpr;
   const Expr &receiver = expr.args.front();
-  if (visibleSoaHelpers.count(helperPath) > 0 && receiver.kind == Expr::Kind::Name) {
+  if (receiver.kind == Expr::Kind::Name) {
     auto bindingIt = bindings.find(receiver.name);
     if (bindingIt != bindings.end() && isExperimentalSoaVectorBinding(bindingIt->second)) {
       receiverBinding = bindingIt->second;
@@ -2926,9 +2928,8 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
 
   expr.isMethodCall = false;
   expr.isFieldAccess = false;
-  expr.name = visibleSoaHelpers.count(helperPath) > 0
-                  ? helperPath
-                  : "/std/collections/soa_vector/" + helperName;
+  expr.name = hasVisibleSamePathHelper ? helperPath
+                                       : "/std/collections/soa_vector/" + helperName;
   expr.namespacePrefix.clear();
   if (canonicalReceiverExpr.has_value()) {
     expr.args.front() = *canonicalReceiverExpr;

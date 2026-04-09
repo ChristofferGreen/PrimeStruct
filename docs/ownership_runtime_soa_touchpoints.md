@@ -421,6 +421,11 @@ Semantics-layer pending fallback diagnostics:
     `/soa_vector/*` lookup keys, so canonical helper imports no longer trip
     same-path-only fallback rewrites in both field-view rewrite passes
     (`src/semantics/SemanticsValidate.cpp`).
+  - Experimental SoA same-path helper method rewrite now probes direct name
+    receivers independent of same-path helper visibility, then selects
+    same-path versus canonical helper targets by visibility, so canonical-only
+    helper visibility no longer skips method rewrite for direct experimental
+    SoA receiver bindings (`src/semantics/SemanticsValidate.cpp`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:
