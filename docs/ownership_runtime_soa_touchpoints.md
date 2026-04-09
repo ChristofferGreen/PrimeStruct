@@ -560,6 +560,11 @@ Semantics-layer pending fallback diagnostics:
     diagnostics and field-view rewrite fallback checks
     (`src/semantics/TemplateMonomorphImplicitTemplateInference.h` and
     `src/semantics/SemanticsValidate.cpp`).
+  - Canonical SoA conversion late-builtin entry gating now includes borrowed
+    `to_aos_ref` parity, so canonical `to_aos_ref` resolution no longer falls
+    back to compiler-owned `to_aos`-only late map/SoA builtin-entry gating
+    during expression validation
+    (`src/semantics/SemanticsValidatorExpr.cpp`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:
