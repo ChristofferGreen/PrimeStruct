@@ -484,7 +484,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
     return true;
   }
 
-  if ((isSimpleCallName(expr, "get") || isSimpleCallName(expr, "ref")) &&
+  if ((isSimpleCallName(expr, "get") || isSimpleCallName(expr, "ref") ||
+       isSimpleCallName(expr, "ref_ref")) &&
       expr.args.size() == 2 && defMap_.find(resolved) == defMap_.end()) {
     handledOut = true;
     std::vector<size_t> receiverIndices;
