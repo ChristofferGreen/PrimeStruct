@@ -109,10 +109,12 @@ bool rewriteExpr(Expr &expr,
   };
   auto isSyntheticSamePathSoaHelperTemplateCarryPath = [](const std::string &path) {
     return path == "/soa_vector/count" || path == "/soa_vector/get" ||
+           path == "/soa_vector/get_ref" ||
            path == "/soa_vector/ref" || path == "/soa_vector/ref_ref" ||
            path == "/soa_vector/push" || path == "/soa_vector/reserve" ||
            path == "/std/collections/soa_vector/count" ||
            path == "/std/collections/soa_vector/get" ||
+           path == "/std/collections/soa_vector/get_ref" ||
            path == "/std/collections/soa_vector/ref" ||
            path == "/std/collections/soa_vector/ref_ref" ||
            path == "/std/collections/soa_vector/push" ||
@@ -441,11 +443,13 @@ bool rewriteExpr(Expr &expr,
         inferCollectionReceiverFamily(receiverExpr) == "soa_vector") {
       return std::string("/soa_vector/reserve");
     }
-    if (helperName == "get" &&
-        hasDefinitionFamilyPath("/soa_vector/get") &&
+    if ((helperName == "get" || helperName == "get_ref") &&
+        hasDefinitionFamilyPath(helperName == "get_ref" ? "/soa_vector/get_ref"
+                                                        : "/soa_vector/get") &&
         (inferCollectionReceiverFamily(receiverExpr) == "soa_vector" ||
          inferCollectionReceiverFamily(receiverExpr) == "vector")) {
-      return std::string("/soa_vector/get");
+      return helperName == "get_ref" ? std::string("/soa_vector/get_ref")
+                                     : std::string("/soa_vector/get");
     }
     const bool isSyntacticSoaRefHelper =
         helperName == "ref" || helperName == "ref_ref";
@@ -814,10 +818,12 @@ bool rewriteExpr(Expr &expr,
          ((resolvedReceiverExpr->kind == Expr::Kind::Call &&
            !resolvedReceiverExpr->isBinding) ||
          ((resolvedPath == "/soa_vector/count" || resolvedPath == "/soa_vector/get" ||
+           resolvedPath == "/soa_vector/get_ref" ||
            resolvedPath == "/soa_vector/ref" || resolvedPath == "/soa_vector/ref_ref" ||
            resolvedPath == "/soa_vector/push" || resolvedPath == "/soa_vector/reserve" ||
            resolvedPath == "/std/collections/soa_vector/count" ||
            resolvedPath == "/std/collections/soa_vector/get" ||
+           resolvedPath == "/std/collections/soa_vector/get_ref" ||
            resolvedPath == "/std/collections/soa_vector/ref" ||
            resolvedPath == "/std/collections/soa_vector/ref_ref" ||
            resolvedPath == "/std/collections/soa_vector/push" ||
@@ -1063,10 +1069,12 @@ bool rewriteExpr(Expr &expr,
           ((resolvedReceiverExpr->kind == Expr::Kind::Call &&
             !resolvedReceiverExpr->isBinding) ||
            ((methodPath == "/soa_vector/count" || methodPath == "/soa_vector/get" ||
+             methodPath == "/soa_vector/get_ref" ||
              methodPath == "/soa_vector/ref" || methodPath == "/soa_vector/ref_ref" ||
              methodPath == "/soa_vector/push" || methodPath == "/soa_vector/reserve" ||
              methodPath == "/std/collections/soa_vector/count" ||
              methodPath == "/std/collections/soa_vector/get" ||
+             methodPath == "/std/collections/soa_vector/get_ref" ||
              methodPath == "/std/collections/soa_vector/ref" ||
              methodPath == "/std/collections/soa_vector/ref_ref" ||
              methodPath == "/std/collections/soa_vector/push" ||
