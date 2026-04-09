@@ -165,7 +165,8 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       } else if (resolveArrayTarget != nullptr &&
                  resolveArrayTarget(receiverCandidate, elemType)) {
         methodResolved = "/array/" + helperName;
-      } else if ((helperName == "get" || helperName == "ref") &&
+      } else if ((helperName == "get" || helperName == "ref" ||
+                  helperName == "ref_ref") &&
                  resolveSoaVectorTarget != nullptr &&
                  resolveSoaVectorTarget(receiverCandidate, elemType)) {
         methodResolved =

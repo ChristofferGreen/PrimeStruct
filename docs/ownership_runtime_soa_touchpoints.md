@@ -497,6 +497,16 @@ Semantics-layer pending fallback diagnostics:
     selection), so canonical `ref_ref` helper visibility no longer falls back
     to compiler-owned `ref`-only path handling during expression rewrite
     target selection (`src/semantics/TemplateMonomorphExpressionRewrite.h`).
+  - SoA method-target and late fallback return-kind resolution now treat
+    `ref_ref` method/helper shapes as equivalent to `ref` across
+    validator/inference same-path and canonical helper-target selection
+    (including canonical method-target builtin fallback classification,
+    collection-type-path method resolution, and late fallback receiver-probe
+    helper retargeting), so canonical `ref_ref` helper visibility no longer
+    falls back to compiler-owned `ref`-only method/return-kind target handling
+    (`src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp`,
+    `src/semantics/SemanticsValidatorInferMethodResolution.cpp`, and
+    `src/semantics/SemanticsValidatorInferLateFallbackBuiltins.cpp`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:
