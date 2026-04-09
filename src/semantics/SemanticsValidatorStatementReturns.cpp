@@ -122,7 +122,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
            (expr.isMethodCall && expr.name == "ref") ||
            resolvedPath == "/soa_vector/ref");
       if (oldSurfaceCallShape &&
-          usesSamePathSoaHelperTargetForCurrentImports("ref")) {
+          hasVisibleSoaHelperTargetForCurrentImports("ref")) {
         return false;
       }
       if (expr.isMethodCall) {

@@ -388,6 +388,14 @@ Semantics-layer pending fallback diagnostics:
     `src/semantics/SemanticsValidatorInferLateFallbackBuiltins.cpp`,
     `src/semantics/SemanticsValidatorInferPreDispatchCalls.cpp`, and
     `src/semantics/TemplateMonomorphImplicitTemplateInference.h`).
+  - Old-surface `get`/`ref` helper fallback gates now treat canonical
+    `/std/collections/soa_vector/*` helper visibility as equivalent to
+    same-path `/soa_vector/*` visibility in return-type inference and template
+    fallback lookup, so canonical helper imports no longer trigger
+    compiler-owned pending diagnostics for those old-surface call shapes
+    (`src/semantics/SemanticsValidatorStatementReturns.cpp`,
+    `src/semantics/SemanticsValidatorInferCollectionReturnInference.cpp`, and
+    `src/semantics/TemplateMonomorphImplicitTemplateInference.h`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:

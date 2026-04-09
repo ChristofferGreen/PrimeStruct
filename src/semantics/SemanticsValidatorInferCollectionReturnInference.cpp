@@ -456,13 +456,13 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
            (isSimpleCallName(candidate, "ref") ||
             (candidate.isMethodCall && candidate.name == "ref") ||
             resolvedCandidate == "/soa_vector/ref"));
-      if (!(usesSamePathSoaHelperTargetForCurrentImports(*soaAccessHelper) &&
+      if (!(hasVisibleSoaHelperTargetForCurrentImports(*soaAccessHelper) &&
             oldSurfaceCallShape)) {
-      std::string elemType;
-      if (builtinCollectionDispatchResolvers.resolveSoaVectorTarget(candidate.args.front(), elemType)) {
-        currentTypeTextOut = normalizeBindingTypeName(elemType);
-        return !currentTypeTextOut.empty();
-      }
+        std::string elemType;
+        if (builtinCollectionDispatchResolvers.resolveSoaVectorTarget(candidate.args.front(), elemType)) {
+          currentTypeTextOut = normalizeBindingTypeName(elemType);
+          return !currentTypeTextOut.empty();
+        }
       }
     }
     std::string builtinAccessName;

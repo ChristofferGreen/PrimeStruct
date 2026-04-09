@@ -236,8 +236,12 @@ bool inferImplicitTemplateArgs(const Definition &def,
       return {};
     }
     const std::string ownedPath = "/soa_vector/" + normalizedName;
+    const std::string canonicalPath =
+        "/std/collections/soa_vector/" + normalizedName;
     if (ctx.sourceDefs.count(ownedPath) > 0 ||
-        ctx.helperOverloads.count(ownedPath) > 0) {
+        ctx.helperOverloads.count(ownedPath) > 0 ||
+        ctx.sourceDefs.count(canonicalPath) > 0 ||
+        ctx.helperOverloads.count(canonicalPath) > 0) {
       return {};
     }
     return soaDirectPendingUnavailableMethodDiagnostic(
