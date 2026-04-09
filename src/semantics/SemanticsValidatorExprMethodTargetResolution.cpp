@@ -834,8 +834,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         }
       }
       if (((!target.isMethodCall && isSimpleCallName(target, "to_aos")) ||
+           (!target.isMethodCall && isSimpleCallName(target, "to_aos_ref")) ||
            resolveCalleePath(target) == "/to_aos" ||
-           resolveCalleePath(target) == "/std/collections/soa_vector/to_aos") &&
+           resolveCalleePath(target) == "/to_aos_ref" ||
+           resolveCalleePath(target) == "/soa_vector/to_aos_ref" ||
+           resolveCalleePath(target) == "/std/collections/soa_vector/to_aos" ||
+           resolveCalleePath(target) == "/std/collections/soa_vector/to_aos_ref") &&
           target.args.size() == 1) {
         std::string sourceElemType;
         const Expr &source = target.args.front();
@@ -1470,7 +1474,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
          resolvedOut == "/std/collections/soa_vector/get" ||
          resolvedOut == "/std/collections/soa_vector/ref" ||
          resolvedOut == "/std/collections/soa_vector/ref_ref" ||
-         resolvedOut == "/std/collections/soa_vector/to_aos") &&
+         resolvedOut == "/std/collections/soa_vector/to_aos" ||
+         resolvedOut == "/std/collections/soa_vector/to_aos_ref") &&
         hasImportedDefinitionPath(resolvedOut) &&
         defMap_.count(resolvedOut) == 0) {
       isBuiltinOut = true;

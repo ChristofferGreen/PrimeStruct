@@ -515,6 +515,15 @@ Semantics-layer pending fallback diagnostics:
     handling in these rewrite/snapshot compatibility paths
     (`src/semantics/SemanticsValidate.cpp` and
     `src/semantics/SemanticsValidatorSnapshots.cpp`).
+  - SoA `to_aos` conversion fallback vector-target probing now includes
+    borrowed helper surfaces (`to_aos_ref`) across method-target and
+    collection-dispatch resolver probing (including root/same-path/canonical
+    borrowed helper call-shape matching and canonical borrowed helper builtin
+    fallback classification), so canonical `to_aos_ref` helper visibility no
+    longer falls back to compiler-owned `to_aos`-only conversion probing in
+    these compatibility paths
+    (`src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp` and
+    `src/semantics/SemanticsValidatorInferCollections.cpp`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:
