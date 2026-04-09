@@ -42,8 +42,12 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
   const auto directCallTargets = semanticProgramDirectCallTargetView(*semanticProgram);
   adapter.directCallTargetsByExpr.reserve(directCallTargets.size());
   for (const auto *entry : directCallTargets) {
-    if (entry->semanticNodeId != 0 && !entry->resolvedPath.empty()) {
-      adapter.directCallTargetsByExpr.insert_or_assign(entry->semanticNodeId, entry->resolvedPath);
+    const std::string_view resolvedPathView =
+        semanticProgramResolveCallTargetString(*semanticProgram, entry->resolvedPathId);
+    const std::string_view resolvedPath =
+        resolvedPathView.empty() ? std::string_view(entry->resolvedPath) : resolvedPathView;
+    if (entry->semanticNodeId != 0 && !resolvedPath.empty()) {
+      adapter.directCallTargetsByExpr.insert_or_assign(entry->semanticNodeId, std::string(resolvedPath));
     }
   }
 
@@ -52,15 +56,20 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
   adapter.methodCallTargetPathsById.reserve(methodCallTargets.size());
   adapter.methodCallTargetIdsByPath.reserve(methodCallTargets.size());
   for (const auto *entry : methodCallTargets) {
-    if (entry->semanticNodeId != 0 && !entry->resolvedPath.empty()) {
+    const std::string_view resolvedPathView =
+        semanticProgramResolveCallTargetString(*semanticProgram, entry->resolvedPathId);
+    const std::string_view resolvedPath =
+        resolvedPathView.empty() ? std::string_view(entry->resolvedPath) : resolvedPathView;
+    if (entry->semanticNodeId != 0 && !resolvedPath.empty()) {
+      const std::string resolvedPathText(resolvedPath);
       SymbolId pathId = InvalidSymbolId;
-      if (const auto existing = adapter.methodCallTargetIdsByPath.find(entry->resolvedPath);
+      if (const auto existing = adapter.methodCallTargetIdsByPath.find(resolvedPathText);
           existing != adapter.methodCallTargetIdsByPath.end()) {
         pathId = existing->second;
       } else {
-        adapter.methodCallTargetPathsById.push_back(entry->resolvedPath);
+        adapter.methodCallTargetPathsById.push_back(resolvedPathText);
         pathId = static_cast<SymbolId>(adapter.methodCallTargetPathsById.size());
-        adapter.methodCallTargetIdsByPath.insert_or_assign(entry->resolvedPath, pathId);
+        adapter.methodCallTargetIdsByPath.insert_or_assign(adapter.methodCallTargetPathsById.back(), pathId);
       }
       adapter.methodCallTargetIdsByExpr.insert_or_assign(entry->semanticNodeId, pathId);
     }

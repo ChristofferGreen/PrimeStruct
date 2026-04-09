@@ -749,6 +749,77 @@ TEST_CASE("semantic product method-call targets stay separated by receiver type"
   CHECK(hasBIdTarget);
 }
 
+TEST_CASE("semantic product direct-call targets carry interned path ids") {
+  const std::string source =
+      "[return<i32>]\n"
+      "id_i32() {\n"
+      "  return(1i32)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [i32] a{id_i32()}\n"
+      "  [i32] b{id_i32()}\n"
+      "  return(plus(a, b))\n"
+      "}\n";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  std::vector<const primec::SemanticProgramDirectCallTarget *> mainTargets;
+  for (const auto *entry : primec::semanticProgramDirectCallTargetView(semanticProgram)) {
+    if (entry->scopePath == "/main" && entry->resolvedPath == "/id_i32") {
+      mainTargets.push_back(entry);
+    }
+  }
+  REQUIRE(mainTargets.size() >= 2);
+  REQUIRE(mainTargets[0]->resolvedPathId != primec::InvalidSymbolId);
+  CHECK(mainTargets[0]->resolvedPathId == mainTargets[1]->resolvedPathId);
+  CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, mainTargets[0]->resolvedPathId) ==
+        "/id_i32");
+}
+
+TEST_CASE("semantic product method-call targets carry interned path ids") {
+  const std::string source =
+      "[return<i32>]\n"
+      "/vector/count([vector<i32>] self) {\n"
+      "  return(17i32)\n"
+      "}\n"
+      "\n"
+      "[effects(heap_alloc), return<i32>]\n"
+      "main() {\n"
+      "  [auto] a{vector<i32>(1i32)}\n"
+      "  [auto] b{vector<i32>(2i32)}\n"
+      "  return(plus(a.count(), b.count()))\n"
+      "}\n";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  std::vector<const primec::SemanticProgramMethodCallTarget *> mainTargets;
+  for (const auto *entry : primec::semanticProgramMethodCallTargetView(semanticProgram)) {
+    if (entry->scopePath == "/main" && entry->methodName == "count" &&
+        entry->resolvedPath == "/vector/count") {
+      mainTargets.push_back(entry);
+    }
+  }
+  REQUIRE(mainTargets.size() >= 2);
+  REQUIRE(mainTargets[0]->resolvedPathId != primec::InvalidSymbolId);
+  CHECK(mainTargets[0]->resolvedPathId == mainTargets[1]->resolvedPathId);
+  CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, mainTargets[0]->resolvedPathId) ==
+        "/vector/count");
+}
+
 TEST_CASE("semantic product publishes specialized SoaColumn field access targets") {
   const std::string source = R"(
 import /std/collections/experimental_soa_storage/*

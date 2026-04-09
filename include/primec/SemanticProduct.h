@@ -3,7 +3,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <string_view>
+#include <unordered_map>
 #include <vector>
+
+#include "primec/SymbolInterner.h"
 
 namespace primec {
 
@@ -35,6 +39,9 @@ struct SemanticProgramDirectCallTarget {
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
   uint64_t provenanceHandle = 0;
+  SymbolId scopePathId = InvalidSymbolId;
+  SymbolId callNameId = InvalidSymbolId;
+  SymbolId resolvedPathId = InvalidSymbolId;
 };
 
 struct SemanticProgramMethodCallTarget {
@@ -46,6 +53,10 @@ struct SemanticProgramMethodCallTarget {
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
   uint64_t provenanceHandle = 0;
+  SymbolId scopePathId = InvalidSymbolId;
+  SymbolId methodNameId = InvalidSymbolId;
+  SymbolId receiverTypeTextId = InvalidSymbolId;
+  SymbolId resolvedPathId = InvalidSymbolId;
 };
 
 struct SemanticProgramBridgePathChoice {
@@ -241,6 +252,8 @@ struct SemanticProgram {
   std::string entryPath;
   std::vector<std::string> sourceImports;
   std::vector<std::string> imports;
+  std::vector<std::string> callTargetStringTable;
+  std::unordered_map<std::string, SymbolId> callTargetStringIdsByText;
   std::vector<SemanticProgramModuleResolvedArtifacts> moduleResolvedArtifacts;
   std::vector<SemanticProgramDefinition> definitions;
   std::vector<SemanticProgramExecution> executions;
@@ -278,6 +291,9 @@ std::vector<const SemanticProgramTryFact *>
 semanticProgramTryFactView(const SemanticProgram &semanticProgram);
 std::vector<const SemanticProgramOnErrorFact *>
 semanticProgramOnErrorFactView(const SemanticProgram &semanticProgram);
+
+SymbolId semanticProgramInternCallTargetString(SemanticProgram &semanticProgram, std::string_view text);
+std::string_view semanticProgramResolveCallTargetString(const SemanticProgram &semanticProgram, SymbolId id);
 
 std::string formatSemanticProgram(const SemanticProgram &semanticProgram);
 

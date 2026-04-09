@@ -285,15 +285,18 @@ SemanticProgram buildSemanticProgram(const Program &program,
     const auto directCallTargets = validator.directCallTargetSnapshotForSemanticProduct();
     semanticProgram.directCallTargets.reserve(directCallTargets.size());
     for (const auto &snapshotEntry : directCallTargets) {
-      semanticProgram.directCallTargets.push_back(SemanticProgramDirectCallTarget{
-          snapshotEntry.scopePath,
-          snapshotEntry.callName,
-          snapshotEntry.resolvedPath,
-          snapshotEntry.sourceLine,
-          snapshotEntry.sourceColumn,
-          snapshotEntry.semanticNodeId,
-          semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId),
-      });
+      SemanticProgramDirectCallTarget entry;
+      entry.scopePath = snapshotEntry.scopePath;
+      entry.callName = snapshotEntry.callName;
+      entry.resolvedPath = snapshotEntry.resolvedPath;
+      entry.sourceLine = snapshotEntry.sourceLine;
+      entry.sourceColumn = snapshotEntry.sourceColumn;
+      entry.semanticNodeId = snapshotEntry.semanticNodeId;
+      entry.provenanceHandle = semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId);
+      entry.scopePathId = semanticProgramInternCallTargetString(semanticProgram, entry.scopePath);
+      entry.callNameId = semanticProgramInternCallTargetString(semanticProgram, entry.callName);
+      entry.resolvedPathId = semanticProgramInternCallTargetString(semanticProgram, entry.resolvedPath);
+      semanticProgram.directCallTargets.push_back(std::move(entry));
       const std::size_t entryIndex = semanticProgram.directCallTargets.size() - 1;
       ensureModuleResolvedArtifacts(snapshotEntry.scopePath).directCallTargetIndices.push_back(
           entryIndex);
@@ -303,16 +306,20 @@ SemanticProgram buildSemanticProgram(const Program &program,
     const auto methodCallTargets = validator.methodCallTargetSnapshotForSemanticProduct();
     semanticProgram.methodCallTargets.reserve(methodCallTargets.size());
     for (const auto &snapshotEntry : methodCallTargets) {
-      semanticProgram.methodCallTargets.push_back(SemanticProgramMethodCallTarget{
-          snapshotEntry.scopePath,
-          snapshotEntry.methodName,
-          bindingTypeTextForSemanticProduct(snapshotEntry.receiverBinding),
-          snapshotEntry.resolvedPath,
-          snapshotEntry.sourceLine,
-          snapshotEntry.sourceColumn,
-          snapshotEntry.semanticNodeId,
-          semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId),
-      });
+      SemanticProgramMethodCallTarget entry;
+      entry.scopePath = snapshotEntry.scopePath;
+      entry.methodName = snapshotEntry.methodName;
+      entry.receiverTypeText = bindingTypeTextForSemanticProduct(snapshotEntry.receiverBinding);
+      entry.resolvedPath = snapshotEntry.resolvedPath;
+      entry.sourceLine = snapshotEntry.sourceLine;
+      entry.sourceColumn = snapshotEntry.sourceColumn;
+      entry.semanticNodeId = snapshotEntry.semanticNodeId;
+      entry.provenanceHandle = semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId);
+      entry.scopePathId = semanticProgramInternCallTargetString(semanticProgram, entry.scopePath);
+      entry.methodNameId = semanticProgramInternCallTargetString(semanticProgram, entry.methodName);
+      entry.receiverTypeTextId = semanticProgramInternCallTargetString(semanticProgram, entry.receiverTypeText);
+      entry.resolvedPathId = semanticProgramInternCallTargetString(semanticProgram, entry.resolvedPath);
+      semanticProgram.methodCallTargets.push_back(std::move(entry));
       const std::size_t entryIndex = semanticProgram.methodCallTargets.size() - 1;
       ensureModuleResolvedArtifacts(snapshotEntry.scopePath).methodCallTargetIndices.push_back(
           entryIndex);

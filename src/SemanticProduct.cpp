@@ -1,5 +1,6 @@
 #include "primec/SemanticProduct.h"
 
+#include <limits>
 #include <sstream>
 #include <string_view>
 
@@ -98,6 +99,32 @@ std::vector<const EntryT *> buildModuleOrFlatSemanticView(const SemanticProgram 
 }
 
 } // namespace
+
+SymbolId semanticProgramInternCallTargetString(SemanticProgram &semanticProgram, std::string_view text) {
+  if (text.empty()) {
+    return InvalidSymbolId;
+  }
+  const std::string key(text);
+  if (const auto existing = semanticProgram.callTargetStringIdsByText.find(key);
+      existing != semanticProgram.callTargetStringIdsByText.end()) {
+    return existing->second;
+  }
+  if (semanticProgram.callTargetStringTable.size() >=
+      static_cast<std::size_t>(std::numeric_limits<SymbolId>::max())) {
+    return InvalidSymbolId;
+  }
+  semanticProgram.callTargetStringTable.emplace_back(text);
+  const SymbolId id = static_cast<SymbolId>(semanticProgram.callTargetStringTable.size());
+  semanticProgram.callTargetStringIdsByText.emplace(semanticProgram.callTargetStringTable.back(), id);
+  return id;
+}
+
+std::string_view semanticProgramResolveCallTargetString(const SemanticProgram &semanticProgram, SymbolId id) {
+  if (id == InvalidSymbolId || id > semanticProgram.callTargetStringTable.size()) {
+    return {};
+  }
+  return semanticProgram.callTargetStringTable[id - 1];
+}
 
 std::vector<const SemanticProgramDirectCallTarget *>
 semanticProgramDirectCallTargetView(const SemanticProgram &semanticProgram) {
@@ -278,25 +305,50 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
   const auto directCallTargets = semanticProgramDirectCallTargetView(semanticProgram);
   for (size_t i = 0; i < directCallTargets.size(); ++i) {
     const auto &entry = *directCallTargets[i];
+    const std::string_view scopePath =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId);
+    const std::string_view callName =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.callNameId);
+    const std::string_view resolvedPath =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.resolvedPathId);
     appendSemanticIndexedLine(out,
                               "direct_call_targets",
                               i,
-                              "scope_path=" + quoteSemanticString(entry.scopePath) + " call_name=" +
-                                  quoteSemanticString(entry.callName) + " resolved_path=" +
-                                  quoteSemanticString(entry.resolvedPath) + " provenance_handle=" +
+                              "scope_path=" +
+                                  quoteSemanticString(scopePath.empty() ? entry.scopePath : scopePath) +
+                                  " call_name=" +
+                                  quoteSemanticString(callName.empty() ? entry.callName : callName) +
+                                  " resolved_path=" +
+                                  quoteSemanticString(resolvedPath.empty() ? entry.resolvedPath : resolvedPath) +
+                                  " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
   const auto methodCallTargets = semanticProgramMethodCallTargetView(semanticProgram);
   for (size_t i = 0; i < methodCallTargets.size(); ++i) {
     const auto &entry = *methodCallTargets[i];
+    const std::string_view scopePath =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId);
+    const std::string_view methodName =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.methodNameId);
+    const std::string_view receiverTypeText =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.receiverTypeTextId);
+    const std::string_view resolvedPath =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.resolvedPathId);
     appendSemanticIndexedLine(out,
                               "method_call_targets",
                               i,
-                              "scope_path=" + quoteSemanticString(entry.scopePath) + " method_name=" +
-                                  quoteSemanticString(entry.methodName) + " receiver_type_text=" +
-                                  quoteSemanticString(entry.receiverTypeText) + " resolved_path=" +
-                                  quoteSemanticString(entry.resolvedPath) + " provenance_handle=" +
+                              "scope_path=" +
+                                  quoteSemanticString(scopePath.empty() ? entry.scopePath : scopePath) +
+                                  " method_name=" +
+                                  quoteSemanticString(methodName.empty() ? entry.methodName : methodName) +
+                                  " receiver_type_text=" +
+                                  quoteSemanticString(receiverTypeText.empty()
+                                                          ? entry.receiverTypeText
+                                                          : receiverTypeText) +
+                                  " resolved_path=" +
+                                  quoteSemanticString(resolvedPath.empty() ? entry.resolvedPath : resolvedPath) +
+                                  " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
