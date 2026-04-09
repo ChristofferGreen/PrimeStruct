@@ -33,6 +33,8 @@ Interpretation:
 
 - `max_*` values are hard caps for single-run gating.
 - `soft_max_*` values are early-warning sustained-regression thresholds.
+- Budget coverage is strict: every `(fixture, phase)` row emitted in a report
+  must have a matching policy entry.
 
 ## Sustained-Window Rule
 

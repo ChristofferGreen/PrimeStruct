@@ -101,6 +101,7 @@ def main() -> int:
 
   failures: list[str] = []
   summaries: list[dict] = []
+  policy_keys: set[tuple[str, str]] = set()
 
   ordered_maps = history_maps + [current_map]
   for raw_entry in entries:
@@ -115,6 +116,10 @@ def main() -> int:
       continue
     key = (fixture, phase)
     entry_name = f"{fixture}:{phase}"
+    if key in policy_keys:
+      failures.append(f"duplicate policy entry for {entry_name}")
+      continue
+    policy_keys.add(key)
 
     try:
       soft_rss = as_int(raw_entry, "soft_max_worst_peak_rss_bytes", entry_name)
@@ -183,6 +188,12 @@ def main() -> int:
     print(
         "[check_semantic_memory_budget] "
         f"{entry_name} rss={observed_rss}/{max_rss} wall={observed_wall:.6f}/{max_wall:.6f}")
+
+  for fixture, phase in sorted(current_map.keys()):
+    key = (fixture, phase)
+    if key in policy_keys:
+      continue
+    failures.append(f"missing policy entry for report result {fixture}:{phase}")
 
   if args.report_json:
     report_path = Path(args.report_json).resolve()

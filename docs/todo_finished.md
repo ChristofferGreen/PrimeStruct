@@ -5,6 +5,11 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Cleanup (April 10, 2026)**
+
+**Group 15 - Semantic memory footprint and multithread compile substrate**
+- ✓ [P5-05] Defined per-fixture RSS/time regression budgets (tolerance + sustained-window rule) in a checked-in benchmark policy note. Completed: the checked-in policy note now documents strict `(fixture, phase)` budget coverage expectations and the budget checker now fails when reports emit tuples without matching policy entries, with regression-harness coverage locking that behavior.
+
 **Todo Cleanup (April 9, 2026)**
 
 **Group 15 - Semantic memory footprint and multithread compile substrate**

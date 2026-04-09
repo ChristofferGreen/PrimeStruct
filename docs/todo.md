@@ -114,4 +114,3 @@ P5 - CI observability, policy, and completion gates
 - ◐ [P5-02] Add optional phase-level allocation counters (allocation count + allocated bytes) for semantic validation/fact collection, off by default.
 - ◐ [P5-03] Add optional per-phase RSS checkpoints around semantic validation and semantic-product build, emitted in benchmark reports.
 - ◐ [P5-04] Add repeated-compile leak check (same fixture N times in one process) and report RSS drift.
-- ◐ [P5-05] Define per-fixture RSS/time regression budgets (tolerance + sustained-window rule) in a checked-in benchmark policy note.

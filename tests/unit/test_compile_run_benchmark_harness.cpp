@@ -276,6 +276,62 @@ TEST_CASE("semantic memory budget checker passes for in-budget report") {
   CHECK(readFile(stderrPath).empty());
 }
 
+TEST_CASE("semantic memory budget checker fails when report tuple lacks policy entry") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path checkerPath = repoRoot / "scripts" / "check_semantic_memory_budget.py";
+
+  const std::string policyPath = writeTemp(
+      "semantic_memory_budget_policy_missing_tuple.json",
+      "{\n"
+      "  \"schema\": \"primestruct_semantic_memory_budget_policy_v1\",\n"
+      "  \"sustained_window\": {\"window_size\": 3, \"minimum_regressions\": 2},\n"
+      "  \"entries\": [\n"
+      "    {\n"
+      "      \"fixture\": \"toy\",\n"
+      "      \"phase\": \"ast-semantic\",\n"
+      "      \"soft_max_worst_peak_rss_bytes\": 120,\n"
+      "      \"soft_max_worst_wall_seconds\": 1.2,\n"
+      "      \"max_worst_peak_rss_bytes\": 140,\n"
+      "      \"max_worst_wall_seconds\": 1.4\n"
+      "    }\n"
+      "  ]\n"
+      "}\n");
+  const std::string reportPath = writeTemp(
+      "semantic_memory_budget_report_missing_tuple.json",
+      "{\n"
+      "  \"schema\": \"primestruct_semantic_memory_report_v1\",\n"
+      "  \"results\": [\n"
+      "    {\n"
+      "      \"fixture\": \"toy\",\n"
+      "      \"phase\": \"ast-semantic\",\n"
+      "      \"worst_peak_rss_bytes\": 110,\n"
+      "      \"worst_wall_seconds\": 1.1\n"
+      "    },\n"
+      "    {\n"
+      "      \"fixture\": \"toy\",\n"
+      "      \"phase\": \"semantic-product\",\n"
+      "      \"worst_peak_rss_bytes\": 110,\n"
+      "      \"worst_wall_seconds\": 1.1\n"
+      "    }\n"
+      "  ]\n"
+      "}\n");
+  const std::string stdoutPath = writeTemp("semantic_memory_budget_missing_tuple.out", "");
+  const std::string stderrPath = writeTemp("semantic_memory_budget_missing_tuple.err", "");
+  const std::string cmd =
+      "python3 " + quoteShellArg(checkerPath.string()) + " --policy " + quoteShellArg(policyPath) +
+      " --report " + quoteShellArg(reportPath) + " > " + quoteShellArg(stdoutPath) + " 2> " +
+      quoteShellArg(stderrPath);
+  CHECK(runCommand(cmd) == 1);
+  const std::string stderrText = readFile(stderrPath);
+  CHECK(stderrText.find("budget check failed") != std::string::npos);
+  CHECK(stderrText.find("missing policy entry for report result toy:semantic-product") != std::string::npos);
+}
+
 TEST_CASE("semantic memory budget checker fails for sustained regressions") {
   if (!hasPython3()) {
     INFO("python3 not available");
