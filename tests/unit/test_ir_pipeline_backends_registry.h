@@ -2074,7 +2074,7 @@ TEST_CASE("compile pipeline benchmark worker-count stress keeps /std/math/* sema
   CHECK(firstRun.directCallTargetCount == secondRun.directCallTargetCount);
 }
 
-TEST_CASE("compile pipeline benchmark worker-count equivalence keeps /std/math/* semantic-product output stable between 1 and 4 workers") {
+TEST_CASE("compile pipeline benchmark worker-count equivalence keeps /std/math/* semantic-product output stable across 1,2,4 workers") {
   constexpr std::size_t localDefinitionCount = 64;
   const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
   {
@@ -2130,15 +2130,24 @@ TEST_CASE("compile pipeline benchmark worker-count equivalence keeps /std/math/*
   };
 
   const StressSnapshot singleWorker = runWithWorkerCount(1);
+  const StressSnapshot twoWorkers = runWithWorkerCount(2);
   const StressSnapshot fourWorkers = runWithWorkerCount(4);
 
   std::error_code ec;
   std::filesystem::remove(tempPath, ec);
 
+  CHECK(singleWorker.dumpOutput == twoWorkers.dumpOutput);
   CHECK(singleWorker.dumpOutput == fourWorkers.dumpOutput);
+  CHECK(twoWorkers.dumpOutput == fourWorkers.dumpOutput);
+  CHECK(singleWorker.definitionCount == twoWorkers.definitionCount);
   CHECK(singleWorker.definitionCount == fourWorkers.definitionCount);
+  CHECK(twoWorkers.definitionCount == fourWorkers.definitionCount);
+  CHECK(singleWorker.callableSummaryCount == twoWorkers.callableSummaryCount);
   CHECK(singleWorker.callableSummaryCount == fourWorkers.callableSummaryCount);
+  CHECK(twoWorkers.callableSummaryCount == fourWorkers.callableSummaryCount);
+  CHECK(singleWorker.directCallTargetCount == twoWorkers.directCallTargetCount);
   CHECK(singleWorker.directCallTargetCount == fourWorkers.directCallTargetCount);
+  CHECK(twoWorkers.directCallTargetCount == fourWorkers.directCallTargetCount);
 }
 
 TEST_CASE("compile pipeline benchmark worker-count stress keeps /std/math/* diagnostics deterministic") {
@@ -2185,7 +2194,7 @@ TEST_CASE("compile pipeline benchmark worker-count stress keeps /std/math/* diag
   CHECK(firstRunMessages.size() >= 2);
 }
 
-TEST_CASE("compile pipeline benchmark worker-count equivalence keeps /std/math/* diagnostics stable between 1 and 4 workers") {
+TEST_CASE("compile pipeline benchmark worker-count equivalence keeps /std/math/* diagnostics stable across 1,2,4 workers") {
   constexpr std::size_t localDefinitionCount = 64;
   const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
   {
@@ -2220,12 +2229,15 @@ TEST_CASE("compile pipeline benchmark worker-count equivalence keeps /std/math/*
   };
 
   const std::vector<std::string> singleWorkerMessages = runWithWorkerCount(1);
+  const std::vector<std::string> twoWorkerMessages = runWithWorkerCount(2);
   const std::vector<std::string> fourWorkerMessages = runWithWorkerCount(4);
 
   std::error_code ec;
   std::filesystem::remove(tempPath, ec);
 
+  CHECK(singleWorkerMessages == twoWorkerMessages);
   CHECK(singleWorkerMessages == fourWorkerMessages);
+  CHECK(twoWorkerMessages == fourWorkerMessages);
   CHECK(singleWorkerMessages.size() >= 2);
 }
 
