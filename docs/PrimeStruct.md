@@ -284,6 +284,8 @@ Ownership and lifetime rules:
   order within one compilation and are deterministic when traversal order is deterministic.
 - `SymbolId` values are owned by the interner instance that produced them: `0` is invalid, non-zero ids are only valid
   against that same interner, and resolved text views are borrowed from interner storage until `clear()`/destruction.
+- Deterministic worker-interner merge ordering and collision rules for parallel validation are defined in
+  `docs/Semantics_Multithread_Design.md` (P4-02 section).
 - Semantic nodes may reference syntax provenance only through stable ids/spans, not raw pointers into temporary
   validator state.
 - During migration, the AST may still outlive the semantic product so debug/source-map consumers can read syntax-faithful

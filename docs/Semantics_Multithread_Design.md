@@ -126,6 +126,70 @@ Merge requirements:
 - Equivalent inputs produce equivalent merged bundles regardless of thread
   count and worker completion order.
 
+## Deterministic Interner Merge Rules (P4-02)
+
+This section defines the merge contract for worker-local symbol interners.
+
+## Definitions
+
+- `SymbolId`: compilation-local non-zero id.
+- `0` is always invalid and is never assigned to real text.
+- `SymbolOriginKey`: stable semantic occurrence key attached to intern calls:
+  module order, definition order, semantic-node order, fact-family field order.
+
+`SymbolOriginKey` must be independent of worker count and scheduling.
+
+## Worker Output Requirements
+
+Each worker exports:
+- `localSymbols[]`: local-id-ordered text table.
+- `firstOriginByLocalId[]`: earliest `SymbolOriginKey` seen for each local id.
+
+Within a worker:
+- local ids are assigned in local first-seen order.
+- duplicate text in one worker maps to one local id.
+- empty text is not interned and resolves to id `0`.
+
+## Global Merge Algorithm
+
+1. Build one candidate record per local symbol:
+   `Candidate{text, firstOrigin, partitionKey, localId}`.
+2. Group candidates by exact text bytes.
+3. For each text group, select one canonical representative:
+   - lowest `firstOrigin`
+   - tie-break: lowest `partitionKey`
+   - tie-break: lowest `localId`
+4. Sort unique texts into final global order by:
+   - representative `firstOrigin`
+   - tie-break: text bytewise lexical order
+5. Assign global `SymbolId` sequentially from `1..N` in sorted order.
+6. Build per-worker remap tables from local id to global id.
+
+This guarantees that the merged id map depends only on stable semantic order,
+not worker completion time.
+
+## Collision and Equality Rules
+
+- Text equality is exact byte equality.
+- Hash collisions in merge maps must be resolved by full byte comparison.
+- Two different texts may not collapse even if hashes collide.
+- If two records share identical `firstOrigin` unexpectedly, preserve
+  determinism with tie-breaks (`partitionKey`, `localId`, then text lexical).
+
+## Determinism Requirements
+
+- For the same canonical input, merged global symbol table and remap tables
+  must be identical across repeated runs and worker counts (`1`, `2`, `4`).
+- Merge must be single-writer; no concurrent mutation of global symbol table.
+- Merge must not depend on iteration order from unordered containers.
+
+## Compatibility Rules
+
+- Existing single-thread semantics remain source-of-truth behavior.
+- Multithreaded merge must preserve existing semantic-product text output.
+- Diagnostics and semantic-product facts continue to resolve text via merged
+  `SymbolId` without changing visible ordering contracts.
+
 ## Diagnostic and Fact Ordering
 
 - Diagnostics are sorted by a deterministic composite key:
