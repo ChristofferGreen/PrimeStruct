@@ -461,6 +461,12 @@ Semantics-layer pending fallback diagnostics:
     no longer falls through this compatibility path when method fallback
     rewrites probe vector-family helper targets
     (`src/semantics/SemanticsValidatorExprLateUnknownTargetFallbacks.cpp`).
+  - Resolved-call SoA borrowed-reference escape fallback detection now treats
+    `ref_ref` helper call/method shapes as equivalent to `ref` across
+    same-path, canonical stdlib, and experimental helper surfaces, so
+    canonical `ref_ref` rewrites stay on the shared reference-escape
+    validation path instead of relying on compiler-owned `ref`-only matching
+    (`src/semantics/SemanticsValidatorExprResolvedCallArguments.cpp`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:

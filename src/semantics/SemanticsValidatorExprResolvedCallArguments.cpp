@@ -225,7 +225,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
       return false;
     }
     if (arg.isMethodCall) {
-      if (arg.name != "ref") {
+      if (arg.name != "ref" && arg.name != "ref_ref") {
         return false;
       }
       receiverOut = &arg.args.front();
@@ -233,9 +233,13 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     }
     const std::string resolvedPath = resolveCalleePath(arg);
     if (!isSimpleCallName(arg, "ref") &&
+        !isSimpleCallName(arg, "ref_ref") &&
         resolvedPath.rfind("/std/collections/soa_vector/ref", 0) != 0 &&
+        resolvedPath.rfind("/std/collections/soa_vector/ref_ref", 0) != 0 &&
         resolvedPath.rfind("/soa_vector/ref", 0) != 0 &&
+        resolvedPath.rfind("/soa_vector/ref_ref", 0) != 0 &&
         resolvedPath.rfind("/std/collections/experimental_soa_vector/soaVectorRef", 0) != 0 &&
+        resolvedPath.rfind("/std/collections/experimental_soa_vector/soaVectorRefRef", 0) != 0 &&
         resolvedPath.rfind("/std/collections/experimental_soa_storage/soaColumnRef", 0) != 0) {
       return false;
     }
