@@ -396,6 +396,11 @@ Semantics-layer pending fallback diagnostics:
     (`src/semantics/SemanticsValidatorStatementReturns.cpp`,
     `src/semantics/SemanticsValidatorInferCollectionReturnInference.cpp`, and
     `src/semantics/TemplateMonomorphImplicitTemplateInference.h`).
+  - Helper-return definition type-inference fallback now resolves helper targets
+    through visible same-path or canonical stdlib SoA helper paths (instead of
+    requiring visible same-path `/soa_vector/<helper>` definitions), so
+    canonical helper imports can satisfy fallback inference for non-core helper
+    names (`src/semantics/SemanticsValidatorInferDefinition.cpp`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:

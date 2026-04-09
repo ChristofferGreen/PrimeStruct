@@ -45,7 +45,7 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     }
     return normalizedBase + "<" + normalizeBindingTypeName(binding.typeTemplateArg) + ">";
   };
-  auto inferSamePathSoaFieldViewHelperBinding = [&](const Expr &candidate, BindingInfo &bindingOut) -> bool {
+  auto inferVisibleSoaFieldViewHelperBinding = [&](const Expr &candidate, BindingInfo &bindingOut) -> bool {
     if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall ||
         !candidate.namespacePrefix.empty() || candidate.args.size() != 1 || candidate.name.empty()) {
       return false;
@@ -58,10 +58,11 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
         helperName == "ref" || helperName == "to_soa" || helperName == "to_aos") {
       return false;
     }
-    const std::string helperPath = "/soa_vector/" + helperName;
-    if (!hasVisibleDefinitionPathForCurrentImports("/soa_vector/" + helperName)) {
+    if (!hasVisibleSoaHelperTargetForCurrentImports(helperName)) {
       return false;
     }
+    const std::string helperPath =
+        preferredSoaHelperTargetForCurrentImports(helperName);
     BindingInfo receiverBinding;
     const Expr &receiver = candidate.args.front();
     if (!inferBindingTypeFromInitializer(receiver, defParams, activeLocals, receiverBinding)) {
@@ -136,7 +137,7 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
           assignBindingFromTypeText(inferredTypeText, exprBinding);
     }
     if (!hasExprBinding) {
-      hasExprBinding = inferSamePathSoaFieldViewHelperBinding(*valueExpr, exprBinding);
+      hasExprBinding = inferVisibleSoaFieldViewHelperBinding(*valueExpr, exprBinding);
     }
     error_.clear();
     error_ = previousError;
