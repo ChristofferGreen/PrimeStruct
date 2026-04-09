@@ -572,6 +572,11 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphFallbackSource.find("std::string preferVectorStdlibImplicitTemplatePath(") !=
         std::string::npos);
+  CHECK(templateMonomorphFallbackSource.find("path == \"/soa_vector/get_ref\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphFallbackSource.find(
+            "path == \"/std/collections/soa_vector/get_ref\"") !=
+        std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "path == \"/soa_vector/get_ref\"") !=
         std::string::npos);
