@@ -565,6 +565,12 @@ Semantics-layer pending fallback diagnostics:
     back to compiler-owned `to_aos`-only late map/SoA builtin-entry gating
     during expression validation
     (`src/semantics/SemanticsValidatorExpr.cpp`).
+  - Template-monomorph SoA conversion root-helper rewrite selection now
+    includes borrowed `to_aos_ref` parity in root helper-family visibility
+    checks, so root `to_aos_ref` helper visibility no longer falls back to
+    compiler-owned `to_aos`-only root-helper rewrite selection during
+    expression-rewrite target retargeting
+    (`src/semantics/TemplateMonomorphExpressionRewrite.h`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:

@@ -337,7 +337,7 @@ bool rewriteExpr(Expr &expr,
       }
       return false;
     };
-    auto hasVisibleRootBuiltinSoaToAosHelper = [&]() {
+    auto hasVisibleRootBuiltinSoaConversionHelper = [&](std::string_view helperPath) {
       auto matchesBuiltinSoaHelper = [&](const std::string &helperPath) {
         auto defIt = ctx.sourceDefs.find(helperPath);
         if (defIt == ctx.sourceDefs.end() || defIt->second.parameters.empty()) {
@@ -350,10 +350,11 @@ bool rewriteExpr(Expr &expr,
         return normalizeBindingTypeName(paramBinding.typeName) == "soa_vector" &&
                !paramBinding.typeTemplateArg.empty();
       };
-      if (matchesBuiltinSoaHelper("/to_aos")) {
+      const std::string ownedHelperPath(helperPath);
+      if (matchesBuiltinSoaHelper(ownedHelperPath)) {
         return true;
       }
-      auto familyIt = ctx.helperOverloads.find("/to_aos");
+      auto familyIt = ctx.helperOverloads.find(ownedHelperPath);
       if (familyIt == ctx.helperOverloads.end()) {
         return false;
       }
@@ -451,10 +452,12 @@ bool rewriteExpr(Expr &expr,
       return helperName == "ref_ref" ? std::string("/soa_vector/ref_ref")
                                      : std::string("/soa_vector/ref");
     }
-    if (helperName == "to_aos" &&
-        hasVisibleRootBuiltinSoaToAosHelper() &&
+    if ((helperName == "to_aos" || helperName == "to_aos_ref") &&
+        hasVisibleRootBuiltinSoaConversionHelper(
+            helperName == "to_aos" ? "/to_aos" : "/to_aos_ref") &&
         resolvesBuiltinSoaToAosShadowReceiver(receiverExpr)) {
-      return std::string("/to_aos");
+      return helperName == "to_aos" ? std::string("/to_aos")
+                                    : std::string("/to_aos_ref");
     }
     const std::string receiverFamily = inferCollectionReceiverFamily(receiverExpr);
     if (receiverFamily == "soa_vector" && resolvesVectorFamilyPath) {
