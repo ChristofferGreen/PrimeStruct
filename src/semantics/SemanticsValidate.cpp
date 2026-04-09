@@ -3183,6 +3183,14 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
     }
   }
   for (Definition &def : program.definitions) {
+    if (def.fullPath == "/to_aos" ||
+        def.fullPath.rfind("/to_aos__", 0) == 0 ||
+        def.fullPath == "/std/collections/soa_vector/to_aos" ||
+        def.fullPath.rfind("/std/collections/soa_vector/to_aos__", 0) == 0 ||
+        def.fullPath.rfind(
+            "/std/collections/experimental_soa_vector_conversions/", 0) == 0) {
+      continue;
+    }
     std::unordered_map<std::string, semantics::BindingInfo> bindings;
     for (const Expr &param : def.parameters) {
       if (auto binding = extractParsedOrExperimentalSoaBindingInfo(param, &structPaths); binding.has_value()) {
