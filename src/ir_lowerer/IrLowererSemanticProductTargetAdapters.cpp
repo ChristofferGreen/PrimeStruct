@@ -48,10 +48,21 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
   }
 
   const auto methodCallTargets = semanticProgramMethodCallTargetView(*semanticProgram);
-  adapter.methodCallTargetsByExpr.reserve(methodCallTargets.size());
+  adapter.methodCallTargetIdsByExpr.reserve(methodCallTargets.size());
+  adapter.methodCallTargetPathsById.reserve(methodCallTargets.size());
+  adapter.methodCallTargetIdsByPath.reserve(methodCallTargets.size());
   for (const auto *entry : methodCallTargets) {
     if (entry->semanticNodeId != 0 && !entry->resolvedPath.empty()) {
-      adapter.methodCallTargetsByExpr.insert_or_assign(entry->semanticNodeId, entry->resolvedPath);
+      SymbolId pathId = InvalidSymbolId;
+      if (const auto existing = adapter.methodCallTargetIdsByPath.find(entry->resolvedPath);
+          existing != adapter.methodCallTargetIdsByPath.end()) {
+        pathId = existing->second;
+      } else {
+        adapter.methodCallTargetPathsById.push_back(entry->resolvedPath);
+        pathId = static_cast<SymbolId>(adapter.methodCallTargetPathsById.size());
+        adapter.methodCallTargetIdsByPath.insert_or_assign(entry->resolvedPath, pathId);
+      }
+      adapter.methodCallTargetIdsByExpr.insert_or_assign(entry->semanticNodeId, pathId);
     }
   }
 
@@ -168,9 +179,13 @@ std::string findSemanticProductMethodCallTarget(const SemanticProductTargetAdapt
   if (expr.semanticNodeId == 0) {
     return {};
   }
-  if (const auto it = adapter.methodCallTargetsByExpr.find(expr.semanticNodeId);
-      it != adapter.methodCallTargetsByExpr.end()) {
-    return it->second;
+  if (const auto it = adapter.methodCallTargetIdsByExpr.find(expr.semanticNodeId);
+      it != adapter.methodCallTargetIdsByExpr.end()) {
+    const SymbolId pathId = it->second;
+    if (pathId == InvalidSymbolId || pathId > adapter.methodCallTargetPathsById.size()) {
+      return {};
+    }
+    return adapter.methodCallTargetPathsById[pathId - 1];
   }
   return {};
 }

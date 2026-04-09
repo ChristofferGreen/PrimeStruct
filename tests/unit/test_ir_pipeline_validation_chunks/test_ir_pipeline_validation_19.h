@@ -795,6 +795,47 @@ TEST_CASE("ir lowerer call helpers require semantic-product method-call targets"
   CHECK(resolveExprPath(methodExpr) == "/std/collections/map/contains");
 }
 
+TEST_CASE("ir lowerer semantic-product adapter interns method-call targets by SymbolId") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
+      "/main",
+      "contains",
+      "",
+      "/std/collections/map/contains",
+      0,
+      0,
+      44,
+  });
+  semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
+      "/main",
+      "contains",
+      "",
+      "/std/collections/map/contains",
+      0,
+      0,
+      45,
+  });
+
+  const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  REQUIRE(adapter.methodCallTargetIdsByExpr.count(44) == 1);
+  REQUIRE(adapter.methodCallTargetIdsByExpr.count(45) == 1);
+  CHECK(adapter.methodCallTargetIdsByExpr.at(44) == adapter.methodCallTargetIdsByExpr.at(45));
+
+  primec::Expr firstExpr;
+  firstExpr.kind = primec::Expr::Kind::Call;
+  firstExpr.isMethodCall = true;
+  firstExpr.semanticNodeId = 44;
+  CHECK(primec::ir_lowerer::findSemanticProductMethodCallTarget(adapter, firstExpr) ==
+        "/std/collections/map/contains");
+
+  primec::Expr secondExpr;
+  secondExpr.kind = primec::Expr::Kind::Call;
+  secondExpr.isMethodCall = true;
+  secondExpr.semanticNodeId = 45;
+  CHECK(primec::ir_lowerer::findSemanticProductMethodCallTarget(adapter, secondExpr) ==
+        "/std/collections/map/contains");
+}
+
 TEST_CASE("ir lowerer call helpers require semantic-product bridge-path choices") {
   const std::unordered_map<std::string, const primec::Definition *> defMap;
   const std::unordered_map<std::string, std::string> importAliases;

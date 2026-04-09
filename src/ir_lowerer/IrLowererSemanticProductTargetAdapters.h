@@ -7,13 +7,16 @@
 
 #include "primec/Ast.h"
 #include "primec/SemanticProduct.h"
+#include "primec/SymbolInterner.h"
 
 namespace primec::ir_lowerer {
 
 struct SemanticProductTargetAdapter {
   bool hasSemanticProduct = false;
   std::unordered_map<uint64_t, std::string> directCallTargetsByExpr;
-  std::unordered_map<uint64_t, std::string> methodCallTargetsByExpr;
+  std::unordered_map<std::string, SymbolId> methodCallTargetIdsByPath;
+  std::vector<std::string> methodCallTargetPathsById;
+  std::unordered_map<uint64_t, SymbolId> methodCallTargetIdsByExpr;
   std::unordered_map<uint64_t, std::string> bridgePathChoicesByExpr;
   std::unordered_map<std::string, const SemanticProgramCallableSummary *> callableSummariesByPath;
   std::unordered_map<uint64_t, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionId;
