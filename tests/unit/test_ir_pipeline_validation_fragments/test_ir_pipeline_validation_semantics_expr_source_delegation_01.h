@@ -308,6 +308,9 @@
             "return soaUnavailableMethodDiagnostic(\n"
             "        resolvedPath,\n"
             "        this->hasVisibleSoaHelperTargetForCurrentImports(\"ref\"));") !=
+            std::string::npos ||
+        semanticsExprMethodCompatibilitySetupSource.find(
+            "this->hasVisibleSoaHelperTargetForCurrentImports(helperName));") !=
             std::string::npos));
   CHECK(semanticsExprSource.find(
             "prepareExprCollectionDispatchSetup(\n"

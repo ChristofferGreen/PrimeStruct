@@ -455,7 +455,11 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
           (*soaAccessHelper == "ref" &&
            (isSimpleCallName(candidate, "ref") ||
             (candidate.isMethodCall && candidate.name == "ref") ||
-            resolvedCandidate == "/soa_vector/ref"));
+            resolvedCandidate == "/soa_vector/ref")) ||
+          (*soaAccessHelper == "ref_ref" &&
+           (isSimpleCallName(candidate, "ref_ref") ||
+            (candidate.isMethodCall && candidate.name == "ref_ref") ||
+            resolvedCandidate == "/soa_vector/ref_ref"));
       if (!(hasVisibleSoaHelperTargetForCurrentImports(*soaAccessHelper) &&
             oldSurfaceCallShape)) {
         std::string elemType;

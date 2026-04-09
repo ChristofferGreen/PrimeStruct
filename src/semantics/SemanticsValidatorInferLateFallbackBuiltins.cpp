@@ -520,13 +520,20 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
          resolveExperimentalMapTarget(receiver, keyType, valueType));
       if (!hasCollectionReceiver) {
         std::string methodResolved;
+        auto hasVisibleSoaBorrowedHelperForPath = [&](const std::string &path) {
+          if (path.rfind("/soa_vector/ref_ref", 0) == 0 ||
+              path.rfind("/std/collections/soa_vector/ref_ref", 0) == 0) {
+            return hasVisibleSoaHelperTargetForCurrentImports("ref_ref");
+          }
+          return hasVisibleSoaHelperTargetForCurrentImports("ref");
+        };
         if (context.resolveMethodCallPath != nullptr &&
             context.resolveMethodCallPath(builtinAccessName, methodResolved) &&
             !methodResolved.empty()) {
           return failInferLateFallbackDiagnostic(
               soaUnavailableMethodDiagnostic(
                   methodResolved,
-                  hasVisibleSoaHelperTargetForCurrentImports("ref")));
+                  hasVisibleSoaBorrowedHelperForPath(methodResolved)));
         }
         return finish(ReturnKind::Unknown);
       }

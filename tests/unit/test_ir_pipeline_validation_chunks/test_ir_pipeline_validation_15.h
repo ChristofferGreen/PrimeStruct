@@ -743,9 +743,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(buildInitializerInferenceSource.find(
             "return soaFieldViewHelperPath(fieldName);") !=
         std::string::npos);
-  CHECK(buildInitializerInferenceSource.find(
+  CHECK((buildInitializerInferenceSource.find(
             "return std::string(\"/soa_vector/ref\");") !=
-        std::string::npos);
+         std::string::npos ||
+         buildInitializerInferenceSource.find(
+             "return std::string(\"/soa_vector/\") + *soaAccessHelper;") !=
+             std::string::npos));
   CHECK(buildInitializerInferenceSource.find("soaFieldViewOrUnknownMethodDiagnostic(") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
@@ -933,18 +936,27 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "soaUnavailableMethodDiagnostic(\n"
             "        resolvedPath,\n"
             "        this->hasVisibleSoaHelperTargetForCurrentImports(\"ref\"))") !=
+            std::string::npos ||
+        exprMethodCompatibilitySetupSource.find(
+            "this->hasVisibleSoaHelperTargetForCurrentImports(helperName)") !=
             std::string::npos));
   CHECK((inferPreDispatchCallsSource.find(
             "usesSamePathSoaHelperTargetForCurrentImports(\"ref\")))") !=
         std::string::npos ||
         inferPreDispatchCallsSource.find(
             "hasVisibleSoaHelperTargetForCurrentImports(\"ref\")))") !=
+            std::string::npos ||
+        inferPreDispatchCallsSource.find(
+            "hasVisibleSoaBorrowedHelperForPath(methodResolved))") !=
             std::string::npos));
   CHECK((inferLateFallbackBuiltinsSource.find(
             "usesSamePathSoaHelperTargetForCurrentImports(\"ref\")))") !=
         std::string::npos ||
         inferLateFallbackBuiltinsSource.find(
             "hasVisibleSoaHelperTargetForCurrentImports(\"ref\")))") !=
+            std::string::npos ||
+        inferLateFallbackBuiltinsSource.find(
+            "hasVisibleSoaBorrowedHelperForPath(methodResolved))") !=
             std::string::npos));
   CHECK(exprMethodTargetResolutionSource.find(
             "usesSamePathSoaHelperTargetForCollectionType(\"count\", \"/vector\")") !=

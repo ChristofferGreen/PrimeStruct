@@ -221,6 +221,20 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
       (!candidate.isMethodCall && isSimpleCallName(candidate, "ref"))) {
     return std::string("ref");
   }
+  const bool isExplicitSoaRefRefCall =
+      (!candidate.isMethodCall && normalizedPrefix == "soa_vector" &&
+       normalizedName == "ref_ref") ||
+      normalizedName == "soa_vector/ref_ref";
+  const bool isBuiltinSoaRefRefMethod =
+      candidate.isMethodCall && normalizedName == "ref_ref" &&
+      !candidate.args.empty() && isDirectSoaVectorTarget(candidate.args.front());
+  if (resolved == "/soa_vector/ref_ref" ||
+      resolved == "/std/collections/soa_vector/ref_ref" ||
+      isExplicitSoaRefRefCall ||
+      isBuiltinSoaRefRefMethod ||
+      (!candidate.isMethodCall && isSimpleCallName(candidate, "ref_ref"))) {
+    return std::string("ref_ref");
+  }
 
   const bool isExplicitSoaGetCall =
       (!candidate.isMethodCall && normalizedPrefix == "soa_vector" &&
@@ -430,11 +444,12 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
   }
   const auto soaAccessHelper =
       builtinSoaAccessHelperName(candidate, params, locals);
-  if (soaAccessHelper.has_value() && *soaAccessHelper == "ref" &&
+  if (soaAccessHelper.has_value() &&
+      (*soaAccessHelper == "ref" || *soaAccessHelper == "ref_ref") &&
       !candidate.args.empty() &&
       !isExperimentalSoaLikeExpr(candidate.args.front()) &&
-      !hasVisibleSoaHelperTargetForCurrentImports("ref")) {
-    return std::string("/soa_vector/ref");
+      !hasVisibleSoaHelperTargetForCurrentImports(*soaAccessHelper)) {
+    return std::string("/soa_vector/") + *soaAccessHelper;
   }
   return std::nullopt;
 }

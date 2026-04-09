@@ -400,7 +400,8 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       builtinSoaAccessHelperName(expr, params, locals);
   if ((resolvedMethod || resolvedMissing ||
        resolved == "/std/collections/soa_vector/get" ||
-       resolved == "/std/collections/soa_vector/ref") &&
+       resolved == "/std/collections/soa_vector/ref" ||
+       resolved == "/std/collections/soa_vector/ref_ref") &&
       soaAccessHelperName.has_value()) {
     handledOut = true;
     if (hasNamedArguments(expr.argNames) &&
@@ -429,7 +430,11 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
         (helperName == "ref" &&
          (isSimpleCallName(expr, "ref") ||
           (expr.isMethodCall && expr.name == "ref") ||
-          resolved == "/soa_vector/ref"));
+          resolved == "/soa_vector/ref")) ||
+        (helperName == "ref_ref" &&
+         (isSimpleCallName(expr, "ref_ref") ||
+          (expr.isMethodCall && expr.name == "ref_ref") ||
+          resolved == "/soa_vector/ref_ref"));
     if (!this->resolveSoaVectorOrExperimentalBorrowedReceiver(
             expr.args.front(),
             params,

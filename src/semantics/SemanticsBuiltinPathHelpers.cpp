@@ -457,22 +457,28 @@ std::string soaFieldViewPendingDiagnostic(std::string_view fieldName) {
   return "soa_vector field views are not implemented yet: " + std::string(fieldName);
 }
 
-std::string soaBorrowedViewPendingDiagnostic() {
-  return "soa_vector borrowed views are not implemented yet: ref";
+std::string soaBorrowedViewPendingDiagnostic(std::string_view helperName) {
+  return "soa_vector borrowed views are not implemented yet: " +
+         std::string(helperName);
 }
 
 } // namespace
 
 std::optional<std::string> soaPendingUnavailableMethodDiagnostic(
-    std::string_view resolvedPath, bool hasVisibleSoaRefHelper) {
+    std::string_view resolvedPath, bool hasVisibleSoaBorrowedHelper) {
   std::string fieldName;
   if (splitSoaFieldViewHelperPath(resolvedPath, &fieldName)) {
     return soaFieldViewPendingDiagnostic(fieldName);
   }
   if ((resolvedPath == "/soa_vector/ref" ||
        resolvedPath == "/std/collections/soa_vector/ref") &&
-      !hasVisibleSoaRefHelper) {
-    return soaBorrowedViewPendingDiagnostic();
+      !hasVisibleSoaBorrowedHelper) {
+    return soaBorrowedViewPendingDiagnostic("ref");
+  }
+  if ((resolvedPath == "/soa_vector/ref_ref" ||
+       resolvedPath == "/std/collections/soa_vector/ref_ref") &&
+      !hasVisibleSoaBorrowedHelper) {
+    return soaBorrowedViewPendingDiagnostic("ref_ref");
   }
   return std::nullopt;
 }
@@ -483,9 +489,9 @@ std::string soaDirectPendingUnavailableMethodDiagnostic(
 }
 
 std::string soaUnavailableMethodDiagnostic(std::string_view resolvedPath,
-                                           bool hasVisibleSoaRefHelper) {
+                                           bool hasVisibleSoaBorrowedHelper) {
   if (const auto pending = soaPendingUnavailableMethodDiagnostic(
-          resolvedPath, hasVisibleSoaRefHelper)) {
+          resolvedPath, hasVisibleSoaBorrowedHelper)) {
     return *pending;
   }
   return "unknown method: " + std::string(resolvedPath);

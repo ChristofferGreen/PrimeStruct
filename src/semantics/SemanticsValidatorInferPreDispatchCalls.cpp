@@ -520,6 +520,13 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
                 path == "/std/collections/map/insert_ref") &&
                !hasVisibleStdlibMapMethodDefinition(path);
       };
+      auto hasVisibleSoaBorrowedHelperForPath = [&](const std::string &path) {
+        if (path.rfind("/soa_vector/ref_ref", 0) == 0 ||
+            path.rfind("/std/collections/soa_vector/ref_ref", 0) == 0) {
+          return hasVisibleSoaHelperTargetForCurrentImports("ref_ref");
+        }
+        return hasVisibleSoaHelperTargetForCurrentImports("ref");
+      };
       if (logicalMethodResolved == "/file_error/why" ||
           logicalMethodResolved == "/FileError/why") {
         return finish(ReturnKind::String);
@@ -542,7 +549,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
         return failInferPreDispatchDiagnostic(
             soaUnavailableMethodDiagnostic(
                 methodResolved,
-                hasVisibleSoaHelperTargetForCurrentImports("ref")));
+                hasVisibleSoaBorrowedHelperForPath(methodResolved)));
       }
       ReturnKind builtinMethodKind = ReturnKind::Unknown;
       if (!hasDefinitionPath(logicalMethodResolved) &&
@@ -558,7 +565,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
         return failInferPreDispatchDiagnostic(
             soaUnavailableMethodDiagnostic(
                 methodResolved,
-                hasVisibleSoaHelperTargetForCurrentImports("ref")));
+                hasVisibleSoaBorrowedHelperForPath(methodResolved)));
       }
       context.resolved = methodResolved;
       hasResolvedPath = true;

@@ -467,6 +467,20 @@ Semantics-layer pending fallback diagnostics:
     canonical `ref_ref` rewrites stay on the shared reference-escape
     validation path instead of relying on compiler-owned `ref`-only matching
     (`src/semantics/SemanticsValidatorExprResolvedCallArguments.cpp`).
+  - Old-surface SoA borrowed-view pending fallback gates now treat `ref_ref`
+    helper call/method shapes as equivalent to `ref` across same-path and
+    canonical stdlib helper surfaces (including helper-visibility-aware pending
+    diagnostics, method compatibility diagnostics, pre-dispatch and late-fallback
+    unknown-method diagnostics, and old-surface helper fallback escape hatches
+    in type inference), so canonical `ref_ref` helper visibility no longer
+    falls back to compiler-owned `ref`-only pending/unknown-method handling
+    (`src/semantics/SemanticsBuiltinPathHelpers.cpp`,
+    `src/semantics/SemanticsValidatorBuildInitializerInference.cpp`,
+    `src/semantics/SemanticsValidatorExprMethodCompatibilitySetup.cpp`,
+    `src/semantics/SemanticsValidatorInferPreDispatchCalls.cpp`,
+    `src/semantics/SemanticsValidatorInferLateFallbackBuiltins.cpp`,
+    `src/semantics/SemanticsValidatorExprMapSoaBuiltins.cpp`, and
+    `src/semantics/SemanticsValidatorInferCollectionReturnInference.cpp`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:
