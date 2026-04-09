@@ -2,6 +2,9 @@
 
 #include "primec/SymbolInterner.h"
 
+#include <string>
+#include <vector>
+
 TEST_SUITE_BEGIN("primestruct.semantics.symbol_interner");
 
 TEST_CASE("symbol interner assigns deterministic first-seen ids") {
@@ -48,6 +51,41 @@ TEST_CASE("symbol interner clears ids and restarts numbering") {
   const primec::SymbolId reset = interner.intern("alpha");
   CHECK(reset == 1);
   CHECK(interner.resolve(reset) == "alpha");
+}
+
+TEST_CASE("symbol interner repeat runs keep identical single-thread ids") {
+  const std::vector<std::string> sequence = {
+      "/std/math/vector", "/std/math/matrix", "/std/math/vector",
+      "/std/math/quaternion", "/std/math/vector", "/std/math/matrix",
+      "/std/math/complex"};
+
+  std::vector<primec::SymbolId> baselineIds;
+  std::vector<std::string> baselineResolved;
+  for (int run = 0; run < 6; ++run) {
+    primec::SymbolInterner interner;
+    std::vector<primec::SymbolId> runIds;
+    runIds.reserve(sequence.size());
+    for (const std::string &symbol : sequence) {
+      runIds.push_back(interner.intern(symbol));
+    }
+
+    if (run == 0) {
+      baselineIds = runIds;
+      baselineResolved.reserve(interner.size());
+      for (std::size_t i = 0; i < interner.size(); ++i) {
+        const primec::SymbolId id = static_cast<primec::SymbolId>(i + 1);
+        baselineResolved.emplace_back(interner.resolve(id));
+      }
+      continue;
+    }
+
+    CHECK(runIds == baselineIds);
+    REQUIRE(interner.size() == baselineResolved.size());
+    for (std::size_t i = 0; i < baselineResolved.size(); ++i) {
+      const primec::SymbolId id = static_cast<primec::SymbolId>(i + 1);
+      CHECK(interner.resolve(id) == baselineResolved[i]);
+    }
+  }
 }
 
 TEST_SUITE_END();
