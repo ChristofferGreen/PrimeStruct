@@ -4309,7 +4309,8 @@ void rewriteExperimentalSoaFieldViewHelperExpr(
     }
     if (fieldName.empty() || fieldName.find('/') != std::string::npos ||
         fieldName == "count" || fieldName == "get" || fieldName == "ref" ||
-        fieldName == "to_soa" || fieldName == "to_aos") {
+        fieldName == "to_soa" || fieldName == "to_aos" ||
+        fieldName == "to_aos_ref") {
       return;
     }
   }

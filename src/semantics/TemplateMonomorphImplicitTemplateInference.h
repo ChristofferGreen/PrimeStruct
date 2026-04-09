@@ -272,6 +272,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
     }
     if (normalizedName == "count" || normalizedName == "get" ||
         normalizedName == "to_soa" || normalizedName == "to_aos" ||
+        normalizedName == "to_aos_ref" ||
         normalizedName == "contains") {
       return {};
     }
