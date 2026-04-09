@@ -385,6 +385,12 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferLateFallbackBuiltinsSource.find("const bool isBuiltinGet = isSimpleCallName(expr, \"get\");") !=
         std::string::npos);
   CHECK(semanticsInferLateFallbackBuiltinsSource.find(
+            "const bool isBuiltinGetRef = isSimpleCallName(expr, \"get_ref\");") !=
+        std::string::npos);
+  CHECK(semanticsInferLateFallbackBuiltinsSource.find(
+            "(helperName == \"get\" || helperName == \"get_ref\" ||") !=
+            std::string::npos);
+  CHECK(semanticsInferLateFallbackBuiltinsSource.find(
             "isSimpleCallName(expr, \"to_soa\") || isSimpleCallName(expr, \"to_aos\")") !=
         std::string::npos);
   CHECK(semanticsInferLateFallbackBuiltinsSource.find("if (getBuiltinGpuName(expr, builtinName)) {") !=

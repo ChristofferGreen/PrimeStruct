@@ -59,17 +59,19 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
   }
 
   const bool isBuiltinGet = isSimpleCallName(expr, "get");
+  const bool isBuiltinGetRef = isSimpleCallName(expr, "get_ref");
   const bool isBuiltinRef = isSimpleCallName(expr, "ref");
   if (!expr.isMethodCall &&
       ((inferCollectionDispatchSetup.isBuiltinAccess && !expr.args.empty()) ||
-       ((isBuiltinGet || isBuiltinRef) && expr.args.size() == 2)) &&
+       ((isBuiltinGet || isBuiltinGetRef || isBuiltinRef) &&
+        expr.args.size() == 2)) &&
       (resolvedIt == defMap_.end() ||
        inferCollectionDispatchSetup.shouldDeferNamespacedVectorAccessCall ||
        inferCollectionDispatchSetup.shouldDeferNamespacedMapAccessCall)) {
     const std::string helperName =
         inferCollectionDispatchSetup.isBuiltinAccess
             ? inferCollectionDispatchSetup.builtinAccessName
-            : (isBuiltinGet ? "get" : "ref");
+            : (isBuiltinGet ? "get" : (isBuiltinGetRef ? "get_ref" : "ref"));
     std::vector<size_t> receiverIndices;
     auto appendReceiverIndex = [&](size_t index) {
       if (index >= expr.args.size()) {
@@ -166,7 +168,8 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       } else if (resolveArrayTarget != nullptr &&
                  resolveArrayTarget(receiverCandidate, elemType)) {
         methodResolved = "/array/" + helperName;
-      } else if ((helperName == "get" || helperName == "ref" ||
+      } else if ((helperName == "get" || helperName == "get_ref" ||
+                  helperName == "ref" ||
                   helperName == "ref_ref") &&
                  resolveSoaVectorTarget != nullptr &&
                  resolveSoaVectorTarget(receiverCandidate, elemType)) {
