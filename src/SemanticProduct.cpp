@@ -761,19 +761,45 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
   const auto onErrorFacts = semanticProgramOnErrorFactView(semanticProgram);
   for (size_t i = 0; i < onErrorFacts.size(); ++i) {
     const auto &entry = *onErrorFacts[i];
+    const std::string_view definitionPath =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.definitionPathId);
+    const std::string_view returnKind =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.returnKindId);
+    const std::string_view handlerPath =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.handlerPathId);
+    const std::string_view errorType =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.errorTypeId);
+    const std::string boundArgTexts = formatSemanticStringListFromIds(
+        semanticProgram, entry.boundArgTextIds, entry.boundArgTexts);
+    const std::string_view returnResultValueType =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.returnResultValueTypeId);
+    const std::string_view returnResultErrorType =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.returnResultErrorTypeId);
     appendSemanticIndexedLine(out,
                               "on_error_facts",
                               i,
-                              "definition_path=" + quoteSemanticString(entry.definitionPath) + " return_kind=" +
-                                  quoteSemanticString(entry.returnKind) + " handler_path=" +
-                                  quoteSemanticString(entry.handlerPath) + " error_type=" +
-                                  quoteSemanticString(entry.errorType) + " bound_arg_count=" +
+                              "definition_path=" +
+                                  quoteSemanticString(definitionPath.empty() ? entry.definitionPath
+                                                                             : definitionPath) +
+                                  " return_kind=" +
+                                  quoteSemanticString(returnKind.empty() ? entry.returnKind : returnKind) +
+                                  " handler_path=" +
+                                  quoteSemanticString(handlerPath.empty() ? entry.handlerPath
+                                                                          : handlerPath) +
+                                  " error_type=" +
+                                  quoteSemanticString(errorType.empty() ? entry.errorType : errorType) +
+                                  " bound_arg_count=" +
                                   std::to_string(entry.boundArgCount) + " bound_arg_texts=" +
-                                  formatSemanticStringList(entry.boundArgTexts) + " return_result_has_value=" +
+                                  boundArgTexts + " return_result_has_value=" +
                                   formatSemanticBool(entry.returnResultHasValue) + " return_result_value_type=" +
-                                  quoteSemanticString(entry.returnResultValueType) +
+                                  quoteSemanticString(returnResultValueType.empty()
+                                                          ? entry.returnResultValueType
+                                                          : returnResultValueType) +
                                   " return_result_error_type=" +
-                                  quoteSemanticString(entry.returnResultErrorType) + " provenance_handle=" +
+                                  quoteSemanticString(returnResultErrorType.empty()
+                                                          ? entry.returnResultErrorType
+                                                          : returnResultErrorType) +
+                                  " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle));
   }
   out << "}\n";

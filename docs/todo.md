@@ -90,7 +90,7 @@ P3 - Interning/ID migration for hot paths
 - ◐ [P3-13] Migrate `return_facts` semantic-product strings to ID-backed internal storage with unchanged dump output.
 - ◐ [P3-14] Migrate `local_auto_facts` semantic-product strings to ID-backed internal storage with unchanged dump output.
 - ◐ [P3-15] Migrate `try_facts` semantic-product strings to ID-backed internal storage with unchanged dump output.
-- ○ [P3-16] Migrate `on_error_facts` semantic-product strings to ID-backed internal storage with unchanged dump output.
+- ◐ [P3-16] Migrate `on_error_facts` semantic-product strings to ID-backed internal storage with unchanged dump output.
 
 P4 - Deterministic multithread compile substrate
 - ○ [P4-01] Write a semantics multithread design note for phase boundaries, immutable shared state, and thread-local mutable state.

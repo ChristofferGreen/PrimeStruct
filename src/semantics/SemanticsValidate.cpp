@@ -658,21 +658,34 @@ SemanticProgram buildSemanticProgram(const Program &program,
     const auto onErrorFacts = validator.onErrorFactSnapshotForSemanticProduct();
     semanticProgram.onErrorFacts.reserve(onErrorFacts.size());
     for (const auto &snapshotEntry : onErrorFacts) {
-      semanticProgram.onErrorFacts.push_back(SemanticProgramOnErrorFact{
-          snapshotEntry.definitionPath,
-          semantics::returnKindSnapshotName(snapshotEntry.returnKind),
-          snapshotEntry.handlerPath,
-          snapshotEntry.errorType,
-          snapshotEntry.boundArgCount,
-          snapshotEntry.boundArgTexts,
-          snapshotEntry.returnResultHasValue,
-          snapshotEntry.returnResultValueType,
-          snapshotEntry.returnResultErrorType,
-          snapshotEntry.semanticNodeId,
-          semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId),
-      });
-      const auto &entry = semanticProgram.onErrorFacts.back();
-      ensureModuleResolvedArtifacts(entry.definitionPath).onErrorFacts.push_back(entry);
+      SemanticProgramOnErrorFact entry;
+      entry.definitionPath = snapshotEntry.definitionPath;
+      entry.returnKind = semantics::returnKindSnapshotName(snapshotEntry.returnKind);
+      entry.handlerPath = snapshotEntry.handlerPath;
+      entry.errorType = snapshotEntry.errorType;
+      entry.boundArgCount = snapshotEntry.boundArgCount;
+      entry.boundArgTexts = snapshotEntry.boundArgTexts;
+      entry.returnResultHasValue = snapshotEntry.returnResultHasValue;
+      entry.returnResultValueType = snapshotEntry.returnResultValueType;
+      entry.returnResultErrorType = snapshotEntry.returnResultErrorType;
+      entry.semanticNodeId = snapshotEntry.semanticNodeId;
+      entry.provenanceHandle = semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId);
+      entry.definitionPathId = semanticProgramInternCallTargetString(semanticProgram, entry.definitionPath);
+      entry.returnKindId = semanticProgramInternCallTargetString(semanticProgram, entry.returnKind);
+      entry.handlerPathId = semanticProgramInternCallTargetString(semanticProgram, entry.handlerPath);
+      entry.errorTypeId = semanticProgramInternCallTargetString(semanticProgram, entry.errorType);
+      entry.boundArgTextIds.reserve(entry.boundArgTexts.size());
+      for (const auto &boundArgText : entry.boundArgTexts) {
+        entry.boundArgTextIds.push_back(
+            semanticProgramInternCallTargetString(semanticProgram, boundArgText));
+      }
+      entry.returnResultValueTypeId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.returnResultValueType);
+      entry.returnResultErrorTypeId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.returnResultErrorType);
+      semanticProgram.onErrorFacts.push_back(std::move(entry));
+      const auto &storedEntry = semanticProgram.onErrorFacts.back();
+      ensureModuleResolvedArtifacts(storedEntry.definitionPath).onErrorFacts.push_back(storedEntry);
     }
   }
 

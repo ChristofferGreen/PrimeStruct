@@ -289,6 +289,13 @@ struct SemanticProgramOnErrorFact {
   std::string returnResultErrorType;
   uint64_t semanticNodeId = 0;
   uint64_t provenanceHandle = 0;
+  SymbolId definitionPathId = InvalidSymbolId;
+  SymbolId returnKindId = InvalidSymbolId;
+  SymbolId handlerPathId = InvalidSymbolId;
+  SymbolId errorTypeId = InvalidSymbolId;
+  std::vector<SymbolId> boundArgTextIds = {};
+  SymbolId returnResultValueTypeId = InvalidSymbolId;
+  SymbolId returnResultErrorTypeId = InvalidSymbolId;
 };
 
 struct SemanticProgramModuleIdentity {
