@@ -7,6 +7,16 @@
 
 TEST_SUITE_BEGIN("primestruct.semantics.symbol_interner");
 
+static std::vector<std::string> resolveSymbolTable(const primec::SymbolInterner &interner) {
+  std::vector<std::string> symbols;
+  symbols.reserve(interner.size());
+  for (std::size_t i = 0; i < interner.size(); ++i) {
+    const primec::SymbolId id = static_cast<primec::SymbolId>(i + 1);
+    symbols.emplace_back(interner.resolve(id));
+  }
+  return symbols;
+}
+
 TEST_CASE("symbol interner assigns deterministic first-seen ids") {
   primec::SymbolInterner interner;
   const primec::SymbolId alpha1 = interner.intern("/std/math/Vec2");
@@ -120,22 +130,15 @@ TEST_CASE("symbol interner two-worker merge helper is input-order independent") 
   const primec::SymbolInterner mergedBA = primec::SymbolInterner::mergeTwoWorkerSnapshotsDeterministic(
       snapshotB, snapshotA);
 
-  REQUIRE(mergedAB.size() == mergedBA.size());
-  for (std::size_t i = 0; i < mergedAB.size(); ++i) {
-    const primec::SymbolId id = static_cast<primec::SymbolId>(i + 1);
-    CHECK(mergedAB.resolve(id) == mergedBA.resolve(id));
-  }
-  CHECK(mergedAB.resolve(1) == "/std/math/mat2");
-  CHECK(mergedAB.resolve(2) == "/std/math/quat");
-  CHECK(mergedAB.resolve(3) == "/std/math/vec2");
+  const std::vector<std::string> mergedSymbolsAB = resolveSymbolTable(mergedAB);
+  const std::vector<std::string> mergedSymbolsBA = resolveSymbolTable(mergedBA);
+  CHECK(mergedSymbolsAB == mergedSymbolsBA);
+  CHECK(mergedSymbolsAB == std::vector<std::string>{
+                              "/std/math/mat2", "/std/math/quat", "/std/math/vec2"});
 
   const primec::SymbolInterner mergedViaGeneric =
       primec::SymbolInterner::mergeWorkerSnapshotsDeterministic({snapshotB, snapshotA});
-  REQUIRE(mergedViaGeneric.size() == mergedAB.size());
-  for (std::size_t i = 0; i < mergedAB.size(); ++i) {
-    const primec::SymbolId id = static_cast<primec::SymbolId>(i + 1);
-    CHECK(mergedViaGeneric.resolve(id) == mergedAB.resolve(id));
-  }
+  CHECK(resolveSymbolTable(mergedViaGeneric) == mergedSymbolsAB);
 
   const std::vector<primec::SymbolId> workerBToMerged =
       primec::SymbolInterner::remapLocalIdsToMerged(snapshotB, mergedAB);
@@ -148,6 +151,85 @@ TEST_CASE("symbol interner two-worker merge helper is input-order independent") 
   REQUIRE(workerAToMerged.size() == 2);
   CHECK(workerAToMerged[0] == 3);
   CHECK(workerAToMerged[1] == 1);
+}
+
+TEST_CASE("symbol interner two-worker merge helper is repeat-run deterministic") {
+  primec::SymbolInterner workerA;
+  CHECK(workerA.intern("/std/math/vec2") == 1);
+  CHECK(workerA.intern("/std/math/vec4") == 2);
+  CHECK(workerA.intern("/std/math/mat4") == 3);
+
+  primec::SymbolInterner workerB;
+  CHECK(workerB.intern("/std/math/mat4") == 1);
+  CHECK(workerB.intern("/std/math/quat") == 2);
+  CHECK(workerB.intern("/std/math/complex") == 3);
+
+  const primec::WorkerSymbolInternerSnapshot snapshotA = workerA.snapshotForWorker(11);
+  const primec::WorkerSymbolInternerSnapshot snapshotB = workerB.snapshotForWorker(5);
+
+  std::vector<std::string> baselineSymbols;
+  std::vector<primec::SymbolId> baselineA;
+  std::vector<primec::SymbolId> baselineB;
+
+  for (int run = 0; run < 16; ++run) {
+    const bool flipInputOrder = (run % 2) != 0;
+    const primec::SymbolInterner merged = flipInputOrder
+                                              ? primec::SymbolInterner::mergeTwoWorkerSnapshotsDeterministic(
+                                                    snapshotB, snapshotA)
+                                              : primec::SymbolInterner::mergeTwoWorkerSnapshotsDeterministic(
+                                                    snapshotA, snapshotB);
+    const std::vector<std::string> symbols = resolveSymbolTable(merged);
+    const std::vector<primec::SymbolId> remapA =
+        primec::SymbolInterner::remapLocalIdsToMerged(snapshotA, merged);
+    const std::vector<primec::SymbolId> remapB =
+        primec::SymbolInterner::remapLocalIdsToMerged(snapshotB, merged);
+
+    if (run == 0) {
+      baselineSymbols = symbols;
+      baselineA = remapA;
+      baselineB = remapB;
+      continue;
+    }
+
+    CHECK(symbols == baselineSymbols);
+    CHECK(remapA == baselineA);
+    CHECK(remapB == baselineB);
+  }
+}
+
+TEST_CASE("symbol interner two-worker merge tie-breaks equal worker ids lexicographically") {
+  const primec::WorkerSymbolInternerSnapshot snapshotLexLow{
+      .workerId = 7,
+      .symbolsByLocalId = {"/std/math/alpha", "/std/math/shared"},
+  };
+  const primec::WorkerSymbolInternerSnapshot snapshotLexHigh{
+      .workerId = 7,
+      .symbolsByLocalId = {"/std/math/zeta", "/std/math/shared"},
+  };
+
+  const primec::SymbolInterner mergedLowHigh =
+      primec::SymbolInterner::mergeTwoWorkerSnapshotsDeterministic(snapshotLexLow,
+                                                                    snapshotLexHigh);
+  const primec::SymbolInterner mergedHighLow =
+      primec::SymbolInterner::mergeTwoWorkerSnapshotsDeterministic(snapshotLexHigh,
+                                                                    snapshotLexLow);
+  const std::vector<std::string> expectedSymbols = {"/std/math/alpha",
+                                                    "/std/math/shared",
+                                                    "/std/math/zeta"};
+  CHECK(resolveSymbolTable(mergedLowHigh) == expectedSymbols);
+  CHECK(resolveSymbolTable(mergedHighLow) == expectedSymbols);
+
+  const std::vector<primec::SymbolId> remapLexLow =
+      primec::SymbolInterner::remapLocalIdsToMerged(snapshotLexLow, mergedLowHigh);
+  REQUIRE(remapLexLow.size() == 2);
+  CHECK(remapLexLow[0] == 1);
+  CHECK(remapLexLow[1] == 2);
+
+  const std::vector<primec::SymbolId> remapLexHigh =
+      primec::SymbolInterner::remapLocalIdsToMerged(snapshotLexHigh, mergedLowHigh);
+  REQUIRE(remapLexHigh.size() == 2);
+  CHECK(remapLexHigh[0] == 3);
+  CHECK(remapLexHigh[1] == 2);
 }
 
 TEST_SUITE_END();
