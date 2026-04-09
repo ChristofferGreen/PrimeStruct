@@ -184,6 +184,7 @@ bool isRootBuiltinName(const std::string &name) {
          normalized == "return" || normalized == "array" || normalized == "vector" || normalized == "map" ||
          normalized == "File" || normalized == "try" || normalized == "count" || normalized == "capacity" ||
          normalized == "to_soa" || normalized == "to_aos" ||
+         normalized == "to_aos_ref" ||
          normalized == "push" || normalized == "pop" ||
          normalized == "reserve" || normalized == "clear" || normalized == "remove_at" || normalized == "remove_swap" ||
          normalized == "at" || normalized == "at_unsafe" || normalized == "convert" ||

@@ -327,14 +327,19 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
 
   const bool isCanonicalSoaToAosResolved =
       resolved.rfind("/std/collections/soa_vector/to_aos", 0) == 0;
+  const bool isBorrowedSoaToAosResolved =
+      resolved == "/to_aos_ref" ||
+      resolved.rfind("/soa_vector/to_aos_ref", 0) == 0;
 
   if ((!resolvedMethod &&
-       (isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos")) &&
+       (isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos") ||
+        isSimpleCallName(expr, "to_aos_ref")) &&
        resolvedMissing) ||
       (resolvedMethod &&
        (resolved == "/to_soa" || resolved == "/to_aos" ||
-        isCanonicalSoaToAosResolved)) ||
-      (!resolvedMethod && isCanonicalSoaToAosResolved)) {
+        isBorrowedSoaToAosResolved || isCanonicalSoaToAosResolved)) ||
+      (!resolvedMethod &&
+       (isBorrowedSoaToAosResolved || isCanonicalSoaToAosResolved))) {
     handledOut = true;
     if (hasNamedArguments(expr.argNames) &&
         !(context.isNamedArgsPackMethodAccessCall != nullptr &&

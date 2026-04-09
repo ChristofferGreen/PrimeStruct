@@ -524,6 +524,21 @@ Semantics-layer pending fallback diagnostics:
     these compatibility paths
     (`src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp` and
     `src/semantics/SemanticsValidatorInferCollections.cpp`).
+  - SoA conversion builtin/fallback classification now includes borrowed
+    `to_aos_ref` helper surfaces across late map/collection dispatch,
+    diagnostics, named-argument builtin guards, and field-view helper-inference
+    exclusion lists, so canonical/same-path `to_aos_ref` visibility no longer
+    falls back to compiler-owned `to_aos`-only classification in these
+    compatibility dispatch/diagnostic paths
+    (`src/semantics/SemanticsValidatorExprMapSoaBuiltins.cpp`,
+    `src/semantics/SemanticsValidatorInferLateFallbackBuiltins.cpp`,
+    `src/semantics/SemanticsValidatorExprCollectionAccess.cpp`,
+    `src/semantics/SemanticsValidatorExprNamedArgumentBuiltins.cpp`,
+    `src/semantics/SemanticsValidatorPassesDiagnostics.cpp`,
+    `src/semantics/SemanticsValidatorExecutionDiagnostics.cpp`,
+    `src/semantics/SemanticsValidatorInferDefinition.cpp`,
+    `src/semantics/SemanticsValidatorBuildInitializerInference.cpp`, and
+    `src/semantics/SemanticsBuiltinPathHelpers.cpp`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:

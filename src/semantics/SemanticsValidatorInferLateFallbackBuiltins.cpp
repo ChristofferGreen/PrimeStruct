@@ -43,7 +43,8 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
 
   const auto resolvedIt = defMap_.find(context.resolved);
   if (!expr.isMethodCall &&
-      (isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos")) &&
+      (isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos") ||
+       isSimpleCallName(expr, "to_aos_ref")) &&
       expr.args.size() == 1 && resolvedIt == defMap_.end()) {
     std::string elemType;
     if (isSimpleCallName(expr, "to_soa")) {

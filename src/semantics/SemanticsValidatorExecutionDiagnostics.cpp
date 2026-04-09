@@ -14,7 +14,8 @@ bool isBuiltinCollectionHelperName(std::string_view helperName) {
          helperName == "at_unsafe_ref" || helperName == "insert" ||
          helperName == "insert_ref" || helperName == "push" || helperName == "pop" ||
          helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
-         helperName == "remove_swap" || helperName == "to_soa" || helperName == "to_aos";
+         helperName == "remove_swap" || helperName == "to_soa" ||
+         helperName == "to_aos" || helperName == "to_aos_ref";
 }
 
 bool isFlowEffectDiagnosticMessage(const std::string &message) {
@@ -82,6 +83,7 @@ void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(
         isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
         isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap") ||
         isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos") ||
+        isSimpleCallName(expr, "to_aos_ref") ||
         (getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper) &&
          isBuiltinCollectionHelperName(namespacedHelper));
     const bool isCollectionBuiltin = defMap_.count(resolved) == 0 && getBuiltinCollectionName(expr, builtinName);

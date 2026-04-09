@@ -317,6 +317,7 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
       expr.name == "try" || isLegacyCapacityBuiltinCall() ||
       isLegacySoaAccessBuiltinCall() || isLegacyVectorHelperBuiltin ||
       isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos") ||
+      isSimpleCallName(expr, "to_aos_ref") ||
       isSimpleCallName(expr, "dispatch") || isSimpleCallName(expr, "buffer") ||
       isSimpleCallName(expr, "upload") || isSimpleCallName(expr, "readback") ||
       isSimpleCallName(expr, "buffer_load") ||

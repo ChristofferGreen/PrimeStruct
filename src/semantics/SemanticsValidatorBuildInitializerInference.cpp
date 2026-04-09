@@ -330,7 +330,8 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
     normalizedPrefix.erase(normalizedPrefix.begin());
   }
   if (normalizedName.empty() || normalizedName == "count" || normalizedName == "get" ||
-      normalizedName == "ref" || normalizedName == "to_soa" || normalizedName == "to_aos") {
+      normalizedName == "ref" || normalizedName == "to_soa" ||
+      normalizedName == "to_aos" || normalizedName == "to_aos_ref") {
     return false;
   }
 

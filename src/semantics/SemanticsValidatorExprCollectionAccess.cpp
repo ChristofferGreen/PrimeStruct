@@ -548,6 +548,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
   if (!expr.isMethodCall && !expr.args.empty() &&
       defMap_.find(resolved) == defMap_.end() &&
       !isSimpleCallName(expr, "to_soa") && !isSimpleCallName(expr, "to_aos") &&
+      !isSimpleCallName(expr, "to_aos_ref") &&
       !isSimpleCallName(expr, "contains") &&
       !getBuiltinArrayAccessName(expr, accessHelperName)) {
     handledOut = true;
