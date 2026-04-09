@@ -55,8 +55,9 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
       helperName.erase(helperName.begin());
     }
     if (helperName.empty() || helperName == "count" || helperName == "get" ||
-        helperName == "ref" || helperName == "to_soa" || helperName == "to_aos" ||
-        helperName == "to_aos_ref") {
+        helperName == "get_ref" || helperName == "ref" ||
+        helperName == "ref_ref" || helperName == "to_soa" ||
+        helperName == "to_aos" || helperName == "to_aos_ref") {
       return false;
     }
     if (!hasVisibleSoaHelperTargetForCurrentImports(helperName)) {
