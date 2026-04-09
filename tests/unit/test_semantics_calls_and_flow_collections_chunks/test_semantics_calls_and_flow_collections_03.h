@@ -475,6 +475,50 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("soa_vector helper-return bare get_ref keeps same-path helper across escapes") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<soa_vector<Particle>>]
+cloneValues() {
+  return(soa_vector<Particle>())
+}
+
+[return<Reference<soa_vector<Particle>>>]
+borrowValues([Reference<soa_vector<Particle>>] values) {
+  return(values)
+}
+
+[return<int>]
+/soa_vector/get_ref([Reference<soa_vector<Particle>>] values, [int] index) {
+  return(7i32)
+}
+
+[return<int>]
+consume([int] value) {
+  return(value)
+}
+
+[return<auto>]
+pick([Reference<soa_vector<Particle>>] values) {
+  return(get_ref(borrowValues(values), 0i32))
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{cloneValues()}
+  [auto] item{get_ref(location(values), 0i32)}
+  return(plus(item, plus(consume(get_ref(borrowValues(location(values)), 0i32)),
+                         pick(location(values)))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("soa_vector helper-return bare count keeps same-path helper across escapes") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

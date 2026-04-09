@@ -1509,7 +1509,8 @@ std::string builtinSoaAccessHelperName(std::string_view rawName) {
   if (normalized.rfind("soa_vector/", 0) == 0) {
     normalized = normalized.substr(std::string("soa_vector/").size());
   }
-  if (normalized == "get" || normalized == "ref" || normalized == "ref_ref") {
+  if (normalized == "get" || normalized == "get_ref" ||
+      normalized == "ref" || normalized == "ref_ref") {
     return normalized;
   }
   return {};
@@ -1997,6 +1998,7 @@ void rewriteBuiltinSoaAccessExpr(
     const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
     const std::string &definitionNamespace,
     bool preserveGetHelper,
+    bool preserveGetRefHelper,
     bool preserveRefHelper,
     bool preserveRefRefHelper);
 
@@ -2007,6 +2009,7 @@ void rewriteBuiltinSoaAccessStatements(
     const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
     const std::string &definitionNamespace,
     bool preserveGetHelper,
+    bool preserveGetRefHelper,
     bool preserveRefHelper,
     bool preserveRefRefHelper) {
   for (Expr &stmt : statements) {
@@ -2017,6 +2020,7 @@ void rewriteBuiltinSoaAccessStatements(
         soaVectorReturnDefinitions,
         definitionNamespace,
         preserveGetHelper,
+        preserveGetRefHelper,
         preserveRefHelper,
         preserveRefRefHelper);
     if (!stmt.bodyArguments.empty()) {
@@ -2028,6 +2032,7 @@ void rewriteBuiltinSoaAccessStatements(
           soaVectorReturnDefinitions,
           definitionNamespace,
           preserveGetHelper,
+          preserveGetRefHelper,
           preserveRefHelper,
           preserveRefRefHelper);
     }
@@ -2048,6 +2053,7 @@ void rewriteBuiltinSoaAccessExpr(
     const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
     const std::string &definitionNamespace,
     bool preserveGetHelper,
+    bool preserveGetRefHelper,
     bool preserveRefHelper,
     bool preserveRefRefHelper) {
   auto findBuiltinVectorValueBinding = [&](const Expr &candidate) -> std::optional<semantics::BindingInfo> {
@@ -2159,6 +2165,7 @@ void rewriteBuiltinSoaAccessExpr(
         soaVectorReturnDefinitions,
         definitionNamespace,
         preserveGetHelper,
+        preserveGetRefHelper,
         preserveRefHelper,
         preserveRefRefHelper);
   }
@@ -2174,6 +2181,7 @@ void rewriteBuiltinSoaAccessExpr(
     return;
   }
   if ((helperName == "get" && preserveGetHelper) ||
+      (helperName == "get_ref" && preserveGetRefHelper) ||
       (helperName == "ref" && preserveRefHelper) ||
       (helperName == "ref_ref" && preserveRefRefHelper)) {
     return;
@@ -2224,6 +2232,7 @@ bool rewriteBuiltinSoaAccessCalls(Program &program, std::string &error) {
     }
   }
   const bool preserveGetHelper = hasVisibleRootSoaHelper(program, "get");
+  const bool preserveGetRefHelper = hasVisibleRootSoaHelper(program, "get_ref");
   const bool preserveRefHelper = hasVisibleRootSoaHelper(program, "ref");
   const bool preserveRefRefHelper = hasVisibleRootSoaHelper(program, "ref_ref");
   for (Definition &def : program.definitions) {
@@ -2247,6 +2256,7 @@ bool rewriteBuiltinSoaAccessCalls(Program &program, std::string &error) {
         soaVectorReturnDefinitions,
         definitionNamespace,
         preserveGetHelper,
+        preserveGetRefHelper,
         preserveRefHelper,
         preserveRefRefHelper);
     if (def.returnExpr.has_value()) {
@@ -2257,6 +2267,7 @@ bool rewriteBuiltinSoaAccessCalls(Program &program, std::string &error) {
           soaVectorReturnDefinitions,
           definitionNamespace,
           preserveGetHelper,
+          preserveGetRefHelper,
           preserveRefHelper,
           preserveRefRefHelper);
     }
