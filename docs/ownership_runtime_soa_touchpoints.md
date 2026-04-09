@@ -490,6 +490,13 @@ Semantics-layer pending fallback diagnostics:
     handling during implicit template inference
     (`src/semantics/TemplateMonomorphImplicitTemplateInference.h` and
     `src/semantics/TemplateMonomorphFallbackTypeInference.h`).
+  - Template-monomorph SoA expression-rewrite helper-target fallback selection
+    now treats `ref_ref` helper call/method shapes as equivalent to `ref`
+    across same-path helper-family matching (including synthetic same-path
+    template-carry path guards and old-surface helper-target family
+    selection), so canonical `ref_ref` helper visibility no longer falls back
+    to compiler-owned `ref`-only path handling during expression rewrite
+    target selection (`src/semantics/TemplateMonomorphExpressionRewrite.h`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:
