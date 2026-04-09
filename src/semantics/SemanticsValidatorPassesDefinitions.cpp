@@ -1,5 +1,9 @@
 #include "SemanticsValidator.h"
 
+#include "primec/SemanticsDefinitionPartitioner.h"
+
+#include <algorithm>
+#include <future>
 #include <iterator>
 #include <optional>
 #include <utility>
@@ -16,7 +20,8 @@ bool SemanticsValidator::publishPassesDefinitionsDiagnostic(const Expr *expr) {
   return publishCurrentStructuredDiagnosticNow();
 }
 
-bool SemanticsValidator::validateDefinitions() {
+bool SemanticsValidator::validateDefinitionsForStableIndices(
+    const std::vector<std::size_t> &stableIndices) {
   std::vector<SemanticDiagnosticRecord> collectedRecords;
   const bool collectDiagnostics = shouldCollectStructuredDiagnostics();
   auto validateDefinition = [&](const Definition &def) -> bool {
@@ -53,6 +58,7 @@ bool SemanticsValidator::validateDefinitions() {
     for (const auto &param : defParams) {
       locals.emplace(param.name, param.binding);
     }
+    observeLocalMapSize(locals.size());
     for (const auto &param : defParams) {
       if (param.defaultExpr == nullptr) {
         continue;
@@ -129,6 +135,7 @@ bool SemanticsValidator::validateDefinitions() {
         }
         return false;
       }
+      observeLocalMapSize(locals.size());
       expireReferenceBorrowsForRemainder(defParams, locals, def.statements, stmtIndex + 1);
     }
     if (def.returnExpr.has_value()) {
@@ -168,8 +175,8 @@ bool SemanticsValidator::validateDefinitions() {
     return true;
   };
 
-  for (const auto &declaration : definitionPrepassSnapshot_.declarationsInStableOrder) {
-    const Definition &def = program_.definitions[declaration.stableIndex];
+  for (const std::size_t stableIndex : stableIndices) {
+    const Definition &def = program_.definitions[stableIndex];
     clearStructuredDiagnosticContext();
     if (collectDiagnostics) {
       ValidationStateScope validationContextScope(*this, buildDefinitionValidationState(def));
@@ -192,6 +199,168 @@ bool SemanticsValidator::validateDefinitions() {
   }
 
   if (!finalizeCollectedStructuredDiagnostics(collectedRecords)) {
+    return false;
+  }
+
+  return true;
+}
+
+bool SemanticsValidator::runDefinitionValidationWorkerChunk(
+    const std::vector<std::size_t> &stableIndices) {
+  auto runStage = [&](const char *stageName, auto &&fn) {
+    try {
+      const bool ok = fn();
+      if (!ok && error_.empty()) {
+        return failUncontextualizedDiagnostic(std::string(stageName) +
+                                              " failed without diagnostic");
+      }
+      return ok;
+    } catch (...) {
+      return failUncontextualizedDiagnostic(
+          std::string("semantic validator exception in ") + stageName);
+    }
+  };
+  if (!runStage("buildDefinitionMaps", [&] { return buildDefinitionMaps(); })) {
+    return false;
+  }
+  if (!runStage("inferUnknownReturnKinds",
+                [&] { return inferUnknownReturnKinds(); })) {
+    return false;
+  }
+  if (!runStage("validateTraitConstraints",
+                [&] { return validateTraitConstraints(); })) {
+    return false;
+  }
+  if (!runStage("validateStructLayouts",
+                [&] { return validateStructLayouts(); })) {
+    return false;
+  }
+  return runStage("validateDefinitionsChunk",
+                  [&] { return validateDefinitionsForStableIndices(stableIndices); });
+}
+
+bool SemanticsValidator::validateDefinitions() {
+  std::vector<std::size_t> allStableIndices;
+  allStableIndices.reserve(definitionPrepassSnapshot_.declarationsInStableOrder.size());
+  for (const auto &declaration : definitionPrepassSnapshot_.declarationsInStableOrder) {
+    allStableIndices.push_back(declaration.stableIndex);
+  }
+
+  if (benchmarkSemanticDefinitionValidationWorkerCount_ <= 1 ||
+      allStableIndices.size() < 2) {
+    return validateDefinitionsForStableIndices(allStableIndices);
+  }
+
+  const std::size_t partitionCount = static_cast<std::size_t>(
+      benchmarkSemanticDefinitionValidationWorkerCount_);
+  const bool collectDiagnostics = shouldCollectStructuredDiagnostics();
+  const std::vector<DefinitionPartitionChunk> partitions =
+      partitionDefinitionsDeterministic(definitionPrepassSnapshot_, partitionCount);
+  if (partitions.size() <= 1) {
+    return validateDefinitionsForStableIndices(allStableIndices);
+  }
+
+  struct WorkerChunkResult {
+    uint32_t partitionKey = 0;
+    bool ok = false;
+    std::string error;
+    SemanticDiagnosticInfo diagnostics;
+    ValidationCounters counters;
+  };
+
+  std::vector<std::future<WorkerChunkResult>> workerTasks;
+  workerTasks.reserve(partitions.size());
+  for (const DefinitionPartitionChunk &chunk : partitions) {
+    if (chunk.declarationStableIndices.empty()) {
+      continue;
+    }
+    workerTasks.push_back(std::async(
+        std::launch::async,
+        [this, collectDiagnostics, partitionKey = chunk.partitionKey, stableIndices = chunk.declarationStableIndices]() {
+          WorkerChunkResult result;
+          result.partitionKey = partitionKey;
+          SemanticsValidator worker(program_,
+                                    entryPath_,
+                                    result.error,
+                                    defaultEffects_,
+                                    entryDefaultEffects_,
+                                    collectDiagnostics ? &result.diagnostics : nullptr,
+                                    collectDiagnostics,
+                                    1,
+                                    benchmarkSemanticPhaseCountersEnabled_);
+          result.ok = worker.runDefinitionValidationWorkerChunk(stableIndices);
+          result.counters = worker.validationCounters();
+          return result;
+        }));
+  }
+  if (workerTasks.size() <= 1) {
+    return validateDefinitionsForStableIndices(allStableIndices);
+  }
+
+  std::vector<WorkerChunkResult> workerResults;
+  workerResults.reserve(workerTasks.size());
+  for (auto &task : workerTasks) {
+    workerResults.push_back(task.get());
+  }
+  std::sort(workerResults.begin(),
+            workerResults.end(),
+            [](const WorkerChunkResult &left, const WorkerChunkResult &right) {
+              return left.partitionKey < right.partitionKey;
+            });
+  if (benchmarkSemanticPhaseCountersEnabled_) {
+    for (const WorkerChunkResult &result : workerResults) {
+      validationCounters_.callsVisited += result.counters.callsVisited;
+      validationCounters_.peakLocalMapSize =
+          std::max(validationCounters_.peakLocalMapSize,
+                   result.counters.peakLocalMapSize);
+    }
+  }
+
+  if (!collectDiagnostics) {
+    for (const WorkerChunkResult &result : workerResults) {
+      if (result.ok) {
+        continue;
+      }
+      if (!result.error.empty()) {
+        error_ = result.error;
+      }
+      if (error_.empty()) {
+        error_ = "parallel definition validation failed without diagnostic";
+      }
+      return false;
+    }
+    return true;
+  }
+
+  std::vector<SemanticDiagnosticRecord> collectedRecords;
+  for (WorkerChunkResult &result : workerResults) {
+    if (!result.diagnostics.records.empty()) {
+      collectedRecords.insert(
+          collectedRecords.end(),
+          std::make_move_iterator(result.diagnostics.records.begin()),
+          std::make_move_iterator(result.diagnostics.records.end()));
+      continue;
+    }
+    if (!result.ok && !result.error.empty()) {
+      SemanticDiagnosticRecord record;
+      record.message = result.error;
+      collectedRecords.push_back(std::move(record));
+    }
+  }
+  if (!finalizeCollectedStructuredDiagnostics(collectedRecords)) {
+    return false;
+  }
+
+  for (const WorkerChunkResult &result : workerResults) {
+    if (result.ok) {
+      continue;
+    }
+    if (!result.error.empty()) {
+      error_ = result.error;
+    }
+    if (error_.empty()) {
+      error_ = "parallel definition validation failed without diagnostic";
+    }
     return false;
   }
 

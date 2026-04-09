@@ -1,0 +1,24 @@
+{
+  "schema": "primestruct_semantic_memory_phase_one_success_criteria_v1",
+  "baseline_report": "benchmarks/semantic_memory_baseline_report.json",
+  "policy": "benchmarks/semantic_memory_budget_policy.json",
+  "description": "Phase-one semantic memory success criteria derived from the checked-in baseline.",
+  "criteria": [
+    {
+      "id": "primary_math_star_repro_semantic_product_peak_rss",
+      "fixture": "math_star_repro",
+      "phase": "semantic-product",
+      "metric": "worst_peak_rss_bytes",
+      "baseline_value": 5927174144,
+      "target_reduction_ratio": 0.1,
+      "absolute_cap_value": 5368709120,
+      "effective_target_value": 5334456730,
+      "pass_rule": "observed_value <= min(baseline_value * (1 - target_reduction_ratio), absolute_cap_value)"
+    }
+  ],
+  "sustained_gate": {
+    "window_size": 3,
+    "minimum_passes": 2,
+    "source": "benchmarks/semantic_memory_budget_policy.json:sustained_window"
+  }
+}

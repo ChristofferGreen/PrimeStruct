@@ -370,6 +370,161 @@ TEST_CASE("primec rejects removed type resolver option") {
   }
 }
 
+TEST_CASE("primec options parse benchmark semantic definition validation worker count") {
+  auto parsePrimec = [](std::vector<std::string> args, primec::Options &options, std::string &error) {
+    std::vector<char *> argv;
+    argv.reserve(args.size());
+    for (std::string &arg : args) {
+      argv.push_back(arg.data());
+    }
+    return primec::parseOptions(
+        static_cast<int>(argv.size()), argv.data(), primec::OptionsParserMode::Primec, options, error);
+  };
+
+  {
+    primec::Options options;
+    std::string error;
+    CHECK(parsePrimec({"primec",
+                       "--emit=ir",
+                       "--benchmark-semantic-definition-validation-workers=4",
+                       "/tmp/input.prime"},
+                      options,
+                      error));
+    CHECK(error.empty());
+    REQUIRE(options.benchmarkSemanticDefinitionValidationWorkerCount.has_value());
+    CHECK(*options.benchmarkSemanticDefinitionValidationWorkerCount == 4);
+  }
+
+  {
+    primec::Options options;
+    std::string error;
+    CHECK_FALSE(parsePrimec({"primec",
+                             "--emit=ir",
+                             "--benchmark-semantic-definition-validation-workers=0",
+                             "/tmp/input.prime"},
+                            options,
+                            error));
+    CHECK(error.find("invalid --benchmark-semantic-definition-validation-workers value: 0") != std::string::npos);
+  }
+
+  {
+    primec::Options options;
+    std::string error;
+    CHECK_FALSE(parsePrimec(
+        {"primec", "--emit=ir", "--benchmark-semantic-definition-validation-workers"},
+        options,
+        error));
+    CHECK(error.find("--benchmark-semantic-definition-validation-workers requires a value") != std::string::npos);
+  }
+}
+
+TEST_CASE("primec options parse benchmark semantic phase counters flag") {
+  auto parsePrimec = [](std::vector<std::string> args, primec::Options &options, std::string &error) {
+    std::vector<char *> argv;
+    argv.reserve(args.size());
+    for (std::string &arg : args) {
+      argv.push_back(arg.data());
+    }
+    return primec::parseOptions(
+        static_cast<int>(argv.size()), argv.data(), primec::OptionsParserMode::Primec, options, error);
+  };
+
+  primec::Options options;
+  std::string error;
+  CHECK(parsePrimec({"primec",
+                     "--emit=ir",
+                     "--benchmark-semantic-phase-counters",
+                     "/tmp/input.prime"},
+                    options,
+                    error));
+  CHECK(error.empty());
+  CHECK(options.benchmarkSemanticPhaseCounters);
+}
+
+TEST_CASE("primec options parse benchmark semantic allocation counters flag") {
+  auto parsePrimec = [](std::vector<std::string> args, primec::Options &options, std::string &error) {
+    std::vector<char *> argv;
+    argv.reserve(args.size());
+    for (std::string &arg : args) {
+      argv.push_back(arg.data());
+    }
+    return primec::parseOptions(
+        static_cast<int>(argv.size()), argv.data(), primec::OptionsParserMode::Primec, options, error);
+  };
+
+  primec::Options options;
+  std::string error;
+  CHECK(parsePrimec({"primec",
+                     "--emit=ir",
+                     "--benchmark-semantic-allocation-counters",
+                     "/tmp/input.prime"},
+                    options,
+                    error));
+  CHECK(error.empty());
+  CHECK(options.benchmarkSemanticAllocationCounters);
+}
+
+TEST_CASE("primec options parse benchmark semantic rss checkpoints flag") {
+  auto parsePrimec = [](std::vector<std::string> args, primec::Options &options, std::string &error) {
+    std::vector<char *> argv;
+    argv.reserve(args.size());
+    for (std::string &arg : args) {
+      argv.push_back(arg.data());
+    }
+    return primec::parseOptions(
+        static_cast<int>(argv.size()), argv.data(), primec::OptionsParserMode::Primec, options, error);
+  };
+
+  primec::Options options;
+  std::string error;
+  CHECK(parsePrimec({"primec",
+                     "--emit=ir",
+                     "--benchmark-semantic-rss-checkpoints",
+                     "/tmp/input.prime"},
+                    options,
+                    error));
+  CHECK(error.empty());
+  CHECK(options.benchmarkSemanticRssCheckpoints);
+}
+
+TEST_CASE("primec options parse benchmark semantic repeat count flag") {
+  auto parsePrimec = [](std::vector<std::string> args, primec::Options &options, std::string &error) {
+    std::vector<char *> argv;
+    argv.reserve(args.size());
+    for (std::string &arg : args) {
+      argv.push_back(arg.data());
+    }
+    return primec::parseOptions(
+        static_cast<int>(argv.size()), argv.data(), primec::OptionsParserMode::Primec, options, error);
+  };
+
+  {
+    primec::Options options;
+    std::string error;
+    CHECK(parsePrimec({"primec",
+                       "--emit=ir",
+                       "--benchmark-semantic-repeat-count=3",
+                       "/tmp/input.prime"},
+                      options,
+                      error));
+    CHECK(error.empty());
+    REQUIRE(options.benchmarkSemanticRepeatCompileCount.has_value());
+    CHECK(*options.benchmarkSemanticRepeatCompileCount == 3);
+  }
+
+  {
+    primec::Options options;
+    std::string error;
+    CHECK_FALSE(parsePrimec({"primec",
+                             "--emit=ir",
+                             "--benchmark-semantic-repeat-count=0",
+                             "/tmp/input.prime"},
+                            options,
+                            error));
+    CHECK(error.find("invalid --benchmark-semantic-repeat-count value: 0") != std::string::npos);
+  }
+}
+
 TEST_CASE("primec emit-diagnostics reports structured wasm emit payload") {
   const std::string source = R"(
 [return<int>]
@@ -548,4 +703,3 @@ main([array<string>] args) {
     CHECK(diagnostics.find("\"notes\":[\"backend: wasm\",\"stage: ir-validate\"]") != std::string::npos);
   }
 }
-

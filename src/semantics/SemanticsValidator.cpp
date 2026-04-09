@@ -4,6 +4,7 @@
 #include "primec/Lexer.h"
 #include "primec/Parser.h"
 
+#include <algorithm>
 #include <cctype>
 #include <functional>
 #include <string_view>
@@ -29,7 +30,9 @@ SemanticsValidator::SemanticsValidator(const Program &program,
                                        const std::vector<std::string> &defaultEffects,
                                        const std::vector<std::string> &entryDefaultEffects,
                                        SemanticDiagnosticInfo *diagnosticInfo,
-                                       bool collectDiagnostics)
+                                       bool collectDiagnostics,
+                                       uint32_t benchmarkSemanticDefinitionValidationWorkerCount,
+                                       bool benchmarkSemanticPhaseCountersEnabled)
     : program_(program),
       entryPath_(entryPath),
       error_(error),
@@ -37,7 +40,10 @@ SemanticsValidator::SemanticsValidator(const Program &program,
       entryDefaultEffects_(entryDefaultEffects),
       diagnosticInfo_(diagnosticInfo),
       diagnosticSink_(diagnosticInfo),
-      collectDiagnostics_(collectDiagnostics) {
+      collectDiagnostics_(collectDiagnostics),
+      benchmarkSemanticDefinitionValidationWorkerCount_(
+          benchmarkSemanticDefinitionValidationWorkerCount),
+      benchmarkSemanticPhaseCountersEnabled_(benchmarkSemanticPhaseCountersEnabled) {
   diagnosticSink_.reset();
   auto registerMathImport = [&](const std::string &importPath) {
     if (importPath == "/std/math/*") {
@@ -57,6 +63,22 @@ SemanticsValidator::SemanticsValidator(const Program &program,
   for (const auto &importPath : program_.imports) {
     registerMathImport(importPath);
   }
+}
+
+void SemanticsValidator::observeCallVisited() {
+  if (!benchmarkSemanticPhaseCountersEnabled_) {
+    return;
+  }
+  ++validationCounters_.callsVisited;
+}
+
+void SemanticsValidator::observeLocalMapSize(std::size_t size) {
+  if (!benchmarkSemanticPhaseCountersEnabled_) {
+    return;
+  }
+  validationCounters_.peakLocalMapSize =
+      std::max<uint64_t>(validationCounters_.peakLocalMapSize,
+                         static_cast<uint64_t>(size));
 }
 
 std::string SemanticsValidator::formatUnknownCallTarget(const Expr &expr) const {

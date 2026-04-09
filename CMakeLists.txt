@@ -2,11 +2,42 @@ cmake_minimum_required(VERSION 3.20)
 project(PrimeStruct LANGUAGES CXX)
 
 option(PRIMESTRUCT_BUILD_TESTS "Build PrimeStruct tests" ON)
+option(PRIMESTRUCT_ENABLE_TSAN_SEMANTICS_SMOKE
+       "Enable ThreadSanitizer instrumentation and semantics smoke target"
+       OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+if(PRIMESTRUCT_ENABLE_TSAN_SEMANTICS_SMOKE)
+  if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    message(FATAL_ERROR
+            "PRIMESTRUCT_ENABLE_TSAN_SEMANTICS_SMOKE requires clang++ on macOS because GCC does not provide a usable libtsan runtime")
+  endif()
+  if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    message(FATAL_ERROR
+            "PRIMESTRUCT_ENABLE_TSAN_SEMANTICS_SMOKE requires Clang or GCC")
+  endif()
+  include(CheckCXXSourceCompiles)
+  set(_primestruct_saved_required_flags "${CMAKE_REQUIRED_FLAGS}")
+  set(_primestruct_saved_required_link_options "${CMAKE_REQUIRED_LINK_OPTIONS}")
+  string(APPEND CMAKE_REQUIRED_FLAGS " -fsanitize=thread")
+  list(APPEND CMAKE_REQUIRED_LINK_OPTIONS "-fsanitize=thread")
+  check_cxx_source_compiles(
+    "int main() { return 0; }"
+    PRIMESTRUCT_TSAN_LINK_PROBE_PASSED
+  )
+  set(CMAKE_REQUIRED_FLAGS "${_primestruct_saved_required_flags}")
+  set(CMAKE_REQUIRED_LINK_OPTIONS "${_primestruct_saved_required_link_options}")
+  if(NOT PRIMESTRUCT_TSAN_LINK_PROBE_PASSED)
+    message(FATAL_ERROR
+            "PRIMESTRUCT_ENABLE_TSAN_SEMANTICS_SMOKE requested but the toolchain cannot link a ThreadSanitizer binary")
+  endif()
+  add_compile_options(-fsanitize=thread -fno-omit-frame-pointer)
+  add_link_options(-fsanitize=thread)
+endif()
 
 function(primestructEnableWarnings targetName)
   if(MSVC)
@@ -656,6 +687,26 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_link_libraries(PrimeStruct_parser_tests PRIVATE primec_frontend_lib)
   primestructEnableWarnings(PrimeStruct_parser_tests)
 
+  if(PRIMESTRUCT_ENABLE_TSAN_SEMANTICS_SMOKE)
+    add_executable(PrimeStruct_semantics_tsan_smoke
+      tests/unit/test_main.cpp
+      tests/unit/test_semantics_tsan_smoke.cpp
+    )
+    target_include_directories(PrimeStruct_semantics_tsan_smoke PRIVATE third_party ${CMAKE_SOURCE_DIR})
+    target_link_libraries(PrimeStruct_semantics_tsan_smoke PRIVATE primec_ir_lib)
+    primestructEnableWarnings(PrimeStruct_semantics_tsan_smoke)
+
+    add_test(
+      NAME PrimeStruct_semantics_tsan_smoke
+      COMMAND $<TARGET_FILE:PrimeStruct_semantics_tsan_smoke>
+              "--test-suite=primestruct.semantics.tsan_smoke"
+              "--order-by=file"
+    )
+    set_tests_properties(
+      PrimeStruct_semantics_tsan_smoke
+      PROPERTIES RUN_SERIAL TRUE TIMEOUT 300 LABELS "optional-ci;tsan;serial-required")
+  endif()
+
   set(PrimeStructMiscTestSuites
     primestruct.dumps.ast_ir
     primestruct.dumps.namespace
@@ -1056,28 +1107,79 @@ if(PRIMESTRUCT_BUILD_TESTS)
 
   add_custom_target(
     primestruct_semantic_memory_benchmark
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/semantic_memory_benchmark.py
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/semantic_memory_ci_artifacts.py
+            --mode benchmark
+            --run-label semantic_memory_benchmark
             --primec $<TARGET_FILE:primec>
             --repo-root ${CMAKE_SOURCE_DIR}
             --runs 3
-            --report-json ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_report.json
+            --history-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_history
+            --history-limit 2
+            --benchmark-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_report.json
+            --budget-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_budget_check_report.json
+            --artifacts-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_artifacts
     DEPENDS primec
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    COMMENT "Running semantic memory benchmark fixtures"
+    COMMENT "Running semantic memory benchmark fixtures with artifact capture"
     VERBATIM
   )
 
   add_test(
     NAME PrimeStruct_semantic_memory_benchmark
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/semantic_memory_benchmark.py
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/semantic_memory_ci_artifacts.py
+            --mode benchmark
+            --run-label semantic_memory_benchmark
             --primec $<TARGET_FILE:primec>
             --repo-root ${CMAKE_SOURCE_DIR}
             --runs 3
-            --report-json ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_report.json
+            --history-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_history
+            --history-limit 2
+            --benchmark-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_report.json
+            --budget-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_budget_check_report.json
+            --artifacts-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_artifacts
   )
   set_tests_properties(
     PrimeStruct_semantic_memory_benchmark
     PROPERTIES RUN_SERIAL TRUE TIMEOUT 1800 LABELS "expensive")
+
+  add_custom_target(
+    primestruct_semantic_memory_trend_check
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/semantic_memory_ci_artifacts.py
+            --mode trend
+            --run-label semantic_memory_trend
+            --primec $<TARGET_FILE:primec>
+            --runs 3
+            --policy ${CMAKE_SOURCE_DIR}/benchmarks/semantic_memory_budget_policy.json
+            --history-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_history
+            --history-limit 2
+            --benchmark-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_report.json
+            --budget-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_budget_check_report.json
+            --artifacts-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_artifacts
+            --repo-root ${CMAKE_SOURCE_DIR}
+    DEPENDS primec primestruct_semantic_memory_benchmark
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    COMMENT "Checking semantic memory sustained trend policy with artifact capture"
+    VERBATIM
+  )
+
+  add_test(
+    NAME PrimeStruct_semantic_memory_trend
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/semantic_memory_ci_artifacts.py
+            --mode trend
+            --run-label semantic_memory_trend
+            --primec $<TARGET_FILE:primec>
+            --runs 3
+            --policy ${CMAKE_SOURCE_DIR}/benchmarks/semantic_memory_budget_policy.json
+            --history-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_history
+            --history-limit 2
+            --benchmark-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_report.json
+            --budget-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_budget_check_report.json
+            --artifacts-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_artifacts
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(
+    PrimeStruct_semantic_memory_trend
+    PROPERTIES DEPENDS PrimeStruct_semantic_memory_benchmark RUN_SERIAL TRUE TIMEOUT 300 LABELS "expensive")
 
   set(PrimeStructCompileRunSuites
     primestruct.compile.run.smoke

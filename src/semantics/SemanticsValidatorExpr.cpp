@@ -18,6 +18,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                                       const std::vector<Expr> *enclosingStatements,
                                       size_t statementIndex) {
   ExprContextScope exprScope(*this, expr);
+  observeLocalMapSize(locals.size());
+  if (expr.kind == Expr::Kind::Call) {
+    observeCallVisited();
+  }
   auto publishExprRootDiagnostic = [&]() -> bool {
     captureExprContext(expr);
     return publishCurrentStructuredDiagnosticNow();

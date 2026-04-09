@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstddef>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -36,6 +37,60 @@ const Entry *findSemanticEntry(const std::vector<const Entry *> &entries, const 
     return nullptr;
   }
   return *it;
+}
+
+std::string buildMathStressSemanticSource(std::size_t localDefinitionCount) {
+  std::string source = "import /std/math/*\n\n";
+  for (std::size_t i = 0; i < localDefinitionCount; ++i) {
+    source += "[return<i32>]\n";
+    source += "leaf_" + std::to_string(i) + "() {\n";
+    source += "  return(/std/math/abs(" + std::to_string(i + 1) + "i32))\n";
+    source += "}\n\n";
+  }
+  source += "[return<i32>]\n";
+  source += "main() {\n";
+  source += "  [i32 mut] total{0i32}\n";
+  for (std::size_t i = 0; i < localDefinitionCount; ++i) {
+    source += "  assign(total, plus(total, leaf_" + std::to_string(i) + "()))\n";
+  }
+  source += "  return(total)\n";
+  source += "}\n";
+  return source;
+}
+
+std::string buildMathStressDiagnosticSource(std::size_t localDefinitionCount) {
+  std::string source = "import /std/math/*\n\n";
+  for (std::size_t i = 0; i < localDefinitionCount; ++i) {
+    source += "[return<void>]\n";
+    source += "broken_" + std::to_string(i) + "() {\n";
+    source += "  missing_symbol_" + std::to_string(i) + "()\n";
+    source += "}\n\n";
+  }
+  source += "[return<i32>]\n";
+  source += "main() {\n";
+  source += "  return(0i32)\n";
+  source += "}\n";
+  return source;
+}
+
+std::vector<std::string> compileDiagnosticMessages(const primec::CompilePipelineDiagnosticInfo &diagnostics) {
+  std::vector<std::string> messages;
+  messages.reserve(diagnostics.records.size());
+  for (const auto &record : diagnostics.records) {
+    messages.push_back(record.message);
+  }
+  return messages;
+}
+
+void checkOptionalRssCheckpointSnapshot(const primec::SemanticPhaseCounterSnapshot &snapshot) {
+  const bool hasCheckpoints = snapshot.rssBeforeBytes > 0 || snapshot.rssAfterBytes > 0;
+  if (!hasCheckpoints) {
+    CHECK(snapshot.rssBeforeBytes == 0);
+    CHECK(snapshot.rssAfterBytes == 0);
+    return;
+  }
+  CHECK(snapshot.rssBeforeBytes > 0);
+  CHECK(snapshot.rssAfterBytes > 0);
 }
 
 } // namespace
@@ -1758,10 +1813,155 @@ main() {
 
   REQUIRE(ok);
   REQUIRE(output.hasSemanticProgram);
+  CHECK_FALSE(output.hasSemanticPhaseCounters);
   CHECK(output.semanticProgram.directCallTargets.empty());
   CHECK(output.semanticProgram.callableSummaries.empty());
   CHECK(output.semanticProgram.bindingFacts.empty());
   CHECK(output.semanticProgram.queryFacts.empty());
+}
+
+TEST_CASE("compile pipeline benchmark semantic phase counters are opt-in and populated") {
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << R"(namespace bench {
+[return<i32>]
+callee([i32] value) {
+  return(value)
+}
+[return<i32>]
+main() {
+  [i32 mut] value{4i32}
+  return(callee(value))
+}
+}
+)";
+  }
+
+  primec::Options baseOptions;
+  baseOptions.inputPath = tempPath.string();
+  baseOptions.entryPath = "/bench/main";
+  baseOptions.emitKind = "native";
+  baseOptions.dumpStage = "semantic-product";
+  primec::addDefaultStdlibInclude(baseOptions.inputPath, baseOptions.importPaths);
+
+  primec::CompilePipelineOutput defaultOutput;
+  primec::CompilePipelineErrorStage defaultErrorStage = primec::CompilePipelineErrorStage::None;
+  std::string defaultError;
+  const bool defaultOk =
+      primec::runCompilePipeline(baseOptions, defaultOutput, defaultErrorStage, defaultError);
+  REQUIRE(defaultOk);
+  CHECK(defaultError.empty());
+  CHECK_FALSE(defaultOutput.hasSemanticPhaseCounters);
+
+  primec::Options countersOptions = baseOptions;
+  countersOptions.benchmarkSemanticPhaseCounters = true;
+
+  primec::CompilePipelineOutput countersOutput;
+  primec::CompilePipelineErrorStage countersErrorStage = primec::CompilePipelineErrorStage::None;
+  std::string countersError;
+  const bool countersOk =
+      primec::runCompilePipeline(countersOptions, countersOutput, countersErrorStage, countersError);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  REQUIRE(countersOk);
+  CHECK(countersError.empty());
+  REQUIRE(countersOutput.hasSemanticPhaseCounters);
+  CHECK(countersOutput.semanticPhaseCounters.validation.callsVisited > 0);
+  CHECK(countersOutput.semanticPhaseCounters.validation.peakLocalMapSize > 0);
+  CHECK(countersOutput.semanticPhaseCounters.validation.factsProduced == 0);
+  CHECK(countersOutput.semanticPhaseCounters.semanticProductBuild.callsVisited == 0);
+  CHECK(countersOutput.semanticPhaseCounters.semanticProductBuild.peakLocalMapSize == 0);
+  CHECK(countersOutput.semanticPhaseCounters.semanticProductBuild.factsProduced > 0);
+}
+
+TEST_CASE("compile pipeline benchmark semantic allocation counters are opt-in and populated") {
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << R"(namespace bench {
+[return<i32>]
+callee([i32] value) {
+  return(value)
+}
+[return<i32>]
+main() {
+  [i32 mut] value{4i32}
+  return(callee(value))
+}
+}
+)";
+  }
+
+  primec::Options options;
+  options.inputPath = tempPath.string();
+  options.entryPath = "/bench/main";
+  options.emitKind = "native";
+  options.dumpStage = "semantic-product";
+  options.benchmarkSemanticAllocationCounters = true;
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  const bool ok = primec::runCompilePipeline(options, output, errorStage, error);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  REQUIRE(ok);
+  CHECK(error.empty());
+  REQUIRE(output.hasSemanticPhaseCounters);
+  CHECK(output.semanticPhaseCounters.validation.allocationCount > 0);
+  CHECK(output.semanticPhaseCounters.validation.allocatedBytes > 0);
+  CHECK(output.semanticPhaseCounters.semanticProductBuild.allocationCount > 0);
+  CHECK(output.semanticPhaseCounters.semanticProductBuild.allocatedBytes > 0);
+}
+
+TEST_CASE("compile pipeline benchmark semantic rss checkpoints are opt-in and populated") {
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << R"(namespace bench {
+[return<i32>]
+callee([i32] value) {
+  return(value)
+}
+[return<i32>]
+main() {
+  [i32 mut] value{4i32}
+  return(callee(value))
+}
+}
+)";
+  }
+
+  primec::Options options;
+  options.inputPath = tempPath.string();
+  options.entryPath = "/bench/main";
+  options.emitKind = "native";
+  options.dumpStage = "semantic-product";
+  options.benchmarkSemanticRssCheckpoints = true;
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  const bool ok = primec::runCompilePipeline(options, output, errorStage, error);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  REQUIRE(ok);
+  CHECK(error.empty());
+  REQUIRE(output.hasSemanticPhaseCounters);
+  checkOptionalRssCheckpointSnapshot(output.semanticPhaseCounters.validation);
+  checkOptionalRssCheckpointSnapshot(output.semanticPhaseCounters.semanticProductBuild);
 }
 
 TEST_CASE("compile pipeline benchmark fact-family allowlist keeps only selected collectors") {
@@ -1805,6 +2005,117 @@ main() {
   CHECK(output.semanticProgram.bindingFacts.empty());
   CHECK(output.semanticProgram.returnFacts.empty());
   CHECK(output.semanticProgram.queryFacts.empty());
+}
+
+TEST_CASE("compile pipeline benchmark worker-count stress keeps /std/math/* semantic-product dumps deterministic") {
+  constexpr std::size_t localDefinitionCount = 64;
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << buildMathStressSemanticSource(localDefinitionCount);
+  }
+
+  struct StressSnapshot {
+    std::string dumpOutput;
+    std::size_t definitionCount = 0;
+    std::size_t callableSummaryCount = 0;
+    std::size_t directCallTargetCount = 0;
+  };
+
+  const auto runStress = [&]() {
+    primec::Options options;
+    options.inputPath = tempPath.string();
+    options.entryPath = "/main";
+    options.emitKind = "native";
+    options.dumpStage = "semantic-product";
+    options.collectDiagnostics = true;
+    options.benchmarkSemanticDefinitionValidationWorkerCount = 4;
+    primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+    primec::CompilePipelineOutput output;
+    primec::CompilePipelineDiagnosticInfo diagnosticInfo;
+    primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+    std::string error;
+    const bool ok = primec::runCompilePipeline(options, output, errorStage, error, &diagnosticInfo);
+
+    REQUIRE(ok);
+    CHECK(error.empty());
+    CHECK(errorStage == primec::CompilePipelineErrorStage::None);
+    CHECK_FALSE(output.hasFailure);
+    CHECK(output.semanticProductRequested);
+    CHECK(output.semanticProductBuilt);
+    REQUIRE(output.hasSemanticProgram);
+    REQUIRE(output.hasDumpOutput);
+    CHECK(std::find(output.program.imports.begin(),
+                    output.program.imports.end(),
+                    "/std/math/*") != output.program.imports.end());
+    CHECK(output.program.definitions.size() >= localDefinitionCount + 1);
+    CHECK(output.semanticProgram.callableSummaries.size() >= localDefinitionCount + 1);
+    CHECK(output.semanticProgram.directCallTargets.size() >= localDefinitionCount);
+
+    StressSnapshot snapshot;
+    snapshot.dumpOutput = output.dumpOutput;
+    snapshot.definitionCount = output.program.definitions.size();
+    snapshot.callableSummaryCount = output.semanticProgram.callableSummaries.size();
+    snapshot.directCallTargetCount = output.semanticProgram.directCallTargets.size();
+    return snapshot;
+  };
+
+  const StressSnapshot firstRun = runStress();
+  const StressSnapshot secondRun = runStress();
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  CHECK(firstRun.dumpOutput == secondRun.dumpOutput);
+  CHECK(firstRun.definitionCount == secondRun.definitionCount);
+  CHECK(firstRun.callableSummaryCount == secondRun.callableSummaryCount);
+  CHECK(firstRun.directCallTargetCount == secondRun.directCallTargetCount);
+}
+
+TEST_CASE("compile pipeline benchmark worker-count stress keeps /std/math/* diagnostics deterministic") {
+  constexpr std::size_t localDefinitionCount = 64;
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << buildMathStressDiagnosticSource(localDefinitionCount);
+  }
+
+  const auto runStress = [&]() {
+    primec::Options options;
+    options.inputPath = tempPath.string();
+    options.entryPath = "/main";
+    options.emitKind = "native";
+    options.collectDiagnostics = true;
+    options.benchmarkSemanticDefinitionValidationWorkerCount = 4;
+    primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+    primec::CompilePipelineOutput output;
+    primec::CompilePipelineDiagnosticInfo diagnosticInfo;
+    primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+    std::string error;
+    const bool ok = primec::runCompilePipeline(options, output, errorStage, error, &diagnosticInfo);
+
+    CHECK_FALSE(ok);
+    CHECK(errorStage == primec::CompilePipelineErrorStage::Semantic);
+    REQUIRE(output.hasFailure);
+    CHECK(output.failure.stage == primec::CompilePipelineErrorStage::Semantic);
+    CHECK(output.failure.message == error);
+    CHECK_FALSE(output.failure.diagnosticInfo.records.empty());
+    CHECK_FALSE(diagnosticInfo.records.empty());
+    return compileDiagnosticMessages(output.failure.diagnosticInfo);
+  };
+
+  const std::vector<std::string> firstRunMessages = runStress();
+  const std::vector<std::string> secondRunMessages = runStress();
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  CHECK(firstRunMessages == secondRunMessages);
+  CHECK(firstRunMessages.size() >= 2);
 }
 
 TEST_CASE("cli driver maps ir preparation failures through backend diagnostics") {

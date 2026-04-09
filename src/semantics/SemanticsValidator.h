@@ -300,15 +300,23 @@ public:
     uint64_t semanticNodeId = 0;
   };
 
+  struct ValidationCounters {
+    uint64_t callsVisited = 0;
+    uint64_t peakLocalMapSize = 0;
+  };
+
   SemanticsValidator(const Program &program,
                      const std::string &entryPath,
                      std::string &error,
                      const std::vector<std::string> &defaultEffects,
                      const std::vector<std::string> &entryDefaultEffects,
                      SemanticDiagnosticInfo *diagnosticInfo,
-                     bool collectDiagnostics);
+                     bool collectDiagnostics,
+                     uint32_t benchmarkSemanticDefinitionValidationWorkerCount = 1,
+                     bool benchmarkSemanticPhaseCountersEnabled = false);
 
   bool run();
+  const ValidationCounters &validationCounters() const { return validationCounters_; }
   std::vector<ReturnResolutionSnapshotEntry> returnResolutionSnapshotForTesting() const;
   std::vector<LocalAutoBindingSnapshotEntry> localAutoBindingSnapshotForTesting() const;
   std::vector<QueryCallTypeSnapshotEntry> queryCallTypeSnapshotForTesting();
@@ -545,6 +553,9 @@ private:
   SemanticDiagnosticInfo *diagnosticInfo_ = nullptr;
   DiagnosticSink diagnosticSink_;
   bool collectDiagnostics_ = false;
+  uint32_t benchmarkSemanticDefinitionValidationWorkerCount_ = 1;
+  bool benchmarkSemanticPhaseCountersEnabled_ = false;
+  ValidationCounters validationCounters_;
   bool allowRecursiveReturnInference_ = true;
   bool deferUnknownReturnInferenceErrors_ = false;
 
@@ -585,6 +596,9 @@ private:
   const Definition *currentDefinitionContext_ = nullptr;
   const Execution *currentExecutionContext_ = nullptr;
   mutable CallTargetResolutionScratch callTargetResolutionScratch_;
+
+  void observeCallVisited();
+  void observeLocalMapSize(std::size_t size);
 };
 
 } // namespace primec::semantics

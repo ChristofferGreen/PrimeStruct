@@ -132,6 +132,16 @@ Benchmark-only collector controls are forwarded to `primec`:
 Initial checked-in baseline report:
 
 - `benchmarks/semantic_memory_baseline_report.json`
+- `benchmarks/semantic_memory_budget_policy.json` defines per-fixture per-phase
+  soft/hard RSS/time budgets plus the sustained-window rule (`2` regressions in
+  a `3`-report window).
+- `docs/semantic_memory_benchmark_policy.md` documents how to update those
+  budgets safely.
+- `benchmarks/semantic_memory_phase_one_success_criteria.json` defines the
+  phase-one success target tied to the primary `/std/math/*` fixture
+  (`math_star_repro`, `semantic-product`) using a reduction-vs-cap rule.
+- `docs/semantic_memory_phase_one_success_criteria.md` explains that phase-one
+  target and its sustained-window pass condition.
 - `benchmarks/semantic_memory/method_target_memoization_delta.md` records the
   `P2-10` method-target memoization RSS/time delta on `math_star_repro`
   (`semantic-product`, 3 runs) against that baseline.
@@ -147,6 +157,35 @@ Initial checked-in baseline report:
 
 The CTest target `PrimeStruct_semantic_memory_benchmark` is labeled `expensive`
 and `RUN_SERIAL` because baseline fixtures exceed the expensive-test thresholds.
+
+Check semantic memory report budgets against policy:
+
+- `python3 scripts/check_semantic_memory_budget.py --policy benchmarks/semantic_memory_budget_policy.json --report build-release/benchmarks/semantic_memory_report.json`
+- `python3 scripts/check_semantic_memory_budget.py --policy benchmarks/semantic_memory_budget_policy.json --report build-release/benchmarks/semantic_memory_report.json --history-report <older1.json> --history-report <older2.json>`
+
+Trend helper for CI/history-driven sustained checks:
+
+- `python3 scripts/check_semantic_memory_trend.py --policy benchmarks/semantic_memory_budget_policy.json --report build-release/benchmarks/semantic_memory_report.json --history-dir build-release/benchmarks/semantic_memory_history --history-limit 2`
+- Add `--trend-report-json <path>` to emit a machine-readable trend summary that
+  records selected history reports and checker pass/fail status.
+
+Phase-one success checker:
+
+- `python3 scripts/check_semantic_memory_phase_one_success.py --criteria benchmarks/semantic_memory_phase_one_success_criteria.json --report build-release/benchmarks/semantic_memory_report.json --history-dir build-release/benchmarks/semantic_memory_history --history-limit 2`
+- Add `--report-json <path>` to emit a machine-readable phase-one check summary.
+
+CI artifact wrapper (always emits run manifest/log artifacts, including failures):
+
+- `python3 scripts/semantic_memory_ci_artifacts.py --mode full --repo-root . --primec build-release/primec --benchmark-report build-release/benchmarks/semantic_memory_report.json --budget-report build-release/benchmarks/semantic_memory_budget_check_report.json --trend-report build-release/benchmarks/semantic_memory_trend_report.json --history-dir build-release/benchmarks/semantic_memory_history --artifacts-dir build-release/benchmarks/semantic_memory_artifacts`
+- In `benchmark`/`full` modes, the wrapper clears prior report outputs first so
+  failed runs cannot accidentally re-publish stale benchmark/budget JSON files
+  from earlier successful runs.
+
+CTest/CMake gates:
+
+- `PrimeStruct_semantic_memory_trend` (depends on `PrimeStruct_semantic_memory_benchmark`)
+- `cmake --build build-release --target primestruct_semantic_memory_trend_check`
+- `PrimeStruct_semantic_memory_benchmark` and `PrimeStruct_semantic_memory_trend` both run through `scripts/semantic_memory_ci_artifacts.py`, so machine-readable report bundles are available in `build-release/benchmarks/semantic_memory_artifacts/` even when one step fails.
 
 ## Type-Graph Budget Gates
 

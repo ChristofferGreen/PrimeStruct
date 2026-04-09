@@ -207,6 +207,24 @@ not worker completion time.
 - P4-09..P4-14: deterministic partitioning/scheduling + equivalence tests.
 - P4-15..P4-16: stress/TSAN coverage for race and determinism confidence.
 
+## Optional CI Gate (P4-16)
+
+The ThreadSanitizer smoke test is feature-flagged so default local and default
+CI jobs do not pay the sanitizer cost.
+
+- CMake option: `PRIMESTRUCT_ENABLE_TSAN_SEMANTICS_SMOKE=ON`
+- CTest label: `optional-ci` (plus `tsan`, `serial-required`)
+- Smoke test name: `PrimeStruct_semantics_tsan_smoke`
+
+Recommended optional-CI invocation:
+
+```bash
+./scripts/run_semantics_tsan_smoke.sh
+```
+
+This configures a dedicated TSan build directory, builds the smoke target, and
+runs only the deterministic multithread semantics smoke suite.
+
 ## Acceptance Criteria for This Design Note
 
 - Phase boundaries are explicit and implementation-addressable.

@@ -26,6 +26,8 @@
   bool validateTraitConstraints();
   bool validateStructLayouts();
   bool validateDefinitions();
+  bool validateDefinitionsForStableIndices(const std::vector<std::size_t> &stableIndices);
+  bool runDefinitionValidationWorkerChunk(const std::vector<std::size_t> &stableIndices);
   bool validateExecutions();
   void collectDefinitionIntraBodyCallDiagnostics(const Definition &def,
                                                  std::vector<SemanticDiagnosticRecord> &out);

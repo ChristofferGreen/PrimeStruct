@@ -102,20 +102,16 @@ P4 - Deterministic multithread compile substrate
 - ◐ [P4-07] Extract read-only definition index/prepass (symbols + resolved declarations) with no validator-state mutation.
 - ◐ [P4-08] Route single-thread definition validation through the read-only prepass and add parity tests.
 - ◐ [P4-09] Implement deterministic N-way definition partitioner and standalone stability unit tests.
-- ○ [P4-10] Run two deterministic definition-validation work chunks in parallel behind a feature flag.
-- ○ [P4-11] Extend worker scheduling from two chunks to N chunks via deterministic partitioner.
-- ○ [P4-12] Add focused ordering tests that lock diagnostic and semantic-product output order under N-chunk scheduling.
-- ○ [P4-13] Add single-thread vs multithread equivalence tests for diagnostics ordering and semantic-product output.
-- ○ [P4-14] Add explicit worker-count equivalence tests for `1`, `2`, and `4` workers.
-- ○ [P4-15] Add concurrency stress tests on high-definition-count imports (including `/std/math/*`) with deterministic-output assertions.
-- ○ [P4-16] Add ThreadSanitizer multithread semantics smoke target (feature-flag on small deterministic fixture) and gate it in optional CI.
+- ◐ [P4-10] Run two deterministic definition-validation work chunks in parallel behind a feature flag.
+- ◐ [P4-11] Extend worker scheduling from two chunks to N chunks via deterministic partitioner.
+- ◐ [P4-12] Add focused ordering tests that lock diagnostic and semantic-product output order under N-chunk scheduling.
+- ◐ [P4-13] Add single-thread vs multithread equivalence tests for diagnostics ordering and semantic-product output.
+- ◐ [P4-14] Add explicit worker-count equivalence tests for `1`, `2`, and `4` workers.
+- ◐ [P4-15] Add concurrency stress tests on high-definition-count imports (including `/std/math/*`) with deterministic-output assertions.
 
 P5 - CI observability, policy, and completion gates
-- ○ [P5-01] Add optional phase-level semantic counters (calls visited, facts produced, peak local map sizes), off by default.
-- ○ [P5-02] Add optional phase-level allocation counters (allocation count + allocated bytes) for semantic validation/fact collection, off by default.
-- ○ [P5-03] Add optional per-phase RSS checkpoints around semantic validation and semantic-product build, emitted in benchmark reports.
-- ○ [P5-04] Add repeated-compile leak check (same fixture N times in one process) and report RSS drift.
-- ○ [P5-05] Define per-fixture RSS/time regression budgets (tolerance + sustained-window rule) in a checked-in benchmark policy note.
-- ○ [P5-06] Define phase-one success criteria tied to the checked-in baseline report (target RSS reduction or absolute cap on primary `/std/math/*` fixture).
-- ○ [P5-07] Add CI trend tracking for semantic benchmark RSS/time with sustained-regression failure policy.
-- ○ [P5-08] Upload semantic benchmark machine-readable reports as CI artifacts for all runs (especially failures).
+- ◐ [P5-01] Add optional phase-level semantic counters (calls visited, facts produced, peak local map sizes), off by default.
+- ◐ [P5-02] Add optional phase-level allocation counters (allocation count + allocated bytes) for semantic validation/fact collection, off by default.
+- ◐ [P5-03] Add optional per-phase RSS checkpoints around semantic validation and semantic-product build, emitted in benchmark reports.
+- ◐ [P5-04] Add repeated-compile leak check (same fixture N times in one process) and report RSS drift.
+- ◐ [P5-05] Define per-fixture RSS/time regression budgets (tolerance + sustained-window rule) in a checked-in benchmark policy note.

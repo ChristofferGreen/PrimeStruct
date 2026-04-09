@@ -57,6 +57,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
                                            const std::vector<Expr> *enclosingStatements,
                                            size_t statementIndex) {
   ExprContextScope statementScope(*this, stmt);
+  observeLocalMapSize(locals.size());
   auto failStatementDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(stmt, std::move(message));
   };
@@ -73,6 +74,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     return false;
   }
   if (handledBindingStatement) {
+    observeLocalMapSize(locals.size());
     return true;
   }
   std::optional<EffectScope> effectScope;

@@ -43,5 +43,11 @@ struct Options {
   bool benchmarkSemanticNoFactEmission = false;
   bool benchmarkSemanticFactFamiliesSpecified = false;
   std::vector<std::string> benchmarkSemanticFactFamilies;
+  bool benchmarkSemanticTwoChunkDefinitionValidation = false;
+  std::optional<uint32_t> benchmarkSemanticDefinitionValidationWorkerCount;
+  bool benchmarkSemanticPhaseCounters = false;
+  bool benchmarkSemanticAllocationCounters = false;
+  bool benchmarkSemanticRssCheckpoints = false;
+  std::optional<uint32_t> benchmarkSemanticRepeatCompileCount;
 };
 } // namespace primec

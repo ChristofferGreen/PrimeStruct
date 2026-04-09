@@ -7,11 +7,22 @@
 #include "primec/Options.h"
 #include "primec/OptionsParser.h"
 
+#include <chrono>
+#include <cstdint>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
+
+#if defined(__APPLE__)
+#include <mach/mach.h>
+#elif defined(__linux__)
+#include <unistd.h>
+#endif
 
 namespace {
 bool hasPathPrefix(const std::filesystem::path &path, const std::filesystem::path &prefix) {
@@ -65,6 +76,104 @@ struct IrBackendRunFailure {
   std::string message;
   std::optional<primec::CliFailure> cliFailure;
 };
+
+struct ProcessRssSample {
+  bool valid = false;
+  uint64_t residentBytes = 0;
+};
+
+ProcessRssSample captureProcessRssSample() {
+  ProcessRssSample sample;
+#if defined(__APPLE__)
+  mach_task_basic_info info{};
+  mach_msg_type_number_t count = MACH_TASK_BASIC_INFO_COUNT;
+  const kern_return_t status = task_info(mach_task_self(),
+                                         MACH_TASK_BASIC_INFO,
+                                         reinterpret_cast<task_info_t>(&info),
+                                         &count);
+  if (status == KERN_SUCCESS) {
+    sample.valid = true;
+    sample.residentBytes = static_cast<uint64_t>(info.resident_size);
+  }
+#elif defined(__linux__)
+  std::ifstream statm("/proc/self/statm");
+  uint64_t residentPages = 0;
+  if (statm.good()) {
+    statm.ignore(std::numeric_limits<std::streamsize>::max(), ' ');
+    if (statm >> residentPages) {
+      const long pageSize = sysconf(_SC_PAGESIZE);
+      if (pageSize > 0) {
+        sample.valid = true;
+        sample.residentBytes = residentPages * static_cast<uint64_t>(pageSize);
+      }
+    }
+  }
+#endif
+  return sample;
+}
+
+struct BenchmarkSemanticRepeatLeakCheck {
+  bool enabled = false;
+  uint32_t requestedRuns = 0;
+  uint64_t rssBeforeBytes = 0;
+  uint64_t rssAfterBytes = 0;
+  int64_t rssDriftBytes = 0;
+  std::vector<uint64_t> rssAfterEachRunBytes;
+  std::vector<double> wallSecondsByRun;
+};
+
+void emitBenchmarkSemanticPhaseCounters(std::ostream &err,
+                                        const primec::CompilePipelineOutput &output) {
+  if (!output.hasSemanticPhaseCounters) {
+    return;
+  }
+  const primec::SemanticPhaseCounters &counters = output.semanticPhaseCounters;
+  err << "[benchmark-semantic-phase-counters] "
+      << "{\"schema\":\"primestruct_semantic_phase_counters_v1\","
+      << "\"validation\":{\"calls_visited\":" << counters.validation.callsVisited
+      << ",\"facts_produced\":" << counters.validation.factsProduced
+      << ",\"peak_local_map_size\":" << counters.validation.peakLocalMapSize
+      << ",\"allocation_count\":" << counters.validation.allocationCount
+      << ",\"allocated_bytes\":" << counters.validation.allocatedBytes
+      << ",\"rss_before_bytes\":" << counters.validation.rssBeforeBytes
+      << ",\"rss_after_bytes\":" << counters.validation.rssAfterBytes << "},"
+      << "\"semantic_product_build\":{\"calls_visited\":" << counters.semanticProductBuild.callsVisited
+      << ",\"facts_produced\":" << counters.semanticProductBuild.factsProduced
+      << ",\"peak_local_map_size\":" << counters.semanticProductBuild.peakLocalMapSize
+      << ",\"allocation_count\":" << counters.semanticProductBuild.allocationCount
+      << ",\"allocated_bytes\":" << counters.semanticProductBuild.allocatedBytes
+      << ",\"rss_before_bytes\":" << counters.semanticProductBuild.rssBeforeBytes
+      << ",\"rss_after_bytes\":" << counters.semanticProductBuild.rssAfterBytes << "}}"
+      << "\n";
+}
+
+void emitBenchmarkSemanticRepeatLeakCheck(std::ostream &err,
+                                          const BenchmarkSemanticRepeatLeakCheck &repeatLeakCheck) {
+  if (!repeatLeakCheck.enabled) {
+    return;
+  }
+  err << "[benchmark-semantic-repeat-leak-check] "
+      << "{\"schema\":\"primestruct_semantic_repeat_leak_check_v1\","
+      << "\"runs\":" << repeatLeakCheck.requestedRuns
+      << ",\"rss_before_bytes\":" << repeatLeakCheck.rssBeforeBytes
+      << ",\"rss_after_bytes\":" << repeatLeakCheck.rssAfterBytes
+      << ",\"rss_drift_bytes\":" << repeatLeakCheck.rssDriftBytes
+      << ",\"rss_by_run_bytes\":[";
+  for (size_t i = 0; i < repeatLeakCheck.rssAfterEachRunBytes.size(); ++i) {
+    if (i != 0) {
+      err << ",";
+    }
+    err << repeatLeakCheck.rssAfterEachRunBytes[i];
+  }
+  err << "],\"wall_seconds_by_run\":[";
+  for (size_t i = 0; i < repeatLeakCheck.wallSecondsByRun.size(); ++i) {
+    if (i != 0) {
+      err << ",";
+    }
+    err << repeatLeakCheck.wallSecondsByRun[i];
+  }
+  err << "]}\n";
+}
 
 bool runIrBackend(const primec::IrBackend &backend,
                   primec::Program &program,
@@ -127,6 +236,10 @@ int main(int argc, char **argv) {
                 << "[--no-transforms] [--out-dir <dir>] [--list-transforms] [--emit-diagnostics] "
                 << "[--collect-diagnostics] "
                 << "[--default-effects <list>] [--ir-inline] "
+                << "[--benchmark-semantic-phase-counters] "
+                << "[--benchmark-semantic-allocation-counters] "
+                << "[--benchmark-semantic-rss-checkpoints] "
+                << "[--benchmark-semantic-repeat-count <n>] "
                 << "[--dump-stage pre_ast|ast|ast-semantic|semantic-product|type-graph|ir] [-- <program args...>]\n"
                 << "Dump-stage note: lowering-facing dumps now include semantic-product between ast-semantic and ir.\n";
     }
@@ -140,11 +253,58 @@ int main(int argc, char **argv) {
   primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
 
   primec::CompilePipelineOutput pipelineOutput;
-  primec::CompilePipelineDiagnosticInfo pipelineDiagnosticInfo;
-  primec::CompilePipelineErrorStage pipelineError = primec::CompilePipelineErrorStage::None;
-  if (!primec::runCompilePipeline(options, pipelineOutput, pipelineError, error, &pipelineDiagnosticInfo)) {
-    return primec::emitCliFailure(std::cerr, options, primec::describeCompilePipelineFailure(pipelineOutput));
+  BenchmarkSemanticRepeatLeakCheck repeatLeakCheck;
+  const uint32_t repeatCount = options.benchmarkSemanticRepeatCompileCount.value_or(1u);
+  repeatLeakCheck.enabled = options.benchmarkSemanticRepeatCompileCount.has_value();
+  repeatLeakCheck.requestedRuns = repeatCount;
+  if (repeatLeakCheck.enabled) {
+    repeatLeakCheck.rssAfterEachRunBytes.reserve(repeatCount);
+    repeatLeakCheck.wallSecondsByRun.reserve(repeatCount);
+    const ProcessRssSample rssBefore = captureProcessRssSample();
+    if (rssBefore.valid) {
+      repeatLeakCheck.rssBeforeBytes = rssBefore.residentBytes;
+    }
   }
+  for (uint32_t runIndex = 0; runIndex < repeatCount; ++runIndex) {
+    primec::CompilePipelineOutput runOutput;
+    primec::CompilePipelineErrorStage runError = primec::CompilePipelineErrorStage::None;
+    std::string runErrorText;
+    const auto runStart = std::chrono::steady_clock::now();
+    const bool ok = primec::runCompilePipeline(options, runOutput, runError, runErrorText);
+    (void)runError;
+    const auto runStop = std::chrono::steady_clock::now();
+    if (repeatLeakCheck.enabled) {
+      repeatLeakCheck.wallSecondsByRun.push_back(
+          std::chrono::duration<double>(runStop - runStart).count());
+      const ProcessRssSample rssAfterRun = captureProcessRssSample();
+      repeatLeakCheck.rssAfterEachRunBytes.push_back(rssAfterRun.valid ? rssAfterRun.residentBytes : 0);
+    }
+    pipelineOutput = std::move(runOutput);
+    error = std::move(runErrorText);
+    if (!ok) {
+      if (repeatLeakCheck.enabled) {
+        const ProcessRssSample rssAfter = captureProcessRssSample();
+        if (rssAfter.valid) {
+          repeatLeakCheck.rssAfterBytes = rssAfter.residentBytes;
+          repeatLeakCheck.rssDriftBytes = static_cast<int64_t>(repeatLeakCheck.rssAfterBytes) -
+                                          static_cast<int64_t>(repeatLeakCheck.rssBeforeBytes);
+        }
+      }
+      emitBenchmarkSemanticPhaseCounters(std::cerr, pipelineOutput);
+      emitBenchmarkSemanticRepeatLeakCheck(std::cerr, repeatLeakCheck);
+      return primec::emitCliFailure(std::cerr, options, primec::describeCompilePipelineFailure(pipelineOutput));
+    }
+  }
+  if (repeatLeakCheck.enabled) {
+    const ProcessRssSample rssAfter = captureProcessRssSample();
+    if (rssAfter.valid) {
+      repeatLeakCheck.rssAfterBytes = rssAfter.residentBytes;
+      repeatLeakCheck.rssDriftBytes = static_cast<int64_t>(repeatLeakCheck.rssAfterBytes) -
+                                      static_cast<int64_t>(repeatLeakCheck.rssBeforeBytes);
+    }
+  }
+  emitBenchmarkSemanticPhaseCounters(std::cerr, pipelineOutput);
+  emitBenchmarkSemanticRepeatLeakCheck(std::cerr, repeatLeakCheck);
   if (pipelineOutput.hasDumpOutput) {
     std::cout << pipelineOutput.dumpOutput;
     return 0;

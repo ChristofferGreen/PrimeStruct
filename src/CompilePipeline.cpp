@@ -627,6 +627,20 @@ bool runCompilePipeline(const Options &options,
     }
     semanticProductBuildConfigPtr = &semanticProductBuildConfig;
   }
+  uint32_t benchmarkSemanticDefinitionValidationWorkerCount = 1;
+  if (options.benchmarkSemanticDefinitionValidationWorkerCount.has_value()) {
+    benchmarkSemanticDefinitionValidationWorkerCount =
+        *options.benchmarkSemanticDefinitionValidationWorkerCount;
+  } else if (options.benchmarkSemanticTwoChunkDefinitionValidation) {
+    benchmarkSemanticDefinitionValidationWorkerCount = 2;
+  }
+  SemanticPhaseCounters benchmarkSemanticPhaseCounters;
+  const bool benchmarkSemanticCountersRequested =
+      options.benchmarkSemanticPhaseCounters ||
+      options.benchmarkSemanticAllocationCounters ||
+      options.benchmarkSemanticRssCheckpoints;
+  SemanticPhaseCounters *benchmarkSemanticPhaseCountersPtr =
+      benchmarkSemanticCountersRequested ? &benchmarkSemanticPhaseCounters : nullptr;
   output.semanticProductRequested = needsSemanticProduct;
   if (!semantics.validate(output.program,
                           options.entryPath,
@@ -637,11 +651,19 @@ bool runCompilePipeline(const Options &options,
                           &semanticDiagnosticInfo,
                           options.collectDiagnostics,
                           needsSemanticProduct ? &semanticProgram : nullptr,
-                          semanticProductBuildConfigPtr)) {
+                          semanticProductBuildConfigPtr,
+                          benchmarkSemanticDefinitionValidationWorkerCount,
+                          benchmarkSemanticPhaseCountersPtr,
+                          options.benchmarkSemanticAllocationCounters,
+                          options.benchmarkSemanticRssCheckpoints)) {
     if (semanticDiagnosticInfo.message.empty()) {
       semanticDiagnosticInfo.message = error;
     }
     return failPipeline(CompilePipelineErrorStage::Semantic, error, semanticDiagnosticInfo);
+  }
+  if (benchmarkSemanticPhaseCountersPtr != nullptr) {
+    output.semanticPhaseCounters = benchmarkSemanticPhaseCounters;
+    output.hasSemanticPhaseCounters = true;
   }
 
   if (needsSemanticProduct) {

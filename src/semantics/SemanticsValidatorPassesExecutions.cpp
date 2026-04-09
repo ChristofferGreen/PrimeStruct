@@ -115,6 +115,7 @@ bool SemanticsValidator::validateExecutions() {
       return false;
     }
     std::unordered_map<std::string, BindingInfo> execLocals;
+    observeLocalMapSize(execLocals.size());
     for (size_t bodyIndex = 0; bodyIndex < exec.bodyArguments.size(); ++bodyIndex) {
       const Expr &arg = exec.bodyArguments[bodyIndex];
       if (!validateStatement({},
@@ -129,6 +130,7 @@ bool SemanticsValidator::validateExecutions() {
                              bodyIndex)) {
         return false;
       }
+      observeLocalMapSize(execLocals.size());
       expireReferenceBorrowsForRemainder({}, execLocals, exec.bodyArguments, bodyIndex + 1);
     }
     return true;

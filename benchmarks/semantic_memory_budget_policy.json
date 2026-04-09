@@ -1,0 +1,210 @@
+{
+  "schema": "primestruct_semantic_memory_budget_policy_v1",
+  "description": "Per-fixture semantic memory regression budgets derived from semantic_memory_baseline_report.json",
+  "sustained_window": {
+    "window_size": 3,
+    "minimum_regressions": 2
+  },
+  "entries": [
+    {
+      "fixture": "math_star_repro",
+      "phase": "ast-semantic",
+      "baseline_worst_peak_rss_bytes": 3493576704,
+      "baseline_worst_wall_seconds": 3.24695,
+      "soft_max_worst_peak_rss_bytes": 3668255540,
+      "soft_max_worst_wall_seconds": 3.636584,
+      "max_worst_peak_rss_bytes": 3842934375,
+      "max_worst_wall_seconds": 3.89634
+    },
+    {
+      "fixture": "math_star_repro",
+      "phase": "semantic-product",
+      "baseline_worst_peak_rss_bytes": 5927174144,
+      "baseline_worst_wall_seconds": 5.206857,
+      "soft_max_worst_peak_rss_bytes": 6223532852,
+      "soft_max_worst_wall_seconds": 5.83168,
+      "max_worst_peak_rss_bytes": 6519891559,
+      "max_worst_wall_seconds": 6.248228
+    },
+    {
+      "fixture": "no_import",
+      "phase": "ast-semantic",
+      "baseline_worst_peak_rss_bytes": 9076736,
+      "baseline_worst_wall_seconds": 0.023977,
+      "soft_max_worst_peak_rss_bytes": 9530573,
+      "soft_max_worst_wall_seconds": 0.033977,
+      "max_worst_peak_rss_bytes": 9984410,
+      "max_worst_wall_seconds": 0.043977
+    },
+    {
+      "fixture": "no_import",
+      "phase": "semantic-product",
+      "baseline_worst_peak_rss_bytes": 9076736,
+      "baseline_worst_wall_seconds": 0.022012,
+      "soft_max_worst_peak_rss_bytes": 9530573,
+      "soft_max_worst_wall_seconds": 0.032012,
+      "max_worst_peak_rss_bytes": 9984410,
+      "max_worst_wall_seconds": 0.042012
+    },
+    {
+      "fixture": "math_vector",
+      "phase": "ast-semantic",
+      "baseline_worst_peak_rss_bytes": 3492954112,
+      "baseline_worst_wall_seconds": 3.266061,
+      "soft_max_worst_peak_rss_bytes": 3667601818,
+      "soft_max_worst_wall_seconds": 3.657988,
+      "max_worst_peak_rss_bytes": 3842249524,
+      "max_worst_wall_seconds": 3.919273
+    },
+    {
+      "fixture": "math_vector",
+      "phase": "semantic-product",
+      "baseline_worst_peak_rss_bytes": 5929271296,
+      "baseline_worst_wall_seconds": 5.43564,
+      "soft_max_worst_peak_rss_bytes": 6225734861,
+      "soft_max_worst_wall_seconds": 6.087917,
+      "max_worst_peak_rss_bytes": 6522198426,
+      "max_worst_wall_seconds": 6.522768
+    },
+    {
+      "fixture": "math_vector_matrix",
+      "phase": "ast-semantic",
+      "baseline_worst_peak_rss_bytes": 3494068224,
+      "baseline_worst_wall_seconds": 3.372302,
+      "soft_max_worst_peak_rss_bytes": 3668771636,
+      "soft_max_worst_wall_seconds": 3.776978,
+      "max_worst_peak_rss_bytes": 3843475047,
+      "max_worst_wall_seconds": 4.046762
+    },
+    {
+      "fixture": "math_vector_matrix",
+      "phase": "semantic-product",
+      "baseline_worst_peak_rss_bytes": 5925748736,
+      "baseline_worst_wall_seconds": 5.343283,
+      "soft_max_worst_peak_rss_bytes": 6222036173,
+      "soft_max_worst_wall_seconds": 5.984477,
+      "max_worst_peak_rss_bytes": 6518323610,
+      "max_worst_wall_seconds": 6.41194
+    },
+    {
+      "fixture": "non_math_large_include",
+      "phase": "ast-semantic",
+      "baseline_worst_peak_rss_bytes": 46612480,
+      "baseline_worst_wall_seconds": 0.209218,
+      "soft_max_worst_peak_rss_bytes": 50724864,
+      "soft_max_worst_wall_seconds": 0.234324,
+      "max_worst_peak_rss_bytes": 52428800,
+      "max_worst_wall_seconds": 0.251062
+    },
+    {
+      "fixture": "non_math_large_include",
+      "phase": "semantic-product",
+      "baseline_worst_peak_rss_bytes": 81510400,
+      "baseline_worst_wall_seconds": 0.249078,
+      "soft_max_worst_peak_rss_bytes": 85585920,
+      "soft_max_worst_wall_seconds": 0.278967,
+      "max_worst_peak_rss_bytes": 89661440,
+      "max_worst_wall_seconds": 0.298894
+    },
+    {
+      "fixture": "inline_math_body",
+      "phase": "ast-semantic",
+      "baseline_worst_peak_rss_bytes": 9830400,
+      "baseline_worst_wall_seconds": 0.022214,
+      "soft_max_worst_peak_rss_bytes": 10321920,
+      "soft_max_worst_wall_seconds": 0.032214,
+      "max_worst_peak_rss_bytes": 10813440,
+      "max_worst_wall_seconds": 0.042214
+    },
+    {
+      "fixture": "inline_math_body",
+      "phase": "semantic-product",
+      "baseline_worst_peak_rss_bytes": 13369344,
+      "baseline_worst_wall_seconds": 0.024006,
+      "soft_max_worst_peak_rss_bytes": 14037812,
+      "soft_max_worst_wall_seconds": 0.036,
+      "max_worst_peak_rss_bytes": 14706279,
+      "max_worst_wall_seconds": 0.044006
+    },
+    {
+      "fixture": "imported_math_body",
+      "phase": "ast-semantic",
+      "baseline_worst_peak_rss_bytes": 3497230336,
+      "baseline_worst_wall_seconds": 3.315065,
+      "soft_max_worst_peak_rss_bytes": 3672091853,
+      "soft_max_worst_wall_seconds": 3.712873,
+      "max_worst_peak_rss_bytes": 3846953370,
+      "max_worst_wall_seconds": 3.978078
+    },
+    {
+      "fixture": "imported_math_body",
+      "phase": "semantic-product",
+      "baseline_worst_peak_rss_bytes": 5931827200,
+      "baseline_worst_wall_seconds": 5.298312,
+      "soft_max_worst_peak_rss_bytes": 6228418560,
+      "soft_max_worst_wall_seconds": 5.934109,
+      "max_worst_peak_rss_bytes": 6525009921,
+      "max_worst_wall_seconds": 6.357974
+    },
+    {
+      "fixture": "scale_1x",
+      "phase": "ast-semantic",
+      "baseline_worst_peak_rss_bytes": 9076736,
+      "baseline_worst_wall_seconds": 0.028119,
+      "soft_max_worst_peak_rss_bytes": 9530573,
+      "soft_max_worst_wall_seconds": 0.038119,
+      "max_worst_peak_rss_bytes": 9984410,
+      "max_worst_wall_seconds": 0.048119
+    },
+    {
+      "fixture": "scale_1x",
+      "phase": "semantic-product",
+      "baseline_worst_peak_rss_bytes": 12500992,
+      "baseline_worst_wall_seconds": 0.027095,
+      "soft_max_worst_peak_rss_bytes": 13126042,
+      "soft_max_worst_wall_seconds": 0.037095,
+      "max_worst_peak_rss_bytes": 13751092,
+      "max_worst_wall_seconds": 0.047095
+    },
+    {
+      "fixture": "scale_2x",
+      "phase": "ast-semantic",
+      "baseline_worst_peak_rss_bytes": 12664832,
+      "baseline_worst_wall_seconds": 0.026471,
+      "soft_max_worst_peak_rss_bytes": 13298074,
+      "soft_max_worst_wall_seconds": 0.036471,
+      "max_worst_peak_rss_bytes": 13931316,
+      "max_worst_wall_seconds": 0.046471
+    },
+    {
+      "fixture": "scale_2x",
+      "phase": "semantic-product",
+      "baseline_worst_peak_rss_bytes": 19726336,
+      "baseline_worst_wall_seconds": 0.030864,
+      "soft_max_worst_peak_rss_bytes": 20712653,
+      "soft_max_worst_wall_seconds": 0.040864,
+      "max_worst_peak_rss_bytes": 21698970,
+      "max_worst_wall_seconds": 0.050864
+    },
+    {
+      "fixture": "scale_4x",
+      "phase": "ast-semantic",
+      "baseline_worst_peak_rss_bytes": 19841024,
+      "baseline_worst_wall_seconds": 0.033838,
+      "soft_max_worst_peak_rss_bytes": 20833076,
+      "soft_max_worst_wall_seconds": 0.043838,
+      "max_worst_peak_rss_bytes": 21825127,
+      "max_worst_wall_seconds": 0.053838
+    },
+    {
+      "fixture": "scale_4x",
+      "phase": "semantic-product",
+      "baseline_worst_peak_rss_bytes": 33832960,
+      "baseline_worst_wall_seconds": 0.05342,
+      "soft_max_worst_peak_rss_bytes": 35524608,
+      "soft_max_worst_wall_seconds": 0.06342,
+      "max_worst_peak_rss_bytes": 37216256,
+      "max_worst_wall_seconds": 0.07342
+    }
+  ]
+}

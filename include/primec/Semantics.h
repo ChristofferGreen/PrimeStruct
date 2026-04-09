@@ -4,6 +4,7 @@
 #include "primec/Diagnostics.h"
 #include "primec/SemanticProduct.h"
 
+#include <cstdint>
 #include <vector>
 
 namespace primec {
@@ -18,6 +19,21 @@ struct SemanticProductBuildConfig {
   std::vector<std::string> collectorAllowlist;
 };
 
+struct SemanticPhaseCounterSnapshot {
+  uint64_t callsVisited = 0;
+  uint64_t factsProduced = 0;
+  uint64_t peakLocalMapSize = 0;
+  uint64_t allocationCount = 0;
+  uint64_t allocatedBytes = 0;
+  uint64_t rssBeforeBytes = 0;
+  uint64_t rssAfterBytes = 0;
+};
+
+struct SemanticPhaseCounters {
+  SemanticPhaseCounterSnapshot validation;
+  SemanticPhaseCounterSnapshot semanticProductBuild;
+};
+
 class Semantics {
 public:
   bool validate(Program &program,
@@ -29,7 +45,11 @@ public:
                 SemanticDiagnosticInfo *diagnosticInfo = nullptr,
                 bool collectDiagnostics = false,
                 SemanticProgram *semanticProgramOut = nullptr,
-                const SemanticProductBuildConfig *semanticProductBuildConfig = nullptr) const;
+                const SemanticProductBuildConfig *semanticProductBuildConfig = nullptr,
+                uint32_t benchmarkSemanticDefinitionValidationWorkerCount = 1,
+                SemanticPhaseCounters *benchmarkSemanticPhaseCounters = nullptr,
+                bool benchmarkSemanticAllocationCountersEnabled = false,
+                bool benchmarkSemanticRssCheckpointsEnabled = false) const;
 };
 
 } // namespace primec

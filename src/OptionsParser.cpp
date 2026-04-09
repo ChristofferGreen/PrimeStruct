@@ -6,6 +6,7 @@
 
 #include <cctype>
 #include <filesystem>
+#include <limits>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -395,6 +396,29 @@ bool parseBenchmarkSemanticFactFamilies(const std::string &text,
   return true;
 }
 
+bool parsePositiveUint32(const std::string &text, uint32_t &out, std::string &error, const char *optionName) {
+  const std::string normalized = trimWhitespace(text);
+  if (normalized.empty()) {
+    error = std::string(optionName) + " requires a positive integer value";
+    return false;
+  }
+  try {
+    size_t consumed = 0;
+    const unsigned long long parsed = std::stoull(normalized, &consumed);
+    if (consumed != normalized.size() ||
+        parsed == 0 ||
+        parsed > static_cast<unsigned long long>(std::numeric_limits<uint32_t>::max())) {
+      error = std::string("invalid ") + optionName + " value: " + normalized;
+      return false;
+    }
+    out = static_cast<uint32_t>(parsed);
+    return true;
+  } catch (...) {
+    error = std::string("invalid ") + optionName + " value: " + normalized;
+    return false;
+  }
+}
+
 void applyNoTransformFlags(Options &out, bool noTransforms, bool noTextTransforms, bool noSemanticTransforms) {
   if (noTransforms) {
     out.textFilters.clear();
@@ -702,6 +726,54 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       }
     } else if (arg == "--benchmark-semantic-no-fact-emission") {
       out.benchmarkSemanticNoFactEmission = true;
+    } else if (arg == "--benchmark-semantic-phase-counters") {
+      out.benchmarkSemanticPhaseCounters = true;
+    } else if (arg == "--benchmark-semantic-allocation-counters") {
+      out.benchmarkSemanticAllocationCounters = true;
+    } else if (arg == "--benchmark-semantic-rss-checkpoints") {
+      out.benchmarkSemanticRssCheckpoints = true;
+    } else if (arg == "--benchmark-semantic-repeat-count" && i + 1 < argc) {
+      uint32_t repeatCount = 0;
+      if (!parsePositiveUint32(argv[++i], repeatCount, error, "--benchmark-semantic-repeat-count")) {
+        return false;
+      }
+      out.benchmarkSemanticRepeatCompileCount = repeatCount;
+    } else if (arg == "--benchmark-semantic-repeat-count") {
+      error = "--benchmark-semantic-repeat-count requires a value";
+      return false;
+    } else if (arg.rfind("--benchmark-semantic-repeat-count=", 0) == 0) {
+      uint32_t repeatCount = 0;
+      if (!parsePositiveUint32(arg.substr(std::string("--benchmark-semantic-repeat-count=").size()),
+                               repeatCount,
+                               error,
+                               "--benchmark-semantic-repeat-count")) {
+        return false;
+      }
+      out.benchmarkSemanticRepeatCompileCount = repeatCount;
+    } else if (arg == "--benchmark-semantic-two-chunk-definition-validation") {
+      out.benchmarkSemanticTwoChunkDefinitionValidation = true;
+    } else if (arg == "--benchmark-semantic-definition-validation-workers" && i + 1 < argc) {
+      uint32_t workerCount = 0;
+      if (!parsePositiveUint32(argv[++i],
+                               workerCount,
+                               error,
+                               "--benchmark-semantic-definition-validation-workers")) {
+        return false;
+      }
+      out.benchmarkSemanticDefinitionValidationWorkerCount = workerCount;
+    } else if (arg == "--benchmark-semantic-definition-validation-workers") {
+      error = "--benchmark-semantic-definition-validation-workers requires a value";
+      return false;
+    } else if (arg.rfind("--benchmark-semantic-definition-validation-workers=", 0) == 0) {
+      uint32_t workerCount = 0;
+      if (!parsePositiveUint32(
+              arg.substr(std::string("--benchmark-semantic-definition-validation-workers=").size()),
+              workerCount,
+              error,
+              "--benchmark-semantic-definition-validation-workers")) {
+        return false;
+      }
+      out.benchmarkSemanticDefinitionValidationWorkerCount = workerCount;
     } else if (arg == "--ir-inline") {
       out.inlineIrCalls = true;
     } else if (!arg.empty() && arg[0] == '-') {

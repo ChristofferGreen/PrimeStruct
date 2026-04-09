@@ -73,6 +73,8 @@ FIXTURES: tuple[FixtureSpec, ...] = (
 
 DIRECT_TARGET_RE = re.compile(r'direct_call_targets\[\d+\]:\s+scope_path="([^"]*)"\s+call_name="([^"]*)"')
 METHOD_TARGET_RE = re.compile(r'method_call_targets\[\d+\]:\s+scope_path="([^"]*)"\s+method_name="([^"]*)"')
+SEMANTIC_PHASE_COUNTERS_PREFIX = "[benchmark-semantic-phase-counters] "
+SEMANTIC_REPEAT_LEAK_CHECK_PREFIX = "[benchmark-semantic-repeat-leak-check] "
 
 
 def parse_args() -> argparse.Namespace:
@@ -107,8 +109,63 @@ def parse_args() -> argparse.Namespace:
         default="auto",
         help="Benchmark-only collector allowlist CSV; use auto|all|none (default: auto).",
     )
+    parser.add_argument(
+        "--semantic-phase-counters",
+        action="store_true",
+        help="Benchmark-only mode: collect semantic phase counters and include them in the report.",
+    )
+    parser.add_argument(
+        "--semantic-allocation-counters",
+        action="store_true",
+        help="Benchmark-only mode: collect semantic allocation counters and include them in the report.",
+    )
+    parser.add_argument(
+        "--semantic-rss-checkpoints",
+        action="store_true",
+        help="Benchmark-only mode: collect per-phase semantic RSS checkpoints and include them in the report.",
+    )
+    parser.add_argument(
+        "--repeat-compile-leak-check-runs",
+        type=int,
+        default=0,
+        help="Benchmark-only mode: run repeated compile in one primec process and report RSS drift (0 disables).",
+    )
     parser.add_argument("--report-json", default="", help="Optional report output path.")
     return parser.parse_args()
+
+
+def run_repeat_compile_leak_check(
+    command: list[str],
+    cwd: Path,
+    fixture_name: str,
+    phase: str,
+    runs: int,
+) -> dict:
+    leak_command = list(command)
+    leak_command.append(f"--benchmark-semantic-repeat-count={runs}")
+
+    exit_code, stdout_text, stderr_text, _ = run_with_rusage(leak_command, cwd)
+    if exit_code != 0:
+        details = stderr_text.strip() or stdout_text.strip()
+        raise RuntimeError(
+            f"repeat compile leak check failed fixture={fixture_name} phase={phase} "
+            f"runs={runs} exit={exit_code}: {details}"
+        )
+
+    for line in stderr_text.splitlines():
+        if not line.startswith(SEMANTIC_REPEAT_LEAK_CHECK_PREFIX):
+            continue
+        payload = line[len(SEMANTIC_REPEAT_LEAK_CHECK_PREFIX):].strip()
+        try:
+            return json.loads(payload)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(
+                f"failed to parse repeat compile leak check fixture={fixture_name} phase={phase}: {exc}"
+            ) from exc
+
+    raise RuntimeError(
+        f"missing repeat compile leak check marker fixture={fixture_name} phase={phase} runs={runs}"
+    )
 
 
 def maxrss_bytes(raw_maxrss: int) -> int:
@@ -183,7 +240,11 @@ def measure_fixture_phase(primec: Path,
                          entry: str,
                          semantic_product_force: str,
                          no_fact_emission: bool,
-                         fact_families: str) -> dict:
+                         fact_families: str,
+                         semantic_phase_counters: bool,
+                         semantic_allocation_counters: bool,
+                         semantic_rss_checkpoints: bool,
+                         repeat_compile_leak_check_runs: int) -> dict:
     fixture_path = (repo_root / fixture.source).resolve()
     if not fixture_path.is_file():
         raise FileNotFoundError(f"fixture not found: {fixture_path}")
@@ -199,6 +260,14 @@ def measure_fixture_phase(primec: Path,
         command.append("--benchmark-semantic-no-fact-emission")
     if fact_families not in ("", "auto", "all"):
         command.append(f"--benchmark-semantic-fact-families={fact_families}")
+    if semantic_phase_counters or semantic_allocation_counters:
+        command.append("--benchmark-semantic-phase-counters")
+    if semantic_allocation_counters:
+        command.append("--benchmark-semantic-allocation-counters")
+    if semantic_rss_checkpoints:
+        command.append("--benchmark-semantic-rss-checkpoints")
+
+    semantic_phase_counter_runs: list[dict] = []
 
     for run_idx in range(runs):
         start = time.perf_counter()
@@ -214,6 +283,26 @@ def measure_fixture_phase(primec: Path,
         peak_rss_bytes.append(rss_bytes)
         if captured_dump == "":
             captured_dump = stdout_text
+        if semantic_phase_counters or semantic_allocation_counters or semantic_rss_checkpoints:
+            parsed_counters = None
+            for line in stderr_text.splitlines():
+                if not line.startswith(SEMANTIC_PHASE_COUNTERS_PREFIX):
+                    continue
+                payload = line[len(SEMANTIC_PHASE_COUNTERS_PREFIX):].strip()
+                try:
+                    parsed_counters = json.loads(payload)
+                except json.JSONDecodeError as exc:
+                    raise RuntimeError(
+                        f"failed to parse semantic phase counters fixture={fixture.name} "
+                        f"phase={phase} run={run_idx + 1}: {exc}"
+                    ) from exc
+                break
+            if parsed_counters is None:
+                raise RuntimeError(
+                    f"missing semantic phase counters fixture={fixture.name} "
+                    f"phase={phase} run={run_idx + 1}"
+                )
+            semantic_phase_counter_runs.append(parsed_counters)
 
     result = {
         "fixture": fixture.name,
@@ -233,6 +322,17 @@ def measure_fixture_phase(primec: Path,
         "no_fact_emission": no_fact_emission,
         "fact_families": fact_families,
     }
+    if semantic_phase_counters or semantic_allocation_counters or semantic_rss_checkpoints:
+        result["semantic_phase_counters_runs"] = semantic_phase_counter_runs
+        result["semantic_phase_counters"] = semantic_phase_counter_runs[0]
+    if repeat_compile_leak_check_runs > 0:
+        result["repeat_compile_leak_check"] = run_repeat_compile_leak_check(
+            command,
+            repo_root,
+            fixture.name,
+            phase,
+            repeat_compile_leak_check_runs,
+        )
     exceeds_runtime_threshold = result["worst_wall_seconds"] > EXPENSIVE_RUNTIME_SECONDS
     exceeds_rss_threshold = result["worst_peak_rss_bytes"] > EXPENSIVE_PEAK_RSS_BYTES
     result["exceeds_expensive_runtime_threshold"] = exceeds_runtime_threshold
@@ -376,6 +476,9 @@ def main() -> int:
     if args.runs < 1:
         print("[semantic_memory_benchmark] --runs must be >= 1", file=sys.stderr)
         return 2
+    if args.repeat_compile_leak_check_runs < 0:
+        print("[semantic_memory_benchmark] --repeat-compile-leak-check-runs must be >= 0", file=sys.stderr)
+        return 2
 
     try:
         phases = parse_phases(args.phases)
@@ -391,7 +494,11 @@ def main() -> int:
     print(
         "[semantic_memory_benchmark] "
         f"semantic_product_force={args.semantic_product_force} "
-        f"no_fact_emission={args.no_fact_emission} fact_families={fact_families}"
+        f"no_fact_emission={args.no_fact_emission} fact_families={fact_families} "
+        f"semantic_phase_counters={args.semantic_phase_counters} "
+        f"semantic_allocation_counters={args.semantic_allocation_counters} "
+        f"semantic_rss_checkpoints={args.semantic_rss_checkpoints} "
+        f"repeat_compile_leak_check_runs={args.repeat_compile_leak_check_runs}"
     )
 
     results: list[dict] = []
@@ -408,6 +515,10 @@ def main() -> int:
                 args.semantic_product_force,
                 args.no_fact_emission,
                 fact_families,
+                args.semantic_phase_counters,
+                args.semantic_allocation_counters,
+                args.semantic_rss_checkpoints,
+                args.repeat_compile_leak_check_runs,
             )
             results.append(row)
             print(
@@ -435,6 +546,10 @@ def main() -> int:
             "semantic_product_force": args.semantic_product_force,
             "no_fact_emission": args.no_fact_emission,
             "fact_families": fact_families,
+            "semantic_phase_counters": args.semantic_phase_counters,
+            "semantic_allocation_counters": args.semantic_allocation_counters,
+            "semantic_rss_checkpoints": args.semantic_rss_checkpoints,
+            "repeat_compile_leak_check_runs": args.repeat_compile_leak_check_runs,
         },
         "expensive_thresholds": {
             "max_wall_seconds": EXPENSIVE_RUNTIME_SECONDS,

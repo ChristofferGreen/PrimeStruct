@@ -4,6 +4,7 @@
 #include "primec/Diagnostics.h"
 #include "primec/Options.h"
 #include "primec/SemanticProduct.h"
+#include "primec/Semantics.h"
 
 #include <string>
 
@@ -32,6 +33,8 @@ struct CompilePipelineOutput {
   bool hasSemanticProgram = false;
   bool semanticProductRequested = false;
   bool semanticProductBuilt = false;
+  SemanticPhaseCounters semanticPhaseCounters;
+  bool hasSemanticPhaseCounters = false;
   std::string filteredSource;
   std::string dumpOutput;
   bool hasDumpOutput = false;

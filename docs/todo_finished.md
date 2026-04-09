@@ -5,6 +5,14 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Cleanup (April 9, 2026)**
+
+**Group 15 - Semantic memory footprint and multithread compile substrate**
+- ✓ [P4-16] Added ThreadSanitizer multithread semantics smoke target and gated it in optional CI. Completed: `PRIMESTRUCT_ENABLE_TSAN_SEMANTICS_SMOKE` now guards the sanitizer target, `PrimeStruct_semantics_tsan_smoke` is labeled `optional-ci`, `tsan`, and `serial-required`, and `scripts/run_semantics_tsan_smoke.sh` plus design-note docs provide the optional CI runbook.
+- ✓ [P5-06] Added executable phase-one success criteria checks tied to the baseline report. Completed: `scripts/check_semantic_memory_phase_one_success.py` now validates baseline-derived reduction/cap thresholds plus sustained-window pass counts against current/history reports, and benchmark-harness tests/doc runbooks now cover pass/fail behavior and machine-readable checker output.
+- ✓ [P5-07] Added CI trend tracking with sustained-regression policy metadata. Completed: `scripts/check_semantic_memory_trend.py` now supports `--trend-report-json` machine-readable summaries (history set + checker status + embedded budget summary), and CI artifact wiring captures that trend metadata alongside budget checks.
+- ✓ [P5-08] Added robust semantic benchmark artifact capture for CI runs (including failures). Completed: `scripts/semantic_memory_ci_artifacts.py` now drives benchmark/trend CTest/CMake gates, writes machine-readable per-run manifests and logs, and suppresses stale report carryover so failed runs do not republish old benchmark/budget JSON artifacts.
+
 **Todo Cleanup (April 8, 2026)**
 
 **Group 11 - Near-term graph queue**

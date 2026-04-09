@@ -5,6 +5,7 @@
 
 #include <filesystem>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <unordered_set>
 #include <vector>
