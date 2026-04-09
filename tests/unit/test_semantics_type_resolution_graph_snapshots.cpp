@@ -1001,6 +1001,46 @@ TEST_CASE("semantic product publishes canonical collection bridge routing choice
   CHECK(choiceEntry->sourceColumn > 0);
 }
 
+TEST_CASE("semantic product bridge routing choices carry interned path ids") {
+  primec::SemanticProgram semanticProgram;
+  auto makeBridgeChoice = [&](uint64_t semanticNodeId,
+                              int sourceLine,
+                              int sourceColumn) -> primec::SemanticProgramBridgePathChoice {
+    primec::SemanticProgramBridgePathChoice entry;
+    entry.scopePath = "/main";
+    entry.collectionFamily = "map";
+    entry.helperName = "count";
+    entry.chosenPath = "/std/collections/map/count";
+    entry.sourceLine = sourceLine;
+    entry.sourceColumn = sourceColumn;
+    entry.semanticNodeId = semanticNodeId;
+    entry.provenanceHandle = semanticNodeId + 1000;
+    entry.scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.scopePath);
+    entry.collectionFamilyId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, entry.collectionFamily);
+    entry.helperNameId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.helperName);
+    entry.chosenPathId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.chosenPath);
+    return entry;
+  };
+
+  semanticProgram.bridgePathChoices.push_back(makeBridgeChoice(101, 10, 4));
+  semanticProgram.bridgePathChoices.push_back(makeBridgeChoice(102, 11, 6));
+
+  REQUIRE(semanticProgram.bridgePathChoices.size() == 2);
+  const auto &first = semanticProgram.bridgePathChoices[0];
+  const auto &second = semanticProgram.bridgePathChoices[1];
+  REQUIRE(first.scopePathId != primec::InvalidSymbolId);
+  REQUIRE(first.collectionFamilyId != primec::InvalidSymbolId);
+  REQUIRE(first.helperNameId != primec::InvalidSymbolId);
+  REQUIRE(first.chosenPathId != primec::InvalidSymbolId);
+  CHECK(first.scopePathId == second.scopePathId);
+  CHECK(first.collectionFamilyId == second.collectionFamilyId);
+  CHECK(first.helperNameId == second.helperNameId);
+  CHECK(first.chosenPathId == second.chosenPathId);
+  CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, first.chosenPathId) ==
+        "/std/collections/map/count");
+}
+
 TEST_CASE("semantic product publishes callable effect and capability summaries") {
   const std::string source =
       "MyError {\n"

@@ -355,13 +355,28 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
   const auto bridgePathChoices = semanticProgramBridgePathChoiceView(semanticProgram);
   for (size_t i = 0; i < bridgePathChoices.size(); ++i) {
     const auto &entry = *bridgePathChoices[i];
+    const std::string_view scopePath =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId);
+    const std::string_view collectionFamily =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.collectionFamilyId);
+    const std::string_view helperName =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.helperNameId);
+    const std::string_view chosenPath =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId);
     appendSemanticIndexedLine(out,
                               "bridge_path_choices",
                               i,
-                              "scope_path=" + quoteSemanticString(entry.scopePath) + " collection_family=" +
-                                  quoteSemanticString(entry.collectionFamily) + " helper_name=" +
-                                  quoteSemanticString(entry.helperName) + " chosen_path=" +
-                                  quoteSemanticString(entry.chosenPath) + " provenance_handle=" +
+                              "scope_path=" +
+                                  quoteSemanticString(scopePath.empty() ? entry.scopePath : scopePath) +
+                                  " collection_family=" +
+                                  quoteSemanticString(collectionFamily.empty()
+                                                          ? entry.collectionFamily
+                                                          : collectionFamily) +
+                                  " helper_name=" +
+                                  quoteSemanticString(helperName.empty() ? entry.helperName : helperName) +
+                                  " chosen_path=" +
+                                  quoteSemanticString(chosenPath.empty() ? entry.chosenPath : chosenPath) +
+                                  " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }

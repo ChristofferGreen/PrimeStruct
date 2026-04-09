@@ -329,18 +329,23 @@ SemanticProgram buildSemanticProgram(const Program &program,
     const auto bridgePathChoices = validator.bridgePathChoiceSnapshotForSemanticProduct();
     semanticProgram.bridgePathChoices.reserve(bridgePathChoices.size());
     for (const auto &snapshotEntry : bridgePathChoices) {
-      semanticProgram.bridgePathChoices.push_back(SemanticProgramBridgePathChoice{
-          snapshotEntry.scopePath,
-          snapshotEntry.collectionFamily,
-          snapshotEntry.helperName,
-          snapshotEntry.chosenPath,
-          snapshotEntry.sourceLine,
-          snapshotEntry.sourceColumn,
-          snapshotEntry.semanticNodeId,
-          semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId),
-      });
-      const auto &entry = semanticProgram.bridgePathChoices.back();
-      ensureModuleResolvedArtifacts(entry.scopePath).bridgePathChoices.push_back(entry);
+      SemanticProgramBridgePathChoice entry;
+      entry.scopePath = snapshotEntry.scopePath;
+      entry.collectionFamily = snapshotEntry.collectionFamily;
+      entry.helperName = snapshotEntry.helperName;
+      entry.chosenPath = snapshotEntry.chosenPath;
+      entry.sourceLine = snapshotEntry.sourceLine;
+      entry.sourceColumn = snapshotEntry.sourceColumn;
+      entry.semanticNodeId = snapshotEntry.semanticNodeId;
+      entry.provenanceHandle = semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId);
+      entry.scopePathId = semanticProgramInternCallTargetString(semanticProgram, entry.scopePath);
+      entry.collectionFamilyId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.collectionFamily);
+      entry.helperNameId = semanticProgramInternCallTargetString(semanticProgram, entry.helperName);
+      entry.chosenPathId = semanticProgramInternCallTargetString(semanticProgram, entry.chosenPath);
+      semanticProgram.bridgePathChoices.push_back(std::move(entry));
+      const auto &storedEntry = semanticProgram.bridgePathChoices.back();
+      ensureModuleResolvedArtifacts(storedEntry.scopePath).bridgePathChoices.push_back(storedEntry);
     }
   }
   if (isCollectorEnabled("callable_summaries")) {

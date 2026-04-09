@@ -68,6 +68,10 @@ struct SemanticProgramBridgePathChoice {
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
   uint64_t provenanceHandle = 0;
+  SymbolId scopePathId = InvalidSymbolId;
+  SymbolId collectionFamilyId = InvalidSymbolId;
+  SymbolId helperNameId = InvalidSymbolId;
+  SymbolId chosenPathId = InvalidSymbolId;
 };
 
 struct SemanticProgramCallableSummary {
