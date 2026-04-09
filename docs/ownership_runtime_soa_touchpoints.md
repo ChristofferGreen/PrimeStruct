@@ -507,6 +507,14 @@ Semantics-layer pending fallback diagnostics:
     (`src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp`,
     `src/semantics/SemanticsValidatorInferMethodResolution.cpp`, and
     `src/semantics/SemanticsValidatorInferLateFallbackBuiltins.cpp`).
+  - SoA access-rewrite plus bridge-path snapshot helper-family handling now
+    includes borrowed helper surfaces (including `ref_ref` rewrite-preserve
+    gating for old-surface access rewrite and `_ref` bridge-helper
+    classification for SoA bridge snapshots), so canonical `ref_ref`/`*_ref`
+    helper visibility no longer falls back to compiler-owned `ref`-only
+    handling in these rewrite/snapshot compatibility paths
+    (`src/semantics/SemanticsValidate.cpp` and
+    `src/semantics/SemanticsValidatorSnapshots.cpp`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:

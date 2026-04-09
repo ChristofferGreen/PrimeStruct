@@ -28,8 +28,11 @@ bool isBridgeHelperName(std::string_view collectionFamily, std::string_view help
            helperName == "mapAtUnsafeRef" || helperName == "mapInsertRef";
   }
   if (collectionFamily == "soa_vector") {
-    return helperName == "count" || helperName == "get" || helperName == "ref" ||
-           helperName == "to_aos" || helperName == "push" || helperName == "reserve";
+    return helperName == "count" || helperName == "count_ref" ||
+           helperName == "get" || helperName == "get_ref" ||
+           helperName == "ref" || helperName == "ref_ref" ||
+           helperName == "to_aos" || helperName == "to_aos_ref" ||
+           helperName == "push" || helperName == "reserve";
   }
   return false;
 }
