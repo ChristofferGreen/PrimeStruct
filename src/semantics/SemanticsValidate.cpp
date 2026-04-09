@@ -491,43 +491,90 @@ SemanticProgram buildSemanticProgram(const Program &program,
     const auto localAutoFacts = validator.localAutoFactSnapshotForSemanticProduct();
     semanticProgram.localAutoFacts.reserve(localAutoFacts.size());
     for (const auto &snapshotEntry : localAutoFacts) {
-      semanticProgram.localAutoFacts.push_back(SemanticProgramLocalAutoFact{
-          snapshotEntry.scopePath,
-          snapshotEntry.bindingName,
-          bindingTypeTextForSemanticProduct(snapshotEntry.binding),
-          snapshotEntry.initializerResolvedPath,
-          bindingTypeTextForSemanticProduct(snapshotEntry.initializerBinding),
-          bindingTypeTextForSemanticProduct(snapshotEntry.initializerReceiverBinding),
-          snapshotEntry.initializerQueryTypeText,
-          snapshotEntry.initializerResultHasValue,
-          snapshotEntry.initializerResultValueType,
-          snapshotEntry.initializerResultErrorType,
-          snapshotEntry.initializerHasTry,
-          snapshotEntry.initializerTryOperandResolvedPath,
-          bindingTypeTextForSemanticProduct(snapshotEntry.initializerTryOperandBinding),
-          bindingTypeTextForSemanticProduct(snapshotEntry.initializerTryOperandReceiverBinding),
-          snapshotEntry.initializerTryOperandQueryTypeText,
-          snapshotEntry.initializerTryValueType,
-          snapshotEntry.initializerTryErrorType,
-          semantics::returnKindSnapshotName(snapshotEntry.initializerTryContextReturnKind),
-          snapshotEntry.initializerTryOnErrorHandlerPath,
-          snapshotEntry.initializerTryOnErrorErrorType,
-          snapshotEntry.initializerTryOnErrorBoundArgCount,
-          snapshotEntry.sourceLine,
-          snapshotEntry.sourceColumn,
-          snapshotEntry.semanticNodeId,
-          semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId),
-          snapshotEntry.initializerDirectCallResolvedPath,
+      SemanticProgramLocalAutoFact entry;
+      entry.scopePath = snapshotEntry.scopePath;
+      entry.bindingName = snapshotEntry.bindingName;
+      entry.bindingTypeText = bindingTypeTextForSemanticProduct(snapshotEntry.binding);
+      entry.initializerResolvedPath = snapshotEntry.initializerResolvedPath;
+      entry.initializerBindingTypeText = bindingTypeTextForSemanticProduct(snapshotEntry.initializerBinding);
+      entry.initializerReceiverBindingTypeText =
+          bindingTypeTextForSemanticProduct(snapshotEntry.initializerReceiverBinding);
+      entry.initializerQueryTypeText = snapshotEntry.initializerQueryTypeText;
+      entry.initializerResultHasValue = snapshotEntry.initializerResultHasValue;
+      entry.initializerResultValueType = snapshotEntry.initializerResultValueType;
+      entry.initializerResultErrorType = snapshotEntry.initializerResultErrorType;
+      entry.initializerHasTry = snapshotEntry.initializerHasTry;
+      entry.initializerTryOperandResolvedPath = snapshotEntry.initializerTryOperandResolvedPath;
+      entry.initializerTryOperandBindingTypeText =
+          bindingTypeTextForSemanticProduct(snapshotEntry.initializerTryOperandBinding);
+      entry.initializerTryOperandReceiverBindingTypeText =
+          bindingTypeTextForSemanticProduct(snapshotEntry.initializerTryOperandReceiverBinding);
+      entry.initializerTryOperandQueryTypeText = snapshotEntry.initializerTryOperandQueryTypeText;
+      entry.initializerTryValueType = snapshotEntry.initializerTryValueType;
+      entry.initializerTryErrorType = snapshotEntry.initializerTryErrorType;
+      entry.initializerTryContextReturnKind =
+          semantics::returnKindSnapshotName(snapshotEntry.initializerTryContextReturnKind);
+      entry.initializerTryOnErrorHandlerPath = snapshotEntry.initializerTryOnErrorHandlerPath;
+      entry.initializerTryOnErrorErrorType = snapshotEntry.initializerTryOnErrorErrorType;
+      entry.initializerTryOnErrorBoundArgCount = snapshotEntry.initializerTryOnErrorBoundArgCount;
+      entry.sourceLine = snapshotEntry.sourceLine;
+      entry.sourceColumn = snapshotEntry.sourceColumn;
+      entry.semanticNodeId = snapshotEntry.semanticNodeId;
+      entry.provenanceHandle = semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId);
+      entry.initializerDirectCallResolvedPath = snapshotEntry.initializerDirectCallResolvedPath;
+      entry.initializerDirectCallReturnKind =
           snapshotEntry.initializerDirectCallReturnKind != semantics::ReturnKind::Unknown
               ? semantics::returnKindSnapshotName(snapshotEntry.initializerDirectCallReturnKind)
-              : std::string{},
-          snapshotEntry.initializerMethodCallResolvedPath,
+              : std::string{};
+      entry.initializerMethodCallResolvedPath = snapshotEntry.initializerMethodCallResolvedPath;
+      entry.initializerMethodCallReturnKind =
           snapshotEntry.initializerMethodCallReturnKind != semantics::ReturnKind::Unknown
               ? semantics::returnKindSnapshotName(snapshotEntry.initializerMethodCallReturnKind)
-              : std::string{},
-      });
-      const auto &entry = semanticProgram.localAutoFacts.back();
-      ensureModuleResolvedArtifacts(entry.scopePath).localAutoFacts.push_back(entry);
+              : std::string{};
+      entry.scopePathId = semanticProgramInternCallTargetString(semanticProgram, entry.scopePath);
+      entry.bindingNameId = semanticProgramInternCallTargetString(semanticProgram, entry.bindingName);
+      entry.bindingTypeTextId = semanticProgramInternCallTargetString(semanticProgram, entry.bindingTypeText);
+      entry.initializerResolvedPathId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.initializerResolvedPath);
+      entry.initializerBindingTypeTextId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.initializerBindingTypeText);
+      entry.initializerReceiverBindingTypeTextId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.initializerReceiverBindingTypeText);
+      entry.initializerQueryTypeTextId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.initializerQueryTypeText);
+      entry.initializerResultValueTypeId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.initializerResultValueType);
+      entry.initializerResultErrorTypeId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.initializerResultErrorType);
+      entry.initializerTryOperandResolvedPathId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.initializerTryOperandResolvedPath);
+      entry.initializerTryOperandBindingTypeTextId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.initializerTryOperandBindingTypeText);
+      entry.initializerTryOperandReceiverBindingTypeTextId = semanticProgramInternCallTargetString(
+          semanticProgram, entry.initializerTryOperandReceiverBindingTypeText);
+      entry.initializerTryOperandQueryTypeTextId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.initializerTryOperandQueryTypeText);
+      entry.initializerTryValueTypeId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.initializerTryValueType);
+      entry.initializerTryErrorTypeId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.initializerTryErrorType);
+      entry.initializerTryContextReturnKindId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.initializerTryContextReturnKind);
+      entry.initializerTryOnErrorHandlerPathId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.initializerTryOnErrorHandlerPath);
+      entry.initializerTryOnErrorErrorTypeId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.initializerTryOnErrorErrorType);
+      entry.initializerDirectCallResolvedPathId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.initializerDirectCallResolvedPath);
+      entry.initializerDirectCallReturnKindId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.initializerDirectCallReturnKind);
+      entry.initializerMethodCallResolvedPathId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.initializerMethodCallResolvedPath);
+      entry.initializerMethodCallReturnKindId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.initializerMethodCallReturnKind);
+      semanticProgram.localAutoFacts.push_back(std::move(entry));
+      const auto &storedEntry = semanticProgram.localAutoFacts.back();
+      ensureModuleResolvedArtifacts(storedEntry.scopePath).localAutoFacts.push_back(storedEntry);
     }
   }
   if (isCollectorEnabled("query_facts")) {

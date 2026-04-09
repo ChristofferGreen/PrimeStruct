@@ -201,6 +201,28 @@ struct SemanticProgramLocalAutoFact {
   std::string initializerDirectCallReturnKind;
   std::string initializerMethodCallResolvedPath;
   std::string initializerMethodCallReturnKind;
+  SymbolId scopePathId = InvalidSymbolId;
+  SymbolId bindingNameId = InvalidSymbolId;
+  SymbolId bindingTypeTextId = InvalidSymbolId;
+  SymbolId initializerResolvedPathId = InvalidSymbolId;
+  SymbolId initializerBindingTypeTextId = InvalidSymbolId;
+  SymbolId initializerReceiverBindingTypeTextId = InvalidSymbolId;
+  SymbolId initializerQueryTypeTextId = InvalidSymbolId;
+  SymbolId initializerResultValueTypeId = InvalidSymbolId;
+  SymbolId initializerResultErrorTypeId = InvalidSymbolId;
+  SymbolId initializerTryOperandResolvedPathId = InvalidSymbolId;
+  SymbolId initializerTryOperandBindingTypeTextId = InvalidSymbolId;
+  SymbolId initializerTryOperandReceiverBindingTypeTextId = InvalidSymbolId;
+  SymbolId initializerTryOperandQueryTypeTextId = InvalidSymbolId;
+  SymbolId initializerTryValueTypeId = InvalidSymbolId;
+  SymbolId initializerTryErrorTypeId = InvalidSymbolId;
+  SymbolId initializerTryContextReturnKindId = InvalidSymbolId;
+  SymbolId initializerTryOnErrorHandlerPathId = InvalidSymbolId;
+  SymbolId initializerTryOnErrorErrorTypeId = InvalidSymbolId;
+  SymbolId initializerDirectCallResolvedPathId = InvalidSymbolId;
+  SymbolId initializerDirectCallReturnKindId = InvalidSymbolId;
+  SymbolId initializerMethodCallResolvedPathId = InvalidSymbolId;
+  SymbolId initializerMethodCallReturnKindId = InvalidSymbolId;
 };
 
 struct SemanticProgramQueryFact {

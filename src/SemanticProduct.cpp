@@ -562,54 +562,91 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
   const auto localAutoFacts = semanticProgramLocalAutoFactView(semanticProgram);
   for (size_t i = 0; i < localAutoFacts.size(); ++i) {
     const auto &entry = *localAutoFacts[i];
+    const auto localAutoText = [&](SymbolId id, const std::string &fallback) -> std::string_view {
+      const std::string_view resolved = semanticProgramResolveCallTargetString(semanticProgram, id);
+      return resolved.empty() ? std::string_view(fallback) : resolved;
+    };
     appendSemanticIndexedLine(out,
                               "local_auto_facts",
                               i,
-                              "scope_path=" + quoteSemanticString(entry.scopePath) + " binding_name=" +
-                                  quoteSemanticString(entry.bindingName) + " binding_type_text=" +
-                                  quoteSemanticString(entry.bindingTypeText) + " initializer_resolved_path=" +
-                                  quoteSemanticString(entry.initializerResolvedPath) +
+                              "scope_path=" +
+                                  quoteSemanticString(localAutoText(entry.scopePathId, entry.scopePath)) +
+                                  " binding_name=" +
+                                  quoteSemanticString(localAutoText(entry.bindingNameId, entry.bindingName)) +
+                                  " binding_type_text=" +
+                                  quoteSemanticString(localAutoText(entry.bindingTypeTextId,
+                                                                    entry.bindingTypeText)) +
+                                  " initializer_resolved_path=" +
+                                  quoteSemanticString(localAutoText(entry.initializerResolvedPathId,
+                                                                    entry.initializerResolvedPath)) +
                                   " initializer_binding_type_text=" +
-                                  quoteSemanticString(entry.initializerBindingTypeText) +
+                                  quoteSemanticString(localAutoText(entry.initializerBindingTypeTextId,
+                                                                    entry.initializerBindingTypeText)) +
                                   " initializer_receiver_binding_type_text=" +
-                                  quoteSemanticString(entry.initializerReceiverBindingTypeText) +
+                                  quoteSemanticString(
+                                      localAutoText(entry.initializerReceiverBindingTypeTextId,
+                                                    entry.initializerReceiverBindingTypeText)) +
                                   " initializer_query_type_text=" +
-                                  quoteSemanticString(entry.initializerQueryTypeText) +
+                                  quoteSemanticString(localAutoText(entry.initializerQueryTypeTextId,
+                                                                    entry.initializerQueryTypeText)) +
                                   " initializer_result_has_value=" +
                                   formatSemanticBool(entry.initializerResultHasValue) +
                                   " initializer_result_value_type=" +
-                                  quoteSemanticString(entry.initializerResultValueType) +
+                                  quoteSemanticString(localAutoText(entry.initializerResultValueTypeId,
+                                                                    entry.initializerResultValueType)) +
                                   " initializer_result_error_type=" +
-                                  quoteSemanticString(entry.initializerResultErrorType) +
+                                  quoteSemanticString(localAutoText(entry.initializerResultErrorTypeId,
+                                                                    entry.initializerResultErrorType)) +
                                   " initializer_has_try=" + formatSemanticBool(entry.initializerHasTry) +
                                   " initializer_try_operand_resolved_path=" +
-                                  quoteSemanticString(entry.initializerTryOperandResolvedPath) +
+                                  quoteSemanticString(localAutoText(
+                                      entry.initializerTryOperandResolvedPathId,
+                                      entry.initializerTryOperandResolvedPath)) +
                                   " initializer_try_operand_binding_type_text=" +
-                                  quoteSemanticString(entry.initializerTryOperandBindingTypeText) +
+                                  quoteSemanticString(
+                                      localAutoText(entry.initializerTryOperandBindingTypeTextId,
+                                                    entry.initializerTryOperandBindingTypeText)) +
                                   " initializer_try_operand_receiver_binding_type_text=" +
-                                  quoteSemanticString(entry.initializerTryOperandReceiverBindingTypeText) +
+                                  quoteSemanticString(localAutoText(
+                                      entry.initializerTryOperandReceiverBindingTypeTextId,
+                                      entry.initializerTryOperandReceiverBindingTypeText)) +
                                   " initializer_try_operand_query_type_text=" +
-                                  quoteSemanticString(entry.initializerTryOperandQueryTypeText) +
+                                  quoteSemanticString(localAutoText(
+                                      entry.initializerTryOperandQueryTypeTextId,
+                                      entry.initializerTryOperandQueryTypeText)) +
                                   " initializer_try_value_type=" +
-                                  quoteSemanticString(entry.initializerTryValueType) +
+                                  quoteSemanticString(localAutoText(entry.initializerTryValueTypeId,
+                                                                    entry.initializerTryValueType)) +
                                   " initializer_try_error_type=" +
-                                  quoteSemanticString(entry.initializerTryErrorType) +
+                                  quoteSemanticString(localAutoText(entry.initializerTryErrorTypeId,
+                                                                    entry.initializerTryErrorType)) +
                                   " initializer_try_context_return_kind=" +
-                                  quoteSemanticString(entry.initializerTryContextReturnKind) +
+                                  quoteSemanticString(
+                                      localAutoText(entry.initializerTryContextReturnKindId,
+                                                    entry.initializerTryContextReturnKind)) +
                                   " initializer_try_on_error_handler_path=" +
-                                  quoteSemanticString(entry.initializerTryOnErrorHandlerPath) +
+                                  quoteSemanticString(localAutoText(
+                                      entry.initializerTryOnErrorHandlerPathId,
+                                      entry.initializerTryOnErrorHandlerPath)) +
                                   " initializer_try_on_error_error_type=" +
-                                  quoteSemanticString(entry.initializerTryOnErrorErrorType) +
+                                  quoteSemanticString(localAutoText(entry.initializerTryOnErrorErrorTypeId,
+                                                                    entry.initializerTryOnErrorErrorType)) +
                                   " initializer_try_on_error_bound_arg_count=" +
                                   std::to_string(entry.initializerTryOnErrorBoundArgCount) +
                                   " initializer_direct_call_resolved_path=" +
-                                  quoteSemanticString(entry.initializerDirectCallResolvedPath) +
+                                  quoteSemanticString(localAutoText(
+                                      entry.initializerDirectCallResolvedPathId,
+                                      entry.initializerDirectCallResolvedPath)) +
                                   " initializer_direct_call_return_kind=" +
-                                  quoteSemanticString(entry.initializerDirectCallReturnKind) +
+                                  quoteSemanticString(localAutoText(entry.initializerDirectCallReturnKindId,
+                                                                    entry.initializerDirectCallReturnKind)) +
                                   " initializer_method_call_resolved_path=" +
-                                  quoteSemanticString(entry.initializerMethodCallResolvedPath) +
+                                  quoteSemanticString(localAutoText(
+                                      entry.initializerMethodCallResolvedPathId,
+                                      entry.initializerMethodCallResolvedPath)) +
                                   " initializer_method_call_return_kind=" +
-                                  quoteSemanticString(entry.initializerMethodCallReturnKind) +
+                                  quoteSemanticString(localAutoText(entry.initializerMethodCallReturnKindId,
+                                                                    entry.initializerMethodCallReturnKind)) +
                                   " provenance_handle=" + std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }

@@ -88,7 +88,7 @@ P3 - Interning/ID migration for hot paths
 - ◐ [P3-11] Migrate `callable_summaries` semantic-product strings to ID-backed internal storage with unchanged dump output.
 - ◐ [P3-12] Migrate `binding_facts` semantic-product strings to ID-backed internal storage with unchanged dump output.
 - ◐ [P3-13] Migrate `return_facts` semantic-product strings to ID-backed internal storage with unchanged dump output.
-- ○ [P3-14] Migrate `local_auto_facts` semantic-product strings to ID-backed internal storage with unchanged dump output.
+- ◐ [P3-14] Migrate `local_auto_facts` semantic-product strings to ID-backed internal storage with unchanged dump output.
 - ○ [P3-15] Migrate `try_facts` semantic-product strings to ID-backed internal storage with unchanged dump output.
 - ○ [P3-16] Migrate `on_error_facts` semantic-product strings to ID-backed internal storage with unchanged dump output.
 

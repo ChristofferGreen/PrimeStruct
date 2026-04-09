@@ -1052,6 +1052,96 @@ TEST_CASE("semantic product return facts carry interned text ids") {
         "i32");
 }
 
+TEST_CASE("semantic product local auto facts carry interned text ids") {
+  const std::string source =
+      "[return<i32>]\n"
+      "id([i32] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [auto] first{id(1i32)}\n"
+      "  [auto] second{id(2i32)}\n"
+      "  return(plus(first, second))\n"
+      "}\n";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *firstEntry = findSemanticEntry(
+      primec::semanticProgramLocalAutoFactView(semanticProgram),
+      [](const primec::SemanticProgramLocalAutoFact &entry) {
+        return entry.scopePath == "/main" && entry.bindingName == "first";
+      });
+  const auto *secondEntry = findSemanticEntry(
+      primec::semanticProgramLocalAutoFactView(semanticProgram),
+      [](const primec::SemanticProgramLocalAutoFact &entry) {
+        return entry.scopePath == "/main" && entry.bindingName == "second";
+      });
+  REQUIRE(firstEntry != nullptr);
+  REQUIRE(secondEntry != nullptr);
+
+  const auto checkTextId = [&](std::string_view text, primec::SymbolId id) {
+    if (text.empty()) {
+      CHECK(id == primec::InvalidSymbolId);
+    } else {
+      REQUIRE(id != primec::InvalidSymbolId);
+      CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, id) == text);
+    }
+  };
+
+  checkTextId(firstEntry->scopePath, firstEntry->scopePathId);
+  checkTextId(firstEntry->bindingName, firstEntry->bindingNameId);
+  checkTextId(firstEntry->bindingTypeText, firstEntry->bindingTypeTextId);
+  checkTextId(firstEntry->initializerResolvedPath, firstEntry->initializerResolvedPathId);
+  checkTextId(firstEntry->initializerBindingTypeText, firstEntry->initializerBindingTypeTextId);
+  checkTextId(firstEntry->initializerReceiverBindingTypeText,
+              firstEntry->initializerReceiverBindingTypeTextId);
+  checkTextId(firstEntry->initializerQueryTypeText, firstEntry->initializerQueryTypeTextId);
+  checkTextId(firstEntry->initializerResultValueType, firstEntry->initializerResultValueTypeId);
+  checkTextId(firstEntry->initializerResultErrorType, firstEntry->initializerResultErrorTypeId);
+  checkTextId(firstEntry->initializerTryOperandResolvedPath,
+              firstEntry->initializerTryOperandResolvedPathId);
+  checkTextId(firstEntry->initializerTryOperandBindingTypeText,
+              firstEntry->initializerTryOperandBindingTypeTextId);
+  checkTextId(firstEntry->initializerTryOperandReceiverBindingTypeText,
+              firstEntry->initializerTryOperandReceiverBindingTypeTextId);
+  checkTextId(firstEntry->initializerTryOperandQueryTypeText,
+              firstEntry->initializerTryOperandQueryTypeTextId);
+  checkTextId(firstEntry->initializerTryValueType, firstEntry->initializerTryValueTypeId);
+  checkTextId(firstEntry->initializerTryErrorType, firstEntry->initializerTryErrorTypeId);
+  checkTextId(firstEntry->initializerTryContextReturnKind,
+              firstEntry->initializerTryContextReturnKindId);
+  checkTextId(firstEntry->initializerTryOnErrorHandlerPath,
+              firstEntry->initializerTryOnErrorHandlerPathId);
+  checkTextId(firstEntry->initializerTryOnErrorErrorType,
+              firstEntry->initializerTryOnErrorErrorTypeId);
+  checkTextId(firstEntry->initializerDirectCallResolvedPath,
+              firstEntry->initializerDirectCallResolvedPathId);
+  checkTextId(firstEntry->initializerDirectCallReturnKind,
+              firstEntry->initializerDirectCallReturnKindId);
+  checkTextId(firstEntry->initializerMethodCallResolvedPath,
+              firstEntry->initializerMethodCallResolvedPathId);
+  checkTextId(firstEntry->initializerMethodCallReturnKind,
+              firstEntry->initializerMethodCallReturnKindId);
+
+  CHECK(firstEntry->scopePathId == secondEntry->scopePathId);
+  CHECK(firstEntry->bindingTypeTextId == secondEntry->bindingTypeTextId);
+  CHECK(firstEntry->initializerResolvedPathId == secondEntry->initializerResolvedPathId);
+  CHECK(firstEntry->initializerBindingTypeTextId == secondEntry->initializerBindingTypeTextId);
+  CHECK(firstEntry->initializerDirectCallResolvedPathId ==
+        secondEntry->initializerDirectCallResolvedPathId);
+  CHECK(firstEntry->initializerDirectCallReturnKindId ==
+        secondEntry->initializerDirectCallReturnKindId);
+  CHECK(firstEntry->bindingNameId != secondEntry->bindingNameId);
+}
+
 TEST_CASE("semantic product publishes same-path collection bridge routing choices") {
   const std::string source =
       "[return<i32>]\n"
