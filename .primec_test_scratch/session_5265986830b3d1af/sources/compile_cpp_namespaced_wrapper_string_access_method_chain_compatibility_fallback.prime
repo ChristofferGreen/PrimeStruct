@@ -1,0 +1,18 @@
+
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+main() {
+  return(plus(/std/collections/vector/at(wrapText(), 1i32).tag(),
+              /vector/at_unsafe(wrapText(), 0i32).tag()))
+}

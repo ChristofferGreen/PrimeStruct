@@ -1,0 +1,15 @@
+
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+/vector/count([string] values) {
+  return(95i32)
+}
+
+[return<int>]
+main() {
+  return(/vector/count(wrapText()))
+}

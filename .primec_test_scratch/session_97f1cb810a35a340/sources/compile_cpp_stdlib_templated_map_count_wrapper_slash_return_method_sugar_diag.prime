@@ -1,0 +1,15 @@
+
+[return<int>]
+/std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
+  return(96i32)
+}
+
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+wrapValues() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+main() {
+  return(wrapValues().count(1i32))
+}

@@ -1,0 +1,9 @@
+
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
+  [i32] tailValue{/array/at_unsafe(values, 1i32)}
+  return(tailValue)
+}

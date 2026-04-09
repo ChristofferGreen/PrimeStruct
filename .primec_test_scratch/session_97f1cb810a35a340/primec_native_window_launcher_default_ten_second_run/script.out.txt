@@ -1,0 +1,11 @@
+[native-window-launcher] Running preflight checks
+[native-window-preflight] xcrun metal: /fake/toolchain/metal
+[native-window-preflight] xcrun metallib: /fake/toolchain/metallib
+[native-window-preflight] GUI session: gui/501
+[native-window-preflight] PASS: prerequisites satisfied
+[native-window-launcher] Compiling cube stdlib gfx stream binary
+[native-window-launcher] Compiling native window host
+[native-window-launcher] Launching native window host
+[native-window-launcher] Defaulting to --max-frames 600 (~10s at 60fps)
+window_host_args=--gfx /Users/chrgre01/src/PrimeStruct/.primec_test_scratch/session_97f1cb810a35a340/primec_native_window_launcher_default_ten_second_run/build output/cube_stdlib_gfx_stream --max-frames 600
+[native-window-launcher] PASS: launch completed

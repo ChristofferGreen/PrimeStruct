@@ -1,0 +1,15 @@
+
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+/std/collections/vector/capacity([map<i32, i32>] values) {
+  return(93i32)
+}
+
+[return<int>]
+main() {
+  return(/std/collections/vector/capacity(wrapMap()))
+}

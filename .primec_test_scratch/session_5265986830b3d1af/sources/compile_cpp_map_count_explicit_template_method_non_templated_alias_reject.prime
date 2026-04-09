@@ -1,0 +1,16 @@
+
+[return<int>]
+/map/count([map<i32, i32>] values, [bool] marker) {
+  return(96i32)
+}
+
+[return<int>]
+/std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
+  return(73i32)
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values.count<i32, i32>(true))
+}

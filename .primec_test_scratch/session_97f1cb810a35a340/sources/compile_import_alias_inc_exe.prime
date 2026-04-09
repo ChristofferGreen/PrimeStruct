@@ -1,0 +1,12 @@
+
+import /util
+namespace util {
+  [public return<int>]
+  inc([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+[return<int>]
+main() {
+  return(inc(4i32))
+}

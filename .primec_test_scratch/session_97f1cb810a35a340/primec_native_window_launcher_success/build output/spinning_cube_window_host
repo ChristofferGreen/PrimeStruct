@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+echo "window_host_invoked=1"
+echo "window_host_args=$*"
+if [[ "${1:-}" != "--gfx" || -z "${2:-}" ]]; then
+  echo "bad args" >&2
+  exit 93
+fi
+if [[ -x "${2}" ]]; then
+  echo "gfx_stream_exists=1"
+else
+  echo "gfx_stream_exists=0"
+fi
+exit 0

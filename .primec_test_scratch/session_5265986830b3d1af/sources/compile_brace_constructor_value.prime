@@ -1,0 +1,10 @@
+
+[return<int>]
+pick([i32] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(pick{ 3i32 })
+}

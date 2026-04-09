@@ -1,0 +1,27 @@
+
+[return<int>]
+/map/at([map<i32, string>] values, [i32] key) {
+  return(41i32)
+}
+
+[return<string>]
+/std/collections/map/at([map<i32, string>] values, [i32] key) {
+  return("hello"utf8)
+}
+
+[return<int>]
+/map/at_unsafe([map<i32, string>] values, [i32] key) {
+  return(42i32)
+}
+
+[return<string>]
+/std/collections/map/at_unsafe([map<i32, string>] values, [i32] key) {
+  return("hello"utf8)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, string>] values{map<i32, string>(1i32, "value"utf8)}
+  return(plus(/std/collections/map/at(values, 1i32).count(),
+              /std/collections/map/at_unsafe(values, 1i32).count()))
+}

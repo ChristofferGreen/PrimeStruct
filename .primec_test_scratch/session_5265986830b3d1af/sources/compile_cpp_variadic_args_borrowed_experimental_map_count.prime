@@ -1,0 +1,35 @@
+
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<int> effects(heap_alloc)]
+score_refs([args<Reference<Map<i32, i32>>>] values) {
+  return(plus(/std/collections/experimental_map/mapCount<i32, i32>(dereference(values[0i32])),
+              /std/collections/experimental_map/mapCount<i32, i32>(dereference(values[2i32]))))
+}
+
+[return<int> effects(heap_alloc)]
+forward([args<Reference<Map<i32, i32>>>] values) {
+  return(score_refs([spread] values))
+}
+
+[return<int> effects(heap_alloc)]
+forward_mixed([args<Reference<Map<i32, i32>>>] values) {
+  [Map<i32, i32>] extra{mapSingle(1i32, 2i32)}
+  return(score_refs(location(extra), [spread] values))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Map<i32, i32>] a0{mapPair(1i32, 2i32, 3i32, 4i32)}
+  [Map<i32, i32>] a1{mapSingle(5i32, 6i32)}
+  [Map<i32, i32>] a2{mapTriple(7i32, 8i32, 9i32, 10i32, 11i32, 12i32)}
+  [Map<i32, i32>] b0{mapSingle(13i32, 14i32)}
+  [Map<i32, i32>] b1{mapPair(15i32, 16i32, 17i32, 18i32)}
+  [Map<i32, i32>] b2{mapSingle(19i32, 20i32)}
+  [Map<i32, i32>] c0{mapPair(21i32, 22i32, 23i32, 24i32)}
+  [Map<i32, i32>] c1{mapTriple(25i32, 26i32, 27i32, 28i32, 29i32, 30i32)}
+  return(plus(score_refs(location(a0), location(a1), location(a2)),
+              plus(forward(location(b0), location(b1), location(b2)),
+                   forward_mixed(location(c0), location(c1)))))
+}

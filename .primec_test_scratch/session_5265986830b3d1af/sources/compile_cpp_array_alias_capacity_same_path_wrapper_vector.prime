@@ -1,0 +1,15 @@
+
+[return<int>]
+/array/capacity([vector<i32>] values, [bool] marker) {
+  return(48i32)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(5i32, 6i32, 7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/array/capacity(wrapVector(), true))
+}

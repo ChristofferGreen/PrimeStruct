@@ -1,0 +1,23 @@
+
+[struct]
+MyError() {
+  [i32] code{0i32}
+}
+
+namespace MyError {
+  [return<string>]
+  why([MyError] err) {
+    return("custom error"utf8)
+  }
+}
+
+[return<Result<MyError>>]
+make_error() {
+  return(1i32)
+}
+
+[return<int> effects(io_out)]
+main() {
+  print_line(Result.why(make_error()))
+  return(0i32)
+}

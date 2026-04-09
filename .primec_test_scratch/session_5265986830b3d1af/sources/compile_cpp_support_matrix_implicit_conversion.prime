@@ -1,0 +1,13 @@
+
+import /std/math/*
+
+[return<int>]
+main() {
+  [Mat3] basis{Mat3(
+    1.0f32, 0.0f32, 0.0f32,
+    0.0f32, 1.0f32, 0.0f32,
+    0.0f32, 0.0f32, 1.0f32
+  )}
+  [auto] value{quat_to_mat3(basis)}
+  return(convert<int>(value.m00))
+}

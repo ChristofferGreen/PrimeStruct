@@ -1,0 +1,3 @@
+2026-04-09 10:50:06.898 spinning_cube_window_host[1909:393413] Failure on line 688 in function id scheduleApplicationNotification(LSNotificationCode, NSWorkspaceNotificationCenter *): noErr == _LSModifyNotification(notificationID, 1, &code, 0, NULL, NULL, NULL)
+2026-04-09 10:50:07.423 spinning_cube_window_host[1909:393420] Connection Invalid error for service com.apple.hiservices-xpcservice.
+2026-04-09 10:50:07.423 spinning_cube_window_host[1909:393413] Error received in message reply handler: Connection invalid

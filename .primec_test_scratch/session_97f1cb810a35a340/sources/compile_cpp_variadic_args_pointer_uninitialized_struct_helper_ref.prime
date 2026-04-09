@@ -1,0 +1,60 @@
+
+[struct]
+Pair() {
+  [i32] left{0i32}
+  [i32] right{0i32}
+}
+
+[return<Reference<uninitialized<Pair>>>]
+borrow_ref([Reference<uninitialized<Pair>>] value) {
+  return(value)
+}
+
+[return<int>]
+score_ptrs([args<Pointer<uninitialized<Pair>>>] values) {
+  init(dereference(values[0i32]), Pair(1i32, 2i32))
+  init(dereference(values.at(1i32)), Pair(3i32, 4i32))
+  init(dereference(values.at_unsafe(2i32)), Pair(5i32, 6i32))
+  [Pair] first{take(dereference(values[0i32]))}
+  [Pair] second{take(dereference(values.at(1i32)))}
+  [Pair] third{take(dereference(values.at_unsafe(2i32)))}
+  return(plus(first.left, plus(second.right, third.left)))
+}
+
+[return<int>]
+forward([args<Pointer<uninitialized<Pair>>>] values) {
+  return(score_ptrs([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Pointer<uninitialized<Pair>>>] values) {
+  [uninitialized<Pair>] extra{uninitialized<Pair>()}
+  [Reference<uninitialized<Pair>>] extra_ref{location(extra)}
+  return(score_ptrs(location(borrow_ref(extra_ref)), [spread] values))
+}
+
+[return<int>]
+main() {
+  [uninitialized<Pair>] a0{uninitialized<Pair>()}
+  [uninitialized<Pair>] a1{uninitialized<Pair>()}
+  [uninitialized<Pair>] a2{uninitialized<Pair>()}
+  [Reference<uninitialized<Pair>>] p0{location(a0)}
+  [Reference<uninitialized<Pair>>] p1{location(a1)}
+  [Reference<uninitialized<Pair>>] p2{location(a2)}
+
+  [uninitialized<Pair>] b0{uninitialized<Pair>()}
+  [uninitialized<Pair>] b1{uninitialized<Pair>()}
+  [uninitialized<Pair>] b2{uninitialized<Pair>()}
+  [Reference<uninitialized<Pair>>] q0{location(b0)}
+  [Reference<uninitialized<Pair>>] q1{location(b1)}
+  [Reference<uninitialized<Pair>>] q2{location(b2)}
+
+  [uninitialized<Pair>] c0{uninitialized<Pair>()}
+  [uninitialized<Pair>] c1{uninitialized<Pair>()}
+  [Reference<uninitialized<Pair>>] r0{location(c0)}
+  [Reference<uninitialized<Pair>>] r1{location(c1)}
+
+  return(plus(score_ptrs(location(borrow_ref(p0)), location(borrow_ref(p1)), location(borrow_ref(p2))),
+              plus(forward(location(borrow_ref(q0)), location(borrow_ref(q1)), location(borrow_ref(q2))),
+                   forward_mixed(location(borrow_ref(r0)), location(borrow_ref(r1))))))
+}

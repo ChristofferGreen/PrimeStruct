@@ -1,0 +1,15 @@
+
+[return<int>]
+packScore([args<i32>] values) {
+  return(plus(count(values), plus(plus(values[0i32], values.at(1i32)), values.at_unsafe(2i32))))
+}
+
+[return<int>]
+forward([args<i32>] values) {
+  return(plus(values.count(), packScore(4i32, values...)))
+}
+
+[return<int>]
+main() {
+  return(forward(5i32, 6i32))
+}

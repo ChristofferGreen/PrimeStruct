@@ -1,0 +1,12 @@
+
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+main() {
+  [i32] callValue{capacity(wrapMap())}
+  [i32] methodValue{wrapMap().capacity()}
+  return(plus(callValue, methodValue))
+}

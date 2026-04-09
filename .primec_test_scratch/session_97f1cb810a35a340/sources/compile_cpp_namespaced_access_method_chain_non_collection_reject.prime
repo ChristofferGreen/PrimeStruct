@@ -1,0 +1,12 @@
+
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[return<int>]
+main() {
+  return(/std/collections/vector/at(7i32, 0i32).tag())
+}

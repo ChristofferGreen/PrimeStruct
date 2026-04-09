@@ -1,0 +1,6 @@
+
+import /std/math/pi
+[return<f64>]
+main() {
+  return(plus(pi, tau))
+}

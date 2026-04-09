@@ -1,0 +1,1 @@
+[spinning-cube-demo] ERROR: primec binary not found: /Users/chrgre01/src/PrimeStruct/.primec_test_scratch/session_5265986830b3d1af/primec_spinning_cube_demo_script_default_primec_root/build-debug/primec

@@ -1,0 +1,6 @@
+
+import /std/math/*
+[return<int>]
+main() {
+  return(pow(2i32, -1i32))
+}

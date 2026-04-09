@@ -1,0 +1,1 @@
+[spinning-cube-demo] ERROR: primec binary not found: /definitely/not/a/real/primec

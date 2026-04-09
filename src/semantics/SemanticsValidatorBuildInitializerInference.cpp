@@ -250,6 +250,20 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
       (!candidate.isMethodCall && isSimpleCallName(candidate, "get"))) {
     return std::string("get");
   }
+  const bool isExplicitSoaGetRefCall =
+      (!candidate.isMethodCall && normalizedPrefix == "soa_vector" &&
+       normalizedName == "get_ref") ||
+      normalizedName == "soa_vector/get_ref";
+  const bool isBuiltinSoaGetRefMethod =
+      candidate.isMethodCall && normalizedName == "get_ref" &&
+      !candidate.args.empty() && isDirectSoaVectorTarget(candidate.args.front());
+  if (resolved == "/soa_vector/get_ref" ||
+      resolved == "/std/collections/soa_vector/get_ref" ||
+      isExplicitSoaGetRefCall ||
+      isBuiltinSoaGetRefMethod ||
+      (!candidate.isMethodCall && isSimpleCallName(candidate, "get_ref"))) {
+    return std::string("get_ref");
+  }
 
   return std::nullopt;
 }

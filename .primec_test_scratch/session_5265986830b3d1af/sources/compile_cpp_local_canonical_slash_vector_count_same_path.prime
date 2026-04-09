@@ -1,0 +1,25 @@
+
+[return<int>]
+/std/collections/vector/count([map<i32, i32>] values) {
+  return(31i32)
+}
+
+[return<int>]
+/std/collections/vector/count([array<i32>] values) {
+  return(32i32)
+}
+
+[return<int>]
+/std/collections/vector/count([string] values) {
+  return(33i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  [array<i32>] items{array<i32>(1i32, 2i32, 3i32)}
+  [string] text{"abc"raw_utf8}
+  return(plus(plus(values./std/collections/vector/count(),
+                    items./std/collections/vector/count()),
+              text./std/collections/vector/count()))
+}

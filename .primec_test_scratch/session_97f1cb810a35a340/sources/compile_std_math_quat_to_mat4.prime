@@ -1,0 +1,9 @@
+
+import /std/math/*
+
+[return<int>]
+main() {
+  [Quat] raw{Quat(2.0f32, 0.0f32, 0.0f32, 0.0f32)}
+  [Mat4] basis{quat_to_mat4(raw)}
+  return(convert<int>(basis.m00 - basis.m11 - basis.m22 + basis.m33))
+}

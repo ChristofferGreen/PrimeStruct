@@ -1,0 +1,26 @@
+
+import /std/collections/*
+
+[struct]
+Mover() {
+  [i32] value{1i32}
+
+  [mut]
+  Move([Reference<Self>] other) {
+    assign(this, other)
+  }
+}
+
+[struct]
+Wrapper() {
+  [Mover] value{Mover()}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Wrapper> mut] values{vector<Wrapper>()}
+  push(values, Wrapper(Mover(1i32)))
+  push(values, Wrapper(Mover(7i32)))
+  remove_at(values, 0i32)
+  return(plus(count(values), at_unsafe(values, 0i32).value.value))
+}

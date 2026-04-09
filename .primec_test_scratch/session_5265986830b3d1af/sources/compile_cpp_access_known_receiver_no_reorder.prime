@@ -1,0 +1,14 @@
+
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+/i32/at([i32] index, [vector<i32>] values) {
+  return(66i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  [i32] index{1i32}
+  return(at(values, index))
+}

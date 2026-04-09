@@ -1,0 +1,8 @@
+
+[return<int>]
+main() {
+  return(plus(
+    convert<int>(equal("alpha"raw_utf8, "alpha"raw_utf8)),
+    convert<int>(less_than("alpha"raw_utf8, "beta"raw_utf8))
+  ))
+}

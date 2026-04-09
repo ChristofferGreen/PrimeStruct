@@ -1,0 +1,13 @@
+
+import /std/math/*
+[return<int>]
+main() {
+  [f32] zero{0.0f}
+  return(plus(
+    plus(convert<int>(sinh(zero)), convert<int>(cosh(zero))),
+    plus(
+      plus(convert<int>(tanh(zero)), convert<int>(asinh(zero))),
+      plus(convert<int>(acosh(1.0f)), convert<int>(atanh(zero)))
+    )
+  ))
+}

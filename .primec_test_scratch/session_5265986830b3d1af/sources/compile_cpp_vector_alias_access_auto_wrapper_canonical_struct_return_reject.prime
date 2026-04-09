@@ -1,0 +1,30 @@
+
+Marker {
+  [i32] value
+}
+
+[return<int>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(index)
+}
+
+[return<Marker>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(Marker(plus(index, 40i32)))
+}
+
+[return<int>]
+/Marker/tag([Marker] self) {
+  return(self.value)
+}
+
+[return<auto>]
+project([vector<i32>] values) {
+  return(/vector/at(values, 2i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(project(values).tag())
+}

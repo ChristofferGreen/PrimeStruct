@@ -1,0 +1,15 @@
+
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+/std/collections/vector/count([string] values) {
+  return(91i32)
+}
+
+[return<int>]
+main() {
+  return(wrapText()./std/collections/vector/count())
+}

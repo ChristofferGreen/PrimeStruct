@@ -1,0 +1,6 @@
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
+  return(at_unsafe(values, 1i32))
+}

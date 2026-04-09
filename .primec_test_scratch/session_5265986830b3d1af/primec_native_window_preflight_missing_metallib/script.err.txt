@@ -1,0 +1,1 @@
+[native-window-preflight] ERROR: xcrun metallib unavailable; run 'xcrun --find metallib' after installing Command Line Tools.

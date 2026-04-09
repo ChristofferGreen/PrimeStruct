@@ -1,0 +1,26 @@
+
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[return<string>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return("abc"raw_utf8)
+}
+
+[return<string>]
+/std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return("abc"raw_utf8)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapValues() {
+  return(vector<i32>(1i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(count(/vector/at(wrapValues(), 0i32)),
+              wrapValues().at_unsafe(0i32).count()))
+}

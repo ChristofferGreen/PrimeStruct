@@ -1,0 +1,12 @@
+
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [array<i32>] baseline{array<i32>{1, 2, 3}}
+  [vector<i32> mut] values{vector<i32>{1, 2}}
+  [map<i32, i32>] pairs{map<i32, i32>{7=10}}
+  values.push(3)
+  values.reserve(8)
+  return(values[0] + values.at(2) + baseline.count() + at(pairs, 7))
+}

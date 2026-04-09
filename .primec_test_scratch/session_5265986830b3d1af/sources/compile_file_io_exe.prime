@@ -1,0 +1,16 @@
+[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]
+main() {
+  [File<Write>] file{ File<Write>("/Users/chrgre01/src/PrimeStruct/.primec_test_scratch/session_5265986830b3d1af/primec_file_io_exe.txt"utf8)? }
+  [array<i32>] bytes{ array<i32>(65i32, 66i32, 67i32) }
+  file.write("Hello "utf8, 123i32, " world"utf8)?
+  file.write_line(""utf8)?
+  file.write_byte(10i32)?
+  file.write_bytes(bytes)?
+  file.flush()?
+  file.close()?
+  return(Result.ok())
+}
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error("file error"utf8)
+}

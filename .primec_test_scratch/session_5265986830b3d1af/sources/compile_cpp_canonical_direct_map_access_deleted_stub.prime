@@ -1,0 +1,7 @@
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(plus(/std/collections/map/at(values, 1i32),
+              /std/collections/map/at_unsafe(values, 1i32)))
+}

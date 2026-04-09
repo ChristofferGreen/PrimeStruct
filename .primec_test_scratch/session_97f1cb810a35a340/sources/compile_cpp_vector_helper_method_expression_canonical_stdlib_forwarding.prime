@@ -1,0 +1,11 @@
+
+[return<int>]
+/std/collections/vector/push([vector<i32> mut] values, [i32] value) {
+  return(plus(count(values), value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  return(plus(/vector/push(values, 2i32), values.push(2i32)))
+}

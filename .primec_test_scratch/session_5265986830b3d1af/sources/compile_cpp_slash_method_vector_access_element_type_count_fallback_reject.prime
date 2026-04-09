@@ -1,0 +1,22 @@
+
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[return<i32>]
+/std/collections/vector/at([vector<string>] values, [i32] index) {
+  return(7i32)
+}
+
+[return<i32>]
+/std/collections/vector/at_unsafe([vector<string>] values, [i32] index) {
+  return(7i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<string>] values{vector<string>("hello"raw_utf8)}
+  return(plus(values./vector/at(0i32).count(),
+              values./std/collections/vector/at_unsafe(0i32).count()))
+}

@@ -614,7 +614,6 @@ bool rewriteExpr(Expr &expr,
     }
     templArg = resolvedArg.text;
   }
-
   if (!expr.isMethodCall && !expr.isBinding) {
     if (Expr *receiverExpr = mutableMapHelperReceiverExpr(expr)) {
       if (!rewriteNestedExperimentalMapConstructorValue(*receiverExpr)) {

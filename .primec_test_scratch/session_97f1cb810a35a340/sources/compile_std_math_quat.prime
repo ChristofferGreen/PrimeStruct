@@ -1,0 +1,11 @@
+
+import /std/math/*
+
+[return<int>]
+main() {
+  [Quat] raw{Quat(0.0f32, 0.0f32, 0.0f32, 2.0f32)}
+  [Quat] normalized{raw.toNormalized()}
+  [Quat] zero{Quat(0.0f32, 0.0f32, 0.0f32, 0.0f32).normalize()}
+  [f32] total{normalized.w + zero.x + zero.y + zero.z + zero.w}
+  return(convert<int>(total))
+}

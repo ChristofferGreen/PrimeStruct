@@ -16,6 +16,11 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     bool &handledOut) {
   handledOut = false;
   const bool resolvedMissing = defMap_.find(resolved) == defMap_.end();
+  std::string resolvedNoTemplate = resolved;
+  const size_t resolvedTemplateSuffix = resolvedNoTemplate.find("__t");
+  if (resolvedTemplateSuffix != std::string::npos) {
+    resolvedNoTemplate.erase(resolvedTemplateSuffix);
+  }
   auto failMapSoaBuiltinDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(expr, std::move(message));
   };
@@ -268,10 +273,6 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       };
 
   auto validateContainsBuiltin = [&](const std::string &helperName) -> bool {
-    if (!expr.templateArgs.empty()) {
-      return failMapSoaBuiltinDiagnostic(helperName +
-                                        " does not accept template arguments");
-    }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       return failMapSoaBuiltinDiagnostic(helperName +
                                         " does not accept block arguments");
@@ -403,11 +404,24 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
 
   const auto soaAccessHelperName =
       builtinSoaAccessHelperName(expr, params, locals);
+  const bool hasExplicitSoaAccessSpelling =
+      !expr.isMethodCall &&
+      (expr.name.rfind("/soa_vector/", 0) == 0 ||
+       expr.name.rfind("soa_vector/", 0) == 0 ||
+       expr.namespacePrefix == "/soa_vector" ||
+       expr.namespacePrefix == "soa_vector");
   if ((resolvedMethod || resolvedMissing ||
-       resolved == "/std/collections/soa_vector/get" ||
-       resolved == "/std/collections/soa_vector/get_ref" ||
-       resolved == "/std/collections/soa_vector/ref" ||
-       resolved == "/std/collections/soa_vector/ref_ref") &&
+       hasExplicitSoaAccessSpelling ||
+       resolvedNoTemplate == "/soa_vector/get" ||
+       resolvedNoTemplate == "/soa_vector/get_ref" ||
+       resolvedNoTemplate == "/soa_vector/ref" ||
+       resolvedNoTemplate == "/soa_vector/ref_ref" ||
+       resolvedNoTemplate == "/std/collections/experimental_soa_vector/soaVectorGetRef" ||
+       resolvedNoTemplate == "/std/collections/experimental_soa_vector/soaVectorRefRef" ||
+       resolvedNoTemplate == "/std/collections/soa_vector/get" ||
+       resolvedNoTemplate == "/std/collections/soa_vector/get_ref" ||
+       resolvedNoTemplate == "/std/collections/soa_vector/ref" ||
+       resolvedNoTemplate == "/std/collections/soa_vector/ref_ref") &&
       soaAccessHelperName.has_value()) {
     handledOut = true;
     if (hasNamedArguments(expr.argNames) &&
@@ -419,6 +433,10 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
           "named arguments not supported for builtin calls");
     }
     const std::string &helperName = *soaAccessHelperName;
+    if (!expr.templateArgs.empty()) {
+      return failMapSoaBuiltinDiagnostic(helperName +
+                                        " does not accept template arguments");
+    }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       return failMapSoaBuiltinDiagnostic(helperName +
                                         " does not accept block arguments");
@@ -428,27 +446,27 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
                                         helperName);
     }
     std::string elemType;
-    const bool oldSurfaceCallShape =
-        (helperName == "get" &&
-         (isSimpleCallName(expr, "get") ||
-          (expr.isMethodCall && expr.name == "get") ||
-          resolved == "/soa_vector/get" ||
-          resolved == "/std/collections/soa_vector/get")) ||
-        (helperName == "get_ref" &&
-         (isSimpleCallName(expr, "get_ref") ||
-          (expr.isMethodCall && expr.name == "get_ref") ||
-          resolved == "/soa_vector/get_ref" ||
-          resolved == "/std/collections/soa_vector/get_ref")) ||
-        (helperName == "ref" &&
-         (isSimpleCallName(expr, "ref") ||
-          (expr.isMethodCall && expr.name == "ref") ||
-          resolved == "/soa_vector/ref" ||
-          resolved == "/std/collections/soa_vector/ref")) ||
-        (helperName == "ref_ref" &&
-         (isSimpleCallName(expr, "ref_ref") ||
-          (expr.isMethodCall && expr.name == "ref_ref") ||
-          resolved == "/soa_vector/ref_ref" ||
-          resolved == "/std/collections/soa_vector/ref_ref"));
+      const bool oldSurfaceCallShape =
+          (helperName == "get" &&
+           (isSimpleCallName(expr, "get") ||
+            (expr.isMethodCall && expr.name == "get") ||
+            resolvedNoTemplate == "/soa_vector/get" ||
+            resolvedNoTemplate == "/std/collections/soa_vector/get")) ||
+          (helperName == "get_ref" &&
+           (isSimpleCallName(expr, "get_ref") ||
+            (expr.isMethodCall && expr.name == "get_ref") ||
+            resolvedNoTemplate == "/soa_vector/get_ref" ||
+            resolvedNoTemplate == "/std/collections/soa_vector/get_ref")) ||
+          (helperName == "ref" &&
+           (isSimpleCallName(expr, "ref") ||
+            (expr.isMethodCall && expr.name == "ref") ||
+            resolvedNoTemplate == "/soa_vector/ref" ||
+            resolvedNoTemplate == "/std/collections/soa_vector/ref")) ||
+          (helperName == "ref_ref" &&
+           (isSimpleCallName(expr, "ref_ref") ||
+            (expr.isMethodCall && expr.name == "ref_ref") ||
+            resolvedNoTemplate == "/soa_vector/ref_ref" ||
+            resolvedNoTemplate == "/std/collections/soa_vector/ref_ref"));
     if (!this->resolveSoaVectorOrExperimentalBorrowedReceiver(
             expr.args.front(),
             params,

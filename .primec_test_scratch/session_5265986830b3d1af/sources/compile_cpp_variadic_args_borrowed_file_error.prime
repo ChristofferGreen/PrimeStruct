@@ -1,0 +1,38 @@
+
+[return<int>]
+score_refs([args<Reference<FileError>>] values) {
+  return(plus(count(dereference(values[0i32]).why()), count(dereference(values[2i32]).why())))
+}
+
+[return<int>]
+forward([args<Reference<FileError>>] values) {
+  return(score_refs([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Reference<FileError>>] values) {
+  [FileError] extra{13i32}
+  [Reference<FileError>] extra_ref{location(extra)}
+  return(score_refs(extra_ref, [spread] values))
+}
+
+[return<int>]
+main() {
+  [FileError] a0{13i32}
+  [FileError] a1{2i32}
+  [FileError] a2{17i32}
+  [Reference<FileError>] r0{location(a0)}
+  [Reference<FileError>] r1{location(a1)}
+  [Reference<FileError>] r2{location(a2)}
+  [FileError] b0{2i32}
+  [FileError] b1{17i32}
+  [FileError] b2{13i32}
+  [Reference<FileError>] s0{location(b0)}
+  [Reference<FileError>] s1{location(b1)}
+  [Reference<FileError>] s2{location(b2)}
+  [FileError] c0{2i32}
+  [FileError] c1{17i32}
+  [Reference<FileError>] t0{location(c0)}
+  [Reference<FileError>] t1{location(c1)}
+  return(plus(score_refs(r0, r1, r2), plus(forward(s0, s1, s2), forward_mixed(t0, t1))))
+}

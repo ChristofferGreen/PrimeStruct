@@ -1,0 +1,12 @@
+
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  [Reference</std/collections/map<i32, i32>>] ref{location(values)}
+  [i32] c{/std/collections/map/count(ref)}
+  [i32] first{/std/collections/map/at(ref, 1i32)}
+  [i32] second{/std/collections/map/at_unsafe(ref, 2i32)}
+  return(plus(c, plus(first, second)))
+}

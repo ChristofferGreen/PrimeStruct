@@ -1,0 +1,45 @@
+
+[struct]
+GfxError() {
+  [i32] code{0i32}
+}
+
+namespace GfxError {
+  [return<string>]
+  why([GfxError] err) {
+    return(if(equal(err.code, 7i32), then() { "frame_acquire_failed"utf8 }, else() { "queue_submit_failed"utf8 }))
+  }
+}
+
+[return<Result<i32, GfxError>>]
+acquire_frame_ok() {
+  return(Result.ok(9i32))
+}
+
+[return<Result<i32, GfxError>>]
+acquire_frame_fail() {
+  return(7i64)
+}
+
+[return<Result<GfxError>>]
+submit_frame([i32] token) {
+  return(Result.ok())
+}
+
+[effects(io_err)]
+log_gfx_error([GfxError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> on_error<GfxError, /log_gfx_error>]
+main_ok() {
+  [i32] frameToken{acquire_frame_ok()?}
+  submit_frame(frameToken)?
+  return(frameToken)
+}
+
+[return<int> effects(io_err) on_error<GfxError, /log_gfx_error>]
+main_fail() {
+  [i32] frameToken{acquire_frame_fail()?}
+  return(frameToken)
+}

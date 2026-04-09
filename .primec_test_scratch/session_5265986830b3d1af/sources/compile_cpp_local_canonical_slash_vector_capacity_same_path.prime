@@ -1,0 +1,25 @@
+
+[effects(heap_alloc), return<int>]
+/std/collections/vector/capacity([map<i32, i32>] values) {
+  return(41i32)
+}
+
+[effects(heap_alloc), return<int>]
+/std/collections/vector/capacity([array<i32>] values) {
+  return(42i32)
+}
+
+[effects(heap_alloc), return<int>]
+/std/collections/vector/capacity([string] values) {
+  return(43i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  [array<i32>] items{array<i32>(1i32, 2i32, 3i32)}
+  [string] text{"abc"raw_utf8}
+  return(plus(plus(values./std/collections/vector/capacity(),
+                    items./std/collections/vector/capacity()),
+              text./std/collections/vector/capacity()))
+}

@@ -1,0 +1,16 @@
+
+[return<string>]
+/map/at([map<i32, string>] values, [i32] key) {
+  return("hello"utf8)
+}
+
+[return<int>]
+/std/collections/map/at([map<i32, string>] values, [i32] key) {
+  return(41i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, string>] values{map<i32, string>(1i32, "value"utf8)}
+  return(/std/collections/map/at(values, 1i32).count())
+}

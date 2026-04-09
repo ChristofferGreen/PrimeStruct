@@ -1,0 +1,15 @@
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapValues() {
+  return(vector<i32>(1i32))
+}
+
+[return<int>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(7i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(count(/vector/at(wrapValues(), 0i32)))
+}

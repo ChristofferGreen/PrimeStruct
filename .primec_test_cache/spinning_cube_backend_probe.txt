@@ -1,0 +1,8 @@
+1
+/Users/chrgre01/src/PrimeStruct/examples/web/spinning_cube/cube.prime
+/Users/chrgre01/src/PrimeStruct/examples/web/spinning_cube/cube.prime
+size=13127
+mtime=-4663886564000000000
+/Users/chrgre01/src/PrimeStruct/primec
+size=missing
+mtime=missing

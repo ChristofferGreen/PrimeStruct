@@ -986,9 +986,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprMethodTargetResolutionSource.find(
             "usesSamePathSoaHelperTargetForCollectionType(\"count\", \"/vector\")") !=
         std::string::npos);
-  CHECK(exprMethodTargetResolutionSource.find(
+  CHECK((exprMethodTargetResolutionSource.find(
             "usesSamePathSoaHelperTargetForCollectionType(\"get\", \"/vector\")") !=
-        std::string::npos);
+         std::string::npos ||
+         exprMethodTargetResolutionSource.find(
+             "usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, \"/vector\")") !=
+             std::string::npos));
   CHECK((exprMethodTargetResolutionSource.find(
             "usesSamePathSoaHelperTargetForCollectionType(\"ref\", \"/vector\")") !=
          std::string::npos ||
@@ -998,9 +1001,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(inferMethodResolutionSource.find(
             "usesSamePathSoaHelperTargetForCollectionType(\"count\", \"/vector\")") !=
         std::string::npos);
-  CHECK(inferMethodResolutionSource.find(
+  CHECK((inferMethodResolutionSource.find(
             "usesSamePathSoaHelperTargetForCollectionType(\"get\", \"/vector\")") !=
-        std::string::npos);
+         std::string::npos ||
+         inferMethodResolutionSource.find(
+             "usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, \"/vector\")") !=
+             std::string::npos));
   CHECK((inferMethodResolutionSource.find(
             "usesSamePathSoaHelperTargetForCollectionType(\"ref\", \"/vector\")") !=
          std::string::npos ||
@@ -1030,6 +1036,10 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
             "bool SemanticsValidator::reportBuiltinSoaDirectPendingExprDiagnostic(") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find("normalizedName == \"get_ref\"") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find("resolved == \"/soa_vector/get_ref\"") !=
         std::string::npos);
   CHECK(inferDefinitionSource.find(
             "soaDirectPendingUnavailableMethodDiagnostic(") !=

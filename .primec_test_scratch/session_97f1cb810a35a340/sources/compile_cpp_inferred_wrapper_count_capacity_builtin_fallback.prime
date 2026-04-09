@@ -1,0 +1,18 @@
+
+wrapMap() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
+  return(values)
+}
+
+[effects(heap_alloc)]
+wrapVector() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(plus(count(wrapMap()), wrapMap().count()),
+              plus(plus(count(wrapVector()), wrapVector().count()),
+                   plus(capacity(wrapVector()), wrapVector().capacity()))))
+}

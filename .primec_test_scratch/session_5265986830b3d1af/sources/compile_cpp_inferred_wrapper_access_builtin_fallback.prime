@@ -1,0 +1,19 @@
+
+wrapMap() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values)
+}
+
+[effects(heap_alloc)]
+wrapVector() {
+  [vector<i32>] values{vector<i32>(3i32, 4i32)}
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(plus(plus(at(wrapMap(), 1i32), wrapMap().at(1i32)), wrapMap()[1i32]),
+              plus(plus(at_unsafe(wrapMap(), 1i32), wrapMap().at_unsafe(1i32)),
+                   plus(plus(plus(at(wrapVector(), 0i32), wrapVector().at(0i32)), wrapVector()[0i32]),
+                        plus(at_unsafe(wrapVector(), 0i32), wrapVector().at_unsafe(0i32))))))
+}

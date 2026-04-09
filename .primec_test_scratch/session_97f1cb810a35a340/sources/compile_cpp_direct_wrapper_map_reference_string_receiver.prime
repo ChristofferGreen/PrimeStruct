@@ -1,0 +1,18 @@
+
+import /std/collections/*
+
+[return<Reference</std/collections/map<i32, string>>>]
+borrowMap([Reference</std/collections/map<i32, string>>] values) {
+  return(values)
+}
+
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/map<i32, string>] values{map<i32, string>(1i32, "hello"utf8)}
+  return(/std/collections/map/at(borrowMap(location(values)), 1i32).count())
+}

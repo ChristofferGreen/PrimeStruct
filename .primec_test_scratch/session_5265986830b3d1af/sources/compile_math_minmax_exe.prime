@@ -1,0 +1,5 @@
+
+[return<int>]
+main() {
+  return(/std/math/min(9i32, /std/math/max(2i32, 6i32)))
+}

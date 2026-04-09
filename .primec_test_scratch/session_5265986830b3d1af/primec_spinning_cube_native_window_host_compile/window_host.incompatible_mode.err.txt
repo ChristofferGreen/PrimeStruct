@@ -1,0 +1,1 @@
+--simulation-smoke is incompatible with --software-surface-demo

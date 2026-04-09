@@ -1,0 +1,2 @@
+unexpected invocation
+[browser-launcher] ERROR: failed to compile cube.wasm

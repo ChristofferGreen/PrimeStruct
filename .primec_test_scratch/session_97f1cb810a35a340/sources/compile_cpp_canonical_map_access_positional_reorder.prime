@@ -1,0 +1,11 @@
+
+[return<int>]
+/std/collections/map/at([/std/collections/map<string, i32>] values, [string] key) {
+  return(86i32)
+}
+
+[return<int>]
+main() {
+  [/std/collections/map<string, i32>] values{map<string, i32>("only"raw_utf8, 2i32)}
+  return(/std/collections/map/at("only"raw_utf8, values))
+}

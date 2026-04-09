@@ -1,0 +1,10 @@
+
+wrapText() {
+  [string] text{"abc"raw_utf8}
+  return(text)
+}
+
+[return<int>]
+main() {
+  return(plus(count(wrapText()), wrapText().count()))
+}

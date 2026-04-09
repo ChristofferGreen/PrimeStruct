@@ -1,0 +1,16 @@
+
+[return<int>]
+/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+  return(90i32)
+}
+
+[return<int>]
+/std/collections/vector/at([vector<i32>] values, [bool] index) {
+  return(40i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(values.count(true), values.at(true)))
+}

@@ -53,6 +53,24 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     }
     return false;
   }
+  if (resolvedPath == "/soa_vector/get" || resolvedPath == "/soa_vector/get_ref" ||
+      resolvedPath == "/soa_vector/ref" || resolvedPath == "/soa_vector/ref_ref" ||
+      resolvedPath == "/std/collections/soa_vector/get" ||
+      resolvedPath == "/std/collections/soa_vector/get_ref" ||
+      resolvedPath == "/std/collections/soa_vector/ref" ||
+      resolvedPath == "/std/collections/soa_vector/ref_ref" ||
+      resolvedPath == "/std/collections/experimental_soa_vector/soaVectorGetRef" ||
+      resolvedPath == "/std/collections/experimental_soa_vector/soaVectorRefRef") {
+    std::string elemType;
+    if (resolvers.resolveSoaVectorTarget(receiverExpr, elemType)) {
+      ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(elemType));
+      if (kind != ReturnKind::Unknown) {
+        kindOut = kind;
+        return true;
+      }
+    }
+    return false;
+  }
   if (resolvedPath == "/map/at" || resolvedPath == "/map/at_ref" ||
       resolvedPath == "/map/at_unsafe" || resolvedPath == "/map/at_unsafe_ref" ||
       resolvedPath == "/std/collections/map/at" || resolvedPath == "/std/collections/map/at_unsafe" ||
@@ -111,6 +129,13 @@ bool SemanticsValidator::resolveBuiltinCollectionAccessCallReturnKind(
       }
     }
     if (resolvers.resolveVectorTarget(receiverExpr, elemType)) {
+      ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(elemType));
+      if (kind != ReturnKind::Unknown) {
+        kindOut = kind;
+        return true;
+      }
+    }
+    if (resolvers.resolveSoaVectorTarget(receiverExpr, elemType)) {
       ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(elemType));
       if (kind != ReturnKind::Unknown) {
         kindOut = kind;

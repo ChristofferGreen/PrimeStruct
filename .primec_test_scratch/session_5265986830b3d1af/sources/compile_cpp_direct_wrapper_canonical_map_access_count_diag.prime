@@ -1,0 +1,20 @@
+
+[return<int>]
+/string/count([string] values) {
+  return(91i32)
+}
+
+[return<string>]
+/std/collections/map/at([map<i32, i32>] values, [i32] key) {
+  return("abc"raw_utf8)
+}
+
+[return</std/collections/map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 4i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(count(/std/collections/map/at(wrapMap(), 1i32)))
+}

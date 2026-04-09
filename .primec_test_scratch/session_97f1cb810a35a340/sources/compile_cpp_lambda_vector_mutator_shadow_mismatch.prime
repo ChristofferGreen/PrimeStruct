@@ -1,0 +1,13 @@
+
+/vector/push([vector<i32> mut] values, [bool] value) { }
+
+[effects(heap_alloc), return<int>]
+main() {
+  []([i32] seed) {
+    [vector<i32> mut] values{vector<i32>(seed)}
+    push(values, 1i32)
+    values.push(2i32)
+    return(0i32)
+  }
+  return(0i32)
+}

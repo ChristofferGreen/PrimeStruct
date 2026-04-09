@@ -1,0 +1,4 @@
+[native-window-preflight] xcrun metal: /fake/toolchain/metal
+[native-window-preflight] xcrun metallib: /fake/toolchain/metallib
+[native-window-preflight] GUI session: gui/501
+[native-window-preflight] PASS: prerequisites satisfied

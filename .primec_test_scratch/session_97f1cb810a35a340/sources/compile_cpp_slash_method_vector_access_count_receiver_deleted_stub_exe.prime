@@ -1,0 +1,10 @@
+
+[effects(heap_alloc), return<vector<string>>]
+wrapValues() {
+  return(vector<string>("abc"raw_utf8))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(count(wrapValues()./vector/at(0i32)))
+}

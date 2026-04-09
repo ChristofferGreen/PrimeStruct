@@ -1,0 +1,11 @@
+
+[return</std/collections/map<i32, string>>]
+wrapMap() {
+  return(map<i32, string>(1i32, "hello"utf8, 2i32, "bye"utf8))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(count(wrapMap()./std/collections/map/at(1i32)),
+              count(wrapMap()./std/collections/map/at_unsafe(2i32))))
+}

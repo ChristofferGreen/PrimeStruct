@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${1:-}" == "--find" && "${2:-}" == "metal" ]]; then
+  echo "/fake/toolchain/metal"
+  exit 0
+fi
+if [[ "${1:-}" == "--find" && "${2:-}" == "metallib" ]]; then
+  echo "/fake/toolchain/metallib"
+  exit 0
+fi
+if [[ "${1:-}" == "clang++" ]]; then
+  shift
+  out=""
+  while [[ $# -gt 0 ]]; do
+    if [[ "$1" == "-o" ]]; then
+      out="$2"
+      shift 2
+      continue
+    fi
+    shift
+  done
+  cat > "$out" <<'EOS'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "window_created=1"
+echo "startup_success=1"
+echo "frame_rendered=1"
+echo "exit_reason=max_frames"
+exit 0
+EOS
+  chmod +x "$out"
+  exit 0
+fi
+echo "unexpected xcrun invocation" >&2
+exit 99

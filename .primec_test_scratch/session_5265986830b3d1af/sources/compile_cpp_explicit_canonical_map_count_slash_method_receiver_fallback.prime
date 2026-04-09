@@ -1,0 +1,16 @@
+
+[return<int>]
+/std/collections/map/count([map<i32, i32>] values) {
+  return(17i32)
+}
+
+[return<int>]
+/i32/tag([i32] self) {
+  return(plus(self, 40i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(values./std/collections/map/count().tag())
+}

@@ -1,0 +1,1 @@
+usage: window_host (--gfx <path> | --software-surface-demo) [--max-frames <positive-int>] [--simulation-smoke]

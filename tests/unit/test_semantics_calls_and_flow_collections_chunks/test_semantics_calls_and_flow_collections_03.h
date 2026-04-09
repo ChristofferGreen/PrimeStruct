@@ -93,6 +93,8 @@ TEST_CASE("soa_vector conversion and access builtins reject template arguments")
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
+    INFO(callExpr);
+    INFO(error);
     CHECK(error.find(expected) != std::string::npos);
   };
 

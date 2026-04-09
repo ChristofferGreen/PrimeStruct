@@ -1,0 +1,11 @@
+
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [array<i32>] values{array<i32>[1i32, 2i32]}
+  [vector<i32> mut] list{vector<i32>[3i32, 4i32]}
+  [map<i32, i32>] pairs{map<i32, i32>[5i32=6i32, 7i32=8i32]}
+  list.push(9i32)
+  return(values.at(0i32) + list[2i32] + at_unsafe(pairs, 7i32))
+}

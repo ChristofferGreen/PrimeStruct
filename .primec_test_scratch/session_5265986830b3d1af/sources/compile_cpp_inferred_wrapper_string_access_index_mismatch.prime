@@ -1,0 +1,14 @@
+
+wrapText() {
+  [string] text{"abc"raw_utf8}
+  return(text)
+}
+
+[return<int>]
+main() {
+  [i32] callValue{at(wrapText(), true)}
+  [i32] methodValue{wrapText().at(true)}
+  [i32] unsafeCall{at_unsafe(wrapText(), true)}
+  [i32] unsafeMethod{wrapText().at_unsafe(true)}
+  return(plus(callValue, plus(methodValue, plus(unsafeCall, unsafeMethod))))
+}

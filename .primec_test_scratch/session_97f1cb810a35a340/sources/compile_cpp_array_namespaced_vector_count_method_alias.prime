@@ -1,0 +1,11 @@
+
+[return<bool>]
+/std/collections/vector/count([vector<i32>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(values./array/count(true))
+}

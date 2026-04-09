@@ -1,0 +1,6 @@
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{/array/vector<i32>(4i32, 5i32)}
+  return(0i32)
+}

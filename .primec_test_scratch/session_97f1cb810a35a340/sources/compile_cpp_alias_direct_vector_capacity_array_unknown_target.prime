@@ -1,0 +1,10 @@
+
+[return<array<i32>>]
+wrapArray() {
+  return(array<i32>(1i32, 2i32))
+}
+
+[return<int>]
+main() {
+  return(/vector/capacity(wrapArray()))
+}

@@ -1,0 +1,5 @@
+
+[return<int>]
+main() {
+  return(/std/math/clamp(9i32, 2i32, 6i32))
+}

@@ -1,0 +1,10 @@
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  [i32] c{/vector/count(values)}
+  [i32] k{/vector/capacity(values)}
+  [i32] first{/vector/at(values, 0i32)}
+  [i32] second{/vector/at_unsafe(values, 1i32)}
+  return(plus(plus(c, k), plus(first, second)))
+}

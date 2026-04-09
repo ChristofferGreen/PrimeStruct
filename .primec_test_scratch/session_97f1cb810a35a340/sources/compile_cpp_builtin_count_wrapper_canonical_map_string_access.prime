@@ -1,0 +1,10 @@
+
+[return</std/collections/map<i32, string>>]
+wrapMap() {
+  return(map<i32, string>(1i32, "hello"utf8))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(count(/std/collections/map/at(wrapMap(), 1i32)))
+}

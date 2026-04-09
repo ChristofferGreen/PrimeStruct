@@ -1,0 +1,8 @@
+
+[return<int>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32> mut] ref{location(value)}
+  assign(ref, 9i32)
+  return(value)
+}

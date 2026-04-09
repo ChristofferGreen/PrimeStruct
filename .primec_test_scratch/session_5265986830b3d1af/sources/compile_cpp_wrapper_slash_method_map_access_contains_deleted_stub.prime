@@ -1,0 +1,11 @@
+
+[return</std/collections/map<i32, map<i32, i32>>>]
+wrapMap() {
+  return(map<i32, map<i32, i32>>())
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(contains(wrapMap()./std/collections/map/at(1i32), 2i32),
+              contains(wrapMap()./std/collections/map/at_unsafe(2i32), 3i32)))
+}

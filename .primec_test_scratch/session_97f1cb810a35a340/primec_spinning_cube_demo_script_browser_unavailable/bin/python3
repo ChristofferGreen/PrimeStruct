@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+if [[ "${1:-}" == "--version" ]]; then
+  echo "Python 3.11.0"
+  exit 0
+fi
+exit 1

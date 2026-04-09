@@ -1,0 +1,12 @@
+{
+  "schema": "primestruct_benchmark_baseline_v1",
+  "entries": [
+    {
+      "phase": "compile",
+      "benchmark": "compile_speed",
+      "entry": "primestruct_cpp",
+      "max_mean_seconds": 1.0,
+      "max_artifact_size_bytes": 100
+    }
+  ]
+}

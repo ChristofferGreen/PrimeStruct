@@ -1,0 +1,6 @@
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(contains(values, 1i32))
+}

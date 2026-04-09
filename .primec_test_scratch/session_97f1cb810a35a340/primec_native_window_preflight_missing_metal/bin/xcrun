@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${1:-}" == "--find" && "${2:-}" == "metal" ]]; then
+  exit 1
+fi
+if [[ "${1:-}" == "--find" && "${2:-}" == "metallib" ]]; then
+  echo "/fake/toolchain/metallib"
+  exit 0
+fi
+echo "unexpected xcrun invocation" >&2
+exit 99

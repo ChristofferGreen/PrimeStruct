@@ -1,0 +1,17 @@
+
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 40i32))
+  }
+}
+
+[effects(heap_alloc), return</std/collections/map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 5i32, 2i32, 6i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/map/at(wrapMap(), 1i32).tag())
+}

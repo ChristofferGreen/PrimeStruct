@@ -1,0 +1,45 @@
+
+[return<Result<i32, FileError>>]
+lift([i32] value) {
+  return(Result.ok(value))
+}
+
+[return<int>]
+run_result_combinators() {
+  [Result<i32, FileError>] first{ Result.ok(2i32) }
+  [Result<i32, FileError>] second{ Result.ok(3i32) }
+  return(
+    Result.and_then(
+      Result.map2(
+        Result.map(first, []([i32] value) { return(multiply(value, 4i32)) }),
+        second,
+        []([i32] left, [i32] right) { return(plus(left, right)) }
+      ),
+      []([i32] total) { return(lift(plus(total, 5i32))) }
+    )
+  )
+}
+
+[return<int>]
+run_result_ok_lambda() {
+  [Result<i32, FileError>] first{ Result.ok(2i32) }
+  [Result<i32, FileError>] second{ Result.ok(3i32) }
+  return(
+    Result.and_then(
+      Result.map2(first, second, []([i32] left, [i32] right) { return(plus(left, right)) }),
+      []([i32] total) { return(Result.ok(multiply(total, 4i32))) }
+    )
+  )
+}
+
+[return<int>]
+main([array<string>] args) {
+  [i32] selector{count(args)}
+  if(equal(selector, 2i32)) {
+    return(run_result_combinators())
+  }
+  if(equal(selector, 3i32)) {
+    return(run_result_ok_lambda())
+  }
+  return(91i32)
+}

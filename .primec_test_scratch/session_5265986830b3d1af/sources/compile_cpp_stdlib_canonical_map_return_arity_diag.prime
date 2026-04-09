@@ -1,0 +1,11 @@
+
+[return</std/collections/map<string>>]
+wrapMap([string] key, [i32] value) {
+  return(map<string, i32>(key, value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<string, i32>] values{wrapMap("only"raw_utf8, 3i32)}
+  return(count(values))
+}

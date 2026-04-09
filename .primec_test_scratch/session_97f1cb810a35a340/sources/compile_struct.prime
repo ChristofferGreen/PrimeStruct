@@ -1,0 +1,10 @@
+
+[struct]
+data() {
+  [i32] value{1i32}
+}
+
+[return<int>]
+main() {
+  return(7i32)
+}

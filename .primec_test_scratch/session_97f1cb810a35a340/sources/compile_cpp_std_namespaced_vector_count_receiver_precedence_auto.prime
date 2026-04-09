@@ -1,0 +1,17 @@
+
+[effects(heap_alloc), return<int>]
+/vector/count([vector<i32>] values) {
+  return(12i32)
+}
+
+[effects(heap_alloc), return<bool>]
+/std/collections/vector/count([vector<i32>] values) {
+  return(false)
+}
+
+  [effects(heap_alloc), return<int>]
+  main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  [auto] inferred{/std/collections/vector/count(values)}
+  return(inferred)
+}

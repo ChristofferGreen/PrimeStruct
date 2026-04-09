@@ -1,0 +1,5 @@
+[spinning-cube-demo] SUMMARY
+[spinning-cube-demo] WEB: FAIL (failed to compile cube.wasm)
+[spinning-cube-demo] NATIVE: SKIP (native backend limitation: backend does not support return type)
+[spinning-cube-demo] METAL: SKIP (xcrun unavailable)
+[spinning-cube-demo] RESULT: FAIL

@@ -1,0 +1,13 @@
+
+import /std/math/*
+
+[return<int>]
+main() {
+  [Quat] turnX{Quat(1.0f32, 0.0f32, 0.0f32, 0.0f32)}
+  [Quat] turnY{Quat(0.0f32, 1.0f32, 0.0f32, 0.0f32)}
+  [Quat] product{multiply(turnX, turnY)}
+  [Vec3] input{Vec3(1.0f32, 2.0f32, 3.0f32)}
+  [Vec3] rotated{multiply(product, input)}
+  [f32] total{product.z - product.x - product.y - product.w + rotated.z - rotated.x - rotated.y}
+  return(convert<int>(total))
+}

@@ -1,0 +1,9 @@
+
+/vector/push([vector<i32> mut] values, [i32] value) { }
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  push(values, 2i32)
+  return(0i32)
+}

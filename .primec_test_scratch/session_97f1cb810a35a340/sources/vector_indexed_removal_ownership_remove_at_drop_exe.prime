@@ -1,0 +1,16 @@
+[struct]
+Owned() {
+  [i32] value{4i32}
+
+  Destroy() {
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Owned> mut] values{vector<Owned>()}
+  push(values, Owned())
+  push(values, Owned(9i32))
+  remove_at(values, 0i32)
+  return(plus(count(values), at(values, 0i32).value))
+}

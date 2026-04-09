@@ -1,0 +1,9 @@
+
+import /std/math/*
+[return<int>]
+main() {
+  return(plus(
+    plus(convert<int>(round(pi)), convert<int>(round(tau))),
+    convert<int>(round(e))
+  ))
+}

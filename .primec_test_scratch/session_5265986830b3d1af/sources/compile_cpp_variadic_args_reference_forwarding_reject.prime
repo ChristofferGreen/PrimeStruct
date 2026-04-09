@@ -1,0 +1,10 @@
+
+[return<int>]
+score([args<Reference<i32>>] values) {
+  return(count(values))
+}
+
+[return<int>]
+main() {
+  return(score(1i32, 2i32))
+}

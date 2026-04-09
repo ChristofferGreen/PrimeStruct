@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 
+#include <functional>
 #include <string>
 #include <string_view>
 
@@ -128,6 +129,68 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
         rewrittenVectorMethodCall.name = normalizedMethodName;
         handledOut = true;
         return validateExpr(params, locals, rewrittenVectorMethodCall);
+      }
+    }
+  }
+
+  if (!expr.isMethodCall && expr.args.size() == 2 &&
+      expr.name.find('/') == std::string::npos &&
+      (normalizedMethodName == "get" || normalizedMethodName == "get_ref" ||
+       normalizedMethodName == "ref" || normalizedMethodName == "ref_ref")) {
+    const std::string samePathHelper = "/soa_vector/" + normalizedMethodName;
+    if (hasVisibleDefinitionPathForCurrentImports(samePathHelper)) {
+      std::function<bool(const Expr &)> isVectorOrSoaLikeReceiver =
+          [&](const Expr &receiverExpr) {
+        if (receiverExpr.kind == Expr::Kind::Call && !receiverExpr.isBinding &&
+            isSimpleCallName(receiverExpr, "location") &&
+            receiverExpr.args.size() == 1) {
+          return isVectorOrSoaLikeReceiver(receiverExpr.args.front());
+        }
+        if (receiverExpr.kind == Expr::Kind::Call && !receiverExpr.isBinding &&
+            isSimpleCallName(receiverExpr, "dereference") &&
+            receiverExpr.args.size() == 1) {
+          return isVectorOrSoaLikeReceiver(receiverExpr.args.front());
+        }
+        std::string collectionTypePath;
+        if (resolveCallCollectionTypePath(receiverExpr, params, locals,
+                                          collectionTypePath)) {
+          if (collectionTypePath == "/vector" ||
+              collectionTypePath == "/soa_vector") {
+            return true;
+          }
+        }
+        std::string receiverTypeText;
+        if (!inferQueryExprTypeText(receiverExpr, params, locals,
+                                    receiverTypeText)) {
+          return false;
+        }
+        std::string normalizedReceiverType =
+            normalizeBindingTypeName(receiverTypeText);
+        const std::string directCollectionType =
+            normalizeCollectionTypePath(normalizedReceiverType);
+        if (directCollectionType == "/vector" ||
+            directCollectionType == "/soa_vector") {
+          return true;
+        }
+        std::string base;
+        std::string argText;
+        if (splitTemplateTypeName(normalizedReceiverType, base, argText) &&
+            (normalizeBindingTypeName(base) == "Reference" ||
+             normalizeBindingTypeName(base) == "Pointer")) {
+          const std::string pointeeCollectionType =
+              normalizeCollectionTypePath(argText);
+          return pointeeCollectionType == "/vector" ||
+                 pointeeCollectionType == "/soa_vector";
+        }
+        return false;
+      };
+      if (isVectorOrSoaLikeReceiver(expr.args.front())) {
+        Expr rewrittenSoaHelperCall = expr;
+        rewrittenSoaHelperCall.isMethodCall = false;
+        rewrittenSoaHelperCall.namespacePrefix.clear();
+        rewrittenSoaHelperCall.name = samePathHelper;
+        handledOut = true;
+        return validateExpr(params, locals, rewrittenSoaHelperCall);
       }
     }
   }

@@ -1,0 +1,11 @@
+
+[struct]
+Widget() {
+  [public i32] size{1i32}
+  [private static i32] counter{2i32}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}

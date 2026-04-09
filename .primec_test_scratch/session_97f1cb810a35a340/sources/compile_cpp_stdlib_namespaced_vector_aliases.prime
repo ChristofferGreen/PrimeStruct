@@ -1,0 +1,12 @@
+
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
+  /std/collections/vector/push(values, 6i32)
+  [i32] countValue{/std/collections/vector/count(values)}
+  [i32] capacityValue{/std/collections/vector/capacity(values)}
+  [i32] tailValue{/std/collections/vector/at_unsafe(values, 2i32)}
+  return(plus(plus(countValue, tailValue), minus(capacityValue, capacityValue)))
+}

@@ -1,0 +1,110 @@
+
+import /std/collections/*
+import /std/math/*
+import /std/ui/*
+
+[effects(io_out), return<void>]
+dump_words([vector<i32>] words) {
+  [i32] len{vectorCount<i32>(words)}
+  for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
+    if(greater_than(index, 0i32)) {
+      print(","utf8)
+    }
+    print(vectorAt<i32>(words, index))
+  }
+  print_line(""utf8)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+run_ui_event_stream() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
+  [LoginFormNodes] login{layout.append_login_form(
+    root,
+    2i32,
+    1i32,
+    10i32,
+    1i32,
+    2i32,
+    16i32,
+    "Login"utf8,
+    "alice"utf8,
+    "secret"utf8,
+    "Go"utf8
+  )}
+
+  [UiEventStream mut] events{UiEventStream()}
+  events.push_pointer_move(login.usernameInput, 7i32, 20i32, 30i32)
+  events.push_pointer_down(login.submitButton, 7i32, 1i32, 20i32, 30i32)
+  events.push_pointer_up(login.submitButton, 7i32, 1i32, 21i32, 31i32)
+  events.push_key_down(login.usernameInput, 13i32, 3i32, 1i32)
+  events.push_key_up(login.usernameInput, 13i32, 1i32)
+  dump_words(events.serialize())
+  return(plus(login.submitButton, events.event_count()))
+}
+
+[effects(heap_alloc, io_out), return<int>]
+run_ui_ime_event_stream() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
+  [LoginFormNodes] login{layout.append_login_form(
+    root,
+    2i32,
+    1i32,
+    10i32,
+    1i32,
+    2i32,
+    16i32,
+    "Login"utf8,
+    "alice"utf8,
+    "secret"utf8,
+    "Go"utf8
+  )}
+
+  [UiEventStream mut] events{UiEventStream()}
+  events.push_ime_preedit(login.usernameInput, 1i32, 4i32, "al|"utf8)
+  events.push_ime_commit(login.usernameInput, "alice"utf8)
+  dump_words(events.serialize())
+  return(plus(login.usernameInput, events.event_count()))
+}
+
+[effects(heap_alloc, io_out), return<int>]
+run_ui_resize_focus_event_stream() {
+  [LayoutTree mut] layout{LayoutTree()}
+  [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
+  [LoginFormNodes] login{layout.append_login_form(
+    root,
+    2i32,
+    1i32,
+    10i32,
+    1i32,
+    2i32,
+    16i32,
+    "Login"utf8,
+    "alice"utf8,
+    "secret"utf8,
+    "Go"utf8
+  )}
+
+  [UiEventStream mut] events{UiEventStream()}
+  events.push_resize(login.panel, 40i32, 57i32)
+  events.push_focus_gained(login.usernameInput)
+  events.push_focus_lost(login.usernameInput)
+  dump_words(events.serialize())
+  return(plus(login.usernameInput, events.event_count()))
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main([array<string>] args) {
+  [i32] selector{count(args)}
+  if(equal(selector, 2i32)) {
+    return(run_ui_event_stream())
+  }
+  if(equal(selector, 3i32)) {
+    return(run_ui_ime_event_stream())
+  }
+  if(equal(selector, 4i32)) {
+    return(run_ui_resize_focus_event_stream())
+  }
+  return(91i32)
+}

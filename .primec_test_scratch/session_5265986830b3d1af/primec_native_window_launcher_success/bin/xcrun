@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${1:-}" == "--find" && "${2:-}" == "metal" ]]; then
+  echo "/fake/toolchain/metal"
+  exit 0
+fi
+if [[ "${1:-}" == "--find" && "${2:-}" == "metallib" ]]; then
+  echo "/fake/toolchain/metallib"
+  exit 0
+fi
+if [[ "${1:-}" == "clang++" ]]; then
+  shift
+  out=""
+  while [[ $# -gt 0 ]]; do
+    if [[ "$1" == "-o" ]]; then
+      out="$2"
+      shift 2
+      continue
+    fi
+    shift
+  done
+  if [[ -z "$out" ]]; then
+    echo "missing -o" >&2
+    exit 92
+  fi
+  cat > "$out" <<'EOS'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "window_host_invoked=1"
+echo "window_host_args=$*"
+if [[ "${1:-}" != "--gfx" || -z "${2:-}" ]]; then
+  echo "bad args" >&2
+  exit 93
+fi
+if [[ -x "${2}" ]]; then
+  echo "gfx_stream_exists=1"
+else
+  echo "gfx_stream_exists=0"
+fi
+exit 0
+EOS
+  chmod +x "$out"
+  exit 0
+fi
+echo "unexpected xcrun invocation" >&2
+exit 99
