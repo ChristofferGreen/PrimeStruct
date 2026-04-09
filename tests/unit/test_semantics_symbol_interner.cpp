@@ -103,7 +103,7 @@ TEST_CASE("symbol interner worker snapshot keeps local id order") {
   CHECK(snapshot.symbolsByLocalId[2] == "/worker/c");
 }
 
-TEST_CASE("symbol interner deterministic merge hook is input-order independent") {
+TEST_CASE("symbol interner two-worker merge helper is input-order independent") {
   primec::SymbolInterner workerA;
   CHECK(workerA.intern("/std/math/vec2") == 1);
   CHECK(workerA.intern("/std/math/mat2") == 2);
@@ -115,10 +115,10 @@ TEST_CASE("symbol interner deterministic merge hook is input-order independent")
   const primec::WorkerSymbolInternerSnapshot snapshotA = workerA.snapshotForWorker(2);
   const primec::WorkerSymbolInternerSnapshot snapshotB = workerB.snapshotForWorker(1);
 
-  const primec::SymbolInterner mergedAB = primec::SymbolInterner::mergeWorkerSnapshotsDeterministic(
-      {snapshotA, snapshotB});
-  const primec::SymbolInterner mergedBA = primec::SymbolInterner::mergeWorkerSnapshotsDeterministic(
-      {snapshotB, snapshotA});
+  const primec::SymbolInterner mergedAB = primec::SymbolInterner::mergeTwoWorkerSnapshotsDeterministic(
+      snapshotA, snapshotB);
+  const primec::SymbolInterner mergedBA = primec::SymbolInterner::mergeTwoWorkerSnapshotsDeterministic(
+      snapshotB, snapshotA);
 
   REQUIRE(mergedAB.size() == mergedBA.size());
   for (std::size_t i = 0; i < mergedAB.size(); ++i) {
@@ -128,6 +128,14 @@ TEST_CASE("symbol interner deterministic merge hook is input-order independent")
   CHECK(mergedAB.resolve(1) == "/std/math/mat2");
   CHECK(mergedAB.resolve(2) == "/std/math/quat");
   CHECK(mergedAB.resolve(3) == "/std/math/vec2");
+
+  const primec::SymbolInterner mergedViaGeneric =
+      primec::SymbolInterner::mergeWorkerSnapshotsDeterministic({snapshotB, snapshotA});
+  REQUIRE(mergedViaGeneric.size() == mergedAB.size());
+  for (std::size_t i = 0; i < mergedAB.size(); ++i) {
+    const primec::SymbolId id = static_cast<primec::SymbolId>(i + 1);
+    CHECK(mergedViaGeneric.resolve(id) == mergedAB.resolve(id));
+  }
 
   const std::vector<primec::SymbolId> workerBToMerged =
       primec::SymbolInterner::remapLocalIdsToMerged(snapshotB, mergedAB);
