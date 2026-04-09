@@ -105,7 +105,6 @@ P4 - Deterministic multithread compile substrate
 - ◐ [P4-10] Run two deterministic definition-validation work chunks in parallel behind a feature flag.
 - ◐ [P4-11] Extend worker scheduling from two chunks to N chunks via deterministic partitioner.
 - ◐ [P4-12] Add focused ordering tests that lock diagnostic and semantic-product output order under N-chunk scheduling.
-- ◐ [P4-15] Add concurrency stress tests on high-definition-count imports (including `/std/math/*`) with deterministic-output assertions.
 
 P5 - CI observability, policy, and completion gates
 - ◐ [P5-01] Add optional phase-level semantic counters (calls visited, facts produced, peak local map sizes), off by default.

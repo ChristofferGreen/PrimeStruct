@@ -11,6 +11,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 - ✓ [P5-05] Defined per-fixture RSS/time regression budgets (tolerance + sustained-window rule) in a checked-in benchmark policy note. Completed: the checked-in policy note now documents strict `(fixture, phase)` budget coverage expectations and the budget checker now fails when reports emit tuples without matching policy entries, with regression-harness coverage locking that behavior.
 - ✓ [P4-13] Added single-thread vs multithread equivalence tests for diagnostics ordering and semantic-product output. Completed: compile-pipeline `/std/math/*` worker-count equivalence coverage now asserts worker `1` and worker `4` produce identical semantic-product dump output and identical diagnostic message ordering on the same stress fixtures.
 - ✓ [P4-14] Added explicit worker-count equivalence tests for `1`, `2`, and `4` workers. Completed: compile-pipeline `/std/math/*` worker-count equivalence coverage now asserts workers `1`, `2`, and `4` produce identical semantic-product dump output and identical diagnostic message ordering on the same stress fixtures.
+- ✓ [P4-15] Added concurrency stress tests on high-definition-count imports (including `/std/math/*`) with deterministic-output assertions. Completed: compile-pipeline stress coverage now exercises high-definition-count `/std/math/*` sources under benchmark worker-count mode and locks deterministic semantic-product dump output plus deterministic diagnostic ordering across repeated stress runs.
 
 **Todo Cleanup (April 9, 2026)**
 
