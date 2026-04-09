@@ -368,6 +368,12 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
   };
   auto resolveExperimentalSoaRefReceiverTarget =
       [&](const Expr &refExpr, const Expr *&receiverTargetOut) -> bool {
+    auto hasRefLikeSuffix = [](const std::string &resolvedPath) {
+      return (resolvedPath.size() >= 4 &&
+              resolvedPath.compare(resolvedPath.size() - 4, 4, "/ref") == 0) ||
+             (resolvedPath.size() >= 8 &&
+              resolvedPath.compare(resolvedPath.size() - 8, 8, "/ref_ref") == 0);
+    };
     auto isBuiltinSoaRefPath = [&](const std::string &resolvedPath,
                                    bool methodForm) -> bool {
       if (resolvedPath.empty()) {
@@ -378,14 +384,21 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
               0) == 0) {
         return true;
       }
+      if (resolvedPath.rfind(
+              "/std/collections/experimental_soa_vector/soaVectorRefRef",
+              0) == 0) {
+        return true;
+      }
       if (methodForm) {
         return resolvedPath.rfind(
                    "/std/collections/experimental_soa_vector/", 0) == 0 &&
-               resolvedPath.size() >= 4 &&
-               resolvedPath.compare(resolvedPath.size() - 4, 4, "/ref") == 0;
+               hasRefLikeSuffix(resolvedPath);
       }
       return resolvedPath.rfind("/std/collections/soa_vector/ref", 0) == 0 ||
-             resolvedPath.rfind("/soa_vector/ref", 0) == 0;
+             resolvedPath.rfind("/soa_vector/ref", 0) == 0 ||
+             resolvedPath.rfind("/std/collections/soa_vector/ref_ref", 0) ==
+                 0 ||
+             resolvedPath.rfind("/soa_vector/ref_ref", 0) == 0;
     };
 
     receiverTargetOut = nullptr;
@@ -394,7 +407,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     }
     if (refExpr.isMethodCall) {
       const std::string resolvedMethodPath = resolveCalleePath(refExpr);
-      if (refExpr.name != "ref" &&
+      if (refExpr.name != "ref" && refExpr.name != "ref_ref" &&
           !isBuiltinSoaRefPath(resolvedMethodPath, true)) {
         return false;
       }
@@ -405,10 +418,15 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       return true;
     }
 
-    const bool isBareRefCall = isSimpleCallName(refExpr, "ref");
+    const bool isBareRefCall =
+        isSimpleCallName(refExpr, "ref") ||
+        isSimpleCallName(refExpr, "ref_ref");
     const bool isCanonicalRefCall =
         refExpr.name.rfind(
             "/std/collections/experimental_soa_vector/soaVectorRef",
+            0) == 0 ||
+        refExpr.name.rfind(
+            "/std/collections/experimental_soa_vector/soaVectorRefRef",
             0) == 0;
     const std::string resolvedCallPath = resolveCalleePath(refExpr);
     if ((!isBareRefCall && !isCanonicalRefCall &&

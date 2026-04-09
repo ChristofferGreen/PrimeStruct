@@ -443,6 +443,12 @@ Semantics-layer pending fallback diagnostics:
     `/std/collections/experimental_soa_vector_conversions/*`, so the pass no
     longer traverses helper-module bodies as rewrite candidates
     (`src/semantics/SemanticsValidate.cpp`).
+  - SoA mutation-borrow receiver fallback detection now treats `ref_ref`
+    helper call/method shapes as equivalent to `ref` across same-path,
+    canonical stdlib, and experimental helper surfaces, so canonical
+    `/std/collections/soa_vector/ref_ref` rewrites no longer miss mutable
+    borrowed-receiver detection during assign-target validation
+    (`src/semantics/SemanticsValidatorExprMutationBorrows.cpp`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:
