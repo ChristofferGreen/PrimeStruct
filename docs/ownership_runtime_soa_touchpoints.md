@@ -401,6 +401,13 @@ Semantics-layer pending fallback diagnostics:
     requiring visible same-path `/soa_vector/<helper>` definitions), so
     canonical helper imports can satisfy fallback inference for non-core helper
     names (`src/semantics/SemanticsValidatorInferDefinition.cpp`).
+  - Late expression builtin validation fallback gates for old-surface
+    `count`/`get`/`ref` call forms now key off old-surface call shape plus
+    visible same-path or canonical stdlib helper targets before falling back,
+    so canonical helper imports do not force compiler-owned pending diagnostics
+    for those old-surface call forms
+    (`src/semantics/SemanticsValidatorExprCountCapacityMapBuiltins.cpp` and
+    `src/semantics/SemanticsValidatorExprMapSoaBuiltins.cpp`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:

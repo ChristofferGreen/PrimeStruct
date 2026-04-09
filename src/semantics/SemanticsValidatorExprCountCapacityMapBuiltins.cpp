@@ -238,9 +238,12 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       std::string elemType;
       if (!(*dispatchResolvers).resolveSoaVectorTarget(expr.args.front(),
                                                        elemType)) {
-        if (logicalResolvedMethod == "/soa_vector/count" &&
-            preferredSoaHelperTargetForCurrentImports("count") ==
-                "/soa_vector/count") {
+        const bool oldSurfaceCallShape =
+            isSimpleCallName(expr, "count") ||
+            (expr.isMethodCall && expr.name == "count") ||
+            logicalResolvedMethod == "/soa_vector/count";
+        if (oldSurfaceCallShape &&
+            hasVisibleSoaHelperTargetForCurrentImports("count")) {
           handledOut = false;
           return true;
         }

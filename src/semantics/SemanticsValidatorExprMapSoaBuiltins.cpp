@@ -421,15 +421,23 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
                                         helperName);
     }
     std::string elemType;
+    const bool oldSurfaceCallShape =
+        (helperName == "get" &&
+         (isSimpleCallName(expr, "get") ||
+          (expr.isMethodCall && expr.name == "get") ||
+          resolved == "/soa_vector/get")) ||
+        (helperName == "ref" &&
+         (isSimpleCallName(expr, "ref") ||
+          (expr.isMethodCall && expr.name == "ref") ||
+          resolved == "/soa_vector/ref"));
     if (!this->resolveSoaVectorOrExperimentalBorrowedReceiver(
             expr.args.front(),
             params,
             locals,
             context.resolveSoaVectorTarget,
             elemType)) {
-      if (resolved == "/soa_vector/" + helperName &&
-          hasVisibleDefinitionPathForCurrentImports(
-              "/soa_vector/" + helperName)) {
+      if (oldSurfaceCallShape &&
+          hasVisibleSoaHelperTargetForCurrentImports(helperName)) {
         handledOut = false;
         return true;
       }
