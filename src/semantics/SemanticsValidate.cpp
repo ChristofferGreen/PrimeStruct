@@ -499,24 +499,33 @@ SemanticProgram buildSemanticProgram(const Program &program,
     const auto queryFacts = validator.queryFactSnapshotForSemanticProduct();
     semanticProgram.queryFacts.reserve(queryFacts.size());
     for (const auto &snapshotEntry : queryFacts) {
-      semanticProgram.queryFacts.push_back(SemanticProgramQueryFact{
-          snapshotEntry.scopePath,
-          snapshotEntry.callName,
-          snapshotEntry.resolvedPath,
-          snapshotEntry.typeText,
-          bindingTypeTextForSemanticProduct(snapshotEntry.binding),
-          bindingTypeTextForSemanticProduct(snapshotEntry.receiverBinding),
-          snapshotEntry.hasResultType,
-          snapshotEntry.resultTypeHasValue,
-          snapshotEntry.resultValueType,
-          snapshotEntry.resultErrorType,
-          snapshotEntry.sourceLine,
-          snapshotEntry.sourceColumn,
-          snapshotEntry.semanticNodeId,
-          semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId),
-      });
-      const auto &entry = semanticProgram.queryFacts.back();
-      ensureModuleResolvedArtifacts(entry.scopePath).queryFacts.push_back(entry);
+      SemanticProgramQueryFact entry;
+      entry.scopePath = snapshotEntry.scopePath;
+      entry.callName = snapshotEntry.callName;
+      entry.resolvedPath = snapshotEntry.resolvedPath;
+      entry.queryTypeText = snapshotEntry.typeText;
+      entry.bindingTypeText = bindingTypeTextForSemanticProduct(snapshotEntry.binding);
+      entry.receiverBindingTypeText = bindingTypeTextForSemanticProduct(snapshotEntry.receiverBinding);
+      entry.hasResultType = snapshotEntry.hasResultType;
+      entry.resultTypeHasValue = snapshotEntry.resultTypeHasValue;
+      entry.resultValueType = snapshotEntry.resultValueType;
+      entry.resultErrorType = snapshotEntry.resultErrorType;
+      entry.sourceLine = snapshotEntry.sourceLine;
+      entry.sourceColumn = snapshotEntry.sourceColumn;
+      entry.semanticNodeId = snapshotEntry.semanticNodeId;
+      entry.provenanceHandle = semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId);
+      entry.scopePathId = semanticProgramInternCallTargetString(semanticProgram, entry.scopePath);
+      entry.callNameId = semanticProgramInternCallTargetString(semanticProgram, entry.callName);
+      entry.resolvedPathId = semanticProgramInternCallTargetString(semanticProgram, entry.resolvedPath);
+      entry.queryTypeTextId = semanticProgramInternCallTargetString(semanticProgram, entry.queryTypeText);
+      entry.bindingTypeTextId = semanticProgramInternCallTargetString(semanticProgram, entry.bindingTypeText);
+      entry.receiverBindingTypeTextId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.receiverBindingTypeText);
+      entry.resultValueTypeId = semanticProgramInternCallTargetString(semanticProgram, entry.resultValueType);
+      entry.resultErrorTypeId = semanticProgramInternCallTargetString(semanticProgram, entry.resultErrorType);
+      semanticProgram.queryFacts.push_back(std::move(entry));
+      const auto &storedEntry = semanticProgram.queryFacts.back();
+      ensureModuleResolvedArtifacts(storedEntry.scopePath).queryFacts.push_back(storedEntry);
     }
   }
   if (isCollectorEnabled("try_facts")) {

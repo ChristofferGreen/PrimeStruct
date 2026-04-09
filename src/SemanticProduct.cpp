@@ -509,19 +509,49 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
   const auto queryFacts = semanticProgramQueryFactView(semanticProgram);
   for (size_t i = 0; i < queryFacts.size(); ++i) {
     const auto &entry = *queryFacts[i];
+    const std::string_view scopePath =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId);
+    const std::string_view callName =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.callNameId);
+    const std::string_view resolvedPath =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.resolvedPathId);
+    const std::string_view queryTypeText =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.queryTypeTextId);
+    const std::string_view bindingTypeText =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.bindingTypeTextId);
+    const std::string_view receiverBindingTypeText =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.receiverBindingTypeTextId);
+    const std::string_view resultValueType =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.resultValueTypeId);
+    const std::string_view resultErrorType =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.resultErrorTypeId);
     appendSemanticIndexedLine(out,
                               "query_facts",
                               i,
-                              "scope_path=" + quoteSemanticString(entry.scopePath) + " call_name=" +
-                                  quoteSemanticString(entry.callName) + " resolved_path=" +
-                                  quoteSemanticString(entry.resolvedPath) + " query_type_text=" +
-                                  quoteSemanticString(entry.queryTypeText) + " binding_type_text=" +
-                                  quoteSemanticString(entry.bindingTypeText) + " receiver_binding_type_text=" +
-                                  quoteSemanticString(entry.receiverBindingTypeText) + " has_result_type=" +
+                              "scope_path=" +
+                                  quoteSemanticString(scopePath.empty() ? entry.scopePath : scopePath) +
+                                  " call_name=" +
+                                  quoteSemanticString(callName.empty() ? entry.callName : callName) +
+                                  " resolved_path=" +
+                                  quoteSemanticString(resolvedPath.empty() ? entry.resolvedPath : resolvedPath) +
+                                  " query_type_text=" +
+                                  quoteSemanticString(queryTypeText.empty() ? entry.queryTypeText : queryTypeText) +
+                                  " binding_type_text=" +
+                                  quoteSemanticString(bindingTypeText.empty() ? entry.bindingTypeText
+                                                                            : bindingTypeText) +
+                                  " receiver_binding_type_text=" +
+                                  quoteSemanticString(receiverBindingTypeText.empty()
+                                                          ? entry.receiverBindingTypeText
+                                                          : receiverBindingTypeText) +
+                                  " has_result_type=" +
                                   formatSemanticBool(entry.hasResultType) + " result_type_has_value=" +
                                   formatSemanticBool(entry.resultTypeHasValue) + " result_value_type=" +
-                                  quoteSemanticString(entry.resultValueType) + " result_error_type=" +
-                                  quoteSemanticString(entry.resultErrorType) + " provenance_handle=" +
+                                  quoteSemanticString(resultValueType.empty() ? entry.resultValueType
+                                                                              : resultValueType) +
+                                  " result_error_type=" +
+                                  quoteSemanticString(resultErrorType.empty() ? entry.resultErrorType
+                                                                              : resultErrorType) +
+                                  " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }

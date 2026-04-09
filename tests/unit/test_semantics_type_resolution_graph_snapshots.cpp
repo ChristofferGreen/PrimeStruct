@@ -900,6 +900,44 @@ TEST_CASE("semantic product query facts prefer local bindings over math constant
   CHECK(queryEntry->bindingTypeText == "f32");
 }
 
+TEST_CASE("semantic product query facts carry interned text ids") {
+  const std::string source =
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [i32] a{plus(1i32, 2i32)}\n"
+      "  [i32] b{plus(3i32, 4i32)}\n"
+      "  return(plus(a, b))\n"
+      "}\n";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  std::vector<const primec::SemanticProgramQueryFact *> plusQueryFacts;
+  for (const auto *entry : primec::semanticProgramQueryFactView(semanticProgram)) {
+    if (entry->scopePath == "/main" && entry->callName == "plus" && entry->queryTypeText == "i32") {
+      plusQueryFacts.push_back(entry);
+    }
+  }
+  REQUIRE(plusQueryFacts.size() >= 2);
+  REQUIRE(plusQueryFacts[0]->scopePathId != primec::InvalidSymbolId);
+  REQUIRE(plusQueryFacts[0]->callNameId != primec::InvalidSymbolId);
+  REQUIRE(plusQueryFacts[0]->queryTypeTextId != primec::InvalidSymbolId);
+  CHECK(plusQueryFacts[0]->scopePathId == plusQueryFacts[1]->scopePathId);
+  CHECK(plusQueryFacts[0]->callNameId == plusQueryFacts[1]->callNameId);
+  CHECK(plusQueryFacts[0]->queryTypeTextId == plusQueryFacts[1]->queryTypeTextId);
+  CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, plusQueryFacts[0]->scopePathId) ==
+        "/main");
+  CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, plusQueryFacts[0]->callNameId) ==
+        "plus");
+  CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, plusQueryFacts[0]->queryTypeTextId) ==
+        "i32");
+}
+
 TEST_CASE("semantic product publishes same-path collection bridge routing choices") {
   const std::string source =
       "[return<i32>]\n"

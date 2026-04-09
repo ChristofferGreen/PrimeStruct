@@ -195,6 +195,14 @@ struct SemanticProgramQueryFact {
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
   uint64_t provenanceHandle = 0;
+  SymbolId scopePathId = InvalidSymbolId;
+  SymbolId callNameId = InvalidSymbolId;
+  SymbolId resolvedPathId = InvalidSymbolId;
+  SymbolId queryTypeTextId = InvalidSymbolId;
+  SymbolId bindingTypeTextId = InvalidSymbolId;
+  SymbolId receiverBindingTypeTextId = InvalidSymbolId;
+  SymbolId resultValueTypeId = InvalidSymbolId;
+  SymbolId resultErrorTypeId = InvalidSymbolId;
 };
 
 struct SemanticProgramTryFact {
