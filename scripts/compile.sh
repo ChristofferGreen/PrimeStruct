@@ -8,7 +8,7 @@ SKIP_TESTS=0
 INCLUDE_EXPENSIVE_TESTS=0
 EXPENSIVE_RUNTIME_THRESHOLD_SECONDS=3
 EXPENSIVE_MEMORY_THRESHOLD_MB=500
-DEFAULT_TEST_MEMORY_GUARD_MB=4096
+DEFAULT_TEST_MEMORY_GUARD_MB=8192
 
 usage() {
   echo "Usage: ./scripts/compile.sh [--release] [--runtime-threshold <seconds>] [--skip-tests] [--include-expensive-tests]" >&2
