@@ -93,7 +93,7 @@ P3 - Interning/ID migration for hot paths
 - ◐ [P3-16] Migrate `on_error_facts` semantic-product strings to ID-backed internal storage with unchanged dump output.
 
 P4 - Deterministic multithread compile substrate
-- ○ [P4-01] Write a semantics multithread design note for phase boundaries, immutable shared state, and thread-local mutable state.
+- ◐ [P4-01] Write a semantics multithread design note for phase boundaries, immutable shared state, and thread-local mutable state.
 - ○ [P4-02] Write deterministic ordering rules for per-worker interner merge (tie-breaks, stable keys, collision handling).
 - ○ [P4-03] Implement two-worker interner merge helper with deterministic ID assignment.
 - ○ [P4-04] Add two-worker interner merge determinism regression tests.

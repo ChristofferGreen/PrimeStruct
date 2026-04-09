@@ -1,5 +1,9 @@
 # Multithreaded Semantics Pass Investigation
 
+Note: this investigation doc is now historical context. The canonical
+implementation baseline for Group 15 P4 starts in
+`docs/Semantics_Multithread_Design.md`.
+
 Goal: parallelize semantic validation across root functions while keeping
 diagnostics deterministic and identical to single-threaded mode.
 

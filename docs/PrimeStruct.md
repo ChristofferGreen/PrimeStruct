@@ -153,6 +153,7 @@ Planned graph invalidation contract:
   because they would otherwise consume graph state whose invalidation boundaries are undefined.
 
 Planned optional parallel-solve contract:
+- Baseline implementation design note: `docs/Semantics_Multithread_Design.md`.
 - Parallel solve is an optimization of the established single-threaded graph resolver, not a second semantic model.
 - The single-threaded path remains the source of truth for:
   - node creation order
