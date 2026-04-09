@@ -97,7 +97,7 @@ P4 - Deterministic multithread compile substrate
 - ◐ [P4-02] Write deterministic ordering rules for per-worker interner merge (tie-breaks, stable keys, collision handling).
 - ◐ [P4-03] Implement two-worker interner merge helper with deterministic ID assignment.
 - ◐ [P4-04] Add two-worker interner merge determinism regression tests.
-- ○ [P4-05] Extend interner merge helper from 2 workers to N workers while preserving deterministic IDs.
+- ◐ [P4-05] Extend interner merge helper from 2 workers to N workers while preserving deterministic IDs.
 - ○ [P4-06] Add N-worker interner merge determinism regression tests.
 - ○ [P4-07] Extract read-only definition index/prepass (symbols + resolved declarations) with no validator-state mutation.
 - ○ [P4-08] Route single-thread definition validation through the read-only prepass and add parity tests.

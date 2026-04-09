@@ -232,4 +232,47 @@ TEST_CASE("symbol interner two-worker merge tie-breaks equal worker ids lexicogr
   CHECK(remapLexHigh[1] == 2);
 }
 
+TEST_CASE("symbol interner N-worker merge preserves canonical first-seen ordering") {
+  primec::SymbolInterner workerA;
+  CHECK(workerA.intern("/std/math/c") == 1);
+  CHECK(workerA.intern("/std/math/a") == 2);
+
+  primec::SymbolInterner workerB;
+  CHECK(workerB.intern("/std/math/b") == 1);
+  CHECK(workerB.intern("/std/math/c") == 2);
+
+  primec::SymbolInterner workerC;
+  CHECK(workerC.intern("/std/math/d") == 1);
+  CHECK(workerC.intern("/std/math/a") == 2);
+
+  const primec::WorkerSymbolInternerSnapshot snapshotA = workerA.snapshotForWorker(3);
+  const primec::WorkerSymbolInternerSnapshot snapshotB = workerB.snapshotForWorker(1);
+  const primec::WorkerSymbolInternerSnapshot snapshotC = workerC.snapshotForWorker(2);
+
+  const primec::SymbolInterner merged = primec::SymbolInterner::mergeWorkerSnapshotsDeterministic(
+      {snapshotA, snapshotC, snapshotB});
+
+  const std::vector<std::string> expectedSymbols = {
+      "/std/math/b", "/std/math/c", "/std/math/d", "/std/math/a"};
+  CHECK(resolveSymbolTable(merged) == expectedSymbols);
+
+  const std::vector<primec::SymbolId> remapA =
+      primec::SymbolInterner::remapLocalIdsToMerged(snapshotA, merged);
+  REQUIRE(remapA.size() == 2);
+  CHECK(remapA[0] == 2);
+  CHECK(remapA[1] == 4);
+
+  const std::vector<primec::SymbolId> remapB =
+      primec::SymbolInterner::remapLocalIdsToMerged(snapshotB, merged);
+  REQUIRE(remapB.size() == 2);
+  CHECK(remapB[0] == 1);
+  CHECK(remapB[1] == 2);
+
+  const std::vector<primec::SymbolId> remapC =
+      primec::SymbolInterner::remapLocalIdsToMerged(snapshotC, merged);
+  REQUIRE(remapC.size() == 2);
+  CHECK(remapC[0] == 3);
+  CHECK(remapC[1] == 4);
+}
+
 TEST_SUITE_END();

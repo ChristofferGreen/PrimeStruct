@@ -1,10 +1,68 @@
 #include "primec/SymbolInterner.h"
 
 #include <algorithm>
-#include <array>
 #include <limits>
 
 namespace primec {
+
+namespace {
+
+bool snapshot_order_less(const WorkerSymbolInternerSnapshot *left,
+                         const WorkerSymbolInternerSnapshot *right) {
+  if (left->workerId != right->workerId) {
+    return left->workerId < right->workerId;
+  }
+  return left->symbolsByLocalId < right->symbolsByLocalId;
+}
+
+SymbolInterner merge_snapshots_deterministic(
+    std::vector<const WorkerSymbolInternerSnapshot *> snapshots) {
+  std::sort(snapshots.begin(), snapshots.end(), snapshot_order_less);
+
+  struct FirstSeen {
+    std::size_t snapshotRank = 0;
+    std::size_t localIndex = 0;
+  };
+  std::unordered_map<std::string, FirstSeen> firstSeenByText;
+  for (std::size_t snapshotRank = 0; snapshotRank < snapshots.size(); ++snapshotRank) {
+    const auto &symbols = snapshots[snapshotRank]->symbolsByLocalId;
+    for (std::size_t localIndex = 0; localIndex < symbols.size(); ++localIndex) {
+      const std::string &symbol = symbols[localIndex];
+      if (firstSeenByText.find(symbol) == firstSeenByText.end()) {
+        firstSeenByText.emplace(symbol, FirstSeen{snapshotRank, localIndex});
+      }
+    }
+  }
+
+  struct MergeCandidate {
+    std::string text;
+    std::size_t snapshotRank = 0;
+    std::size_t localIndex = 0;
+  };
+  std::vector<MergeCandidate> candidates;
+  candidates.reserve(firstSeenByText.size());
+  for (const auto &[text, seen] : firstSeenByText) {
+    candidates.push_back(MergeCandidate{text, seen.snapshotRank, seen.localIndex});
+  }
+  std::sort(candidates.begin(), candidates.end(), [](const MergeCandidate &left,
+                                                     const MergeCandidate &right) {
+    if (left.snapshotRank != right.snapshotRank) {
+      return left.snapshotRank < right.snapshotRank;
+    }
+    if (left.localIndex != right.localIndex) {
+      return left.localIndex < right.localIndex;
+    }
+    return left.text < right.text;
+  });
+
+  SymbolInterner merged;
+  for (const auto &candidate : candidates) {
+    (void)merged.intern(candidate.text);
+  }
+  return merged;
+}
+
+} // namespace
 
 std::size_t SymbolInterner::StringViewHash::operator()(std::string_view value) const noexcept {
   return std::hash<std::string_view>{}(value);
@@ -97,79 +155,17 @@ WorkerSymbolInternerSnapshot SymbolInterner::snapshotForWorker(uint32_t workerId
 
 SymbolInterner SymbolInterner::mergeTwoWorkerSnapshotsDeterministic(
     const WorkerSymbolInternerSnapshot &first, const WorkerSymbolInternerSnapshot &second) {
-  std::array<const WorkerSymbolInternerSnapshot *, 2> ordered = {&first, &second};
-  std::sort(ordered.begin(), ordered.end(), [](const WorkerSymbolInternerSnapshot *left,
-                                               const WorkerSymbolInternerSnapshot *right) {
-    if (left->workerId != right->workerId) {
-      return left->workerId < right->workerId;
-    }
-    return left->symbolsByLocalId < right->symbolsByLocalId;
-  });
-
-  struct FirstSeen {
-    std::size_t snapshotRank = 0;
-    std::size_t localIndex = 0;
-  };
-  std::unordered_map<std::string, FirstSeen> firstSeenByText;
-  for (std::size_t snapshotRank = 0; snapshotRank < ordered.size(); ++snapshotRank) {
-    const auto &symbols = ordered[snapshotRank]->symbolsByLocalId;
-    for (std::size_t localIndex = 0; localIndex < symbols.size(); ++localIndex) {
-      const std::string &symbol = symbols[localIndex];
-      if (firstSeenByText.find(symbol) == firstSeenByText.end()) {
-        firstSeenByText.emplace(symbol, FirstSeen{snapshotRank, localIndex});
-      }
-    }
-  }
-
-  struct MergeCandidate {
-    std::string text;
-    std::size_t snapshotRank = 0;
-    std::size_t localIndex = 0;
-  };
-  std::vector<MergeCandidate> candidates;
-  candidates.reserve(firstSeenByText.size());
-  for (const auto &[text, seen] : firstSeenByText) {
-    candidates.push_back(MergeCandidate{text, seen.snapshotRank, seen.localIndex});
-  }
-  std::sort(candidates.begin(), candidates.end(), [](const MergeCandidate &left,
-                                                     const MergeCandidate &right) {
-    if (left.snapshotRank != right.snapshotRank) {
-      return left.snapshotRank < right.snapshotRank;
-    }
-    if (left.localIndex != right.localIndex) {
-      return left.localIndex < right.localIndex;
-    }
-    return left.text < right.text;
-  });
-
-  SymbolInterner merged;
-  for (const auto &candidate : candidates) {
-    (void)merged.intern(candidate.text);
-  }
-  return merged;
+  return merge_snapshots_deterministic({&first, &second});
 }
 
 SymbolInterner SymbolInterner::mergeWorkerSnapshotsDeterministic(
     std::vector<WorkerSymbolInternerSnapshot> snapshots) {
-  if (snapshots.size() == 2) {
-    return mergeTwoWorkerSnapshotsDeterministic(snapshots[0], snapshots[1]);
-  }
-
-  std::sort(snapshots.begin(), snapshots.end(), [](const WorkerSymbolInternerSnapshot &left,
-                                                   const WorkerSymbolInternerSnapshot &right) {
-    if (left.workerId != right.workerId) {
-      return left.workerId < right.workerId;
-    }
-    return left.symbolsByLocalId < right.symbolsByLocalId;
-  });
-
-  SymbolInterner merged;
+  std::vector<const WorkerSymbolInternerSnapshot *> snapshotPtrs;
+  snapshotPtrs.reserve(snapshots.size());
   for (const WorkerSymbolInternerSnapshot &snapshot : snapshots) {
-    for (const std::string &symbol : snapshot.symbolsByLocalId) {
-      (void)merged.intern(symbol);
-    }
+    snapshotPtrs.push_back(&snapshot);
   }
-  return merged;
+  return merge_snapshots_deterministic(std::move(snapshotPtrs));
 }
 
 std::vector<SymbolId> SymbolInterner::remapLocalIdsToMerged(

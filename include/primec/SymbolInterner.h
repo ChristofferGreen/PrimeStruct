@@ -45,8 +45,8 @@ public:
   static SymbolInterner
   mergeWorkerSnapshotsDeterministic(std::vector<WorkerSymbolInternerSnapshot> snapshots);
 
-  // Deterministic two-worker merge helper used as the first multithread merge
-  // implementation slice. Assignment is independent of argument order.
+  // Deterministic two-worker merge helper that uses the shared merge policy.
+  // Assignment is independent of argument order.
   static SymbolInterner
   mergeTwoWorkerSnapshotsDeterministic(const WorkerSymbolInternerSnapshot &first,
                                        const WorkerSymbolInternerSnapshot &second);
