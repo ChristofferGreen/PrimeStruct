@@ -464,22 +464,27 @@ SemanticProgram buildSemanticProgram(const Program &program,
     const auto returnFacts = validator.returnFactSnapshotForSemanticProduct();
     semanticProgram.returnFacts.reserve(returnFacts.size());
     for (const auto &snapshotEntry : returnFacts) {
-      semanticProgram.returnFacts.push_back(SemanticProgramReturnFact{
-          snapshotEntry.definitionPath,
-          semantics::returnKindSnapshotName(snapshotEntry.kind),
-          snapshotEntry.structPath,
-          bindingTypeTextForSemanticProduct(snapshotEntry.binding),
-          snapshotEntry.binding.isMutable,
-          snapshotEntry.binding.isEntryArgString,
-          snapshotEntry.binding.isUnsafeReference,
-          snapshotEntry.binding.referenceRoot,
-          snapshotEntry.sourceLine,
-          snapshotEntry.sourceColumn,
-          snapshotEntry.semanticNodeId,
-          semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId),
-      });
-      const auto &entry = semanticProgram.returnFacts.back();
-      ensureModuleResolvedArtifacts(entry.definitionPath).returnFacts.push_back(entry);
+      SemanticProgramReturnFact entry;
+      entry.definitionPath = snapshotEntry.definitionPath;
+      entry.returnKind = semantics::returnKindSnapshotName(snapshotEntry.kind);
+      entry.structPath = snapshotEntry.structPath;
+      entry.bindingTypeText = bindingTypeTextForSemanticProduct(snapshotEntry.binding);
+      entry.isMutable = snapshotEntry.binding.isMutable;
+      entry.isEntryArgString = snapshotEntry.binding.isEntryArgString;
+      entry.isUnsafeReference = snapshotEntry.binding.isUnsafeReference;
+      entry.referenceRoot = snapshotEntry.binding.referenceRoot;
+      entry.sourceLine = snapshotEntry.sourceLine;
+      entry.sourceColumn = snapshotEntry.sourceColumn;
+      entry.semanticNodeId = snapshotEntry.semanticNodeId;
+      entry.provenanceHandle = semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId);
+      entry.definitionPathId = semanticProgramInternCallTargetString(semanticProgram, entry.definitionPath);
+      entry.returnKindId = semanticProgramInternCallTargetString(semanticProgram, entry.returnKind);
+      entry.structPathId = semanticProgramInternCallTargetString(semanticProgram, entry.structPath);
+      entry.bindingTypeTextId = semanticProgramInternCallTargetString(semanticProgram, entry.bindingTypeText);
+      entry.referenceRootId = semanticProgramInternCallTargetString(semanticProgram, entry.referenceRoot);
+      semanticProgram.returnFacts.push_back(std::move(entry));
+      const auto &storedEntry = semanticProgram.returnFacts.back();
+      ensureModuleResolvedArtifacts(storedEntry.definitionPath).returnFacts.push_back(storedEntry);
     }
   }
   if (isCollectorEnabled("local_auto_facts")) {

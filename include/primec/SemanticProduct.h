@@ -164,6 +164,11 @@ struct SemanticProgramReturnFact {
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
   uint64_t provenanceHandle = 0;
+  SymbolId definitionPathId = InvalidSymbolId;
+  SymbolId returnKindId = InvalidSymbolId;
+  SymbolId structPathId = InvalidSymbolId;
+  SymbolId bindingTypeTextId = InvalidSymbolId;
+  SymbolId referenceRootId = InvalidSymbolId;
 };
 
 struct SemanticProgramLocalAutoFact {

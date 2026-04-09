@@ -526,17 +526,36 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
   const auto returnFacts = semanticProgramReturnFactView(semanticProgram);
   for (size_t i = 0; i < returnFacts.size(); ++i) {
     const auto &entry = *returnFacts[i];
+    const std::string_view definitionPath =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.definitionPathId);
+    const std::string_view returnKind =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.returnKindId);
+    const std::string_view structPath =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.structPathId);
+    const std::string_view bindingTypeText =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.bindingTypeTextId);
+    const std::string_view referenceRoot =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.referenceRootId);
     appendSemanticIndexedLine(out,
                               "return_facts",
                               i,
-                              "definition_path=" + quoteSemanticString(entry.definitionPath) + " return_kind=" +
-                                  quoteSemanticString(entry.returnKind) + " struct_path=" +
-                                  quoteSemanticString(entry.structPath) + " binding_type_text=" +
-                                  quoteSemanticString(entry.bindingTypeText) + " is_mutable=" +
+                              "definition_path=" +
+                                  quoteSemanticString(definitionPath.empty() ? entry.definitionPath
+                                                                             : definitionPath) +
+                                  " return_kind=" +
+                                  quoteSemanticString(returnKind.empty() ? entry.returnKind : returnKind) +
+                                  " struct_path=" +
+                                  quoteSemanticString(structPath.empty() ? entry.structPath : structPath) +
+                                  " binding_type_text=" +
+                                  quoteSemanticString(bindingTypeText.empty() ? entry.bindingTypeText
+                                                                              : bindingTypeText) +
+                                  " is_mutable=" +
                                   formatSemanticBool(entry.isMutable) + " is_entry_arg_string=" +
                                   formatSemanticBool(entry.isEntryArgString) + " is_unsafe_reference=" +
                                   formatSemanticBool(entry.isUnsafeReference) + " reference_root=" +
-                                  quoteSemanticString(entry.referenceRoot) + " provenance_handle=" +
+                                  quoteSemanticString(referenceRoot.empty() ? entry.referenceRoot
+                                                                            : referenceRoot) +
+                                  " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
