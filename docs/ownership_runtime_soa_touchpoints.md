@@ -379,6 +379,15 @@ Semantics-layer pending fallback diagnostics:
   - `src/semantics/SemanticsValidatorStatementReturns.cpp`
   - `src/semantics/SemanticsValidatorInferDefinition.cpp`
   - `src/semantics/TemplateMonomorphImplicitTemplateInference.h`
+  - Borrowed-view `ref` pending fallback gating now checks visibility of either
+    same-path `/soa_vector/ref` or canonical
+    `/std/collections/soa_vector/ref` helper surfaces before emitting pending
+    diagnostics, so canonical-only import surfaces no longer trip compiler-owned
+    pending fallbacks (`src/semantics/SemanticsValidatorBuildInitializerInference.cpp`,
+    `src/semantics/SemanticsValidatorExprMethodCompatibilitySetup.cpp`,
+    `src/semantics/SemanticsValidatorInferLateFallbackBuiltins.cpp`,
+    `src/semantics/SemanticsValidatorInferPreDispatchCalls.cpp`, and
+    `src/semantics/TemplateMonomorphImplicitTemplateInference.h`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:

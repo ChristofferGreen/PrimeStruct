@@ -434,7 +434,7 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
   if (soaAccessHelper.has_value() && *soaAccessHelper == "ref" &&
       !candidate.args.empty() &&
       !isExperimentalSoaLikeExpr(candidate.args.front()) &&
-      !usesSamePathSoaHelperTargetForCurrentImports("ref")) {
+      !hasVisibleSoaHelperTargetForCurrentImports("ref")) {
     return std::string("/soa_vector/ref");
   }
   return std::nullopt;
@@ -464,6 +464,16 @@ bool SemanticsValidator::usesSamePathSoaHelperTargetForCurrentImports(
   const std::string samePath =
       helper == "to_aos" ? "/to_aos" : "/soa_vector/" + helper;
   return preferredSoaHelperTargetForCurrentImports(helperName) == samePath;
+}
+
+bool SemanticsValidator::hasVisibleSoaHelperTargetForCurrentImports(
+    std::string_view helperName) const {
+  const std::string helper(helperName);
+  const std::string samePath =
+      helper == "to_aos" ? "/to_aos" : "/soa_vector/" + helper;
+  const std::string canonicalPath = "/std/collections/soa_vector/" + helper;
+  return hasVisibleDefinitionPathForCurrentImports(samePath) ||
+         hasVisibleDefinitionPathForCurrentImports(canonicalPath);
 }
 
 std::string SemanticsValidator::preferredSoaHelperTargetForCollectionType(

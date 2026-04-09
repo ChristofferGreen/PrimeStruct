@@ -141,7 +141,7 @@ bool SemanticsValidator::prepareExprMethodCompatibilitySetup(
     }
     return soaUnavailableMethodDiagnostic(
         resolvedPath,
-        this->usesSamePathSoaHelperTargetForCurrentImports("ref"));
+        this->hasVisibleSoaHelperTargetForCurrentImports("ref"));
   };
   return true;
 }

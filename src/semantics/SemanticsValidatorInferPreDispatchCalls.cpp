@@ -542,7 +542,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
         return failInferPreDispatchDiagnostic(
             soaUnavailableMethodDiagnostic(
                 methodResolved,
-                usesSamePathSoaHelperTargetForCurrentImports("ref")));
+                hasVisibleSoaHelperTargetForCurrentImports("ref")));
       }
       ReturnKind builtinMethodKind = ReturnKind::Unknown;
       if (!hasDefinitionPath(logicalMethodResolved) &&
@@ -558,7 +558,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
         return failInferPreDispatchDiagnostic(
             soaUnavailableMethodDiagnostic(
                 methodResolved,
-                usesSamePathSoaHelperTargetForCurrentImports("ref")));
+                hasVisibleSoaHelperTargetForCurrentImports("ref")));
       }
       context.resolved = methodResolved;
       hasResolvedPath = true;

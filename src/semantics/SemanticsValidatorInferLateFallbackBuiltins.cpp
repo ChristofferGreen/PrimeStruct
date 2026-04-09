@@ -524,7 +524,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
           return failInferLateFallbackDiagnostic(
               soaUnavailableMethodDiagnostic(
                   methodResolved,
-                  usesSamePathSoaHelperTargetForCurrentImports("ref")));
+                  hasVisibleSoaHelperTargetForCurrentImports("ref")));
         }
         return finish(ReturnKind::Unknown);
       }
