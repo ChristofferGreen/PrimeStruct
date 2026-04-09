@@ -408,6 +408,14 @@ Semantics-layer pending fallback diagnostics:
     for those old-surface call forms
     (`src/semantics/SemanticsValidatorExprCountCapacityMapBuiltins.cpp` and
     `src/semantics/SemanticsValidatorExprMapSoaBuiltins.cpp`).
+  - SoA field-helper-versus-field-view fallback probes in initializer and
+    method target inference now key off visible same-path or canonical stdlib
+    helper targets (instead of same-path-only `/soa_vector/<helper>` lookup),
+    so canonical helper imports no longer mis-route those probes into
+    field-view pending fallback diagnostics
+    (`src/semantics/SemanticsValidatorBuildInitializerInference.cpp`,
+    `src/semantics/SemanticsValidatorInferMethodResolution.cpp`, and
+    `src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:

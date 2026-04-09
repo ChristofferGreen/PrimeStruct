@@ -2137,9 +2137,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           if (!stmt.isBinding || isStaticBinding(stmt) || stmt.name != normalizedMethodName) {
             continue;
           }
-          const std::string helperPath = "/soa_vector/" + normalizedMethodName;
-          if (defMap_.count(helperPath) > 0) {
-            resolvedOut = helperPath;
+          if (hasVisibleSoaHelperTargetForCurrentImports(normalizedMethodName)) {
+            resolvedOut =
+                preferredSoaHelperTargetForCurrentImports(normalizedMethodName);
             isBuiltinOut = false;
           } else {
             resolvedOut = soaFieldViewHelperPath(normalizedMethodName);

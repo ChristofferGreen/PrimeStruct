@@ -320,8 +320,7 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
     return false;
   }
 
-  if (hasVisibleDefinitionPathForCurrentImports(
-          "/soa_vector/" + std::string(normalizedName))) {
+  if (hasVisibleSoaHelperTargetForCurrentImports(normalizedName)) {
     return false;
   }
 

@@ -259,9 +259,9 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       if (!stmt.isBinding || isStaticBinding || stmt.name != normalizedMethodName) {
         continue;
       }
-      const std::string helperPath = "/soa_vector/" + normalizedMethodName;
-      if (defMap_.count(helperPath) > 0) {
-        resolvedOut = helperPath;
+      if (hasVisibleSoaHelperTargetForCurrentImports(normalizedMethodName)) {
+        resolvedOut =
+            preferredSoaHelperTargetForCurrentImports(normalizedMethodName);
       } else {
         resolvedOut = soaFieldViewHelperPath(normalizedMethodName);
       }
