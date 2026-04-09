@@ -9,6 +9,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Group 15 - Semantic memory footprint and multithread compile substrate**
 - ✓ [P5-05] Defined per-fixture RSS/time regression budgets (tolerance + sustained-window rule) in a checked-in benchmark policy note. Completed: the checked-in policy note now documents strict `(fixture, phase)` budget coverage expectations and the budget checker now fails when reports emit tuples without matching policy entries, with regression-harness coverage locking that behavior.
+- ✓ [P4-13] Added single-thread vs multithread equivalence tests for diagnostics ordering and semantic-product output. Completed: compile-pipeline `/std/math/*` worker-count equivalence coverage now asserts worker `1` and worker `4` produce identical semantic-product dump output and identical diagnostic message ordering on the same stress fixtures.
 
 **Todo Cleanup (April 9, 2026)**
 

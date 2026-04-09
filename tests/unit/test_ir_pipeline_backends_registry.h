@@ -2074,6 +2074,73 @@ TEST_CASE("compile pipeline benchmark worker-count stress keeps /std/math/* sema
   CHECK(firstRun.directCallTargetCount == secondRun.directCallTargetCount);
 }
 
+TEST_CASE("compile pipeline benchmark worker-count equivalence keeps /std/math/* semantic-product output stable between 1 and 4 workers") {
+  constexpr std::size_t localDefinitionCount = 64;
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << buildMathStressSemanticSource(localDefinitionCount);
+  }
+
+  struct StressSnapshot {
+    std::string dumpOutput;
+    std::size_t definitionCount = 0;
+    std::size_t callableSummaryCount = 0;
+    std::size_t directCallTargetCount = 0;
+  };
+
+  const auto runWithWorkerCount = [&](int workerCount) {
+    primec::Options options;
+    options.inputPath = tempPath.string();
+    options.entryPath = "/main";
+    options.emitKind = "native";
+    options.dumpStage = "semantic-product";
+    options.collectDiagnostics = true;
+    options.benchmarkSemanticDefinitionValidationWorkerCount = workerCount;
+    primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+    primec::CompilePipelineOutput output;
+    primec::CompilePipelineDiagnosticInfo diagnosticInfo;
+    primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+    std::string error;
+    const bool ok = primec::runCompilePipeline(options, output, errorStage, error, &diagnosticInfo);
+
+    REQUIRE(ok);
+    CHECK(error.empty());
+    CHECK(errorStage == primec::CompilePipelineErrorStage::None);
+    CHECK_FALSE(output.hasFailure);
+    CHECK(output.semanticProductRequested);
+    CHECK(output.semanticProductBuilt);
+    REQUIRE(output.hasSemanticProgram);
+    REQUIRE(output.hasDumpOutput);
+    CHECK(std::find(output.program.imports.begin(),
+                    output.program.imports.end(),
+                    "/std/math/*") != output.program.imports.end());
+    CHECK(output.program.definitions.size() >= localDefinitionCount + 1);
+    CHECK(output.semanticProgram.callableSummaries.size() >= localDefinitionCount + 1);
+    CHECK(output.semanticProgram.directCallTargets.size() >= localDefinitionCount);
+
+    StressSnapshot snapshot;
+    snapshot.dumpOutput = output.dumpOutput;
+    snapshot.definitionCount = output.program.definitions.size();
+    snapshot.callableSummaryCount = output.semanticProgram.callableSummaries.size();
+    snapshot.directCallTargetCount = output.semanticProgram.directCallTargets.size();
+    return snapshot;
+  };
+
+  const StressSnapshot singleWorker = runWithWorkerCount(1);
+  const StressSnapshot fourWorkers = runWithWorkerCount(4);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  CHECK(singleWorker.dumpOutput == fourWorkers.dumpOutput);
+  CHECK(singleWorker.definitionCount == fourWorkers.definitionCount);
+  CHECK(singleWorker.callableSummaryCount == fourWorkers.callableSummaryCount);
+  CHECK(singleWorker.directCallTargetCount == fourWorkers.directCallTargetCount);
+}
+
 TEST_CASE("compile pipeline benchmark worker-count stress keeps /std/math/* diagnostics deterministic") {
   constexpr std::size_t localDefinitionCount = 64;
   const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
@@ -2116,6 +2183,50 @@ TEST_CASE("compile pipeline benchmark worker-count stress keeps /std/math/* diag
 
   CHECK(firstRunMessages == secondRunMessages);
   CHECK(firstRunMessages.size() >= 2);
+}
+
+TEST_CASE("compile pipeline benchmark worker-count equivalence keeps /std/math/* diagnostics stable between 1 and 4 workers") {
+  constexpr std::size_t localDefinitionCount = 64;
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << buildMathStressDiagnosticSource(localDefinitionCount);
+  }
+
+  const auto runWithWorkerCount = [&](int workerCount) {
+    primec::Options options;
+    options.inputPath = tempPath.string();
+    options.entryPath = "/main";
+    options.emitKind = "native";
+    options.collectDiagnostics = true;
+    options.benchmarkSemanticDefinitionValidationWorkerCount = workerCount;
+    primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+    primec::CompilePipelineOutput output;
+    primec::CompilePipelineDiagnosticInfo diagnosticInfo;
+    primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+    std::string error;
+    const bool ok = primec::runCompilePipeline(options, output, errorStage, error, &diagnosticInfo);
+
+    CHECK_FALSE(ok);
+    CHECK(errorStage == primec::CompilePipelineErrorStage::Semantic);
+    REQUIRE(output.hasFailure);
+    CHECK(output.failure.stage == primec::CompilePipelineErrorStage::Semantic);
+    CHECK(output.failure.message == error);
+    CHECK_FALSE(output.failure.diagnosticInfo.records.empty());
+    CHECK_FALSE(diagnosticInfo.records.empty());
+    return compileDiagnosticMessages(output.failure.diagnosticInfo);
+  };
+
+  const std::vector<std::string> singleWorkerMessages = runWithWorkerCount(1);
+  const std::vector<std::string> fourWorkerMessages = runWithWorkerCount(4);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  CHECK(singleWorkerMessages == fourWorkerMessages);
+  CHECK(singleWorkerMessages.size() >= 2);
 }
 
 TEST_CASE("cli driver maps ir preparation failures through backend diagnostics") {
