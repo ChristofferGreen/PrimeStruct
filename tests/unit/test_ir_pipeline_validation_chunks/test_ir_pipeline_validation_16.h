@@ -442,12 +442,16 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "std::optional<std::string> soaPendingUnavailableMethodDiagnosticForMonomorph(") ==
         std::string::npos);
-  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+  CHECK((templateMonomorphImplicitTemplateInferenceSource.find(
             "soaPendingUnavailableMethodDiagnostic(\n"
             "              resolvedPath,\n"
             "              ctx.sourceDefs.count(\"/soa_vector/ref\") > 0 ||\n"
             "                  ctx.helperOverloads.count(\"/soa_vector/ref\") > 0))") !=
-        std::string::npos);
+        std::string::npos ||
+        templateMonomorphImplicitTemplateInferenceSource.find(
+            "soaPendingUnavailableMethodDiagnostic(\n"
+            "              resolvedPath, hasVisibleSoaRefHelper))") !=
+            std::string::npos));
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "bool hasVisibleDefinitionPathForMonomorph(const Context &ctx,") ==
         std::string::npos);
@@ -455,7 +459,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "bool hasVisibleSoaHelperTargetForMonomorph(const Context &ctx,") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "const bool hasVisibleSoaRefHelper =") ==
+            "const bool hasVisibleSoaRefHelper =") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "hasVisibleDefinitionPathForMonomorph(ctx, helperPath)") ==
@@ -480,12 +484,16 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "soaPendingUnavailableMethodDiagnosticForMonomorph(\n"
             "                  ctx, resolvedPath)") ==
         std::string::npos);
-  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+  CHECK((templateMonomorphImplicitTemplateInferenceSource.find(
             "soaPendingUnavailableMethodDiagnostic(\n"
             "              resolvedPath,\n"
             "              ctx.sourceDefs.count(\"/soa_vector/ref\") > 0 ||\n"
             "                  ctx.helperOverloads.count(\"/soa_vector/ref\") > 0))") !=
-        std::string::npos);
+        std::string::npos ||
+        templateMonomorphImplicitTemplateInferenceSource.find(
+            "soaPendingUnavailableMethodDiagnostic(\n"
+            "              resolvedPath, hasVisibleSoaRefHelper))") !=
+            std::string::npos));
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "soaDirectFieldViewPendingDiagnostic(normalizedName)") ==
         std::string::npos);

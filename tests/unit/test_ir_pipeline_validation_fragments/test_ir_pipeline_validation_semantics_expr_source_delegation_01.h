@@ -299,11 +299,16 @@
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "rememberedMethodTargetTraceFailure = std::move(message);") !=
         std::string::npos);
-  CHECK(semanticsExprMethodCompatibilitySetupSource.find(
+  CHECK((semanticsExprMethodCompatibilitySetupSource.find(
             "return soaUnavailableMethodDiagnostic(\n"
             "        resolvedPath,\n"
             "        this->usesSamePathSoaHelperTargetForCurrentImports(\"ref\"));") !=
-        std::string::npos);
+        std::string::npos ||
+        semanticsExprMethodCompatibilitySetupSource.find(
+            "return soaUnavailableMethodDiagnostic(\n"
+            "        resolvedPath,\n"
+            "        this->hasVisibleSoaHelperTargetForCurrentImports(\"ref\"));") !=
+            std::string::npos));
   CHECK(semanticsExprSource.find(
             "prepareExprCollectionDispatchSetup(\n"
             "            params,\n"

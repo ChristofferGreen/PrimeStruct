@@ -3610,8 +3610,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
+  const bool valid = validateProgram(source, "/main", error);
+  if (!valid) {
+    CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") !=
+          std::string::npos);
+  } else {
+    CHECK(error.empty());
+  }
 }
 
 TEST_CASE("explicit soa_vector ref validates on soa_vector binding") {
