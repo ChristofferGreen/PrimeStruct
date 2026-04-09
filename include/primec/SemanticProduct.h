@@ -92,6 +92,14 @@ struct SemanticProgramCallableSummary {
   std::size_t onErrorBoundArgCount = 0;
   uint64_t semanticNodeId = 0;
   uint64_t provenanceHandle = 0;
+  SymbolId fullPathId = InvalidSymbolId;
+  SymbolId returnKindId = InvalidSymbolId;
+  std::vector<SymbolId> activeEffectIds = {};
+  std::vector<SymbolId> activeCapabilityIds = {};
+  SymbolId resultValueTypeId = InvalidSymbolId;
+  SymbolId resultErrorTypeId = InvalidSymbolId;
+  SymbolId onErrorHandlerPathId = InvalidSymbolId;
+  SymbolId onErrorErrorTypeId = InvalidSymbolId;
 };
 
 struct SemanticProgramTypeMetadata {

@@ -126,6 +126,27 @@ std::string_view semanticProgramResolveCallTargetString(const SemanticProgram &s
   return semanticProgram.callTargetStringTable[id - 1];
 }
 
+std::string formatSemanticStringListFromIds(const SemanticProgram &semanticProgram,
+                                            const std::vector<SymbolId> &ids,
+                                            const std::vector<std::string> &fallbackValues) {
+  if (ids.empty()) {
+    return formatSemanticStringList(fallbackValues);
+  }
+  std::vector<std::string> resolvedValues;
+  resolvedValues.reserve(ids.size());
+  for (std::size_t i = 0; i < ids.size(); ++i) {
+    const std::string_view resolved = semanticProgramResolveCallTargetString(semanticProgram, ids[i]);
+    if (!resolved.empty()) {
+      resolvedValues.emplace_back(resolved);
+    } else if (i < fallbackValues.size()) {
+      resolvedValues.push_back(fallbackValues[i]);
+    } else {
+      resolvedValues.emplace_back();
+    }
+  }
+  return formatSemanticStringList(resolvedValues);
+}
+
 std::vector<const SemanticProgramDirectCallTarget *>
 semanticProgramDirectCallTargetView(const SemanticProgram &semanticProgram) {
   std::vector<const SemanticProgramDirectCallTarget *> entries;
@@ -383,23 +404,54 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
   const auto callableSummaries = semanticProgramCallableSummaryView(semanticProgram);
   for (size_t i = 0; i < callableSummaries.size(); ++i) {
     const auto &entry = *callableSummaries[i];
+    const std::string_view fullPath =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.fullPathId);
+    const std::string_view returnKind =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.returnKindId);
+    const std::string formattedActiveEffects =
+        formatSemanticStringListFromIds(semanticProgram, entry.activeEffectIds, entry.activeEffects);
+    const std::string formattedActiveCapabilities =
+        formatSemanticStringListFromIds(semanticProgram, entry.activeCapabilityIds, entry.activeCapabilities);
+    const std::string_view resultValueType =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.resultValueTypeId);
+    const std::string_view resultErrorType =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.resultErrorTypeId);
+    const std::string_view onErrorHandlerPath =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.onErrorHandlerPathId);
+    const std::string_view onErrorErrorType =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.onErrorErrorTypeId);
     appendSemanticIndexedLine(out,
                               "callable_summaries",
                               i,
-                              "full_path=" + quoteSemanticString(entry.fullPath) + " is_execution=" +
+                              "full_path=" +
+                                  quoteSemanticString(fullPath.empty() ? entry.fullPath : fullPath) +
+                                  " is_execution=" +
                                   formatSemanticBool(entry.isExecution) + " return_kind=" +
-                                  quoteSemanticString(entry.returnKind) + " is_compute=" +
+                                  quoteSemanticString(returnKind.empty() ? entry.returnKind : returnKind) +
+                                  " is_compute=" +
                                   formatSemanticBool(entry.isCompute) + " is_unsafe=" +
                                   formatSemanticBool(entry.isUnsafe) + " active_effects=" +
-                                  formatSemanticStringList(entry.activeEffects) + " active_capabilities=" +
-                                  formatSemanticStringList(entry.activeCapabilities) + " has_result_type=" +
+                                  formattedActiveEffects + " active_capabilities=" +
+                                  formattedActiveCapabilities + " has_result_type=" +
                                   formatSemanticBool(entry.hasResultType) + " result_type_has_value=" +
                                   formatSemanticBool(entry.resultTypeHasValue) + " result_value_type=" +
-                                  quoteSemanticString(entry.resultValueType) + " result_error_type=" +
-                                  quoteSemanticString(entry.resultErrorType) + " has_on_error=" +
+                                  quoteSemanticString(resultValueType.empty()
+                                                          ? entry.resultValueType
+                                                          : resultValueType) +
+                                  " result_error_type=" +
+                                  quoteSemanticString(resultErrorType.empty()
+                                                          ? entry.resultErrorType
+                                                          : resultErrorType) +
+                                  " has_on_error=" +
                                   formatSemanticBool(entry.hasOnError) + " on_error_handler_path=" +
-                                  quoteSemanticString(entry.onErrorHandlerPath) + " on_error_error_type=" +
-                                  quoteSemanticString(entry.onErrorErrorType) + " on_error_bound_arg_count=" +
+                                  quoteSemanticString(onErrorHandlerPath.empty()
+                                                          ? entry.onErrorHandlerPath
+                                                          : onErrorHandlerPath) +
+                                  " on_error_error_type=" +
+                                  quoteSemanticString(onErrorErrorType.empty()
+                                                          ? entry.onErrorErrorType
+                                                          : onErrorErrorType) +
+                                  " on_error_bound_arg_count=" +
                                   std::to_string(entry.onErrorBoundArgCount) + " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle));
   }

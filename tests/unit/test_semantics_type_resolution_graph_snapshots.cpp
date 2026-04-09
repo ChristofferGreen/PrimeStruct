@@ -1080,6 +1080,48 @@ TEST_CASE("semantic product publishes callable effect and capability summaries")
   CHECK(summaryEntry->hasOnError);
   CHECK(summaryEntry->onErrorHandlerPath == "/unexpectedError");
   CHECK(summaryEntry->onErrorErrorType == "MyError");
+  REQUIRE(summaryEntry->fullPathId != primec::InvalidSymbolId);
+  REQUIRE(summaryEntry->returnKindId != primec::InvalidSymbolId);
+  CHECK(summaryEntry->activeEffectIds.size() == summaryEntry->activeEffects.size());
+  CHECK(summaryEntry->activeCapabilityIds.size() == summaryEntry->activeCapabilities.size());
+  CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, summaryEntry->fullPathId) == "/main");
+  CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, summaryEntry->returnKindId) ==
+        summaryEntry->returnKind);
+  CHECK(primec::semanticProgramResolveCallTargetString(
+            semanticProgram, summaryEntry->onErrorHandlerPathId) == "/unexpectedError");
+}
+
+TEST_CASE("semantic product callable summaries reuse interned return kind ids") {
+  const std::string source =
+      "[return<i32>]\n"
+      "helper() {\n"
+      "  return(1i32)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  return(helper())\n"
+      "}\n";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto summaries = primec::semanticProgramCallableSummaryView(semanticProgram);
+  const auto *helperSummary = findSemanticEntry(
+      summaries, [](const primec::SemanticProgramCallableSummary &entry) { return entry.fullPath == "/helper"; });
+  const auto *mainSummary = findSemanticEntry(
+      summaries, [](const primec::SemanticProgramCallableSummary &entry) { return entry.fullPath == "/main"; });
+  REQUIRE(helperSummary != nullptr);
+  REQUIRE(mainSummary != nullptr);
+  REQUIRE(helperSummary->returnKindId != primec::InvalidSymbolId);
+  REQUIRE(mainSummary->returnKindId != primec::InvalidSymbolId);
+  CHECK(helperSummary->returnKindId == mainSummary->returnKindId);
+  CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, helperSummary->returnKindId) == "i32");
 }
 
 TEST_CASE("semantic product publishes struct and enum metadata") {

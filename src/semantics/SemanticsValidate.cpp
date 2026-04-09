@@ -352,27 +352,45 @@ SemanticProgram buildSemanticProgram(const Program &program,
     const auto callableSummaries = validator.callableSummarySnapshotForSemanticProduct();
     semanticProgram.callableSummaries.reserve(callableSummaries.size());
     for (const auto &snapshotEntry : callableSummaries) {
-      semanticProgram.callableSummaries.push_back(SemanticProgramCallableSummary{
-          snapshotEntry.fullPath,
-          snapshotEntry.isExecution,
-          semantics::returnKindSnapshotName(snapshotEntry.returnKind),
-          snapshotEntry.isCompute,
-          snapshotEntry.isUnsafe,
-          snapshotEntry.activeEffects,
-          snapshotEntry.activeCapabilities,
-          snapshotEntry.hasResultType,
-          snapshotEntry.resultTypeHasValue,
-          snapshotEntry.resultValueType,
-          snapshotEntry.resultErrorType,
-          snapshotEntry.hasOnError,
-          snapshotEntry.onErrorHandlerPath,
-          snapshotEntry.onErrorErrorType,
-          snapshotEntry.onErrorBoundArgCount,
-          snapshotEntry.semanticNodeId,
-          semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId),
-      });
-      const auto &entry = semanticProgram.callableSummaries.back();
-      ensureModuleResolvedArtifacts(entry.fullPath).callableSummaries.push_back(entry);
+      SemanticProgramCallableSummary entry;
+      entry.fullPath = snapshotEntry.fullPath;
+      entry.isExecution = snapshotEntry.isExecution;
+      entry.returnKind = semantics::returnKindSnapshotName(snapshotEntry.returnKind);
+      entry.isCompute = snapshotEntry.isCompute;
+      entry.isUnsafe = snapshotEntry.isUnsafe;
+      entry.activeEffects = snapshotEntry.activeEffects;
+      entry.activeCapabilities = snapshotEntry.activeCapabilities;
+      entry.hasResultType = snapshotEntry.hasResultType;
+      entry.resultTypeHasValue = snapshotEntry.resultTypeHasValue;
+      entry.resultValueType = snapshotEntry.resultValueType;
+      entry.resultErrorType = snapshotEntry.resultErrorType;
+      entry.hasOnError = snapshotEntry.hasOnError;
+      entry.onErrorHandlerPath = snapshotEntry.onErrorHandlerPath;
+      entry.onErrorErrorType = snapshotEntry.onErrorErrorType;
+      entry.onErrorBoundArgCount = snapshotEntry.onErrorBoundArgCount;
+      entry.semanticNodeId = snapshotEntry.semanticNodeId;
+      entry.provenanceHandle = semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId);
+      entry.fullPathId = semanticProgramInternCallTargetString(semanticProgram, entry.fullPath);
+      entry.returnKindId = semanticProgramInternCallTargetString(semanticProgram, entry.returnKind);
+      entry.activeEffectIds.reserve(entry.activeEffects.size());
+      for (const auto &activeEffect : entry.activeEffects) {
+        entry.activeEffectIds.push_back(
+            semanticProgramInternCallTargetString(semanticProgram, activeEffect));
+      }
+      entry.activeCapabilityIds.reserve(entry.activeCapabilities.size());
+      for (const auto &activeCapability : entry.activeCapabilities) {
+        entry.activeCapabilityIds.push_back(
+            semanticProgramInternCallTargetString(semanticProgram, activeCapability));
+      }
+      entry.resultValueTypeId = semanticProgramInternCallTargetString(semanticProgram, entry.resultValueType);
+      entry.resultErrorTypeId = semanticProgramInternCallTargetString(semanticProgram, entry.resultErrorType);
+      entry.onErrorHandlerPathId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.onErrorHandlerPath);
+      entry.onErrorErrorTypeId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.onErrorErrorType);
+      semanticProgram.callableSummaries.push_back(std::move(entry));
+      const auto &storedEntry = semanticProgram.callableSummaries.back();
+      ensureModuleResolvedArtifacts(storedEntry.fullPath).callableSummaries.push_back(storedEntry);
     }
   }
   if (isCollectorEnabled("type_metadata")) {
