@@ -88,4 +88,58 @@ TEST_CASE("symbol interner repeat runs keep identical single-thread ids") {
   }
 }
 
+TEST_CASE("symbol interner worker snapshot keeps local id order") {
+  primec::SymbolInterner interner;
+  CHECK(interner.intern("/worker/a") == 1);
+  CHECK(interner.intern("/worker/b") == 2);
+  CHECK(interner.intern("/worker/a") == 1);
+  CHECK(interner.intern("/worker/c") == 3);
+
+  const primec::WorkerSymbolInternerSnapshot snapshot = interner.snapshotForWorker(7);
+  CHECK(snapshot.workerId == 7);
+  REQUIRE(snapshot.symbolsByLocalId.size() == 3);
+  CHECK(snapshot.symbolsByLocalId[0] == "/worker/a");
+  CHECK(snapshot.symbolsByLocalId[1] == "/worker/b");
+  CHECK(snapshot.symbolsByLocalId[2] == "/worker/c");
+}
+
+TEST_CASE("symbol interner deterministic merge hook is input-order independent") {
+  primec::SymbolInterner workerA;
+  CHECK(workerA.intern("/std/math/vec2") == 1);
+  CHECK(workerA.intern("/std/math/mat2") == 2);
+
+  primec::SymbolInterner workerB;
+  CHECK(workerB.intern("/std/math/mat2") == 1);
+  CHECK(workerB.intern("/std/math/quat") == 2);
+
+  const primec::WorkerSymbolInternerSnapshot snapshotA = workerA.snapshotForWorker(2);
+  const primec::WorkerSymbolInternerSnapshot snapshotB = workerB.snapshotForWorker(1);
+
+  const primec::SymbolInterner mergedAB = primec::SymbolInterner::mergeWorkerSnapshotsDeterministic(
+      {snapshotA, snapshotB});
+  const primec::SymbolInterner mergedBA = primec::SymbolInterner::mergeWorkerSnapshotsDeterministic(
+      {snapshotB, snapshotA});
+
+  REQUIRE(mergedAB.size() == mergedBA.size());
+  for (std::size_t i = 0; i < mergedAB.size(); ++i) {
+    const primec::SymbolId id = static_cast<primec::SymbolId>(i + 1);
+    CHECK(mergedAB.resolve(id) == mergedBA.resolve(id));
+  }
+  CHECK(mergedAB.resolve(1) == "/std/math/mat2");
+  CHECK(mergedAB.resolve(2) == "/std/math/quat");
+  CHECK(mergedAB.resolve(3) == "/std/math/vec2");
+
+  const std::vector<primec::SymbolId> workerBToMerged =
+      primec::SymbolInterner::remapLocalIdsToMerged(snapshotB, mergedAB);
+  REQUIRE(workerBToMerged.size() == 2);
+  CHECK(workerBToMerged[0] == 1);
+  CHECK(workerBToMerged[1] == 2);
+
+  const std::vector<primec::SymbolId> workerAToMerged =
+      primec::SymbolInterner::remapLocalIdsToMerged(snapshotA, mergedAB);
+  REQUIRE(workerAToMerged.size() == 2);
+  CHECK(workerAToMerged[0] == 3);
+  CHECK(workerAToMerged[1] == 1);
+}
+
 TEST_SUITE_END();

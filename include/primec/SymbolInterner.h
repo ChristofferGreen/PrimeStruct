@@ -7,11 +7,19 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <vector>
 
 namespace primec {
 
 using SymbolId = uint32_t;
 constexpr SymbolId InvalidSymbolId = 0;
+
+// Immutable transfer object for crossing worker boundaries.
+// symbolsByLocalId[i] corresponds to worker-local SymbolId i+1.
+struct WorkerSymbolInternerSnapshot {
+  uint32_t workerId = 0;
+  std::vector<std::string> symbolsByLocalId;
+};
 
 class SymbolInterner {
 public:
@@ -28,6 +36,20 @@ public:
   std::size_t size() const noexcept;
   bool empty() const noexcept;
   void clear();
+
+  // Captures worker-local symbols in deterministic local-id order.
+  WorkerSymbolInternerSnapshot snapshotForWorker(uint32_t workerId) const;
+
+  // Deterministic merge hook for worker-local snapshots.
+  // Snapshots are sorted by workerId, then lexicographically by symbolsByLocalId.
+  static SymbolInterner
+  mergeWorkerSnapshotsDeterministic(std::vector<WorkerSymbolInternerSnapshot> snapshots);
+
+  // Maps worker-local SymbolIds to merged SymbolIds by local-id order.
+  // Missing symbols map to InvalidSymbolId.
+  static std::vector<SymbolId>
+  remapLocalIdsToMerged(const WorkerSymbolInternerSnapshot &snapshot,
+                        const SymbolInterner &merged);
 
 private:
   struct StringViewHash {

@@ -1,5 +1,6 @@
 #include "primec/SymbolInterner.h"
 
+#include <algorithm>
 #include <limits>
 
 namespace primec {
@@ -81,6 +82,46 @@ bool SymbolInterner::empty() const noexcept {
 void SymbolInterner::clear() {
   idsByText_.clear();
   storage_.clear();
+}
+
+WorkerSymbolInternerSnapshot SymbolInterner::snapshotForWorker(uint32_t workerId) const {
+  WorkerSymbolInternerSnapshot snapshot;
+  snapshot.workerId = workerId;
+  snapshot.symbolsByLocalId.reserve(storage_.size());
+  for (const std::string &symbol : storage_) {
+    snapshot.symbolsByLocalId.push_back(symbol);
+  }
+  return snapshot;
+}
+
+SymbolInterner SymbolInterner::mergeWorkerSnapshotsDeterministic(
+    std::vector<WorkerSymbolInternerSnapshot> snapshots) {
+  std::sort(snapshots.begin(), snapshots.end(), [](const WorkerSymbolInternerSnapshot &left,
+                                                   const WorkerSymbolInternerSnapshot &right) {
+    if (left.workerId != right.workerId) {
+      return left.workerId < right.workerId;
+    }
+    return left.symbolsByLocalId < right.symbolsByLocalId;
+  });
+
+  SymbolInterner merged;
+  for (const WorkerSymbolInternerSnapshot &snapshot : snapshots) {
+    for (const std::string &symbol : snapshot.symbolsByLocalId) {
+      (void)merged.intern(symbol);
+    }
+  }
+  return merged;
+}
+
+std::vector<SymbolId> SymbolInterner::remapLocalIdsToMerged(
+    const WorkerSymbolInternerSnapshot &snapshot, const SymbolInterner &merged) {
+  std::vector<SymbolId> mergedIdsByLocalId;
+  mergedIdsByLocalId.reserve(snapshot.symbolsByLocalId.size());
+  for (const std::string &symbol : snapshot.symbolsByLocalId) {
+    const std::optional<SymbolId> mergedId = merged.lookup(symbol);
+    mergedIdsByLocalId.push_back(mergedId.value_or(InvalidSymbolId));
+  }
+  return mergedIdsByLocalId;
 }
 
 } // namespace primec
