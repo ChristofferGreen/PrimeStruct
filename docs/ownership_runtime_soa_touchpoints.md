@@ -431,6 +431,13 @@ Semantics-layer pending fallback diagnostics:
     `/soa_vector/*` and experimental helper-module definitions), so the
     compatibility rewrite pass no longer traverses canonical stdlib helper
     bodies as fallback candidates (`src/semantics/SemanticsValidate.cpp`).
+  - Experimental SoA `to_aos` method rewrite helper-target selection now
+    detects visible root `/to_aos` and canonical
+    `/std/collections/soa_vector/to_aos` surfaces (definitions/imports,
+    including specialized defs) before falling back to
+    `/std/collections/experimental_soa_vector_conversions/soaVectorToAos`, so
+    canonical helper visibility no longer routes this rewrite family through
+    the experimental fallback path (`src/semantics/SemanticsValidate.cpp`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:

@@ -2809,7 +2809,8 @@ void rewriteExperimentalSoaToAosMethodExpr(
     const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace,
-    bool hasVisibleToAosHelper);
+    bool hasVisibleRootToAosHelper,
+    bool hasVisibleCanonicalToAosHelper);
 
 std::vector<std::string> candidatePathsForExprCall(
     const Expr &callExpr,
@@ -3015,7 +3016,8 @@ void rewriteExperimentalSoaToAosMethodStatements(
     const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace,
-    bool hasVisibleToAosHelper) {
+    bool hasVisibleRootToAosHelper,
+    bool hasVisibleCanonicalToAosHelper) {
   for (Expr &stmt : statements) {
     rewriteExperimentalSoaToAosMethodExpr(
         stmt,
@@ -3023,7 +3025,8 @@ void rewriteExperimentalSoaToAosMethodStatements(
         soaVectorReturnDefinitions,
         structPaths,
         definitionNamespace,
-        hasVisibleToAosHelper);
+        hasVisibleRootToAosHelper,
+        hasVisibleCanonicalToAosHelper);
     if (!stmt.bodyArguments.empty()) {
       auto bodyBindings = bindings;
       rewriteExperimentalSoaToAosMethodStatements(
@@ -3032,7 +3035,8 @@ void rewriteExperimentalSoaToAosMethodStatements(
           soaVectorReturnDefinitions,
           structPaths,
           definitionNamespace,
-          hasVisibleToAosHelper);
+          hasVisibleRootToAosHelper,
+          hasVisibleCanonicalToAosHelper);
     }
     if (stmt.isBinding) {
       if (auto binding = extractParsedOrExperimentalSoaBindingInfo(stmt, &structPaths); binding.has_value()) {
@@ -3048,7 +3052,8 @@ void rewriteExperimentalSoaToAosMethodExpr(
     const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace,
-    bool hasVisibleToAosHelper) {
+    bool hasVisibleRootToAosHelper,
+    bool hasVisibleCanonicalToAosHelper) {
   for (Expr &arg : expr.args) {
     rewriteExperimentalSoaToAosMethodExpr(
         arg,
@@ -3056,7 +3061,8 @@ void rewriteExperimentalSoaToAosMethodExpr(
         soaVectorReturnDefinitions,
         structPaths,
         definitionNamespace,
-        hasVisibleToAosHelper);
+        hasVisibleRootToAosHelper,
+        hasVisibleCanonicalToAosHelper);
   }
   if (expr.kind != Expr::Kind::Call || !expr.isMethodCall || expr.args.empty() ||
       expr.args.front().kind == Expr::Kind::Literal) {
@@ -3104,10 +3110,20 @@ void rewriteExperimentalSoaToAosMethodExpr(
     return;
   }
 
-  if (hasVisibleToAosHelper) {
+  if (hasVisibleRootToAosHelper) {
     expr.isMethodCall = false;
     expr.isFieldAccess = false;
     expr.name = "/to_aos";
+    expr.namespacePrefix.clear();
+    if (canonicalReceiverExpr.has_value()) {
+      expr.args.front() = *canonicalReceiverExpr;
+    }
+    return;
+  }
+  if (hasVisibleCanonicalToAosHelper) {
+    expr.isMethodCall = false;
+    expr.isFieldAccess = false;
+    expr.name = "/std/collections/soa_vector/to_aos";
     expr.namespacePrefix.clear();
     if (canonicalReceiverExpr.has_value()) {
       expr.args.front() = *canonicalReceiverExpr;
@@ -3128,7 +3144,8 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
   error.clear();
   std::unordered_map<std::string, semantics::BindingInfo> soaVectorReturnDefinitions;
   std::unordered_set<std::string> structPaths;
-  bool hasVisibleToAosHelper = false;
+  bool hasVisibleRootToAosHelper = false;
+  bool hasVisibleCanonicalToAosHelper = false;
   for (const Definition &def : program.definitions) {
     if (auto binding = extractExperimentalSoaVectorOrBorrowedReturnBinding(def);
         binding.has_value()) {
@@ -3141,16 +3158,28 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
     if (isStructLikeDefinition(def)) {
       structPaths.insert(def.fullPath);
     }
-    if (def.fullPath == "/to_aos") {
-      hasVisibleToAosHelper = true;
+    if (def.fullPath == "/to_aos" ||
+        def.fullPath.rfind("/to_aos__", 0) == 0) {
+      hasVisibleRootToAosHelper = true;
+    }
+    if (def.fullPath == "/std/collections/soa_vector/to_aos" ||
+        def.fullPath.rfind("/std/collections/soa_vector/to_aos__", 0) == 0) {
+      hasVisibleCanonicalToAosHelper = true;
     }
   }
-  if (!hasVisibleToAosHelper) {
-    for (const auto &importPath : program.imports) {
-      if (importPath == "/to_aos" || importPath == "to_aos") {
-        hasVisibleToAosHelper = true;
-        break;
-      }
+  const auto &importPaths =
+      program.sourceImports.empty() ? program.imports : program.sourceImports;
+  for (const auto &importPath : importPaths) {
+    if (importPath == "to_aos" ||
+        localImportPathCoversTarget(importPath, "/to_aos")) {
+      hasVisibleRootToAosHelper = true;
+    }
+    if (localImportPathCoversTarget(
+            importPath, "/std/collections/soa_vector/to_aos")) {
+      hasVisibleCanonicalToAosHelper = true;
+    }
+    if (hasVisibleRootToAosHelper && hasVisibleCanonicalToAosHelper) {
+      break;
     }
   }
   for (Definition &def : program.definitions) {
@@ -3171,7 +3200,8 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
         soaVectorReturnDefinitions,
         structPaths,
         definitionNamespace,
-        hasVisibleToAosHelper);
+        hasVisibleRootToAosHelper,
+        hasVisibleCanonicalToAosHelper);
     if (def.returnExpr.has_value()) {
       auto returnBindings = bindings;
       for (const Expr &stmt : def.statements) {
@@ -3185,7 +3215,8 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
           soaVectorReturnDefinitions,
           structPaths,
           definitionNamespace,
-          hasVisibleToAosHelper);
+          hasVisibleRootToAosHelper,
+          hasVisibleCanonicalToAosHelper);
     }
   }
   return true;
