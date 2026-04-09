@@ -586,6 +586,13 @@ Semantics-layer pending fallback diagnostics:
     helper call shapes no longer fall back to compiler-owned old-surface-only
     deferral during standalone return-escape borrowed-reference checks
     (`src/semantics/SemanticsValidatorStatementReturns.cpp`).
+  - Template-monomorph SoA synthetic helper template-carry clearing now treats
+    canonical `/std/collections/soa_vector/*` helper paths as equivalent to
+    old-surface `/soa_vector/*` paths in vector-receiver fallback guards, so
+    canonical helper selection no longer falls back to compiler-owned
+    old-surface-only template-carry clearing behavior during expression-rewrite
+    path retargeting
+    (`src/semantics/TemplateMonomorphExpressionRewrite.h`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:

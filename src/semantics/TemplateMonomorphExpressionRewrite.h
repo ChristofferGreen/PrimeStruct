@@ -110,8 +110,13 @@ bool rewriteExpr(Expr &expr,
   auto isSyntheticSamePathSoaHelperTemplateCarryPath = [](const std::string &path) {
     return path == "/soa_vector/count" || path == "/soa_vector/get" ||
            path == "/soa_vector/ref" || path == "/soa_vector/ref_ref" ||
-           path == "/soa_vector/push" ||
-           path == "/soa_vector/reserve";
+           path == "/soa_vector/push" || path == "/soa_vector/reserve" ||
+           path == "/std/collections/soa_vector/count" ||
+           path == "/std/collections/soa_vector/get" ||
+           path == "/std/collections/soa_vector/ref" ||
+           path == "/std/collections/soa_vector/ref_ref" ||
+           path == "/std/collections/soa_vector/push" ||
+           path == "/std/collections/soa_vector/reserve";
   };
   auto mapHelperReceiverExpr = [&](const Expr &candidate) -> const Expr * {
     if (candidate.isMethodCall) {
@@ -810,8 +815,13 @@ bool rewriteExpr(Expr &expr,
            !resolvedReceiverExpr->isBinding) ||
          ((resolvedPath == "/soa_vector/count" || resolvedPath == "/soa_vector/get" ||
            resolvedPath == "/soa_vector/ref" || resolvedPath == "/soa_vector/ref_ref" ||
-           resolvedPath == "/soa_vector/push" ||
-           resolvedPath == "/soa_vector/reserve") &&
+           resolvedPath == "/soa_vector/push" || resolvedPath == "/soa_vector/reserve" ||
+           resolvedPath == "/std/collections/soa_vector/count" ||
+           resolvedPath == "/std/collections/soa_vector/get" ||
+           resolvedPath == "/std/collections/soa_vector/ref" ||
+           resolvedPath == "/std/collections/soa_vector/ref_ref" ||
+           resolvedPath == "/std/collections/soa_vector/push" ||
+           resolvedPath == "/std/collections/soa_vector/reserve") &&
           resolvedReceiverFamily == "vector"));
     if (isSyntheticSamePathSoaHelperTemplateCarry) {
       expr.templateArgs.clear();
@@ -1054,8 +1064,13 @@ bool rewriteExpr(Expr &expr,
             !resolvedReceiverExpr->isBinding) ||
            ((methodPath == "/soa_vector/count" || methodPath == "/soa_vector/get" ||
              methodPath == "/soa_vector/ref" || methodPath == "/soa_vector/ref_ref" ||
-             methodPath == "/soa_vector/push" ||
-             methodPath == "/soa_vector/reserve") &&
+             methodPath == "/soa_vector/push" || methodPath == "/soa_vector/reserve" ||
+             methodPath == "/std/collections/soa_vector/count" ||
+             methodPath == "/std/collections/soa_vector/get" ||
+             methodPath == "/std/collections/soa_vector/ref" ||
+             methodPath == "/std/collections/soa_vector/ref_ref" ||
+             methodPath == "/std/collections/soa_vector/push" ||
+             methodPath == "/std/collections/soa_vector/reserve") &&
             resolvedReceiverFamily == "vector"));
       if (isSyntheticSamePathSoaHelperTemplateCarry) {
         expr.templateArgs.clear();
