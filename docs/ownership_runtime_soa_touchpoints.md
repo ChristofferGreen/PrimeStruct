@@ -416,6 +416,11 @@ Semantics-layer pending fallback diagnostics:
     (`src/semantics/SemanticsValidatorBuildInitializerInference.cpp`,
     `src/semantics/SemanticsValidatorInferMethodResolution.cpp`, and
     `src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp`).
+  - SoA field-view rewrite visibility collection now includes canonical
+    `/std/collections/soa_vector/*` helpers and aliases them onto
+    `/soa_vector/*` lookup keys, so canonical helper imports no longer trip
+    same-path-only fallback rewrites in both field-view rewrite passes
+    (`src/semantics/SemanticsValidate.cpp`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:

@@ -4065,6 +4065,11 @@ bool rewriteExperimentalSoaFieldViewIndexes(Program &program, std::string &error
   for (const Definition &def : program.definitions) {
     if (def.fullPath.rfind("/soa_vector/", 0) == 0) {
       visibleSoaFieldHelpers.insert(def.fullPath);
+    } else if (def.fullPath.rfind("/std/collections/soa_vector/", 0) == 0) {
+      visibleSoaFieldHelpers.insert(def.fullPath);
+      const std::string helperSuffix =
+          def.fullPath.substr(std::string("/std/collections/soa_vector/").size());
+      visibleSoaFieldHelpers.insert("/soa_vector/" + helperSuffix);
     }
     if (auto binding = extractExperimentalSoaVectorOrBorrowedReturnBinding(def);
         binding.has_value()) {
@@ -4438,6 +4443,11 @@ bool rewriteExperimentalSoaFieldViewHelpers(Program &program, std::string &error
   for (const Definition &def : program.definitions) {
     if (def.fullPath.rfind("/soa_vector/", 0) == 0) {
       visibleSoaFieldHelpers.insert(def.fullPath);
+    } else if (def.fullPath.rfind("/std/collections/soa_vector/", 0) == 0) {
+      visibleSoaFieldHelpers.insert(def.fullPath);
+      const std::string helperSuffix =
+          def.fullPath.substr(std::string("/std/collections/soa_vector/").size());
+      visibleSoaFieldHelpers.insert("/soa_vector/" + helperSuffix);
     }
     if (auto binding = extractExperimentalSoaVectorOrBorrowedReturnBinding(def);
         binding.has_value()) {
