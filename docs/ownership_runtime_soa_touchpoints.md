@@ -571,6 +571,15 @@ Semantics-layer pending fallback diagnostics:
     compiler-owned `to_aos`-only root-helper rewrite selection during
     expression-rewrite target retargeting
     (`src/semantics/TemplateMonomorphExpressionRewrite.h`).
+  - SoA access/count fallback call-shape deferral now treats canonical
+    `/std/collections/soa_vector/*` helper call shapes as equivalent to
+    old-surface `/soa_vector/*` shapes in late builtin fallback deferral and
+    return-type fallback gating (`count`/`get`/`ref`/`ref_ref`), so canonical
+    helper call shapes no longer fall back to compiler-owned old-surface-only
+    deferral paths
+    (`src/semantics/SemanticsValidatorExprCountCapacityMapBuiltins.cpp`,
+    `src/semantics/SemanticsValidatorExprMapSoaBuiltins.cpp`, and
+    `src/semantics/SemanticsValidatorInferCollectionReturnInference.cpp`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:

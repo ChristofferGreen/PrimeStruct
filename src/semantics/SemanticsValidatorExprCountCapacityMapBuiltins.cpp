@@ -241,7 +241,8 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
         const bool oldSurfaceCallShape =
             isSimpleCallName(expr, "count") ||
             (expr.isMethodCall && expr.name == "count") ||
-            logicalResolvedMethod == "/soa_vector/count";
+            logicalResolvedMethod == "/soa_vector/count" ||
+            logicalResolvedMethod == "/std/collections/soa_vector/count";
         if (oldSurfaceCallShape &&
             hasVisibleSoaHelperTargetForCurrentImports("count")) {
           handledOut = false;

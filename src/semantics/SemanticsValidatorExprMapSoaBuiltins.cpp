@@ -431,15 +431,18 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
         (helperName == "get" &&
          (isSimpleCallName(expr, "get") ||
           (expr.isMethodCall && expr.name == "get") ||
-          resolved == "/soa_vector/get")) ||
+          resolved == "/soa_vector/get" ||
+          resolved == "/std/collections/soa_vector/get")) ||
         (helperName == "ref" &&
          (isSimpleCallName(expr, "ref") ||
           (expr.isMethodCall && expr.name == "ref") ||
-          resolved == "/soa_vector/ref")) ||
+          resolved == "/soa_vector/ref" ||
+          resolved == "/std/collections/soa_vector/ref")) ||
         (helperName == "ref_ref" &&
          (isSimpleCallName(expr, "ref_ref") ||
           (expr.isMethodCall && expr.name == "ref_ref") ||
-          resolved == "/soa_vector/ref_ref"));
+          resolved == "/soa_vector/ref_ref" ||
+          resolved == "/std/collections/soa_vector/ref_ref"));
     if (!this->resolveSoaVectorOrExperimentalBorrowedReceiver(
             expr.args.front(),
             params,
