@@ -175,7 +175,7 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
     return isLegacyCountLikeBuiltinCall("capacity");
   };
   auto isLegacySoaAccessBuiltinCall = [&]() {
-    if (!(expr.name == "get" || expr.name == "ref")) {
+    if (!(expr.name == "get" || expr.name == "ref" || expr.name == "ref_ref")) {
       return false;
     }
     if (defMap_.find(resolved) == defMap_.end() && !expr.args.empty()) {

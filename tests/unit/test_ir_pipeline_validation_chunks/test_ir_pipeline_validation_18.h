@@ -235,16 +235,24 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = \"/soa_vector/ref\";") ==
         std::string::npos);
-  CHECK(semanticsInferMethodResolutionSource.find(
+  CHECK((semanticsInferMethodResolutionSource.find(
             "\"ref\",\n"
             "          collectionTypePath == \"/soa_vector\" ? \"/soa_vector\" : \"/vector\");") !=
-        std::string::npos);
+         std::string::npos ||
+         semanticsInferMethodResolutionSource.find(
+             "normalizedMethodName,\n"
+             "          collectionTypePath == \"/soa_vector\" ? \"/soa_vector\" : \"/vector\");") !=
+             std::string::npos));
   CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = \"/to_aos\";") ==
         std::string::npos);
-  CHECK(semanticsInferMethodResolutionSource.find(
+  CHECK((semanticsInferMethodResolutionSource.find(
             "\"to_aos\",\n"
             "          collectionTypePath == \"/soa_vector\" ? \"/soa_vector\" : \"/vector\");") !=
-        std::string::npos);
+         std::string::npos ||
+         semanticsInferMethodResolutionSource.find(
+             "normalizedMethodName,\n"
+             "          collectionTypePath == \"/soa_vector\" ? \"/soa_vector\" : \"/vector\");") !=
+             std::string::npos));
   CHECK(semanticsInferSource.find("auto extractWrappedPointeeType = [&](const std::string &typeText, std::string &pointeeTypeOut) -> bool {") ==
         std::string::npos);
   CHECK(semanticsInferSource.find("auto extractCollectionElementType = [&](const std::string &typeText,") ==

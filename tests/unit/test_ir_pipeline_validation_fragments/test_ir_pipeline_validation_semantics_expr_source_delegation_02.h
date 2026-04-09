@@ -151,10 +151,14 @@
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "preferredSoaHelperTargetForCollectionType(") != std::string::npos);
-  CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "\"ref\", \"/soa_vector\"") != std::string::npos);
-  CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "\"to_aos\", \"/vector\"") != std::string::npos);
+  CHECK((semanticsExprMethodTargetResolutionSource.find(
+            "\"ref\", \"/soa_vector\"") != std::string::npos ||
+         semanticsExprMethodTargetResolutionSource.find(
+             "normalizedMethodName, \"/soa_vector\"") != std::string::npos));
+  CHECK((semanticsExprMethodTargetResolutionSource.find(
+            "\"to_aos\", \"/vector\"") != std::string::npos ||
+         semanticsExprMethodTargetResolutionSource.find(
+             "normalizedMethodName, \"/vector\"") != std::string::npos));
   CHECK(semanticsExprMethodTargetResolutionSource.find("setCollectionMethodTarget(\"/to_aos\")") ==
         std::string::npos);
   CHECK(semanticsExprSource.find(

@@ -683,7 +683,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(builtinPathHelpersSource.find("namespace {\n\nstd::string soaFieldViewPendingDiagnostic(") !=
         std::string::npos);
-  CHECK(builtinPathHelpersSource.find("std::string soaBorrowedViewPendingDiagnostic()") !=
+  CHECK(builtinPathHelpersSource.find(
+            "std::string soaBorrowedViewPendingDiagnostic(std::string_view helperName)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
             "std::string soaDirectFieldViewPendingDiagnostic(std::string_view fieldName)") ==
@@ -722,6 +723,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos ||
         buildInitializerInferenceSource.find(
             "!hasVisibleSoaHelperTargetForCurrentImports(\"ref\")") !=
+            std::string::npos ||
+        buildInitializerInferenceSource.find(
+            "hasVisibleSoaHelperTargetForCurrentImports(*soaAccessHelper)") !=
             std::string::npos));
   CHECK(buildInitializerInferenceSource.find(
             "hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/ref\")") ==
@@ -964,18 +968,24 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprMethodTargetResolutionSource.find(
             "usesSamePathSoaHelperTargetForCollectionType(\"get\", \"/vector\")") !=
         std::string::npos);
-  CHECK(exprMethodTargetResolutionSource.find(
+  CHECK((exprMethodTargetResolutionSource.find(
             "usesSamePathSoaHelperTargetForCollectionType(\"ref\", \"/vector\")") !=
-        std::string::npos);
+         std::string::npos ||
+         exprMethodTargetResolutionSource.find(
+             "usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, \"/vector\")") !=
+             std::string::npos));
   CHECK(inferMethodResolutionSource.find(
             "usesSamePathSoaHelperTargetForCollectionType(\"count\", \"/vector\")") !=
         std::string::npos);
   CHECK(inferMethodResolutionSource.find(
             "usesSamePathSoaHelperTargetForCollectionType(\"get\", \"/vector\")") !=
         std::string::npos);
-  CHECK(inferMethodResolutionSource.find(
+  CHECK((inferMethodResolutionSource.find(
             "usesSamePathSoaHelperTargetForCollectionType(\"ref\", \"/vector\")") !=
-        std::string::npos);
+         std::string::npos ||
+         inferMethodResolutionSource.find(
+             "usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, \"/vector\")") !=
+             std::string::npos));
   CHECK(inferDefinitionSource.find("isBuiltinSoaFieldViewExpr(") == std::string::npos);
   CHECK(inferDefinitionSource.find("isBuiltinSoaRefExpr(") == std::string::npos);
   CHECK(inferDefinitionSource.find("builtinSoaAccessHelperName(") ==

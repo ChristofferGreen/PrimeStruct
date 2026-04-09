@@ -22,7 +22,7 @@ TEST_CASE("to_soa and to_aos reject named arguments for builtin calls") {
   checkNamedArgs("packed.to_aos([values] packed)");
 }
 
-TEST_CASE("soa_vector get and ref reject named arguments for builtin calls") {
+TEST_CASE("soa_vector get, ref, and ref_ref reject named arguments for builtin calls") {
   const auto checkNamedArgs = [](const std::string &callExpr) {
     const std::string source =
         "Particle() {\n"
@@ -41,8 +41,11 @@ TEST_CASE("soa_vector get and ref reject named arguments for builtin calls") {
 
   checkNamedArgs("get([index] 0i32, [values] values)");
   checkNamedArgs("ref([index] 0i32, [values] values)");
+  checkNamedArgs("ref_ref([index] 0i32, [values] values)");
+  checkNamedArgs("values.ref_ref([index] 0i32)");
   checkNamedArgs("/soa_vector/get([index] 0i32, [values] values)");
   checkNamedArgs("/soa_vector/ref([index] 0i32, [values] values)");
+  checkNamedArgs("/soa_vector/ref_ref([index] 0i32, [values] values)");
 }
 
 TEST_CASE("soa_vector get and ref require integer indices for builtin calls") {
