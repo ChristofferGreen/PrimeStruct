@@ -580,6 +580,12 @@ Semantics-layer pending fallback diagnostics:
     (`src/semantics/SemanticsValidatorExprCountCapacityMapBuiltins.cpp`,
     `src/semantics/SemanticsValidatorExprMapSoaBuiltins.cpp`, and
     `src/semantics/SemanticsValidatorInferCollectionReturnInference.cpp`).
+  - Statement-return SoA borrowed-reference fallback call-shape deferral now
+    treats canonical `/std/collections/soa_vector/ref(_ref)` call shapes as
+    equivalent to old-surface `/soa_vector/ref(_ref)` shapes, so canonical
+    helper call shapes no longer fall back to compiler-owned old-surface-only
+    deferral during standalone return-escape borrowed-reference checks
+    (`src/semantics/SemanticsValidatorStatementReturns.cpp`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:

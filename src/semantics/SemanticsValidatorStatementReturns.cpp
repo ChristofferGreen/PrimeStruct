@@ -121,11 +121,13 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
           ((*soaAccessHelper == "ref" &&
             ((isSimpleCallName(expr, "ref")) ||
              (expr.isMethodCall && expr.name == "ref") ||
-             resolvedPath == "/soa_vector/ref")) ||
+             resolvedPath == "/soa_vector/ref" ||
+             resolvedPath == "/std/collections/soa_vector/ref")) ||
            (*soaAccessHelper == "ref_ref" &&
             ((isSimpleCallName(expr, "ref_ref")) ||
              (expr.isMethodCall && expr.name == "ref_ref") ||
-             resolvedPath == "/soa_vector/ref_ref")));
+             resolvedPath == "/soa_vector/ref_ref" ||
+             resolvedPath == "/std/collections/soa_vector/ref_ref")));
       if (oldSurfaceCallShape &&
           hasVisibleSoaHelperTargetForCurrentImports(*soaAccessHelper)) {
         return false;
