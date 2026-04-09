@@ -700,22 +700,60 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
   const auto tryFacts = semanticProgramTryFactView(semanticProgram);
   for (size_t i = 0; i < tryFacts.size(); ++i) {
     const auto &entry = *tryFacts[i];
+    const std::string_view scopePath =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId);
+    const std::string_view operandResolvedPath =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.operandResolvedPathId);
+    const std::string_view operandBindingTypeText =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.operandBindingTypeTextId);
+    const std::string_view operandReceiverBindingTypeText = semanticProgramResolveCallTargetString(
+        semanticProgram, entry.operandReceiverBindingTypeTextId);
+    const std::string_view operandQueryTypeText =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.operandQueryTypeTextId);
+    const std::string_view valueType =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.valueTypeId);
+    const std::string_view errorType =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.errorTypeId);
+    const std::string_view contextReturnKind =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.contextReturnKindId);
+    const std::string_view onErrorHandlerPath =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.onErrorHandlerPathId);
+    const std::string_view onErrorErrorType =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.onErrorErrorTypeId);
     appendSemanticIndexedLine(out,
                               "try_facts",
                               i,
-                              "scope_path=" + quoteSemanticString(entry.scopePath) + " operand_resolved_path=" +
-                                  quoteSemanticString(entry.operandResolvedPath) +
+                              "scope_path=" +
+                                  quoteSemanticString(scopePath.empty() ? entry.scopePath : scopePath) +
+                                  " operand_resolved_path=" +
+                                  quoteSemanticString(operandResolvedPath.empty() ? entry.operandResolvedPath
+                                                                                  : operandResolvedPath) +
                                   " operand_binding_type_text=" +
-                                  quoteSemanticString(entry.operandBindingTypeText) +
+                                  quoteSemanticString(operandBindingTypeText.empty()
+                                                          ? entry.operandBindingTypeText
+                                                          : operandBindingTypeText) +
                                   " operand_receiver_binding_type_text=" +
-                                  quoteSemanticString(entry.operandReceiverBindingTypeText) +
+                                  quoteSemanticString(operandReceiverBindingTypeText.empty()
+                                                          ? entry.operandReceiverBindingTypeText
+                                                          : operandReceiverBindingTypeText) +
                                   " operand_query_type_text=" +
-                                  quoteSemanticString(entry.operandQueryTypeText) + " value_type=" +
-                                  quoteSemanticString(entry.valueType) + " error_type=" +
-                                  quoteSemanticString(entry.errorType) + " context_return_kind=" +
-                                  quoteSemanticString(entry.contextReturnKind) + " on_error_handler_path=" +
-                                  quoteSemanticString(entry.onErrorHandlerPath) + " on_error_error_type=" +
-                                  quoteSemanticString(entry.onErrorErrorType) + " on_error_bound_arg_count=" +
+                                  quoteSemanticString(operandQueryTypeText.empty()
+                                                          ? entry.operandQueryTypeText
+                                                          : operandQueryTypeText) +
+                                  " value_type=" +
+                                  quoteSemanticString(valueType.empty() ? entry.valueType : valueType) +
+                                  " error_type=" +
+                                  quoteSemanticString(errorType.empty() ? entry.errorType : errorType) +
+                                  " context_return_kind=" +
+                                  quoteSemanticString(contextReturnKind.empty() ? entry.contextReturnKind
+                                                                                : contextReturnKind) +
+                                  " on_error_handler_path=" +
+                                  quoteSemanticString(onErrorHandlerPath.empty() ? entry.onErrorHandlerPath
+                                                                                 : onErrorHandlerPath) +
+                                  " on_error_error_type=" +
+                                  quoteSemanticString(onErrorErrorType.empty() ? entry.onErrorErrorType
+                                                                               : onErrorErrorType) +
+                                  " on_error_bound_arg_count=" +
                                   std::to_string(entry.onErrorBoundArgCount) + " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));

@@ -1142,6 +1142,61 @@ TEST_CASE("semantic product local auto facts carry interned text ids") {
   CHECK(firstEntry->bindingNameId != secondEntry->bindingNameId);
 }
 
+TEST_CASE("semantic product try facts carry interned text ids") {
+  const std::string source = R"(
+MyError {
+}
+
+[return<void>]
+unexpectedError([MyError] err) {
+}
+
+[return<Result<i32, MyError>>]
+lookup() {
+  return(Result.ok(4i32))
+}
+
+[return<Result<i32, MyError>> on_error<MyError, /unexpectedError>]
+main() {
+  [auto] selected{try(lookup())}
+  return(Result.ok(selected))
+}
+)";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *tryEntry = findSemanticEntry(
+      primec::semanticProgramTryFactView(semanticProgram),
+      [](const primec::SemanticProgramTryFact &entry) { return entry.scopePath == "/main"; });
+  REQUIRE(tryEntry != nullptr);
+
+  const auto checkTextId = [&](std::string_view text, primec::SymbolId id) {
+    if (text.empty()) {
+      CHECK(id == primec::InvalidSymbolId);
+    } else {
+      REQUIRE(id != primec::InvalidSymbolId);
+      CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, id) == text);
+    }
+  };
+
+  checkTextId(tryEntry->scopePath, tryEntry->scopePathId);
+  checkTextId(tryEntry->operandResolvedPath, tryEntry->operandResolvedPathId);
+  checkTextId(tryEntry->operandBindingTypeText, tryEntry->operandBindingTypeTextId);
+  checkTextId(tryEntry->operandReceiverBindingTypeText, tryEntry->operandReceiverBindingTypeTextId);
+  checkTextId(tryEntry->operandQueryTypeText, tryEntry->operandQueryTypeTextId);
+  checkTextId(tryEntry->valueType, tryEntry->valueTypeId);
+  checkTextId(tryEntry->errorType, tryEntry->errorTypeId);
+  checkTextId(tryEntry->contextReturnKind, tryEntry->contextReturnKindId);
+  checkTextId(tryEntry->onErrorHandlerPath, tryEntry->onErrorHandlerPathId);
+  checkTextId(tryEntry->onErrorErrorType, tryEntry->onErrorErrorTypeId);
+}
+
 TEST_CASE("semantic product publishes same-path collection bridge routing choices") {
   const std::string source =
       "[return<i32>]\n"
