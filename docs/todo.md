@@ -101,7 +101,7 @@ P4 - Deterministic multithread compile substrate
 - ◐ [P4-06] Add N-worker interner merge determinism regression tests.
 - ◐ [P4-07] Extract read-only definition index/prepass (symbols + resolved declarations) with no validator-state mutation.
 - ◐ [P4-08] Route single-thread definition validation through the read-only prepass and add parity tests.
-- ○ [P4-09] Implement deterministic N-way definition partitioner and standalone stability unit tests.
+- ◐ [P4-09] Implement deterministic N-way definition partitioner and standalone stability unit tests.
 - ○ [P4-10] Run two deterministic definition-validation work chunks in parallel behind a feature flag.
 - ○ [P4-11] Extend worker scheduling from two chunks to N chunks via deterministic partitioner.
 - ○ [P4-12] Add focused ordering tests that lock diagnostic and semantic-product output order under N-chunk scheduling.
