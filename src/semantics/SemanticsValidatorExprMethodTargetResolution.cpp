@@ -1751,11 +1751,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (normalizedMethodName == "to_soa" && collectionTypePath == "/vector") {
       return setCollectionMethodTarget("/to_soa");
     }
-    if (normalizedMethodName == "to_aos" &&
+    if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
         (collectionTypePath == "/soa_vector" || collectionTypePath == "/vector")) {
       return setCollectionMethodTarget(
           preferredSoaHelperTargetForCollectionType(
-              "to_aos",
+              normalizedMethodName,
               collectionTypePath == "/soa_vector" ? "/soa_vector" : "/vector"));
     }
     return false;
@@ -2113,14 +2113,14 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa_vector"));
     }
   }
-  if (normalizedMethodName == "to_aos") {
+  if (normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") {
     if (resolveVectorTarget(receiver, elemType)) {
       return setCollectionMethodTarget(
-          preferredSoaHelperTargetForCollectionType("to_aos", "/vector"));
+          preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/vector"));
     }
     if (resolveSoaVectorTarget(receiver, elemType)) {
       return setCollectionMethodTarget(
-          preferredSoaHelperTargetForCollectionType("to_aos", "/soa_vector"));
+          preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa_vector"));
     }
   }
   if (this->resolveSoaVectorOrExperimentalBorrowedReceiver(
@@ -2591,11 +2591,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   if (normalizedMethodName == "to_soa" && normalizedTypeName == "vector") {
     return setCollectionMethodTarget("/to_soa");
   }
-  if (normalizedMethodName == "to_aos" &&
+  if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
       (normalizedTypeName == "soa_vector" || normalizedTypeName == "vector")) {
     return setCollectionMethodTarget(
         preferredSoaHelperTargetForCollectionType(
-            "to_aos",
+            normalizedMethodName,
             normalizedTypeName == "soa_vector" ? "/soa_vector" : "/vector"));
   }
   if (isMapCollectionTypeName(normalizeBindingTypeName(typeName)) &&

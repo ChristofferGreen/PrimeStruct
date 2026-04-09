@@ -545,6 +545,13 @@ Semantics-layer pending fallback diagnostics:
     longer falls back to compiler-owned hardcoded `/soa_vector/to_aos_ref`
     target selection during template method-target resolution
     (`src/semantics/TemplateMonomorphMethodTargets.h`).
+  - Validator and inference SoA conversion method-target selection now
+    includes borrowed `to_aos_ref` helper-target parity across
+    collection-type-path, direct receiver, and normalized-type dispatch, so
+    canonical/same-path `to_aos_ref` visibility no longer falls back to
+    compiler-owned `to_aos`-only target selection during non-template method
+    resolution (`src/semantics/SemanticsValidatorInferMethodResolution.cpp`
+    and `src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:

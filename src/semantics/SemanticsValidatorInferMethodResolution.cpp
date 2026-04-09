@@ -207,10 +207,10 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       resolvedOut = "/to_soa";
       return true;
     }
-    if (normalizedMethodName == "to_aos" &&
+    if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
         (collectionTypePath == "/soa_vector" || collectionTypePath == "/vector")) {
       resolvedOut = preferredSoaHelperTargetForCollectionType(
-          "to_aos",
+          normalizedMethodName,
           collectionTypePath == "/soa_vector" ? "/soa_vector" : "/vector");
       return true;
     }
@@ -585,16 +585,16 @@ bool SemanticsValidator::resolveInferMethodCallPath(
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa_vector");
       return true;
     }
-    if (normalizedMethodName == "to_aos" &&
+    if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
         resolveVectorTarget(receiver, elemType)) {
       resolvedOut =
-          preferredSoaHelperTargetForCollectionType("to_aos", "/vector");
+          preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/vector");
       return true;
     }
-    if (normalizedMethodName == "to_aos" &&
+    if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
         resolveSoaVectorTarget(receiver, elemType)) {
       resolvedOut =
-          preferredSoaHelperTargetForCollectionType("to_aos", "/soa_vector");
+          preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa_vector");
       return true;
     }
     if (resolveSoaFieldViewMethodTarget(receiver)) {
