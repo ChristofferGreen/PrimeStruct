@@ -168,7 +168,9 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       } else if ((helperName == "get" || helperName == "ref") &&
                  resolveSoaVectorTarget != nullptr &&
                  resolveSoaVectorTarget(receiverCandidate, elemType)) {
-        methodResolved = "/soa_vector/" + helperName;
+        methodResolved =
+            preferredSoaHelperTargetForCollectionType(helperName,
+                                                      "/soa_vector");
       } else if (resolveStringTarget != nullptr &&
                  resolveStringTarget(receiverCandidate)) {
         methodResolved = "/string/" + helperName;

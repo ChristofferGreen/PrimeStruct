@@ -449,6 +449,12 @@ Semantics-layer pending fallback diagnostics:
     `/std/collections/soa_vector/ref_ref` rewrites no longer miss mutable
     borrowed-receiver detection during assign-target validation
     (`src/semantics/SemanticsValidatorExprMutationBorrows.cpp`).
+  - SoA late fallback return-kind helper-target selection for old-surface
+    `get`/`ref` receiver probes now resolves through visible helper targets
+    (same-path or canonical stdlib) instead of hardcoding
+    `/soa_vector/<helper>`, so canonical helper imports satisfy this fallback
+    path without relying on compiler-owned same-path assumptions
+    (`src/semantics/SemanticsValidatorInferLateFallbackBuiltins.cpp`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:
