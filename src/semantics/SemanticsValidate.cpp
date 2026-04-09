@@ -434,23 +434,30 @@ SemanticProgram buildSemanticProgram(const Program &program,
     const auto bindingFacts = validator.bindingFactSnapshotForSemanticProduct();
     semanticProgram.bindingFacts.reserve(bindingFacts.size());
     for (const auto &snapshotEntry : bindingFacts) {
-      semanticProgram.bindingFacts.push_back(SemanticProgramBindingFact{
-          snapshotEntry.scopePath,
-          snapshotEntry.siteKind,
-          snapshotEntry.name,
-          snapshotEntry.resolvedPath,
-          bindingTypeTextForSemanticProduct(snapshotEntry.binding),
-          snapshotEntry.binding.isMutable,
-          snapshotEntry.binding.isEntryArgString,
-          snapshotEntry.binding.isUnsafeReference,
-          snapshotEntry.binding.referenceRoot,
-          snapshotEntry.sourceLine,
-          snapshotEntry.sourceColumn,
-          snapshotEntry.semanticNodeId,
-          semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId),
-      });
-      const auto &entry = semanticProgram.bindingFacts.back();
-      ensureModuleResolvedArtifacts(entry.scopePath).bindingFacts.push_back(entry);
+      SemanticProgramBindingFact entry;
+      entry.scopePath = snapshotEntry.scopePath;
+      entry.siteKind = snapshotEntry.siteKind;
+      entry.name = snapshotEntry.name;
+      entry.resolvedPath = snapshotEntry.resolvedPath;
+      entry.bindingTypeText = bindingTypeTextForSemanticProduct(snapshotEntry.binding);
+      entry.isMutable = snapshotEntry.binding.isMutable;
+      entry.isEntryArgString = snapshotEntry.binding.isEntryArgString;
+      entry.isUnsafeReference = snapshotEntry.binding.isUnsafeReference;
+      entry.referenceRoot = snapshotEntry.binding.referenceRoot;
+      entry.sourceLine = snapshotEntry.sourceLine;
+      entry.sourceColumn = snapshotEntry.sourceColumn;
+      entry.semanticNodeId = snapshotEntry.semanticNodeId;
+      entry.provenanceHandle = semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId);
+      entry.scopePathId = semanticProgramInternCallTargetString(semanticProgram, entry.scopePath);
+      entry.siteKindId = semanticProgramInternCallTargetString(semanticProgram, entry.siteKind);
+      entry.nameId = semanticProgramInternCallTargetString(semanticProgram, entry.name);
+      entry.resolvedPathId = semanticProgramInternCallTargetString(semanticProgram, entry.resolvedPath);
+      entry.bindingTypeTextId =
+          semanticProgramInternCallTargetString(semanticProgram, entry.bindingTypeText);
+      entry.referenceRootId = semanticProgramInternCallTargetString(semanticProgram, entry.referenceRoot);
+      semanticProgram.bindingFacts.push_back(std::move(entry));
+      const auto &storedEntry = semanticProgram.bindingFacts.back();
+      ensureModuleResolvedArtifacts(storedEntry.scopePath).bindingFacts.push_back(storedEntry);
     }
   }
   if (isCollectorEnabled("return_facts")) {

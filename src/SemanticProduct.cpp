@@ -487,18 +487,39 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
   const auto bindingFacts = semanticProgramBindingFactView(semanticProgram);
   for (size_t i = 0; i < bindingFacts.size(); ++i) {
     const auto &entry = *bindingFacts[i];
+    const std::string_view scopePath =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId);
+    const std::string_view siteKind =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.siteKindId);
+    const std::string_view name =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.nameId);
+    const std::string_view resolvedPath =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.resolvedPathId);
+    const std::string_view bindingTypeText =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.bindingTypeTextId);
+    const std::string_view referenceRoot =
+        semanticProgramResolveCallTargetString(semanticProgram, entry.referenceRootId);
     appendSemanticIndexedLine(out,
                               "binding_facts",
                               i,
-                              "scope_path=" + quoteSemanticString(entry.scopePath) + " site_kind=" +
-                                  quoteSemanticString(entry.siteKind) + " name=" +
-                                  quoteSemanticString(entry.name) + " resolved_path=" +
-                                  quoteSemanticString(entry.resolvedPath) + " binding_type_text=" +
-                                  quoteSemanticString(entry.bindingTypeText) + " is_mutable=" +
+                              "scope_path=" +
+                                  quoteSemanticString(scopePath.empty() ? entry.scopePath : scopePath) +
+                                  " site_kind=" +
+                                  quoteSemanticString(siteKind.empty() ? entry.siteKind : siteKind) +
+                                  " name=" + quoteSemanticString(name.empty() ? entry.name : name) +
+                                  " resolved_path=" +
+                                  quoteSemanticString(resolvedPath.empty() ? entry.resolvedPath
+                                                                          : resolvedPath) +
+                                  " binding_type_text=" +
+                                  quoteSemanticString(bindingTypeText.empty()
+                                                          ? entry.bindingTypeText
+                                                          : bindingTypeText) +
+                                  " is_mutable=" +
                                   formatSemanticBool(entry.isMutable) + " is_entry_arg_string=" +
                                   formatSemanticBool(entry.isEntryArgString) + " is_unsafe_reference=" +
                                   formatSemanticBool(entry.isUnsafeReference) + " reference_root=" +
-                                  quoteSemanticString(entry.referenceRoot) + " provenance_handle=" +
+                                  quoteSemanticString(referenceRoot.empty() ? entry.referenceRoot : referenceRoot) +
+                                  " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }

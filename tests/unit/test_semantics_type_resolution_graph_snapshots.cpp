@@ -938,6 +938,63 @@ TEST_CASE("semantic product query facts carry interned text ids") {
         "i32");
 }
 
+TEST_CASE("semantic product binding facts carry interned text ids") {
+  const std::string source =
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [i32] a{1i32}\n"
+      "  [i32] b{2i32}\n"
+      "  return(plus(a, b))\n"
+      "}\n";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *aEntry = findSemanticEntry(
+      primec::semanticProgramBindingFactView(semanticProgram),
+      [](const primec::SemanticProgramBindingFact &entry) {
+        return entry.scopePath == "/main" && entry.siteKind == "local" && entry.name == "a";
+      });
+  const auto *bEntry = findSemanticEntry(
+      primec::semanticProgramBindingFactView(semanticProgram),
+      [](const primec::SemanticProgramBindingFact &entry) {
+        return entry.scopePath == "/main" && entry.siteKind == "local" && entry.name == "b";
+      });
+  REQUIRE(aEntry != nullptr);
+  REQUIRE(bEntry != nullptr);
+  REQUIRE(aEntry->scopePathId != primec::InvalidSymbolId);
+  REQUIRE(aEntry->siteKindId != primec::InvalidSymbolId);
+  REQUIRE(aEntry->nameId != primec::InvalidSymbolId);
+  REQUIRE(aEntry->bindingTypeTextId != primec::InvalidSymbolId);
+  CHECK(aEntry->referenceRootId == primec::InvalidSymbolId);
+  CHECK(aEntry->scopePathId == bEntry->scopePathId);
+  CHECK(aEntry->siteKindId == bEntry->siteKindId);
+  CHECK(aEntry->bindingTypeTextId == bEntry->bindingTypeTextId);
+  CHECK(aEntry->nameId != bEntry->nameId);
+  if (aEntry->resolvedPath.empty()) {
+    CHECK(aEntry->resolvedPathId == primec::InvalidSymbolId);
+  } else {
+    REQUIRE(aEntry->resolvedPathId != primec::InvalidSymbolId);
+    CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, aEntry->resolvedPathId) ==
+          aEntry->resolvedPath);
+  }
+  if (bEntry->resolvedPath.empty()) {
+    CHECK(bEntry->resolvedPathId == primec::InvalidSymbolId);
+  } else {
+    REQUIRE(bEntry->resolvedPathId != primec::InvalidSymbolId);
+    CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, bEntry->resolvedPathId) ==
+          bEntry->resolvedPath);
+  }
+  CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, aEntry->scopePathId) == "/main");
+  CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, aEntry->siteKindId) == "local");
+  CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, aEntry->bindingTypeTextId) == "i32");
+}
+
 TEST_CASE("semantic product publishes same-path collection bridge routing choices") {
   const std::string source =
       "[return<i32>]\n"

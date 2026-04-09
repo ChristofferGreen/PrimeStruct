@@ -86,7 +86,7 @@ P3 - Interning/ID migration for hot paths
 - ◐ [P3-09] Update migration inventory with explicit one-leaf follow-ups for each remaining fact family not yet ID-backed.
 - ◐ [P3-10] Migrate `bridge_path_choices` semantic-product strings to ID-backed internal storage with unchanged dump output.
 - ◐ [P3-11] Migrate `callable_summaries` semantic-product strings to ID-backed internal storage with unchanged dump output.
-- ○ [P3-12] Migrate `binding_facts` semantic-product strings to ID-backed internal storage with unchanged dump output.
+- ◐ [P3-12] Migrate `binding_facts` semantic-product strings to ID-backed internal storage with unchanged dump output.
 - ○ [P3-13] Migrate `return_facts` semantic-product strings to ID-backed internal storage with unchanged dump output.
 - ○ [P3-14] Migrate `local_auto_facts` semantic-product strings to ID-backed internal storage with unchanged dump output.
 - ○ [P3-15] Migrate `try_facts` semantic-product strings to ID-backed internal storage with unchanged dump output.

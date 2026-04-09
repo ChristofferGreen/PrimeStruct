@@ -143,6 +143,12 @@ struct SemanticProgramBindingFact {
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
   uint64_t provenanceHandle = 0;
+  SymbolId scopePathId = InvalidSymbolId;
+  SymbolId siteKindId = InvalidSymbolId;
+  SymbolId nameId = InvalidSymbolId;
+  SymbolId resolvedPathId = InvalidSymbolId;
+  SymbolId bindingTypeTextId = InvalidSymbolId;
+  SymbolId referenceRootId = InvalidSymbolId;
 };
 
 struct SemanticProgramReturnFact {
