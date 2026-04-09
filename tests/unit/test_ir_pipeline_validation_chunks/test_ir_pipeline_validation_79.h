@@ -529,7 +529,6 @@ TEST_CASE("ir lowerer result helpers require semantic query facts for generic ca
       "/lookup",
       "Result<i32, FileError>",
       "Result<i32, FileError>",
-      "",
       true,
       true,
       "i32",

@@ -499,13 +499,14 @@ SemanticProgram buildSemanticProgram(const Program &program,
     const auto queryFacts = validator.queryFactSnapshotForSemanticProduct();
     semanticProgram.queryFacts.reserve(queryFacts.size());
     for (const auto &snapshotEntry : queryFacts) {
+      const std::string receiverBindingTypeText =
+          bindingTypeTextForSemanticProduct(snapshotEntry.receiverBinding);
       SemanticProgramQueryFact entry;
       entry.scopePath = snapshotEntry.scopePath;
       entry.callName = snapshotEntry.callName;
       entry.resolvedPath = snapshotEntry.resolvedPath;
       entry.queryTypeText = snapshotEntry.typeText;
       entry.bindingTypeText = bindingTypeTextForSemanticProduct(snapshotEntry.binding);
-      entry.receiverBindingTypeText = bindingTypeTextForSemanticProduct(snapshotEntry.receiverBinding);
       entry.hasResultType = snapshotEntry.hasResultType;
       entry.resultTypeHasValue = snapshotEntry.resultTypeHasValue;
       entry.resultValueType = snapshotEntry.resultValueType;
@@ -520,7 +521,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.queryTypeTextId = semanticProgramInternCallTargetString(semanticProgram, entry.queryTypeText);
       entry.bindingTypeTextId = semanticProgramInternCallTargetString(semanticProgram, entry.bindingTypeText);
       entry.receiverBindingTypeTextId =
-          semanticProgramInternCallTargetString(semanticProgram, entry.receiverBindingTypeText);
+          semanticProgramInternCallTargetString(semanticProgram, receiverBindingTypeText);
       entry.resultValueTypeId = semanticProgramInternCallTargetString(semanticProgram, entry.resultValueType);
       entry.resultErrorTypeId = semanticProgramInternCallTargetString(semanticProgram, entry.resultErrorType);
       semanticProgram.queryFacts.push_back(std::move(entry));

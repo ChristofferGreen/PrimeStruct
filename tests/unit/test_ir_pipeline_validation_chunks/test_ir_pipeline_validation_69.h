@@ -672,7 +672,6 @@ TEST_CASE("ir lowerer statement binding helper uses semantic query facts for def
       "/loadValue",
       "Result<i64, ParseError>",
       "Result<i64, ParseError>",
-      "",
       true,
       true,
       "i64",

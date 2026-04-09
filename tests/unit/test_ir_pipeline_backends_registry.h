@@ -790,7 +790,6 @@ TEST_CASE("ir lowerer rejects incomplete semantic-product query facts") {
       .resolvedPath = "/lookup",
       .queryTypeText = "Result<i32, FileError>",
       .bindingTypeText = "Result<i32, FileError>",
-      .receiverBindingTypeText = "",
       .hasResultType = true,
       .resultTypeHasValue = true,
       .resultValueType = "",
@@ -799,6 +798,10 @@ TEST_CASE("ir lowerer rejects incomplete semantic-product query facts") {
       .sourceColumn = 1,
       .semanticNodeId = 83,
   });
+  primec::SemanticProgramCallableSummary callableSummary;
+  callableSummary.fullPath = "/main";
+  callableSummary.returnKind = "i32";
+  semanticProgram.callableSummaries.push_back(std::move(callableSummary));
 
   primec::IrLowerer lowerer;
   primec::IrModule module;

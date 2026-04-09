@@ -82,7 +82,7 @@ P3 - Interning/ID migration for hot paths
 - ◐ [P3-05] Migrate method-target keys from `std::string` to `SymbolId` while keeping diagnostics text unchanged.
 - ◐ [P3-06] Migrate direct/method call-target semantic-product facts to ID-backed internal storage with unchanged dump output.
 - ◐ [P3-07] Migrate one additional semantic-product fact family to ID-backed internal storage with unchanged dump output.
-- ○ [P3-08] Remove one transitional string shadow field whose owning family is fully migrated and parity-tested.
+- ◐ [P3-08] Remove one transitional string shadow field whose owning family is fully migrated and parity-tested.
 - ○ [P3-09] Update migration inventory with explicit one-leaf follow-ups for each remaining fact family not yet ID-backed.
 
 P4 - Deterministic multithread compile substrate

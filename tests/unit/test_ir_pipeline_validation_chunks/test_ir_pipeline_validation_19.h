@@ -947,7 +947,6 @@ TEST_CASE("ir lowerer semantic-product adapter joins return and inference facts 
       "/lookup",
       "Result<i32, FileError>",
       "Result<i32, FileError>",
-      "",
       true,
       true,
       "i32",

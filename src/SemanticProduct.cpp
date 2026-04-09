@@ -540,9 +540,7 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   quoteSemanticString(bindingTypeText.empty() ? entry.bindingTypeText
                                                                             : bindingTypeText) +
                                   " receiver_binding_type_text=" +
-                                  quoteSemanticString(receiverBindingTypeText.empty()
-                                                          ? entry.receiverBindingTypeText
-                                                          : receiverBindingTypeText) +
+                                  quoteSemanticString(receiverBindingTypeText) +
                                   " has_result_type=" +
                                   formatSemanticBool(entry.hasResultType) + " result_type_has_value=" +
                                   formatSemanticBool(entry.resultTypeHasValue) + " result_value_type=" +

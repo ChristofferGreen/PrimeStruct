@@ -1274,8 +1274,11 @@ main() {
         return entry.scopePath == "/main" && entry.resolvedPath == "/lookup";
       });
   REQUIRE(queryEntry != nullptr);
+  const std::string_view queryReceiverBindingTypeText =
+      primec::semanticProgramResolveCallTargetString(
+          semanticProgram, queryEntry->receiverBindingTypeTextId);
   CHECK(localAutoEntry->initializerReceiverBindingTypeText ==
-        queryEntry->receiverBindingTypeText);
+        queryReceiverBindingTypeText);
   CHECK(localAutoEntry->initializerQueryTypeText == queryEntry->queryTypeText);
   CHECK(localAutoEntry->initializerResultHasValue ==
         queryEntry->resultTypeHasValue);
@@ -2412,7 +2415,6 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       "/lookup",
       "Result<i32, MyError>",
       "Result<i32, MyError>",
-      "",
       true,
       true,
       "i32",
