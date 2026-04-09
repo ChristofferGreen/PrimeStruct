@@ -265,6 +265,10 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     pathOut = selectHelperOverloadPath(expr, preferredSoaToAosMethodTarget(), ctx);
     return true;
   }
+  if (normalizedTypeName == "soa_vector" && normalizedMethodName == "to_aos_ref") {
+    pathOut = selectHelperOverloadPath(expr, preferredSoaMethodTarget(normalizedMethodName), ctx);
+    return true;
+  }
   if (normalizedTypeName == "soa_vector" &&
       (normalizedMethodName == "push" || normalizedMethodName == "reserve")) {
     pathOut = selectHelperOverloadPath(expr, preferredSoaMethodTarget(normalizedMethodName), ctx);

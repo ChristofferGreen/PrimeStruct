@@ -539,6 +539,12 @@ Semantics-layer pending fallback diagnostics:
     `src/semantics/SemanticsValidatorInferDefinition.cpp`,
     `src/semantics/SemanticsValidatorBuildInitializerInference.cpp`, and
     `src/semantics/SemanticsBuiltinPathHelpers.cpp`).
+  - Template-monomorph SoA conversion method-target selection now includes
+    borrowed `to_aos_ref` helper-target parity for explicit `soa_vector`
+    receiver dispatch, so canonical/same-path `to_aos_ref` visibility no
+    longer falls back to compiler-owned hardcoded `/soa_vector/to_aos_ref`
+    target selection during template method-target resolution
+    (`src/semantics/TemplateMonomorphMethodTargets.h`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:
