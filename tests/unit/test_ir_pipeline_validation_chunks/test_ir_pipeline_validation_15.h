@@ -885,6 +885,14 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(inferMethodResolutionSource.find(
             "hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/ref\")") ==
         std::string::npos);
+  CHECK(inferMethodResolutionSource.find(
+            "normalizedMethodName == \"get\" || normalizedMethodName == \"get_ref\"") !=
+        std::string::npos);
+  CHECK(inferMethodResolutionSource.find("preferredBorrowedSoaAccessHelperTarget(") !=
+        std::string::npos);
+  CHECK(inferMethodResolutionSource.find(
+            "/std/collections/experimental_soa_vector/soaVectorGetRef") !=
+        std::string::npos);
   CHECK(inferMethodResolutionSource.find("hasVisibleSoaHelperTargetForCurrentImports(") !=
         std::string::npos);
   CHECK(inferMethodResolutionSource.find("auto extractBorrowedBinding =") ==
@@ -914,6 +922,17 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/ref\")") ==
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "normalizedMethodName == \"get\" || normalizedMethodName == \"get_ref\"") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "resolvedOut == \"/std/collections/soa_vector/get_ref\"") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find("preferredBorrowedSoaAccessHelperTarget(") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "/std/collections/experimental_soa_vector/soaVectorGetRef") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "hasVisibleSoaHelperTargetForCurrentImports(") !=

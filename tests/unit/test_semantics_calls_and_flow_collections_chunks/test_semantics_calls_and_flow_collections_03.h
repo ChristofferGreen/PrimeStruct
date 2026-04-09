@@ -510,8 +510,10 @@ pick([Reference<soa_vector<Particle>>] values) {
 main() {
   [soa_vector<Particle>] values{cloneValues()}
   [auto] item{get_ref(location(values), 0i32)}
-  return(plus(item, plus(consume(get_ref(borrowValues(location(values)), 0i32)),
-                         pick(location(values)))))
+  return(plus(item,
+              plus(consume(get_ref(borrowValues(location(values)), 0i32)),
+                   plus(consume(location(values).get_ref(0i32)),
+                        pick(location(values))))))
 }
 )";
   std::string error;
@@ -627,6 +629,7 @@ main() {
   assign(total, plus(total, get_ref(location(values), 0i32)))
   assign(total, plus(total, ref(values, 0i32)))
   assign(total, plus(total, values.get(0i32)))
+  assign(total, plus(total, location(values).get_ref(0i32)))
   assign(total, plus(total, values./soa_vector/get(0i32)))
   assign(total, plus(total, /soa_vector/get_ref(location(values), 0i32)))
   assign(total, plus(total, values.ref(0i32)))
