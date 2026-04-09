@@ -426,6 +426,11 @@ Semantics-layer pending fallback diagnostics:
     same-path versus canonical helper targets by visibility, so canonical-only
     helper visibility no longer skips method rewrite for direct experimental
     SoA receiver bindings (`src/semantics/SemanticsValidate.cpp`).
+  - Experimental SoA same-path helper method rewrite traversal now excludes
+    canonical `/std/collections/soa_vector/*` helper definitions (alongside
+    `/soa_vector/*` and experimental helper-module definitions), so the
+    compatibility rewrite pass no longer traverses canonical stdlib helper
+    bodies as fallback candidates (`src/semantics/SemanticsValidate.cpp`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:

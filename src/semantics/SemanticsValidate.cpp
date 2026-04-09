@@ -2966,6 +2966,7 @@ bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &
   }
   for (Definition &def : program.definitions) {
     if (def.fullPath.rfind("/soa_vector/", 0) == 0 ||
+        def.fullPath.rfind("/std/collections/soa_vector/", 0) == 0 ||
         def.fullPath.rfind("/std/collections/experimental_soa_vector/", 0) == 0) {
       continue;
     }
