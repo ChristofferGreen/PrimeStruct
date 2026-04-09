@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "SemanticsHelpers.h"
+#include "primec/SemanticsDefinitionPrepass.h"
 #include "primec/SymbolInterner.h"
 #include "primec/Semantics.h"
 
@@ -549,6 +550,7 @@ private:
 
   std::unordered_set<std::string> defaultEffectSet_;
   std::unordered_set<std::string> entryDefaultEffectSet_;
+  DefinitionPrepassSnapshot definitionPrepassSnapshot_;
   std::unordered_map<std::string, const Definition *> defMap_;
   std::unordered_map<std::string, ReturnKind> returnKinds_;
   std::unordered_map<std::string, std::string> returnStructs_;

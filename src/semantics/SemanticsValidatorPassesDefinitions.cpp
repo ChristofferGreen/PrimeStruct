@@ -168,7 +168,8 @@ bool SemanticsValidator::validateDefinitions() {
     return true;
   };
 
-  for (const auto &def : program_.definitions) {
+  for (const auto &declaration : definitionPrepassSnapshot_.declarationsInStableOrder) {
+    const Definition &def = program_.definitions[declaration.stableIndex];
     clearStructuredDiagnosticContext();
     if (collectDiagnostics) {
       ValidationStateScope validationContextScope(*this, buildDefinitionValidationState(def));

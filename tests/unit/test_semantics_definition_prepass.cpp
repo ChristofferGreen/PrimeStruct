@@ -32,6 +32,15 @@ std::vector<primec::SymbolId> declarationSymbols(
   return ids;
 }
 
+std::vector<std::string> diagnosticMessages(const primec::SemanticDiagnosticInfo &diagnostics) {
+  std::vector<std::string> messages;
+  messages.reserve(diagnostics.records.size());
+  for (const auto &record : diagnostics.records) {
+    messages.push_back(record.message);
+  }
+  return messages;
+}
+
 } // namespace
 
 TEST_CASE("definition prepass indexes declarations and records duplicates deterministically") {
@@ -111,6 +120,42 @@ main() {
         secondSnapshot.duplicateDeclarationPaths);
   CHECK(firstSnapshot.firstDeclarationIndexByPath.size() ==
         secondSnapshot.firstDeclarationIndexByPath.size());
+}
+
+TEST_CASE("definition validation diagnostics keep source-order parity via prepass iteration") {
+  const std::string source = R"(
+[return<void>]
+alpha() {
+  unknown_alpha()
+}
+
+[return<void>]
+beta() {
+  unknown_beta()
+}
+)";
+
+  std::string firstError;
+  primec::SemanticDiagnosticInfo firstDiagnostics;
+  const bool firstOk =
+      validateProgramCollectingDiagnostics(source, "/alpha", firstError, firstDiagnostics);
+  CHECK_FALSE(firstOk);
+  CHECK_FALSE(firstError.empty());
+
+  std::string secondError;
+  primec::SemanticDiagnosticInfo secondDiagnostics;
+  const bool secondOk =
+      validateProgramCollectingDiagnostics(source, "/alpha", secondError, secondDiagnostics);
+  CHECK_FALSE(secondOk);
+  CHECK_FALSE(secondError.empty());
+
+  const std::vector<std::string> firstMessages = diagnosticMessages(firstDiagnostics);
+  const std::vector<std::string> secondMessages = diagnosticMessages(secondDiagnostics);
+  REQUIRE(firstMessages.size() >= 2);
+  REQUIRE(secondMessages.size() >= 2);
+  CHECK(firstMessages == secondMessages);
+  CHECK(firstMessages[0].find("unknown call target: unknown_alpha") != std::string::npos);
+  CHECK(firstMessages[1].find("unknown call target: unknown_beta") != std::string::npos);
 }
 
 TEST_SUITE_END();

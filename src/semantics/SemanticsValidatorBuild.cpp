@@ -16,6 +16,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
   };
   defaultEffectSet_.clear();
   entryDefaultEffectSet_.clear();
+  definitionPrepassSnapshot_ = buildDefinitionPrepassSnapshot(program_);
   defMap_.clear();
   returnKinds_.clear();
   returnStructs_.clear();
@@ -80,7 +81,8 @@ bool SemanticsValidator::buildDefinitionMaps() {
     isExplicitOut = false;
     return true;
   };
-  for (const auto &def : program_.definitions) {
+  for (const auto &declaration : definitionPrepassSnapshot_.declarationsInStableOrder) {
+    const Definition &def = program_.definitions[declaration.stableIndex];
     DefinitionContextScope definitionScope(*this, def);
     bool isExplicit = false;
     if (isStructDefinition(def, isExplicit)) {
@@ -135,7 +137,8 @@ bool SemanticsValidator::buildDefinitionMaps() {
     return structNames_.count(parent) > 0;
   };
   std::vector<SemanticDiagnosticRecord> transformDiagnosticRecords;
-  for (const auto &def : program_.definitions) {
+  for (const auto &declaration : definitionPrepassSnapshot_.declarationsInStableOrder) {
+    const Definition &def = program_.definitions[declaration.stableIndex];
     DefinitionContextScope definitionScope(*this, def);
     if (defMap_.count(def.fullPath) > 0) {
       return failBuildDefinitionMapDiagnostic("duplicate definition: " +
@@ -186,7 +189,8 @@ bool SemanticsValidator::buildDefinitionMaps() {
     return false;
   }
 
-  for (const auto &def : program_.definitions) {
+  for (const auto &declaration : definitionPrepassSnapshot_.declarationsInStableOrder) {
+    const Definition &def = program_.definitions[declaration.stableIndex];
     DefinitionContextScope definitionContextScope(*this, def);
     ValidationContext context;
     if (!makeDefinitionValidationContext(def, context)) {
