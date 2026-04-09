@@ -51,7 +51,7 @@ TEST_CASE("soa_vector get/get_ref/ref/ref_ref reject named arguments for builtin
   checkNamedArgs("/soa_vector/ref_ref([index] 0i32, [values] values)");
 }
 
-TEST_CASE("soa_vector get, ref, and ref_ref require integer indices for builtin calls") {
+TEST_CASE("soa_vector get/get_ref/ref/ref_ref require integer indices for builtin calls") {
   const auto checkIndexType = [](const std::string &callExpr) {
     const std::string source =
         "Particle() {\n"
@@ -69,10 +69,12 @@ TEST_CASE("soa_vector get, ref, and ref_ref require integer indices for builtin 
   };
 
   checkIndexType("get(values, true)");
+  checkIndexType("get_ref(location(values), true)");
   checkIndexType("values.ref(1.0f32)");
   checkIndexType("ref_ref(values, true)");
   checkIndexType("values.ref_ref(1.0f32)");
   checkIndexType("/soa_vector/get(values, true)");
+  checkIndexType("/soa_vector/get_ref(location(values), 1.0f32)");
   checkIndexType("/soa_vector/ref(values, 1.0f32)");
   checkIndexType("/soa_vector/ref_ref(values, 1.0f32)");
 }
@@ -104,12 +106,17 @@ TEST_CASE("soa_vector conversion and access builtins reject template arguments")
               "to_aos does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "get<i32>(values, 0i32)",
               "get does not accept template arguments");
+  checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
+              "get_ref<i32>(location(values), 0i32)", "get_ref does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "ref<i32>(values, 0i32)",
               "ref does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "ref_ref<i32>(values, 0i32)",
               "ref_ref does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
               "/soa_vector/get<i32>(values, 0i32)", "get does not accept template arguments");
+  checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
+              "/soa_vector/get_ref<i32>(location(values), 0i32)",
+              "get_ref does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
               "/soa_vector/ref<i32>(values, 0i32)", "ref does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
@@ -174,6 +181,11 @@ TEST_CASE("soa_vector conversion and access builtins enforce argument counts") {
               "argument count mismatch for builtin to_aos");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "get(values)",
               "argument count mismatch for builtin get");
+  checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "get_ref(location(values))",
+              "argument count mismatch for builtin get_ref");
+  checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
+              "get_ref(location(values), 0i32, 1i32)",
+              "argument count mismatch for builtin get_ref");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "ref(values, 0i32, 1i32)",
               "argument count mismatch for builtin ref");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "ref_ref(values)",
