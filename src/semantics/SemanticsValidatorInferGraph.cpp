@@ -312,7 +312,7 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
 }
 
 void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph &graph) {
-  std::unordered_map<std::string, size_t> dependencyCountByBindingKey;
+  std::unordered_map<GraphLocalAutoKey, size_t, GraphLocalAutoKeyHash> dependencyCountByBindingKey;
   for (const TypeResolutionGraphNode &node : graph.nodes) {
     if (node.kind != TypeResolutionNodeKind::LocalAuto) {
       continue;
@@ -348,7 +348,7 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
 
   auto shouldCaptureGraphBinding = [&](const Definition &def, const Expr &bindingExpr) {
     const auto [sourceLine, sourceColumn] = graphLocalAutoSourceLocation(bindingExpr);
-    const std::string bindingKey =
+    const GraphLocalAutoKey bindingKey =
         graphLocalAutoBindingKey(def.fullPath, sourceLine, sourceColumn);
     const bool isStructFieldOmittedEnvelope =
         structNames_.count(def.fullPath) > 0 &&
@@ -441,7 +441,7 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
       }
       if (shouldCaptureGraphBinding(def, expr) && graphBindingIsUsable(binding)) {
         const auto [sourceLine, sourceColumn] = graphLocalAutoSourceLocation(expr);
-        const std::string bindingKey =
+        const GraphLocalAutoKey bindingKey =
             graphLocalAutoBindingKey(def.fullPath, sourceLine, sourceColumn);
         graphLocalAutoBindings_.try_emplace(bindingKey, binding);
         const Expr *initializerAnalysisExpr = expr.args.size() == 1 ? &expr.args.front() : nullptr;

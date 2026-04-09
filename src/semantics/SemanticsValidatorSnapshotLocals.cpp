@@ -263,10 +263,24 @@ void SemanticsValidator::forEachLocalAwareSnapshotCall(
   }
 }
 
-std::string SemanticsValidator::graphLocalAutoBindingKey(const std::string &scopePath,
-                                                         int sourceLine,
-                                                         int sourceColumn) {
-  return scopePath + "@" + std::to_string(sourceLine) + ":" + std::to_string(sourceColumn);
+void SemanticsValidator::forEachInferredQuerySnapshot(
+    const std::function<void(const Definition &, const Expr &, QuerySnapshotData &&)> &visitor) {
+  forEachLocalAwareSnapshotCall([&](const Definition &def,
+                                    const std::vector<ParameterInfo> &defParams,
+                                    const Expr &expr,
+                                    const std::unordered_map<std::string, BindingInfo> &activeLocals) {
+    QuerySnapshotData queryData;
+    if (!inferQuerySnapshotData(defParams, activeLocals, expr, queryData)) {
+      return;
+    }
+    visitor(def, expr, std::move(queryData));
+  });
+}
+
+SemanticsValidator::GraphLocalAutoKey SemanticsValidator::graphLocalAutoBindingKey(const std::string &scopePath,
+                                                                                    int sourceLine,
+                                                                                    int sourceColumn) {
+  return GraphLocalAutoKey{scopePath, sourceLine, sourceColumn};
 }
 
 std::pair<int, int> SemanticsValidator::graphLocalAutoSourceLocation(const Expr &expr) {

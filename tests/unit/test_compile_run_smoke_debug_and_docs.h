@@ -496,6 +496,35 @@ main() {
   CHECK(diagnostics.find("replay trace has no checkpoint-capable events") != std::string::npos);
 }
 
+TEST_CASE("primevm debug-replay bypasses source compilation on trace-only path") {
+  const std::string invalidSource = R"(
+[return<int>]
+main( {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("primevm_debug_replay_trace_only_invalid_source.prime", invalidSource);
+  const std::string traceText =
+      "{\"version\":1,\"event\":\"stop\",\"sequence\":12,\"reason\":\"Exit\",\"snapshot\":"
+      "{\"state\":\"Stopped\",\"function_index\":0,\"instruction_pointer\":0,\"call_depth\":0,"
+      "\"operand_stack_size\":0,\"result\":17},\"snapshot_payload\":"
+      "{\"instruction_pointer\":0,\"call_stack\":[],\"frame_locals\":[],\"current_frame_locals\":[],"
+      "\"operand_stack\":[]}}\n";
+  const std::string tracePath = writeTemp("primevm_debug_replay_trace_only.ndjson", traceText);
+  const std::string replayPath =
+      (testScratchPath("") / "primevm_debug_replay_trace_only.out").string();
+
+  const std::string replayCmd = "./primevm " + quoteShellArg(srcPath) + " --entry /main --debug-replay " +
+                                quoteShellArg(tracePath) + " > " + quoteShellArg(replayPath);
+  CHECK(runCommand(replayCmd) == 17);
+
+  const std::string replayOutput = readFile(replayPath);
+  CHECK(replayOutput.find("\"event\":\"replay_checkpoint\"") != std::string::npos);
+  CHECK(replayOutput.find("\"checkpoint_event\":\"stop\"") != std::string::npos);
+  CHECK(replayOutput.find("\"reason\":\"Exit\"") != std::string::npos);
+  CHECK(replayOutput.find("\"result\":17") != std::string::npos);
+}
+
 TEST_CASE("primevm debug-dap rejects incompatible debug-json mode") {
   const std::string source = R"(
 [return<int>]
@@ -511,4 +540,3 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("--debug-dap cannot be combined with --debug-json") != std::string::npos);
 }
-

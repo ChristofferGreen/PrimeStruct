@@ -1,0 +1,817 @@
+{
+  "benchmark_options": {
+    "fact_families": "auto",
+    "no_fact_emission": false,
+    "semantic_product_force": "auto"
+  },
+  "entry": "/bench/main",
+  "expensive_offenders": [
+    {
+      "exceeds_expensive_rss_threshold": true,
+      "exceeds_expensive_runtime_threshold": true,
+      "fixture": "math_star_repro",
+      "phase": "ast-semantic",
+      "worst_peak_rss_bytes": 3493576704,
+      "worst_wall_seconds": 3.246950458000356
+    },
+    {
+      "exceeds_expensive_rss_threshold": true,
+      "exceeds_expensive_runtime_threshold": true,
+      "fixture": "math_star_repro",
+      "phase": "semantic-product",
+      "worst_peak_rss_bytes": 5927174144,
+      "worst_wall_seconds": 5.2068565000008675
+    },
+    {
+      "exceeds_expensive_rss_threshold": true,
+      "exceeds_expensive_runtime_threshold": true,
+      "fixture": "math_vector",
+      "phase": "ast-semantic",
+      "worst_peak_rss_bytes": 3492954112,
+      "worst_wall_seconds": 3.2660613329990156
+    },
+    {
+      "exceeds_expensive_rss_threshold": true,
+      "exceeds_expensive_runtime_threshold": true,
+      "fixture": "math_vector",
+      "phase": "semantic-product",
+      "worst_peak_rss_bytes": 5929271296,
+      "worst_wall_seconds": 5.435640042000159
+    },
+    {
+      "exceeds_expensive_rss_threshold": true,
+      "exceeds_expensive_runtime_threshold": true,
+      "fixture": "math_vector_matrix",
+      "phase": "ast-semantic",
+      "worst_peak_rss_bytes": 3494068224,
+      "worst_wall_seconds": 3.3723018340006092
+    },
+    {
+      "exceeds_expensive_rss_threshold": true,
+      "exceeds_expensive_runtime_threshold": true,
+      "fixture": "math_vector_matrix",
+      "phase": "semantic-product",
+      "worst_peak_rss_bytes": 5925748736,
+      "worst_wall_seconds": 5.343283292000706
+    },
+    {
+      "exceeds_expensive_rss_threshold": true,
+      "exceeds_expensive_runtime_threshold": true,
+      "fixture": "imported_math_body",
+      "phase": "ast-semantic",
+      "worst_peak_rss_bytes": 3497230336,
+      "worst_wall_seconds": 3.315064791999248
+    },
+    {
+      "exceeds_expensive_rss_threshold": true,
+      "exceeds_expensive_runtime_threshold": true,
+      "fixture": "imported_math_body",
+      "phase": "semantic-product",
+      "worst_peak_rss_bytes": 5931827200,
+      "worst_wall_seconds": 5.29831195800034
+    }
+  ],
+  "expensive_thresholds": {
+    "max_peak_rss_bytes": 524288000,
+    "max_wall_seconds": 3.0
+  },
+  "fixtures": [
+    {
+      "group": "primary",
+      "name": "math_star_repro",
+      "scale_factor": null,
+      "source": "benchmarks/semantic_memory/fixtures/math_star_repro.prime"
+    },
+    {
+      "group": "imports",
+      "name": "no_import",
+      "scale_factor": null,
+      "source": "benchmarks/semantic_memory/fixtures/no_import.prime"
+    },
+    {
+      "group": "imports",
+      "name": "math_vector",
+      "scale_factor": null,
+      "source": "benchmarks/semantic_memory/fixtures/math_vector.prime"
+    },
+    {
+      "group": "imports",
+      "name": "math_vector_matrix",
+      "scale_factor": null,
+      "source": "benchmarks/semantic_memory/fixtures/math_vector_matrix.prime"
+    },
+    {
+      "group": "imports",
+      "name": "non_math_large_include",
+      "scale_factor": null,
+      "source": "benchmarks/semantic_memory/fixtures/non_math_large_include.prime"
+    },
+    {
+      "group": "inline_vs_import",
+      "name": "inline_math_body",
+      "scale_factor": null,
+      "source": "benchmarks/semantic_memory/fixtures/inline_math_body.prime"
+    },
+    {
+      "group": "inline_vs_import",
+      "name": "imported_math_body",
+      "scale_factor": null,
+      "source": "benchmarks/semantic_memory/fixtures/imported_math_body.prime"
+    },
+    {
+      "group": "scale",
+      "name": "scale_1x",
+      "scale_factor": 1,
+      "source": "benchmarks/semantic_memory/fixtures/scale_1x.prime"
+    },
+    {
+      "group": "scale",
+      "name": "scale_2x",
+      "scale_factor": 2,
+      "source": "benchmarks/semantic_memory/fixtures/scale_2x.prime"
+    },
+    {
+      "group": "scale",
+      "name": "scale_4x",
+      "scale_factor": 4,
+      "source": "benchmarks/semantic_memory/fixtures/scale_4x.prime"
+    }
+  ],
+  "phases": [
+    "ast-semantic",
+    "semantic-product"
+  ],
+  "platform": {
+    "machine": "arm64",
+    "release": "25.2.0",
+    "system": "Darwin"
+  },
+  "primec": "build-release/primec",
+  "repo_root": ".",
+  "results": [
+    {
+      "dump_size_bytes": 24270,
+      "entry": "/bench/main",
+      "exceeds_expensive_rss_threshold": true,
+      "exceeds_expensive_runtime_threshold": true,
+      "fact_families": "auto",
+      "fixture": "math_star_repro",
+      "group": "primary",
+      "is_expensive_threshold_offender": true,
+      "median_peak_rss_bytes": 3492544512,
+      "median_wall_seconds": 3.2191562080006406,
+      "no_fact_emission": false,
+      "peak_rss_bytes": [
+        3493576704,
+        3492544512,
+        3492544512
+      ],
+      "phase": "ast-semantic",
+      "runs": 3,
+      "semantic_product_force": "auto",
+      "source": "benchmarks/semantic_memory/fixtures/math_star_repro.prime",
+      "wall_seconds": [
+        3.246950458000356,
+        3.2191562080006406,
+        3.218524707999677
+      ],
+      "worst_peak_rss_bytes": 3493576704,
+      "worst_wall_seconds": 3.246950458000356
+    },
+    {
+      "dump_size_bytes": 2458848,
+      "entry": "/bench/main",
+      "exceeds_expensive_rss_threshold": true,
+      "exceeds_expensive_runtime_threshold": true,
+      "fact_families": "auto",
+      "fixture": "math_star_repro",
+      "group": "primary",
+      "is_expensive_threshold_offender": true,
+      "key_cardinality": {
+        "distinct_direct_call_target_keys": 489,
+        "distinct_method_call_target_keys": 319,
+        "max_target_key_length": 50
+      },
+      "median_peak_rss_bytes": 5926502400,
+      "median_wall_seconds": 5.204085917001066,
+      "no_fact_emission": false,
+      "peak_rss_bytes": [
+        5926502400,
+        5927174144,
+        5923766272
+      ],
+      "phase": "semantic-product",
+      "runs": 3,
+      "semantic_product_force": "auto",
+      "source": "benchmarks/semantic_memory/fixtures/math_star_repro.prime",
+      "wall_seconds": [
+        5.202993666000111,
+        5.2068565000008675,
+        5.204085917001066
+      ],
+      "worst_peak_rss_bytes": 5927174144,
+      "worst_wall_seconds": 5.2068565000008675
+    },
+    {
+      "dump_size_bytes": 57,
+      "entry": "/bench/main",
+      "exceeds_expensive_rss_threshold": false,
+      "exceeds_expensive_runtime_threshold": false,
+      "fact_families": "auto",
+      "fixture": "no_import",
+      "group": "imports",
+      "is_expensive_threshold_offender": false,
+      "median_peak_rss_bytes": 9076736,
+      "median_wall_seconds": 0.02211912500024482,
+      "no_fact_emission": false,
+      "peak_rss_bytes": [
+        9076736,
+        9076736,
+        9076736
+      ],
+      "phase": "ast-semantic",
+      "runs": 3,
+      "semantic_product_force": "auto",
+      "source": "benchmarks/semantic_memory/fixtures/no_import.prime",
+      "wall_seconds": [
+        0.0239766660015448,
+        0.02211912500024482,
+        0.02193920900026569
+      ],
+      "worst_peak_rss_bytes": 9076736,
+      "worst_wall_seconds": 0.0239766660015448
+    },
+    {
+      "dump_size_bytes": 1273,
+      "entry": "/bench/main",
+      "exceeds_expensive_rss_threshold": false,
+      "exceeds_expensive_runtime_threshold": false,
+      "fact_families": "auto",
+      "fixture": "no_import",
+      "group": "imports",
+      "is_expensive_threshold_offender": false,
+      "key_cardinality": {
+        "distinct_direct_call_target_keys": 1,
+        "distinct_method_call_target_keys": 0,
+        "max_target_key_length": 19
+      },
+      "median_peak_rss_bytes": 9076736,
+      "median_wall_seconds": 0.018966833000376937,
+      "no_fact_emission": false,
+      "peak_rss_bytes": [
+        9076736,
+        9076736,
+        9076736
+      ],
+      "phase": "semantic-product",
+      "runs": 3,
+      "semantic_product_force": "auto",
+      "source": "benchmarks/semantic_memory/fixtures/no_import.prime",
+      "wall_seconds": [
+        0.02201216600042244,
+        0.018011375001151464,
+        0.018966833000376937
+      ],
+      "worst_peak_rss_bytes": 9076736,
+      "worst_wall_seconds": 0.02201216600042244
+    },
+    {
+      "dump_size_bytes": 24120,
+      "entry": "/bench/main",
+      "exceeds_expensive_rss_threshold": true,
+      "exceeds_expensive_runtime_threshold": true,
+      "fact_families": "auto",
+      "fixture": "math_vector",
+      "group": "imports",
+      "is_expensive_threshold_offender": true,
+      "median_peak_rss_bytes": 3492528128,
+      "median_wall_seconds": 3.2520303330002207,
+      "no_fact_emission": false,
+      "peak_rss_bytes": [
+        3492528128,
+        3492511744,
+        3492954112
+      ],
+      "phase": "ast-semantic",
+      "runs": 3,
+      "semantic_product_force": "auto",
+      "source": "benchmarks/semantic_memory/fixtures/math_vector.prime",
+      "wall_seconds": [
+        3.2343407079988538,
+        3.2520303330002207,
+        3.2660613329990156
+      ],
+      "worst_peak_rss_bytes": 3492954112,
+      "worst_wall_seconds": 3.2660613329990156
+    },
+    {
+      "dump_size_bytes": 2454184,
+      "entry": "/bench/main",
+      "exceeds_expensive_rss_threshold": true,
+      "exceeds_expensive_runtime_threshold": true,
+      "fact_families": "auto",
+      "fixture": "math_vector",
+      "group": "imports",
+      "is_expensive_threshold_offender": true,
+      "key_cardinality": {
+        "distinct_direct_call_target_keys": 486,
+        "distinct_method_call_target_keys": 319,
+        "max_target_key_length": 50
+      },
+      "median_peak_rss_bytes": 5925797888,
+      "median_wall_seconds": 5.289367041999867,
+      "no_fact_emission": false,
+      "peak_rss_bytes": [
+        5925797888,
+        5929271296,
+        5889064960
+      ],
+      "phase": "semantic-product",
+      "runs": 3,
+      "semantic_product_force": "auto",
+      "source": "benchmarks/semantic_memory/fixtures/math_vector.prime",
+      "wall_seconds": [
+        5.2091678340002545,
+        5.435640042000159,
+        5.289367041999867
+      ],
+      "worst_peak_rss_bytes": 5929271296,
+      "worst_wall_seconds": 5.435640042000159
+    },
+    {
+      "dump_size_bytes": 24120,
+      "entry": "/bench/main",
+      "exceeds_expensive_rss_threshold": true,
+      "exceeds_expensive_runtime_threshold": true,
+      "fact_families": "auto",
+      "fixture": "math_vector_matrix",
+      "group": "imports",
+      "is_expensive_threshold_offender": true,
+      "median_peak_rss_bytes": 3493462016,
+      "median_wall_seconds": 3.3064304159997846,
+      "no_fact_emission": false,
+      "peak_rss_bytes": [
+        3493363712,
+        3493462016,
+        3494068224
+      ],
+      "phase": "ast-semantic",
+      "runs": 3,
+      "semantic_product_force": "auto",
+      "source": "benchmarks/semantic_memory/fixtures/math_vector_matrix.prime",
+      "wall_seconds": [
+        3.2588930420006363,
+        3.3064304159997846,
+        3.3723018340006092
+      ],
+      "worst_peak_rss_bytes": 3494068224,
+      "worst_wall_seconds": 3.3723018340006092
+    },
+    {
+      "dump_size_bytes": 2454253,
+      "entry": "/bench/main",
+      "exceeds_expensive_rss_threshold": true,
+      "exceeds_expensive_runtime_threshold": true,
+      "fact_families": "auto",
+      "fixture": "math_vector_matrix",
+      "group": "imports",
+      "is_expensive_threshold_offender": true,
+      "key_cardinality": {
+        "distinct_direct_call_target_keys": 486,
+        "distinct_method_call_target_keys": 319,
+        "max_target_key_length": 50
+      },
+      "median_peak_rss_bytes": 5925388288,
+      "median_wall_seconds": 5.263348042000871,
+      "no_fact_emission": false,
+      "peak_rss_bytes": [
+        5925388288,
+        5925748736,
+        5925306368
+      ],
+      "phase": "semantic-product",
+      "runs": 3,
+      "semantic_product_force": "auto",
+      "source": "benchmarks/semantic_memory/fixtures/math_vector_matrix.prime",
+      "wall_seconds": [
+        5.263348042000871,
+        5.343283292000706,
+        5.223147999999128
+      ],
+      "worst_peak_rss_bytes": 5925748736,
+      "worst_wall_seconds": 5.343283292000706
+    },
+    {
+      "dump_size_bytes": 4190,
+      "entry": "/bench/main",
+      "exceeds_expensive_rss_threshold": false,
+      "exceeds_expensive_runtime_threshold": false,
+      "fact_families": "auto",
+      "fixture": "non_math_large_include",
+      "group": "imports",
+      "is_expensive_threshold_offender": false,
+      "median_peak_rss_bytes": 43401216,
+      "median_wall_seconds": 0.20857633299965528,
+      "no_fact_emission": false,
+      "peak_rss_bytes": [
+        43401216,
+        46612480,
+        43171840
+      ],
+      "phase": "ast-semantic",
+      "runs": 3,
+      "semantic_product_force": "auto",
+      "source": "benchmarks/semantic_memory/fixtures/non_math_large_include.prime",
+      "wall_seconds": [
+        0.20921795799949905,
+        0.20857633299965528,
+        0.2079988340010459
+      ],
+      "worst_peak_rss_bytes": 46612480,
+      "worst_wall_seconds": 0.20921795799949905
+    },
+    {
+      "dump_size_bytes": 125710,
+      "entry": "/bench/main",
+      "exceeds_expensive_rss_threshold": false,
+      "exceeds_expensive_runtime_threshold": false,
+      "fact_families": "auto",
+      "fixture": "non_math_large_include",
+      "group": "imports",
+      "is_expensive_threshold_offender": false,
+      "key_cardinality": {
+        "distinct_direct_call_target_keys": 90,
+        "distinct_method_call_target_keys": 2,
+        "max_target_key_length": 95
+      },
+      "median_peak_rss_bytes": 80625664,
+      "median_wall_seconds": 0.24563399999897229,
+      "no_fact_emission": false,
+      "peak_rss_bytes": [
+        80625664,
+        81510400,
+        80625664
+      ],
+      "phase": "semantic-product",
+      "runs": 3,
+      "semantic_product_force": "auto",
+      "source": "benchmarks/semantic_memory/fixtures/non_math_large_include.prime",
+      "wall_seconds": [
+        0.24064108300080989,
+        0.2490781659998902,
+        0.24563399999897229
+      ],
+      "worst_peak_rss_bytes": 81510400,
+      "worst_wall_seconds": 0.2490781659998902
+    },
+    {
+      "dump_size_bytes": 139,
+      "entry": "/bench/main",
+      "exceeds_expensive_rss_threshold": false,
+      "exceeds_expensive_runtime_threshold": false,
+      "fact_families": "auto",
+      "fixture": "inline_math_body",
+      "group": "inline_vs_import",
+      "is_expensive_threshold_offender": false,
+      "median_peak_rss_bytes": 9764864,
+      "median_wall_seconds": 0.021788500000184285,
+      "no_fact_emission": false,
+      "peak_rss_bytes": [
+        9830400,
+        9764864,
+        9764864
+      ],
+      "phase": "ast-semantic",
+      "runs": 3,
+      "semantic_product_force": "auto",
+      "source": "benchmarks/semantic_memory/fixtures/inline_math_body.prime",
+      "wall_seconds": [
+        0.021553667000262067,
+        0.022213749998627463,
+        0.021788500000184285
+      ],
+      "worst_peak_rss_bytes": 9830400,
+      "worst_wall_seconds": 0.022213749998627463
+    },
+    {
+      "dump_size_bytes": 7292,
+      "entry": "/bench/main",
+      "exceeds_expensive_rss_threshold": false,
+      "exceeds_expensive_runtime_threshold": false,
+      "fact_families": "auto",
+      "fixture": "inline_math_body",
+      "group": "inline_vs_import",
+      "is_expensive_threshold_offender": false,
+      "key_cardinality": {
+        "distinct_direct_call_target_keys": 5,
+        "distinct_method_call_target_keys": 0,
+        "max_target_key_length": 20
+      },
+      "median_peak_rss_bytes": 13320192,
+      "median_wall_seconds": 0.02365970900063985,
+      "no_fact_emission": false,
+      "peak_rss_bytes": [
+        13320192,
+        13320192,
+        13369344
+      ],
+      "phase": "semantic-product",
+      "runs": 3,
+      "semantic_product_force": "auto",
+      "source": "benchmarks/semantic_memory/fixtures/inline_math_body.prime",
+      "wall_seconds": [
+        0.02365970900063985,
+        0.024006374998862157,
+        0.02356879199942341
+      ],
+      "worst_peak_rss_bytes": 13369344,
+      "worst_wall_seconds": 0.024006374998862157
+    },
+    {
+      "dump_size_bytes": 24202,
+      "entry": "/bench/main",
+      "exceeds_expensive_rss_threshold": true,
+      "exceeds_expensive_runtime_threshold": true,
+      "fact_families": "auto",
+      "fixture": "imported_math_body",
+      "group": "inline_vs_import",
+      "is_expensive_threshold_offender": true,
+      "median_peak_rss_bytes": 3496689664,
+      "median_wall_seconds": 3.305073833998904,
+      "no_fact_emission": false,
+      "peak_rss_bytes": [
+        3496689664,
+        3497230336,
+        3496673280
+      ],
+      "phase": "ast-semantic",
+      "runs": 3,
+      "semantic_product_force": "auto",
+      "source": "benchmarks/semantic_memory/fixtures/imported_math_body.prime",
+      "wall_seconds": [
+        3.315064791999248,
+        3.2989749999997002,
+        3.305073833998904
+      ],
+      "worst_peak_rss_bytes": 3497230336,
+      "worst_wall_seconds": 3.315064791999248
+    },
+    {
+      "dump_size_bytes": 2460367,
+      "entry": "/bench/main",
+      "exceeds_expensive_rss_threshold": true,
+      "exceeds_expensive_runtime_threshold": true,
+      "fact_families": "auto",
+      "fixture": "imported_math_body",
+      "group": "inline_vs_import",
+      "is_expensive_threshold_offender": true,
+      "key_cardinality": {
+        "distinct_direct_call_target_keys": 490,
+        "distinct_method_call_target_keys": 319,
+        "max_target_key_length": 50
+      },
+      "median_peak_rss_bytes": 5929877504,
+      "median_wall_seconds": 5.223271415999989,
+      "no_fact_emission": false,
+      "peak_rss_bytes": [
+        5931827200,
+        5929877504,
+        5929844736
+      ],
+      "phase": "semantic-product",
+      "runs": 3,
+      "semantic_product_force": "auto",
+      "source": "benchmarks/semantic_memory/fixtures/imported_math_body.prime",
+      "wall_seconds": [
+        5.29831195800034,
+        5.223271415999989,
+        5.198981208999612
+      ],
+      "worst_peak_rss_bytes": 5931827200,
+      "worst_wall_seconds": 5.29831195800034
+    },
+    {
+      "dump_size_bytes": 207,
+      "entry": "/bench/main",
+      "exceeds_expensive_rss_threshold": false,
+      "exceeds_expensive_runtime_threshold": false,
+      "fact_families": "auto",
+      "fixture": "scale_1x",
+      "group": "scale",
+      "is_expensive_threshold_offender": false,
+      "median_peak_rss_bytes": 9076736,
+      "median_wall_seconds": 0.022663665999061777,
+      "no_fact_emission": false,
+      "peak_rss_bytes": [
+        9076736,
+        9076736,
+        9076736
+      ],
+      "phase": "ast-semantic",
+      "runs": 3,
+      "semantic_product_force": "auto",
+      "source": "benchmarks/semantic_memory/fixtures/scale_1x.prime",
+      "wall_seconds": [
+        0.028119458998844493,
+        0.022635625000475557,
+        0.022663665999061777
+      ],
+      "worst_peak_rss_bytes": 9076736,
+      "worst_wall_seconds": 0.028119458998844493
+    },
+    {
+      "dump_size_bytes": 10265,
+      "entry": "/bench/main",
+      "exceeds_expensive_rss_threshold": false,
+      "exceeds_expensive_runtime_threshold": false,
+      "fact_families": "auto",
+      "fixture": "scale_1x",
+      "group": "scale",
+      "is_expensive_threshold_offender": false,
+      "key_cardinality": {
+        "distinct_direct_call_target_keys": 9,
+        "distinct_method_call_target_keys": 0,
+        "max_target_key_length": 19
+      },
+      "median_peak_rss_bytes": 12500992,
+      "median_wall_seconds": 0.02565287499965052,
+      "no_fact_emission": false,
+      "peak_rss_bytes": [
+        12500992,
+        12500992,
+        12500992
+      ],
+      "phase": "semantic-product",
+      "runs": 3,
+      "semantic_product_force": "auto",
+      "source": "benchmarks/semantic_memory/fixtures/scale_1x.prime",
+      "wall_seconds": [
+        0.025021790999744553,
+        0.02565287499965052,
+        0.027094666000266443
+      ],
+      "worst_peak_rss_bytes": 12500992,
+      "worst_wall_seconds": 0.027094666000266443
+    },
+    {
+      "dump_size_bytes": 357,
+      "entry": "/bench/main",
+      "exceeds_expensive_rss_threshold": false,
+      "exceeds_expensive_runtime_threshold": false,
+      "fact_families": "auto",
+      "fixture": "scale_2x",
+      "group": "scale",
+      "is_expensive_threshold_offender": false,
+      "median_peak_rss_bytes": 12599296,
+      "median_wall_seconds": 0.023467166000045836,
+      "no_fact_emission": false,
+      "peak_rss_bytes": [
+        12599296,
+        12599296,
+        12664832
+      ],
+      "phase": "ast-semantic",
+      "runs": 3,
+      "semantic_product_force": "auto",
+      "source": "benchmarks/semantic_memory/fixtures/scale_2x.prime",
+      "wall_seconds": [
+        0.026471375000255648,
+        0.02345245800097473,
+        0.023467166000045836
+      ],
+      "worst_peak_rss_bytes": 12664832,
+      "worst_wall_seconds": 0.026471375000255648
+    },
+    {
+      "dump_size_bytes": 19298,
+      "entry": "/bench/main",
+      "exceeds_expensive_rss_threshold": false,
+      "exceeds_expensive_runtime_threshold": false,
+      "fact_families": "auto",
+      "fixture": "scale_2x",
+      "group": "scale",
+      "is_expensive_threshold_offender": false,
+      "key_cardinality": {
+        "distinct_direct_call_target_keys": 17,
+        "distinct_method_call_target_keys": 0,
+        "max_target_key_length": 19
+      },
+      "median_peak_rss_bytes": 19611648,
+      "median_wall_seconds": 0.03038566599934711,
+      "no_fact_emission": false,
+      "peak_rss_bytes": [
+        19726336,
+        19611648,
+        19611648
+      ],
+      "phase": "semantic-product",
+      "runs": 3,
+      "semantic_product_force": "auto",
+      "source": "benchmarks/semantic_memory/fixtures/scale_2x.prime",
+      "wall_seconds": [
+        0.030863542000588495,
+        0.03038566599934711,
+        0.0293090420000226
+      ],
+      "worst_peak_rss_bytes": 19726336,
+      "worst_wall_seconds": 0.030863542000588495
+    },
+    {
+      "dump_size_bytes": 657,
+      "entry": "/bench/main",
+      "exceeds_expensive_rss_threshold": false,
+      "exceeds_expensive_runtime_threshold": false,
+      "fact_families": "auto",
+      "fixture": "scale_4x",
+      "group": "scale",
+      "is_expensive_threshold_offender": false,
+      "median_peak_rss_bytes": 19742720,
+      "median_wall_seconds": 0.033337625000058324,
+      "no_fact_emission": false,
+      "peak_rss_bytes": [
+        19841024,
+        19742720,
+        19742720
+      ],
+      "phase": "ast-semantic",
+      "runs": 3,
+      "semantic_product_force": "auto",
+      "source": "benchmarks/semantic_memory/fixtures/scale_4x.prime",
+      "wall_seconds": [
+        0.0328727500000241,
+        0.033337625000058324,
+        0.03383758300151385
+      ],
+      "worst_peak_rss_bytes": 19841024,
+      "worst_wall_seconds": 0.03383758300151385
+    },
+    {
+      "dump_size_bytes": 37358,
+      "entry": "/bench/main",
+      "exceeds_expensive_rss_threshold": false,
+      "exceeds_expensive_runtime_threshold": false,
+      "fact_families": "auto",
+      "fixture": "scale_4x",
+      "group": "scale",
+      "is_expensive_threshold_offender": false,
+      "key_cardinality": {
+        "distinct_direct_call_target_keys": 33,
+        "distinct_method_call_target_keys": 0,
+        "max_target_key_length": 19
+      },
+      "median_peak_rss_bytes": 33832960,
+      "median_wall_seconds": 0.05093449999912991,
+      "no_fact_emission": false,
+      "peak_rss_bytes": [
+        33832960,
+        33832960,
+        33832960
+      ],
+      "phase": "semantic-product",
+      "runs": 3,
+      "semantic_product_force": "auto",
+      "source": "benchmarks/semantic_memory/fixtures/scale_4x.prime",
+      "wall_seconds": [
+        0.04776279099860403,
+        0.05093449999912991,
+        0.05341958400094882
+      ],
+      "worst_peak_rss_bytes": 33832960,
+      "worst_wall_seconds": 0.05341958400094882
+    }
+  ],
+  "runs": 3,
+  "scale_slopes": [
+    {
+      "fixtures": [
+        "scale_1x",
+        "scale_2x",
+        "scale_4x"
+      ],
+      "phase": "ast-semantic",
+      "rss_bytes_per_scale_unit": 3555328.0,
+      "wall_seconds_per_scale_unit": 0.0035579863336655158,
+      "x_axis": [
+        1,
+        2,
+        4
+      ]
+    },
+    {
+      "fixtures": [
+        "scale_1x",
+        "scale_2x",
+        "scale_4x"
+      ],
+      "phase": "semantic-product",
+      "rss_bytes_per_scale_unit": 7110656.0,
+      "wall_seconds_per_scale_unit": 0.008427208333159797,
+      "x_axis": [
+        1,
+        2,
+        4
+      ]
+    }
+  ],
+  "schema": "primestruct_semantic_memory_report_v1"
+}

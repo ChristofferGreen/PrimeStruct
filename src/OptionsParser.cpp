@@ -337,6 +337,64 @@ std::vector<std::string> parseDefaultEffects(const std::string &text) {
   return effects;
 }
 
+bool parseBenchmarkForceSemanticProduct(const std::string &text, std::optional<bool> &out, std::string &error) {
+  const std::string normalized = trimWhitespace(text);
+  if (normalized == "on" || normalized == "true" || normalized == "1") {
+    out = true;
+    return true;
+  }
+  if (normalized == "off" || normalized == "false" || normalized == "0") {
+    out = false;
+    return true;
+  }
+  if (normalized == "auto" || normalized.empty()) {
+    out.reset();
+    return true;
+  }
+  error = "unsupported --benchmark-force-semantic-product value: " + normalized +
+          " (expected auto|on|off)";
+  return false;
+}
+
+bool parseBenchmarkSemanticFactFamilies(const std::string &text,
+                                        bool &specified,
+                                        std::vector<std::string> &out) {
+  out.clear();
+  specified = true;
+  const std::string trimmed = trimWhitespace(text);
+  if (trimmed.empty() || trimmed == "auto" || trimmed == "all") {
+    specified = false;
+    return true;
+  }
+  if (trimmed == "none") {
+    return true;
+  }
+  size_t start = 0;
+  auto addUnique = [&](const std::string &name) {
+    for (const auto &existing : out) {
+      if (existing == name) {
+        return;
+      }
+    }
+    out.push_back(name);
+  };
+  while (start <= trimmed.size()) {
+    size_t end = trimmed.find(',', start);
+    if (end == std::string::npos) {
+      end = trimmed.size();
+    }
+    std::string token = trimWhitespace(trimmed.substr(start, end - start));
+    if (!token.empty()) {
+      addUnique(token);
+    }
+    if (end == trimmed.size()) {
+      break;
+    }
+    start = end + 1;
+  }
+  return true;
+}
+
 void applyNoTransformFlags(Options &out, bool noTransforms, bool noTextTransforms, bool noSemanticTransforms) {
   if (noTransforms) {
     out.textFilters.clear();
@@ -613,6 +671,37 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       auto effects = parseDefaultEffects(arg.substr(std::string("--default-effects=").size()));
       out.defaultEffects = effects;
       out.entryDefaultEffects = effects;
+    } else if (arg == "--benchmark-force-semantic-product" && i + 1 < argc) {
+      if (!parseBenchmarkForceSemanticProduct(argv[++i], out.benchmarkForceSemanticProduct, error)) {
+        return false;
+      }
+    } else if (arg == "--benchmark-force-semantic-product") {
+      error = "--benchmark-force-semantic-product requires a value";
+      return false;
+    } else if (arg.rfind("--benchmark-force-semantic-product=", 0) == 0) {
+      if (!parseBenchmarkForceSemanticProduct(arg.substr(std::string("--benchmark-force-semantic-product=").size()),
+                                             out.benchmarkForceSemanticProduct,
+                                             error)) {
+        return false;
+      }
+    } else if (arg == "--benchmark-semantic-fact-families" && i + 1 < argc) {
+      if (!parseBenchmarkSemanticFactFamilies(
+              argv[++i], out.benchmarkSemanticFactFamiliesSpecified, out.benchmarkSemanticFactFamilies)) {
+        error = "invalid --benchmark-semantic-fact-families value";
+        return false;
+      }
+    } else if (arg == "--benchmark-semantic-fact-families") {
+      error = "--benchmark-semantic-fact-families requires a value";
+      return false;
+    } else if (arg.rfind("--benchmark-semantic-fact-families=", 0) == 0) {
+      if (!parseBenchmarkSemanticFactFamilies(arg.substr(std::string("--benchmark-semantic-fact-families=").size()),
+                                              out.benchmarkSemanticFactFamiliesSpecified,
+                                              out.benchmarkSemanticFactFamilies)) {
+        error = "invalid --benchmark-semantic-fact-families value";
+        return false;
+      }
+    } else if (arg == "--benchmark-semantic-no-fact-emission") {
+      out.benchmarkSemanticNoFactEmission = true;
     } else if (arg == "--ir-inline") {
       out.inlineIrCalls = true;
     } else if (!arg.empty() && arg[0] == '-') {

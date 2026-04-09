@@ -83,6 +83,42 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
   return std::nullopt;
 }
 
+template <typename ResolveFn, typename VisitorFn>
+void forEachResolvedNonMethodCallSnapshot(const Program &program,
+                                          ResolveFn &&resolvePath,
+                                          VisitorFn &&visitor) {
+  std::function<void(const std::string &, const Expr &)> visitExpr;
+  auto visitExprs = [&](const std::string &scopePath, const std::vector<Expr> &exprs) {
+    for (const auto &expr : exprs) {
+      visitExpr(scopePath, expr);
+    }
+  };
+
+  visitExpr = [&](const std::string &scopePath, const Expr &expr) {
+    if (expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
+      std::string resolvedPath = resolvePath(expr);
+      if (!resolvedPath.empty()) {
+        visitor(scopePath, expr, std::move(resolvedPath));
+      }
+    }
+    visitExprs(scopePath, expr.args);
+    visitExprs(scopePath, expr.bodyArguments);
+  };
+
+  for (const auto &def : program.definitions) {
+    visitExprs(def.fullPath, def.parameters);
+    visitExprs(def.fullPath, def.statements);
+    if (def.returnExpr.has_value()) {
+      visitExpr(def.fullPath, *def.returnExpr);
+    }
+  }
+
+  for (const auto &exec : program.executions) {
+    visitExprs(exec.fullPath, exec.arguments);
+    visitExprs(exec.fullPath, exec.bodyArguments);
+  }
+}
+
 std::vector<std::string> snapshotCapabilities(const std::vector<Transform> &transforms) {
   std::vector<std::string> capabilities;
   for (const auto &transform : transforms) {
@@ -261,111 +297,111 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
   visitExpr = [&](const std::string &scopePath, const Expr &expr) {
     if (expr.isBinding && isLocalAutoCandidate(expr)) {
       const auto [sourceLine, sourceColumn] = graphLocalAutoSourceLocation(expr);
-      const std::string bindingKey = graphLocalAutoBindingKey(
-          scopePath, sourceLine, sourceColumn);
+      const GraphLocalAutoKey bindingKey =
+          graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn);
       const auto bindingIt = graphLocalAutoBindings_.find(bindingKey);
       if (bindingIt != graphLocalAutoBindings_.end()) {
-        std::string initializerResolvedPath;
-        if (const auto pathIt = graphLocalAutoResolvedPaths_.find(bindingKey);
-            pathIt != graphLocalAutoResolvedPaths_.end()) {
-          initializerResolvedPath = pathIt->second;
-        }
-        std::string initializerDirectCallResolvedPath;
-        if (const auto directCallPathIt = graphLocalAutoDirectCallResolvedPaths_.find(bindingKey);
-            directCallPathIt != graphLocalAutoDirectCallResolvedPaths_.end()) {
-          initializerDirectCallResolvedPath = directCallPathIt->second;
-        }
-        ReturnKind initializerDirectCallReturnKind = ReturnKind::Unknown;
-        if (const auto directCallReturnKindIt = graphLocalAutoDirectCallReturnKinds_.find(bindingKey);
-            directCallReturnKindIt != graphLocalAutoDirectCallReturnKinds_.end()) {
-          initializerDirectCallReturnKind = directCallReturnKindIt->second;
-        }
-        std::string initializerMethodCallResolvedPath;
-        if (const auto methodCallPathIt = graphLocalAutoMethodCallResolvedPaths_.find(bindingKey);
-            methodCallPathIt != graphLocalAutoMethodCallResolvedPaths_.end()) {
-          initializerMethodCallResolvedPath = methodCallPathIt->second;
-        }
-        ReturnKind initializerMethodCallReturnKind = ReturnKind::Unknown;
-        if (const auto methodCallReturnKindIt = graphLocalAutoMethodCallReturnKinds_.find(bindingKey);
-            methodCallReturnKindIt != graphLocalAutoMethodCallReturnKinds_.end()) {
-          initializerMethodCallReturnKind = methodCallReturnKindIt->second;
-        }
-        BindingInfo initializerBinding;
-        if (const auto bindingInfoIt = graphLocalAutoInitializerBindings_.find(bindingKey);
-            bindingInfoIt != graphLocalAutoInitializerBindings_.end()) {
-          initializerBinding = bindingInfoIt->second;
-        }
-        BindingInfo initializerReceiverBinding;
-        std::string initializerQueryTypeText;
-        bool initializerResultHasValue = false;
-        std::string initializerResultValueType;
-        std::string initializerResultErrorType;
-        if (const auto querySnapshotIt = graphLocalAutoQuerySnapshots_.find(bindingKey);
-            querySnapshotIt != graphLocalAutoQuerySnapshots_.end()) {
-          const QuerySnapshotData &querySnapshot = querySnapshotIt->second;
-          initializerReceiverBinding = querySnapshot.receiverBinding;
-          initializerQueryTypeText = querySnapshot.typeText;
-          if (querySnapshot.resultInfo.isResult) {
-            initializerResultHasValue = querySnapshot.resultInfo.hasValue;
-            initializerResultValueType = querySnapshot.resultInfo.valueType;
-            initializerResultErrorType = querySnapshot.resultInfo.errorType;
+          std::string initializerResolvedPath;
+          if (const auto pathIt = graphLocalAutoResolvedPaths_.find(bindingKey);
+              pathIt != graphLocalAutoResolvedPaths_.end()) {
+            initializerResolvedPath = pathIt->second;
           }
-        }
-        bool initializerHasTry = false;
-        std::string initializerTryOperandResolvedPath;
-        BindingInfo initializerTryOperandBinding;
-        BindingInfo initializerTryOperandReceiverBinding;
-        std::string initializerTryOperandQueryTypeText;
-        std::string initializerTryValueType;
-        std::string initializerTryErrorType;
-        ReturnKind initializerTryContextReturnKind = ReturnKind::Unknown;
-        std::string initializerTryOnErrorHandlerPath;
-        std::string initializerTryOnErrorErrorType;
-        size_t initializerTryOnErrorBoundArgCount = 0;
-        if (const auto tryIt = graphLocalAutoTryValues_.find(bindingKey);
-            tryIt != graphLocalAutoTryValues_.end()) {
-          initializerHasTry = true;
-          initializerTryOperandResolvedPath = tryIt->second.operandResolvedPath;
-          initializerTryOperandBinding = tryIt->second.operandBinding;
-          initializerTryOperandReceiverBinding = tryIt->second.operandReceiverBinding;
-          initializerTryOperandQueryTypeText = tryIt->second.operandQueryTypeText;
-          initializerTryValueType = tryIt->second.valueType;
-          initializerTryErrorType = tryIt->second.errorType;
-          initializerTryContextReturnKind = tryIt->second.contextReturnKind;
-          initializerTryOnErrorHandlerPath = tryIt->second.onErrorHandlerPath;
-          initializerTryOnErrorErrorType = tryIt->second.onErrorErrorType;
-          initializerTryOnErrorBoundArgCount = tryIt->second.onErrorBoundArgCount;
-        }
-        entries.push_back(LocalAutoBindingSnapshotEntry{
-            scopePath,
-            expr.name,
-            sourceLine,
-            sourceColumn,
-            bindingIt->second,
-            std::move(initializerResolvedPath),
-            std::move(initializerBinding),
-            std::move(initializerReceiverBinding),
-            std::move(initializerQueryTypeText),
-            initializerResultHasValue,
-            std::move(initializerResultValueType),
-            std::move(initializerResultErrorType),
-            initializerHasTry,
-            std::move(initializerTryOperandResolvedPath),
-            std::move(initializerTryOperandBinding),
-            std::move(initializerTryOperandReceiverBinding),
-            std::move(initializerTryOperandQueryTypeText),
-            std::move(initializerTryValueType),
-            std::move(initializerTryErrorType),
-            initializerTryContextReturnKind,
-            std::move(initializerTryOnErrorHandlerPath),
-            std::move(initializerTryOnErrorErrorType),
-            initializerTryOnErrorBoundArgCount,
-            expr.semanticNodeId,
-            std::move(initializerDirectCallResolvedPath),
-            initializerDirectCallReturnKind,
-            std::move(initializerMethodCallResolvedPath),
-            initializerMethodCallReturnKind,
-        });
+          std::string initializerDirectCallResolvedPath;
+          if (const auto directCallPathIt = graphLocalAutoDirectCallResolvedPaths_.find(bindingKey);
+              directCallPathIt != graphLocalAutoDirectCallResolvedPaths_.end()) {
+            initializerDirectCallResolvedPath = directCallPathIt->second;
+          }
+          ReturnKind initializerDirectCallReturnKind = ReturnKind::Unknown;
+          if (const auto directCallReturnKindIt = graphLocalAutoDirectCallReturnKinds_.find(bindingKey);
+              directCallReturnKindIt != graphLocalAutoDirectCallReturnKinds_.end()) {
+            initializerDirectCallReturnKind = directCallReturnKindIt->second;
+          }
+          std::string initializerMethodCallResolvedPath;
+          if (const auto methodCallPathIt = graphLocalAutoMethodCallResolvedPaths_.find(bindingKey);
+              methodCallPathIt != graphLocalAutoMethodCallResolvedPaths_.end()) {
+            initializerMethodCallResolvedPath = methodCallPathIt->second;
+          }
+          ReturnKind initializerMethodCallReturnKind = ReturnKind::Unknown;
+          if (const auto methodCallReturnKindIt = graphLocalAutoMethodCallReturnKinds_.find(bindingKey);
+              methodCallReturnKindIt != graphLocalAutoMethodCallReturnKinds_.end()) {
+            initializerMethodCallReturnKind = methodCallReturnKindIt->second;
+          }
+          BindingInfo initializerBinding;
+          if (const auto bindingInfoIt = graphLocalAutoInitializerBindings_.find(bindingKey);
+              bindingInfoIt != graphLocalAutoInitializerBindings_.end()) {
+            initializerBinding = bindingInfoIt->second;
+          }
+          BindingInfo initializerReceiverBinding;
+          std::string initializerQueryTypeText;
+          bool initializerResultHasValue = false;
+          std::string initializerResultValueType;
+          std::string initializerResultErrorType;
+          if (const auto querySnapshotIt = graphLocalAutoQuerySnapshots_.find(bindingKey);
+              querySnapshotIt != graphLocalAutoQuerySnapshots_.end()) {
+            const QuerySnapshotData &querySnapshot = querySnapshotIt->second;
+            initializerReceiverBinding = querySnapshot.receiverBinding;
+            initializerQueryTypeText = querySnapshot.typeText;
+            if (querySnapshot.resultInfo.isResult) {
+              initializerResultHasValue = querySnapshot.resultInfo.hasValue;
+              initializerResultValueType = querySnapshot.resultInfo.valueType;
+              initializerResultErrorType = querySnapshot.resultInfo.errorType;
+            }
+          }
+          bool initializerHasTry = false;
+          std::string initializerTryOperandResolvedPath;
+          BindingInfo initializerTryOperandBinding;
+          BindingInfo initializerTryOperandReceiverBinding;
+          std::string initializerTryOperandQueryTypeText;
+          std::string initializerTryValueType;
+          std::string initializerTryErrorType;
+          ReturnKind initializerTryContextReturnKind = ReturnKind::Unknown;
+          std::string initializerTryOnErrorHandlerPath;
+          std::string initializerTryOnErrorErrorType;
+          size_t initializerTryOnErrorBoundArgCount = 0;
+          if (const auto tryIt = graphLocalAutoTryValues_.find(bindingKey);
+              tryIt != graphLocalAutoTryValues_.end()) {
+            initializerHasTry = true;
+            initializerTryOperandResolvedPath = tryIt->second.operandResolvedPath;
+            initializerTryOperandBinding = tryIt->second.operandBinding;
+            initializerTryOperandReceiverBinding = tryIt->second.operandReceiverBinding;
+            initializerTryOperandQueryTypeText = tryIt->second.operandQueryTypeText;
+            initializerTryValueType = tryIt->second.valueType;
+            initializerTryErrorType = tryIt->second.errorType;
+            initializerTryContextReturnKind = tryIt->second.contextReturnKind;
+            initializerTryOnErrorHandlerPath = tryIt->second.onErrorHandlerPath;
+            initializerTryOnErrorErrorType = tryIt->second.onErrorErrorType;
+            initializerTryOnErrorBoundArgCount = tryIt->second.onErrorBoundArgCount;
+          }
+          entries.push_back(LocalAutoBindingSnapshotEntry{
+              scopePath,
+              expr.name,
+              sourceLine,
+              sourceColumn,
+              bindingIt->second,
+              std::move(initializerResolvedPath),
+              std::move(initializerBinding),
+              std::move(initializerReceiverBinding),
+              std::move(initializerQueryTypeText),
+              initializerResultHasValue,
+              std::move(initializerResultValueType),
+              std::move(initializerResultErrorType),
+              initializerHasTry,
+              std::move(initializerTryOperandResolvedPath),
+              std::move(initializerTryOperandBinding),
+              std::move(initializerTryOperandReceiverBinding),
+              std::move(initializerTryOperandQueryTypeText),
+              std::move(initializerTryValueType),
+              std::move(initializerTryErrorType),
+              initializerTryContextReturnKind,
+              std::move(initializerTryOnErrorHandlerPath),
+              std::move(initializerTryOnErrorErrorType),
+              initializerTryOnErrorBoundArgCount,
+              expr.semanticNodeId,
+              std::move(initializerDirectCallResolvedPath),
+              initializerDirectCallReturnKind,
+              std::move(initializerMethodCallResolvedPath),
+              initializerMethodCallReturnKind,
+          });
       }
     }
     for (const auto &arg : expr.args) {
@@ -603,43 +639,19 @@ SemanticsValidator::callBindingSnapshotForTesting() {
 std::vector<SemanticsValidator::DirectCallTargetSnapshotEntry>
 SemanticsValidator::directCallTargetSnapshotForSemanticProduct() const {
   std::vector<DirectCallTargetSnapshotEntry> entries;
-  std::function<void(const std::string &, const Expr &)> visitExpr;
-  auto visitExprs = [&](const std::string &scopePath, const std::vector<Expr> &exprs) {
-    for (const auto &expr : exprs) {
-      visitExpr(scopePath, expr);
-    }
-  };
-
-  visitExpr = [&](const std::string &scopePath, const Expr &expr) {
-    if (expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
-      const std::string resolvedPath = resolveCalleePath(expr);
-      if (!resolvedPath.empty()) {
+  forEachResolvedNonMethodCallSnapshot(
+      program_,
+      [this](const Expr &expr) { return resolveCalleePath(expr); },
+      [&](const std::string &scopePath, const Expr &expr, std::string resolvedPath) {
         entries.push_back(DirectCallTargetSnapshotEntry{
             scopePath,
             expr.name,
-            resolvedPath,
+            std::move(resolvedPath),
             expr.sourceLine,
             expr.sourceColumn,
             expr.semanticNodeId,
         });
-      }
-    }
-    visitExprs(scopePath, expr.args);
-    visitExprs(scopePath, expr.bodyArguments);
-  };
-
-  for (const auto &def : program_.definitions) {
-    visitExprs(def.fullPath, def.parameters);
-    visitExprs(def.fullPath, def.statements);
-    if (def.returnExpr.has_value()) {
-      visitExpr(def.fullPath, *def.returnExpr);
-    }
-  }
-
-  for (const auto &exec : program_.executions) {
-    visitExprs(exec.fullPath, exec.arguments);
-    visitExprs(exec.fullPath, exec.bodyArguments);
-  }
+      });
 
   std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
     if (left.scopePath != right.scopePath) {
@@ -737,45 +749,23 @@ SemanticsValidator::methodCallTargetSnapshotForSemanticProduct() {
 std::vector<SemanticsValidator::BridgePathChoiceSnapshotEntry>
 SemanticsValidator::bridgePathChoiceSnapshotForSemanticProduct() const {
   std::vector<BridgePathChoiceSnapshotEntry> entries;
-  std::function<void(const std::string &, const Expr &)> visitExpr;
-  auto visitExprs = [&](const std::string &scopePath, const std::vector<Expr> &exprs) {
-    for (const auto &expr : exprs) {
-      visitExpr(scopePath, expr);
-    }
-  };
-
-  visitExpr = [&](const std::string &scopePath, const Expr &expr) {
-    if (expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
-      const std::string resolvedPath = resolveCalleePath(expr);
-      if (const auto bridgeChoice = collectionBridgeChoiceFromResolvedPath(resolvedPath);
-          bridgeChoice.has_value()) {
-        entries.push_back(BridgePathChoiceSnapshotEntry{
-            scopePath,
-            bridgeChoice->first,
-            bridgeChoice->second,
-            resolvedPath,
-            expr.sourceLine,
-            expr.sourceColumn,
-            expr.semanticNodeId,
-        });
-      }
-    }
-    visitExprs(scopePath, expr.args);
-    visitExprs(scopePath, expr.bodyArguments);
-  };
-
-  for (const auto &def : program_.definitions) {
-    visitExprs(def.fullPath, def.parameters);
-    visitExprs(def.fullPath, def.statements);
-    if (def.returnExpr.has_value()) {
-      visitExpr(def.fullPath, *def.returnExpr);
-    }
-  }
-
-  for (const auto &exec : program_.executions) {
-    visitExprs(exec.fullPath, exec.arguments);
-    visitExprs(exec.fullPath, exec.bodyArguments);
-  }
+  forEachResolvedNonMethodCallSnapshot(
+      program_,
+      [this](const Expr &expr) { return resolveCalleePath(expr); },
+      [&](const std::string &scopePath, const Expr &expr, std::string resolvedPath) {
+        if (const auto bridgeChoice = collectionBridgeChoiceFromResolvedPath(resolvedPath);
+            bridgeChoice.has_value()) {
+          entries.push_back(BridgePathChoiceSnapshotEntry{
+              scopePath,
+              bridgeChoice->first,
+              bridgeChoice->second,
+              std::move(resolvedPath),
+              expr.sourceLine,
+              expr.sourceColumn,
+              expr.semanticNodeId,
+          });
+        }
+      });
 
   std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
     if (left.scopePath != right.scopePath) {
@@ -1238,14 +1228,7 @@ SemanticsValidator::localAutoFactSnapshotForSemanticProduct() const {
 std::vector<SemanticsValidator::QueryFactSnapshotEntry>
 SemanticsValidator::queryFactSnapshotForSemanticProduct() {
   std::vector<QueryFactSnapshotEntry> entries;
-  forEachLocalAwareSnapshotCall([&](const Definition &def,
-                                    const std::vector<ParameterInfo> &defParams,
-                                    const Expr &expr,
-                                    const std::unordered_map<std::string, BindingInfo> &activeLocals) {
-    QuerySnapshotData queryData;
-    if (!inferQuerySnapshotData(defParams, activeLocals, expr, queryData)) {
-      return;
-    }
+  forEachInferredQuerySnapshot([&](const Definition &def, const Expr &expr, QuerySnapshotData &&queryData) {
     entries.push_back(QueryFactSnapshotEntry{
         def.fullPath,
         expr.name,
@@ -1294,22 +1277,18 @@ SemanticsValidator::onErrorFactSnapshotForSemanticProduct() {
 std::vector<SemanticsValidator::QueryReceiverBindingSnapshotEntry>
 SemanticsValidator::queryReceiverBindingSnapshotForTesting() {
   std::vector<QueryReceiverBindingSnapshotEntry> entries;
-  forEachLocalAwareSnapshotCall([&](const Definition &def,
-                                    const std::vector<ParameterInfo> &defParams,
-                                    const Expr &expr,
-                                    const std::unordered_map<std::string, BindingInfo> &activeLocals) {
-    QuerySnapshotData queryData;
-    if (inferQuerySnapshotData(defParams, activeLocals, expr, queryData) &&
-        !queryData.receiverBinding.typeName.empty()) {
-      entries.push_back(QueryReceiverBindingSnapshotEntry{
-          def.fullPath,
-          expr.name,
-          std::move(queryData.resolvedPath),
-          expr.sourceLine,
-          expr.sourceColumn,
-          std::move(queryData.receiverBinding),
-      });
+  forEachInferredQuerySnapshot([&](const Definition &def, const Expr &expr, QuerySnapshotData &&queryData) {
+    if (queryData.receiverBinding.typeName.empty()) {
+      return;
     }
+    entries.push_back(QueryReceiverBindingSnapshotEntry{
+        def.fullPath,
+        expr.name,
+        std::move(queryData.resolvedPath),
+        expr.sourceLine,
+        expr.sourceColumn,
+        std::move(queryData.receiverBinding),
+    });
   });
 
   std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {

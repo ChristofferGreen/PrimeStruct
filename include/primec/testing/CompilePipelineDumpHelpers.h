@@ -102,6 +102,10 @@ inline std::filesystem::path makeCompilePipelineDumpSourcePath() {
       "compile_pipeline_dumps/primestruct-dump-" + nonce + "-" + std::to_string(counter++) + ".prime");
 }
 
+inline bool dumpStageRequiresSemanticProduct(std::string_view dumpStage) {
+  return dumpStage == "semantic-product" || dumpStage == "semantic_product";
+}
+
 inline bool captureCompilePipelineDumpStageFromPath(const std::filesystem::path &sourcePath,
                                                     const std::string &entryPath,
                                                     std::string_view dumpStage,
@@ -116,6 +120,8 @@ inline bool captureCompilePipelineDumpStageFromPath(const std::filesystem::path 
   options.defaultEffects = detail::defaultCompilePipelineTestingEffects();
   options.entryDefaultEffects = options.defaultEffects;
   options.dumpStage = std::string(dumpStage);
+  const bool requiresSemanticProduct = dumpStageRequiresSemanticProduct(dumpStage);
+  options.skipSemanticProductForNonConsumingPath = !requiresSemanticProduct;
   options.collectDiagnostics = diagnosticInfo != nullptr;
   primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
 
@@ -184,6 +190,7 @@ inline bool prepareCompilePipelineIr(const std::string &source,
   prepared.options.wasmProfile = "wasi";
   prepared.options.defaultEffects = detail::defaultCompilePipelineTestingEffects();
   prepared.options.entryDefaultEffects = prepared.options.defaultEffects;
+  prepared.options.skipSemanticProductForNonConsumingPath = false;
   prepared.options.collectDiagnostics = diagnosticInfo != nullptr;
   primec::addDefaultStdlibInclude(prepared.options.inputPath, prepared.options.importPaths);
 

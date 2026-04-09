@@ -225,8 +225,8 @@ struct SemanticProgramModuleIdentity {
 
 struct SemanticProgramModuleResolvedArtifacts {
   SemanticProgramModuleIdentity identity;
-  std::vector<SemanticProgramDirectCallTarget> directCallTargets;
-  std::vector<SemanticProgramMethodCallTarget> methodCallTargets;
+  std::vector<std::size_t> directCallTargetIndices;
+  std::vector<std::size_t> methodCallTargetIndices;
   std::vector<SemanticProgramBridgePathChoice> bridgePathChoices;
   std::vector<SemanticProgramCallableSummary> callableSummaries;
   std::vector<SemanticProgramBindingFact> bindingFacts;

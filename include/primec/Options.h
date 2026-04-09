@@ -38,5 +38,10 @@ struct Options {
   std::vector<std::string> entryDefaultEffects = {"io_out"};
   std::vector<std::string> programArgs;
   std::vector<std::string> importPaths;
+  bool skipSemanticProductForNonConsumingPath = false;
+  std::optional<bool> benchmarkForceSemanticProduct;
+  bool benchmarkSemanticNoFactEmission = false;
+  bool benchmarkSemanticFactFamiliesSpecified = false;
+  std::vector<std::string> benchmarkSemanticFactFamilies;
 };
 } // namespace primec

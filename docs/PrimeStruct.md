@@ -279,6 +279,10 @@ Ownership and lifetime rules:
 - The semantic product is immutable after `Semantics::validate` succeeds.
 - The semantic product owns copied lowering facts; it must not depend on mutable AST-side caches or validator-global
   scratch state.
+- Compilation-local symbol interning uses `SymbolId` via `primec::SymbolInterner`; ids are assigned in first-seen
+  order within one compilation and are deterministic when traversal order is deterministic.
+- `SymbolId` values are owned by the interner instance that produced them: `0` is invalid, non-zero ids are only valid
+  against that same interner, and resolved text views are borrowed from interner storage until `clear()`/destruction.
 - Semantic nodes may reference syntax provenance only through stable ids/spans, not raw pointers into temporary
   validator state.
 - During migration, the AST may still outlive the semantic product so debug/source-map consumers can read syntax-faithful

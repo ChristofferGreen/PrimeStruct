@@ -1425,6 +1425,385 @@ main() {
   CHECK(diagnosticInfo.records.front().message == output.failure.message);
 }
 
+TEST_CASE("compile pipeline skips semantic product for ast-semantic dumps") {
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << R"(namespace bench {
+[i32]
+main() {
+  return(0)
+}
+}
+)";
+  }
+
+  primec::Options options;
+  options.inputPath = tempPath.string();
+  options.entryPath = "/bench/main";
+  options.emitKind = "native";
+  options.dumpStage = "ast-semantic";
+  options.collectDiagnostics = true;
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineDiagnosticInfo diagnosticInfo;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  const bool ok = primec::runCompilePipeline(options, output, errorStage, error, &diagnosticInfo);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  REQUIRE(ok);
+  CHECK(output.hasDumpOutput);
+  CHECK(errorStage == primec::CompilePipelineErrorStage::None);
+  CHECK_FALSE(output.hasFailure);
+  CHECK(output.semanticProductRequested == false);
+  CHECK(output.semanticProductBuilt == false);
+  CHECK_FALSE(output.hasSemanticProgram);
+  CHECK(output.dumpOutput.find("ast {") != std::string::npos);
+  CHECK(output.dumpOutput.find("/bench/main()") != std::string::npos);
+}
+
+TEST_CASE("compile pipeline builds semantic product for semantic-product dumps") {
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << R"(namespace bench {
+[void]
+callee() {}
+[i32]
+main() {
+  callee()
+  return(0)
+}
+}
+)";
+  }
+
+  primec::Options options;
+  options.inputPath = tempPath.string();
+  options.entryPath = "/bench/main";
+  options.emitKind = "native";
+  options.dumpStage = "semantic-product";
+  options.collectDiagnostics = true;
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineDiagnosticInfo diagnosticInfo;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  const bool ok = primec::runCompilePipeline(options, output, errorStage, error, &diagnosticInfo);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  REQUIRE(ok);
+  CHECK(output.hasDumpOutput);
+  CHECK(errorStage == primec::CompilePipelineErrorStage::None);
+  CHECK_FALSE(output.hasFailure);
+  CHECK(output.semanticProductRequested);
+  CHECK(output.semanticProductBuilt);
+  REQUIRE(output.hasSemanticProgram);
+  CHECK(output.semanticProgram.entryPath == "/bench/main");
+  CHECK(output.dumpOutput.find("semantic_product {") != std::string::npos);
+  CHECK(output.dumpOutput.find("direct_call_targets[0]:") != std::string::npos);
+}
+
+TEST_CASE("compile pipeline keeps semantic product for emit paths") {
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << R"(namespace bench {
+[i32]
+main() {
+  return(0)
+}
+}
+)";
+  }
+
+  primec::Options options;
+  options.inputPath = tempPath.string();
+  options.entryPath = "/bench/main";
+  options.emitKind = "vm";
+  options.collectDiagnostics = true;
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineDiagnosticInfo diagnosticInfo;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  const bool ok = primec::runCompilePipeline(options, output, errorStage, error, &diagnosticInfo);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  REQUIRE(ok);
+  CHECK_FALSE(output.hasDumpOutput);
+  CHECK(errorStage == primec::CompilePipelineErrorStage::None);
+  CHECK_FALSE(output.hasFailure);
+  CHECK(output.semanticProductRequested);
+  CHECK(output.semanticProductBuilt);
+  REQUIRE(output.hasSemanticProgram);
+  CHECK(output.semanticProgram.entryPath == "/bench/main");
+}
+
+TEST_CASE("compile pipeline explicit skip mode omits semantic product for non-consuming paths") {
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << R"(namespace bench {
+[i32]
+main() {
+  return(0)
+}
+}
+)";
+  }
+
+  primec::Options options;
+  options.inputPath = tempPath.string();
+  options.entryPath = "/bench/main";
+  options.emitKind = "vm";
+  options.skipSemanticProductForNonConsumingPath = true;
+  options.collectDiagnostics = true;
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineDiagnosticInfo diagnosticInfo;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  const bool ok = primec::runCompilePipeline(options, output, errorStage, error, &diagnosticInfo);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  REQUIRE(ok);
+  CHECK_FALSE(output.hasDumpOutput);
+  CHECK(errorStage == primec::CompilePipelineErrorStage::None);
+  CHECK_FALSE(output.hasFailure);
+  CHECK_FALSE(output.semanticProductRequested);
+  CHECK_FALSE(output.semanticProductBuilt);
+  CHECK_FALSE(output.hasSemanticProgram);
+}
+
+TEST_CASE("ir pipeline helper parseAndValidate skips semantic product when not requested") {
+  const std::string source = R"(import /std/math/Vec2
+
+[i32]
+main() {
+  return(0i32)
+}
+)";
+
+  primec::Program program;
+  std::string error;
+  const bool ok = parseAndValidate(source, program, error, {"io_out", "io_err"});
+  INFO(error);
+  REQUIRE(ok);
+  CHECK(error.empty());
+  CHECK_FALSE(program.definitions.empty());
+}
+
+TEST_CASE("compile pipeline explicit skip mode rejects semantic-product dump requests") {
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << R"(namespace bench {
+[return<i32>]
+main() {
+  return(0i32)
+}
+}
+)";
+  }
+
+  primec::Options options;
+  options.inputPath = tempPath.string();
+  options.entryPath = "/bench/main";
+  options.emitKind = "vm";
+  options.dumpStage = "semantic-product";
+  options.skipSemanticProductForNonConsumingPath = true;
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  const bool ok = primec::runCompilePipeline(options, output, errorStage, error);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  CHECK_FALSE(ok);
+  CHECK(errorStage == primec::CompilePipelineErrorStage::Semantic);
+  CHECK(error == "semantic-product dump requested without semantic product");
+  CHECK_FALSE(output.hasSemanticProgram);
+}
+
+TEST_CASE("compile pipeline benchmark force-on keeps semantic product for ast-semantic dumps") {
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << R"(namespace bench {
+[return<i32>]
+main() {
+  return(0i32)
+}
+}
+)";
+  }
+
+  primec::Options options;
+  options.inputPath = tempPath.string();
+  options.entryPath = "/bench/main";
+  options.emitKind = "native";
+  options.dumpStage = "ast-semantic";
+  options.benchmarkForceSemanticProduct = true;
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  const bool ok = primec::runCompilePipeline(options, output, errorStage, error);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  REQUIRE(ok);
+  CHECK(output.hasDumpOutput);
+  CHECK(output.semanticProductRequested);
+  CHECK(output.semanticProductBuilt);
+  CHECK(output.hasSemanticProgram);
+}
+
+TEST_CASE("compile pipeline benchmark force-off rejects semantic-product dump") {
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << R"(namespace bench {
+[return<i32>]
+main() {
+  return(0i32)
+}
+}
+)";
+  }
+
+  primec::Options options;
+  options.inputPath = tempPath.string();
+  options.entryPath = "/bench/main";
+  options.emitKind = "native";
+  options.dumpStage = "semantic-product";
+  options.benchmarkForceSemanticProduct = false;
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  const bool ok = primec::runCompilePipeline(options, output, errorStage, error);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  CHECK_FALSE(ok);
+  CHECK(errorStage == primec::CompilePipelineErrorStage::Semantic);
+  CHECK(error == "semantic-product dump requested without semantic product");
+  CHECK_FALSE(output.hasSemanticProgram);
+}
+
+TEST_CASE("compile pipeline benchmark no-fact-emission keeps semantic product shells empty") {
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << R"(namespace bench {
+[void]
+callee() {}
+[return<i32>]
+main() {
+  callee()
+  return(0i32)
+}
+}
+)";
+  }
+
+  primec::Options options;
+  options.inputPath = tempPath.string();
+  options.entryPath = "/bench/main";
+  options.emitKind = "native";
+  options.dumpStage = "semantic-product";
+  options.benchmarkSemanticNoFactEmission = true;
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  const bool ok = primec::runCompilePipeline(options, output, errorStage, error);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  REQUIRE(ok);
+  REQUIRE(output.hasSemanticProgram);
+  CHECK(output.semanticProgram.directCallTargets.empty());
+  CHECK(output.semanticProgram.callableSummaries.empty());
+  CHECK(output.semanticProgram.bindingFacts.empty());
+  CHECK(output.semanticProgram.queryFacts.empty());
+}
+
+TEST_CASE("compile pipeline benchmark fact-family allowlist keeps only selected collectors") {
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << R"(namespace bench {
+[void]
+callee() {}
+[return<i32>]
+main() {
+  callee()
+  return(0i32)
+}
+}
+)";
+  }
+
+  primec::Options options;
+  options.inputPath = tempPath.string();
+  options.entryPath = "/bench/main";
+  options.emitKind = "native";
+  options.dumpStage = "semantic-product";
+  options.benchmarkSemanticFactFamiliesSpecified = true;
+  options.benchmarkSemanticFactFamilies = {"callable_summaries"};
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  const bool ok = primec::runCompilePipeline(options, output, errorStage, error);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  REQUIRE(ok);
+  REQUIRE(output.hasSemanticProgram);
+  CHECK_FALSE(output.semanticProgram.callableSummaries.empty());
+  CHECK(output.semanticProgram.directCallTargets.empty());
+  CHECK(output.semanticProgram.bindingFacts.empty());
+  CHECK(output.semanticProgram.returnFacts.empty());
+  CHECK(output.semanticProgram.queryFacts.empty());
+}
+
 TEST_CASE("cli driver maps ir preparation failures through backend diagnostics") {
   const primec::IrBackend *vmBackend = primec::findIrBackend("vm");
   REQUIRE(vmBackend != nullptr);

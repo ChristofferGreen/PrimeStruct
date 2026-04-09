@@ -117,12 +117,27 @@ TEST_CASE("soa_vector conversion and access builtins reject template arguments")
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
               "/soa_vector/get<i32>(values, 0i32)", "get does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
-              "/soa_vector/get_ref<i32>(location(values), 0i32)",
-              "get_ref does not accept template arguments");
-  checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
               "/soa_vector/ref<i32>(values, 0i32)", "ref does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
               "/soa_vector/ref_ref<i32>(values, 0i32)", "ref_ref does not accept template arguments");
+}
+
+TEST_CASE("soa_vector canonical get_ref accepts explicit element template argument") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [auto] item{/soa_vector/get_ref<i32>(location(values), 0i32)}
+  return(item.x)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("soa_vector conversion and access builtins reject block arguments") {
@@ -541,14 +556,14 @@ borrowValues([Reference<soa_vector<Particle>>] values) {
 
 [return<auto>]
 pick([Reference<soa_vector<Particle>>] values) {
-  return(get_ref(borrowValues(values), 0i32))
+  return(get_ref(borrowValues(values), 0i32).x)
 }
 
 [return<int>]
 main() {
   [soa_vector<Particle>] values{cloneValues()}
   [auto] item{pick(location(values))}
-  return(item.x)
+  return(item)
 }
 )";
   std::string error;

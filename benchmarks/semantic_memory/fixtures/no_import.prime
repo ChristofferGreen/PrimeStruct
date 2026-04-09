@@ -1,0 +1,6 @@
+namespace bench {
+[return<i32>]
+main() {
+  return(1i32)
+}
+}

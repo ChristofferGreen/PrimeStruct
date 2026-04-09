@@ -4,11 +4,19 @@
 #include "primec/Diagnostics.h"
 #include "primec/SemanticProduct.h"
 
+#include <vector>
+
 namespace primec {
 
 using SemanticDiagnosticRelatedSpan = DiagnosticRelatedSpan;
 using SemanticDiagnosticRecord = DiagnosticSinkRecord;
 using SemanticDiagnosticInfo = DiagnosticSinkReport;
+
+struct SemanticProductBuildConfig {
+  bool disableAllCollectors = false;
+  bool collectorAllowlistSpecified = false;
+  std::vector<std::string> collectorAllowlist;
+};
 
 class Semantics {
 public:
@@ -20,7 +28,8 @@ public:
                 const std::vector<std::string> &semanticTransforms = {},
                 SemanticDiagnosticInfo *diagnosticInfo = nullptr,
                 bool collectDiagnostics = false,
-                SemanticProgram *semanticProgramOut = nullptr) const;
+                SemanticProgram *semanticProgramOut = nullptr,
+                const SemanticProductBuildConfig *semanticProductBuildConfig = nullptr) const;
 };
 
 } // namespace primec

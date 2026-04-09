@@ -6,7 +6,48 @@
 namespace primec::semantics {
 
 std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
+  const Definition *activeDefinition = currentDefinitionContext_;
+  const Execution *activeExecution = currentExecutionContext_;
+  const bool hasScopedOwner = activeDefinition != nullptr || activeExecution != nullptr;
+  if (hasScopedOwner &&
+      (callTargetResolutionScratch_.definitionOwner != activeDefinition ||
+       callTargetResolutionScratch_.executionOwner != activeExecution)) {
+    callTargetResolutionScratch_.resetArena();
+    callTargetResolutionScratch_.definitionOwner = activeDefinition;
+    callTargetResolutionScratch_.executionOwner = activeExecution;
+  } else if (!hasScopedOwner &&
+             (!callTargetResolutionScratch_.definitionFamilyPathCache.empty() ||
+              !callTargetResolutionScratch_.normalizedMethodNameCache.empty() ||
+              !callTargetResolutionScratch_.explicitRemovedMethodPathCache.empty() ||
+              callTargetResolutionScratch_.definitionOwner != nullptr ||
+              callTargetResolutionScratch_.executionOwner != nullptr)) {
+    callTargetResolutionScratch_.resetArena();
+  }
+
   auto hasDefinitionFamilyPath = [&](std::string_view path) {
+    if (hasScopedOwner) {
+      const std::string key(path);
+      if (const auto cacheIt = callTargetResolutionScratch_.definitionFamilyPathCache.find(key);
+          cacheIt != callTargetResolutionScratch_.definitionFamilyPathCache.end()) {
+        return cacheIt->second;
+      }
+      bool hasPath = false;
+      if (defMap_.count(key) > 0) {
+        hasPath = true;
+      } else {
+        const std::string templatedPrefix = key + "<";
+        const std::string specializedPrefix = key + "__t";
+        for (const auto &def : program_.definitions) {
+          if (def.fullPath == path || def.fullPath.rfind(templatedPrefix, 0) == 0 ||
+              def.fullPath.rfind(specializedPrefix, 0) == 0) {
+            hasPath = true;
+            break;
+          }
+        }
+      }
+      callTargetResolutionScratch_.definitionFamilyPathCache.emplace(std::move(key), hasPath);
+      return hasPath;
+    }
     if (defMap_.count(std::string(path)) > 0) {
       return true;
     }
@@ -19,6 +60,59 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
       }
     }
     return false;
+  };
+  auto rootedPathForName = [&](std::string_view name) -> std::string {
+    if (!hasScopedOwner) {
+      return "/" + std::string(name);
+    }
+    const std::string key(name);
+    if (const auto cacheIt = callTargetResolutionScratch_.rootedCallNamePathCache.find(key);
+        cacheIt != callTargetResolutionScratch_.rootedCallNamePathCache.end()) {
+      return cacheIt->second;
+    }
+    auto [insertIt, inserted] =
+        callTargetResolutionScratch_.rootedCallNamePathCache.emplace(key, "/" + key);
+    (void)inserted;
+    return insertIt->second;
+  };
+  auto normalizedPrefixPath = [&](std::string_view namespacePrefix) -> std::string {
+    if (!hasScopedOwner) {
+      std::string normalizedPrefix(namespacePrefix);
+      if (!normalizedPrefix.empty() && normalizedPrefix.front() != '/') {
+        normalizedPrefix.insert(normalizedPrefix.begin(), '/');
+      }
+      return normalizedPrefix;
+    }
+    const std::string key(namespacePrefix);
+    if (const auto cacheIt = callTargetResolutionScratch_.normalizedNamespacePrefixCache.find(key);
+        cacheIt != callTargetResolutionScratch_.normalizedNamespacePrefixCache.end()) {
+      return cacheIt->second;
+    }
+    std::string normalizedPrefix = key;
+    if (!normalizedPrefix.empty() && normalizedPrefix.front() != '/') {
+      normalizedPrefix.insert(normalizedPrefix.begin(), '/');
+    }
+    auto [insertIt, inserted] =
+        callTargetResolutionScratch_.normalizedNamespacePrefixCache.emplace(key, std::move(normalizedPrefix));
+    (void)inserted;
+    return insertIt->second;
+  };
+  auto joinedPath = [&](std::string_view prefix, std::string_view name) -> std::string {
+    if (!hasScopedOwner) {
+      return std::string(prefix) + "/" + std::string(name);
+    }
+    std::string key(prefix);
+    key.push_back('\x1f');
+    key.append(name);
+    if (const auto cacheIt = callTargetResolutionScratch_.joinedCallPathCache.find(key);
+        cacheIt != callTargetResolutionScratch_.joinedCallPathCache.end()) {
+      return cacheIt->second;
+    }
+    std::string joined = std::string(prefix) + "/" + std::string(name);
+    auto [insertIt, inserted] =
+        callTargetResolutionScratch_.joinedCallPathCache.emplace(std::move(key), std::move(joined));
+    (void)inserted;
+    return insertIt->second;
   };
   auto rewriteCanonicalCollectionHelperPath = [&](const std::string &resolvedPath) -> std::string {
     auto canonicalMapHelperAliasPath = [&](std::string_view) -> std::string {
@@ -273,7 +367,7 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     return rewriteCanonicalCollectionConstructorPath(expr.name);
   }
   if (expr.name.find('/') != std::string::npos) {
-    return rewriteCanonicalCollectionConstructorPath("/" + expr.name);
+    return rewriteCanonicalCollectionConstructorPath(rootedPathForName(expr.name));
   }
 
   std::string pointerBuiltinName;
@@ -281,10 +375,7 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     return "/" + pointerBuiltinName;
   }
   if (!expr.namespacePrefix.empty()) {
-    std::string normalizedPrefix = expr.namespacePrefix;
-    if (normalizedPrefix.front() != '/') {
-      normalizedPrefix.insert(normalizedPrefix.begin(), '/');
-    }
+    const std::string normalizedPrefix = normalizedPrefixPath(expr.namespacePrefix);
     auto isRemovedVectorCompatibilityHelper = [](std::string_view helperName) {
       return helperName == "count" || helperName == "capacity" || helperName == "at" ||
              helperName == "at_unsafe" || helperName == "push" || helperName == "pop" ||
@@ -332,7 +423,7 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     }
     std::string prefix = normalizedPrefix;
     while (!prefix.empty()) {
-      std::string candidate = prefix + "/" + expr.name;
+      const std::string candidate = joinedPath(prefix, expr.name);
       if (defMap_.count(candidate) > 0) {
         return candidate;
       }
@@ -354,14 +445,14 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     if (it != importAliases_.end()) {
       return rewriteCanonicalCollectionConstructorPath(it->second);
     }
-    std::string root = "/" + expr.name;
+    const std::string root = rootedPathForName(expr.name);
     if (defMap_.count(root) > 0) {
       return rewriteCanonicalCollectionConstructorPath(root);
     }
-    return rewriteCanonicalCollectionConstructorPath(normalizedPrefix + "/" + expr.name);
+    return rewriteCanonicalCollectionConstructorPath(joinedPath(normalizedPrefix, expr.name));
   }
 
-  std::string root = "/" + expr.name;
+  const std::string root = rootedPathForName(expr.name);
   if (defMap_.count(root) > 0) {
     return rewriteCanonicalCollectionConstructorPath(root);
   }

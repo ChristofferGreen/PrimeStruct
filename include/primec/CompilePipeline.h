@@ -30,6 +30,8 @@ struct CompilePipelineOutput {
   Program program;
   SemanticProgram semanticProgram;
   bool hasSemanticProgram = false;
+  bool semanticProductRequested = false;
+  bool semanticProductBuilt = false;
   std::string filteredSource;
   std::string dumpOutput;
   bool hasDumpOutput = false;

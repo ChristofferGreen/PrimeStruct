@@ -67,6 +67,7 @@ inline bool parseAndValidateThroughCompilePipeline(const std::string &source,
   options.entryPath = "/main";
   options.defaultEffects = defaultEffects;
   options.entryDefaultEffects = entryDefaultEffects;
+  options.skipSemanticProductForNonConsumingPath = semanticProgramOut == nullptr;
   primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
 
   primec::CompilePipelineOutput output;

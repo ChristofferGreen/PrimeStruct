@@ -29,6 +29,7 @@ set(PRIMESTRUCT_SUPPORT_SOURCES
   src/EmitKind.cpp
   src/OptionsParser.cpp
   src/ProcessRunner.cpp
+  src/SymbolInterner.cpp
   src/TempPaths.cpp
   src/TransformRules.cpp
   src/TransformRegistry.cpp
@@ -595,6 +596,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_semantics_type_resolution_graph.cpp
     tests/unit/test_semantics_type_resolution_graph_snapshots.cpp
     tests/unit/test_semantics_type_resolution_return_solver.cpp
+    tests/unit/test_semantics_symbol_interner.cpp
     tests/unit/test_semantics_uninitialized_fields.cpp
     tests/unit/test_semantics_entry_parameters.cpp
     tests/unit/test_semantics_entry_return_inference.cpp
@@ -1047,6 +1049,31 @@ if(PRIMESTRUCT_BUILD_TESTS)
             --baseline ${CMAKE_SOURCE_DIR}/benchmarks/type_graph_budget_baseline.json
   )
   set_tests_properties(PrimeStruct_graph_budget PROPERTIES RUN_SERIAL TRUE TIMEOUT 120 LABELS "parallel-safe")
+
+  add_custom_target(
+    primestruct_semantic_memory_benchmark
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/semantic_memory_benchmark.py
+            --primec $<TARGET_FILE:primec>
+            --repo-root ${CMAKE_SOURCE_DIR}
+            --runs 3
+            --report-json ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_report.json
+    DEPENDS primec
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    COMMENT "Running semantic memory benchmark fixtures"
+    VERBATIM
+  )
+
+  add_test(
+    NAME PrimeStruct_semantic_memory_benchmark
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/semantic_memory_benchmark.py
+            --primec $<TARGET_FILE:primec>
+            --repo-root ${CMAKE_SOURCE_DIR}
+            --runs 3
+            --report-json ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_report.json
+  )
+  set_tests_properties(
+    PrimeStruct_semantic_memory_benchmark
+    PROPERTIES RUN_SERIAL TRUE TIMEOUT 1800 LABELS "expensive")
 
   set(PrimeStructCompileRunSuites
     primestruct.compile.run.smoke

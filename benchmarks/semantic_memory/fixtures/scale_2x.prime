@@ -1,0 +1,22 @@
+namespace bench {
+[return<i32>]
+f0([i32] value) {
+  return(plus(value, 1i32))
+}
+[return<i32>]
+f1([i32] value) {
+  return(plus(f0(value), 1i32))
+}
+[return<i32>]
+f2([i32] value) {
+  return(plus(f1(value), 1i32))
+}
+[return<i32>]
+f3([i32] value) {
+  return(plus(f2(value), 1i32))
+}
+[return<i32>]
+main() {
+  return(f3(0i32))
+}
+}

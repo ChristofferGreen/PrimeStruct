@@ -135,7 +135,7 @@ bool SemanticsValidator::lookupGraphLocalAutoDirectCallFact(const std::string &s
     return false;
   }
   const auto [sourceLine, sourceColumn] = graphLocalAutoSourceLocation(bindingExpr);
-  const std::string bindingKey = graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn);
+  const GraphLocalAutoKey bindingKey = graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn);
   bool found = false;
   if (const auto resolvedPathIt = graphLocalAutoDirectCallResolvedPaths_.find(bindingKey);
       resolvedPathIt != graphLocalAutoDirectCallResolvedPaths_.end()) {
@@ -167,7 +167,7 @@ bool SemanticsValidator::lookupGraphLocalAutoMethodCallFact(const std::string &s
     return false;
   }
   const auto [sourceLine, sourceColumn] = graphLocalAutoSourceLocation(bindingExpr);
-  const std::string bindingKey = graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn);
+  const GraphLocalAutoKey bindingKey = graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn);
   bool found = false;
   if (const auto resolvedPathIt = graphLocalAutoMethodCallResolvedPaths_.find(bindingKey);
       resolvedPathIt != graphLocalAutoMethodCallResolvedPaths_.end()) {

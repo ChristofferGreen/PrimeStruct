@@ -1,0 +1,10 @@
+namespace bench {
+[return<i32>]
+poly3([i32] x) {
+  return(plus(plus(x, x), 7i32))
+}
+[return<i32>]
+main() {
+  return(poly3(9i32))
+}
+}

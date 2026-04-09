@@ -95,6 +95,59 @@ Baseline thresholds are stored in:
 
 - `benchmarks/benchmark_baseline.json`
 
+## Semantic Memory Benchmark
+
+Semantic memory benchmark fixtures live under:
+
+- `benchmarks/semantic_memory/fixtures/`
+- `math_vector.prime` uses explicit vector-surface imports (`/std/math/Vec2`).
+- `math_vector_matrix.prime` uses explicit vector+matrix imports (`/std/math/Vec2 /std/math/Mat2`).
+
+Run the semantic memory harness after building `primec`:
+
+- `./scripts/semantic_memory_benchmark.sh`
+- `python3 scripts/semantic_memory_benchmark.py --repo-root . --primec build-release/primec --runs 3 --report-json build-release/benchmarks/semantic_memory_report.json`
+- `python3 scripts/semantic_memory_benchmark.py --repo-root . --primec build-release/primec --runs 3 --semantic-product-force on --report-json build-release/benchmarks/semantic_memory_force_on_report.json`
+- `python3 scripts/semantic_memory_benchmark.py --repo-root . --primec build-release/primec --runs 3 --no-fact-emission --report-json build-release/benchmarks/semantic_memory_no_facts_report.json`
+- `python3 scripts/semantic_memory_benchmark.py --repo-root . --primec build-release/primec --runs 3 --fact-families callable_summaries --report-json build-release/benchmarks/semantic_memory_callable_only_report.json`
+
+The semantic memory report schema is:
+
+- `primestruct_semantic_memory_report_v1`
+
+This report captures:
+
+- Per-fixture wall time and peak RSS for both `ast-semantic` and `semantic-product` dump stages.
+- Median and worst-case wall/RSS across 3 runs.
+- Semantic-product key-cardinality metrics (distinct direct/method target keys and max key length).
+- `1x/2x/4x` scale-fixture slope estimates for RSS/time.
+- Expensive-threshold annotations (`3s` runtime, `500 MiB` peak RSS): per-row flags plus an `expensive_offenders` summary.
+
+Benchmark-only collector controls are forwarded to `primec`:
+
+- `--semantic-product-force auto|on|off` maps to compile-pipeline semantic-product gate override.
+- `--no-fact-emission` runs semantic validation while disabling semantic-product collectors.
+- `--fact-families <csv>` allows only the specified semantic collector families.
+
+Initial checked-in baseline report:
+
+- `benchmarks/semantic_memory_baseline_report.json`
+- `benchmarks/semantic_memory/method_target_memoization_delta.md` records the
+  `P2-10` method-target memoization RSS/time delta on `math_star_repro`
+  (`semantic-product`, 3 runs) against that baseline.
+- `benchmarks/semantic_memory/graph_local_auto_structured_keys_delta.md`
+  records the `P2-11` graph-local-auto structured-key RSS/time delta on
+  `math_star_repro` (`semantic-product`, 3 runs) against that baseline.
+- `benchmarks/semantic_memory/normalized_method_name_cache_flattening_delta.md`
+  records the `P2-12` normalized-method-name cache flattening RSS/time delta
+  on `math_star_repro` (`semantic-product`, 3 runs) against that baseline.
+- `benchmarks/semantic_memory/per_definition_arena_pmr_delta.md` records the
+  `P2-13` per-definition arena/PMR scratch-allocation RSS/time delta on
+  `math_star_repro` (`semantic-product`, 3 runs) against that baseline.
+
+The CTest target `PrimeStruct_semantic_memory_benchmark` is labeled `expensive`
+and `RUN_SERIAL` because baseline fixtures exceed the expensive-test thresholds.
+
 ## Type-Graph Budget Gates
 
 Type-resolution graph budget checks are enforced from a committed baseline file:

@@ -668,9 +668,9 @@ TEST_CASE("semantic product publishes resolved method-call targets") {
       "  return(17i32)\n"
       "}\n"
       "\n"
-      "[return<i32>]\n"
+      "[effects(heap_alloc), return<i32>]\n"
       "main() {\n"
-      "  [auto] values{vector(1i32)}\n"
+      "  [auto] values{vector<i32>(1i32)}\n"
       "  return(values.count())\n"
       "}\n";
 
@@ -1971,6 +1971,110 @@ TEST_CASE("semantic product formatter emits deterministic lowering-facing sectio
   CHECK(dump.find("struct_field_metadata[") != std::string::npos);
   CHECK(dump.find("binding_facts[") != std::string::npos);
   CHECK(dump.find("return_facts[") != std::string::npos);
+}
+
+TEST_CASE("semantic product formatter resolves module direct-call indices deterministically") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      "/z",
+      "last",
+      "/last",
+      20,
+      2,
+      300,
+      900,
+  });
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      "/a",
+      "first",
+      "/first",
+      10,
+      1,
+      200,
+      800,
+  });
+
+  primec::SemanticProgramModuleResolvedArtifacts moduleA;
+  moduleA.identity.moduleKey = "/a";
+  moduleA.identity.stableOrder = 0;
+  moduleA.directCallTargetIndices.push_back(1);
+  semanticProgram.moduleResolvedArtifacts.push_back(moduleA);
+
+  primec::SemanticProgramModuleResolvedArtifacts moduleZ;
+  moduleZ.identity.moduleKey = "/z";
+  moduleZ.identity.stableOrder = 1;
+  moduleZ.directCallTargetIndices.push_back(0);
+  semanticProgram.moduleResolvedArtifacts.push_back(moduleZ);
+
+  const auto view = primec::semanticProgramDirectCallTargetView(semanticProgram);
+  REQUIRE(view.size() == 2);
+  CHECK(view[0] == &semanticProgram.directCallTargets[1]);
+  CHECK(view[1] == &semanticProgram.directCallTargets[0]);
+
+  const std::string dump = primec::formatSemanticProgram(semanticProgram);
+  const std::string firstEntry =
+      "direct_call_targets[0]: scope_path=\"/a\" call_name=\"first\" resolved_path=\"/first\"";
+  const std::string secondEntry =
+      "direct_call_targets[1]: scope_path=\"/z\" call_name=\"last\" resolved_path=\"/last\"";
+  const std::size_t firstPos = dump.find(firstEntry);
+  const std::size_t secondPos = dump.find(secondEntry);
+  CHECK(firstPos != std::string::npos);
+  CHECK(secondPos != std::string::npos);
+  CHECK(firstPos < secondPos);
+}
+
+TEST_CASE("semantic product formatter resolves module method-call indices deterministically") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
+      "/z",
+      "scale",
+      "matrix<f32>",
+      "/std/math/matrix/scale",
+      22,
+      6,
+      330,
+      930,
+  });
+  semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
+      "/a",
+      "length",
+      "vector<f32>",
+      "/std/math/vector/length",
+      12,
+      3,
+      230,
+      830,
+  });
+
+  primec::SemanticProgramModuleResolvedArtifacts moduleA;
+  moduleA.identity.moduleKey = "/a";
+  moduleA.identity.stableOrder = 0;
+  moduleA.methodCallTargetIndices.push_back(1);
+  semanticProgram.moduleResolvedArtifacts.push_back(moduleA);
+
+  primec::SemanticProgramModuleResolvedArtifacts moduleZ;
+  moduleZ.identity.moduleKey = "/z";
+  moduleZ.identity.stableOrder = 1;
+  moduleZ.methodCallTargetIndices.push_back(0);
+  semanticProgram.moduleResolvedArtifacts.push_back(moduleZ);
+
+  const auto view = primec::semanticProgramMethodCallTargetView(semanticProgram);
+  REQUIRE(view.size() == 2);
+  CHECK(view[0] == &semanticProgram.methodCallTargets[1]);
+  CHECK(view[1] == &semanticProgram.methodCallTargets[0]);
+
+  const std::string dump = primec::formatSemanticProgram(semanticProgram);
+  const std::string firstEntry =
+      "method_call_targets[0]: scope_path=\"/a\" method_name=\"length\" receiver_type_text=\"vector<f32>\" resolved_path=\"/std/math/vector/length\"";
+  const std::string secondEntry =
+      "method_call_targets[1]: scope_path=\"/z\" method_name=\"scale\" receiver_type_text=\"matrix<f32>\" resolved_path=\"/std/math/matrix/scale\"";
+  const std::size_t firstPos = dump.find(firstEntry);
+  const std::size_t secondPos = dump.find(secondEntry);
+  CHECK(firstPos != std::string::npos);
+  CHECK(secondPos != std::string::npos);
+  CHECK(firstPos < secondPos);
 }
 
 TEST_CASE("semantic product formatter exact golden is stable") {

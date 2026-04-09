@@ -15,6 +15,77 @@ TEST_CASE("benchmark baseline artifact includes native allocator coverage") {
   CHECK(baseline.find("\"entry\": \"primestruct_cpp\"") != std::string::npos);
 }
 
+TEST_CASE("semantic memory benchmark fixtures are checked in") {
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path fixtureRoot = repoRoot / "benchmarks" / "semantic_memory" / "fixtures";
+  REQUIRE(std::filesystem::exists(fixtureRoot));
+  CHECK(std::filesystem::exists(fixtureRoot / "math_star_repro.prime"));
+  CHECK(std::filesystem::exists(fixtureRoot / "no_import.prime"));
+  CHECK(std::filesystem::exists(fixtureRoot / "math_vector.prime"));
+  CHECK(std::filesystem::exists(fixtureRoot / "math_vector_matrix.prime"));
+  CHECK(std::filesystem::exists(fixtureRoot / "non_math_large_include.prime"));
+  CHECK(std::filesystem::exists(fixtureRoot / "inline_math_body.prime"));
+  CHECK(std::filesystem::exists(fixtureRoot / "imported_math_body.prime"));
+  CHECK(std::filesystem::exists(fixtureRoot / "scale_1x.prime"));
+  CHECK(std::filesystem::exists(fixtureRoot / "scale_2x.prime"));
+  CHECK(std::filesystem::exists(fixtureRoot / "scale_4x.prime"));
+}
+
+TEST_CASE("semantic memory baseline report is checked in with fixture phase coverage") {
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path baselinePath = repoRoot / "benchmarks" / "semantic_memory_baseline_report.json";
+  const std::string baseline = readFile(baselinePath.string());
+  REQUIRE_FALSE(baseline.empty());
+  CHECK(baseline.find("\"schema\": \"primestruct_semantic_memory_report_v1\"") != std::string::npos);
+  CHECK(baseline.find("\"fixture\": \"math_star_repro\"") != std::string::npos);
+  CHECK(baseline.find("\"fixture\": \"no_import\"") != std::string::npos);
+  CHECK(baseline.find("\"phase\": \"ast-semantic\"") != std::string::npos);
+  CHECK(baseline.find("\"phase\": \"semantic-product\"") != std::string::npos);
+  CHECK(baseline.find("\"worst_wall_seconds\"") != std::string::npos);
+  CHECK(baseline.find("\"worst_peak_rss_bytes\"") != std::string::npos);
+  CHECK(baseline.find("\"expensive_thresholds\"") != std::string::npos);
+  CHECK(baseline.find("\"is_expensive_threshold_offender\": true") != std::string::npos);
+}
+
+TEST_CASE("semantic memory benchmark helper accepts benchmark-only collector controls") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";
+  const std::filesystem::path primecPath = repoRoot / "build-release" / "primec";
+  if (!std::filesystem::exists(primecPath)) {
+    INFO("primec not available in build-release");
+    return;
+  }
+
+  const std::string reportPath = writeTemp("semantic_memory_report.json", "");
+  const std::string stdoutPath = writeTemp("semantic_memory_benchmark.out", "");
+  const std::string stderrPath = writeTemp("semantic_memory_benchmark.err", "");
+
+  const std::string cmd =
+      "python3 " + quoteShellArg(scriptPath.string()) +
+      " --repo-root " + quoteShellArg(repoRoot.string()) +
+      " --primec " + quoteShellArg(primecPath.string()) +
+      " --runs 1 --fixtures no_import --phases ast-semantic --semantic-product-force on "
+      "--fact-families callable_summaries --report-json " +
+      quoteShellArg(reportPath) +
+      " > " + quoteShellArg(stdoutPath) + " 2> " + quoteShellArg(stderrPath);
+  CHECK(runCommand(cmd) == 0);
+  CHECK(readFile(stderrPath).empty());
+
+  const std::string report = readFile(reportPath);
+  CHECK(report.find("\"schema\": \"primestruct_semantic_memory_report_v1\"") != std::string::npos);
+  CHECK(report.find("\"fixture\": \"no_import\"") != std::string::npos);
+  CHECK(report.find("\"phase\": \"ast-semantic\"") != std::string::npos);
+  CHECK(report.find("\"semantic_product_force\": \"on\"") != std::string::npos);
+  CHECK(report.find("\"fact_families\": \"callable_summaries\"") != std::string::npos);
+  CHECK(report.find("\"expensive_thresholds\"") != std::string::npos);
+  CHECK(report.find("\"is_expensive_threshold_offender\": false") != std::string::npos);
+}
+
 TEST_CASE("benchmark regression checker passes for in-threshold report") {
   if (!hasPython3()) {
     INFO("python3 not available");

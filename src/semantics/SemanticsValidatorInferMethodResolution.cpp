@@ -11,6 +11,24 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     const std::unordered_map<std::string, BindingInfo> &locals,
     const std::string &methodName,
     std::string &resolvedOut) {
+  const Definition *activeDefinition = currentDefinitionContext_;
+  const Execution *activeExecution = currentExecutionContext_;
+  const bool hasScopedOwner = activeDefinition != nullptr || activeExecution != nullptr;
+  if (hasScopedOwner &&
+      (callTargetResolutionScratch_.definitionOwner != activeDefinition ||
+       callTargetResolutionScratch_.executionOwner != activeExecution)) {
+    callTargetResolutionScratch_.resetArena();
+    callTargetResolutionScratch_.definitionOwner = activeDefinition;
+    callTargetResolutionScratch_.executionOwner = activeExecution;
+  } else if (!hasScopedOwner &&
+             (!callTargetResolutionScratch_.definitionFamilyPathCache.empty() ||
+              !callTargetResolutionScratch_.normalizedMethodNameCache.empty() ||
+              !callTargetResolutionScratch_.explicitRemovedMethodPathCache.empty() ||
+              callTargetResolutionScratch_.definitionOwner != nullptr ||
+              callTargetResolutionScratch_.executionOwner != nullptr)) {
+    callTargetResolutionScratch_.resetArena();
+  }
+
   auto resolveArgsPackCountTarget = [&](const Expr &target, std::string &elemType) -> bool {
     return resolveInferArgsPackCountTarget(params, locals, target, elemType);
   };
@@ -31,26 +49,79 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   const Expr &receiver = expr.args.front();
   std::string typeName;
   std::string typeTemplateArg;
-  std::string normalizedMethodName = methodName;
-  if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
-    normalizedMethodName.erase(normalizedMethodName.begin());
+  auto normalizeMethodName = [](const std::string &name) {
+    std::string normalizedMethodName = name;
+    if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
+      normalizedMethodName.erase(normalizedMethodName.begin());
+    }
+    if (normalizedMethodName.rfind("vector/", 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(std::string("vector/").size());
+    } else if (normalizedMethodName.rfind("array/", 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
+    } else if (normalizedMethodName.rfind("soa_vector/", 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(std::string("soa_vector/").size());
+    } else if (normalizedMethodName.rfind("std/collections/soa_vector/", 0) == 0) {
+      normalizedMethodName =
+          normalizedMethodName.substr(std::string("std/collections/soa_vector/").size());
+    } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/vector/").size());
+    } else if (normalizedMethodName.rfind("map/", 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(std::string("map/").size());
+    } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
+    }
+    return normalizedMethodName;
+  };
+  auto lookupNormalizedMethodName = [&](const std::string &rawMethodName,
+                                        std::string &normalizedMethodNameOut) {
+    for (const auto &entry : callTargetResolutionScratch_.normalizedMethodNameCache) {
+      if (entry.first == rawMethodName) {
+        normalizedMethodNameOut = entry.second;
+        return true;
+      }
+    }
+    return false;
+  };
+  std::string normalizedMethodName;
+  if (hasScopedOwner) {
+    if (!lookupNormalizedMethodName(methodName, normalizedMethodName)) {
+      normalizedMethodName = normalizeMethodName(methodName);
+      callTargetResolutionScratch_.normalizedMethodNameCache.emplace_back(methodName, normalizedMethodName);
+    }
+  } else {
+    normalizedMethodName = normalizeMethodName(methodName);
   }
-  if (normalizedMethodName.rfind("vector/", 0) == 0) {
-    normalizedMethodName = normalizedMethodName.substr(std::string("vector/").size());
-  } else if (normalizedMethodName.rfind("array/", 0) == 0) {
-    normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
-  } else if (normalizedMethodName.rfind("soa_vector/", 0) == 0) {
-    normalizedMethodName = normalizedMethodName.substr(std::string("soa_vector/").size());
-  } else if (normalizedMethodName.rfind("std/collections/soa_vector/", 0) == 0) {
-    normalizedMethodName =
-        normalizedMethodName.substr(std::string("std/collections/soa_vector/").size());
-  } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
-    normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/vector/").size());
-  } else if (normalizedMethodName.rfind("map/", 0) == 0) {
-    normalizedMethodName = normalizedMethodName.substr(std::string("map/").size());
-  } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
-    normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
-  }
+  auto rootedPathFragment = [&](std::string_view token) -> std::string {
+    if (!hasScopedOwner) {
+      return "/" + std::string(token);
+    }
+    const std::string key(token);
+    if (const auto cacheIt = callTargetResolutionScratch_.rootedCallNamePathCache.find(key);
+        cacheIt != callTargetResolutionScratch_.rootedCallNamePathCache.end()) {
+      return cacheIt->second;
+    }
+    auto [insertIt, inserted] =
+        callTargetResolutionScratch_.rootedCallNamePathCache.emplace(key, "/" + key);
+    (void)inserted;
+    return insertIt->second;
+  };
+  auto joinMethodTarget = [&](std::string_view pathPrefix, std::string_view methodFragment) -> std::string {
+    if (!hasScopedOwner) {
+      return std::string(pathPrefix) + "/" + std::string(methodFragment);
+    }
+    std::string joinKey(pathPrefix);
+    joinKey.push_back('\x1f');
+    joinKey.append(methodFragment);
+    if (const auto cacheIt = callTargetResolutionScratch_.joinedCallPathCache.find(joinKey);
+        cacheIt != callTargetResolutionScratch_.joinedCallPathCache.end()) {
+      return cacheIt->second;
+    }
+    std::string joined = std::string(pathPrefix) + "/" + std::string(methodFragment);
+    auto [insertIt, inserted] =
+        callTargetResolutionScratch_.joinedCallPathCache.emplace(std::move(joinKey), std::move(joined));
+    (void)inserted;
+    return insertIt->second;
+  };
   const auto isValueSurfaceAccessMethodName = [](std::string_view helperName) {
     return helperName == "at" || helperName == "at_unsafe";
   };
@@ -58,8 +129,56 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     return isValueSurfaceAccessMethodName(helperName) ||
            helperName == "at_ref" || helperName == "at_unsafe_ref";
   };
-  const std::string explicitRemovedMethodPath =
-      explicitRemovedCollectionMethodPath(methodName, expr.namespacePrefix);
+  std::string explicitRemovedMethodPath;
+  if (hasScopedOwner) {
+    const std::string cacheKey = methodName + "\x1f" + expr.namespacePrefix;
+    if (const auto cacheIt = callTargetResolutionScratch_.explicitRemovedMethodPathCache.find(cacheKey);
+        cacheIt != callTargetResolutionScratch_.explicitRemovedMethodPathCache.end()) {
+      explicitRemovedMethodPath = cacheIt->second;
+    } else {
+      explicitRemovedMethodPath = explicitRemovedCollectionMethodPath(methodName, expr.namespacePrefix);
+      callTargetResolutionScratch_.explicitRemovedMethodPathCache.emplace(cacheKey, explicitRemovedMethodPath);
+    }
+  } else {
+    explicitRemovedMethodPath = explicitRemovedCollectionMethodPath(methodName, expr.namespacePrefix);
+  }
+  auto methodTargetMemoKey = [&](std::string_view receiverTypeText) -> std::string {
+    if (!hasScopedOwner || expr.semanticNodeId == 0 || receiverTypeText.empty()) {
+      return {};
+    }
+    std::string key = std::to_string(expr.semanticNodeId);
+    key.push_back('\x1f');
+    key.append(receiverTypeText);
+    key.push_back('\x1f');
+    key.append(normalizedMethodName);
+    return key;
+  };
+  auto lookupMethodTargetMemo = [&](std::string_view receiverTypeText,
+                                    std::string &resolvedPathOut,
+                                    bool &successOut) -> bool {
+    const std::string key = methodTargetMemoKey(receiverTypeText);
+    if (key.empty()) {
+      return false;
+    }
+    const auto memoIt = callTargetResolutionScratch_.methodTargetMemoCache.find(key);
+    if (memoIt == callTargetResolutionScratch_.methodTargetMemoCache.end()) {
+      return false;
+    }
+    resolvedPathOut = memoIt->second;
+    successOut = !memoIt->second.empty();
+    return true;
+  };
+  auto storeMethodTargetMemo = [&](std::string_view receiverTypeText, bool success) {
+    const std::string key = methodTargetMemoKey(receiverTypeText);
+    if (key.empty()) {
+      return;
+    }
+    if (!success) {
+      callTargetResolutionScratch_.methodTargetMemoCache.insert_or_assign(key, std::string());
+      return;
+    }
+    callTargetResolutionScratch_.methodTargetMemoCache.insert_or_assign(key, resolvedOut);
+  };
   auto resolveCollectionMethodFromTypePath = [&](const std::string &collectionTypePath) -> bool {
     if (!explicitRemovedMethodPath.empty() && hasDefinitionPath(explicitRemovedMethodPath)) {
       if (normalizedMethodName == "count" &&
@@ -404,7 +523,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
     std::string resolvedType = resolveCalleePath(receiver);
     if (!resolvedType.empty() && structNames_.count(resolvedType) > 0) {
-      resolvedOut = resolvedType + "/" + normalizedMethodName;
+      resolvedOut = joinMethodTarget(resolvedType, normalizedMethodName);
       return true;
     }
     std::string receiverCollectionTypePath;
@@ -425,11 +544,11 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       const std::string resolvedReceiverType =
           resolveMethodStructTypePath(normalizedReceiverType, receiver.namespacePrefix);
       if (!resolvedReceiverType.empty()) {
-        resolvedOut = resolvedReceiverType + "/" + normalizedMethodName;
+        resolvedOut = joinMethodTarget(resolvedReceiverType, normalizedMethodName);
         return true;
       }
       if (isPrimitiveBindingTypeName(normalizedReceiverType)) {
-        resolvedOut = "/" + normalizedReceiverType + "/" + normalizedMethodName;
+        resolvedOut = joinMethodTarget(rootedPathFragment(normalizedReceiverType), normalizedMethodName);
         return true;
       }
     }
@@ -441,7 +560,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     resolvedType = inferStructReturnPath(receiver, params, locals);
     if (!resolvedType.empty()) {
-      resolvedOut = resolvedType + "/" + normalizedMethodName;
+      resolvedOut = joinMethodTarget(resolvedType, normalizedMethodName);
       return true;
     }
     const ReturnKind receiverKind = inferExprReturnKind(receiver, params, locals);
@@ -453,7 +572,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       if (receiverType.empty()) {
         return false;
       }
-      resolvedOut = "/" + receiverType + "/" + normalizedMethodName;
+      resolvedOut = joinMethodTarget(rootedPathFragment(receiverType), normalizedMethodName);
       return true;
     }
   }
@@ -461,7 +580,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       shouldPreferStructReturnMethodTargetForCall(receiver)) {
     std::string inferredStructPath = inferStructReturnPath(receiver, params, locals);
     if (!inferredStructPath.empty() && structNames_.count(inferredStructPath) > 0) {
-      resolvedOut = inferredStructPath + "/" + normalizedMethodName;
+      resolvedOut = joinMethodTarget(inferredStructPath, normalizedMethodName);
       return true;
     }
   } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding &&
@@ -493,13 +612,13 @@ bool SemanticsValidator::resolveInferMethodCallPath(
               resolveMethodStructTypePath(normalizeBindingTypeName(receiverTypeText),
                                           defIt->second->namespacePrefix);
           if (!resolvedReceiverType.empty()) {
-            resolvedOut = resolvedReceiverType + "/" + normalizedMethodName;
+            resolvedOut = joinMethodTarget(resolvedReceiverType, normalizedMethodName);
             return true;
           }
           const std::string normalizedReceiverType =
               normalizeBindingTypeName(receiverTypeText);
           if (isPrimitiveBindingTypeName(normalizedReceiverType)) {
-            resolvedOut = "/" + normalizedReceiverType + "/" + normalizedMethodName;
+            resolvedOut = joinMethodTarget(rootedPathFragment(normalizedReceiverType), normalizedMethodName);
             return true;
           }
         }
@@ -523,7 +642,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       findParamBinding(params, receiver.name) == nullptr &&
       locals.find(receiver.name) == locals.end()) {
     std::string resolvedReceiverPath;
-    const std::string rootReceiverPath = "/" + receiver.name;
+    const std::string rootReceiverPath = rootedPathFragment(receiver.name);
     if (defMap_.find(rootReceiverPath) != defMap_.end()) {
       resolvedReceiverPath = rootReceiverPath;
     } else {
@@ -534,13 +653,13 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     if (!resolvedReceiverPath.empty() &&
         (structNames_.count(resolvedReceiverPath) > 0 ||
-         defMap_.find(resolvedReceiverPath + "/" + normalizedMethodName) != defMap_.end())) {
-      resolvedOut = resolvedReceiverPath + "/" + normalizedMethodName;
+         defMap_.find(joinMethodTarget(resolvedReceiverPath, normalizedMethodName)) != defMap_.end())) {
+      resolvedOut = joinMethodTarget(resolvedReceiverPath, normalizedMethodName);
       return true;
     }
     const std::string resolvedType = resolveMethodStructTypePath(receiver.name, receiver.namespacePrefix);
     if (!resolvedType.empty()) {
-      resolvedOut = resolvedType + "/" + normalizedMethodName;
+      resolvedOut = joinMethodTarget(resolvedType, normalizedMethodName);
       return true;
     }
   }
@@ -807,6 +926,20 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   if (typeName.empty()) {
     return false;
   }
+  const std::string memoReceiverTypeText = normalizeBindingTypeName(
+      typeTemplateArg.empty() ? typeName : typeName + "<" + typeTemplateArg + ">");
+  std::string memoResolvedPath;
+  bool memoSuccess = false;
+  if (lookupMethodTargetMemo(memoReceiverTypeText, memoResolvedPath, memoSuccess)) {
+    if (memoSuccess) {
+      resolvedOut = std::move(memoResolvedPath);
+    }
+    return memoSuccess;
+  }
+  auto returnWithMethodTargetMemo = [&](bool success) {
+    storeMethodTargetMemo(memoReceiverTypeText, success);
+    return success;
+  };
   {
     const std::string receiverTypeText =
         typeTemplateArg.empty() ? typeName : typeName + "<" + typeTemplateArg + ">";
@@ -814,26 +947,26 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         inferMethodCollectionTypePathFromTypeText(normalizeBindingTypeName(receiverTypeText));
     if (!receiverCollectionTypePath.empty() &&
         resolveCollectionMethodFromTypePath(receiverCollectionTypePath)) {
-      return true;
+      return returnWithMethodTargetMemo(true);
     }
   }
   if (typeName == "FileError" &&
       (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
        normalizedMethodName == "status" || normalizedMethodName == "result")) {
     resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
-    return !resolvedOut.empty();
+    return returnWithMethodTargetMemo(!resolvedOut.empty());
   }
   if (typeName == "ImageError" &&
       (normalizedMethodName == "why" || normalizedMethodName == "status" ||
        normalizedMethodName == "result")) {
     resolvedOut = preferredImageErrorHelperTarget(normalizedMethodName);
-    return !resolvedOut.empty();
+    return returnWithMethodTargetMemo(!resolvedOut.empty());
   }
   if (typeName == "ContainerError" &&
       (normalizedMethodName == "why" || normalizedMethodName == "status" ||
        normalizedMethodName == "result")) {
     resolvedOut = preferredContainerErrorHelperTarget(normalizedMethodName);
-    return !resolvedOut.empty();
+    return returnWithMethodTargetMemo(!resolvedOut.empty());
   }
   if (typeName == "GfxError" &&
       (normalizedMethodName == "why" || normalizedMethodName == "status" ||
@@ -842,7 +975,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         preferredGfxErrorHelperTarget(normalizedMethodName,
                                       resolveMethodStructTypePath(typeName, expr.namespacePrefix));
     if (!resolvedOut.empty()) {
-      return true;
+      return returnWithMethodTargetMemo(true);
     }
   }
   if (typeName == "Reference" &&
@@ -853,26 +986,26 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     std::string valueType;
     if (resolveInferExperimentalMapTarget(params, locals, receiver, keyType, valueType)) {
       resolvedOut = preferredExperimentalMapReferenceMethodTarget(normalizedMethodName);
-      return !resolvedOut.empty();
+      return returnWithMethodTargetMemo(!resolvedOut.empty());
     }
   }
   if (typeName == "Pointer" || typeName == "Reference") {
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      resolvedOut = "/" + typeName + "/" + normalizedMethodName;
-      return true;
+      resolvedOut = joinMethodTarget(rootedPathFragment(typeName), normalizedMethodName);
+      return returnWithMethodTargetMemo(true);
     }
-    return false;
+    return returnWithMethodTargetMemo(false);
   }
   if (isPrimitiveBindingTypeName(typeName)) {
-    resolvedOut = "/" + normalizeBindingTypeName(typeName) + "/" + normalizedMethodName;
-    return true;
+    resolvedOut = joinMethodTarget(rootedPathFragment(normalizeBindingTypeName(typeName)), normalizedMethodName);
+    return returnWithMethodTargetMemo(true);
   }
   std::string resolvedType = resolveMethodStructTypePath(typeName, expr.namespacePrefix);
   if (resolvedType.empty()) {
     resolvedType = resolveTypePath(typeName, expr.namespacePrefix);
   }
-  resolvedOut = resolvedType + "/" + normalizedMethodName;
-  return true;
+  resolvedOut = joinMethodTarget(resolvedType, normalizedMethodName);
+  return returnWithMethodTargetMemo(true);
 }
 
 } // namespace primec::semantics

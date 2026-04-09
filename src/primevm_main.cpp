@@ -394,43 +394,18 @@ int main(int argc, char **argv) {
     primec::printTransformList(std::cout);
     return 0;
   }
-  std::string error;
-  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
-
-  primec::CompilePipelineOutput pipelineOutput;
-  primec::CompilePipelineDiagnosticInfo pipelineDiagnosticInfo;
-  primec::CompilePipelineErrorStage pipelineError = primec::CompilePipelineErrorStage::None;
-  if (!primec::runCompilePipeline(options, pipelineOutput, pipelineError, error, &pipelineDiagnosticInfo)) {
-    return primec::emitCliFailure(std::cerr, options, primec::describeCompilePipelineFailure(pipelineOutput));
-  }
-  if (pipelineOutput.hasDumpOutput) {
-    std::cout << pipelineOutput.dumpOutput;
-    return 0;
-  }
-
-  primec::Program &program = pipelineOutput.program;
-  const primec::SemanticProgram *semanticProgram =
-      pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr;
   const primec::IrBackendDiagnostics &vmDiagnostics = primec::vmIrBackendDiagnostics();
+  if (!options.debugReplayPath.empty() && options.dumpStage.empty()) {
+    std::ifstream sourceFile(options.inputPath, std::ios::binary);
+    if (!sourceFile.good()) {
+      primec::CliFailure importFailure;
+      importFailure.code = primec::DiagnosticCode::ImportError;
+      importFailure.plainPrefix = "Import error: ";
+      importFailure.message = "failed to read input: " + options.inputPath;
+      return primec::emitCliFailure(std::cerr, options, importFailure);
+    }
 
-  primec::IrModule ir;
-  primec::IrPreparationFailure irFailure;
-  if (!primec::prepareIrModule(program, semanticProgram, options, primec::IrValidationTarget::Vm, ir, irFailure)) {
-    return primec::emitCliFailure(
-        std::cerr,
-        options,
-        primec::describeIrPreparationFailure(irFailure, vmDiagnostics, &primec::normalizeVmLoweringError));
-  }
-
-  primec::Vm vm;
-  std::vector<std::string_view> args;
-  args.reserve(1 + options.programArgs.size());
-  args.push_back(options.inputPath);
-  for (const auto &arg : options.programArgs) {
-    args.push_back(arg);
-  }
-  uint64_t result = 0;
-  if (!options.debugReplayPath.empty()) {
+    std::string error;
     std::string traceText;
     if (!readTextFile(options.debugReplayPath, traceText, error)) {
       return emitVmRuntimeFailure(options, vmDiagnostics, error, "debug-replay");
@@ -468,6 +443,41 @@ int main(int argc, char **argv) {
     }
     return 0;
   }
+  std::string error;
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput pipelineOutput;
+  primec::CompilePipelineDiagnosticInfo pipelineDiagnosticInfo;
+  primec::CompilePipelineErrorStage pipelineError = primec::CompilePipelineErrorStage::None;
+  if (!primec::runCompilePipeline(options, pipelineOutput, pipelineError, error, &pipelineDiagnosticInfo)) {
+    return primec::emitCliFailure(std::cerr, options, primec::describeCompilePipelineFailure(pipelineOutput));
+  }
+  if (pipelineOutput.hasDumpOutput) {
+    std::cout << pipelineOutput.dumpOutput;
+    return 0;
+  }
+
+  primec::Program &program = pipelineOutput.program;
+  const primec::SemanticProgram *semanticProgram =
+      pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr;
+
+  primec::IrModule ir;
+  primec::IrPreparationFailure irFailure;
+  if (!primec::prepareIrModule(program, semanticProgram, options, primec::IrValidationTarget::Vm, ir, irFailure)) {
+    return primec::emitCliFailure(
+        std::cerr,
+        options,
+        primec::describeIrPreparationFailure(irFailure, vmDiagnostics, &primec::normalizeVmLoweringError));
+  }
+
+  primec::Vm vm;
+  std::vector<std::string_view> args;
+  args.reserve(1 + options.programArgs.size());
+  args.push_back(options.inputPath);
+  for (const auto &arg : options.programArgs) {
+    args.push_back(arg);
+  }
+  uint64_t result = 0;
   if (options.debugDap) {
     primec::VmDebugDapRunResult dapResult;
     if (!primec::runVmDebugDapSession(ir, args, options.inputPath, std::cin, std::cout, dapResult, error)) {

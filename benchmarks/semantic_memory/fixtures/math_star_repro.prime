@@ -1,0 +1,19 @@
+import /std/math/*
+
+namespace bench {
+[void]
+step0() {}
+[void]
+step1() {
+  step0()
+}
+[void]
+step2() {
+  step1()
+}
+[return<i32>]
+main() {
+  step2()
+  return(0i32)
+}
+}

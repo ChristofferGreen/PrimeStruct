@@ -101,24 +101,58 @@ std::vector<const EntryT *> buildModuleOrFlatSemanticView(const SemanticProgram 
 
 std::vector<const SemanticProgramDirectCallTarget *>
 semanticProgramDirectCallTargetView(const SemanticProgram &semanticProgram) {
-  return buildModuleOrFlatSemanticView<SemanticProgramDirectCallTarget>(
-      semanticProgram,
-      [](const SemanticProgramModuleResolvedArtifacts &module)
-          -> const std::vector<SemanticProgramDirectCallTarget> & { return module.directCallTargets; },
-      [](const SemanticProgram &program) -> const std::vector<SemanticProgramDirectCallTarget> & {
-        return program.directCallTargets;
-      });
+  std::vector<const SemanticProgramDirectCallTarget *> entries;
+  if (!semanticProgram.moduleResolvedArtifacts.empty()) {
+    size_t moduleEntryCount = 0;
+    for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
+      moduleEntryCount += module.directCallTargetIndices.size();
+    }
+    entries.reserve(moduleEntryCount);
+    for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
+      for (const std::size_t entryIndex : module.directCallTargetIndices) {
+        if (entryIndex < semanticProgram.directCallTargets.size()) {
+          entries.push_back(&semanticProgram.directCallTargets[entryIndex]);
+        }
+      }
+    }
+    if (!entries.empty() || semanticProgram.directCallTargets.empty()) {
+      return entries;
+    }
+  }
+
+  entries.reserve(semanticProgram.directCallTargets.size());
+  for (const auto &entry : semanticProgram.directCallTargets) {
+    entries.push_back(&entry);
+  }
+  return entries;
 }
 
 std::vector<const SemanticProgramMethodCallTarget *>
 semanticProgramMethodCallTargetView(const SemanticProgram &semanticProgram) {
-  return buildModuleOrFlatSemanticView<SemanticProgramMethodCallTarget>(
-      semanticProgram,
-      [](const SemanticProgramModuleResolvedArtifacts &module)
-          -> const std::vector<SemanticProgramMethodCallTarget> & { return module.methodCallTargets; },
-      [](const SemanticProgram &program) -> const std::vector<SemanticProgramMethodCallTarget> & {
-        return program.methodCallTargets;
-      });
+  std::vector<const SemanticProgramMethodCallTarget *> entries;
+  if (!semanticProgram.moduleResolvedArtifacts.empty()) {
+    size_t moduleEntryCount = 0;
+    for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
+      moduleEntryCount += module.methodCallTargetIndices.size();
+    }
+    entries.reserve(moduleEntryCount);
+    for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
+      for (const std::size_t entryIndex : module.methodCallTargetIndices) {
+        if (entryIndex < semanticProgram.methodCallTargets.size()) {
+          entries.push_back(&semanticProgram.methodCallTargets[entryIndex]);
+        }
+      }
+    }
+    if (!entries.empty() || semanticProgram.methodCallTargets.empty()) {
+      return entries;
+    }
+  }
+
+  entries.reserve(semanticProgram.methodCallTargets.size());
+  for (const auto &entry : semanticProgram.methodCallTargets) {
+    entries.push_back(&entry);
+  }
+  return entries;
 }
 
 std::vector<const SemanticProgramBridgePathChoice *>

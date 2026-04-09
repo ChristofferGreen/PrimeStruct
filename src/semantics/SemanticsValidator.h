@@ -1,8 +1,12 @@
 #pragma once
 
+#include <cstddef>
+#include <array>
 #include <functional>
 #include <cstdint>
+#include <memory_resource>
 #include <memory>
+#include <new>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -327,6 +331,27 @@ public:
   std::vector<ValidationContextSnapshotEntry> validationContextSnapshotForTesting() const;
 
 private:
+  struct GraphLocalAutoKey {
+    std::string scopePath;
+    int32_t sourceLine = 0;
+    int32_t sourceColumn = 0;
+
+    bool operator==(const GraphLocalAutoKey &other) const {
+      return scopePath == other.scopePath &&
+             sourceLine == other.sourceLine &&
+             sourceColumn == other.sourceColumn;
+    }
+  };
+
+  struct GraphLocalAutoKeyHash {
+    std::size_t operator()(const GraphLocalAutoKey &key) const {
+      std::size_t hash = std::hash<std::string>{}(key.scopePath);
+      hash ^= std::hash<int32_t>{}(key.sourceLine) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+      hash ^= std::hash<int32_t>{}(key.sourceColumn) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+      return hash;
+    }
+  };
+
   #include "SemanticsValidatorPrivateCore.h"
   #include "SemanticsValidatorPrivateExprValidation.h"
   #include "SemanticsValidatorPrivateExprInference.h"
@@ -444,6 +469,32 @@ private:
     }
   };
 
+  struct CallTargetResolutionScratch {
+    using PmrBoolMap = std::pmr::unordered_map<std::string, bool>;
+    using PmrStringMap = std::pmr::unordered_map<std::string, std::string>;
+    using PmrStringPairVec = std::pmr::vector<std::pair<std::string, std::string>>;
+
+    const Definition *definitionOwner = nullptr;
+    const Execution *executionOwner = nullptr;
+    std::array<std::byte, 8192> inlineArenaBuffer{};
+    std::pmr::monotonic_buffer_resource arenaResource{
+        inlineArenaBuffer.data(),
+        inlineArenaBuffer.size(),
+        std::pmr::new_delete_resource()};
+    PmrBoolMap definitionFamilyPathCache{&arenaResource};
+    PmrStringMap rootedCallNamePathCache{&arenaResource};
+    PmrStringMap normalizedNamespacePrefixCache{&arenaResource};
+    PmrStringMap joinedCallPathCache{&arenaResource};
+    PmrStringPairVec normalizedMethodNameCache{&arenaResource};
+    PmrStringMap explicitRemovedMethodPathCache{&arenaResource};
+    PmrStringMap methodTargetMemoCache{&arenaResource};
+
+    void resetArena() {
+      this->~CallTargetResolutionScratch();
+      new (this) CallTargetResolutionScratch();
+    }
+  };
+
   const Program &program_;
   const std::string &entryPath_;
   std::string &error_;
@@ -461,15 +512,15 @@ private:
   std::unordered_map<std::string, ReturnKind> returnKinds_;
   std::unordered_map<std::string, std::string> returnStructs_;
   std::unordered_map<std::string, BindingInfo> returnBindings_;
-  std::unordered_map<std::string, BindingInfo> graphLocalAutoBindings_;
-  std::unordered_map<std::string, std::string> graphLocalAutoResolvedPaths_;
-  std::unordered_map<std::string, BindingInfo> graphLocalAutoInitializerBindings_;
-  std::unordered_map<std::string, QuerySnapshotData> graphLocalAutoQuerySnapshots_;
-  std::unordered_map<std::string, LocalAutoTrySnapshotData> graphLocalAutoTryValues_;
-  std::unordered_map<std::string, std::string> graphLocalAutoDirectCallResolvedPaths_;
-  std::unordered_map<std::string, ReturnKind> graphLocalAutoDirectCallReturnKinds_;
-  std::unordered_map<std::string, std::string> graphLocalAutoMethodCallResolvedPaths_;
-  std::unordered_map<std::string, ReturnKind> graphLocalAutoMethodCallReturnKinds_;
+  std::unordered_map<GraphLocalAutoKey, BindingInfo, GraphLocalAutoKeyHash> graphLocalAutoBindings_;
+  std::unordered_map<GraphLocalAutoKey, std::string, GraphLocalAutoKeyHash> graphLocalAutoResolvedPaths_;
+  std::unordered_map<GraphLocalAutoKey, BindingInfo, GraphLocalAutoKeyHash> graphLocalAutoInitializerBindings_;
+  std::unordered_map<GraphLocalAutoKey, QuerySnapshotData, GraphLocalAutoKeyHash> graphLocalAutoQuerySnapshots_;
+  std::unordered_map<GraphLocalAutoKey, LocalAutoTrySnapshotData, GraphLocalAutoKeyHash> graphLocalAutoTryValues_;
+  std::unordered_map<GraphLocalAutoKey, std::string, GraphLocalAutoKeyHash> graphLocalAutoDirectCallResolvedPaths_;
+  std::unordered_map<GraphLocalAutoKey, ReturnKind, GraphLocalAutoKeyHash> graphLocalAutoDirectCallReturnKinds_;
+  std::unordered_map<GraphLocalAutoKey, std::string, GraphLocalAutoKeyHash> graphLocalAutoMethodCallResolvedPaths_;
+  std::unordered_map<GraphLocalAutoKey, ReturnKind, GraphLocalAutoKeyHash> graphLocalAutoMethodCallReturnKinds_;
   std::unordered_set<std::string> structNames_;
   std::unordered_set<std::string> publicDefinitions_;
   std::unordered_map<std::string, std::vector<ParameterInfo>> paramsByDef_;
@@ -490,6 +541,7 @@ private:
   const Expr *currentExprContext_ = nullptr;
   const Definition *currentDefinitionContext_ = nullptr;
   const Execution *currentExecutionContext_ = nullptr;
+  mutable CallTargetResolutionScratch callTargetResolutionScratch_;
 };
 
 } // namespace primec::semantics

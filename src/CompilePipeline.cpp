@@ -11,12 +11,14 @@
 #include "semantics/TypeResolutionGraph.h"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <deque>
 #include <filesystem>
 #include <fstream>
 #include <limits>
 #include <sstream>
+#include <string_view>
 #include <unordered_set>
 
 namespace primec {
@@ -56,6 +58,28 @@ DumpStage parseDumpStage(const std::string &dumpStage) {
     return DumpStage::TypeGraph;
   }
   return DumpStage::Unsupported;
+}
+
+constexpr std::array<std::string_view, 14> SemanticCollectorFamilies = {
+    "definitions",
+    "executions",
+    "direct_call_targets",
+    "method_call_targets",
+    "bridge_path_choices",
+    "callable_summaries",
+    "type_metadata",
+    "struct_field_metadata",
+    "binding_facts",
+    "return_facts",
+    "local_auto_facts",
+    "query_facts",
+    "try_facts",
+    "on_error_facts",
+};
+
+bool isKnownSemanticCollectorFamily(std::string_view name) {
+  return std::find(SemanticCollectorFamilies.begin(), SemanticCollectorFamilies.end(), name) !=
+         SemanticCollectorFamilies.end();
 }
 
 bool shouldAutoIncludeStdlib(const std::string &source) {
@@ -584,6 +608,26 @@ bool runCompilePipeline(const Options &options,
   Semantics semantics;
   SemanticDiagnosticInfo semanticDiagnosticInfo;
   SemanticProgram semanticProgram;
+  bool needsSemanticProduct = dumpStage != DumpStage::AstSemantic && !options.skipSemanticProductForNonConsumingPath;
+  if (options.benchmarkForceSemanticProduct.has_value()) {
+    needsSemanticProduct = *options.benchmarkForceSemanticProduct;
+  }
+  SemanticProductBuildConfig semanticProductBuildConfig;
+  const SemanticProductBuildConfig *semanticProductBuildConfigPtr = nullptr;
+  if (options.benchmarkSemanticNoFactEmission || options.benchmarkSemanticFactFamiliesSpecified) {
+    semanticProductBuildConfig.disableAllCollectors = options.benchmarkSemanticNoFactEmission;
+    semanticProductBuildConfig.collectorAllowlistSpecified = options.benchmarkSemanticFactFamiliesSpecified;
+    semanticProductBuildConfig.collectorAllowlist = options.benchmarkSemanticFactFamilies;
+    for (const auto &collectorFamily : semanticProductBuildConfig.collectorAllowlist) {
+      if (!isKnownSemanticCollectorFamily(collectorFamily)) {
+        error = "unknown benchmark semantic collector family: " + collectorFamily;
+        diagnosticSink.setSummary(error);
+        return failPipeline(CompilePipelineErrorStage::Semantic, error, capturedDiagnosticInfo);
+      }
+    }
+    semanticProductBuildConfigPtr = &semanticProductBuildConfig;
+  }
+  output.semanticProductRequested = needsSemanticProduct;
   if (!semantics.validate(output.program,
                           options.entryPath,
                           error,
@@ -592,21 +636,30 @@ bool runCompilePipeline(const Options &options,
                           options.semanticTransforms,
                           &semanticDiagnosticInfo,
                           options.collectDiagnostics,
-                          &semanticProgram)) {
+                          needsSemanticProduct ? &semanticProgram : nullptr,
+                          semanticProductBuildConfigPtr)) {
     if (semanticDiagnosticInfo.message.empty()) {
       semanticDiagnosticInfo.message = error;
     }
     return failPipeline(CompilePipelineErrorStage::Semantic, error, semanticDiagnosticInfo);
   }
 
-  output.semanticProgram = std::move(semanticProgram);
-  output.hasSemanticProgram = true;
+  if (needsSemanticProduct) {
+    output.semanticProgram = std::move(semanticProgram);
+    output.hasSemanticProgram = true;
+    output.semanticProductBuilt = true;
+  }
 
   if (!validateGraphicsBackendSupport(output.program, options, error, &capturedDiagnosticInfo)) {
     return failPipeline(CompilePipelineErrorStage::Semantic, error, capturedDiagnosticInfo);
   }
 
   if (dumpStage == DumpStage::SemanticProduct) {
+    if (!output.hasSemanticProgram) {
+      error = "semantic-product dump requested without semantic product";
+      diagnosticSink.setSummary(error);
+      return failPipeline(CompilePipelineErrorStage::Semantic, error, capturedDiagnosticInfo);
+    }
     output.dumpOutput = formatSemanticProgram(output.semanticProgram);
     output.hasDumpOutput = true;
     return true;

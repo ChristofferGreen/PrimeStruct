@@ -1,0 +1,8 @@
+import /std/math/Vec2
+
+namespace bench {
+[return<i32>]
+main() {
+  return(1i32)
+}
+}
