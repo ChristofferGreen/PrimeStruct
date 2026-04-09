@@ -54,6 +54,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsBindingTypeHelpers.cpp
   src/semantics/SemanticsBuiltinPathHelpers.cpp
   src/semantics/SemanticsCallPathHelpers.cpp
+  src/semantics/SemanticsDefinitionPrepass.cpp
   src/semantics/SemanticsReturnKindHelpers.cpp
   src/semantics/SemanticsHelpersCore.cpp
   src/semantics/SemanticsHelpersValidation.cpp
@@ -602,6 +603,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_semantics_entry_return_inference.cpp
     tests/unit/test_semantics_entry_resolution.cpp
     tests/unit/test_semantics_entry_transforms.cpp
+    tests/unit/test_semantics_definition_prepass.cpp
     tests/unit/test_semantics_imports.cpp
     tests/unit/test_semantics_maybe.cpp
     tests/unit/test_semantics_result_helpers.cpp
