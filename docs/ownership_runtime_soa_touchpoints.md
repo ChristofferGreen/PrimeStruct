@@ -455,6 +455,12 @@ Semantics-layer pending fallback diagnostics:
     `/soa_vector/<helper>`, so canonical helper imports satisfy this fallback
     path without relying on compiler-owned same-path assumptions
     (`src/semantics/SemanticsValidatorInferLateFallbackBuiltins.cpp`).
+  - Late unknown-target vector-family fallback matching now treats canonical
+    `/std/collections/soa_vector/*` helper targets as vector-family-equivalent
+    (alongside same-path `/soa_vector/*`), so canonical SoA helper resolution
+    no longer falls through this compatibility path when method fallback
+    rewrites probe vector-family helper targets
+    (`src/semantics/SemanticsValidatorExprLateUnknownTargetFallbacks.cpp`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:
