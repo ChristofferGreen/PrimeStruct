@@ -664,7 +664,10 @@ std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
   if (defIt == ctx.sourceDefs.end() || ctx.templateDefs.count(path) > 0) {
     return path;
   }
-  if (path == "/soa_vector/ref" || path == "/soa_vector/ref_ref") {
+  if (path == "/soa_vector/ref" ||
+      path == "/soa_vector/ref_ref" ||
+      path == "/std/collections/soa_vector/ref" ||
+      path == "/std/collections/soa_vector/ref_ref") {
     return path;
   }
   const bool preserveCompatibilityTemplatePath = isCollectionCompatibilityTemplateFallbackPath(path);

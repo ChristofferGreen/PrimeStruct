@@ -593,6 +593,13 @@ Semantics-layer pending fallback diagnostics:
     old-surface-only template-carry clearing behavior during expression-rewrite
     path retargeting
     (`src/semantics/TemplateMonomorphExpressionRewrite.h`).
+  - Template-monomorph implicit template fallback path preservation now treats
+    canonical `/std/collections/soa_vector/ref(_ref)` helper paths as
+    equivalent to old-surface `/soa_vector/ref(_ref)` helper paths, so
+    canonical borrowed-helper selection no longer falls back to
+    compiler-owned old-surface-only path-preservation behavior during implicit
+    template fallback resolution
+    (`src/semantics/TemplateMonomorphFallbackTypeInference.h`).
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:
