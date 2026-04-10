@@ -286,17 +286,18 @@ TEST_CASE("ir lowerer return inference helper reads semantic product return fact
           primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
   });
   semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
-      "/semantic/main",
-      "i32",
-      "",
-      "Result<i64, FileError>",
-      false,
-      false,
-      false,
-      "",
-      4,
-      2,
-      41,
+      .returnKind = "i32",
+      .structPath = "",
+      .bindingTypeText = "Result<i64, FileError>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 4,
+      .sourceColumn = 2,
+      .semanticNodeId = 41,
+      .definitionPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/semantic/main"),
   });
 
   primec::ir_lowerer::EntryReturnConfig out;

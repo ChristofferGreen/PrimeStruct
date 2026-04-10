@@ -156,6 +156,12 @@ std::string_view semanticProgramBindingFactResolvedPath(
   return semanticProgramResolveCallTargetString(semanticProgram, entry.resolvedPathId);
 }
 
+std::string_view semanticProgramReturnFactDefinitionPath(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramReturnFact &entry) {
+  return semanticProgramResolveCallTargetString(semanticProgram, entry.definitionPathId);
+}
+
 std::string formatSemanticStringListFromIds(const SemanticProgram &semanticProgram,
                                             const std::vector<SymbolId> &ids,
                                             const std::vector<std::string> &fallbackValues) {
@@ -556,7 +562,7 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
   for (size_t i = 0; i < returnFacts.size(); ++i) {
     const auto &entry = *returnFacts[i];
     const std::string_view definitionPath =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.definitionPathId);
+        semanticProgramReturnFactDefinitionPath(semanticProgram, entry);
     const std::string_view returnKind =
         semanticProgramResolveCallTargetString(semanticProgram, entry.returnKindId);
     const std::string_view structPath =
@@ -569,8 +575,7 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                               "return_facts",
                               i,
                               "definition_path=" +
-                                  quoteSemanticString(definitionPath.empty() ? entry.definitionPath
-                                                                             : definitionPath) +
+                                  quoteSemanticString(definitionPath) +
                                   " return_kind=" +
                                   quoteSemanticString(returnKind.empty() ? entry.returnKind : returnKind) +
                                   " struct_path=" +

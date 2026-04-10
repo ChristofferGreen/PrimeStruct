@@ -146,7 +146,6 @@ struct SemanticProgramBindingFact {
 };
 
 struct SemanticProgramReturnFact {
-  std::string definitionPath;
   std::string returnKind;
   std::string structPath;
   std::string bindingTypeText;
@@ -372,6 +371,9 @@ std::string_view semanticProgramCallableSummaryFullPath(
 std::string_view semanticProgramBindingFactResolvedPath(
     const SemanticProgram &semanticProgram,
     const SemanticProgramBindingFact &entry);
+std::string_view semanticProgramReturnFactDefinitionPath(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramReturnFact &entry);
 
 std::string formatSemanticProgram(const SemanticProgram &semanticProgram);
 

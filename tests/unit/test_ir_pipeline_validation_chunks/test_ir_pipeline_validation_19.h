@@ -913,17 +913,18 @@ TEST_CASE("ir lowerer semantic-product adapter joins return and inference facts 
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
-      "/legacy_main",
-      "return",
-      "/i32",
-      "i32",
-      false,
-      false,
-      false,
-      "",
-      9,
-      3,
-      61,
+      .returnKind = "return",
+      .structPath = "/i32",
+      .bindingTypeText = "i32",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 9,
+      .sourceColumn = 3,
+      .semanticNodeId = 61,
+      .definitionPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/legacy_main"),
   });
   semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
       "/main",
@@ -992,7 +993,8 @@ TEST_CASE("ir lowerer semantic-product adapter joins return and inference facts 
 
   const auto *returnFact = primec::ir_lowerer::findSemanticProductReturnFact(semanticTargets, mainDef);
   REQUIRE(returnFact != nullptr);
-  CHECK(returnFact->definitionPath == "/legacy_main");
+  CHECK(primec::semanticProgramReturnFactDefinitionPath(semanticProgram, *returnFact) ==
+        "/legacy_main");
 
   primec::Definition legacyFixtureDef;
   legacyFixtureDef.fullPath = "/legacy_main";

@@ -1428,7 +1428,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         semanticsSnapshots.find("directCallTargetSnapshotForSemanticProduct() const"));
   CHECK(semanticsSnapshots.find("forEachResolvedNonMethodCallSnapshot(") <
         semanticsSnapshots.find("bridgePathChoiceSnapshotForSemanticProduct() const"));
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(entry.definitionPath).returnFacts.push_back(entry);") !=
+  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.definitionPath).returnFacts.push_back(entry);") !=
         std::string::npos);
   CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(entry.scopePath).localAutoFacts.push_back(entry);") !=
         std::string::npos);

@@ -302,7 +302,6 @@ TEST_CASE("ir lowerer inference get-return-info step uses semantic-product retur
       .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/pkg/current"),
   });
   semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
-      .definitionPath = "/pkg/legacy",
       .returnKind = "int64",
       .structPath = "/pkg/Pair",
       .bindingTypeText = "Result<Pair, MyError>",
@@ -313,6 +312,8 @@ TEST_CASE("ir lowerer inference get-return-info step uses semantic-product retur
       .sourceLine = 0,
       .sourceColumn = 0,
       .semanticNodeId = 91,
+      .definitionPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/pkg/legacy"),
   });
   const auto semanticProductTargets = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 
@@ -370,7 +371,6 @@ TEST_CASE("ir lowerer inference get-return-info setup precomputes semantic-produ
       .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/pkg/current"),
   });
   semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
-      .definitionPath = "/pkg/current",
       .returnKind = "array",
       .structPath = "/vector",
       .bindingTypeText = "vector<Pair>",
@@ -381,6 +381,8 @@ TEST_CASE("ir lowerer inference get-return-info setup precomputes semantic-produ
       .sourceLine = 0,
       .sourceColumn = 0,
       .semanticNodeId = 97,
+      .definitionPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/pkg/current"),
   });
   const auto semanticProductTargets = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 

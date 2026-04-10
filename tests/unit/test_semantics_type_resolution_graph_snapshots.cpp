@@ -1031,10 +1031,14 @@ TEST_CASE("semantic product return facts carry interned text ids") {
 
   const auto *helperEntry = findSemanticEntry(
       primec::semanticProgramReturnFactView(semanticProgram),
-      [](const primec::SemanticProgramReturnFact &entry) { return entry.definitionPath == "/helper"; });
+      [&semanticProgram](const primec::SemanticProgramReturnFact &entry) {
+        return primec::semanticProgramReturnFactDefinitionPath(semanticProgram, entry) == "/helper";
+      });
   const auto *mainEntry = findSemanticEntry(
       primec::semanticProgramReturnFactView(semanticProgram),
-      [](const primec::SemanticProgramReturnFact &entry) { return entry.definitionPath == "/main"; });
+      [&semanticProgram](const primec::SemanticProgramReturnFact &entry) {
+        return primec::semanticProgramReturnFactDefinitionPath(semanticProgram, entry) == "/main";
+      });
   REQUIRE(helperEntry != nullptr);
   REQUIRE(mainEntry != nullptr);
 
@@ -1649,14 +1653,18 @@ TEST_CASE("semantic product publishes binding and return facts") {
 
   const auto *mainReturnEntry = findSemanticEntry(
       primec::semanticProgramReturnFactView(semanticProgram),
-      [](const primec::SemanticProgramReturnFact &entry) { return entry.definitionPath == "/main"; });
+      [&semanticProgram](const primec::SemanticProgramReturnFact &entry) {
+        return primec::semanticProgramReturnFactDefinitionPath(semanticProgram, entry) == "/main";
+      });
   REQUIRE(mainReturnEntry != nullptr);
   CHECK(mainReturnEntry->returnKind == "i32");
   CHECK(mainReturnEntry->bindingTypeText == "i32");
 
   const auto *pairReturnEntry = findSemanticEntry(
       primec::semanticProgramReturnFactView(semanticProgram),
-      [](const primec::SemanticProgramReturnFact &entry) { return entry.definitionPath == "/makePair"; });
+      [&semanticProgram](const primec::SemanticProgramReturnFact &entry) {
+        return primec::semanticProgramReturnFactDefinitionPath(semanticProgram, entry) == "/makePair";
+      });
   REQUIRE(pairReturnEntry != nullptr);
   CHECK(pairReturnEntry->structPath == "/Pair");
   CHECK(pairReturnEntry->bindingTypeText == "Pair");
@@ -1974,7 +1982,9 @@ TEST_CASE("semantic product source locations stay aligned with AST-owned lowerin
   CHECK(bridgeEntry->sourceColumn == bridgeCallExpr->sourceColumn);
 
   const auto *returnEntry = findSemanticEntry(primec::semanticProgramReturnFactView(semanticProgram),
-      [](const primec::SemanticProgramReturnFact &entry) { return entry.definitionPath == "/main"; });
+      [&semanticProgram](const primec::SemanticProgramReturnFact &entry) {
+        return primec::semanticProgramReturnFactDefinitionPath(semanticProgram, entry) == "/main";
+      });
   REQUIRE(returnEntry != nullptr);
   CHECK(returnEntry->sourceLine == mainDefinition->returnExpr->sourceLine);
   CHECK(returnEntry->sourceColumn == mainDefinition->returnExpr->sourceColumn);
@@ -2199,9 +2209,13 @@ TEST_CASE("semantic product semantic ids ignore unrelated definition ordering") 
   CHECK(firstDirectCall->sourceColumn == secondDirectCall->sourceColumn);
 
   const auto *firstReturn = findSemanticEntry(primec::semanticProgramReturnFactView(first),
-      [](const primec::SemanticProgramReturnFact &entry) { return entry.definitionPath == "/main"; });
+      [&first](const primec::SemanticProgramReturnFact &entry) {
+        return primec::semanticProgramReturnFactDefinitionPath(first, entry) == "/main";
+      });
   const auto *secondReturn = findSemanticEntry(primec::semanticProgramReturnFactView(second),
-      [](const primec::SemanticProgramReturnFact &entry) { return entry.definitionPath == "/main"; });
+      [&second](const primec::SemanticProgramReturnFact &entry) {
+        return primec::semanticProgramReturnFactDefinitionPath(second, entry) == "/main";
+      });
   REQUIRE(firstReturn != nullptr);
   REQUIRE(secondReturn != nullptr);
   CHECK(firstReturn->semanticNodeId == secondReturn->semanticNodeId);
@@ -2328,8 +2342,9 @@ TEST_CASE("semantic product lowering preserves debug source-map provenance") {
                         });
   const auto *returnEntry =
       findSemanticEntry(primec::semanticProgramReturnFactView(semanticProgram),
-                        [](const primec::SemanticProgramReturnFact &entry) {
-                          return entry.definitionPath == "/main";
+                        [&semanticProgram](const primec::SemanticProgramReturnFact &entry) {
+                          return primec::semanticProgramReturnFactDefinitionPath(semanticProgram, entry) ==
+                                 "/main";
                         });
   REQUIRE(directCallEntry != nullptr);
   REQUIRE(methodCallEntry != nullptr);
@@ -2414,8 +2429,9 @@ main() {
                         });
   const auto *semanticReturnEntry =
       findSemanticEntry(primec::semanticProgramReturnFactView(semanticProgram),
-                        [](const primec::SemanticProgramReturnFact &entry) {
-                          return entry.definitionPath == "/main";
+                        [&semanticProgram](const primec::SemanticProgramReturnFact &entry) {
+                          return primec::semanticProgramReturnFactDefinitionPath(semanticProgram, entry) ==
+                                 "/main";
                         });
   REQUIRE(semanticDirectEntry != nullptr);
   REQUIRE(semanticMethodEntry != nullptr);
@@ -2487,7 +2503,8 @@ main() {
   CHECK(semanticMethodEntry->methodName == "count");
   CHECK(primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, *semanticBridgeEntry) ==
         "count");
-  CHECK(semanticReturnEntry->definitionPath == "/main");
+  CHECK(primec::semanticProgramReturnFactDefinitionPath(semanticProgram, *semanticReturnEntry) ==
+        "/main");
 
   primec::IrLowerer lowerer;
   primec::IrModule baselineModule;
@@ -2848,18 +2865,19 @@ TEST_CASE("semantic product formatter exact golden is stable") {
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main/value"),
   });
   semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
-      "/main",
-      "return",
-      "/i32",
-      "i32",
-      false,
-      false,
-      false,
-      "",
-      13,
-      3,
-      21,
-      111,
+      .returnKind = "return",
+      .structPath = "/i32",
+      .bindingTypeText = "i32",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 13,
+      .sourceColumn = 3,
+      .semanticNodeId = 21,
+      .provenanceHandle = 111,
+      .definitionPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
   });
   semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
       "/main",
