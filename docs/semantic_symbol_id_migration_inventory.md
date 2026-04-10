@@ -34,6 +34,9 @@ implemented, parity-tested, and landed independently.
 - Try-fact operand-path shadow removal landed (`P3-25`): try facts now resolve
   operand paths via `operandResolvedPathId` only, and lowerer semantic-product
   validation rejects invalid try-fact operand-path IDs.
+- On-error handler-path shadow removal landed (`P3-26`): on-error facts now
+  resolve handlers via `handlerPathId` only, and lowerer semantic-product
+  validation rejects invalid on-error handler-path IDs.
 
 ## Remaining families and next one-leaf follow-ups
 
@@ -41,7 +44,6 @@ implemented, parity-tested, and landed independently.
 | --- | --- | --- |
 | `method_call_targets` | IDs + string shadows | `P3-18`: remove `resolvedPath` shadow and require `resolvedPathId` on semantic-product paths. |
 | `bridge_path_choices` | IDs + remaining string shadows | `P3-19`: remove `helperName` shadow and consume `helperNameId` only on semantic-product paths. |
-| `on_error_facts` | IDs + string shadows | `P3-26`: remove `handlerPath` shadow and require `handlerPathId` in semantic-product consumers. |
 
 ## Out of scope for this queue
 - `definitions`, `executions`, `type_metadata`, and `struct_field_metadata` are

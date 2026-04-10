@@ -16,8 +16,12 @@ bool buildOnErrorHandlerFromSemanticFact(const Definition &def,
                                          std::string &error) {
   out = OnErrorHandler{};
   out->errorType = fact.errorType;
-  out->handlerPath =
-      std::string(semanticProgramOnErrorFactHandlerPath(semanticProgram, fact));
+  const auto handlerPath = semanticProgramOnErrorFactHandlerPath(semanticProgram, fact);
+  if (fact.handlerPathId == InvalidSymbolId || handlerPath.empty()) {
+    error = "missing semantic-product on_error handler path id: " + def.fullPath;
+    return false;
+  }
+  out->handlerPath = std::string(handlerPath);
   out->boundArgs.clear();
   out->boundArgs.reserve(fact.boundArgCount);
 

@@ -1261,6 +1261,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(onErrorHelpersSource.find("missing semantic-product on_error fact: ") !=
         std::string::npos);
+  CHECK(onErrorHelpersSource.find("missing semantic-product on_error handler path id: ") !=
+        std::string::npos);
   CHECK(onErrorHelpersSource.find("fact.boundArgTexts.size() != fact.boundArgCount") !=
         std::string::npos);
   CHECK(onErrorHelpersSource.find("for (const auto &argText : fact.boundArgTexts)") !=
@@ -1837,6 +1839,42 @@ TEST_CASE("semantic product try facts use operandResolvedPathId without operandR
         std::string::npos);
 
   CHECK(irLowererResultHelpers.find("tryFact->operandResolvedPathId == InvalidSymbolId") !=
+        std::string::npos);
+}
+
+TEST_CASE("semantic product on_error facts use handlerPathId without handlerPath shadow field") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  const std::filesystem::path root =
+      std::filesystem::exists(cwd / "include" / "primec" / "SemanticProduct.h")
+          ? cwd
+          : cwd.parent_path();
+  const std::string semanticProductHeader =
+      readTextFile(root / "include" / "primec" / "SemanticProduct.h");
+  const std::string semanticProductSource =
+      readTextFile(root / "src" / "SemanticProduct.cpp");
+  const std::string onErrorHelpersSource =
+      readTextFile(root / "src" / "ir_lowerer" / "IrLowererOnErrorHelpers.cpp");
+
+  const std::size_t onErrorStart =
+      semanticProductHeader.find("struct SemanticProgramOnErrorFact {");
+  const std::size_t moduleIdentityStart =
+      semanticProductHeader.find("struct SemanticProgramModuleIdentity {");
+  REQUIRE(onErrorStart != std::string::npos);
+  REQUIRE(moduleIdentityStart != std::string::npos);
+  REQUIRE(onErrorStart < moduleIdentityStart);
+
+  const std::string onErrorBody =
+      semanticProductHeader.substr(onErrorStart, moduleIdentityStart - onErrorStart);
+  CHECK(onErrorBody.find("SymbolId handlerPathId = InvalidSymbolId;") !=
+        std::string::npos);
+  CHECK(onErrorBody.find("std::string handlerPath;") == std::string::npos);
+
+  CHECK(semanticProductSource.find("semanticProgramOnErrorFactHandlerPath(") !=
+        std::string::npos);
+  CHECK(semanticProductSource.find("handlerPath.empty() ? entry.handlerPath") ==
+        std::string::npos);
+
+  CHECK(onErrorHelpersSource.find("fact.handlerPathId == InvalidSymbolId") !=
         std::string::npos);
 }
 
