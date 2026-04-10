@@ -548,9 +548,6 @@ std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string 
       matchesPath("/std/collections/soa_vector/push")) {
     return "/std/collections/experimental_soa_vector/soaVectorPush";
   }
-  if (matchesPath("/std/collections/soa_vector/to_aos_ref")) {
-    return "/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef";
-  }
   return {};
 }
 

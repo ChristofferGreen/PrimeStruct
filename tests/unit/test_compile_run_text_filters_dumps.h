@@ -1797,6 +1797,49 @@ main() {
   CHECK(ast.find("pickBorrowed(location(values)).to_aos()", mainPos) == std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic rewrites borrowed helper-return experimental soa_vector to_aos_ref via canonical helper") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<Reference<SoaVector<Particle>>>]
+pickBorrowed([Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32))
+  values.push(Particle(9i32))
+  [vector<Particle>] unpacked{pickBorrowed(location(values)).to_aos_ref<Particle>()}
+  return(count(unpacked))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_dump_ast_semantic_borrowed_return_experimental_soa_vector_to_aos_ref.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_dump_ast_semantic_borrowed_return_experimental_soa_vector_to_aos_ref.txt")
+          .string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t mainPos = ast.find("/main()");
+  CHECK(mainPos != std::string::npos);
+  CHECK(ast.find("/std/collections/soa_vector/to_aos_ref__", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef__", mainPos) ==
+        std::string::npos);
+  CHECK(ast.find("pickBorrowed(location(values)).to_aos_ref<Particle>()", mainPos) == std::string::npos);
+}
+
 TEST_CASE("dump ast-semantic keeps helper-return experimental soa_vector to_aos with same-path helper") {
   const std::string source = R"(
 import /std/collections/*

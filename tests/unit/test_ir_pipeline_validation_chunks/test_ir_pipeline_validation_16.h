@@ -656,6 +656,15 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "std::string experimentalVectorHelperPathForCanonicalHelper(const std::string &path)") !=
         std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string &path)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "matchesPath(\"/std/collections/soa_vector/to_aos_ref\")") ==
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "soaVectorToAosRef") ==
+        std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionConstructorPathsSource.find(
             "std::string experimentalMapConstructorHelperPath(size_t argumentCount)") !=
         std::string::npos);
