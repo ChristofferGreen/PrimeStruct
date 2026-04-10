@@ -470,6 +470,14 @@ inline void expectBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConformance
                                             "");
 }
 
+inline void expectBuiltinCanonicalMapStructFieldInitializerConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapStructFieldInitializerConformanceSource(),
+                                            "map_builtin_canonical_struct_field_initializer_" + emitMode,
+                                            emitMode,
+                                            0,
+                                            "");
+}
+
 inline void expectBuiltinCanonicalMapInsertHelperReturnValueDirectReject(const std::string &emitMode) {
   expectMapConformanceCompileReject(
       makeBuiltinCanonicalMapInsertHelperReturnValueDirectRejectSource(),
@@ -484,6 +492,14 @@ inline void expectBuiltinCanonicalMapInsertHelperReturnValueMethodReject(const s
                                     "map_builtin_canonical_insert_helper_return_value_method_" + emitMode,
                                     emitMode,
                                     "insert is statement-only");
+}
+
+inline void expectBuiltinCanonicalMapInsertBorrowedHolderFieldDirectReject(const std::string &emitMode) {
+  expectMapConformanceCompileReject(makeBuiltinCanonicalMapInsertBorrowedHolderFieldDirectRejectSource(),
+                                    "map_builtin_canonical_insert_borrowed_holder_field_direct_" + emitMode,
+                                    emitMode,
+                                    "only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/"
+                                    "pointer/assign/increment/decrement calls in expressions");
 }
 
 inline void expectExperimentalMapIndexConformance(const std::string &emitMode) {

@@ -159,7 +159,7 @@
   CHECK(validatorInfer.find("dependencyIt->second == 1") != std::string::npos);
   CHECK(validatorInfer.find("isIfCall(initializer) || isMatchCall(initializer) || isBuiltinBlockCall(initializer)") !=
         std::string::npos);
-  CHECK(validatorInfer.find("graphLocalAutoBindings_.try_emplace(bindingKey, binding);") !=
+  CHECK(validatorInfer.find("auto [factIt, inserted] = graphLocalAutoFacts_.try_emplace(bindingKey);") !=
         std::string::npos);
   CHECK(validatorInfer.find("computeTypeResolutionDependencyDag(graph)") != std::string::npos);
   CHECK(validatorInfer.find("sortTypeResolutionNodesForDiagnosticOrder(unresolvedNodes);") !=

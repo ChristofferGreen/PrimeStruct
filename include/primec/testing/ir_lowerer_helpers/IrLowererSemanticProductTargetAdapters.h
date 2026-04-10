@@ -13,9 +13,8 @@ namespace primec::ir_lowerer {
 
 struct SemanticProductTargetAdapter {
   bool hasSemanticProduct = false;
+  const SemanticProgram *semanticProgram = nullptr;
   std::unordered_map<uint64_t, std::string> directCallTargetsByExpr;
-  std::unordered_map<std::string, SymbolId> methodCallTargetIdsByPath;
-  std::vector<std::string> methodCallTargetPathsById;
   std::unordered_map<uint64_t, SymbolId> methodCallTargetIdsByExpr;
   std::unordered_map<uint64_t, std::string> bridgePathChoicesByExpr;
   std::unordered_map<std::string, const SemanticProgramCallableSummary *> callableSummariesByPath;

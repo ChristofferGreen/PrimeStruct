@@ -2730,6 +2730,817 @@ TEST_CASE("semantic product formatter resolves module method-call indices determ
   CHECK(firstPos < secondPos);
 }
 
+TEST_CASE("semantic product formatter resolves module callable-summary indices deterministically") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "return",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "i64",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 501,
+      .provenanceHandle = 1501,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/z"),
+      .returnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "return"),
+      .resultValueTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "i64"),
+  });
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "return",
+      .isCompute = true,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "i32",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 502,
+      .provenanceHandle = 1502,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/a"),
+      .returnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "return"),
+      .resultValueTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+  });
+
+  primec::SemanticProgramModuleResolvedArtifacts moduleA;
+  moduleA.identity.moduleKey = "/a";
+  moduleA.identity.stableOrder = 0;
+  moduleA.callableSummaryIndices.push_back(1);
+  semanticProgram.moduleResolvedArtifacts.push_back(moduleA);
+
+  primec::SemanticProgramModuleResolvedArtifacts moduleZ;
+  moduleZ.identity.moduleKey = "/z";
+  moduleZ.identity.stableOrder = 1;
+  moduleZ.callableSummaryIndices.push_back(0);
+  semanticProgram.moduleResolvedArtifacts.push_back(moduleZ);
+
+  const auto view = primec::semanticProgramCallableSummaryView(semanticProgram);
+  REQUIRE(view.size() == 2);
+  CHECK(view[0] == &semanticProgram.callableSummaries[1]);
+  CHECK(view[1] == &semanticProgram.callableSummaries[0]);
+
+  const std::string dump = primec::formatSemanticProgram(semanticProgram);
+  const std::string firstEntry = "callable_summaries[0]: full_path=\"/a\"";
+  const std::string secondEntry = "callable_summaries[1]: full_path=\"/z\"";
+  const std::size_t firstPos = dump.find(firstEntry);
+  const std::size_t secondPos = dump.find(secondEntry);
+  CHECK(firstPos != std::string::npos);
+  CHECK(secondPos != std::string::npos);
+  CHECK(firstPos < secondPos);
+}
+
+TEST_CASE("semantic product formatter keeps callable-summary text parity for flat vs module-index storage") {
+  auto makeProgram = [](bool useModuleIndices) {
+    primec::SemanticProgram semanticProgram;
+    semanticProgram.entryPath = "/main";
+
+    primec::SemanticProgramCallableSummary first;
+    first.isExecution = false;
+    first.returnKind = "return";
+    first.isCompute = false;
+    first.isUnsafe = false;
+    first.activeEffects = {};
+    first.activeCapabilities = {};
+    first.hasResultType = true;
+    first.resultTypeHasValue = true;
+    first.resultValueType = "i64";
+    first.resultErrorType = "";
+    first.hasOnError = false;
+    first.onErrorHandlerPath = "";
+    first.onErrorErrorType = "";
+    first.onErrorBoundArgCount = 0;
+    first.semanticNodeId = 601;
+    first.provenanceHandle = 1601;
+    first.fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/first");
+    first.returnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "return");
+    first.resultValueTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "i64");
+    semanticProgram.callableSummaries.push_back(std::move(first));
+
+    primec::SemanticProgramCallableSummary second;
+    second.isExecution = true;
+    second.returnKind = "return";
+    second.isCompute = true;
+    second.isUnsafe = false;
+    second.activeEffects = {};
+    second.activeCapabilities = {};
+    second.hasResultType = true;
+    second.resultTypeHasValue = true;
+    second.resultValueType = "i32";
+    second.resultErrorType = "";
+    second.hasOnError = false;
+    second.onErrorHandlerPath = "";
+    second.onErrorErrorType = "";
+    second.onErrorBoundArgCount = 0;
+    second.semanticNodeId = 602;
+    second.provenanceHandle = 1602;
+    second.fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/second");
+    second.returnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "return");
+    second.resultValueTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+    semanticProgram.callableSummaries.push_back(std::move(second));
+
+    if (useModuleIndices) {
+      primec::SemanticProgramModuleResolvedArtifacts moduleFirst;
+      moduleFirst.identity.moduleKey = "/first";
+      moduleFirst.identity.stableOrder = 0;
+      moduleFirst.callableSummaryIndices.push_back(0);
+      semanticProgram.moduleResolvedArtifacts.push_back(std::move(moduleFirst));
+
+      primec::SemanticProgramModuleResolvedArtifacts moduleSecond;
+      moduleSecond.identity.moduleKey = "/second";
+      moduleSecond.identity.stableOrder = 1;
+      moduleSecond.callableSummaryIndices.push_back(1);
+      semanticProgram.moduleResolvedArtifacts.push_back(std::move(moduleSecond));
+    }
+
+    return semanticProgram;
+  };
+
+  const primec::SemanticProgram flatProgram = makeProgram(false);
+  const primec::SemanticProgram moduleIndexedProgram = makeProgram(true);
+  CHECK(primec::formatSemanticProgram(moduleIndexedProgram) == primec::formatSemanticProgram(flatProgram));
+}
+
+TEST_CASE("semantic product formatter resolves module binding-fact indices deterministically") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+
+  primec::SemanticProgramBindingFact first;
+  first.scopePath = "/z";
+  first.siteKind = "local";
+  first.name = "last";
+  first.bindingTypeText = "i64";
+  first.isMutable = false;
+  first.isEntryArgString = false;
+  first.isUnsafeReference = false;
+  first.referenceRoot = "";
+  first.sourceLine = 20;
+  first.sourceColumn = 2;
+  first.semanticNodeId = 701;
+  first.provenanceHandle = 1701;
+  first.scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/z");
+  first.siteKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "local");
+  first.nameId = primec::semanticProgramInternCallTargetString(semanticProgram, "last");
+  first.resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/z/last");
+  first.bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i64");
+  first.referenceRootId = primec::InvalidSymbolId;
+  semanticProgram.bindingFacts.push_back(std::move(first));
+
+  primec::SemanticProgramBindingFact second;
+  second.scopePath = "/a";
+  second.siteKind = "local";
+  second.name = "first";
+  second.bindingTypeText = "i32";
+  second.isMutable = false;
+  second.isEntryArgString = false;
+  second.isUnsafeReference = false;
+  second.referenceRoot = "";
+  second.sourceLine = 10;
+  second.sourceColumn = 1;
+  second.semanticNodeId = 702;
+  second.provenanceHandle = 1702;
+  second.scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/a");
+  second.siteKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "local");
+  second.nameId = primec::semanticProgramInternCallTargetString(semanticProgram, "first");
+  second.resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/a/first");
+  second.bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+  second.referenceRootId = primec::InvalidSymbolId;
+  semanticProgram.bindingFacts.push_back(std::move(second));
+
+  primec::SemanticProgramModuleResolvedArtifacts moduleA;
+  moduleA.identity.moduleKey = "/a";
+  moduleA.identity.stableOrder = 0;
+  moduleA.bindingFactIndices.push_back(1);
+  semanticProgram.moduleResolvedArtifacts.push_back(moduleA);
+
+  primec::SemanticProgramModuleResolvedArtifacts moduleZ;
+  moduleZ.identity.moduleKey = "/z";
+  moduleZ.identity.stableOrder = 1;
+  moduleZ.bindingFactIndices.push_back(0);
+  semanticProgram.moduleResolvedArtifacts.push_back(moduleZ);
+
+  const auto view = primec::semanticProgramBindingFactView(semanticProgram);
+  REQUIRE(view.size() == 2);
+  CHECK(view[0] == &semanticProgram.bindingFacts[1]);
+  CHECK(view[1] == &semanticProgram.bindingFacts[0]);
+
+  const std::string dump = primec::formatSemanticProgram(semanticProgram);
+  const std::string firstEntry = "binding_facts[0]: scope_path=\"/a\"";
+  const std::string secondEntry = "binding_facts[1]: scope_path=\"/z\"";
+  const std::size_t firstPos = dump.find(firstEntry);
+  const std::size_t secondPos = dump.find(secondEntry);
+  CHECK(firstPos != std::string::npos);
+  CHECK(secondPos != std::string::npos);
+  CHECK(firstPos < secondPos);
+}
+
+TEST_CASE("semantic product formatter keeps binding-fact text parity for flat vs module-index storage") {
+  auto makeProgram = [](bool useModuleIndices) {
+    primec::SemanticProgram semanticProgram;
+    semanticProgram.entryPath = "/main";
+
+    primec::SemanticProgramBindingFact first;
+    first.scopePath = "/first";
+    first.siteKind = "parameter";
+    first.name = "left";
+    first.bindingTypeText = "i64";
+    first.isMutable = true;
+    first.isEntryArgString = false;
+    first.isUnsafeReference = false;
+    first.referenceRoot = "";
+    first.sourceLine = 5;
+    first.sourceColumn = 3;
+    first.semanticNodeId = 801;
+    first.provenanceHandle = 1801;
+    first.scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/first");
+    first.siteKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "parameter");
+    first.nameId = primec::semanticProgramInternCallTargetString(semanticProgram, "left");
+    first.resolvedPathId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "/first/left");
+    first.bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i64");
+    first.referenceRootId = primec::InvalidSymbolId;
+    semanticProgram.bindingFacts.push_back(std::move(first));
+
+    primec::SemanticProgramBindingFact second;
+    second.scopePath = "/second";
+    second.siteKind = "local";
+    second.name = "right";
+    second.bindingTypeText = "i32";
+    second.isMutable = false;
+    second.isEntryArgString = false;
+    second.isUnsafeReference = false;
+    second.referenceRoot = "";
+    second.sourceLine = 8;
+    second.sourceColumn = 4;
+    second.semanticNodeId = 802;
+    second.provenanceHandle = 1802;
+    second.scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/second");
+    second.siteKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "local");
+    second.nameId = primec::semanticProgramInternCallTargetString(semanticProgram, "right");
+    second.resolvedPathId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "/second/right");
+    second.bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+    second.referenceRootId = primec::InvalidSymbolId;
+    semanticProgram.bindingFacts.push_back(std::move(second));
+
+    if (useModuleIndices) {
+      primec::SemanticProgramModuleResolvedArtifacts moduleFirst;
+      moduleFirst.identity.moduleKey = "/first";
+      moduleFirst.identity.stableOrder = 0;
+      moduleFirst.bindingFactIndices.push_back(0);
+      semanticProgram.moduleResolvedArtifacts.push_back(std::move(moduleFirst));
+
+      primec::SemanticProgramModuleResolvedArtifacts moduleSecond;
+      moduleSecond.identity.moduleKey = "/second";
+      moduleSecond.identity.stableOrder = 1;
+      moduleSecond.bindingFactIndices.push_back(1);
+      semanticProgram.moduleResolvedArtifacts.push_back(std::move(moduleSecond));
+    }
+
+    return semanticProgram;
+  };
+
+  const primec::SemanticProgram flatProgram = makeProgram(false);
+  const primec::SemanticProgram moduleIndexedProgram = makeProgram(true);
+  CHECK(primec::formatSemanticProgram(moduleIndexedProgram) == primec::formatSemanticProgram(flatProgram));
+}
+
+TEST_CASE("semantic product formatter resolves module return-fact indices deterministically") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+
+  primec::SemanticProgramReturnFact first;
+  first.returnKind = "return";
+  first.structPath = "/i64";
+  first.bindingTypeText = "i64";
+  first.isMutable = false;
+  first.isEntryArgString = false;
+  first.isUnsafeReference = false;
+  first.referenceRoot = "";
+  first.sourceLine = 20;
+  first.sourceColumn = 2;
+  first.semanticNodeId = 901;
+  first.provenanceHandle = 1901;
+  first.definitionPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/z");
+  first.returnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "return");
+  first.structPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/i64");
+  first.bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i64");
+  first.referenceRootId = primec::InvalidSymbolId;
+  semanticProgram.returnFacts.push_back(std::move(first));
+
+  primec::SemanticProgramReturnFact second;
+  second.returnKind = "return";
+  second.structPath = "/i32";
+  second.bindingTypeText = "i32";
+  second.isMutable = false;
+  second.isEntryArgString = false;
+  second.isUnsafeReference = false;
+  second.referenceRoot = "";
+  second.sourceLine = 10;
+  second.sourceColumn = 1;
+  second.semanticNodeId = 902;
+  second.provenanceHandle = 1902;
+  second.definitionPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/a");
+  second.returnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "return");
+  second.structPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/i32");
+  second.bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+  second.referenceRootId = primec::InvalidSymbolId;
+  semanticProgram.returnFacts.push_back(std::move(second));
+
+  primec::SemanticProgramModuleResolvedArtifacts moduleA;
+  moduleA.identity.moduleKey = "/a";
+  moduleA.identity.stableOrder = 0;
+  moduleA.returnFactIndices.push_back(1);
+  semanticProgram.moduleResolvedArtifacts.push_back(moduleA);
+
+  primec::SemanticProgramModuleResolvedArtifacts moduleZ;
+  moduleZ.identity.moduleKey = "/z";
+  moduleZ.identity.stableOrder = 1;
+  moduleZ.returnFactIndices.push_back(0);
+  semanticProgram.moduleResolvedArtifacts.push_back(moduleZ);
+
+  const auto view = primec::semanticProgramReturnFactView(semanticProgram);
+  REQUIRE(view.size() == 2);
+  CHECK(view[0] == &semanticProgram.returnFacts[1]);
+  CHECK(view[1] == &semanticProgram.returnFacts[0]);
+
+  const std::string dump = primec::formatSemanticProgram(semanticProgram);
+  const std::string firstEntry = "return_facts[0]: definition_path=\"/a\"";
+  const std::string secondEntry = "return_facts[1]: definition_path=\"/z\"";
+  const std::size_t firstPos = dump.find(firstEntry);
+  const std::size_t secondPos = dump.find(secondEntry);
+  CHECK(firstPos != std::string::npos);
+  CHECK(secondPos != std::string::npos);
+  CHECK(firstPos < secondPos);
+}
+
+TEST_CASE("semantic product formatter keeps return-fact text parity for flat vs module-index storage") {
+  auto makeProgram = [](bool useModuleIndices) {
+    primec::SemanticProgram semanticProgram;
+    semanticProgram.entryPath = "/main";
+
+    primec::SemanticProgramReturnFact first;
+    first.returnKind = "return";
+    first.structPath = "/i64";
+    first.bindingTypeText = "i64";
+    first.isMutable = false;
+    first.isEntryArgString = false;
+    first.isUnsafeReference = false;
+    first.referenceRoot = "";
+    first.sourceLine = 5;
+    first.sourceColumn = 3;
+    first.semanticNodeId = 911;
+    first.provenanceHandle = 1911;
+    first.definitionPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/first");
+    first.returnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "return");
+    first.structPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/i64");
+    first.bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i64");
+    first.referenceRootId = primec::InvalidSymbolId;
+    semanticProgram.returnFacts.push_back(std::move(first));
+
+    primec::SemanticProgramReturnFact second;
+    second.returnKind = "return";
+    second.structPath = "/i32";
+    second.bindingTypeText = "i32";
+    second.isMutable = false;
+    second.isEntryArgString = false;
+    second.isUnsafeReference = false;
+    second.referenceRoot = "";
+    second.sourceLine = 8;
+    second.sourceColumn = 4;
+    second.semanticNodeId = 912;
+    second.provenanceHandle = 1912;
+    second.definitionPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/second");
+    second.returnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "return");
+    second.structPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/i32");
+    second.bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+    second.referenceRootId = primec::InvalidSymbolId;
+    semanticProgram.returnFacts.push_back(std::move(second));
+
+    if (useModuleIndices) {
+      primec::SemanticProgramModuleResolvedArtifacts moduleFirst;
+      moduleFirst.identity.moduleKey = "/first";
+      moduleFirst.identity.stableOrder = 0;
+      moduleFirst.returnFactIndices.push_back(0);
+      semanticProgram.moduleResolvedArtifacts.push_back(std::move(moduleFirst));
+
+      primec::SemanticProgramModuleResolvedArtifacts moduleSecond;
+      moduleSecond.identity.moduleKey = "/second";
+      moduleSecond.identity.stableOrder = 1;
+      moduleSecond.returnFactIndices.push_back(1);
+      semanticProgram.moduleResolvedArtifacts.push_back(std::move(moduleSecond));
+    }
+
+    return semanticProgram;
+  };
+
+  const primec::SemanticProgram flatProgram = makeProgram(false);
+  const primec::SemanticProgram moduleIndexedProgram = makeProgram(true);
+  CHECK(primec::formatSemanticProgram(moduleIndexedProgram) == primec::formatSemanticProgram(flatProgram));
+}
+
+TEST_CASE("semantic product formatter resolves module local-auto-fact indices deterministically") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+
+  auto makeLocalAuto = [&](std::string scopePath,
+                           std::string bindingName,
+                           std::string bindingTypeText,
+                           std::string initializerResolvedPath,
+                           int sourceLine,
+                           int sourceColumn,
+                           uint64_t semanticNodeId,
+                           uint64_t provenanceHandle) {
+    primec::SemanticProgramLocalAutoFact entry;
+    entry.scopePath = std::move(scopePath);
+    entry.bindingName = std::move(bindingName);
+    entry.bindingTypeText = std::move(bindingTypeText);
+    entry.initializerBindingTypeText = entry.bindingTypeText;
+    entry.initializerQueryTypeText = entry.bindingTypeText;
+    entry.sourceLine = sourceLine;
+    entry.sourceColumn = sourceColumn;
+    entry.semanticNodeId = semanticNodeId;
+    entry.provenanceHandle = provenanceHandle;
+    entry.scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.scopePath);
+    entry.bindingNameId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.bindingName);
+    entry.bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.bindingTypeText);
+    entry.initializerBindingTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, entry.initializerBindingTypeText);
+    entry.initializerQueryTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, entry.initializerQueryTypeText);
+    entry.initializerResolvedPathId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, initializerResolvedPath);
+    return entry;
+  };
+
+  semanticProgram.localAutoFacts.push_back(
+      makeLocalAuto("/z", "last", "i64", "/initLast", 20, 2, 921, 1921));
+  semanticProgram.localAutoFacts.push_back(
+      makeLocalAuto("/a", "first", "i32", "/initFirst", 10, 1, 922, 1922));
+
+  primec::SemanticProgramModuleResolvedArtifacts moduleA;
+  moduleA.identity.moduleKey = "/a";
+  moduleA.identity.stableOrder = 0;
+  moduleA.localAutoFactIndices.push_back(1);
+  semanticProgram.moduleResolvedArtifacts.push_back(moduleA);
+
+  primec::SemanticProgramModuleResolvedArtifacts moduleZ;
+  moduleZ.identity.moduleKey = "/z";
+  moduleZ.identity.stableOrder = 1;
+  moduleZ.localAutoFactIndices.push_back(0);
+  semanticProgram.moduleResolvedArtifacts.push_back(moduleZ);
+
+  const auto view = primec::semanticProgramLocalAutoFactView(semanticProgram);
+  REQUIRE(view.size() == 2);
+  CHECK(view[0] == &semanticProgram.localAutoFacts[1]);
+  CHECK(view[1] == &semanticProgram.localAutoFacts[0]);
+
+  const std::string dump = primec::formatSemanticProgram(semanticProgram);
+  const std::string firstEntry = "local_auto_facts[0]: scope_path=\"/a\" binding_name=\"first\"";
+  const std::string secondEntry = "local_auto_facts[1]: scope_path=\"/z\" binding_name=\"last\"";
+  const std::size_t firstPos = dump.find(firstEntry);
+  const std::size_t secondPos = dump.find(secondEntry);
+  CHECK(firstPos != std::string::npos);
+  CHECK(secondPos != std::string::npos);
+  CHECK(firstPos < secondPos);
+}
+
+TEST_CASE("semantic product formatter keeps local-auto-fact text parity for flat vs module-index storage") {
+  auto makeProgram = [](bool useModuleIndices) {
+    primec::SemanticProgram semanticProgram;
+    semanticProgram.entryPath = "/main";
+
+    auto makeLocalAuto = [&](std::string scopePath,
+                             std::string bindingName,
+                             std::string bindingTypeText,
+                             std::string initializerResolvedPath,
+                             int sourceLine,
+                             int sourceColumn,
+                             uint64_t semanticNodeId,
+                             uint64_t provenanceHandle) {
+      primec::SemanticProgramLocalAutoFact entry;
+      entry.scopePath = std::move(scopePath);
+      entry.bindingName = std::move(bindingName);
+      entry.bindingTypeText = std::move(bindingTypeText);
+      entry.initializerBindingTypeText = entry.bindingTypeText;
+      entry.initializerQueryTypeText = entry.bindingTypeText;
+      entry.sourceLine = sourceLine;
+      entry.sourceColumn = sourceColumn;
+      entry.semanticNodeId = semanticNodeId;
+      entry.provenanceHandle = provenanceHandle;
+      entry.scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.scopePath);
+      entry.bindingNameId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.bindingName);
+      entry.bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, entry.bindingTypeText);
+      entry.initializerBindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, entry.initializerBindingTypeText);
+      entry.initializerQueryTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, entry.initializerQueryTypeText);
+      entry.initializerResolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, initializerResolvedPath);
+      return entry;
+    };
+
+    semanticProgram.localAutoFacts.push_back(
+        makeLocalAuto("/first", "left", "i64", "/initLeft", 5, 3, 931, 1931));
+    semanticProgram.localAutoFacts.push_back(
+        makeLocalAuto("/second", "right", "i32", "/initRight", 8, 4, 932, 1932));
+
+    if (useModuleIndices) {
+      primec::SemanticProgramModuleResolvedArtifacts moduleFirst;
+      moduleFirst.identity.moduleKey = "/first";
+      moduleFirst.identity.stableOrder = 0;
+      moduleFirst.localAutoFactIndices.push_back(0);
+      semanticProgram.moduleResolvedArtifacts.push_back(std::move(moduleFirst));
+
+      primec::SemanticProgramModuleResolvedArtifacts moduleSecond;
+      moduleSecond.identity.moduleKey = "/second";
+      moduleSecond.identity.stableOrder = 1;
+      moduleSecond.localAutoFactIndices.push_back(1);
+      semanticProgram.moduleResolvedArtifacts.push_back(std::move(moduleSecond));
+    }
+
+    return semanticProgram;
+  };
+
+  const primec::SemanticProgram flatProgram = makeProgram(false);
+  const primec::SemanticProgram moduleIndexedProgram = makeProgram(true);
+  CHECK(primec::formatSemanticProgram(moduleIndexedProgram) == primec::formatSemanticProgram(flatProgram));
+}
+
+TEST_CASE("semantic product formatter resolves module query-fact indices deterministically") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+
+  auto makeQuery = [&](std::string scopePath,
+                       std::string callName,
+                       std::string resolvedPath,
+                       std::string typeText,
+                       std::string bindingText,
+                       int sourceLine,
+                       int sourceColumn,
+                       uint64_t semanticNodeId,
+                       uint64_t provenanceHandle) {
+    primec::SemanticProgramQueryFact entry;
+    entry.scopePath = std::move(scopePath);
+    entry.callName = std::move(callName);
+    entry.queryTypeText = std::move(typeText);
+    entry.bindingTypeText = std::move(bindingText);
+    entry.hasResultType = true;
+    entry.resultTypeHasValue = true;
+    entry.resultValueType = "i32";
+    entry.resultErrorType = "MyError";
+    entry.sourceLine = sourceLine;
+    entry.sourceColumn = sourceColumn;
+    entry.semanticNodeId = semanticNodeId;
+    entry.provenanceHandle = provenanceHandle;
+    entry.scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.scopePath);
+    entry.callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.callName);
+    entry.resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, resolvedPath);
+    entry.queryTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.queryTypeText);
+    entry.bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.bindingTypeText);
+    entry.receiverBindingTypeTextId = primec::InvalidSymbolId;
+    entry.resultValueTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.resultValueType);
+    entry.resultErrorTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.resultErrorType);
+    return entry;
+  };
+
+  semanticProgram.queryFacts.push_back(
+      makeQuery("/z", "lookupLast", "/lookup/last", "Result<i32, MyError>", "Result<i32, MyError>", 20, 2, 941, 1941));
+  semanticProgram.queryFacts.push_back(
+      makeQuery("/a", "lookupFirst", "/lookup/first", "Result<i32, MyError>", "Result<i32, MyError>", 10, 1, 942, 1942));
+
+  primec::SemanticProgramModuleResolvedArtifacts moduleA;
+  moduleA.identity.moduleKey = "/a";
+  moduleA.identity.stableOrder = 0;
+  moduleA.queryFactIndices.push_back(1);
+  semanticProgram.moduleResolvedArtifacts.push_back(moduleA);
+
+  primec::SemanticProgramModuleResolvedArtifacts moduleZ;
+  moduleZ.identity.moduleKey = "/z";
+  moduleZ.identity.stableOrder = 1;
+  moduleZ.queryFactIndices.push_back(0);
+  semanticProgram.moduleResolvedArtifacts.push_back(moduleZ);
+
+  const auto view = primec::semanticProgramQueryFactView(semanticProgram);
+  REQUIRE(view.size() == 2);
+  CHECK(view[0] == &semanticProgram.queryFacts[1]);
+  CHECK(view[1] == &semanticProgram.queryFacts[0]);
+
+  const std::string dump = primec::formatSemanticProgram(semanticProgram);
+  const std::string firstEntry = "query_facts[0]: scope_path=\"/a\" call_name=\"lookupFirst\"";
+  const std::string secondEntry = "query_facts[1]: scope_path=\"/z\" call_name=\"lookupLast\"";
+  const std::size_t firstPos = dump.find(firstEntry);
+  const std::size_t secondPos = dump.find(secondEntry);
+  CHECK(firstPos != std::string::npos);
+  CHECK(secondPos != std::string::npos);
+  CHECK(firstPos < secondPos);
+}
+
+TEST_CASE("semantic product formatter keeps query-fact text parity for flat vs module-index storage") {
+  auto makeProgram = [](bool useModuleIndices) {
+    primec::SemanticProgram semanticProgram;
+    semanticProgram.entryPath = "/main";
+
+    auto makeQuery = [&](std::string scopePath,
+                         std::string callName,
+                         std::string resolvedPath,
+                         int sourceLine,
+                         int sourceColumn,
+                         uint64_t semanticNodeId,
+                         uint64_t provenanceHandle) {
+      primec::SemanticProgramQueryFact entry;
+      entry.scopePath = std::move(scopePath);
+      entry.callName = std::move(callName);
+      entry.queryTypeText = "Result<i32, MyError>";
+      entry.bindingTypeText = "Result<i32, MyError>";
+      entry.hasResultType = true;
+      entry.resultTypeHasValue = true;
+      entry.resultValueType = "i32";
+      entry.resultErrorType = "MyError";
+      entry.sourceLine = sourceLine;
+      entry.sourceColumn = sourceColumn;
+      entry.semanticNodeId = semanticNodeId;
+      entry.provenanceHandle = provenanceHandle;
+      entry.scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.scopePath);
+      entry.callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.callName);
+      entry.resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, resolvedPath);
+      entry.queryTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.queryTypeText);
+      entry.bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.bindingTypeText);
+      entry.receiverBindingTypeTextId = primec::InvalidSymbolId;
+      entry.resultValueTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.resultValueType);
+      entry.resultErrorTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.resultErrorType);
+      return entry;
+    };
+
+    semanticProgram.queryFacts.push_back(makeQuery("/first", "leftLookup", "/first/lookup", 5, 3, 951, 1951));
+    semanticProgram.queryFacts.push_back(makeQuery("/second", "rightLookup", "/second/lookup", 8, 4, 952, 1952));
+
+    if (useModuleIndices) {
+      primec::SemanticProgramModuleResolvedArtifacts moduleFirst;
+      moduleFirst.identity.moduleKey = "/first";
+      moduleFirst.identity.stableOrder = 0;
+      moduleFirst.queryFactIndices.push_back(0);
+      semanticProgram.moduleResolvedArtifacts.push_back(std::move(moduleFirst));
+
+      primec::SemanticProgramModuleResolvedArtifacts moduleSecond;
+      moduleSecond.identity.moduleKey = "/second";
+      moduleSecond.identity.stableOrder = 1;
+      moduleSecond.queryFactIndices.push_back(1);
+      semanticProgram.moduleResolvedArtifacts.push_back(std::move(moduleSecond));
+    }
+
+    return semanticProgram;
+  };
+
+  const primec::SemanticProgram flatProgram = makeProgram(false);
+  const primec::SemanticProgram moduleIndexedProgram = makeProgram(true);
+  CHECK(primec::formatSemanticProgram(moduleIndexedProgram) == primec::formatSemanticProgram(flatProgram));
+}
+
+TEST_CASE("semantic product formatter keeps second dedup-slice text parity for flat vs module-index storage") {
+  auto makeProgram = [](bool useModuleIndices) {
+    primec::SemanticProgram semanticProgram;
+    semanticProgram.entryPath = "/main";
+
+    auto makeReturnFact = [&](std::string definitionPath,
+                              std::string structPath,
+                              std::string bindingTypeText,
+                              int sourceLine,
+                              int sourceColumn,
+                              uint64_t semanticNodeId,
+                              uint64_t provenanceHandle) {
+      primec::SemanticProgramReturnFact entry;
+      entry.returnKind = "return";
+      entry.structPath = std::move(structPath);
+      entry.bindingTypeText = std::move(bindingTypeText);
+      entry.sourceLine = sourceLine;
+      entry.sourceColumn = sourceColumn;
+      entry.semanticNodeId = semanticNodeId;
+      entry.provenanceHandle = provenanceHandle;
+      entry.definitionPathId = primec::semanticProgramInternCallTargetString(semanticProgram, definitionPath);
+      entry.returnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "return");
+      entry.structPathId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.structPath);
+      entry.bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.bindingTypeText);
+      return entry;
+    };
+
+    auto makeLocalAutoFact = [&](std::string scopePath,
+                                 std::string bindingName,
+                                 std::string bindingTypeText,
+                                 std::string initializerResolvedPath,
+                                 int sourceLine,
+                                 int sourceColumn,
+                                 uint64_t semanticNodeId,
+                                 uint64_t provenanceHandle) {
+      primec::SemanticProgramLocalAutoFact entry;
+      entry.scopePath = std::move(scopePath);
+      entry.bindingName = std::move(bindingName);
+      entry.bindingTypeText = std::move(bindingTypeText);
+      entry.initializerBindingTypeText = entry.bindingTypeText;
+      entry.initializerQueryTypeText = entry.bindingTypeText;
+      entry.sourceLine = sourceLine;
+      entry.sourceColumn = sourceColumn;
+      entry.semanticNodeId = semanticNodeId;
+      entry.provenanceHandle = provenanceHandle;
+      entry.scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.scopePath);
+      entry.bindingNameId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.bindingName);
+      entry.bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.bindingTypeText);
+      entry.initializerResolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, initializerResolvedPath);
+      entry.initializerBindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, entry.initializerBindingTypeText);
+      entry.initializerQueryTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, entry.initializerQueryTypeText);
+      return entry;
+    };
+
+    auto makeQueryFact = [&](std::string scopePath,
+                             std::string callName,
+                             std::string resolvedPath,
+                             std::string queryTypeText,
+                             std::string bindingTypeText,
+                             int sourceLine,
+                             int sourceColumn,
+                             uint64_t semanticNodeId,
+                             uint64_t provenanceHandle) {
+      primec::SemanticProgramQueryFact entry;
+      entry.scopePath = std::move(scopePath);
+      entry.callName = std::move(callName);
+      entry.queryTypeText = std::move(queryTypeText);
+      entry.bindingTypeText = std::move(bindingTypeText);
+      entry.hasResultType = true;
+      entry.resultTypeHasValue = true;
+      entry.resultValueType = "i32";
+      entry.resultErrorType = "Err";
+      entry.sourceLine = sourceLine;
+      entry.sourceColumn = sourceColumn;
+      entry.semanticNodeId = semanticNodeId;
+      entry.provenanceHandle = provenanceHandle;
+      entry.scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.scopePath);
+      entry.callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.callName);
+      entry.resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, resolvedPath);
+      entry.queryTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.queryTypeText);
+      entry.bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.bindingTypeText);
+      entry.resultValueTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.resultValueType);
+      entry.resultErrorTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.resultErrorType);
+      return entry;
+    };
+
+    semanticProgram.returnFacts.push_back(
+        makeReturnFact("/first", "/i64", "i64", 5, 1, 961, 1961));
+    semanticProgram.returnFacts.push_back(
+        makeReturnFact("/second", "/i32", "i32", 8, 1, 962, 1962));
+
+    semanticProgram.localAutoFacts.push_back(
+        makeLocalAutoFact("/first", "lhs", "i64", "/init/lhs", 5, 2, 971, 1971));
+    semanticProgram.localAutoFacts.push_back(
+        makeLocalAutoFact("/second", "rhs", "i32", "/init/rhs", 8, 2, 972, 1972));
+
+    semanticProgram.queryFacts.push_back(
+        makeQueryFact("/first", "lookupLeft", "/lookup/left", "Result<i32, Err>", "Result<i32, Err>", 5, 3, 981, 1981));
+    semanticProgram.queryFacts.push_back(
+        makeQueryFact("/second", "lookupRight", "/lookup/right", "Result<i32, Err>", "Result<i32, Err>", 8, 3, 982, 1982));
+
+    if (useModuleIndices) {
+      primec::SemanticProgramModuleResolvedArtifacts moduleFirst;
+      moduleFirst.identity.moduleKey = "/first";
+      moduleFirst.identity.stableOrder = 0;
+      moduleFirst.returnFactIndices.push_back(0);
+      moduleFirst.localAutoFactIndices.push_back(0);
+      moduleFirst.queryFactIndices.push_back(0);
+      semanticProgram.moduleResolvedArtifacts.push_back(std::move(moduleFirst));
+
+      primec::SemanticProgramModuleResolvedArtifacts moduleSecond;
+      moduleSecond.identity.moduleKey = "/second";
+      moduleSecond.identity.stableOrder = 1;
+      moduleSecond.returnFactIndices.push_back(1);
+      moduleSecond.localAutoFactIndices.push_back(1);
+      moduleSecond.queryFactIndices.push_back(1);
+      semanticProgram.moduleResolvedArtifacts.push_back(std::move(moduleSecond));
+    }
+
+    return semanticProgram;
+  };
+
+  const primec::SemanticProgram flatProgram = makeProgram(false);
+  const primec::SemanticProgram moduleIndexedProgram = makeProgram(true);
+  CHECK(primec::formatSemanticProgram(moduleIndexedProgram) == primec::formatSemanticProgram(flatProgram));
+}
+
 TEST_CASE("semantic product formatter exact golden is stable") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";

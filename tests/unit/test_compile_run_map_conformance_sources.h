@@ -811,6 +811,22 @@ inline std::string makeBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConfor
   return source;
 }
 
+inline std::string makeBuiltinCanonicalMapStructFieldInitializerConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[struct]\n";
+  source += "Holder() {\n";
+  source += "  [map<i32, i32> mut] values{map<i32, i32>()}\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Holder mut] holder{Holder()}\n";
+  source += "  [Reference<map<i32, i32>>] valuesRef{location(holder.values)}\n";
+  source += "  return(/std/collections/map/count<i32, i32>(valuesRef))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeBuiltinCanonicalMapInsertHelperReturnValueDirectRejectSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
@@ -838,6 +854,26 @@ inline std::string makeBuiltinCanonicalMapInsertHelperReturnValueMethodRejectSou
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  makeValues().insert(1i32, 4i32)\n";
+  source += "  return(0i32)\n";
+  source += "}\n";
+  return source;
+}
+
+inline std::string makeBuiltinCanonicalMapInsertBorrowedHolderFieldDirectRejectSource() {
+  std::string source;
+  source += "import /std/collections/*\n\n";
+  source += "[struct]\n";
+  source += "Holder() {\n";
+  source += "  [map<i32, i32> mut] values{map<i32, i32>()}\n";
+  source += "}\n\n";
+  source += "[return<Reference<Holder>>]\n";
+  source += "borrowHolder([Reference<Holder>] holder) {\n";
+  source += "  return(holder)\n";
+  source += "}\n\n";
+  source += "[effects(heap_alloc), return<int>]\n";
+  source += "main() {\n";
+  source += "  [Holder mut] holder{Holder()}\n";
+  source += "  /std/collections/map/insert<i32, i32>(borrowHolder(location(holder)).values, 1i32, 4i32)\n";
   source += "  return(0i32)\n";
   source += "}\n";
   return source;

@@ -7,6 +7,8 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStructFieldBindingHelpers.h"
 
+#include <sstream>
+
 namespace primec::ir_lowerer {
 
 namespace {
@@ -23,6 +25,47 @@ std::string normalizeMapImportAliasPath(const std::string &path) {
 
 bool isStructLikeSemanticProductCategory(const std::string &category) {
   return category == "struct" || category == "pod" || category == "handle" || category == "gpu_lane";
+}
+
+std::string mapKindTypeName(LocalInfo::ValueKind kind) {
+  switch (kind) {
+  case LocalInfo::ValueKind::Int32:
+    return "i32";
+  case LocalInfo::ValueKind::Int64:
+    return "i64";
+  case LocalInfo::ValueKind::UInt64:
+    return "u64";
+  case LocalInfo::ValueKind::Bool:
+    return "bool";
+  case LocalInfo::ValueKind::Float32:
+    return "f32";
+  case LocalInfo::ValueKind::Float64:
+    return "f64";
+  case LocalInfo::ValueKind::String:
+    return "string";
+  default:
+    return "";
+  }
+}
+
+std::string inferExperimentalMapStructPathFromKinds(LocalInfo::ValueKind keyKind,
+                                                    LocalInfo::ValueKind valueKind) {
+  const std::string keyType = mapKindTypeName(keyKind);
+  const std::string valueType = mapKindTypeName(valueKind);
+  if (keyType.empty() || valueType.empty()) {
+    return "";
+  }
+
+  const std::string canonicalArgs = keyType + "," + valueType;
+  uint64_t hash = 1469598103934665603ULL;
+  for (unsigned char ch : canonicalArgs) {
+    hash ^= static_cast<uint64_t>(ch);
+    hash *= 1099511628211ULL;
+  }
+
+  std::ostringstream specializedPath;
+  specializedPath << "/std/collections/experimental_map/Map__t" << std::hex << hash;
+  return specializedPath.str();
 }
 
 } // namespace
@@ -540,6 +583,17 @@ std::string inferStructPathFromNameExpr(const Expr &expr, const LocalMap &locals
   }
   if (!localIt->second.structTypeName.empty()) {
     return localIt->second.structTypeName;
+  }
+  const bool isMapLikeLocal =
+      localIt->second.kind == LocalInfo::Kind::Map ||
+      ((localIt->second.kind == LocalInfo::Kind::Reference || localIt->second.kind == LocalInfo::Kind::Pointer) &&
+       (localIt->second.referenceToMap || localIt->second.pointerToMap));
+  if (isMapLikeLocal) {
+    const std::string inferredMapStruct =
+        inferExperimentalMapStructPathFromKinds(localIt->second.mapKeyKind, localIt->second.mapValueKind);
+    if (!inferredMapStruct.empty()) {
+      return inferredMapStruct;
+    }
   }
   if (localIt->second.kind == LocalInfo::Kind::Vector) {
     return "/vector";

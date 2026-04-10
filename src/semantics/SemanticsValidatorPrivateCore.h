@@ -7,6 +7,8 @@
                                const std::unordered_map<std::string, BindingInfo> &)> &visitor);
   void forEachInferredQuerySnapshot(
       const std::function<void(const Definition &, const Expr &, QuerySnapshotData &&)> &visitor);
+  void ensureQuerySnapshotFactCaches();
+  void ensureCallAndTrySnapshotFactCaches();
   bool buildDefinitionMaps();
   bool validateDefinitionBuildTransforms(const Definition &def,
                                          bool isStructHelper,
@@ -147,7 +149,9 @@
                                    const std::unordered_map<std::string, BindingInfo> &locals,
                                    BindingInfo &bindingOut,
                                    const Expr *bindingExpr = nullptr);
-  static GraphLocalAutoKey graphLocalAutoBindingKey(const std::string &scopePath, int sourceLine, int sourceColumn);
+  GraphLocalAutoKey graphLocalAutoBindingKey(std::string_view scopePath,
+                                             int sourceLine,
+                                             int sourceColumn) const;
   static std::pair<int, int> graphLocalAutoSourceLocation(const Expr &expr);
   bool lookupGraphLocalAutoBinding(const std::string &scopePath,
                                    const Expr &bindingExpr,

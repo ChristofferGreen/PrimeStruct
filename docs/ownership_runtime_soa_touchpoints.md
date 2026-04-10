@@ -351,18 +351,46 @@ path (based on current recognition hooks):
   `src/ir_lowerer/IrLowererCountAccessClassifiers.cpp`,
   `src/ir_lowerer/IrLowererStatementCallEmission.cpp`, and
   `src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h`).
-- Remaining non-local lvalue receiver shapes that do not currently route
-  through that same path (for example non-local receiver forms beyond
-  field-access, helper-return, and args-pack map-access receiver-source `at` /
-  `at_unsafe` / `at_ref` / `at_unsafe_ref` + compatibility-alias path/stem
-  call/method chains (including PascalCase/PascalCase `_ref` and
-  generated-suffix variants on receiver-access + mutating-insert stems)).
-- Temporary/helper-return receiver shapes that do not provide a stable writable
-  lvalue target for pointer write-back now have deterministic compile-diagnostic
-  coverage for both direct canonical and method-sugar insert forms (see
-  `tests/unit/test_compile_run_map_conformance_sources.h`,
-  `tests/unit/test_compile_run_map_conformance_expectations.h`, and the
-  native/C++/VM conformance harness suites).
+- Still-unhandled non-local receiver families (2026-04 refresh):
+  - Family A: direct canonical insert on temporary value-return map receivers
+    (`/std/collections/map/insert(makeValues(), key, value)`).
+    - Minimal repro:
+      `main() { /std/collections/map/insert<i32, i32>(makeValues(), 1i32, 4i32) }`
+    - Current behavior:
+      compile reject in lowering (`native backend only supports ... calls in expressions`)
+      because the receiver has no stable write-back lvalue.
+    - Owning files:
+      `src/ir_lowerer/IrLowererStatementCallEmission.cpp`,
+      `src/ir_lowerer/IrLowererLowerStatementsExpr.h`,
+      `tests/unit/test_compile_run_map_conformance_sources.h` (`makeBuiltinCanonicalMapInsertHelperReturnValueDirectRejectSource`),
+      `tests/unit/test_compile_run_map_conformance_expectations.h` (`expectBuiltinCanonicalMapInsertHelperReturnValueDirectReject`).
+  - Family B: method-sugar insert on temporary value-return map receivers
+    (`makeValues().insert(key, value)`).
+    - Minimal repro:
+      `main() { makeValues().insert(1i32, 4i32) }`
+    - Current behavior:
+      semantic reject (`insert is statement-only`) before rewrite/lowering.
+    - Owning files:
+      `src/semantics/SemanticsValidatorExprPostAccessPrechecks.cpp`,
+      `tests/unit/test_compile_run_map_conformance_sources.h` (`makeBuiltinCanonicalMapInsertHelperReturnValueMethodRejectSource`),
+      `tests/unit/test_compile_run_map_conformance_expectations.h` (`expectBuiltinCanonicalMapInsertHelperReturnValueMethodReject`).
+  - Family C: direct canonical insert on helper-return borrowed struct-field
+    receivers (`borrowHolder(location(holder)).values`).
+    - Minimal repro:
+      `main() { /std/collections/map/insert<i32, i32>(borrowHolder(location(holder)).values, 1i32, 4i32) }`
+    - Current behavior:
+      compile reject in lowering (`native backend only supports ... calls in expressions`)
+      after canonical insert receiver rewrite still fails to materialize the
+      helper-return field receiver as a typed map lvalue for builtin
+      write-back/repoint handling.
+    - Owning files:
+      `src/ir_lowerer/IrLowererStatementCallEmission.cpp`,
+      `src/ir_lowerer/IrLowererAccessTargetResolution.cpp`,
+      `src/ir_lowerer/IrLowererLowerStatementsExpr.h`,
+      `src/ir_lowerer/IrLowererUninitializedStructInference.cpp`,
+      `tests/unit/test_compile_run_map_conformance_sources.h` (`makeBuiltinCanonicalMapInsertBorrowedHolderFieldDirectRejectSource`),
+      `tests/unit/test_compile_run_map_conformance_expectations.h` (`expectBuiltinCanonicalMapInsertBorrowedHolderFieldDirectReject`),
+      and the native/C++/VM conformance harness suites.
 
 ## 4) SoA compiler-owned fallback inventory by layer
 
@@ -600,6 +628,55 @@ Semantics-layer pending fallback diagnostics:
     compiler-owned old-surface-only path-preservation behavior during implicit
     template fallback resolution
     (`src/semantics/TemplateMonomorphFallbackTypeInference.h`).
+
+Still-unhandled compiler-owned SoA fallback families (2026-04 refresh):
+- Family S1: builtin `soa_vector` literal lowering remains compiler-owned and
+  struct-only for non-empty literals.
+  - Helper shape:
+    `soa_vector<T>(...)` where non-empty `T` must lower as struct-backed
+    experimental SoA payload (`soa_vector<i32>(1i32)` still rejects).
+  - Current behavior:
+    lowering hard-fails with compiler-owned diagnostics for non-struct element
+    payloads (`native backend requires soa_vector literal elements to be struct
+    values` / `native backend currently supports non-empty soa_vector literals
+    only for struct element types`), and enforces a compiler-owned capacity
+    ceiling (`soa_vector literal exceeds local capacity limit (256)`).
+  - Owning files:
+    `src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp`.
+- Family S2: canonical `to_aos` argument bridging still depends on a
+  compiler-owned storage-layout copy shim.
+  - Helper shape:
+    `/std/collections/soa_vector/to_aos(...)` and
+    `/std/collections/soa_vector/to_aos_ref(...)` passing builtin
+    `soa_vector` arguments into experimental `SoaVector__*` parameter layouts.
+  - Current behavior:
+    inline-parameter lowering routes through
+    `emitBuiltinSoaToAosStructBridge(...)`, which assumes a concrete storage
+    slot layout and emits direct slot-copy glue; failures surface as
+    `builtin soa_vector to_aos bridge requires SoaVector storage layout`.
+    Root `soa_vector` receiver compatibility now also covers canonical
+    `to_aos_ref` call-shape variants (including specialized helper suffixes)
+    via the same bridge-match path in inline parameter lowering. The bridge
+    matcher no longer accepts empty callee paths, so this compatibility now
+    requires explicit canonical helper-path classification (`to_aos` /
+    `to_aos_ref`) instead of falling back to compiler-owned pathless matching.
+  - Owning files:
+    `src/ir_lowerer/IrLowererInlineParamHelpers.cpp`.
+- Family S3: direct old-surface/pending SoA field-view helper calls still rely
+  on compiler-owned pending diagnostics rather than stdlib-owned completion.
+  - Helper shape:
+    old-surface/builtin field-view access paths that resolve through
+    `builtinSoaDirectPendingHelperPath(...)` (for example unresolved
+    field-view helper rewrites and return-position probes).
+  - Current behavior:
+    semantic validation emits compiler-owned pending diagnostics
+    (`soa_vector field views are not implemented yet: ...` /
+    `soa helper unavailable (still pending): ...`) instead of routing these
+    forms through a finalized stdlib helper contract.
+  - Owning files:
+    `src/semantics/SemanticsBuiltinPathHelpers.cpp`,
+    `src/semantics/SemanticsValidatorExpr.cpp`,
+    `src/semantics/SemanticsValidatorStatementReturns.cpp`.
 
 IR-lowerer/runtime special-case boundaries:
 - Non-empty `soa_vector` literal lowering now routes through:

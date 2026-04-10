@@ -627,6 +627,19 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
           targetInfoOut.isMapTarget = true;
           return true;
         }
+        if (directCallee->parameters.size() >= 3) {
+          const std::string keyTypeText = extractParameterTypeName(directCallee->parameters[1]);
+          const std::string valueTypeText = extractParameterTypeName(directCallee->parameters[2]);
+          const LocalInfo::ValueKind keyKind = valueKindFromTypeName(trimTemplateTypeText(keyTypeText));
+          const LocalInfo::ValueKind valueKind = valueKindFromTypeName(trimTemplateTypeText(valueTypeText));
+          if (keyKind != LocalInfo::ValueKind::Unknown &&
+              valueKind != LocalInfo::ValueKind::Unknown) {
+            targetInfoOut.isMapTarget = true;
+            targetInfoOut.mapKeyKind = keyKind;
+            targetInfoOut.mapValueKind = valueKind;
+            return true;
+          }
+        }
       }
     }
 
@@ -642,6 +655,19 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
                                      targetInfoOut.mapValueKind)) {
           targetInfoOut.isMapTarget = true;
           return true;
+        }
+        if (methodCallee->parameters.size() >= 3) {
+          const std::string keyTypeText = extractParameterTypeName(methodCallee->parameters[1]);
+          const std::string valueTypeText = extractParameterTypeName(methodCallee->parameters[2]);
+          const LocalInfo::ValueKind keyKind = valueKindFromTypeName(trimTemplateTypeText(keyTypeText));
+          const LocalInfo::ValueKind valueKind = valueKindFromTypeName(trimTemplateTypeText(valueTypeText));
+          if (keyKind != LocalInfo::ValueKind::Unknown &&
+              valueKind != LocalInfo::ValueKind::Unknown) {
+            targetInfoOut.isMapTarget = true;
+            targetInfoOut.mapKeyKind = keyKind;
+            targetInfoOut.mapValueKind = valueKind;
+            return true;
+          }
         }
       }
     }

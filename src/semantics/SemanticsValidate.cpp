@@ -211,6 +211,123 @@ std::string semanticModuleKeyForPath(const std::string &path) {
   return normalized.substr(0, nextSlash);
 }
 
+bool isBridgeHelperNameForSemanticProductBuild(std::string_view collectionFamily,
+                                               std::string_view helperName) {
+  if (collectionFamily == "vector") {
+    return helperName == "count" || helperName == "capacity" || helperName == "at" ||
+           helperName == "at_unsafe" || helperName == "push" || helperName == "pop" ||
+           helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
+           helperName == "remove_swap";
+  }
+  if (collectionFamily == "map") {
+    return helperName == "count" || helperName == "count_ref" ||
+           helperName == "contains" || helperName == "contains_ref" ||
+           helperName == "tryAt" || helperName == "tryAt_ref" ||
+           helperName == "at" || helperName == "at_ref" ||
+           helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
+           helperName == "insert" || helperName == "insert_ref" || helperName == "mapInsert" ||
+           helperName == "mapCountRef" || helperName == "mapContainsRef" ||
+           helperName == "mapTryAtRef" || helperName == "mapAtRef" ||
+           helperName == "mapAtUnsafeRef" || helperName == "mapInsertRef";
+  }
+  if (collectionFamily == "soa_vector") {
+    return helperName == "count" || helperName == "count_ref" ||
+           helperName == "get" || helperName == "get_ref" ||
+           helperName == "ref" || helperName == "ref_ref" ||
+           helperName == "to_aos" || helperName == "to_aos_ref" ||
+           helperName == "push" || helperName == "reserve";
+  }
+  return false;
+}
+
+std::optional<semantics::SemanticsValidator::BridgePathChoiceSnapshotEntry>
+bridgePathChoiceFromDirectCallSnapshotForSemanticProductBuild(
+    const semantics::SemanticsValidator::DirectCallTargetSnapshotEntry &snapshotEntry) {
+  auto parsePrefixedHelper = [&](std::string_view prefix,
+                                 std::string_view collectionFamily)
+      -> std::optional<semantics::SemanticsValidator::BridgePathChoiceSnapshotEntry> {
+    if (snapshotEntry.resolvedPath.rfind(prefix, 0) != 0) {
+      return std::nullopt;
+    }
+    std::string helperName = snapshotEntry.resolvedPath.substr(prefix.size());
+    const size_t specializationSuffix = helperName.find("__t");
+    if (specializationSuffix != std::string::npos) {
+      helperName.erase(specializationSuffix);
+    }
+    if (!isBridgeHelperNameForSemanticProductBuild(collectionFamily, helperName)) {
+      return std::nullopt;
+    }
+    return semantics::SemanticsValidator::BridgePathChoiceSnapshotEntry{
+        snapshotEntry.scopePath,
+        std::string(collectionFamily),
+        std::move(helperName),
+        snapshotEntry.resolvedPath,
+        snapshotEntry.sourceLine,
+        snapshotEntry.sourceColumn,
+        snapshotEntry.semanticNodeId,
+    };
+  };
+
+  if (auto parsed = parsePrefixedHelper("/vector/", "vector")) {
+    return parsed;
+  }
+  if (auto parsed = parsePrefixedHelper("/std/collections/vector/", "vector")) {
+    return parsed;
+  }
+  if (auto parsed = parsePrefixedHelper("/std/collections/experimental_vector/", "vector")) {
+    return parsed;
+  }
+  if (auto parsed = parsePrefixedHelper("/map/", "map")) {
+    return parsed;
+  }
+  if (auto parsed = parsePrefixedHelper("/std/collections/map/", "map")) {
+    return parsed;
+  }
+  if (auto parsed = parsePrefixedHelper("/std/collections/experimental_map/", "map")) {
+    return parsed;
+  }
+  if (auto parsed = parsePrefixedHelper("/soa_vector/", "soa_vector")) {
+    return parsed;
+  }
+  if (auto parsed = parsePrefixedHelper("/std/collections/soa_vector/", "soa_vector")) {
+    return parsed;
+  }
+  return std::nullopt;
+}
+
+std::vector<semantics::SemanticsValidator::BridgePathChoiceSnapshotEntry>
+bridgePathChoiceSnapshotFromDirectCallTargetsForSemanticProductBuild(
+    const std::vector<semantics::SemanticsValidator::DirectCallTargetSnapshotEntry> &directCallTargets) {
+  std::vector<semantics::SemanticsValidator::BridgePathChoiceSnapshotEntry> entries;
+  entries.reserve(directCallTargets.size());
+  for (const auto &snapshotEntry : directCallTargets) {
+    if (auto bridgeEntry = bridgePathChoiceFromDirectCallSnapshotForSemanticProductBuild(snapshotEntry);
+        bridgeEntry.has_value()) {
+      entries.push_back(std::move(*bridgeEntry));
+    }
+  }
+
+  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+    if (left.scopePath != right.scopePath) {
+      return left.scopePath < right.scopePath;
+    }
+    if (left.sourceLine != right.sourceLine) {
+      return left.sourceLine < right.sourceLine;
+    }
+    if (left.sourceColumn != right.sourceColumn) {
+      return left.sourceColumn < right.sourceColumn;
+    }
+    if (left.collectionFamily != right.collectionFamily) {
+      return left.collectionFamily < right.collectionFamily;
+    }
+    if (left.helperName != right.helperName) {
+      return left.helperName < right.helperName;
+    }
+    return left.chosenPath < right.chosenPath;
+  });
+  return entries;
+}
+
 SemanticProgram buildSemanticProgram(const Program &program,
                                      const std::string &entryPath,
                                      semantics::SemanticsValidator &validator,
@@ -290,8 +407,12 @@ SemanticProgram buildSemanticProgram(const Program &program,
     module.identity.stableOrder = moduleIndex;
     return module;
   };
+  std::optional<std::vector<semantics::SemanticsValidator::DirectCallTargetSnapshotEntry>>
+      directCallTargetSnapshotsForBridgeDerivation;
   if (isCollectorEnabled("direct_call_targets")) {
-    const auto directCallTargets = validator.directCallTargetSnapshotForSemanticProduct();
+    directCallTargetSnapshotsForBridgeDerivation =
+        validator.directCallTargetSnapshotForSemanticProduct();
+    const auto &directCallTargets = *directCallTargetSnapshotsForBridgeDerivation;
     semanticProgram.directCallTargets.reserve(directCallTargets.size());
     for (const auto &snapshotEntry : directCallTargets) {
       SemanticProgramDirectCallTarget entry;
@@ -335,7 +456,10 @@ SemanticProgram buildSemanticProgram(const Program &program,
     }
   }
   if (isCollectorEnabled("bridge_path_choices")) {
-    const auto bridgePathChoices = validator.bridgePathChoiceSnapshotForSemanticProduct();
+    const auto bridgePathChoices = directCallTargetSnapshotsForBridgeDerivation.has_value()
+                                       ? bridgePathChoiceSnapshotFromDirectCallTargetsForSemanticProductBuild(
+                                             *directCallTargetSnapshotsForBridgeDerivation)
+                                       : validator.bridgePathChoiceSnapshotForSemanticProduct();
     semanticProgram.bridgePathChoices.reserve(bridgePathChoices.size());
     for (const auto &snapshotEntry : bridgePathChoices) {
       SemanticProgramBridgePathChoice entry;
@@ -396,8 +520,9 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.onErrorErrorTypeId =
           semanticProgramInternCallTargetString(semanticProgram, entry.onErrorErrorType);
       semanticProgram.callableSummaries.push_back(std::move(entry));
-      const auto &storedEntry = semanticProgram.callableSummaries.back();
-      ensureModuleResolvedArtifacts(snapshotEntry.fullPath).callableSummaries.push_back(storedEntry);
+      const std::size_t entryIndex = semanticProgram.callableSummaries.size() - 1;
+      ensureModuleResolvedArtifacts(snapshotEntry.fullPath).callableSummaryIndices.push_back(
+          entryIndex);
     }
   }
   if (isCollectorEnabled("type_metadata")) {
@@ -463,8 +588,8 @@ SemanticProgram buildSemanticProgram(const Program &program,
           semanticProgramInternCallTargetString(semanticProgram, entry.bindingTypeText);
       entry.referenceRootId = semanticProgramInternCallTargetString(semanticProgram, entry.referenceRoot);
       semanticProgram.bindingFacts.push_back(std::move(entry));
-      const auto &storedEntry = semanticProgram.bindingFacts.back();
-      ensureModuleResolvedArtifacts(storedEntry.scopePath).bindingFacts.push_back(storedEntry);
+      const std::size_t entryIndex = semanticProgram.bindingFacts.size() - 1;
+      ensureModuleResolvedArtifacts(snapshotEntry.scopePath).bindingFactIndices.push_back(entryIndex);
     }
   }
   if (isCollectorEnabled("return_facts")) {
@@ -490,8 +615,8 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.bindingTypeTextId = semanticProgramInternCallTargetString(semanticProgram, entry.bindingTypeText);
       entry.referenceRootId = semanticProgramInternCallTargetString(semanticProgram, entry.referenceRoot);
       semanticProgram.returnFacts.push_back(std::move(entry));
-      const auto &storedEntry = semanticProgram.returnFacts.back();
-      ensureModuleResolvedArtifacts(snapshotEntry.definitionPath).returnFacts.push_back(storedEntry);
+      const std::size_t entryIndex = semanticProgram.returnFacts.size() - 1;
+      ensureModuleResolvedArtifacts(snapshotEntry.definitionPath).returnFactIndices.push_back(entryIndex);
     }
   }
   if (isCollectorEnabled("local_auto_facts")) {
@@ -579,8 +704,8 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.initializerMethodCallReturnKindId =
           semanticProgramInternCallTargetString(semanticProgram, entry.initializerMethodCallReturnKind);
       semanticProgram.localAutoFacts.push_back(std::move(entry));
-      const auto &storedEntry = semanticProgram.localAutoFacts.back();
-      ensureModuleResolvedArtifacts(storedEntry.scopePath).localAutoFacts.push_back(storedEntry);
+      const std::size_t entryIndex = semanticProgram.localAutoFacts.size() - 1;
+      ensureModuleResolvedArtifacts(snapshotEntry.scopePath).localAutoFactIndices.push_back(entryIndex);
     }
   }
   if (isCollectorEnabled("query_facts")) {
@@ -613,8 +738,8 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.resultValueTypeId = semanticProgramInternCallTargetString(semanticProgram, entry.resultValueType);
       entry.resultErrorTypeId = semanticProgramInternCallTargetString(semanticProgram, entry.resultErrorType);
       semanticProgram.queryFacts.push_back(std::move(entry));
-      const auto &storedEntry = semanticProgram.queryFacts.back();
-      ensureModuleResolvedArtifacts(storedEntry.scopePath).queryFacts.push_back(storedEntry);
+      const std::size_t entryIndex = semanticProgram.queryFacts.size() - 1;
+      ensureModuleResolvedArtifacts(snapshotEntry.scopePath).queryFactIndices.push_back(entryIndex);
     }
   }
   if (isCollectorEnabled("try_facts")) {

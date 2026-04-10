@@ -15,7 +15,19 @@ namespace {
 
 bool isCanonicalBuiltinSoaToAosPath(const std::string &calleePath) {
   return calleePath == "/std/collections/soa_vector/to_aos" ||
-         calleePath.rfind("/std/collections/soa_vector/to_aos__", 0) == 0;
+         calleePath == "/std/collections/soa_vector/to_aos_ref" ||
+         calleePath.rfind("/std/collections/soa_vector/to_aos__", 0) == 0 ||
+         calleePath.rfind("/std/collections/soa_vector/to_aos_ref__", 0) == 0 ||
+         calleePath ==
+             "/std/collections/experimental_soa_vector_conversions/soaVectorToAos" ||
+         calleePath ==
+             "/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef" ||
+         calleePath.rfind(
+             "/std/collections/experimental_soa_vector_conversions/soaVectorToAos__",
+             0) == 0 ||
+         calleePath.rfind(
+             "/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef__",
+             0) == 0;
 }
 
 bool isExperimentalSoaVectorStructPath(const std::string &structPath) {
@@ -25,14 +37,14 @@ bool isExperimentalSoaVectorStructPath(const std::string &structPath) {
 bool isBuiltinSoaToAosStructMatch(const std::string &calleePath,
                                   const std::string &expectedStruct,
                                   const std::string &argStruct) {
-  if (!isCanonicalBuiltinSoaToAosPath(calleePath)) {
-    return false;
-  }
   if (!isExperimentalSoaVectorStructPath(expectedStruct) ||
       isExperimentalSoaVectorStructPath(argStruct)) {
     return false;
   }
-  return normalizeCollectionBindingTypeName(argStruct) == "soa_vector";
+  if (normalizeCollectionBindingTypeName(argStruct) != "soa_vector") {
+    return false;
+  }
+  return isCanonicalBuiltinSoaToAosPath(calleePath);
 }
 
 bool resolveBuiltinSoaToAosStorageField(const StructSlotLayoutInfo &layout,
@@ -212,6 +224,98 @@ bool rewriteBuiltinMapConstructorExpr(const Expr &callExpr,
     }
   }
   return true;
+}
+
+bool resolveIdentityReferenceForwardParamIndex(const Definition &callee, size_t &indexOut) {
+  indexOut = 0;
+  if (!callee.returnExpr.has_value() || !callee.statements.empty()) {
+    return false;
+  }
+  const Expr &returnExpr = *callee.returnExpr;
+  if (returnExpr.kind != Expr::Kind::Name) {
+    return false;
+  }
+  for (size_t i = 0; i < callee.parameters.size(); ++i) {
+    if (callee.parameters[i].name == returnExpr.name) {
+      indexOut = i;
+      return true;
+    }
+  }
+  return false;
+}
+
+bool peelMapReferenceReceiverExpr(const Expr &receiverExpr,
+                                  const ResolveInlineParameterDefinitionCallFn &resolveDefinitionCall,
+                                  Expr &peeledOut) {
+  const Expr *current = &receiverExpr;
+  bool changed = false;
+  for (size_t peelSteps = 0; peelSteps < 8; ++peelSteps) {
+    if (current->kind != Expr::Kind::Call) {
+      break;
+    }
+    if ((isSimpleCallName(*current, "location") || isSimpleCallName(*current, "dereference")) &&
+        current->args.size() == 1) {
+      current = &current->args.front();
+      changed = true;
+      continue;
+    }
+    if (current->isMethodCall || !resolveDefinitionCall) {
+      break;
+    }
+    const Definition *callee = resolveDefinitionCall(*current);
+    size_t forwardedParamIndex = 0;
+    if (callee == nullptr || !resolveIdentityReferenceForwardParamIndex(*callee, forwardedParamIndex) ||
+        forwardedParamIndex >= current->args.size()) {
+      break;
+    }
+    current = &current->args[forwardedParamIndex];
+    changed = true;
+  }
+  if (!changed) {
+    return false;
+  }
+  peeledOut = *current;
+  return true;
+}
+
+bool rewriteMapReferenceFieldAccessReceiverExpr(const Expr &argExpr,
+                                                const ResolveInlineParameterDefinitionCallFn &resolveDefinitionCall,
+                                                Expr &rewrittenExpr) {
+  if (argExpr.kind != Expr::Kind::Call || !argExpr.isFieldAccess || argExpr.args.size() != 1) {
+    return false;
+  }
+  Expr peeledReceiver;
+  if (!peelMapReferenceReceiverExpr(argExpr.args.front(), resolveDefinitionCall, peeledReceiver)) {
+    return false;
+  }
+  rewrittenExpr = argExpr;
+  rewrittenExpr.args.front() = std::move(peeledReceiver);
+  return true;
+}
+
+bool isMapLikeStructTypeName(const std::string &structTypeName) {
+  if (structTypeName.empty()) {
+    return false;
+  }
+  return normalizeCollectionBindingTypeName(structTypeName) == "map" ||
+         structTypeName == "/std/collections/experimental_map/Map" ||
+         structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0;
+}
+
+bool shouldRewriteMapReferenceReceiverForParam(const LocalInfo &paramInfo) {
+  if (paramInfo.structTypeName.empty()) {
+    return paramInfo.kind == LocalInfo::Kind::Map ||
+           ((paramInfo.kind == LocalInfo::Kind::Reference || paramInfo.kind == LocalInfo::Kind::Pointer) &&
+            (paramInfo.referenceToMap || paramInfo.pointerToMap));
+  }
+  if (paramInfo.kind == LocalInfo::Kind::Map) {
+    return true;
+  }
+  if (paramInfo.kind == LocalInfo::Kind::Value || paramInfo.kind == LocalInfo::Kind::Reference ||
+      paramInfo.kind == LocalInfo::Kind::Pointer) {
+    return isMapLikeStructTypeName(paramInfo.structTypeName);
+  }
+  return false;
 }
 
 } // namespace
@@ -494,7 +598,15 @@ bool emitInlineDefinitionCallParameters(
         error = "argument count mismatch";
         return false;
       }
-      std::string argStruct = inferStructExprPath(*orderedArg, callerLocals);
+      Expr rewrittenMapReferenceArgExpr;
+      const Expr *argExprPtr = orderedArg;
+      if (shouldRewriteMapReferenceReceiverForParam(paramInfo) &&
+          orderedArg->kind == Expr::Kind::Call &&
+          rewriteMapReferenceFieldAccessReceiverExpr(
+              *orderedArg, resolveDefinitionCall, rewrittenMapReferenceArgExpr)) {
+        argExprPtr = &rewrittenMapReferenceArgExpr;
+      }
+      std::string argStruct = inferStructExprPath(*argExprPtr, callerLocals);
       if (argStruct.empty() ||
           (argStruct != paramInfo.structTypeName &&
            !isBuiltinSoaToAosStructMatch(calleePath, paramInfo.structTypeName, argStruct))) {
@@ -502,7 +614,7 @@ bool emitInlineDefinitionCallParameters(
                 (argStruct.empty() ? std::string("<unknown>") : argStruct);
         return false;
       }
-      const Expr &argExpr = *orderedArg;
+      const Expr &argExpr = *argExprPtr;
       auto emitStructPointer = [&](const Expr &arg) -> bool {
         if (arg.kind == Expr::Kind::Name) {
           auto it = callerLocals.find(arg.name);
@@ -742,12 +854,18 @@ bool emitInlineDefinitionCallParameters(
     }
     Expr rewrittenMapArgExpr;
     const Expr *emittedArgExpr = orderedArg;
+    Expr rewrittenMapReferenceArgExpr;
     if (paramInfo.kind == LocalInfo::Kind::Map &&
         paramInfo.structTypeName.empty() &&
         orderedArg->kind == Expr::Kind::Call &&
         rewriteBuiltinMapConstructorExpr(
             *orderedArg, paramInfo.mapKeyKind, paramInfo.mapValueKind, resolveDefinitionCall, rewrittenMapArgExpr)) {
       emittedArgExpr = &rewrittenMapArgExpr;
+    } else if (shouldRewriteMapReferenceReceiverForParam(paramInfo) &&
+               orderedArg->kind == Expr::Kind::Call &&
+               rewriteMapReferenceFieldAccessReceiverExpr(
+                   *orderedArg, resolveDefinitionCall, rewrittenMapReferenceArgExpr)) {
+      emittedArgExpr = &rewrittenMapReferenceArgExpr;
     }
     if (!emitExpr(*emittedArgExpr, callerLocals)) {
       return false;

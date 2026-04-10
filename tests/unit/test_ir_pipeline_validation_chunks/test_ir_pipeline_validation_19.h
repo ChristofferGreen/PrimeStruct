@@ -799,7 +799,7 @@ TEST_CASE("ir lowerer call helpers require semantic-product method-call targets"
   CHECK(resolveExprPath(methodExpr) == "/std/collections/map/contains");
 }
 
-TEST_CASE("ir lowerer semantic-product adapter interns method-call targets by SymbolId") {
+TEST_CASE("ir lowerer semantic-product adapter reuses method-call path ids") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
       .scopePath = "/main",
@@ -829,9 +829,11 @@ TEST_CASE("ir lowerer semantic-product adapter interns method-call targets by Sy
   });
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  REQUIRE(adapter.semanticProgram == &semanticProgram);
   REQUIRE(adapter.methodCallTargetIdsByExpr.count(44) == 1);
   REQUIRE(adapter.methodCallTargetIdsByExpr.count(45) == 1);
   CHECK(adapter.methodCallTargetIdsByExpr.at(44) == adapter.methodCallTargetIdsByExpr.at(45));
+  CHECK(adapter.methodCallTargetIdsByExpr.at(44) == semanticProgram.methodCallTargets[0].resolvedPathId);
 
   primec::Expr firstExpr;
   firstExpr.kind = primec::Expr::Kind::Call;

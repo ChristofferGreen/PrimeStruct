@@ -38,6 +38,7 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
     return adapter;
   }
   adapter.hasSemanticProduct = true;
+  adapter.semanticProgram = semanticProgram;
 
   const auto directCallTargets = semanticProgramDirectCallTargetView(*semanticProgram);
   adapter.directCallTargetsByExpr.reserve(directCallTargets.size());
@@ -51,23 +52,14 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
 
   const auto methodCallTargets = semanticProgramMethodCallTargetView(*semanticProgram);
   adapter.methodCallTargetIdsByExpr.reserve(methodCallTargets.size());
-  adapter.methodCallTargetPathsById.reserve(methodCallTargets.size());
-  adapter.methodCallTargetIdsByPath.reserve(methodCallTargets.size());
   for (const auto *entry : methodCallTargets) {
+    if (entry->semanticNodeId == 0 || entry->resolvedPathId == InvalidSymbolId) {
+      continue;
+    }
     const std::string_view resolvedPath =
-        semanticProgramMethodCallTargetResolvedPath(*semanticProgram, *entry);
-    if (entry->semanticNodeId != 0 && !resolvedPath.empty()) {
-      const std::string resolvedPathText(resolvedPath);
-      SymbolId pathId = InvalidSymbolId;
-      if (const auto existing = adapter.methodCallTargetIdsByPath.find(resolvedPathText);
-          existing != adapter.methodCallTargetIdsByPath.end()) {
-        pathId = existing->second;
-      } else {
-        adapter.methodCallTargetPathsById.push_back(resolvedPathText);
-        pathId = static_cast<SymbolId>(adapter.methodCallTargetPathsById.size());
-        adapter.methodCallTargetIdsByPath.insert_or_assign(adapter.methodCallTargetPathsById.back(), pathId);
-      }
-      adapter.methodCallTargetIdsByExpr.insert_or_assign(entry->semanticNodeId, pathId);
+        semanticProgramResolveCallTargetString(*semanticProgram, entry->resolvedPathId);
+    if (!resolvedPath.empty()) {
+      adapter.methodCallTargetIdsByExpr.insert_or_assign(entry->semanticNodeId, entry->resolvedPathId);
     }
   }
 
@@ -185,16 +177,21 @@ std::string findSemanticProductDirectCallTarget(const SemanticProductTargetAdapt
 }
 
 std::string findSemanticProductMethodCallTarget(const SemanticProductTargetAdapter &adapter, const Expr &expr) {
-  if (expr.semanticNodeId == 0) {
+  if (expr.semanticNodeId == 0 || adapter.semanticProgram == nullptr) {
     return {};
   }
   if (const auto it = adapter.methodCallTargetIdsByExpr.find(expr.semanticNodeId);
       it != adapter.methodCallTargetIdsByExpr.end()) {
     const SymbolId pathId = it->second;
-    if (pathId == InvalidSymbolId || pathId > adapter.methodCallTargetPathsById.size()) {
+    if (pathId == InvalidSymbolId) {
       return {};
     }
-    return adapter.methodCallTargetPathsById[pathId - 1];
+    const std::string_view resolvedPath =
+        semanticProgramResolveCallTargetString(*adapter.semanticProgram, pathId);
+    if (resolvedPath.empty()) {
+      return {};
+    }
+    return std::string(resolvedPath);
   }
   return {};
 }

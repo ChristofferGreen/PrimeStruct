@@ -277,10 +277,240 @@ void SemanticsValidator::forEachInferredQuerySnapshot(
   });
 }
 
-SemanticsValidator::GraphLocalAutoKey SemanticsValidator::graphLocalAutoBindingKey(const std::string &scopePath,
+void SemanticsValidator::ensureQuerySnapshotFactCaches() {
+  if (querySnapshotFactCacheValid_) {
+    return;
+  }
+
+  queryFactSnapshotCache_.clear();
+  queryReceiverBindingSnapshotCache_.clear();
+  queryCallTypeSnapshotCache_.clear();
+  queryBindingSnapshotCache_.clear();
+  queryResultTypeSnapshotCache_.clear();
+  forEachInferredQuerySnapshot([&](const Definition &def, const Expr &expr, QuerySnapshotData &&queryData) {
+    QueryFactSnapshotEntry factEntry{
+        def.fullPath,
+        expr.name,
+        queryData.resolvedPath,
+        expr.sourceLine,
+        expr.sourceColumn,
+        queryData.typeText,
+        queryData.binding,
+        queryData.receiverBinding,
+        queryData.resultInfo.isResult,
+        queryData.resultInfo.isResult && queryData.resultInfo.hasValue,
+        queryData.resultInfo.valueType,
+        queryData.resultInfo.errorType,
+        expr.semanticNodeId,
+    };
+    queryFactSnapshotCache_.push_back(std::move(factEntry));
+
+    if (!queryData.typeText.empty()) {
+      queryCallTypeSnapshotCache_.push_back(QueryCallTypeSnapshotEntry{
+          def.fullPath,
+          expr.name,
+          queryData.resolvedPath,
+          expr.sourceLine,
+          expr.sourceColumn,
+          queryData.typeText,
+      });
+    }
+
+    if (!queryData.binding.typeName.empty()) {
+      queryBindingSnapshotCache_.push_back(QueryBindingSnapshotEntry{
+          def.fullPath,
+          expr.name,
+          queryData.resolvedPath,
+          expr.sourceLine,
+          expr.sourceColumn,
+          queryData.binding,
+      });
+    }
+
+    if (queryData.resultInfo.isResult) {
+      queryResultTypeSnapshotCache_.push_back(QueryResultTypeSnapshotEntry{
+          def.fullPath,
+          expr.name,
+          queryData.resolvedPath,
+          expr.sourceLine,
+          expr.sourceColumn,
+          queryData.resultInfo.hasValue,
+          queryData.resultInfo.valueType,
+          queryData.resultInfo.errorType,
+      });
+    }
+
+    if (!queryData.receiverBinding.typeName.empty()) {
+      queryReceiverBindingSnapshotCache_.push_back(QueryReceiverBindingSnapshotEntry{
+          def.fullPath,
+          expr.name,
+          std::move(queryData.resolvedPath),
+          expr.sourceLine,
+          expr.sourceColumn,
+          std::move(queryData.receiverBinding),
+      });
+    }
+  });
+
+  std::stable_sort(queryFactSnapshotCache_.begin(),
+                   queryFactSnapshotCache_.end(),
+                   [](const auto &left, const auto &right) {
+                     if (left.scopePath != right.scopePath) {
+                       return left.scopePath < right.scopePath;
+                     }
+                     if (left.sourceLine != right.sourceLine) {
+                       return left.sourceLine < right.sourceLine;
+                     }
+                     if (left.sourceColumn != right.sourceColumn) {
+                       return left.sourceColumn < right.sourceColumn;
+                     }
+                     if (left.callName != right.callName) {
+                       return left.callName < right.callName;
+                     }
+                     return left.resolvedPath < right.resolvedPath;
+                   });
+  std::stable_sort(queryReceiverBindingSnapshotCache_.begin(),
+                   queryReceiverBindingSnapshotCache_.end(),
+                   [](const auto &left, const auto &right) {
+                     if (left.scopePath != right.scopePath) {
+                       return left.scopePath < right.scopePath;
+                     }
+                     if (left.sourceLine != right.sourceLine) {
+                       return left.sourceLine < right.sourceLine;
+                     }
+                     if (left.sourceColumn != right.sourceColumn) {
+                       return left.sourceColumn < right.sourceColumn;
+                     }
+                     return left.callName < right.callName;
+                   });
+  std::stable_sort(queryCallTypeSnapshotCache_.begin(),
+                   queryCallTypeSnapshotCache_.end(),
+                   [](const auto &left, const auto &right) {
+                     if (left.scopePath != right.scopePath) {
+                       return left.scopePath < right.scopePath;
+                     }
+                     if (left.sourceLine != right.sourceLine) {
+                       return left.sourceLine < right.sourceLine;
+                     }
+                     if (left.sourceColumn != right.sourceColumn) {
+                       return left.sourceColumn < right.sourceColumn;
+                     }
+                     return left.callName < right.callName;
+                   });
+  std::stable_sort(queryBindingSnapshotCache_.begin(),
+                   queryBindingSnapshotCache_.end(),
+                   [](const auto &left, const auto &right) {
+                     if (left.scopePath != right.scopePath) {
+                       return left.scopePath < right.scopePath;
+                     }
+                     if (left.sourceLine != right.sourceLine) {
+                       return left.sourceLine < right.sourceLine;
+                     }
+                     if (left.sourceColumn != right.sourceColumn) {
+                       return left.sourceColumn < right.sourceColumn;
+                     }
+                     return left.callName < right.callName;
+                   });
+  std::stable_sort(queryResultTypeSnapshotCache_.begin(),
+                   queryResultTypeSnapshotCache_.end(),
+                   [](const auto &left, const auto &right) {
+                     if (left.scopePath != right.scopePath) {
+                       return left.scopePath < right.scopePath;
+                     }
+                     if (left.sourceLine != right.sourceLine) {
+                       return left.sourceLine < right.sourceLine;
+                     }
+                     if (left.sourceColumn != right.sourceColumn) {
+                       return left.sourceColumn < right.sourceColumn;
+                     }
+                     return left.callName < right.callName;
+                   });
+  querySnapshotFactCacheValid_ = true;
+}
+
+void SemanticsValidator::ensureCallAndTrySnapshotFactCaches() {
+  if (callAndTrySnapshotFactCacheValid_) {
+    return;
+  }
+
+  callBindingSnapshotCache_.clear();
+  tryValueSnapshotCache_.clear();
+  forEachLocalAwareSnapshotCall([&](const Definition &def,
+                                    const std::vector<ParameterInfo> &defParams,
+                                    const Expr &expr,
+                                    const std::unordered_map<std::string, BindingInfo> &activeLocals) {
+    CallSnapshotData callData;
+    if (inferCallSnapshotData(defParams, activeLocals, expr, callData) &&
+        !callData.resolvedPath.empty() &&
+        !callData.binding.typeName.empty()) {
+      callBindingSnapshotCache_.push_back(CallBindingSnapshotEntry{
+          def.fullPath,
+          expr.name,
+          std::move(callData.resolvedPath),
+          expr.sourceLine,
+          expr.sourceColumn,
+          std::move(callData.binding),
+      });
+    }
+
+    LocalAutoTrySnapshotData tryData;
+    if (!inferTrySnapshotData(def, defParams, activeLocals, expr, tryData)) {
+      return;
+    }
+    tryValueSnapshotCache_.push_back(TryValueSnapshotEntry{
+        def.fullPath,
+        std::move(tryData.operandResolvedPath),
+        expr.sourceLine,
+        expr.sourceColumn,
+        std::move(tryData.operandBinding),
+        std::move(tryData.operandReceiverBinding),
+        std::move(tryData.operandQueryTypeText),
+        std::move(tryData.valueType),
+        std::move(tryData.errorType),
+        tryData.contextReturnKind,
+        std::move(tryData.onErrorHandlerPath),
+        std::move(tryData.onErrorErrorType),
+        tryData.onErrorBoundArgCount,
+        expr.semanticNodeId,
+    });
+  });
+
+  std::stable_sort(callBindingSnapshotCache_.begin(),
+                   callBindingSnapshotCache_.end(),
+                   [](const auto &left, const auto &right) {
+                     if (left.scopePath != right.scopePath) {
+                       return left.scopePath < right.scopePath;
+                     }
+                     if (left.sourceLine != right.sourceLine) {
+                       return left.sourceLine < right.sourceLine;
+                     }
+                     if (left.sourceColumn != right.sourceColumn) {
+                       return left.sourceColumn < right.sourceColumn;
+                     }
+                     return left.callName < right.callName;
+                   });
+  std::stable_sort(tryValueSnapshotCache_.begin(),
+                   tryValueSnapshotCache_.end(),
+                   [](const auto &left, const auto &right) {
+                     if (left.scopePath != right.scopePath) {
+                       return left.scopePath < right.scopePath;
+                     }
+                     if (left.sourceLine != right.sourceLine) {
+                       return left.sourceLine < right.sourceLine;
+                     }
+                     if (left.sourceColumn != right.sourceColumn) {
+                       return left.sourceColumn < right.sourceColumn;
+                     }
+                     return left.operandResolvedPath < right.operandResolvedPath;
+                   });
+  callAndTrySnapshotFactCacheValid_ = true;
+}
+
+SemanticsValidator::GraphLocalAutoKey SemanticsValidator::graphLocalAutoBindingKey(std::string_view scopePath,
                                                                                     int sourceLine,
-                                                                                    int sourceColumn) {
-  return GraphLocalAutoKey{scopePath, sourceLine, sourceColumn};
+                                                                                    int sourceColumn) const {
+  const SymbolId scopePathId = graphLocalAutoScopePathInterner_.intern(scopePath);
+  return GraphLocalAutoKey{scopePathId, sourceLine, sourceColumn};
 }
 
 std::pair<int, int> SemanticsValidator::graphLocalAutoSourceLocation(const Expr &expr) {

@@ -112,12 +112,12 @@ bool SemanticsValidator::lookupGraphLocalAutoBinding(const std::string &scopePat
     return false;
   }
   const auto [sourceLine, sourceColumn] = graphLocalAutoSourceLocation(bindingExpr);
-  const auto it = graphLocalAutoBindings_.find(graphLocalAutoBindingKey(
+  const auto it = graphLocalAutoFacts_.find(graphLocalAutoBindingKey(
       scopePath, sourceLine, sourceColumn));
-  if (it == graphLocalAutoBindings_.end()) {
+  if (it == graphLocalAutoFacts_.end() || !it->second.hasBinding) {
     return false;
   }
-  bindingOut = it->second;
+  bindingOut = it->second.binding;
   return true;
 }
 
@@ -136,15 +136,18 @@ bool SemanticsValidator::lookupGraphLocalAutoDirectCallFact(const std::string &s
   }
   const auto [sourceLine, sourceColumn] = graphLocalAutoSourceLocation(bindingExpr);
   const GraphLocalAutoKey bindingKey = graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn);
+  const auto it = graphLocalAutoFacts_.find(bindingKey);
+  if (it == graphLocalAutoFacts_.end()) {
+    return false;
+  }
+  const GraphLocalAutoFacts &fact = it->second;
   bool found = false;
-  if (const auto resolvedPathIt = graphLocalAutoDirectCallResolvedPaths_.find(bindingKey);
-      resolvedPathIt != graphLocalAutoDirectCallResolvedPaths_.end()) {
-    resolvedPathOut = resolvedPathIt->second;
+  if (!fact.directCallResolvedPath.empty()) {
+    resolvedPathOut = fact.directCallResolvedPath;
     found = true;
   }
-  if (const auto returnKindIt = graphLocalAutoDirectCallReturnKinds_.find(bindingKey);
-      returnKindIt != graphLocalAutoDirectCallReturnKinds_.end()) {
-    returnKindOut = returnKindIt->second;
+  if (fact.hasDirectCallReturnKind) {
+    returnKindOut = fact.directCallReturnKind;
     found = true;
   }
   return found;
@@ -168,15 +171,18 @@ bool SemanticsValidator::lookupGraphLocalAutoMethodCallFact(const std::string &s
   }
   const auto [sourceLine, sourceColumn] = graphLocalAutoSourceLocation(bindingExpr);
   const GraphLocalAutoKey bindingKey = graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn);
+  const auto it = graphLocalAutoFacts_.find(bindingKey);
+  if (it == graphLocalAutoFacts_.end()) {
+    return false;
+  }
+  const GraphLocalAutoFacts &fact = it->second;
   bool found = false;
-  if (const auto resolvedPathIt = graphLocalAutoMethodCallResolvedPaths_.find(bindingKey);
-      resolvedPathIt != graphLocalAutoMethodCallResolvedPaths_.end()) {
-    resolvedPathOut = resolvedPathIt->second;
+  if (!fact.methodCallResolvedPath.empty()) {
+    resolvedPathOut = fact.methodCallResolvedPath;
     found = true;
   }
-  if (const auto returnKindIt = graphLocalAutoMethodCallReturnKinds_.find(bindingKey);
-      returnKindIt != graphLocalAutoMethodCallReturnKinds_.end()) {
-    returnKindOut = returnKindIt->second;
+  if (fact.hasMethodCallReturnKind) {
+    returnKindOut = fact.methodCallReturnKind;
     found = true;
   }
   return found;

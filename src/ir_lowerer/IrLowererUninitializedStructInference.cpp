@@ -335,6 +335,18 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
           return inferStructExprPath(resultExpr.args[1], localsInExpr);
         }
       }
+      if (!exprIn.isMethodCall && exprIn.templateArgs.size() == 2) {
+        std::string collectionName;
+        if (getBuiltinCollectionName(exprIn, collectionName) && collectionName == "map") {
+          const std::string mapType = "map<" + trimTemplateTypeText(exprIn.templateArgs.front()) + ", " +
+                                      trimTemplateTypeText(exprIn.templateArgs.back()) + ">";
+          const std::string inferredMapStruct =
+              inferUninitializedTargetStructPath(mapType, exprIn.namespacePrefix, resolveStructTypeName);
+          if (!inferredMapStruct.empty()) {
+            return inferredMapStruct;
+          }
+        }
+      }
       if ((isSimpleCallName(exprIn, "get") || isSimpleCallName(exprIn, "ref")) &&
           exprIn.args.size() == 2) {
         const std::string receiverStruct = inferStructExprPath(exprIn.args.front(),

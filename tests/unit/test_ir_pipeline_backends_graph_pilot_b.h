@@ -1,5 +1,5 @@
   CHECK(validatorHeader.find("struct GraphLocalAutoKey {") != std::string::npos);
-  CHECK(validatorHeader.find("std::unordered_map<GraphLocalAutoKey, BindingInfo, GraphLocalAutoKeyHash> graphLocalAutoBindings_;") !=
+  CHECK(validatorHeader.find("std::unordered_map<GraphLocalAutoKey, GraphLocalAutoFacts, GraphLocalAutoKeyHash> graphLocalAutoFacts_;") !=
         std::string::npos);
   CHECK(validatorHeader.find("bool ensureDefinitionReturnKindReady(const Definition &def);") != std::string::npos);
   CHECK(validatorHeader.find("bool inferDefinitionReturnKindGraphStep") != std::string::npos);

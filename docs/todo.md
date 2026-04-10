@@ -12,18 +12,18 @@ Sizing note: each leaf `○` item should fit in one code-affecting commit plus f
 
 **Group 13 - Ownership/runtime substrate**
 - ◐ Route the remaining builtin canonical `map<K, V>` borrowed/non-local growth mutation surfaces through the shared grown-pointer write-back/repoint path.
-  - ○ Refresh section 3 of `docs/ownership_runtime_soa_touchpoints.md` with concrete still-unhandled non-local receiver families (one entry per family with minimal repro + owning source files).
-  - ○ Add one failing conformance case for the highest-priority unhandled non-local receiver family across native/C++/VM harnesses.
-  - ○ Migrate that single highest-priority non-local receiver family onto the shared rewrite/lowering path and flip the new conformance case to passing.
+  - ◐ Refresh section 3 of `docs/ownership_runtime_soa_touchpoints.md` with concrete still-unhandled non-local receiver families (one entry per family with minimal repro + owning source files).
+  - ◐ Add one failing conformance case for the highest-priority unhandled non-local receiver family across native/C++/VM harnesses.
+  - ◐ Migrate that single highest-priority non-local receiver family onto the shared rewrite/lowering path and flip the new conformance case to passing.
 
 **Group 14 - SoA bring-up and end-state cleanup**
 - ◐ Retire remaining compiler-owned builtin `soa_vector` semantics/lowering/backend scaffolding as the stdlib `.prime` substrate becomes authoritative.
   - ◐ Migrate the next compiler-owned SoA fallback family onto shared stdlib helper/conversion paths.
-    - ○ Refresh section 4 of `docs/ownership_runtime_soa_touchpoints.md` with concrete still-unhandled compiler-owned SoA fallback families (one entry per family with helper shape + owning files).
-    - ○ Add one failing focused semantics/backend parity test for the highest-priority unhandled SoA fallback family.
-    - ○ Migrate that single highest-priority SoA fallback family onto shared stdlib helper/conversion paths and flip the new parity test to passing.
-  - ○ Remove one no-longer-needed compiler-owned SoA fallback branch for the current highest-priority migrated family.
-  - ○ Add a guard test that fails if that removed branch behavior reappears.
+    - ◐ Refresh section 4 of `docs/ownership_runtime_soa_touchpoints.md` with concrete still-unhandled compiler-owned SoA fallback families (one entry per family with helper shape + owning files). Progress: section 4 now includes an explicit 2026-04 still-unhandled-family inventory (S1/S2/S3) covering struct-only non-empty `soa_vector` literal lowering, compiler-owned `to_aos` storage-layout bridge glue, and pending field-view diagnostic fallback paths with owning files.
+    - ◐ Add one failing focused semantics/backend parity test for the highest-priority unhandled SoA fallback family. Progress: added a focused compile-run parity reject that locks root non-struct non-empty `soa_vector` literal behavior across semantic dump (`--dump-stage ast-semantic`) and emit (`--emit=exe`) paths with matching semantic-stage diagnostics.
+    - ◐ Migrate that single highest-priority SoA fallback family onto shared stdlib helper/conversion paths and flip the new parity test to passing. Progress: canonical `to_aos_ref` now reuses the same SoA bridge-compat parameter matching as `to_aos` in inline parameter lowering (including specialized helper-path variants), and focused compile-run coverage now passes for root `soa_vector` receiver-location form `/std/collections/soa_vector/to_aos_ref<T>(location(values))` in the C++ emitter.
+  - ◐ Remove one no-longer-needed compiler-owned SoA fallback branch for the current highest-priority migrated family. Progress: removed the inline-parameter `calleePath.empty()` acceptance branch from builtin `soa_vector` -> experimental `SoaVector__*` bridge matching so S2 bridge compatibility now requires canonical helper-path classification.
+  - ◐ Add a guard test that fails if that removed branch behavior reappears. Progress: added a focused inline-parameter helper regression that asserts empty-callee-path calls reject builtin `soa_vector` -> `SoaVector__*` bridge matching while canonical `/std/collections/soa_vector/to_aos_ref` still succeeds.
 
 **Group 15 - Semantic memory footprint and multithread compile substrate**
 Order rule: execute leaves top-to-bottom. Each leaf below is scoped to one code-affecting commit.
@@ -56,8 +56,8 @@ P1 - Immediate peak-RSS reductions in existing pipeline
 - ◐ [P1-07] Replace per-module full-entry copies for one high-volume semantic-product fact family with canonical vector references/indices.
 - ◐ [P1-08] Add formatter/update path that resolves module references without re-copying entries for that migrated fact family.
 - ◐ [P1-09] Add semantic-product text-parity regression test for the first dedup slice.
-- ◐ [P1-10] Migrate a second high-volume copied fact family to canonical reference/index storage.
-- ◐ [P1-11] Add semantic-product text-parity regression test for the second dedup slice.
+- ◐ [P1-10] Migrate a second high-volume copied fact family to canonical reference/index storage. Progress: module-resolved `return_facts`, `local_auto_facts`, and `query_facts` now store `returnFactIndices`, `localAutoFactIndices`, and `queryFactIndices` into canonical semantic-program vectors (instead of full per-module entry copies), with deterministic module-index view/formatter parity coverage for each migrated family.
+- ◐ [P1-11] Add semantic-product text-parity regression test for the second dedup slice. Progress: added combined parity coverage that exercises flat-vs-module-index formatting equivalence across all second-slice families together (`return_facts`, `local_auto_facts`, and `query_facts`) in one semantic-product snapshot test.
 
 P2 - Traversal and allocation churn reductions
 - ◐ [P2-01] Inventory snapshot passes by traversal shape and pick the highest-overlap pair.
@@ -70,13 +70,13 @@ P2 - Traversal and allocation churn reductions
 - ◐ [P2-08] Replace repeated call-target path normalization/concatenation with cached canonical fragments.
 - ◐ [P2-09] Extend cached canonical fragment reuse to method-target path construction.
 - ◐ [P2-10] Add method-target memoization keyed by semantic-node identity + receiver type + method name and report RSS/time delta.
-- ◐ [P2-11] Replace `graphLocalAuto*` string-concatenated map keys with compact structured keys and report RSS delta.
-- ◐ [P2-12] Convert one high-churn semantic map/set from string keys to a flatter cache-friendly container and report RSS delta.
-- ◐ [P2-13] Prototype per-definition arena/pmr allocation for transient semantic maps/vectors and report RSS/time delta.
+- ◐ [P2-11] Replace `graphLocalAuto*` string-concatenated map keys with compact structured keys and report RSS delta. Progress: `GraphLocalAutoKey` now stores interned `scopePathId` instead of copied `scopePath` text, and validator graph-local key maps now reuse a dedicated scope-path interner.
+- ◐ [P2-12] Convert one high-churn semantic map/set from string keys to a flatter cache-friendly container and report RSS delta. Progress: collapsed graph-local auto side-channel state from nine per-field keyed maps into one `graphLocalAutoFacts_` map so each key is hashed/stored once and related fields are co-located.
+- ◐ [P2-13] Prototype per-definition arena/pmr allocation for transient semantic maps/vectors and report RSS/time delta. Progress: graph-local auto dependency-count transient map now uses a PMR `monotonic_buffer_resource`-backed container (`GraphLocalAutoDependencyScratch`) to reduce allocator churn in type-resolution graph local-auto collection.
 
 P3 - Interning/ID migration for hot paths
-- ◐ [P3-18] Remove `method_call_targets.resolvedPath` string shadow and require `resolvedPathId` on semantic-product paths.
-- ◐ [P3-19] Remove `bridge_path_choices.helperName` string shadow and require `helperNameId` on semantic-product paths.
+- ◐ [P3-18] Remove `method_call_targets.resolvedPath` string shadow and require `resolvedPathId` on semantic-product paths. Progress: IR lowerer semantic-product target adapter now reuses `resolvedPathId` directly for method-call targets and resolves text through the semantic-product string table at lookup time (no adapter-local method-call path string table).
+- ◐ [P3-19] Remove `bridge_path_choices.helperName` string shadow and require `helperNameId` on semantic-product paths. Progress: semantic-product bridge path choice entries now require `helperNameId` with string-table lookup helper accessors, and source-guard coverage asserts `SemanticProgramBridgePathChoice` has no `helperName` string shadow field.
 - ◐ [P3-20] Remove `callable_summaries.fullPath` string shadow and require `fullPathId` in semantic-product consumers.
 - ◐ [P3-21] Remove `binding_facts.resolvedPath` string shadow and require `resolvedPathId` in semantic-product consumers.
 - ◐ [P3-22] Remove `return_facts.definitionPath` string shadow and require `definitionPathId` in semantic-product consumers.

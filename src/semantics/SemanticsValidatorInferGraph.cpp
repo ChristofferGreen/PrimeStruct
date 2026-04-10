@@ -4,8 +4,11 @@
 #include "TypeResolutionGraph.h"
 
 #include <algorithm>
+#include <array>
+#include <cstddef>
 #include <cstdlib>
 #include <functional>
+#include <memory_resource>
 #include <sstream>
 
 namespace primec::semantics {
@@ -76,15 +79,8 @@ bool SemanticsValidator::inferUnknownReturnKinds() {
 }
 
 bool SemanticsValidator::inferUnknownReturnKindsGraph() {
-  graphLocalAutoBindings_.clear();
-  graphLocalAutoResolvedPaths_.clear();
-  graphLocalAutoInitializerBindings_.clear();
-  graphLocalAutoQuerySnapshots_.clear();
-  graphLocalAutoTryValues_.clear();
-  graphLocalAutoDirectCallResolvedPaths_.clear();
-  graphLocalAutoDirectCallReturnKinds_.clear();
-  graphLocalAutoMethodCallResolvedPaths_.clear();
-  graphLocalAutoMethodCallReturnKinds_.clear();
+  graphLocalAutoScopePathInterner_.clear();
+  graphLocalAutoFacts_.clear();
   const TypeResolutionGraph graph = buildTypeResolutionGraph(program_);
   const CondensationDag dag = computeTypeResolutionDependencyDag(graph);
 
@@ -312,7 +308,19 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
 }
 
 void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph &graph) {
-  std::unordered_map<GraphLocalAutoKey, size_t, GraphLocalAutoKeyHash> dependencyCountByBindingKey;
+  struct GraphLocalAutoDependencyScratch {
+    using PmrDependencyCountMap = std::pmr::unordered_map<GraphLocalAutoKey, size_t, GraphLocalAutoKeyHash>;
+
+    std::array<std::byte, 16384> inlineArenaBuffer{};
+    std::pmr::monotonic_buffer_resource arenaResource{
+        inlineArenaBuffer.data(),
+        inlineArenaBuffer.size(),
+        std::pmr::new_delete_resource()};
+    PmrDependencyCountMap dependencyCountByBindingKey{&arenaResource};
+  };
+
+  GraphLocalAutoDependencyScratch dependencyScratch;
+  auto &dependencyCountByBindingKey = dependencyScratch.dependencyCountByBindingKey;
   for (const TypeResolutionGraphNode &node : graph.nodes) {
     if (node.kind != TypeResolutionNodeKind::LocalAuto) {
       continue;
@@ -443,7 +451,11 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
         const auto [sourceLine, sourceColumn] = graphLocalAutoSourceLocation(expr);
         const GraphLocalAutoKey bindingKey =
             graphLocalAutoBindingKey(def.fullPath, sourceLine, sourceColumn);
-        graphLocalAutoBindings_.try_emplace(bindingKey, binding);
+        auto [factIt, inserted] = graphLocalAutoFacts_.try_emplace(bindingKey);
+        (void)inserted;
+        GraphLocalAutoFacts &fact = factIt->second;
+        fact.hasBinding = true;
+        fact.binding = binding;
         const Expr *initializerAnalysisExpr = expr.args.size() == 1 ? &expr.args.front() : nullptr;
         if (initializerAnalysisExpr != nullptr &&
             !initializerAnalysisExpr->isMethodCall &&
@@ -461,18 +473,21 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
         if (initializerAnalysisExpr != nullptr &&
             inferCallSnapshotData(defParams, activeLocals, *initializerAnalysisExpr, initializerCallData)) {
           if (!initializerCallData.resolvedPath.empty()) {
-            graphLocalAutoResolvedPaths_[bindingKey] = std::move(initializerCallData.resolvedPath);
+            fact.initializerResolvedPath = std::move(initializerCallData.resolvedPath);
           } else {
-            graphLocalAutoResolvedPaths_.erase(bindingKey);
+            fact.initializerResolvedPath.clear();
           }
           if (!initializerCallData.binding.typeName.empty()) {
-            graphLocalAutoInitializerBindings_[bindingKey] = std::move(initializerCallData.binding);
+            fact.hasInitializerBinding = true;
+            fact.initializerBinding = std::move(initializerCallData.binding);
           } else {
-            graphLocalAutoInitializerBindings_.erase(bindingKey);
+            fact.hasInitializerBinding = false;
+            fact.initializerBinding = BindingInfo{};
           }
         } else {
-          graphLocalAutoResolvedPaths_.erase(bindingKey);
-          graphLocalAutoInitializerBindings_.erase(bindingKey);
+          fact.initializerResolvedPath.clear();
+          fact.hasInitializerBinding = false;
+          fact.initializerBinding = BindingInfo{};
         }
         if (initializerAnalysisExpr != nullptr &&
             initializerAnalysisExpr->kind == Expr::Kind::Call &&
@@ -484,20 +499,24 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
             directCallResolvedPath = preferredCollectionPath;
           }
           if (!directCallResolvedPath.empty()) {
-            graphLocalAutoDirectCallResolvedPaths_[bindingKey] = directCallResolvedPath;
+            fact.directCallResolvedPath = directCallResolvedPath;
             const auto directCallReturnKindIt = returnKinds_.find(directCallResolvedPath);
             if (directCallReturnKindIt != returnKinds_.end()) {
-              graphLocalAutoDirectCallReturnKinds_[bindingKey] = directCallReturnKindIt->second;
+              fact.hasDirectCallReturnKind = true;
+              fact.directCallReturnKind = directCallReturnKindIt->second;
             } else {
-              graphLocalAutoDirectCallReturnKinds_.erase(bindingKey);
+              fact.hasDirectCallReturnKind = false;
+              fact.directCallReturnKind = ReturnKind::Unknown;
             }
           } else {
-            graphLocalAutoDirectCallResolvedPaths_.erase(bindingKey);
-            graphLocalAutoDirectCallReturnKinds_.erase(bindingKey);
+            fact.directCallResolvedPath.clear();
+            fact.hasDirectCallReturnKind = false;
+            fact.directCallReturnKind = ReturnKind::Unknown;
           }
         } else {
-          graphLocalAutoDirectCallResolvedPaths_.erase(bindingKey);
-          graphLocalAutoDirectCallReturnKinds_.erase(bindingKey);
+          fact.directCallResolvedPath.clear();
+          fact.hasDirectCallReturnKind = false;
+          fact.directCallReturnKind = ReturnKind::Unknown;
         }
         if (initializerAnalysisExpr != nullptr &&
             initializerAnalysisExpr->kind == Expr::Kind::Call &&
@@ -516,34 +535,42 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
                                            isBuiltinMethod);
               }) &&
               !resolvedMethodTarget.empty()) {
-            graphLocalAutoMethodCallResolvedPaths_[bindingKey] = resolvedMethodTarget;
+            fact.methodCallResolvedPath = resolvedMethodTarget;
             const auto methodCallReturnKindIt = returnKinds_.find(resolvedMethodTarget);
             if (methodCallReturnKindIt != returnKinds_.end()) {
-              graphLocalAutoMethodCallReturnKinds_[bindingKey] = methodCallReturnKindIt->second;
+              fact.hasMethodCallReturnKind = true;
+              fact.methodCallReturnKind = methodCallReturnKindIt->second;
             } else {
-              graphLocalAutoMethodCallReturnKinds_.erase(bindingKey);
+              fact.hasMethodCallReturnKind = false;
+              fact.methodCallReturnKind = ReturnKind::Unknown;
             }
           } else {
-            graphLocalAutoMethodCallResolvedPaths_.erase(bindingKey);
-            graphLocalAutoMethodCallReturnKinds_.erase(bindingKey);
+            fact.methodCallResolvedPath.clear();
+            fact.hasMethodCallReturnKind = false;
+            fact.methodCallReturnKind = ReturnKind::Unknown;
           }
         } else {
-          graphLocalAutoMethodCallResolvedPaths_.erase(bindingKey);
-          graphLocalAutoMethodCallReturnKinds_.erase(bindingKey);
+          fact.methodCallResolvedPath.clear();
+          fact.hasMethodCallReturnKind = false;
+          fact.methodCallReturnKind = ReturnKind::Unknown;
         }
         QuerySnapshotData initializerQueryData;
         if (initializerAnalysisExpr != nullptr &&
             inferQuerySnapshotData(defParams, activeLocals, *initializerAnalysisExpr, initializerQueryData)) {
-          graphLocalAutoQuerySnapshots_[bindingKey] = std::move(initializerQueryData);
+          fact.hasQuerySnapshot = true;
+          fact.querySnapshot = std::move(initializerQueryData);
         } else {
-          graphLocalAutoQuerySnapshots_.erase(bindingKey);
+          fact.hasQuerySnapshot = false;
+          fact.querySnapshot = QuerySnapshotData{};
         }
         LocalAutoTrySnapshotData initializerTryValue;
         if (expr.args.size() == 1 &&
             inferTrySnapshotData(def, defParams, activeLocals, expr.args.front(), initializerTryValue)) {
-          graphLocalAutoTryValues_[bindingKey] = std::move(initializerTryValue);
+          fact.hasTryValue = true;
+          fact.tryValue = std::move(initializerTryValue);
         } else {
-          graphLocalAutoTryValues_.erase(bindingKey);
+          fact.hasTryValue = false;
+          fact.tryValue = LocalAutoTrySnapshotData{};
         }
       }
       activeLocals.emplace(expr.name, std::move(binding));

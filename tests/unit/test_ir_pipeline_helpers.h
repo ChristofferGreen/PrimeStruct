@@ -46,6 +46,17 @@ inline std::filesystem::path makeTempIrPipelineSourcePath() {
       "ir_pipeline/primestruct-ir-pipeline-" + nonce + "-" + std::to_string(counter++) + ".prime");
 }
 
+enum class CompilePipelineSemanticProductIntentForTesting {
+  Require,
+  SkipForNonConsumingPath,
+};
+
+inline void applyCompilePipelineSemanticProductIntentForTesting(
+    primec::Options &options, CompilePipelineSemanticProductIntentForTesting intent) {
+  options.skipSemanticProductForNonConsumingPath =
+      (intent == CompilePipelineSemanticProductIntentForTesting::SkipForNonConsumingPath);
+}
+
 inline bool parseAndValidateThroughCompilePipeline(const std::string &source,
                                                    primec::Program &program,
                                                    primec::SemanticProgram *semanticProgramOut,
@@ -67,7 +78,11 @@ inline bool parseAndValidateThroughCompilePipeline(const std::string &source,
   options.entryPath = "/main";
   options.defaultEffects = defaultEffects;
   options.entryDefaultEffects = entryDefaultEffects;
-  options.skipSemanticProductForNonConsumingPath = semanticProgramOut == nullptr;
+  const auto semanticProductIntent =
+      semanticProgramOut != nullptr
+          ? CompilePipelineSemanticProductIntentForTesting::Require
+          : CompilePipelineSemanticProductIntentForTesting::SkipForNonConsumingPath;
+  applyCompilePipelineSemanticProductIntentForTesting(options, semanticProductIntent);
   primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
 
   primec::CompilePipelineOutput output;
@@ -122,6 +137,8 @@ inline bool prepareIrThroughCompilePipeline(const std::string &source,
   prepared.options.wasmProfile = "wasi";
   prepared.options.defaultEffects = {"io_out", "io_err"};
   prepared.options.entryDefaultEffects = prepared.options.defaultEffects;
+  applyCompilePipelineSemanticProductIntentForTesting(
+      prepared.options, CompilePipelineSemanticProductIntentForTesting::Require);
   prepared.options.collectDiagnostics = diagnosticInfo != nullptr;
   primec::addDefaultStdlibInclude(prepared.options.inputPath, prepared.options.importPaths);
 

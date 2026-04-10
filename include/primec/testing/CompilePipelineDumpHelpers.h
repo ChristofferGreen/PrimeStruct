@@ -102,6 +102,16 @@ struct PreparedCompilePipelineIrState {
   std::string backendKind;
 };
 
+enum class CompilePipelineSemanticProductIntent {
+  Require,
+  SkipForNonConsumingPath,
+};
+
+inline void applySemanticProductIntent(Options &options, CompilePipelineSemanticProductIntent intent) {
+  options.skipSemanticProductForNonConsumingPath =
+      (intent == CompilePipelineSemanticProductIntent::SkipForNonConsumingPath);
+}
+
 inline std::filesystem::path makeCompilePipelineDumpSourcePath() {
   static std::atomic<unsigned long long> counter{0};
   const auto nonce =
@@ -128,8 +138,11 @@ inline bool captureCompilePipelineDumpStageFromPath(const std::filesystem::path 
   options.defaultEffects = detail::defaultCompilePipelineTestingEffects();
   options.entryDefaultEffects = options.defaultEffects;
   options.dumpStage = std::string(dumpStage);
-  const bool requiresSemanticProduct = dumpStageRequiresSemanticProduct(dumpStage);
-  options.skipSemanticProductForNonConsumingPath = !requiresSemanticProduct;
+  const auto semanticProductIntent =
+      dumpStageRequiresSemanticProduct(dumpStage)
+          ? CompilePipelineSemanticProductIntent::Require
+          : CompilePipelineSemanticProductIntent::SkipForNonConsumingPath;
+  applySemanticProductIntent(options, semanticProductIntent);
   options.collectDiagnostics = diagnosticInfo != nullptr;
   primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
 
@@ -198,7 +211,8 @@ inline bool prepareCompilePipelineIr(const std::string &source,
   prepared.options.wasmProfile = "wasi";
   prepared.options.defaultEffects = detail::defaultCompilePipelineTestingEffects();
   prepared.options.entryDefaultEffects = prepared.options.defaultEffects;
-  prepared.options.skipSemanticProductForNonConsumingPath = false;
+  detail::applySemanticProductIntent(
+      prepared.options, detail::CompilePipelineSemanticProductIntent::Require);
   prepared.options.collectDiagnostics = diagnosticInfo != nullptr;
   primec::addDefaultStdlibInclude(prepared.options.inputPath, prepared.options.importPaths);
 

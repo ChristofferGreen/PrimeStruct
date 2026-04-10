@@ -2077,6 +2077,92 @@ main() {
   CHECK(output.semanticProgram.queryFacts.empty());
 }
 
+TEST_CASE("compile pipeline direct and bridge collector merge keeps output-order parity") {
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << R"(namespace bench {
+[void]
+callee() {}
+[void]
+main() {
+  [vector<i32>] values{vector<i32>()}
+  callee()
+  [i32] countA{count(values)}
+  [i32] countB{count(values)}
+  [i32] capA{capacity(values)}
+}
+}
+)";
+  }
+
+  const auto runWithFamilies = [&](const std::vector<std::string> &families) {
+    primec::Options options;
+    options.inputPath = tempPath.string();
+    options.entryPath = "/bench/main";
+    options.emitKind = "native";
+    options.dumpStage = "semantic-product";
+    options.benchmarkSemanticFactFamiliesSpecified = true;
+    options.benchmarkSemanticFactFamilies = families;
+    primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+    primec::CompilePipelineOutput output;
+    primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+    std::string error;
+    const bool ok = primec::runCompilePipeline(options, output, errorStage, error);
+    REQUIRE(ok);
+    CHECK(error.empty());
+    REQUIRE(output.hasSemanticProgram);
+    return output;
+  };
+
+  const primec::CompilePipelineOutput combinedOutput =
+      runWithFamilies({"direct_call_targets", "bridge_path_choices"});
+  const primec::CompilePipelineOutput directOnlyOutput =
+      runWithFamilies({"direct_call_targets"});
+  const primec::CompilePipelineOutput bridgeOnlyOutput =
+      runWithFamilies({"bridge_path_choices"});
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  const auto combinedDirectTargets =
+      primec::semanticProgramDirectCallTargetView(combinedOutput.semanticProgram);
+  const auto directOnlyTargets =
+      primec::semanticProgramDirectCallTargetView(directOnlyOutput.semanticProgram);
+  REQUIRE(combinedDirectTargets.size() == directOnlyTargets.size());
+  for (std::size_t i = 0; i < combinedDirectTargets.size(); ++i) {
+    const auto *combinedEntry = combinedDirectTargets[i];
+    const auto *directOnlyEntry = directOnlyTargets[i];
+    REQUIRE(combinedEntry != nullptr);
+    REQUIRE(directOnlyEntry != nullptr);
+    CHECK(combinedEntry->scopePath == directOnlyEntry->scopePath);
+    CHECK(combinedEntry->callName == directOnlyEntry->callName);
+    CHECK(primec::semanticProgramDirectCallTargetResolvedPath(combinedOutput.semanticProgram, *combinedEntry) ==
+          primec::semanticProgramDirectCallTargetResolvedPath(directOnlyOutput.semanticProgram, *directOnlyEntry));
+  }
+
+  const auto combinedBridgeChoices =
+      primec::semanticProgramBridgePathChoiceView(combinedOutput.semanticProgram);
+  const auto bridgeOnlyChoices =
+      primec::semanticProgramBridgePathChoiceView(bridgeOnlyOutput.semanticProgram);
+  REQUIRE(combinedBridgeChoices.size() == bridgeOnlyChoices.size());
+  for (std::size_t i = 0; i < combinedBridgeChoices.size(); ++i) {
+    const auto *combinedEntry = combinedBridgeChoices[i];
+    const auto *bridgeOnlyEntry = bridgeOnlyChoices[i];
+    REQUIRE(combinedEntry != nullptr);
+    REQUIRE(bridgeOnlyEntry != nullptr);
+    CHECK(combinedEntry->scopePath == bridgeOnlyEntry->scopePath);
+    CHECK(combinedEntry->collectionFamily == bridgeOnlyEntry->collectionFamily);
+    CHECK(primec::semanticProgramBridgePathChoiceHelperName(combinedOutput.semanticProgram, *combinedEntry) ==
+          primec::semanticProgramBridgePathChoiceHelperName(bridgeOnlyOutput.semanticProgram, *bridgeOnlyEntry));
+    CHECK(primec::semanticProgramResolveCallTargetString(combinedOutput.semanticProgram, combinedEntry->chosenPathId) ==
+          primec::semanticProgramResolveCallTargetString(bridgeOnlyOutput.semanticProgram,
+                                                         bridgeOnlyEntry->chosenPathId));
+  }
+}
+
 TEST_CASE("compile pipeline benchmark worker-count stress keeps /std/math/* semantic-product dumps deterministic") {
   constexpr std::size_t localDefinitionCount = 64;
   const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();

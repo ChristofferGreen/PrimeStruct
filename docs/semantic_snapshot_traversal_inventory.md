@@ -39,12 +39,46 @@ Selected pair for `P2-02`:
 This makes the pair low-risk for a first shared-traversal merge with clear
 output-order parity checks in `P2-03`.
 
-## Next Pair Candidate (for `P2-04`)
+## Implementation Status (Group 15 P2)
 
-Likely second merge candidate after `S4`:
+- `P2-02` implemented in `src/semantics/SemanticsValidate.cpp`:
+  - when both `direct_call_targets` and `bridge_path_choices` collectors are
+    enabled, bridge snapshots are now derived from the already-collected direct
+    call snapshots inside semantic-product build, avoiding a second redundant
+    snapshot traversal in that hot path.
+  - fallback to `validator.bridgePathChoiceSnapshotForSemanticProduct()` is
+    preserved when direct-call collection is not enabled.
+- `P2-03` parity coverage added:
+  - `tests/unit/test_ir_pipeline_backends_registry.h`:
+    `compile pipeline direct and bridge collector merge keeps output-order parity`
+    compares combined collector output order against direct-only and
+    bridge-only runs.
+- `P2-04` implemented in `src/semantics/SemanticsValidatorSnapshotLocals.cpp` +
+  `src/semantics/SemanticsValidatorSnapshots.cpp`:
+  - query snapshot collection now runs once through
+    `ensureQuerySnapshotFactCaches()` and populates cached outputs for:
+    `queryCallTypeSnapshotForTesting`, `queryBindingSnapshotForTesting`,
+    `queryResultTypeSnapshotForTesting`, `queryFactSnapshotForSemanticProduct`,
+    and `queryReceiverBindingSnapshotForTesting`.
+- `P2-05` parity/guard coverage added:
+  - `tests/unit/test_ir_pipeline_backends_graph_contexts.h`:
+    `semantic snapshot shared traversal keeps query fact and receiver ordering keys`
+    now also guards cached shared traversal wiring for query-call-type,
+    query-binding, and query-result outputs.
+- Additional traversal-churn follow-up implemented:
+  - call + try snapshot collection now runs once through
+    `ensureCallAndTrySnapshotFactCaches()` and populates cached outputs for:
+    `callBindingSnapshotForTesting` and `tryValueSnapshotForTesting`.
+  - guard coverage:
+    `semantic snapshot shared traversal keeps call and try ordering keys`
+    in `tests/unit/test_ir_pipeline_backends_graph_contexts.h`.
 
-- `queryFactSnapshotForSemanticProduct`
+## Next Pair Candidate (post query + call/try merges)
+
+Likely next merge candidate:
+
+- `methodCallTargetSnapshotForSemanticProduct`
 - `queryReceiverBindingSnapshotForTesting`
 
-Both run `forEachLocalAwareSnapshotCall(...)` + `inferQuerySnapshotData(...)`
-and differ only in projection/filtering of the same `QuerySnapshotData` payload.
+Both run `forEachLocalAwareSnapshotCall(...)` and perform receiver-binding
+inference on overlapping call-site traversals.

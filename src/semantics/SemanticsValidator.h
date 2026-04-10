@@ -8,6 +8,7 @@
 #include <memory>
 #include <new>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <optional>
@@ -342,12 +343,12 @@ public:
 
 private:
   struct GraphLocalAutoKey {
-    std::string scopePath;
+    SymbolId scopePathId = InvalidSymbolId;
     int32_t sourceLine = 0;
     int32_t sourceColumn = 0;
 
     bool operator==(const GraphLocalAutoKey &other) const {
-      return scopePath == other.scopePath &&
+      return scopePathId == other.scopePathId &&
              sourceLine == other.sourceLine &&
              sourceColumn == other.sourceColumn;
     }
@@ -355,11 +356,29 @@ private:
 
   struct GraphLocalAutoKeyHash {
     std::size_t operator()(const GraphLocalAutoKey &key) const {
-      std::size_t hash = std::hash<std::string>{}(key.scopePath);
+      std::size_t hash = std::hash<SymbolId>{}(key.scopePathId);
       hash ^= std::hash<int32_t>{}(key.sourceLine) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
       hash ^= std::hash<int32_t>{}(key.sourceColumn) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
       return hash;
     }
+  };
+
+  struct GraphLocalAutoFacts {
+    bool hasBinding = false;
+    BindingInfo binding;
+    std::string initializerResolvedPath;
+    bool hasInitializerBinding = false;
+    BindingInfo initializerBinding;
+    bool hasQuerySnapshot = false;
+    QuerySnapshotData querySnapshot;
+    bool hasTryValue = false;
+    LocalAutoTrySnapshotData tryValue;
+    std::string directCallResolvedPath;
+    bool hasDirectCallReturnKind = false;
+    ReturnKind directCallReturnKind = ReturnKind::Unknown;
+    std::string methodCallResolvedPath;
+    bool hasMethodCallReturnKind = false;
+    ReturnKind methodCallReturnKind = ReturnKind::Unknown;
   };
 
   #include "SemanticsValidatorPrivateCore.h"
@@ -566,15 +585,8 @@ private:
   std::unordered_map<std::string, ReturnKind> returnKinds_;
   std::unordered_map<std::string, std::string> returnStructs_;
   std::unordered_map<std::string, BindingInfo> returnBindings_;
-  std::unordered_map<GraphLocalAutoKey, BindingInfo, GraphLocalAutoKeyHash> graphLocalAutoBindings_;
-  std::unordered_map<GraphLocalAutoKey, std::string, GraphLocalAutoKeyHash> graphLocalAutoResolvedPaths_;
-  std::unordered_map<GraphLocalAutoKey, BindingInfo, GraphLocalAutoKeyHash> graphLocalAutoInitializerBindings_;
-  std::unordered_map<GraphLocalAutoKey, QuerySnapshotData, GraphLocalAutoKeyHash> graphLocalAutoQuerySnapshots_;
-  std::unordered_map<GraphLocalAutoKey, LocalAutoTrySnapshotData, GraphLocalAutoKeyHash> graphLocalAutoTryValues_;
-  std::unordered_map<GraphLocalAutoKey, std::string, GraphLocalAutoKeyHash> graphLocalAutoDirectCallResolvedPaths_;
-  std::unordered_map<GraphLocalAutoKey, ReturnKind, GraphLocalAutoKeyHash> graphLocalAutoDirectCallReturnKinds_;
-  std::unordered_map<GraphLocalAutoKey, std::string, GraphLocalAutoKeyHash> graphLocalAutoMethodCallResolvedPaths_;
-  std::unordered_map<GraphLocalAutoKey, ReturnKind, GraphLocalAutoKeyHash> graphLocalAutoMethodCallReturnKinds_;
+  mutable SymbolInterner graphLocalAutoScopePathInterner_;
+  std::unordered_map<GraphLocalAutoKey, GraphLocalAutoFacts, GraphLocalAutoKeyHash> graphLocalAutoFacts_;
   std::unordered_set<std::string> structNames_;
   std::unordered_set<std::string> publicDefinitions_;
   std::unordered_map<std::string, std::vector<ParameterInfo>> paramsByDef_;
@@ -584,6 +596,15 @@ private:
   std::unordered_set<std::string> queryTypeInferenceDefinitionStack_;
   std::unordered_set<const Expr *> queryTypeInferenceExprStack_;
   std::unordered_map<std::string, std::string> importAliases_;
+  bool querySnapshotFactCacheValid_ = false;
+  std::vector<QueryFactSnapshotEntry> queryFactSnapshotCache_;
+  std::vector<QueryReceiverBindingSnapshotEntry> queryReceiverBindingSnapshotCache_;
+  std::vector<QueryCallTypeSnapshotEntry> queryCallTypeSnapshotCache_;
+  std::vector<QueryBindingSnapshotEntry> queryBindingSnapshotCache_;
+  std::vector<QueryResultTypeSnapshotEntry> queryResultTypeSnapshotCache_;
+  bool callAndTrySnapshotFactCacheValid_ = false;
+  std::vector<TryValueSnapshotEntry> tryValueSnapshotCache_;
+  std::vector<CallBindingSnapshotEntry> callBindingSnapshotCache_;
   std::unordered_map<std::string, EffectFreeSummary> effectFreeDefCache_;
   std::unordered_set<std::string> effectFreeDefStack_;
   std::unordered_map<std::string, bool> effectFreeStructCache_;

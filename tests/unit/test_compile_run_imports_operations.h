@@ -544,6 +544,37 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("rejects root non-struct non-empty soa_vector literal with semantic/emit parity in C++ emitter") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<i32>] values{soa_vector<i32>(1i32)}
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_root_soa_vector_non_struct_literal_reject.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_root_soa_vector_non_struct_literal_reject_exe").string();
+  const std::string semanticErrPath =
+      (testScratchPath("") / "primec_root_soa_vector_non_struct_literal_reject_semantic_err.txt").string();
+  const std::string emitErrPath =
+      (testScratchPath("") / "primec_root_soa_vector_non_struct_literal_reject_emit_err.txt").string();
+
+  const std::string semanticCmd =
+      "./primec --dump-stage ast-semantic " + srcPath + " --entry /main > /dev/null 2> " + semanticErrPath;
+  CHECK(runCommand(semanticCmd) == 2);
+  const std::string semanticErr = readFile(semanticErrPath);
+  CHECK(semanticErr.find("soa_vector requires struct element type") != std::string::npos);
+  CHECK(semanticErr.find("stage: semantic") != std::string::npos);
+
+  const std::string emitCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + emitErrPath;
+  CHECK(runCommand(emitCmd) == 2);
+  const std::string emitErr = readFile(emitErrPath);
+  CHECK(emitErr.find("soa_vector requires struct element type") != std::string::npos);
+  CHECK(emitErr.find("stage: semantic") != std::string::npos);
+}
+
 TEST_CASE("runs experimental soa_vector stdlib to-aos helper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
@@ -641,6 +672,32 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 0);
 }
+
+TEST_CASE("no-import root soa_vector canonical to_aos_ref helper form runs in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<Particle> mut] values{soa_vector<Particle>()}
+  [vector<Particle>] unpacked{/std/collections/soa_vector/to_aos_ref<Particle>(location(values))}
+  return(count(unpacked))
+}
+)";
+  const std::string srcPath = writeTemp("compile_root_soa_vector_to_aos_ref_form_exe.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_root_soa_vector_to_aos_ref_form_exe").string();
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
 TEST_CASE("runs experimental soa_vector stdlib non-empty to-aos helper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
@@ -3014,12 +3071,20 @@ TEST_CASE("compiles and runs builtin canonical map helper-return borrowed method
   expectBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConformance("exe");
 }
 
+TEST_CASE("compiles and runs builtin canonical map struct-field initializer in C++ emitter") {
+  expectBuiltinCanonicalMapStructFieldInitializerConformance("exe");
+}
+
 TEST_CASE("rejects builtin canonical map direct insert on helper-return value receivers in C++ emitter") {
   expectBuiltinCanonicalMapInsertHelperReturnValueDirectReject("exe");
 }
 
 TEST_CASE("rejects builtin canonical map method insert on helper-return value receivers in C++ emitter") {
   expectBuiltinCanonicalMapInsertHelperReturnValueMethodReject("exe");
+}
+
+TEST_CASE("rejects builtin canonical map direct insert on borrowed holder field receivers in C++ emitter") {
+  expectBuiltinCanonicalMapInsertBorrowedHolderFieldDirectReject("exe");
 }
 
 TEST_CASE("rejects canonical map constructor ownership growth in C++ emitter") {
