@@ -83,6 +83,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   and asserts machine-readable report contract rows include the schema,
   one-sample `wall_seconds`/`peak_rss_bytes` arrays, and median/worst
   aggregates equal to that single sample for the fixture-phase tuple.
+- `semantic-memory-key-cardinality-report-rows`: semantic-memory benchmark
+  harness coverage now executes `semantic_memory_benchmark.py` with
+  `--runs 1 --fixtures no_import,math_vector --phases ast-semantic,semantic-product --report-json ...`
+  and asserts semantic-product rows carry `key_cardinality` fields
+  (`distinct_direct_call_target_keys`, `distinct_method_call_target_keys`,
+  `max_target_key_length`) while ast-semantic rows omit that payload.
 - `semantic-product-direct-call-routing`: production lowering now validates
   that every non-method direct call has a published semantic-product routing
   fact before lowering starts, and semantic-product-aware direct-call

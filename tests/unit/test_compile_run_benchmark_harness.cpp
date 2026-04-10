@@ -333,6 +333,73 @@ TEST_CASE("semantic memory benchmark helper emits wall-rss machine report rows")
   CHECK(readFile(validateErrPath).empty());
 }
 
+TEST_CASE("semantic memory benchmark helper emits key-cardinality report fields") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";
+  const std::filesystem::path primecPath = repoRoot / "build-release" / "primec";
+  if (!std::filesystem::exists(primecPath)) {
+    INFO("primec not available in build-release");
+    return;
+  }
+
+  const std::string reportPath = writeTemp("semantic_memory_key_cardinality_report.json", "");
+  const std::string stdoutPath = writeTemp("semantic_memory_key_cardinality.out", "");
+  const std::string stderrPath = writeTemp("semantic_memory_key_cardinality.err", "");
+
+  const std::string benchmarkCmd =
+      "python3 " + quoteShellArg(scriptPath.string()) +
+      " --repo-root " + quoteShellArg(repoRoot.string()) +
+      " --primec " + quoteShellArg(primecPath.string()) +
+      " --runs 1 --fixtures no_import,math_vector --phases ast-semantic,semantic-product "
+      "--report-json " + quoteShellArg(reportPath) +
+      " > " + quoteShellArg(stdoutPath) + " 2> " + quoteShellArg(stderrPath);
+  CHECK(runCommand(benchmarkCmd) == 0);
+  CHECK(readFile(stderrPath).empty());
+
+  const std::string validateOutPath = writeTemp("semantic_memory_key_cardinality_validate.out", "");
+  const std::string validateErrPath = writeTemp("semantic_memory_key_cardinality_validate.err", "");
+  const std::string validateCmd =
+      "python3 -c " +
+      quoteShellArg(
+          "import json, sys\n"
+          "report = json.load(open(sys.argv[1], encoding='utf-8'))\n"
+          "rows = report.get('results', [])\n"
+          "ok = len(rows) == 4\n"
+          "method_positive = False\n"
+          "for row in rows:\n"
+          "  phase = row.get('phase')\n"
+          "  card = row.get('key_cardinality')\n"
+          "  if phase == 'semantic-product':\n"
+          "    ok = ok and isinstance(card, dict)\n"
+          "    if isinstance(card, dict):\n"
+          "      direct = card.get('distinct_direct_call_target_keys')\n"
+          "      method = card.get('distinct_method_call_target_keys')\n"
+          "      max_len = card.get('max_target_key_length')\n"
+          "      ok = ok and isinstance(direct, int) and direct >= 0\n"
+          "      ok = ok and isinstance(method, int) and method >= 0\n"
+          "      ok = ok and isinstance(max_len, int) and max_len >= 0\n"
+          "      if direct > 0 or method > 0:\n"
+          "        ok = ok and max_len > 0\n"
+          "      method_positive = method_positive or method > 0\n"
+          "  elif phase == 'ast-semantic':\n"
+          "    ok = ok and card is None\n"
+          "  else:\n"
+          "    ok = False\n"
+          "ok = ok and method_positive\n"
+          "if not ok:\n"
+          "  print(json.dumps(report, indent=2, sort_keys=True))\n"
+          "sys.exit(0 if ok else 1)\n") +
+      " " + quoteShellArg(reportPath) +
+      " > " + quoteShellArg(validateOutPath) + " 2> " + quoteShellArg(validateErrPath);
+  CHECK(runCommand(validateCmd) == 0);
+  CHECK(readFile(validateErrPath).empty());
+}
+
 TEST_CASE("semantic memory benchmark helper covers no-import and math-vector phases") {
   if (!hasPython3()) {
     INFO("python3 not available");
