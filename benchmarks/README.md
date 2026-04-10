@@ -116,6 +116,9 @@ Semantic memory benchmark fixtures live under:
 - `inline_math_body.prime` and `imported_math_body.prime` are paired fixtures
   with identical non-import body text; the imported variant adds
   `/std/math/Vec2` to isolate stdlib-import overhead from body-shape effects.
+- `scale_1x.prime`, `scale_2x.prime`, and `scale_4x.prime` are the scale-step
+  attribution fixtures; they grow the same linear call-chain shape at `1x`,
+  `2x`, and `4x` sizes for RSS/time slope reporting.
 - The benchmark harness runs fixtures across both semantic phases by default:
   `ast-semantic` and `semantic-product`.
 

@@ -71,6 +71,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `semantic_memory_benchmark.py` with those fixtures across
   `ast-semantic,semantic-product` and asserts the exact four fixture-phase
   tuples to guard inline-vs-stdlib-import attribution runs.
+- `semantic-memory-scale-slope-guard`: semantic-memory benchmark harness now
+  validates `scale_1x`/`scale_2x`/`scale_4x` fixture-size contracts and runs
+  `semantic_memory_benchmark.py --fixtures scale_1x,scale_2x,scale_4x
+  --phases ast-semantic,semantic-product`, asserting the exact six
+  fixture-phase tuples plus canonical per-phase `scale_slopes` rows
+  (`x_axis=[1,2,4]`, ordered fixtures, finite RSS/time slope values).
 - `semantic-product-direct-call-routing`: production lowering now validates
   that every non-method direct call has a published semantic-product routing
   fact before lowering starts, and semantic-product-aware direct-call

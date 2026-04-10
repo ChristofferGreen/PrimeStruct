@@ -475,6 +475,101 @@ TEST_CASE("semantic memory benchmark helper covers inline-vs-import math fixture
   CHECK(readFile(validateErrPath).empty());
 }
 
+TEST_CASE("semantic memory benchmark helper reports 1x-2x-4x scale slopes") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path scale1Path =
+      repoRoot / "benchmarks" / "semantic_memory" / "fixtures" / "scale_1x.prime";
+  const std::filesystem::path scale2Path =
+      repoRoot / "benchmarks" / "semantic_memory" / "fixtures" / "scale_2x.prime";
+  const std::filesystem::path scale4Path =
+      repoRoot / "benchmarks" / "semantic_memory" / "fixtures" / "scale_4x.prime";
+  const std::string scale1 = readFile(scale1Path.string());
+  const std::string scale2 = readFile(scale2Path.string());
+  const std::string scale4 = readFile(scale4Path.string());
+  REQUIRE_FALSE(scale1.empty());
+  REQUIRE_FALSE(scale2.empty());
+  REQUIRE_FALSE(scale4.empty());
+
+  CHECK(countOccurrences(scale1, "[return<i32>]\nf") == 2);
+  CHECK(countOccurrences(scale2, "[return<i32>]\nf") == 4);
+  CHECK(countOccurrences(scale4, "[return<i32>]\nf") == 8);
+  CHECK(scale1.find("return(f1(0i32))") != std::string::npos);
+  CHECK(scale2.find("return(f3(0i32))") != std::string::npos);
+  CHECK(scale4.find("return(f7(0i32))") != std::string::npos);
+
+  const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";
+  const std::filesystem::path primecPath = repoRoot / "build-release" / "primec";
+  if (!std::filesystem::exists(primecPath)) {
+    INFO("primec not available in build-release");
+    return;
+  }
+
+  const std::string reportPath = writeTemp("semantic_memory_scale_report.json", "");
+  const std::string stdoutPath = writeTemp("semantic_memory_scale.out", "");
+  const std::string stderrPath = writeTemp("semantic_memory_scale.err", "");
+
+  const std::string benchmarkCmd =
+      "python3 " + quoteShellArg(scriptPath.string()) +
+      " --repo-root " + quoteShellArg(repoRoot.string()) +
+      " --primec " + quoteShellArg(primecPath.string()) +
+      " --runs 1 --fixtures scale_1x,scale_2x,scale_4x "
+      "--phases ast-semantic,semantic-product "
+      "--report-json " + quoteShellArg(reportPath) +
+      " > " + quoteShellArg(stdoutPath) + " 2> " + quoteShellArg(stderrPath);
+  CHECK(runCommand(benchmarkCmd) == 0);
+  CHECK(readFile(stderrPath).empty());
+
+  const std::string validateOutPath = writeTemp("semantic_memory_scale_validate.out", "");
+  const std::string validateErrPath = writeTemp("semantic_memory_scale_validate.err", "");
+  const std::string validateCmd =
+      "python3 -c " +
+      quoteShellArg(
+          "import json, math, sys\n"
+          "report = json.load(open(sys.argv[1], encoding='utf-8'))\n"
+          "pairs = {(row['fixture'], row['phase']) for row in report['results']}\n"
+          "expected_pairs = {\n"
+          "  ('scale_1x', 'ast-semantic'),\n"
+          "  ('scale_2x', 'ast-semantic'),\n"
+          "  ('scale_4x', 'ast-semantic'),\n"
+          "  ('scale_1x', 'semantic-product'),\n"
+          "  ('scale_2x', 'semantic-product'),\n"
+          "  ('scale_4x', 'semantic-product'),\n"
+          "}\n"
+          "slopes = {row['phase']: row for row in report.get('scale_slopes', [])}\n"
+          "ok_pairs = pairs == expected_pairs and len(report['results']) == 6\n"
+          "ok_phases = set(slopes.keys()) == {'ast-semantic', 'semantic-product'}\n"
+          "ok_shape = True\n"
+          "for phase in ('ast-semantic', 'semantic-product'):\n"
+          "  row = slopes.get(phase)\n"
+          "  if row is None:\n"
+          "    ok_shape = False\n"
+          "    continue\n"
+          "  if row.get('x_axis') != [1, 2, 4]:\n"
+          "    ok_shape = False\n"
+          "  if row.get('fixtures') != ['scale_1x', 'scale_2x', 'scale_4x']:\n"
+          "    ok_shape = False\n"
+          "  rss = row.get('rss_bytes_per_scale_unit')\n"
+          "  wall = row.get('wall_seconds_per_scale_unit')\n"
+          "  if not isinstance(rss, (int, float)) or not math.isfinite(rss):\n"
+          "    ok_shape = False\n"
+          "  if not isinstance(wall, (int, float)) or not math.isfinite(wall):\n"
+          "    ok_shape = False\n"
+          "ok = ok_pairs and ok_phases and ok_shape\n"
+          "if not ok:\n"
+          "  print('pairs=', sorted(pairs))\n"
+          "  print('scale_slopes=', report.get('scale_slopes'))\n"
+          "sys.exit(0 if ok else 1)\n") +
+      " " + quoteShellArg(reportPath) +
+      " > " + quoteShellArg(validateOutPath) + " 2> " + quoteShellArg(validateErrPath);
+  CHECK(runCommand(validateCmd) == 0);
+  CHECK(readFile(validateErrPath).empty());
+}
+
 TEST_CASE("semantic memory benchmark helper defines method-target memoization delta report fields") {
   const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
   const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";
