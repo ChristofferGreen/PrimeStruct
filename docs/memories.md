@@ -239,6 +239,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `to_aos`, and focused compile-run coverage for root
   `/std/collections/soa_vector/to_aos_ref<T>(location(values))` in the C++
   emitter is locked passing.
+- `semantic-soa-inline-param-canonical-callee-guard-2026-04`: Group 14 now
+  archives removal of the empty-callee builtin `soa_vector` -> experimental
+  `SoaVector__*` bridge fallback in inline-parameter lowering: S2 bridge
+  matching now requires canonical helper-path classification, and
+  `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_56.h`
+  locks that empty-callee inputs fail while canonical
+  `/std/collections/soa_vector/to_aos_ref` continues to pass.
 - `semantic-method-target-scratch-candidates`: infer-stage method-target
   resolution now reuses `CallTargetResolutionScratch::methodReceiverResolutionCandidates`
   for scoped definitions/executions in `resolveInferMethodCallPath(...)`,
