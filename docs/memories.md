@@ -66,7 +66,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - `semantic-product-bridge-path-helper-id-only`: `SemanticProgramBridgePathChoice`
   no longer stores a `helperName` string shadow; semantic-product formatter,
   semantic snapshot tests, and backend conformance tests now consume bridge
-  helper names exclusively via `helperNameId`.
+  helper names exclusively via `helperNameId`, and bridge-path completeness
+  rejects missing/out-of-range helper IDs.
 - `semantic-product-callable-summary-path-id-only`: `SemanticProgramCallableSummary`
   no longer stores a `fullPath` string shadow; semantic-product formatter,
   semantic-product target adapters, and manual callable-summary fixtures now

@@ -461,6 +461,53 @@ TEST_CASE("ir lowerer reports bridge helper id errors before direct-call target 
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer rejects semantic-product bridge paths with invalid helper name ids") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "count";
+  callExpr.semanticNodeId = 5203;
+  callExpr.args.push_back(valuesExpr);
+  mainDef.statements.push_back(callExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "count",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 5203,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
+  });
+  semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
+      .scopePath = "/main",
+      .collectionFamily = "vector",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 5203,
+      .helperNameId =
+          static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u),
+      .chosenPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
+  });
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product bridge helper name id: /main -> count");
+  CHECK(diagnosticInfo.message == error);
+}
+
 TEST_CASE("ir lowerer rejects missing semantic-product binding facts") {
   primec::Program program;
 
