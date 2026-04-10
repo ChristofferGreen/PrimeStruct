@@ -133,6 +133,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   semantic-product build runs, and compile-pipeline ast-semantic benchmark
   counter coverage asserts that validation counters are populated while
   semantic-product build counters stay zero on skipped paths.
+- `compile-pipeline-semantic-product-generation-matrix`: compile-pipeline
+  registry coverage now validates a focused dump/emit matrix where
+  non-consuming dump stages (`pre_ast`, `ast`, `ir`, `type-graph`,
+  `ast-semantic`) keep semantic-product request/build/publication disabled
+  while `semantic-product` dumps plus consuming `native`/`vm` emit paths keep
+  it enabled.
 - `semantic-product-direct-call-routing`: production lowering now validates
   that every non-method direct call has a published semantic-product routing
   fact before lowering starts, and semantic-product-aware direct-call

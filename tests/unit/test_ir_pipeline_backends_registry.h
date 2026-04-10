@@ -2282,6 +2282,75 @@ main() {
   CHECK(output.semanticProgram.entryPath == "/bench/main");
 }
 
+TEST_CASE("compile pipeline semantic-product generation stays limited to semantic-product dumps and consuming emit paths") {
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << R"(namespace bench {
+[i32]
+main() {
+  return(0)
+}
+}
+)";
+  }
+
+  struct Scenario {
+    std::string_view name;
+    std::string_view emitKind;
+    std::string_view dumpStage;
+    bool expectDumpOutput;
+    bool expectSemanticProductRequested;
+    bool expectSemanticProductBuilt;
+    bool expectSemanticProgram;
+  };
+
+  const std::vector<Scenario> scenarios = {
+      {"pre-ast dump", "native", "pre_ast", true, false, false, false},
+      {"ast dump", "native", "ast", true, false, false, false},
+      {"ir dump", "native", "ir", true, false, false, false},
+      {"type-graph dump", "native", "type-graph", true, false, false, false},
+      {"ast-semantic dump", "native", "ast-semantic", true, false, false, false},
+      {"semantic-product dump", "native", "semantic-product", true, true, true, true},
+      {"native emit", "native", "", false, true, true, true},
+      {"vm emit", "vm", "", false, true, true, true},
+  };
+
+  for (const Scenario &scenario : scenarios) {
+    primec::Options options;
+    options.inputPath = tempPath.string();
+    options.entryPath = "/bench/main";
+    options.emitKind = std::string(scenario.emitKind);
+    options.dumpStage = std::string(scenario.dumpStage);
+    options.collectDiagnostics = true;
+    primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+    primec::CompilePipelineOutput output;
+    primec::CompilePipelineDiagnosticInfo diagnosticInfo;
+    primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+    std::string error;
+    const bool ok = primec::runCompilePipeline(options, output, errorStage, error, &diagnosticInfo);
+
+    INFO(scenario.name);
+    INFO(error);
+    REQUIRE(ok);
+    CHECK(error.empty());
+    CHECK(errorStage == primec::CompilePipelineErrorStage::None);
+    CHECK_FALSE(output.hasFailure);
+    CHECK(output.hasDumpOutput == scenario.expectDumpOutput);
+    CHECK(output.semanticProductRequested == scenario.expectSemanticProductRequested);
+    CHECK(output.semanticProductBuilt == scenario.expectSemanticProductBuilt);
+    CHECK(output.hasSemanticProgram == scenario.expectSemanticProgram);
+    if (scenario.expectSemanticProgram) {
+      CHECK(output.semanticProgram.entryPath == "/bench/main");
+    }
+  }
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+}
+
 TEST_CASE("compile pipeline explicit skip mode omits semantic product for non-consuming paths") {
   const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
   {

@@ -31,7 +31,6 @@ Order rule: execute leaves top-to-bottom. Each leaf below is scoped to one code-
 P0 - Reproducible measurement and attribution
 
 P1 - Immediate peak-RSS reductions in existing pipeline
-- ◐ [P1-03] Add focused tests that semantic-product generation occurs only for `semantic-product` dumps and emit paths that consume it.
 - ◐ [P1-04] Migrate one non-consuming backend IR-preparation entry point to skip semantic-product requests.
 - ◐ [P1-05] Migrate a second non-consuming backend IR-preparation entry point to skip semantic-product requests.
 - ◐ [P1-06] Add/refresh backend-entrypoint inventory (`docs/semantic_product_backend_entrypoint_inventory.md`) and append explicit one-leaf follow-ups for each remaining non-consuming backend family.
