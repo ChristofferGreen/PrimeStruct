@@ -896,6 +896,59 @@ TEST_CASE("ir lowerer rejects missing semantic-product return binding types") {
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer rejects missing semantic-product return definition path id") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 9101;
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "return",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 9101,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+  });
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .returnKind = "return",
+      .structPath = "",
+      .bindingTypeText = "i32",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 9101,
+      .definitionPathId = primec::InvalidSymbolId,
+  });
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product return definition path id");
+  CHECK(diagnosticInfo.message == error);
+}
+
 TEST_CASE("ir lowerer rejects incomplete semantic-product query facts") {
   primec::Program program;
 

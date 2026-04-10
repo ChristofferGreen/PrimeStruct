@@ -88,9 +88,15 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
 
   const auto returnFacts = semanticProgramReturnFactView(*semanticProgram);
   for (const auto *returnFact : returnFacts) {
+    const std::string_view definitionPath =
+        semanticProgramReturnFactDefinitionPath(*semanticProgram, *returnFact);
+    if (returnFact->definitionPathId == InvalidSymbolId || definitionPath.empty()) {
+      error = "missing semantic-product return definition path id";
+      return false;
+    }
     if (returnFact->bindingTypeText.empty()) {
       error = "missing semantic-product return binding type: " +
-              std::string(semanticProgramReturnFactDefinitionPath(*semanticProgram, *returnFact));
+              std::string(definitionPath);
       return false;
     }
   }

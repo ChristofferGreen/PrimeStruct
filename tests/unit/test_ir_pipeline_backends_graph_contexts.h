@@ -1383,6 +1383,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
       readRepoFile("src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp");
   const std::string bindingTypeHelpersSource =
       readRepoFile("src/ir_lowerer/IrLowererBindingTypeHelpers.cpp");
+  const std::string irLowererResultHelpers =
+      readRepoFile("src/ir_lowerer/IrLowererResultHelpers.cpp");
   const std::string statementCallHelpersHeader =
       readRepoFile("src/ir_lowerer/IrLowererStatementCallHelpers.h");
   const std::string functionTableStepHeader =
@@ -1527,6 +1529,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(bindingTypeHelpersSource.find("bool validateSemanticProductLocalAutoCoverage(const Program &program,") !=
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find("missing semantic-product local-auto fact: ") != std::string::npos);
+  CHECK(irLowererResultHelpers.find("missing semantic-product return definition path id") !=
+        std::string::npos);
   CHECK(irMethodResolution.find("const auto &semanticAwareImportAliases =") != std::string::npos);
   CHECK(statementCallHelpersHeader.find("const SemanticProgram *semanticProgram,") !=
         std::string::npos);
@@ -1683,6 +1687,42 @@ TEST_CASE("semantic product binding facts use resolvedPathId without resolvedPat
         std::string::npos);
 
   CHECK(bindingTypeHelpersSource.find("bindingFact->resolvedPathId != InvalidSymbolId") !=
+        std::string::npos);
+}
+
+TEST_CASE("semantic product return facts use definitionPathId without definitionPath shadow field") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  const std::filesystem::path root =
+      std::filesystem::exists(cwd / "include" / "primec" / "SemanticProduct.h")
+          ? cwd
+          : cwd.parent_path();
+  const std::string semanticProductHeader =
+      readTextFile(root / "include" / "primec" / "SemanticProduct.h");
+  const std::string semanticProductSource =
+      readTextFile(root / "src" / "SemanticProduct.cpp");
+  const std::string irLowererResultHelpers =
+      readTextFile(root / "src" / "ir_lowerer" / "IrLowererResultHelpers.cpp");
+
+  const std::size_t returnStart =
+      semanticProductHeader.find("struct SemanticProgramReturnFact {");
+  const std::size_t localAutoStart =
+      semanticProductHeader.find("struct SemanticProgramLocalAutoFact {");
+  REQUIRE(returnStart != std::string::npos);
+  REQUIRE(localAutoStart != std::string::npos);
+  REQUIRE(returnStart < localAutoStart);
+
+  const std::string returnBody =
+      semanticProductHeader.substr(returnStart, localAutoStart - returnStart);
+  CHECK(returnBody.find("SymbolId definitionPathId = InvalidSymbolId;") !=
+        std::string::npos);
+  CHECK(returnBody.find("std::string definitionPath;") == std::string::npos);
+
+  CHECK(semanticProductSource.find("semanticProgramReturnFactDefinitionPath(") !=
+        std::string::npos);
+  CHECK(semanticProductSource.find("definitionPath.empty() ? entry.definitionPath") ==
+        std::string::npos);
+
+  CHECK(irLowererResultHelpers.find("returnFact->definitionPathId == InvalidSymbolId") !=
         std::string::npos);
 }
 
