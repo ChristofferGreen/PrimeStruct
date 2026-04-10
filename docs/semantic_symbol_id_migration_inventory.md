@@ -15,15 +15,16 @@ implemented, parity-tested, and landed independently.
   `chosenPath` now resolves via `chosenPathId` only.
 - Direct-call resolved-path shadow removal landed (`P3-17`): direct-call target
   paths now resolve via `resolvedPathId` only.
+- Callable-summary full-path shadow removal landed (`P3-20`): callable summaries
+  now resolve paths via `fullPathId` only, and lowerer semantic-product
+  validation rejects missing/invalid callable-summary path IDs.
 
 ## Remaining families and next one-leaf follow-ups
 
 | Family | Current state | Next leaf follow-up |
 | --- | --- | --- |
-| `direct_call_targets` | IDs + string shadows | `P3-17`: remove `resolvedPath` shadow and require `resolvedPathId` on semantic-product paths. |
 | `method_call_targets` | IDs + string shadows | `P3-18`: remove `resolvedPath` shadow and require `resolvedPathId` on semantic-product paths. |
 | `bridge_path_choices` | IDs + remaining string shadows | `P3-19`: remove `helperName` shadow and consume `helperNameId` only on semantic-product paths. |
-| `callable_summaries` | IDs + string shadows | `P3-20`: remove `fullPath` shadow and require `fullPathId` in semantic-product consumers. |
 | `binding_facts` | IDs + string shadows | `P3-21`: remove `resolvedPath` shadow and require `resolvedPathId` in semantic-product consumers. |
 | `return_facts` | IDs + string shadows | `P3-22`: remove `definitionPath` shadow and require `definitionPathId` in semantic-product consumers. |
 | `local_auto_facts` | IDs + string shadows | `P3-23`: remove `initializerResolvedPath` shadow and require `initializerResolvedPathId` in semantic-product consumers. |

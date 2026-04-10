@@ -70,11 +70,17 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
 
   const auto callableSummaries = semanticProgramCallableSummaryView(*semanticProgram);
   for (const auto *summary : callableSummaries) {
+    const std::string_view callablePath =
+        semanticProgramCallableSummaryFullPath(*semanticProgram, *summary);
+    if (summary->fullPathId == InvalidSymbolId || callablePath.empty()) {
+      error = "missing semantic-product callable summary path id";
+      return false;
+    }
     if (summary->hasResultType && summary->resultTypeHasValue) {
       ResultExprInfo resultInfo;
       if (!applySemanticResultValueTypeText(summary->resultValueType, resultInfo)) {
         error = "missing semantic-product callable result metadata: " +
-                std::string(semanticProgramCallableSummaryFullPath(*semanticProgram, *summary));
+                std::string(callablePath);
         return false;
       }
     }

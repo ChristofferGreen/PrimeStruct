@@ -1612,6 +1612,42 @@ TEST_CASE("semantic product bridge path choices use helperNameId without helperN
         std::string::npos);
 }
 
+TEST_CASE("semantic product callable summaries use fullPathId without fullPath shadow field") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  const std::filesystem::path root =
+      std::filesystem::exists(cwd / "include" / "primec" / "SemanticProduct.h")
+          ? cwd
+          : cwd.parent_path();
+  const std::string semanticProductHeader =
+      readTextFile(root / "include" / "primec" / "SemanticProduct.h");
+  const std::string semanticProductSource =
+      readTextFile(root / "src" / "SemanticProduct.cpp");
+  const std::string irLowererResultHelpers =
+      readTextFile(root / "src" / "ir_lowerer" / "IrLowererResultHelpers.cpp");
+
+  const std::size_t callableStart =
+      semanticProductHeader.find("struct SemanticProgramCallableSummary {");
+  const std::size_t typeMetadataStart =
+      semanticProductHeader.find("struct SemanticProgramTypeMetadata {");
+  REQUIRE(callableStart != std::string::npos);
+  REQUIRE(typeMetadataStart != std::string::npos);
+  REQUIRE(callableStart < typeMetadataStart);
+
+  const std::string callableBody =
+      semanticProductHeader.substr(callableStart, typeMetadataStart - callableStart);
+  CHECK(callableBody.find("SymbolId fullPathId = InvalidSymbolId;") !=
+        std::string::npos);
+  CHECK(callableBody.find("std::string fullPath;") == std::string::npos);
+
+  CHECK(semanticProductSource.find("semanticProgramCallableSummaryFullPath(") !=
+        std::string::npos);
+  CHECK(semanticProductSource.find("fullPath.empty() ? entry.fullPath") ==
+        std::string::npos);
+
+  CHECK(irLowererResultHelpers.find("summary->fullPathId == InvalidSymbolId") !=
+        std::string::npos);
+}
+
 TEST_CASE("semantic snapshot shared traversal keeps query fact and receiver ordering keys") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   const std::filesystem::path root =
