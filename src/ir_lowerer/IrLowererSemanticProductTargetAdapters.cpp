@@ -84,8 +84,10 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
   const auto callableSummaries = semanticProgramCallableSummaryView(*semanticProgram);
   adapter.callableSummariesByPath.reserve(callableSummaries.size());
   for (const auto *entry : callableSummaries) {
-    if (!entry->fullPath.empty()) {
-      adapter.callableSummariesByPath[entry->fullPath] = entry;
+    const std::string_view fullPath =
+        semanticProgramCallableSummaryFullPath(*semanticProgram, *entry);
+    if (!fullPath.empty()) {
+      adapter.callableSummariesByPath[std::string(fullPath)] = entry;
     }
   }
 

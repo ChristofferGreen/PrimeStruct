@@ -108,7 +108,6 @@ TEST_CASE("ir lowerer on_error helpers prefer semantic-product metadata") {
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .fullPath = "/handler",
       .isExecution = false,
       .returnKind = "void",
       .isCompute = false,
@@ -124,9 +123,10 @@ TEST_CASE("ir lowerer on_error helpers prefer semantic-product metadata") {
       .onErrorErrorType = "",
       .onErrorBoundArgCount = 0,
       .semanticNodeId = 21,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
   });
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .fullPath = "/main",
       .isExecution = false,
       .returnKind = "void",
       .isCompute = false,
@@ -142,6 +142,8 @@ TEST_CASE("ir lowerer on_error helpers prefer semantic-product metadata") {
       .onErrorErrorType = "FileError",
       .onErrorBoundArgCount = 1,
       .semanticNodeId = 22,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
   });
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
       .definitionPath = "/semantic/main",
@@ -193,7 +195,6 @@ TEST_CASE("ir lowerer on_error helpers require definition semantic ids for seman
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .fullPath = "/handler",
       .isExecution = false,
       .returnKind = "void",
       .isCompute = false,
@@ -209,9 +210,10 @@ TEST_CASE("ir lowerer on_error helpers require definition semantic ids for seman
       .onErrorErrorType = "",
       .onErrorBoundArgCount = 0,
       .semanticNodeId = 21,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
   });
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .fullPath = "/main",
       .isExecution = false,
       .returnKind = "void",
       .isCompute = false,
@@ -227,6 +229,8 @@ TEST_CASE("ir lowerer on_error helpers require definition semantic ids for seman
       .onErrorErrorType = "FileError",
       .onErrorBoundArgCount = 1,
       .semanticNodeId = 22,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
   });
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
       .definitionPath = "/main",
@@ -337,7 +341,6 @@ TEST_CASE("ir lowerer on_error entry setup validates semantic bound arg counts")
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .fullPath = "/handler",
       .isExecution = false,
       .returnKind = "void",
       .isCompute = false,
@@ -353,9 +356,10 @@ TEST_CASE("ir lowerer on_error entry setup validates semantic bound arg counts")
       .onErrorErrorType = "",
       .onErrorBoundArgCount = 0,
       .semanticNodeId = 31,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
   });
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .fullPath = "/main",
       .isExecution = false,
       .returnKind = "void",
       .isCompute = false,
@@ -371,6 +375,8 @@ TEST_CASE("ir lowerer on_error entry setup validates semantic bound arg counts")
       .onErrorErrorType = "FileError",
       .onErrorBoundArgCount = 2,
       .semanticNodeId = 32,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
   });
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
       .definitionPath = "/semantic/main",

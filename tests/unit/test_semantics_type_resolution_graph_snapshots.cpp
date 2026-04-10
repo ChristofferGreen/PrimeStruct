@@ -1410,8 +1410,10 @@ TEST_CASE("semantic product publishes callable effect and capability summaries")
 
   const auto *summaryEntry = findSemanticEntry(
       primec::semanticProgramCallableSummaryView(semanticProgram),
-      [](const primec::SemanticProgramCallableSummary &entry) {
-        return entry.fullPath == "/main" && !entry.isExecution;
+      [&semanticProgram](const primec::SemanticProgramCallableSummary &entry) {
+        return primec::semanticProgramCallableSummaryFullPath(semanticProgram, entry) ==
+                   "/main" &&
+               !entry.isExecution;
       });
   REQUIRE(summaryEntry != nullptr);
   CHECK(summaryEntry->returnKind == "i32");
@@ -1458,9 +1460,15 @@ TEST_CASE("semantic product callable summaries reuse interned return kind ids") 
 
   const auto summaries = primec::semanticProgramCallableSummaryView(semanticProgram);
   const auto *helperSummary = findSemanticEntry(
-      summaries, [](const primec::SemanticProgramCallableSummary &entry) { return entry.fullPath == "/helper"; });
+      summaries,
+      [&semanticProgram](const primec::SemanticProgramCallableSummary &entry) {
+        return primec::semanticProgramCallableSummaryFullPath(semanticProgram, entry) == "/helper";
+      });
   const auto *mainSummary = findSemanticEntry(
-      summaries, [](const primec::SemanticProgramCallableSummary &entry) { return entry.fullPath == "/main"; });
+      summaries,
+      [&semanticProgram](const primec::SemanticProgramCallableSummary &entry) {
+        return primec::semanticProgramCallableSummaryFullPath(semanticProgram, entry) == "/main";
+      });
   REQUIRE(helperSummary != nullptr);
   REQUIRE(mainSummary != nullptr);
   REQUIRE(helperSummary->returnKindId != primec::InvalidSymbolId);
@@ -2753,23 +2761,36 @@ TEST_CASE("semantic product formatter exact golden is stable") {
                                                         "/std/collections/vector/count"),
   });
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      "/main",
-      true,
-      "return",
-      false,
-      false,
-      {"io_out"},
-      {"gpu"},
-      true,
-      true,
-      "i32",
-      "MyError",
-      true,
-      "/unexpectedError",
-      "MyError",
-      1,
-      16,
-      106,
+      .isExecution = true,
+      .returnKind = "return",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {"io_out"},
+      .activeCapabilities = {"gpu"},
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "i32",
+      .resultErrorType = "MyError",
+      .hasOnError = true,
+      .onErrorHandlerPath = "/unexpectedError",
+      .onErrorErrorType = "MyError",
+      .onErrorBoundArgCount = 1,
+      .semanticNodeId = 16,
+      .provenanceHandle = 106,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .returnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "return"),
+      .activeEffectIds = {
+          primec::semanticProgramInternCallTargetString(semanticProgram, "io_out"),
+      },
+      .activeCapabilityIds = {
+          primec::semanticProgramInternCallTargetString(semanticProgram, "gpu"),
+      },
+      .resultValueTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+      .resultErrorTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "MyError"),
+      .onErrorHandlerPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/unexpectedError"),
+      .onErrorErrorTypeId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "MyError"),
   });
   semanticProgram.typeMetadata.push_back(primec::SemanticProgramTypeMetadata{
       "/Particle",

@@ -283,7 +283,6 @@ TEST_CASE("ir lowerer inference get-return-info step uses semantic-product retur
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .fullPath = "/pkg/current",
       .isExecution = false,
       .returnKind = "int64",
       .isCompute = false,
@@ -299,6 +298,8 @@ TEST_CASE("ir lowerer inference get-return-info step uses semantic-product retur
       .onErrorErrorType = "",
       .onErrorBoundArgCount = 0,
       .semanticNodeId = 91,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/pkg/current"),
   });
   semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
       .definitionPath = "/pkg/legacy",
@@ -350,7 +351,6 @@ TEST_CASE("ir lowerer inference get-return-info setup precomputes semantic-produ
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .fullPath = "/pkg/current",
       .isExecution = false,
       .returnKind = "array",
       .isCompute = false,
@@ -366,6 +366,8 @@ TEST_CASE("ir lowerer inference get-return-info setup precomputes semantic-produ
       .onErrorErrorType = "",
       .onErrorBoundArgCount = 0,
       .semanticNodeId = 97,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/pkg/current"),
   });
   semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
       .definitionPath = "/pkg/current",

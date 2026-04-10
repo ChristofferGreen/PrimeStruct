@@ -144,6 +144,12 @@ std::string_view semanticProgramBridgePathChoiceHelperName(
   return semanticProgramResolveCallTargetString(semanticProgram, entry.helperNameId);
 }
 
+std::string_view semanticProgramCallableSummaryFullPath(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramCallableSummary &entry) {
+  return semanticProgramResolveCallTargetString(semanticProgram, entry.fullPathId);
+}
+
 std::string formatSemanticStringListFromIds(const SemanticProgram &semanticProgram,
                                             const std::vector<SymbolId> &ids,
                                             const std::vector<std::string> &fallbackValues) {
@@ -423,7 +429,7 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
   for (size_t i = 0; i < callableSummaries.size(); ++i) {
     const auto &entry = *callableSummaries[i];
     const std::string_view fullPath =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.fullPathId);
+        semanticProgramCallableSummaryFullPath(semanticProgram, entry);
     const std::string_view returnKind =
         semanticProgramResolveCallTargetString(semanticProgram, entry.returnKindId);
     const std::string formattedActiveEffects =
@@ -442,7 +448,7 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                               "callable_summaries",
                               i,
                               "full_path=" +
-                                  quoteSemanticString(fullPath.empty() ? entry.fullPath : fullPath) +
+                                  quoteSemanticString(fullPath) +
                                   " is_execution=" +
                                   formatSemanticBool(entry.isExecution) + " return_kind=" +
                                   quoteSemanticString(returnKind.empty() ? entry.returnKind : returnKind) +

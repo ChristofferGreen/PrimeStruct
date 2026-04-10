@@ -473,7 +473,6 @@ TEST_CASE("ir lowerer statement call helper prefers semantic callable inventory"
   semanticProgram.definitions.push_back(
       {.name = "target", .fullPath = "/main/target", .namespacePrefix = "/main"});
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .fullPath = "/main/target",
       .isExecution = false,
       .returnKind = "void",
       .isCompute = false,
@@ -489,6 +488,8 @@ TEST_CASE("ir lowerer statement call helper prefers semantic callable inventory"
       .onErrorErrorType = "",
       .onErrorBoundArgCount = 0,
       .semanticNodeId = 0,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main/target"),
   });
 
   std::unordered_set<std::string> loweredCallTargets = {"/main/skipped", "/main/target"};

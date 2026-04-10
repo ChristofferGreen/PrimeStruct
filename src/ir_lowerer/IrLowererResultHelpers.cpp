@@ -73,7 +73,8 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
     if (summary->hasResultType && summary->resultTypeHasValue) {
       ResultExprInfo resultInfo;
       if (!applySemanticResultValueTypeText(summary->resultValueType, resultInfo)) {
-        error = "missing semantic-product callable result metadata: " + summary->fullPath;
+        error = "missing semantic-product callable result metadata: " +
+                std::string(semanticProgramCallableSummaryFullPath(*semanticProgram, *summary));
         return false;
       }
     }

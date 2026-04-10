@@ -71,7 +71,6 @@ struct SemanticProgramBridgePathChoice {
 };
 
 struct SemanticProgramCallableSummary {
-  std::string fullPath;
   bool isExecution = false;
   std::string returnKind;
   bool isCompute = false;
@@ -368,6 +367,9 @@ std::string_view semanticProgramMethodCallTargetResolvedPath(
 std::string_view semanticProgramBridgePathChoiceHelperName(
     const SemanticProgram &semanticProgram,
     const SemanticProgramBridgePathChoice &entry);
+std::string_view semanticProgramCallableSummaryFullPath(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramCallableSummary &entry);
 
 std::string formatSemanticProgram(const SemanticProgram &semanticProgram);
 

@@ -361,7 +361,6 @@ SemanticProgram buildSemanticProgram(const Program &program,
     semanticProgram.callableSummaries.reserve(callableSummaries.size());
     for (const auto &snapshotEntry : callableSummaries) {
       SemanticProgramCallableSummary entry;
-      entry.fullPath = snapshotEntry.fullPath;
       entry.isExecution = snapshotEntry.isExecution;
       entry.returnKind = semantics::returnKindSnapshotName(snapshotEntry.returnKind);
       entry.isCompute = snapshotEntry.isCompute;
@@ -378,7 +377,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.onErrorBoundArgCount = snapshotEntry.onErrorBoundArgCount;
       entry.semanticNodeId = snapshotEntry.semanticNodeId;
       entry.provenanceHandle = semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId);
-      entry.fullPathId = semanticProgramInternCallTargetString(semanticProgram, entry.fullPath);
+      entry.fullPathId = semanticProgramInternCallTargetString(semanticProgram, snapshotEntry.fullPath);
       entry.returnKindId = semanticProgramInternCallTargetString(semanticProgram, entry.returnKind);
       entry.activeEffectIds.reserve(entry.activeEffects.size());
       for (const auto &activeEffect : entry.activeEffects) {
@@ -398,7 +397,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
           semanticProgramInternCallTargetString(semanticProgram, entry.onErrorErrorType);
       semanticProgram.callableSummaries.push_back(std::move(entry));
       const auto &storedEntry = semanticProgram.callableSummaries.back();
-      ensureModuleResolvedArtifacts(storedEntry.fullPath).callableSummaries.push_back(storedEntry);
+      ensureModuleResolvedArtifacts(snapshotEntry.fullPath).callableSummaries.push_back(storedEntry);
     }
   }
   if (isCollectorEnabled("type_metadata")) {

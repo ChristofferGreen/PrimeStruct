@@ -66,6 +66,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   no longer stores a `helperName` string shadow; semantic-product formatter,
   semantic snapshot tests, and backend conformance tests now consume bridge
   helper names exclusively via `helperNameId`.
+- `semantic-product-callable-summary-path-id-only`: `SemanticProgramCallableSummary`
+  no longer stores a `fullPath` string shadow; semantic-product formatter,
+  semantic-product target adapters, and manual callable-summary fixtures now
+  resolve callable paths exclusively through `fullPathId`.
 - `semantic-product-completeness-and-provenance`: mutation-based lowering
   tests now prove post-validation AST call and transform drift does not
   change semantic-product-owned lowering meaning, while canonical

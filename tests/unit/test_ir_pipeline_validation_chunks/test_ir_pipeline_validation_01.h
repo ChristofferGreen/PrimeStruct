@@ -1229,21 +1229,30 @@ TEST_CASE("ir lowerer effects unit prefers semantic product callable summaries")
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      "/main",
-      false,
-      "i32",
-      false,
-      false,
-      {"io_out"},
-      {"io_out"},
-      false,
-      false,
-      "",
-      "",
-      false,
-      "",
-      "",
-      0,
+      .isExecution = false,
+      .returnKind = "i32",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {"io_out"},
+      .activeCapabilities = {"io_out"},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 0,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .returnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+      .activeEffectIds = {
+          primec::semanticProgramInternCallTargetString(semanticProgram, "io_out"),
+      },
+      .activeCapabilityIds = {
+          primec::semanticProgramInternCallTargetString(semanticProgram, "io_out"),
+      },
   });
 
   std::string error;
@@ -1268,21 +1277,30 @@ TEST_CASE("ir lowerer effects unit keeps nested expression effect checks syntax 
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      "/main",
-      false,
-      "i32",
-      false,
-      false,
-      {"io_out"},
-      {"io_out"},
-      false,
-      false,
-      "",
-      "",
-      false,
-      "",
-      "",
-      0,
+      .isExecution = false,
+      .returnKind = "i32",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {"io_out"},
+      .activeCapabilities = {"io_out"},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 0,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .returnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+      .activeEffectIds = {
+          primec::semanticProgramInternCallTargetString(semanticProgram, "io_out"),
+      },
+      .activeCapabilityIds = {
+          primec::semanticProgramInternCallTargetString(semanticProgram, "io_out"),
+      },
   });
 
   std::string error;
@@ -1316,21 +1334,31 @@ TEST_CASE("ir lowerer effects unit resolves entry metadata masks from semantic p
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      "/main",
-      false,
-      "i32",
-      false,
-      false,
-      {"io_out", "heap_alloc"},
-      {"io_out"},
-      false,
-      false,
-      "",
-      "",
-      false,
-      "",
-      "",
-      0,
+      .isExecution = false,
+      .returnKind = "i32",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {"io_out", "heap_alloc"},
+      .activeCapabilities = {"io_out"},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 0,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .returnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+      .activeEffectIds = {
+          primec::semanticProgramInternCallTargetString(semanticProgram, "io_out"),
+          primec::semanticProgramInternCallTargetString(semanticProgram, "heap_alloc"),
+      },
+      .activeCapabilityIds = {
+          primec::semanticProgramInternCallTargetString(semanticProgram, "io_out"),
+      },
   });
 
   uint64_t entryEffectMask = 0;
