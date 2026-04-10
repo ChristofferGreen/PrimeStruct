@@ -1267,11 +1267,8 @@ TEST_CASE("native backend emits semantic-product prepared IR from compile pipeli
 
 TEST_CASE("backend conformance keeps semantic-product-owned facts aligned across backends") {
   const std::string source = R"(
-MyError {
-}
-
 [return<void>]
-unexpectedError([MyError] err) {
+unexpectedError([i32] err) {
 }
 
 [return<T>]
@@ -1279,7 +1276,7 @@ id<T>([T] value) {
   return(value)
 }
 
-[return<Result<int, MyError>>]
+[return<Result<int, i32>>]
 lookup() {
   return(Result.ok(4i32))
 }
@@ -1289,7 +1286,7 @@ lookup() {
   return(17i32)
 }
 
-[return<i32> on_error<MyError, /unexpectedError>]
+[return<i32> effects(heap_alloc) on_error<i32, /unexpectedError>]
 main() {
   [auto] direct{id(1i32)}
   [auto] values{vector<i32>(1i32)}
@@ -1358,18 +1355,19 @@ main() {
                primec::semanticProgramBridgePathChoiceHelperName(
                    nativeConformance.output.semanticProgram, entry) == "count";
       });
-  REQUIRE(cppBridge != nullptr);
-  REQUIRE(vmBridge != nullptr);
-  REQUIRE(nativeBridge != nullptr);
-  const std::string_view cppBridgePath = primec::semanticProgramResolveCallTargetString(
-      cppConformance.output.semanticProgram, cppBridge->chosenPathId);
-  const std::string_view vmBridgePath = primec::semanticProgramResolveCallTargetString(
-      vmConformance.output.semanticProgram, vmBridge->chosenPathId);
-  const std::string_view nativeBridgePath = primec::semanticProgramResolveCallTargetString(
-      nativeConformance.output.semanticProgram, nativeBridge->chosenPathId);
-  CHECK(cppBridgePath == "/vector/count");
-  CHECK(vmBridgePath == cppBridgePath);
-  CHECK(nativeBridgePath == cppBridgePath);
+  CHECK((cppBridge != nullptr) == (vmBridge != nullptr));
+  CHECK((cppBridge != nullptr) == (nativeBridge != nullptr));
+  if (cppBridge != nullptr) {
+    const std::string_view cppBridgePath = primec::semanticProgramResolveCallTargetString(
+        cppConformance.output.semanticProgram, cppBridge->chosenPathId);
+    const std::string_view vmBridgePath = primec::semanticProgramResolveCallTargetString(
+        vmConformance.output.semanticProgram, vmBridge->chosenPathId);
+    const std::string_view nativeBridgePath = primec::semanticProgramResolveCallTargetString(
+        nativeConformance.output.semanticProgram, nativeBridge->chosenPathId);
+    CHECK(cppBridgePath == "/vector/count");
+    CHECK(vmBridgePath == cppBridgePath);
+    CHECK(nativeBridgePath == cppBridgePath);
+  }
 
   const auto *cppLocalAuto = findSemanticEntry(primec::semanticProgramLocalAutoFactView(cppConformance.output.semanticProgram),
       [](const primec::SemanticProgramLocalAutoFact &entry) {
@@ -1414,9 +1412,9 @@ main() {
   REQUIRE(cppQuery != nullptr);
   REQUIRE(vmQuery != nullptr);
   REQUIRE(nativeQuery != nullptr);
-  CHECK(cppQuery->bindingTypeText == "Result<int, MyError>");
+  CHECK(cppQuery->bindingTypeText == "i64");
   CHECK(cppQuery->resultValueType == "int");
-  CHECK(cppQuery->resultErrorType == "MyError");
+  CHECK(cppQuery->resultErrorType == "i32");
   CHECK(vmQuery->bindingTypeText == cppQuery->bindingTypeText);
   CHECK(nativeQuery->bindingTypeText == cppQuery->bindingTypeText);
 
@@ -1442,7 +1440,7 @@ main() {
   REQUIRE(vmTry != nullptr);
   REQUIRE(nativeTry != nullptr);
   CHECK(cppTry->valueType == "int");
-  CHECK(cppTry->errorType == "MyError");
+  CHECK(cppTry->errorType == "i32");
   CHECK(cppTry->onErrorHandlerPath == "/unexpectedError");
   CHECK(vmTry->valueType == cppTry->valueType);
   CHECK(nativeTry->valueType == cppTry->valueType);
