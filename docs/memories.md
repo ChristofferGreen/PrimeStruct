@@ -149,6 +149,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   semantic-product intent from `semanticProgramOut` and applies
   `SkipForNonConsumingPath` when semantic output is not requested, with
   backend-registry source-lock coverage pinning this wiring.
+- `semantic-product-first-module-index-slice`: module-resolved
+  `direct_call_targets`, `method_call_targets`, `callable_summaries`, and
+  `binding_facts` are now indexed (`*Indices`) into canonical semantic-program
+  vectors instead of storing per-module copied entries, and formatter snapshot
+  coverage locks deterministic module-index view ordering for those families.
 - `compile-pipeline-dump-helper-explicit-semantic-intent`: compile-pipeline
   dump capture helpers now require explicit
   `CompilePipelineSemanticProductIntent` plumbing at callsites (instead of an
