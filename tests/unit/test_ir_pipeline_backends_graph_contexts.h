@@ -146,6 +146,17 @@ TEST_CASE("method target resolution reuses scoped scratch cache") {
         std::string::npos);
   CHECK(source.find("callTargetResolutionScratch_.joinedCallPathCache.find(joinKey)") !=
         std::string::npos);
+  CHECK(source.find("appendCanonicalReceiverResolutionCandidates") != std::string::npos);
+  CHECK(source.find("appendCandidate(joinMethodTarget(\"/std/collections/vector\", helperSuffix));") !=
+        std::string::npos);
+  CHECK(source.find("appendCandidate(joinMethodTarget(\"/vector\", helperSuffix));") !=
+        std::string::npos);
+  CHECK(source.find("appendCandidate(joinMethodTarget(\"/std/collections/map\", helperSuffix));") !=
+        std::string::npos);
+  CHECK(source.find("appendCandidate(joinMethodTarget(\"/map\", helperSuffix));") !=
+        std::string::npos);
+  CHECK(source.find("appendCanonicalReceiverResolutionCandidates(resolvedReceiverPath, appendResolvedCandidate);") !=
+        std::string::npos);
   CHECK(source.find("const CallTargetResolutionScratch::SymbolPairKey cacheKey{methodNameKey, namespaceKey};") !=
         std::string::npos);
   CHECK(source.find("callTargetResolutionScratch_.explicitRemovedMethodPathCache.find(cacheKey)") !=

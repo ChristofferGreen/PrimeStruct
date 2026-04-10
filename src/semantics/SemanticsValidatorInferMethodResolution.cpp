@@ -146,6 +146,27 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     (void)inserted;
     return insertIt->second;
   };
+  auto appendCanonicalReceiverResolutionCandidates = [&](const std::string &resolvedReceiverPath,
+                                                         const auto &appendCandidate) {
+    appendCandidate(resolvedReceiverPath);
+    if (resolvedReceiverPath.rfind("/vector/", 0) == 0) {
+      const std::string_view helperSuffix =
+          std::string_view(resolvedReceiverPath).substr(std::string_view("/vector/").size());
+      appendCandidate(joinMethodTarget("/std/collections/vector", helperSuffix));
+    } else if (resolvedReceiverPath.rfind("/std/collections/vector/", 0) == 0) {
+      const std::string_view helperSuffix =
+          std::string_view(resolvedReceiverPath).substr(std::string_view("/std/collections/vector/").size());
+      appendCandidate(joinMethodTarget("/vector", helperSuffix));
+    } else if (resolvedReceiverPath.rfind("/map/", 0) == 0) {
+      const std::string_view helperSuffix =
+          std::string_view(resolvedReceiverPath).substr(std::string_view("/map/").size());
+      appendCandidate(joinMethodTarget("/std/collections/map", helperSuffix));
+    } else if (resolvedReceiverPath.rfind("/std/collections/map/", 0) == 0) {
+      const std::string_view helperSuffix =
+          std::string_view(resolvedReceiverPath).substr(std::string_view("/std/collections/map/").size());
+      appendCandidate(joinMethodTarget("/map", helperSuffix));
+    }
+  };
   const auto isValueSurfaceAccessMethodName = [](std::string_view helperName) {
     return helperName == "at" || helperName == "at_unsafe";
   };
@@ -900,20 +921,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       resolvedCandidates.push_back(candidate);
     };
     const std::string resolvedReceiverPath = resolveCalleePath(receiver);
-    appendResolvedCandidate(resolvedReceiverPath);
-    if (resolvedReceiverPath.rfind("/vector/", 0) == 0) {
-      appendResolvedCandidate("/std/collections/vector/" +
-                              resolvedReceiverPath.substr(std::string("/vector/").size()));
-    } else if (resolvedReceiverPath.rfind("/std/collections/vector/", 0) == 0) {
-      appendResolvedCandidate("/vector/" +
-                              resolvedReceiverPath.substr(std::string("/std/collections/vector/").size()));
-    } else if (resolvedReceiverPath.rfind("/map/", 0) == 0) {
-      appendResolvedCandidate("/std/collections/map/" +
-                              resolvedReceiverPath.substr(std::string("/map/").size()));
-    } else if (resolvedReceiverPath.rfind("/std/collections/map/", 0) == 0) {
-      appendResolvedCandidate("/map/" +
-                              resolvedReceiverPath.substr(std::string("/std/collections/map/").size()));
-    }
+    appendCanonicalReceiverResolutionCandidates(resolvedReceiverPath, appendResolvedCandidate);
     for (const auto &candidate : resolvedCandidates) {
       auto defIt = defMap_.find(candidate);
       if (defIt == defMap_.end() || defIt->second == nullptr) {
