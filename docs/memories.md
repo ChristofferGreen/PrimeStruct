@@ -139,6 +139,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `ast-semantic`) keep semantic-product request/build/publication disabled
   while `semantic-product` dumps plus consuming `native`/`vm` emit paths keep
   it enabled.
+- `primec-unknown-emit-preflight-skip`: `primec` now resolves backend kind
+  before running compile pipeline and flips
+  `skipSemanticProductForNonConsumingPath` for no-dump unknown emit kinds, so
+  non-consuming unknown-backend dispatch paths avoid semantic-product
+  allocation before reporting the canonical emit error.
 - `semantic-product-direct-call-routing`: production lowering now validates
   that every non-method direct call has a published semantic-product routing
   fact before lowering starts, and semantic-product-aware direct-call

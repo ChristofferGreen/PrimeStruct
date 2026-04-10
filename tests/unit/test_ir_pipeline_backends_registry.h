@@ -3182,6 +3182,8 @@ TEST_CASE("main routes cpp and exe through ir backend alias lookup") {
   const std::string source = readTextFile(mainPath);
   CHECK(source.find("resolveIrBackendEmitKind(options.emitKind)") != std::string::npos);
   CHECK(source.find("findIrBackend(irBackendKind)") != std::string::npos);
+  CHECK(source.find("if (irBackend == nullptr && options.dumpStage.empty())") != std::string::npos);
+  CHECK(source.find("options.skipSemanticProductForNonConsumingPath = true;") != std::string::npos);
   CHECK(source.find("describeCompilePipelineFailure(pipelineOutput)") != std::string::npos);
   CHECK(source.find("describeIrPreparationFailure(") != std::string::npos);
   CHECK(source.find("pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr") !=

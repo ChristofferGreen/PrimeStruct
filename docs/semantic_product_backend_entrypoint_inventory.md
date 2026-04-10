@@ -14,6 +14,7 @@ It exists to support Group 15 `P1-06` follow-up slicing.
 | Family | Primary callsites | Semantic product consumption | Status |
 |---|---|---|---|
 | `primec` backend emit dispatch (`cpp-ir`, `exe-ir`, `native`, `vm`, `ir`, `wasm`, `glsl-ir`, `spirv-ir`) | `src/main.cpp` (`runCompilePipeline` -> `runIrBackend` -> `prepareIrModule`) | Required | Consuming |
+| `primec` unknown emit kind without dump stage | `src/main.cpp` (`resolveIrBackendEmitKind` / `findIrBackend` preflight) | Not required | Non-consuming (optimized in `P1-04`) |
 | `primevm` VM execute/debug-json/debug-trace/debug-dap | `src/primevm_main.cpp` (`runCompilePipeline` -> `prepareIrModule`) | Required | Consuming |
 | `primevm` debug-replay trace path (`--debug-replay` without dump stage) | `src/primevm_main.cpp` (trace parse + replay output) | Not required | Non-consuming (optimized in `P1-05`) |
 | Compile-pipeline dump boundary (`--dump-stage ast-semantic`) | `src/CompilePipeline.cpp` | Not required | Non-consuming (optimized in `P1-01`) |

@@ -253,6 +253,11 @@ int main(int argc, char **argv) {
     primec::printTransformList(std::cout);
     return 0;
   }
+  const std::string_view irBackendKind = primec::resolveIrBackendEmitKind(options.emitKind);
+  const primec::IrBackend *irBackend = primec::findIrBackend(irBackendKind);
+  if (irBackend == nullptr && options.dumpStage.empty()) {
+    options.skipSemanticProductForNonConsumingPath = true;
+  }
   std::string error;
   primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
 
@@ -315,9 +320,6 @@ int main(int argc, char **argv) {
   }
 
   primec::Program &program = pipelineOutput.program;
-
-  const std::string_view irBackendKind = primec::resolveIrBackendEmitKind(options.emitKind);
-  const primec::IrBackend *irBackend = primec::findIrBackend(irBackendKind);
 
   if (irBackend != nullptr && irBackend->requiresOutputPath() && !options.outputPath.empty()) {
     std::filesystem::path resolved = resolveOutputPath(options);
