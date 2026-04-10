@@ -83,4 +83,4 @@ P3 - Interning/ID migration for hot paths
 - ◐ [P3-23] Remove `local_auto_facts.initializerResolvedPath` string shadow and require `initializerResolvedPathId` in semantic-product consumers.
 - ◐ [P3-24] Remove `query_facts.resolvedPath` string shadow and require `resolvedPathId` in semantic-product consumers.
 - ◐ [P3-25] Remove `try_facts.operandResolvedPath` string shadow and require `operandResolvedPathId` in semantic-product consumers.
-- ○ [P3-26] Remove `on_error_facts.handlerPath` string shadow and require `handlerPathId` in semantic-product consumers.
+- ◐ [P3-26] Remove `on_error_facts.handlerPath` string shadow and require `handlerPathId` in semantic-product consumers.

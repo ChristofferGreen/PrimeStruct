@@ -10,12 +10,14 @@ namespace primec::ir_lowerer {
 namespace {
 
 bool buildOnErrorHandlerFromSemanticFact(const Definition &def,
+                                         const SemanticProgram &semanticProgram,
                                          const SemanticProgramOnErrorFact &fact,
                                          std::optional<OnErrorHandler> &out,
                                          std::string &error) {
   out = OnErrorHandler{};
   out->errorType = fact.errorType;
-  out->handlerPath = fact.handlerPath;
+  out->handlerPath =
+      std::string(semanticProgramOnErrorFactHandlerPath(semanticProgram, fact));
   out->boundArgs.clear();
   out->boundArgs.reserve(fact.boundArgCount);
 
@@ -130,7 +132,8 @@ bool buildOnErrorByDefinition(const Program &program,
           error = "missing semantic-product on_error fact: " + def.fullPath;
           return false;
         }
-        if (!buildOnErrorHandlerFromSemanticFact(def, *onErrorFact, handler, error)) {
+        if (!buildOnErrorHandlerFromSemanticFact(
+                def, *semanticProgram, *onErrorFact, handler, error)) {
           return false;
         }
       }

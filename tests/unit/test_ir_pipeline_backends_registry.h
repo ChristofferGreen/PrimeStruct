@@ -1090,7 +1090,6 @@ TEST_CASE("ir lowerer rejects mismatched semantic-product on_error bound args") 
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
       .definitionPath = "/main",
       .returnKind = "void",
-      .handlerPath = "/handler",
       .errorType = "FileError",
       .boundArgCount = 2,
       .boundArgTexts = {"1i32"},
@@ -1098,6 +1097,7 @@ TEST_CASE("ir lowerer rejects mismatched semantic-product on_error bound args") 
       .returnResultValueType = "",
       .returnResultErrorType = "",
       .semanticNodeId = 93,
+      .handlerPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
   });
 
   primec::IrLowerer lowerer;
@@ -1463,9 +1463,12 @@ main() {
   REQUIRE(vmOnError != nullptr);
   REQUIRE(nativeOnError != nullptr);
   CHECK(cppOnError->returnKind == "i32");
-  CHECK(cppOnError->handlerPath == "/unexpectedError");
-  CHECK(vmOnError->handlerPath == cppOnError->handlerPath);
-  CHECK(nativeOnError->handlerPath == cppOnError->handlerPath);
+  CHECK(primec::semanticProgramOnErrorFactHandlerPath(cppConformance.output.semanticProgram, *cppOnError) ==
+        "/unexpectedError");
+  CHECK(primec::semanticProgramOnErrorFactHandlerPath(vmConformance.output.semanticProgram, *vmOnError) ==
+        primec::semanticProgramOnErrorFactHandlerPath(cppConformance.output.semanticProgram, *cppOnError));
+  CHECK(primec::semanticProgramOnErrorFactHandlerPath(nativeConformance.output.semanticProgram, *nativeOnError) ==
+        primec::semanticProgramOnErrorFactHandlerPath(cppConformance.output.semanticProgram, *cppOnError));
 
   const auto *cppReturn = findSemanticEntry(primec::semanticProgramReturnFactView(cppConformance.output.semanticProgram),
       [&cppConformance](const primec::SemanticProgramReturnFact &entry) {

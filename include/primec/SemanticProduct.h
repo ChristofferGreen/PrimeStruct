@@ -270,7 +270,6 @@ struct SemanticProgramTryFact {
 struct SemanticProgramOnErrorFact {
   std::string definitionPath;
   std::string returnKind;
-  std::string handlerPath;
   std::string errorType;
   std::size_t boundArgCount = 0;
   std::vector<std::string> boundArgTexts;
@@ -380,6 +379,9 @@ std::string_view semanticProgramQueryFactResolvedPath(
 std::string_view semanticProgramTryFactOperandResolvedPath(
     const SemanticProgram &semanticProgram,
     const SemanticProgramTryFact &entry);
+std::string_view semanticProgramOnErrorFactHandlerPath(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramOnErrorFact &entry);
 
 std::string formatSemanticProgram(const SemanticProgram &semanticProgram);
 

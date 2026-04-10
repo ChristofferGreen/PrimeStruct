@@ -148,7 +148,6 @@ TEST_CASE("ir lowerer on_error helpers prefer semantic-product metadata") {
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
       .definitionPath = "/semantic/main",
       .returnKind = "void",
-      .handlerPath = "/handler",
       .errorType = "FileError",
       .boundArgCount = 1,
       .boundArgTexts = {"2i32"},
@@ -156,6 +155,7 @@ TEST_CASE("ir lowerer on_error helpers prefer semantic-product metadata") {
       .returnResultValueType = "",
       .returnResultErrorType = "",
       .semanticNodeId = 22,
+      .handlerPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
   });
 
   primec::ir_lowerer::OnErrorByDefinition onErrorByDef;
@@ -235,7 +235,6 @@ TEST_CASE("ir lowerer on_error helpers require definition semantic ids for seman
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
       .definitionPath = "/main",
       .returnKind = "void",
-      .handlerPath = "/handler",
       .errorType = "FileError",
       .boundArgCount = 1,
       .boundArgTexts = {"2i32"},
@@ -243,6 +242,7 @@ TEST_CASE("ir lowerer on_error helpers require definition semantic ids for seman
       .returnResultValueType = "",
       .returnResultErrorType = "",
       .semanticNodeId = 0,
+      .handlerPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
   });
 
   primec::ir_lowerer::OnErrorByDefinition onErrorByDef;
@@ -381,7 +381,6 @@ TEST_CASE("ir lowerer on_error entry setup validates semantic bound arg counts")
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
       .definitionPath = "/semantic/main",
       .returnKind = "void",
-      .handlerPath = "/handler",
       .errorType = "FileError",
       .boundArgCount = 2,
       .boundArgTexts = {"1i32"},
@@ -389,6 +388,7 @@ TEST_CASE("ir lowerer on_error entry setup validates semantic bound arg counts")
       .returnResultValueType = "",
       .returnResultErrorType = "",
       .semanticNodeId = 32,
+      .handlerPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
   });
 
   primec::ir_lowerer::EntryCallOnErrorSetup setup;

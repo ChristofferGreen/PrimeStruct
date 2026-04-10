@@ -1273,7 +1273,8 @@ other() {
 
   checkTextId(mainEntry->definitionPath, mainEntry->definitionPathId);
   checkTextId(mainEntry->returnKind, mainEntry->returnKindId);
-  checkTextId(mainEntry->handlerPath, mainEntry->handlerPathId);
+  checkTextId(primec::semanticProgramOnErrorFactHandlerPath(semanticProgram, *mainEntry),
+              mainEntry->handlerPathId);
   checkTextId(mainEntry->errorType, mainEntry->errorTypeId);
   checkTextId(mainEntry->returnResultValueType, mainEntry->returnResultValueTypeId);
   checkTextId(mainEntry->returnResultErrorType, mainEntry->returnResultErrorTypeId);
@@ -1761,7 +1762,8 @@ main() {
       [](const primec::SemanticProgramOnErrorFact &entry) { return entry.definitionPath == "/main"; });
   REQUIRE(onErrorEntry != nullptr);
   CHECK(onErrorEntry->returnKind == "i32");
-  CHECK(onErrorEntry->handlerPath == "/unexpectedError");
+  CHECK(primec::semanticProgramOnErrorFactHandlerPath(semanticProgram, *onErrorEntry) ==
+        "/unexpectedError");
   CHECK(onErrorEntry->errorType == "MyError");
   CHECK(onErrorEntry->boundArgTexts == std::vector<std::string>{});
   CHECK(onErrorEntry->returnResultHasValue);
@@ -2954,17 +2956,18 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       .operandResolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
-      "/main",
-      "return",
-      "/unexpectedError",
-      "MyError",
-      1,
-      {"err"},
-      true,
-      "i32",
-      "MyError",
-      25,
-      115,
+      .definitionPath = "/main",
+      .returnKind = "return",
+      .errorType = "MyError",
+      .boundArgCount = 1,
+      .boundArgTexts = {"err"},
+      .returnResultHasValue = true,
+      .returnResultValueType = "i32",
+      .returnResultErrorType = "MyError",
+      .semanticNodeId = 25,
+      .provenanceHandle = 115,
+      .handlerPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/unexpectedError"),
   });
 
   const std::string expected = R"(semantic_product {

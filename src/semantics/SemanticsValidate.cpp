@@ -666,7 +666,6 @@ SemanticProgram buildSemanticProgram(const Program &program,
       SemanticProgramOnErrorFact entry;
       entry.definitionPath = snapshotEntry.definitionPath;
       entry.returnKind = semantics::returnKindSnapshotName(snapshotEntry.returnKind);
-      entry.handlerPath = snapshotEntry.handlerPath;
       entry.errorType = snapshotEntry.errorType;
       entry.boundArgCount = snapshotEntry.boundArgCount;
       entry.boundArgTexts = snapshotEntry.boundArgTexts;
@@ -677,7 +676,8 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.provenanceHandle = semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId);
       entry.definitionPathId = semanticProgramInternCallTargetString(semanticProgram, entry.definitionPath);
       entry.returnKindId = semanticProgramInternCallTargetString(semanticProgram, entry.returnKind);
-      entry.handlerPathId = semanticProgramInternCallTargetString(semanticProgram, entry.handlerPath);
+      entry.handlerPathId =
+          semanticProgramInternCallTargetString(semanticProgram, snapshotEntry.handlerPath);
       entry.errorTypeId = semanticProgramInternCallTargetString(semanticProgram, entry.errorType);
       entry.boundArgTextIds.reserve(entry.boundArgTexts.size());
       for (const auto &boundArgText : entry.boundArgTexts) {

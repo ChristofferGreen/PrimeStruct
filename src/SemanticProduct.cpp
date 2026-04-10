@@ -180,6 +180,12 @@ std::string_view semanticProgramTryFactOperandResolvedPath(
   return semanticProgramResolveCallTargetString(semanticProgram, entry.operandResolvedPathId);
 }
 
+std::string_view semanticProgramOnErrorFactHandlerPath(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramOnErrorFact &entry) {
+  return semanticProgramResolveCallTargetString(semanticProgram, entry.handlerPathId);
+}
+
 std::string formatSemanticStringListFromIds(const SemanticProgram &semanticProgram,
                                             const std::vector<SymbolId> &ids,
                                             const std::vector<std::string> &fallbackValues) {
@@ -816,8 +822,7 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
         semanticProgramResolveCallTargetString(semanticProgram, entry.definitionPathId);
     const std::string_view returnKind =
         semanticProgramResolveCallTargetString(semanticProgram, entry.returnKindId);
-    const std::string_view handlerPath =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.handlerPathId);
+    const std::string_view handlerPath = semanticProgramOnErrorFactHandlerPath(semanticProgram, entry);
     const std::string_view errorType =
         semanticProgramResolveCallTargetString(semanticProgram, entry.errorTypeId);
     const std::string boundArgTexts = formatSemanticStringListFromIds(
@@ -835,8 +840,7 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   " return_kind=" +
                                   quoteSemanticString(returnKind.empty() ? entry.returnKind : returnKind) +
                                   " handler_path=" +
-                                  quoteSemanticString(handlerPath.empty() ? entry.handlerPath
-                                                                          : handlerPath) +
+                                  quoteSemanticString(handlerPath) +
                                   " error_type=" +
                                   quoteSemanticString(errorType.empty() ? entry.errorType : errorType) +
                                   " bound_arg_count=" +
