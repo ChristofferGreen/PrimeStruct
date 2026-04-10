@@ -271,6 +271,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `/std/collections/soa_vector/to_aos(_ref)` flows, so a bridge-free canonical
   builtin element-access/lowering substrate is a prerequisite before removing
   direct-helper bridge handling.
+- `semantic-soa-s2-canonical-count-get-bridge-substrate-2026-04`: S2 inline-
+  parameter bridge matching now treats canonical `/std/collections/soa_vector`
+  `count|get` callee paths (plus same-path aliases) as bridge-eligible for
+  builtin `/soa_vector` -> experimental `SoaVector__*` value-parameter
+  adaptation, and focused IR validation in
+  `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_56.h`
+  locks those canonical count/get bridge paths as passing.
 - `semantic-soa-s1-literal-capacity-slice-2026-04`: Group 14 archives the
   S1 literal-capacity migration slice where VM/native lowering no longer
   rejects struct-element non-empty builtin `soa_vector` literals above the

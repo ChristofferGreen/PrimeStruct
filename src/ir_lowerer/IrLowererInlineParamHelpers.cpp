@@ -13,17 +13,17 @@ namespace primec::ir_lowerer {
 
 namespace {
 
-bool isCanonicalBuiltinSoaToAosPath(const std::string &calleePath) {
-  return calleePath ==
-             "/std/collections/experimental_soa_vector_conversions/soaVectorToAos" ||
-         calleePath ==
-             "/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef" ||
-         calleePath.rfind(
-             "/std/collections/experimental_soa_vector_conversions/soaVectorToAos__",
-             0) == 0 ||
-         calleePath.rfind(
-             "/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef__",
-             0) == 0;
+bool isCanonicalBuiltinSoaBridgePath(const std::string &calleePath) {
+  auto matchesPath = [&](std::string_view path) {
+    return calleePath == path ||
+           calleePath.rfind(std::string(path) + "__", 0) == 0;
+  };
+  return matchesPath("/std/collections/experimental_soa_vector_conversions/soaVectorToAos") ||
+         matchesPath("/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef") ||
+         matchesPath("/std/collections/soa_vector/count") ||
+         matchesPath("/std/collections/soa_vector/get") ||
+         matchesPath("/soa_vector/count") ||
+         matchesPath("/soa_vector/get");
 }
 
 bool isExperimentalSoaVectorStructPath(const std::string &structPath) {
@@ -40,7 +40,7 @@ bool isBuiltinSoaToAosStructMatch(const std::string &calleePath,
   if (normalizeCollectionBindingTypeName(argStruct) != "soa_vector") {
     return false;
   }
-  return isCanonicalBuiltinSoaToAosPath(calleePath);
+  return isCanonicalBuiltinSoaBridgePath(calleePath);
 }
 
 bool resolveBuiltinSoaToAosStorageField(const StructSlotLayoutInfo &layout,

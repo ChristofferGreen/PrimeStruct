@@ -688,6 +688,103 @@ TEST_CASE("ir lowerer inline param helper requires canonical callee path for bui
   }
 }
 
+TEST_CASE("ir lowerer inline param helper bridges builtin soa for canonical count and get callee paths") {
+  primec::Expr valuesParam;
+  valuesParam.kind = primec::Expr::Kind::Name;
+  valuesParam.isBinding = true;
+  valuesParam.name = "values";
+
+  primec::Expr sourceArg;
+  sourceArg.kind = primec::Expr::Kind::Name;
+  sourceArg.name = "source";
+
+  auto inferStructExprPath = [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &locals) {
+    if (expr.kind != primec::Expr::Kind::Name) {
+      return std::string();
+    }
+    auto it = locals.find(expr.name);
+    if (it == locals.end()) {
+      return std::string();
+    }
+    return it->second.structTypeName;
+  };
+
+  auto resolveStructSlotLayout =
+      [](const std::string &structPath, primec::ir_lowerer::StructSlotLayoutInfo &layout) {
+        if (structPath != "/std/collections/experimental_soa_vector/SoaVector__Particle") {
+          return false;
+        }
+        layout.structPath = structPath;
+        layout.totalSlots = 4;
+        layout.fields.clear();
+        primec::ir_lowerer::StructSlotFieldInfo storageField;
+        storageField.name = "storage";
+        storageField.slotOffset = 0;
+        storageField.slotCount = 4;
+        layout.fields.push_back(storageField);
+        return true;
+      };
+
+  auto inferCallParameterLocalInfo =
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
+        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+        infoOut.structTypeName = "/std/collections/experimental_soa_vector/SoaVector__Particle";
+        return true;
+      };
+
+  primec::ir_lowerer::LocalMap callerLocals;
+  primec::ir_lowerer::LocalInfo sourceInfo;
+  sourceInfo.index = 17;
+  sourceInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  sourceInfo.structTypeName = "/soa_vector";
+  callerLocals.emplace("source", sourceInfo);
+
+  for (const char *calleePath :
+       {"/std/collections/soa_vector/count", "/std/collections/soa_vector/get"}) {
+    int32_t nextLocal = 3;
+    primec::ir_lowerer::LocalMap calleeLocals;
+    std::vector<primec::IrInstruction> instructions;
+    std::string error;
+    REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
+        {valuesParam},
+        {&sourceArg},
+        {},
+        1,
+        std::string(calleePath),
+        callerLocals,
+        nextLocal,
+        calleeLocals,
+        inferCallParameterLocalInfo,
+        [](const primec::Expr &) { return false; },
+        [](const primec::Expr &,
+           const primec::ir_lowerer::LocalMap &,
+           primec::ir_lowerer::LocalInfo::StringSource &,
+           int32_t &,
+           bool &) { return true; },
+        inferStructExprPath,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        },
+        resolveStructSlotLayout,
+        [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+          if (expr.kind != primec::Expr::Kind::Name || expr.name != "source") {
+            return false;
+          }
+          instructions.push_back({primec::IrOpcode::LoadLocal, 17u});
+          return true;
+        },
+        [](int32_t, int32_t, int32_t) { return true; },
+        [&]() { return nextLocal++; },
+        [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+        [](int32_t) {},
+        error,
+        {}));
+    CHECK(error.empty());
+    REQUIRE(calleeLocals.count("values") == 1u);
+    CHECK_FALSE(instructions.empty());
+  }
+}
+
 TEST_CASE("ir lowerer setup type helper combines numeric kinds") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
   CHECK(primec::ir_lowerer::combineNumericKinds(ValueKind::Int32, ValueKind::Int32) == ValueKind::Int32);
