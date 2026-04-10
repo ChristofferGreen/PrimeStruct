@@ -80,6 +80,7 @@ bool SemanticsValidator::inferUnknownReturnKinds() {
 
 bool SemanticsValidator::inferUnknownReturnKindsGraph() {
   graphLocalAutoScopePathInterner_.clear();
+  graphLocalAutoLegacyKeyShadow_.clear();
   graphLocalAutoFacts_.clear();
   const TypeResolutionGraph graph = buildTypeResolutionGraph(program_);
   const CondensationDag dag = computeTypeResolutionDependencyDag(graph);

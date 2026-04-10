@@ -315,7 +315,8 @@ public:
                      bool collectDiagnostics,
                      uint32_t benchmarkSemanticDefinitionValidationWorkerCount = 1,
                      bool benchmarkSemanticPhaseCountersEnabled = false,
-                     bool benchmarkSemanticDisableMethodTargetMemoization = false);
+                     bool benchmarkSemanticDisableMethodTargetMemoization = false,
+                     bool benchmarkSemanticGraphLocalAutoLegacyKeyShadow = false);
 
   bool run();
   const ValidationCounters &validationCounters() const { return validationCounters_; }
@@ -600,6 +601,7 @@ private:
   uint32_t benchmarkSemanticDefinitionValidationWorkerCount_ = 1;
   bool benchmarkSemanticPhaseCountersEnabled_ = false;
   bool methodTargetMemoizationEnabled_ = true;
+  bool benchmarkGraphLocalAutoLegacyKeyShadowEnabled_ = false;
   ValidationCounters validationCounters_;
   bool allowRecursiveReturnInference_ = true;
   bool deferUnknownReturnInferenceErrors_ = false;
@@ -612,6 +614,7 @@ private:
   std::unordered_map<std::string, std::string> returnStructs_;
   std::unordered_map<std::string, BindingInfo> returnBindings_;
   mutable SymbolInterner graphLocalAutoScopePathInterner_;
+  mutable std::unordered_set<std::string> graphLocalAutoLegacyKeyShadow_;
   std::unordered_map<GraphLocalAutoKey, GraphLocalAutoFacts, GraphLocalAutoKeyHash> graphLocalAutoFacts_;
   std::unordered_set<std::string> structNames_;
   std::unordered_set<std::string> publicDefinitions_;

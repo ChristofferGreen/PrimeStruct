@@ -50,7 +50,8 @@ public:
                 SemanticPhaseCounters *benchmarkSemanticPhaseCounters = nullptr,
                 bool benchmarkSemanticAllocationCountersEnabled = false,
                 bool benchmarkSemanticRssCheckpointsEnabled = false,
-                bool benchmarkSemanticDisableMethodTargetMemoization = false) const;
+                bool benchmarkSemanticDisableMethodTargetMemoization = false,
+                bool benchmarkSemanticGraphLocalAutoLegacyKeyShadow = false) const;
 };
 
 } // namespace primec

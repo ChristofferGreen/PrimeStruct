@@ -510,6 +510,29 @@ TEST_CASE("primec options parse benchmark semantic method-target memoization tog
   CHECK(options.benchmarkSemanticDisableMethodTargetMemoization);
 }
 
+TEST_CASE("primec options parse benchmark semantic graph-local-auto legacy key shadow flag") {
+  auto parsePrimec = [](std::vector<std::string> args, primec::Options &options, std::string &error) {
+    std::vector<char *> argv;
+    argv.reserve(args.size());
+    for (std::string &arg : args) {
+      argv.push_back(arg.data());
+    }
+    return primec::parseOptions(
+        static_cast<int>(argv.size()), argv.data(), primec::OptionsParserMode::Primec, options, error);
+  };
+
+  primec::Options options;
+  std::string error;
+  CHECK(parsePrimec({"primec",
+                     "--emit=ir",
+                     "--benchmark-semantic-graph-local-auto-legacy-key-shadow",
+                     "/tmp/input.prime"},
+                    options,
+                    error));
+  CHECK(error.empty());
+  CHECK(options.benchmarkSemanticGraphLocalAutoLegacyKeyShadow);
+}
+
 TEST_CASE("primec options parse benchmark semantic repeat count flag") {
   auto parsePrimec = [](std::vector<std::string> args, primec::Options &options, std::string &error) {
     std::vector<char *> argv;
