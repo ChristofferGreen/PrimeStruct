@@ -1110,6 +1110,35 @@ TEST_CASE("ir lowerer semantic-product adapter joins return and inference facts 
   CHECK(tryFact->onErrorHandlerPath == "/handler");
 }
 
+TEST_CASE("ir lowerer semantic-product adapter resolves return facts by definition path id fallback") {
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 0;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .returnKind = "return",
+      .structPath = "/i32",
+      .bindingTypeText = "i32",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 9,
+      .sourceColumn = 3,
+      .semanticNodeId = 0,
+      .definitionPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+  });
+
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto *returnFact = primec::ir_lowerer::findSemanticProductReturnFact(semanticTargets, mainDef);
+  REQUIRE(returnFact != nullptr);
+  CHECK(returnFact->definitionPathId != primec::InvalidSymbolId);
+  CHECK(primec::semanticProgramReturnFactDefinitionPath(semanticProgram, *returnFact) == "/main");
+}
+
 TEST_CASE("ir lowerer call helpers resolve definition calls through slashless map import aliases") {
   primec::Definition canonicalMapCountDef;
   canonicalMapCountDef.fullPath = "/std/collections/map/count";

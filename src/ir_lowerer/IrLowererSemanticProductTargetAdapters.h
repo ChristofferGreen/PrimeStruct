@@ -24,6 +24,7 @@ struct SemanticProductTargetAdapter {
   std::unordered_map<std::string, std::vector<const SemanticProgramStructFieldMetadata *>>
       structFieldMetadataByStructPath;
   std::unordered_map<uint64_t, const SemanticProgramReturnFact *> returnFactsByDefinitionId;
+  std::unordered_map<SymbolId, const SemanticProgramReturnFact *> returnFactsByDefinitionPathId;
   std::unordered_map<uint64_t, const SemanticProgramLocalAutoFact *> localAutoFactsByExpr;
   std::unordered_map<uint64_t, const SemanticProgramQueryFact *> queryFactsByExpr;
   std::unordered_map<uint64_t, const SemanticProgramTryFact *> tryFactsByExpr;

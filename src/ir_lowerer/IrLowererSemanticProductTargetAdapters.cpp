@@ -132,9 +132,15 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
 
   const auto returnFacts = semanticProgramReturnFactView(*semanticProgram);
   adapter.returnFactsByDefinitionId.reserve(returnFacts.size());
+  adapter.returnFactsByDefinitionPathId.reserve(returnFacts.size());
   for (const auto *entry : returnFacts) {
     if (entry->semanticNodeId != 0) {
       adapter.returnFactsByDefinitionId.insert_or_assign(entry->semanticNodeId, entry);
+    }
+    const std::string_view definitionPath =
+        semanticProgramReturnFactDefinitionPath(*semanticProgram, *entry);
+    if (entry->definitionPathId != InvalidSymbolId && !definitionPath.empty()) {
+      adapter.returnFactsByDefinitionPathId.insert_or_assign(entry->definitionPathId, entry);
     }
   }
 
@@ -262,7 +268,23 @@ const std::vector<const SemanticProgramStructFieldMetadata *> *findSemanticProdu
 
 const SemanticProgramReturnFact *findSemanticProductReturnFact(const SemanticProductTargetAdapter &adapter,
                                                               const Definition &definition) {
-  return findDefinitionScopedSemanticFact(adapter.returnFactsByDefinitionId, definition);
+  if (const auto *fact = findDefinitionScopedSemanticFact(adapter.returnFactsByDefinitionId, definition);
+      fact != nullptr) {
+    return fact;
+  }
+  if (adapter.semanticProgram == nullptr || definition.fullPath.empty()) {
+    return nullptr;
+  }
+  const auto definitionPathId =
+      semanticProgramLookupCallTargetStringId(*adapter.semanticProgram, definition.fullPath);
+  if (!definitionPathId.has_value()) {
+    return nullptr;
+  }
+  if (const auto it = adapter.returnFactsByDefinitionPathId.find(*definitionPathId);
+      it != adapter.returnFactsByDefinitionPathId.end()) {
+    return it->second;
+  }
+  return nullptr;
 }
 
 const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(const SemanticProductTargetAdapter &adapter,
