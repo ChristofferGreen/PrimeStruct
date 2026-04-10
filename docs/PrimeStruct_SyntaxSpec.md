@@ -833,7 +833,7 @@ old-surface user helper shadows them, and old-explicit builtin mutator spellings
 `push|reserve requires mutable vector binding` lowerer contract on builtin `soa_vector<T>` receivers instead of
 falling through to the generic unsupported-expression-call rejection. Builtin `ref(...)` currently rejects direct,
 old-explicit, and helper-return local binding persistence plus call-argument and call-form/method-form return escapes
-with `soa_vector borrowed views are not implemented yet: ref` until the borrowed-view substrate exists.
+with `unknown method: /std/collections/soa_vector/ref` until the borrowed-view substrate exists.
 Imported raw-builtin bare/method canonical `count/get/ref/push/reserve` forms now also clear semantics on that same
 canonical helper surface, imported method `get(...).field` / `ref(...).field` now resolves the element struct before
 lowering, and imported method `push/reserve` now also reaches the same canonical wrapper-mismatch boundary instead of

@@ -243,7 +243,7 @@ TEST_CASE("soa_vector builtin ref local bindings use pending diagnostic") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
+    CHECK(error.find("unknown method: /std/collections/soa_vector/ref") != std::string::npos);
   };
 
   checkReject("auto", "ref(values, 0i32)");
@@ -271,7 +271,7 @@ TEST_CASE("soa_vector helper-return ref local bindings use pending diagnostic") 
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
+    CHECK(error.find("unknown method: /std/collections/soa_vector/ref") != std::string::npos);
   };
 
   checkReject("auto", "ref(cloneValues(), 0i32)");
@@ -324,9 +324,9 @@ TEST_CASE("soa_vector builtin ref call argument escapes use pending diagnostic")
     CHECK(error.find(expected) != std::string::npos);
   };
 
-  checkReject("ref(values, 0i32)", "soa_vector borrowed views are not implemented yet: ref");
-  checkReject("values.ref(0i32)", "soa_vector borrowed views are not implemented yet: ref");
-  checkReject("/soa_vector/ref(values, 0i32)", "soa_vector borrowed views are not implemented yet: ref");
+  checkReject("ref(values, 0i32)", "unknown method: /std/collections/soa_vector/ref");
+  checkReject("values.ref(0i32)", "unknown method: /std/collections/soa_vector/ref");
+  checkReject("/soa_vector/ref(values, 0i32)", "unknown method: /std/collections/soa_vector/ref");
 }
 
 TEST_CASE("soa_vector helper-return ref call argument escapes use borrowed-view diagnostic") {
@@ -355,7 +355,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/ref") != std::string::npos);
 }
 
 TEST_CASE("soa_vector builtin ref return escapes use pending diagnostic") {
@@ -376,7 +376,7 @@ TEST_CASE("soa_vector builtin ref return escapes use pending diagnostic") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/pick", error));
-    CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
+    CHECK(error.find("unknown method: /std/collections/soa_vector/ref") != std::string::npos);
   };
 
   checkReject("ref(values, 0i32)");
@@ -905,8 +905,8 @@ TEST_CASE("soa_vector builtin field views call argument escapes fail through inf
     CHECK(error.find(expected) != std::string::npos);
   };
 
-  checkReject("x(values)", "soa_vector field views are not implemented yet: x");
-  checkReject("values.x()", "soa_vector field views are not implemented yet: x");
+  checkReject("x(values)", "unknown method: /std/collections/soa_vector/field_view/x");
+  checkReject("values.x()", "unknown method: /std/collections/soa_vector/field_view/x");
 }
 
 TEST_CASE("soa_vector builtin field views return escapes fail through inference") {
@@ -930,8 +930,8 @@ TEST_CASE("soa_vector builtin field views return escapes fail through inference"
     CHECK(error.find(expected) != std::string::npos);
   };
 
-  checkReject("x(values)", "soa_vector field views are not implemented yet: x");
-  checkReject("values.x()", "soa_vector field views are not implemented yet: x");
+  checkReject("x(values)", "unknown method: /std/collections/soa_vector/field_view/x");
+  checkReject("values.x()", "unknown method: /std/collections/soa_vector/field_view/x");
 }
 
 TEST_CASE("soa_vector field-view helper still accepts call and return escapes through same-path helper") {
@@ -1078,7 +1078,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
 }
 
 TEST_CASE("soa_vector field-view call-form reports unsupported diagnostic") {
@@ -1096,7 +1096,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
 }
 
 TEST_CASE("soa_vector field-view index syntax reports unsupported diagnostic") {
@@ -1113,7 +1113,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
 }
 
 TEST_CASE("soa_vector field-view builtin rejects named arguments") {

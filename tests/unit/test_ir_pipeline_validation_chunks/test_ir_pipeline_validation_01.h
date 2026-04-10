@@ -578,7 +578,7 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/ref") != std::string::npos);
 }
 
 TEST_CASE("root ref vector receiver rejects non-soa target") {
@@ -595,7 +595,7 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/ref") != std::string::npos);
 }
 
 TEST_CASE("semantics accepts to_soa before lowerer rejection") {
@@ -878,7 +878,7 @@ main() {
   std::string error;
   const bool parsed = parseAndValidate(source, program, semanticProgram, error);
   if (!parsed) {
-    CHECK((error.find("soa_vector borrowed views are not implemented yet: ref") !=
+    CHECK((error.find("unknown method: /std/collections/soa_vector/ref") !=
            std::string::npos ||
            error.find("field access requires struct receiver") !=
                std::string::npos));
@@ -909,7 +909,7 @@ main() {
   std::string error;
   const bool parsed = parseAndValidate(source, program, semanticProgram, error);
   if (!parsed) {
-    CHECK((error.find("soa_vector borrowed views are not implemented yet: ref") !=
+    CHECK((error.find("unknown method: /std/collections/soa_vector/ref") !=
            std::string::npos ||
            error.find("field access requires struct receiver") !=
                std::string::npos));
@@ -1057,7 +1057,7 @@ Particle() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error == "soa_vector field views are not implemented yet: x");
+  CHECK(error == "unknown method: /std/collections/soa_vector/field_view/x");
 }
 
 TEST_CASE("semantics rejects soa_vector field-view call-form before lowerer") {
@@ -1075,7 +1075,7 @@ Particle() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error == "soa_vector field views are not implemented yet: x");
+  CHECK(error == "unknown method: /std/collections/soa_vector/field_view/x");
 }
 
 TEST_CASE("semantics rejects soa_vector field-view direct-call index shape before lowerer") {
@@ -1093,7 +1093,7 @@ Particle() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error == "soa_vector field views are not implemented yet: x");
+  CHECK(error == "unknown method: /std/collections/soa_vector/field_view/x");
 }
 
 TEST_CASE("semantics rejects soa_vector field-view call-form index shape before lowerer") {
@@ -1111,7 +1111,7 @@ Particle() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error == "soa_vector field views are not implemented yet: x");
+  CHECK(error == "unknown method: /std/collections/soa_vector/field_view/x");
 }
 
 TEST_CASE("semantics rejects soa_vector get method named args before lowerer") {

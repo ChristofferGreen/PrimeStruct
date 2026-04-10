@@ -464,7 +464,7 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
       !candidate.args.empty() &&
       !isExperimentalSoaLikeExpr(candidate.args.front()) &&
       !hasVisibleSoaHelperTargetForCurrentImports(*soaAccessHelper)) {
-    return std::string("/soa_vector/") + *soaAccessHelper;
+    return std::string("/std/collections/soa_vector/") + *soaAccessHelper;
   }
   return std::nullopt;
 }

@@ -331,33 +331,33 @@ TEST_CASE("soa field-view backend cleanup stays stable") {
   const std::string nativeTailDispatchSource = readText(nativeTailDispatchPath);
 
   CHECK(emitterCollectionInferenceSource.find("field_view") == std::string::npos);
-  CHECK(emitterCollectionInferenceSource.find("soa_vector field views are not implemented yet: ") ==
+  CHECK(emitterCollectionInferenceSource.find("unknown method: /std/collections/soa_vector/field_view/") ==
         std::string::npos);
-  CHECK(emitterCollectionInferenceSource.find("soa_vector borrowed views are not implemented yet: ref") ==
+  CHECK(emitterCollectionInferenceSource.find("unknown method: /std/collections/soa_vector/ref") ==
         std::string::npos);
   CHECK(emitterCollectionInferenceSource.find("soaVectorGet") == std::string::npos);
   CHECK(emitterCollectionInferenceSource.find("soaVectorRef") == std::string::npos);
 
   CHECK(inlineDispatchSource.find("field_view") == std::string::npos);
-  CHECK(inlineDispatchSource.find("soa_vector field views are not implemented yet: ") ==
+  CHECK(inlineDispatchSource.find("unknown method: /std/collections/soa_vector/field_view/") ==
         std::string::npos);
-  CHECK(inlineDispatchSource.find("soa_vector borrowed views are not implemented yet: ref") ==
+  CHECK(inlineDispatchSource.find("unknown method: /std/collections/soa_vector/ref") ==
         std::string::npos);
   CHECK(inlineDispatchSource.find("soaVectorGet") == std::string::npos);
   CHECK(inlineDispatchSource.find("soaVectorRef") == std::string::npos);
 
   CHECK(countAccessClassifiersSource.find("field_view") == std::string::npos);
-  CHECK(countAccessClassifiersSource.find("soa_vector field views are not implemented yet: ") ==
+  CHECK(countAccessClassifiersSource.find("unknown method: /std/collections/soa_vector/field_view/") ==
         std::string::npos);
-  CHECK(countAccessClassifiersSource.find("soa_vector borrowed views are not implemented yet: ref") ==
+  CHECK(countAccessClassifiersSource.find("unknown method: /std/collections/soa_vector/ref") ==
         std::string::npos);
   CHECK(countAccessClassifiersSource.find("soaVectorGet") == std::string::npos);
   CHECK(countAccessClassifiersSource.find("soaVectorRef") == std::string::npos);
 
   CHECK(nativeTailDispatchSource.find("field_view") == std::string::npos);
-  CHECK(nativeTailDispatchSource.find("soa_vector field views are not implemented yet: ") ==
+  CHECK(nativeTailDispatchSource.find("unknown method: /std/collections/soa_vector/field_view/") ==
         std::string::npos);
-  CHECK(nativeTailDispatchSource.find("soa_vector borrowed views are not implemented yet: ref") ==
+  CHECK(nativeTailDispatchSource.find("unknown method: /std/collections/soa_vector/ref") ==
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("soaVectorGet") == std::string::npos);
   CHECK(nativeTailDispatchSource.find("soaVectorRef") == std::string::npos);

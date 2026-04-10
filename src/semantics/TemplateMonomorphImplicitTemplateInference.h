@@ -241,7 +241,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
           !candidate.args.empty() &&
           candidate.args.front().kind == Expr::Kind::Call) {
         return soaDirectPendingUnavailableMethodDiagnostic(
-            isRefRefCall ? "/soa_vector/ref_ref" : "/soa_vector/ref");
+            isRefRefCall ? "/std/collections/soa_vector/ref_ref"
+                         : "/std/collections/soa_vector/ref");
       }
       const bool isExplicitSoaRefCall =
           (!candidate.isMethodCall && normalizedPrefix == "soa_vector" &&
@@ -266,7 +267,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
            (isSimpleCallName(candidate, "ref") ||
             isSimpleCallName(candidate, "ref_ref")))) {
         return soaDirectPendingUnavailableMethodDiagnostic(
-            isRefRefCall ? "/soa_vector/ref_ref" : "/soa_vector/ref");
+            isRefRefCall ? "/std/collections/soa_vector/ref_ref"
+                         : "/std/collections/soa_vector/ref");
       }
       return {};
     }

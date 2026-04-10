@@ -1677,7 +1677,7 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector borrowed local field-view method reports pending diagnostic") {
@@ -1698,7 +1698,7 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector borrowed local field-view call-form reports pending diagnostic") {
@@ -1721,7 +1721,7 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector inline location field-view methods report pending diagnostic") {
@@ -1746,7 +1746,7 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector inline location borrowed helper-return field-view methods report pending diagnostic") {
@@ -1775,7 +1775,7 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector borrowed helper-return field-view call-form reports pending diagnostic") {
@@ -1802,7 +1802,7 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector method-like borrowed helper-return field-view methods report pending diagnostic") {
@@ -1835,7 +1835,7 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector mutating field-view index validates") {
@@ -1904,7 +1904,7 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector mutating field-view call-form reports pending diagnostic") {
@@ -1925,7 +1925,7 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector mutating dereferenced borrowed helper-return field-view index validates") {
@@ -1980,7 +1980,7 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector mutating inline location borrowed helper-return field-view indexes validate") {
@@ -2080,7 +2080,7 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector mutating method-like borrowed helper-return field-view methods report pending diagnostic") {
@@ -2113,7 +2113,7 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector field views are not implemented yet: x") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector mutating ref field access validates") {
@@ -3612,7 +3612,7 @@ main() {
   std::string error;
   const bool valid = validateProgram(source, "/main", error);
   if (!valid) {
-    CHECK(error.find("soa_vector borrowed views are not implemented yet: ref") !=
+    CHECK(error.find("unknown method: /std/collections/soa_vector/ref") !=
           std::string::npos);
   } else {
     CHECK(error.empty());

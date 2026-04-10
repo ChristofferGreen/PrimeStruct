@@ -179,7 +179,7 @@
         std::string::npos);
   CHECK(semanticsExprSource.find("to_soa requires vector target") ==
         std::string::npos);
-  CHECK(semanticsExprSource.find("soa_vector field views are not implemented yet: ") ==
+  CHECK(semanticsExprSource.find("unknown method: /std/collections/soa_vector/field_view/") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("if (resolvedMethod && resolved == \"/std/collections/map/contains\") {") ==
         std::string::npos);
@@ -653,7 +653,7 @@
             "if (getBuiltinMutationName(expr, mutateName)) {") !=
         std::string::npos);
   CHECK(semanticsExprMutationBorrowsSource.find(
-            "soa_vector field views are not implemented yet: ") ==
+            "unknown method: /std/collections/soa_vector/field_view/") ==
         std::string::npos);
   CHECK(semanticsExprMutationBorrowsSource.find(
             "isBuiltinSoaFieldViewExpr(target, params, locals,") !=
@@ -763,7 +763,7 @@
             "to_soa requires vector target") !=
         std::string::npos);
   CHECK(semanticsExprMapSoaBuiltinsSource.find(
-            "soa_vector field views are not implemented yet: ") ==
+            "unknown method: /std/collections/soa_vector/field_view/") ==
         std::string::npos);
   CHECK(semanticsExprMapSoaBuiltinsSource.find(
             "soaDirectPendingUnavailableMethodDiagnostic(resolved)") !=

@@ -438,64 +438,66 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
 }
 
 std::string soaFieldViewHelperPath(std::string_view fieldName) {
-  return "/soa_vector/field_view/" + std::string(fieldName);
+  return "/std/collections/soa_vector/field_view/" + std::string(fieldName);
 }
 
 bool splitSoaFieldViewHelperPath(std::string_view path, std::string *fieldNameOut) {
-  constexpr std::string_view kSoaFieldViewPrefix = "/soa_vector/field_view/";
-  if (!path.starts_with(kSoaFieldViewPrefix)) {
-    return false;
+  constexpr std::string_view kCanonicalSoaFieldViewPrefix =
+      "/std/collections/soa_vector/field_view/";
+  constexpr std::string_view kLegacySoaFieldViewPrefix = "/soa_vector/field_view/";
+  if (path.starts_with(kCanonicalSoaFieldViewPrefix)) {
+    if (fieldNameOut != nullptr) {
+      *fieldNameOut = std::string(path.substr(kCanonicalSoaFieldViewPrefix.size()));
+    }
+    return true;
   }
-  if (fieldNameOut != nullptr) {
-    *fieldNameOut = std::string(path.substr(kSoaFieldViewPrefix.size()));
+  if (path.starts_with(kLegacySoaFieldViewPrefix)) {
+    if (fieldNameOut != nullptr) {
+      *fieldNameOut = std::string(path.substr(kLegacySoaFieldViewPrefix.size()));
+    }
+    return true;
   }
-  return true;
+  return false;
 }
 
 namespace {
 
-std::string soaFieldViewPendingDiagnostic(std::string_view fieldName) {
-  return "soa_vector field views are not implemented yet: " + std::string(fieldName);
-}
-
-std::string soaBorrowedViewPendingDiagnostic(std::string_view helperName) {
-  return "soa_vector borrowed views are not implemented yet: " +
-         std::string(helperName);
+std::string canonicalSoaPendingHelperPath(std::string_view resolvedPath) {
+  std::string fieldName;
+  if (splitSoaFieldViewHelperPath(resolvedPath, &fieldName)) {
+    return soaFieldViewHelperPath(fieldName);
+  }
+  if (resolvedPath == "/soa_vector/ref") {
+    return "/std/collections/soa_vector/ref";
+  }
+  if (resolvedPath == "/soa_vector/ref_ref") {
+    return "/std/collections/soa_vector/ref_ref";
+  }
+  return std::string(resolvedPath);
 }
 
 } // namespace
 
 std::optional<std::string> soaPendingUnavailableMethodDiagnostic(
     std::string_view resolvedPath, bool hasVisibleSoaBorrowedHelper) {
-  std::string fieldName;
-  if (splitSoaFieldViewHelperPath(resolvedPath, &fieldName)) {
-    return soaFieldViewPendingDiagnostic(fieldName);
-  }
-  if ((resolvedPath == "/soa_vector/ref" ||
-       resolvedPath == "/std/collections/soa_vector/ref") &&
-      !hasVisibleSoaBorrowedHelper) {
-    return soaBorrowedViewPendingDiagnostic("ref");
-  }
-  if ((resolvedPath == "/soa_vector/ref_ref" ||
-       resolvedPath == "/std/collections/soa_vector/ref_ref") &&
-      !hasVisibleSoaBorrowedHelper) {
-    return soaBorrowedViewPendingDiagnostic("ref_ref");
-  }
+  (void)resolvedPath;
+  (void)hasVisibleSoaBorrowedHelper;
   return std::nullopt;
 }
 
 std::string soaDirectPendingUnavailableMethodDiagnostic(
     std::string_view resolvedPath) {
-  return *soaPendingUnavailableMethodDiagnostic(resolvedPath, false);
+  return "unknown method: " + canonicalSoaPendingHelperPath(resolvedPath);
 }
 
 std::string soaUnavailableMethodDiagnostic(std::string_view resolvedPath,
                                            bool hasVisibleSoaBorrowedHelper) {
+  const std::string canonicalPath = canonicalSoaPendingHelperPath(resolvedPath);
   if (const auto pending = soaPendingUnavailableMethodDiagnostic(
-          resolvedPath, hasVisibleSoaBorrowedHelper)) {
+          canonicalPath, hasVisibleSoaBorrowedHelper)) {
     return *pending;
   }
-  return "unknown method: " + std::string(resolvedPath);
+  return "unknown method: " + canonicalPath;
 }
 
 bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {

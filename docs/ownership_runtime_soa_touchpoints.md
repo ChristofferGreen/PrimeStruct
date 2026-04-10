@@ -643,17 +643,18 @@ Still-unhandled compiler-owned SoA fallback families (2026-04 refresh):
     classification.
   - Owning files:
     `src/ir_lowerer/IrLowererInlineParamHelpers.cpp`.
-- Family S3: direct old-surface/pending SoA field-view helper calls still rely
-  on compiler-owned pending diagnostics rather than stdlib-owned completion.
+- Family S3: direct old-surface/pending SoA field-view helper calls now route
+  through canonical stdlib helper-contract diagnostics instead of bespoke
+  pending strings.
   - Helper shape:
     old-surface/builtin field-view access paths that resolve through
     `builtinSoaDirectPendingHelperPath(...)` (for example unresolved
     field-view helper rewrites and return-position probes).
   - Current behavior:
-    semantic validation emits compiler-owned pending diagnostics
-    (`soa_vector field views are not implemented yet: ...` /
-    `soa helper unavailable (still pending): ...`) instead of routing these
-    forms through a finalized stdlib helper contract.
+    semantic validation now canonicalizes these forms onto finalized stdlib
+    helper contracts and reports deterministic unavailable-method diagnostics
+    (`unknown method: /std/collections/soa_vector/field_view/<field>` and
+    `unknown method: /std/collections/soa_vector/ref(_ref)`).
   - Owning files:
     `src/semantics/SemanticsBuiltinPathHelpers.cpp`,
     `src/semantics/SemanticsValidatorExpr.cpp`,

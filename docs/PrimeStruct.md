@@ -3101,7 +3101,7 @@ bad_use_after_take() {
     pending diagnostic. `count(...)` on `soa_vector` lowers through the native count path for current SoA bindings, empty
     `soa_vector<T>()` literals lower to header-only storage, and builtin `ref(...)` now rejects direct and helper-return
     local binding persistence plus direct and helper-return call-argument/return escapes with
-    `soa_vector borrowed views are not implemented yet: ref`
+    `unknown method: /std/collections/soa_vector/ref`
     until the borrowed-view substrate exists, including old-explicit
     `/soa_vector/ref(...)` call-argument escapes.
     Non-empty SoA literals still emit the deterministic unsupported diagnostic `native

@@ -4,6 +4,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `soa-pending-diagnostics-canonicalized`: direct pending SoA borrowed/field-view
+  rejects now canonicalize onto stdlib helper-contract unavailable-method
+  diagnostics (`/std/collections/soa_vector/ref(_ref)` and
+  `/std/collections/soa_vector/field_view/<field>`) instead of bespoke
+  `soa_vector ... not implemented yet` strings, and source-lock tests now
+  assert canonical helper-path usage in validator + monomorph fallback code.
 - `arg-pack-dereference-struct-inference`: IR struct-type inference now
   propagates through `dereference(...)`, so indexed borrowed arg-pack values
   (for example `args<Reference<Map<K, V>>>`) preserve their struct identity

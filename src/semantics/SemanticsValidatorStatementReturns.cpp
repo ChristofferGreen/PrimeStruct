@@ -163,7 +163,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       return failReturnDiagnostic(std::move(message));
     };
     const Expr &returnExpr = stmt.args.front();
-    auto pendingFieldViewNameFromHelper = [&]() -> std::optional<std::string> {
+    auto pendingFieldViewPathFromHelper = [&]() -> std::optional<std::string> {
       if (returnExpr.kind != Expr::Kind::Call || returnExpr.args.size() < 2 ||
           returnExpr.args[1].kind != Expr::Kind::Literal) {
         return std::nullopt;
@@ -260,7 +260,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
           continue;
         }
         if (currentFieldIndex == fieldIndex) {
-          return fieldStmt.name;
+          return soaFieldViewHelperPath(fieldStmt.name);
         }
         ++currentFieldIndex;
       }
@@ -271,9 +271,9 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       return failReturnDiagnostic(
           soaDirectPendingUnavailableMethodDiagnostic(*pendingPath));
     }
-    if (const auto pendingFieldName = pendingFieldViewNameFromHelper()) {
+    if (const auto pendingFieldPath = pendingFieldViewPathFromHelper()) {
       return failReturnDiagnostic(
-          "soa_vector field views are not implemented yet: " + *pendingFieldName);
+          soaDirectPendingUnavailableMethodDiagnostic(*pendingFieldPath));
     }
     auto declaredReferenceReturnTarget = [&]() -> std::optional<std::string> {
       auto defIt = defMap_.find(currentValidationState_.context.definitionPath);

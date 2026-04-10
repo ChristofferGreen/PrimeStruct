@@ -247,11 +247,10 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
   }
 
   const std::string resolvedTarget = resolveCalleePath(expr);
-  std::string soaFieldName;
-  if (splitSoaFieldViewHelperPath(resolvedTarget, &soaFieldName)) {
+  if (splitSoaFieldViewHelperPath(resolvedTarget)) {
     handledOut = true;
     return failLateUnknownTargetDiagnostic(
-        "soa_vector field views are not implemented yet: " + soaFieldName);
+        soaDirectPendingUnavailableMethodDiagnostic(resolvedTarget));
   }
 
   handledOut = true;
