@@ -174,6 +174,12 @@ std::string_view semanticProgramQueryFactResolvedPath(
   return semanticProgramResolveCallTargetString(semanticProgram, entry.resolvedPathId);
 }
 
+std::string_view semanticProgramTryFactOperandResolvedPath(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramTryFact &entry) {
+  return semanticProgramResolveCallTargetString(semanticProgram, entry.operandResolvedPathId);
+}
+
 std::string formatSemanticStringListFromIds(const SemanticProgram &semanticProgram,
                                             const std::vector<SymbolId> &ids,
                                             const std::vector<std::string> &fallbackValues) {
@@ -749,7 +755,7 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
     const std::string_view scopePath =
         semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId);
     const std::string_view operandResolvedPath =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.operandResolvedPathId);
+        semanticProgramTryFactOperandResolvedPath(semanticProgram, entry);
     const std::string_view operandBindingTypeText =
         semanticProgramResolveCallTargetString(semanticProgram, entry.operandBindingTypeTextId);
     const std::string_view operandReceiverBindingTypeText = semanticProgramResolveCallTargetString(
@@ -769,11 +775,10 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
     appendSemanticIndexedLine(out,
                               "try_facts",
                               i,
-                              "scope_path=" +
+                                  "scope_path=" +
                                   quoteSemanticString(scopePath.empty() ? entry.scopePath : scopePath) +
                                   " operand_resolved_path=" +
-                                  quoteSemanticString(operandResolvedPath.empty() ? entry.operandResolvedPath
-                                                                                  : operandResolvedPath) +
+                                  quoteSemanticString(operandResolvedPath) +
                                   " operand_binding_type_text=" +
                                   quoteSemanticString(operandBindingTypeText.empty()
                                                           ? entry.operandBindingTypeText

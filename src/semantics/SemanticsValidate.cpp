@@ -623,7 +623,6 @@ SemanticProgram buildSemanticProgram(const Program &program,
     for (const auto &snapshotEntry : tryFacts) {
       SemanticProgramTryFact entry;
       entry.scopePath = snapshotEntry.scopePath;
-      entry.operandResolvedPath = snapshotEntry.operandResolvedPath;
       entry.operandBindingTypeText = bindingTypeTextForSemanticProduct(snapshotEntry.operandBinding);
       entry.operandReceiverBindingTypeText =
           bindingTypeTextForSemanticProduct(snapshotEntry.operandReceiverBinding);
@@ -640,7 +639,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.provenanceHandle = semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId);
       entry.scopePathId = semanticProgramInternCallTargetString(semanticProgram, entry.scopePath);
       entry.operandResolvedPathId =
-          semanticProgramInternCallTargetString(semanticProgram, entry.operandResolvedPath);
+          semanticProgramInternCallTargetString(semanticProgram, snapshotEntry.operandResolvedPath);
       entry.operandBindingTypeTextId =
           semanticProgramInternCallTargetString(semanticProgram, entry.operandBindingTypeText);
       entry.operandReceiverBindingTypeTextId = semanticProgramInternCallTargetString(

@@ -1206,7 +1206,8 @@ main() {
   };
 
   checkTextId(tryEntry->scopePath, tryEntry->scopePathId);
-  checkTextId(tryEntry->operandResolvedPath, tryEntry->operandResolvedPathId);
+  checkTextId(primec::semanticProgramTryFactOperandResolvedPath(semanticProgram, *tryEntry),
+              tryEntry->operandResolvedPathId);
   checkTextId(tryEntry->operandBindingTypeText, tryEntry->operandBindingTypeTextId);
   checkTextId(tryEntry->operandReceiverBindingTypeText, tryEntry->operandReceiverBindingTypeTextId);
   checkTextId(tryEntry->operandQueryTypeText, tryEntry->operandQueryTypeTextId);
@@ -1745,8 +1746,9 @@ main() {
 
   const auto *tryEntry = findSemanticEntry(
       primec::semanticProgramTryFactView(semanticProgram),
-      [](const primec::SemanticProgramTryFact &entry) {
-        return entry.scopePath == "/main" && entry.operandResolvedPath == "/lookup";
+      [&semanticProgram](const primec::SemanticProgramTryFact &entry) {
+        return entry.scopePath == "/main" &&
+               primec::semanticProgramTryFactOperandResolvedPath(semanticProgram, entry) == "/lookup";
       });
   REQUIRE(tryEntry != nullptr);
   CHECK(tryEntry->valueType == "int");
@@ -2082,12 +2084,14 @@ TEST_CASE("semantic product semantic ids stay deterministic across repeated vali
   CHECK(firstQuery->provenanceHandle == secondQuery->provenanceHandle);
 
   const auto *firstTry = findSemanticEntry(primec::semanticProgramTryFactView(first),
-      [](const primec::SemanticProgramTryFact &entry) {
-        return entry.scopePath == "/main" && entry.operandResolvedPath == "/lookup";
+      [&first](const primec::SemanticProgramTryFact &entry) {
+        return entry.scopePath == "/main" &&
+               primec::semanticProgramTryFactOperandResolvedPath(first, entry) == "/lookup";
       });
   const auto *secondTry = findSemanticEntry(primec::semanticProgramTryFactView(second),
-      [](const primec::SemanticProgramTryFact &entry) {
-        return entry.scopePath == "/main" && entry.operandResolvedPath == "/lookup";
+      [&second](const primec::SemanticProgramTryFact &entry) {
+        return entry.scopePath == "/main" &&
+               primec::semanticProgramTryFactOperandResolvedPath(second, entry) == "/lookup";
       });
   REQUIRE(firstTry != nullptr);
   REQUIRE(secondTry != nullptr);
@@ -2933,21 +2937,21 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
   semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
-      "/main",
-      "/lookup",
-      "Result<i32, MyError>",
-      "",
-      "Result<i32, MyError>",
-      "i32",
-      "MyError",
-      "return",
-      "/unexpectedError",
-      "MyError",
-      1,
-      16,
-      8,
-      24,
-      114,
+      .scopePath = "/main",
+      .operandBindingTypeText = "Result<i32, MyError>",
+      .operandReceiverBindingTypeText = "",
+      .operandQueryTypeText = "Result<i32, MyError>",
+      .valueType = "i32",
+      .errorType = "MyError",
+      .contextReturnKind = "return",
+      .onErrorHandlerPath = "/unexpectedError",
+      .onErrorErrorType = "MyError",
+      .onErrorBoundArgCount = 1,
+      .sourceLine = 16,
+      .sourceColumn = 8,
+      .semanticNodeId = 24,
+      .provenanceHandle = 114,
+      .operandResolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
       "/main",

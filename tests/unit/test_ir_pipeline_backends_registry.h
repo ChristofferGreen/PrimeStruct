@@ -902,9 +902,16 @@ TEST_CASE("ir lowerer rejects incomplete semantic-product try facts") {
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "try",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 84,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/try"),
+  });
   semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
       .scopePath = "/main",
-      .operandResolvedPath = "/lookup",
       .operandBindingTypeText = "Result<i32, FileError>",
       .operandReceiverBindingTypeText = "",
       .operandQueryTypeText = "Result<i32, FileError>",
@@ -917,7 +924,13 @@ TEST_CASE("ir lowerer rejects incomplete semantic-product try facts") {
       .sourceLine = 1,
       .sourceColumn = 1,
       .semanticNodeId = 84,
+      .operandResolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
+  primec::SemanticProgramCallableSummary callableSummary;
+  callableSummary.fullPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
+  callableSummary.returnKind = "i32";
+  semanticProgram.callableSummaries.push_back(std::move(callableSummary));
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
@@ -1408,16 +1421,22 @@ main() {
   CHECK(nativeQuery->bindingTypeText == cppQuery->bindingTypeText);
 
   const auto *cppTry = findSemanticEntry(primec::semanticProgramTryFactView(cppConformance.output.semanticProgram),
-      [](const primec::SemanticProgramTryFact &entry) {
-        return entry.scopePath == "/main" && entry.operandResolvedPath == "/lookup";
+      [&cppConformance](const primec::SemanticProgramTryFact &entry) {
+        return entry.scopePath == "/main" &&
+               primec::semanticProgramTryFactOperandResolvedPath(cppConformance.output.semanticProgram, entry) ==
+                   "/lookup";
       });
   const auto *vmTry = findSemanticEntry(primec::semanticProgramTryFactView(vmConformance.output.semanticProgram),
-      [](const primec::SemanticProgramTryFact &entry) {
-        return entry.scopePath == "/main" && entry.operandResolvedPath == "/lookup";
+      [&vmConformance](const primec::SemanticProgramTryFact &entry) {
+        return entry.scopePath == "/main" &&
+               primec::semanticProgramTryFactOperandResolvedPath(vmConformance.output.semanticProgram, entry) ==
+                   "/lookup";
       });
   const auto *nativeTry = findSemanticEntry(primec::semanticProgramTryFactView(nativeConformance.output.semanticProgram),
-      [](const primec::SemanticProgramTryFact &entry) {
-        return entry.scopePath == "/main" && entry.operandResolvedPath == "/lookup";
+      [&nativeConformance](const primec::SemanticProgramTryFact &entry) {
+        return entry.scopePath == "/main" &&
+               primec::semanticProgramTryFactOperandResolvedPath(nativeConformance.output.semanticProgram, entry) ==
+                   "/lookup";
       });
   REQUIRE(cppTry != nullptr);
   REQUIRE(vmTry != nullptr);

@@ -631,20 +631,20 @@ TEST_CASE("ir lowerer inference dispatch requires semantic try facts") {
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
-      "/main",
-      "/lookup",
-      "Result<bool, FileError>",
-      "",
-      "Result<bool, FileError>",
-      "bool",
-      "FileError",
-      "return",
-      "/handler",
-      "FileError",
-      1,
-      12,
-      9,
-      64,
+      .scopePath = "/main",
+      .operandBindingTypeText = "Result<bool, FileError>",
+      .operandReceiverBindingTypeText = "",
+      .operandQueryTypeText = "Result<bool, FileError>",
+      .valueType = "bool",
+      .errorType = "FileError",
+      .contextReturnKind = "return",
+      .onErrorHandlerPath = "/handler",
+      .onErrorErrorType = "FileError",
+      .onErrorBoundArgCount = 1,
+      .sourceLine = 12,
+      .sourceColumn = 9,
+      .semanticNodeId = 64,
+      .operandResolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
