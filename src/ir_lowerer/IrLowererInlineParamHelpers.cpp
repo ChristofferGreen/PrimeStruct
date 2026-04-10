@@ -14,9 +14,7 @@ namespace primec::ir_lowerer {
 namespace {
 
 bool isCanonicalBuiltinSoaToAosPath(const std::string &calleePath) {
-  return calleePath == "/std/collections/soa_vector/to_aos_ref" ||
-         calleePath.rfind("/std/collections/soa_vector/to_aos_ref__", 0) == 0 ||
-         calleePath ==
+  return calleePath ==
              "/std/collections/experimental_soa_vector_conversions/soaVectorToAos" ||
          calleePath ==
              "/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef" ||

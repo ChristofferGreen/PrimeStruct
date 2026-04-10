@@ -954,7 +954,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("borrowed helper-return experimental wrapper to_aos lowers through conversion helper") {
+TEST_CASE("borrowed helper-return experimental wrapper lowers through conversion helper") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -975,7 +975,9 @@ main() {
   [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
   values.push(Particle(7i32))
   values.push(Particle(9i32))
-  [vector<Particle>] unpacked{pickBorrowed(location(values)).to_aos()}
+  [vector<Particle>] unpacked{
+      /std/collections/experimental_soa_vector_conversions/soaVectorToAosRef<Particle>(
+          pickBorrowed(location(values)))}
   return(count(unpacked))
 }
 )";

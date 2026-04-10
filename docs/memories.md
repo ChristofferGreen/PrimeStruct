@@ -244,8 +244,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `SoaVector__*` bridge fallback in inline-parameter lowering: S2 bridge
   matching now requires canonical helper-path classification, and
   `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_56.h`
-  locks that empty-callee inputs fail while canonical
-  `/std/collections/soa_vector/to_aos_ref` continues to pass.
+  locks that empty-callee inputs fail while helper-path-scoped bridge matching
+  remains explicit.
 - `semantic-soa-s2-canonical-conversion-loops-2026-04`: Group 14 now archives
   the S2 slice where canonical `/std/collections/soa_vector/to_aos` accepts
   builtin `soa_vector<T>` at the canonical surface and forwards through
@@ -255,8 +255,22 @@ This file stores durable session-derived facts that are useful in later work. Ke
   archives the S2 slice where inline-parameter bridge matching no longer
   treats canonical `/std/collections/soa_vector/to_aos` as a builtin
   `/soa_vector` -> `SoaVector__*` bridge-eligible callee path; focused IR
-  validation now locks canonical `to_aos` rejection while canonical
-  `to_aos_ref` continues to bridge-match.
+  validation now locks canonical `to_aos` rejection while direct experimental
+  conversion helper paths remain bridge-eligible.
+- `semantic-soa-s2-to-aos-ref-bridge-eligibility-prune-2026-04`: Group 14 now
+  archives the S2 slice where canonical
+  `/std/collections/soa_vector/to_aos_ref` accepts `Reference<soa_vector<T>>`
+  and routes through canonical `/std/collections/soa_vector/to_aos` with
+  `dereference(...)`, and inline-parameter bridge matching no longer treats
+  canonical `to_aos_ref` as a bridge-eligible callee path.
+- `semantic-soa-s2-direct-helper-bridge-prereq-split-2026-04`: the remaining
+  S2 direct-helper bridge-removal leaf is now explicitly split in
+  `docs/todo.md`: disabling direct
+  `/std/collections/experimental_soa_vector_conversions/soaVectorToAos(_Ref)`
+  bridge matching currently regresses canonical builtin `soa_vector`
+  `/std/collections/soa_vector/to_aos(_ref)` flows, so a bridge-free canonical
+  builtin element-access/lowering substrate is a prerequisite before removing
+  direct-helper bridge handling.
 - `semantic-soa-s1-literal-capacity-slice-2026-04`: Group 14 archives the
   S1 literal-capacity migration slice where VM/native lowering no longer
   rejects struct-element non-empty builtin `soa_vector` literals above the

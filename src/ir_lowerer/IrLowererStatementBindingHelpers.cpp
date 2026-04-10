@@ -932,6 +932,10 @@ bool inferCallParameterLocalInfo(const Expr &param,
   applySpecializedWrappedMapBindingInfo(param, infoOut);
   applyStructArrayInfo(param, infoOut);
   applyStructValueInfo(param, infoOut);
+  if ((infoOut.kind == LocalInfo::Kind::Reference || infoOut.kind == LocalInfo::Kind::Pointer) &&
+      (infoOut.referenceToVector || infoOut.pointerToVector)) {
+    infoOut.structTypeName = infoOut.isSoaVector ? "/soa_vector" : "/vector";
+  }
   if (infoOut.kind == LocalInfo::Kind::Value && !infoOut.structTypeName.empty()) {
     infoOut.valueKind = LocalInfo::ValueKind::Int64;
   }

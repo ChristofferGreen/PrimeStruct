@@ -622,17 +622,22 @@ Still-unhandled compiler-owned SoA fallback families (2026-04 refresh):
     calls passing builtin `soa_vector` arguments into experimental
     `SoaVector__*` parameter layouts.
   - Current behavior:
-    canonical `/std/collections/soa_vector/to_aos` now accepts builtin
-    `soa_vector<T>` and forwards through the shared experimental conversion
-    helper path, so the canonical helper path itself no longer depends on this
-    bridge matcher. Canonical `/std/collections/soa_vector/to_aos_ref` and
-    direct experimental conversion helper calls still route through
+    canonical `/std/collections/soa_vector/to_aos` accepts builtin
+    `soa_vector<T>`, and canonical `/std/collections/soa_vector/to_aos_ref`
+    accepts `Reference<soa_vector<T>>` and routes through canonical
+    `/std/collections/soa_vector/to_aos(dereference(...))`. Canonical helper
+    callsites are no longer bridge-eligible in the inline-parameter callee-path
+    matcher, but canonical conversion still depends indirectly on direct
+    experimental helper bridge handling because canonical `to_aos` lowers
+    through `/std/collections/experimental_soa_vector_conversions/soaVectorToAos(...)`.
+    Direct experimental conversion helper calls route through
     inline-parameter lowering, which routes through
     `emitBuiltinSoaToAosStructBridge(...)`, which assumes a concrete storage
     slot layout and emits direct slot-copy glue; failures surface as
     `builtin soa_vector to_aos bridge requires SoaVector storage layout`.
-    Canonical `/std/collections/soa_vector/to_aos` is no longer bridge-eligible
-    in the inline-parameter callee-path matcher.
+    Canonical `/std/collections/soa_vector/to_aos` and
+    `/std/collections/soa_vector/to_aos_ref` are no longer bridge-eligible in
+    the inline-parameter callee-path matcher.
     The bridge matcher no longer accepts empty callee paths, so this
     compatibility still requires explicit canonical/experimental helper-path
     classification.
