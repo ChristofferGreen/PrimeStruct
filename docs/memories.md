@@ -58,6 +58,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `--fixtures math_vector_matrix,math_star_repro --phases ast-semantic,semantic-product`
   and asserts the exact four fixture-phase output tuples, guarding the
   vector+matrix-vs-star attribution fixture contract.
+- `semantic-memory-non-math-large-include-comparability`: semantic-memory
+  benchmark fixtures now include `/std/bench_non_math/*` (non-math
+  `/std/collections/*` + `/std/file/*`) via
+  `benchmarks/semantic_memory/fixtures/non_math_large_include.prime`, and
+  benchmark-harness coverage asserts non-math-vs-math-star ast-semantic
+  top-level definition counts stay both large and ratio-bounded for
+  include-scaling attribution.
 - `semantic-product-direct-call-routing`: production lowering now validates
   that every non-method direct call has a published semantic-product routing
   fact before lowering starts, and semantic-product-aware direct-call

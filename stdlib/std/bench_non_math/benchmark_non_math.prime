@@ -1,0 +1,140 @@
+import /std/collections/*
+import /std/file/*
+
+namespace std {
+  namespace bench_non_math {
+  [public struct]
+  RecordA() {
+    [public i32] id{0i32}
+    [public i32] weight{0i32}
+  }
+
+  [public struct]
+  RecordB() {
+    [public i32] lhs{0i32}
+    [public i32] rhs{0i32}
+  }
+
+  [public struct]
+  Ledger() {
+    [public vector<i32> mut] values{vector<i32>()}
+    [public i32 mut] checksum{0i32}
+  }
+
+  [public effects(heap_alloc), return<void>]
+  /Ledger/push([Ledger mut] self, [i32] value) {
+    [vector<i32> mut] values{self.values}
+    /std/collections/vector/push(values, value)
+    assign(self.values, values)
+    assign(self.checksum, plus(self.checksum, value))
+    return()
+  }
+
+  [public return<i32>]
+  /Ledger/count([Ledger] self) {
+    return(count(self.values))
+  }
+
+  [public return<i32>]
+  seed() {
+    return(17i32)
+  }
+
+  [public return<i32>]
+  chain00([i32] value) { return(plus(value, 1i32)) }
+  [public return<i32>]
+  chain01([i32] value) { return(minus(chain00(value), -2i32)) }
+  [public return<i32>]
+  chain02([i32] value) { return(plus(chain01(value), 3i32)) }
+  [public return<i32>]
+  chain03([i32] value) { return(minus(chain02(value), -4i32)) }
+  [public return<i32>]
+  chain04([i32] value) { return(plus(chain03(value), 5i32)) }
+  [public return<i32>]
+  chain05([i32] value) { return(minus(chain04(value), -6i32)) }
+  [public return<i32>]
+  chain06([i32] value) { return(plus(chain05(value), 7i32)) }
+  [public return<i32>]
+  chain07([i32] value) { return(minus(chain06(value), -8i32)) }
+  [public return<i32>]
+  chain08([i32] value) { return(plus(chain07(value), 9i32)) }
+  [public return<i32>]
+  chain09([i32] value) { return(minus(chain08(value), -10i32)) }
+  [public return<i32>]
+  chain10([i32] value) { return(plus(chain09(value), 11i32)) }
+  [public return<i32>]
+  chain11([i32] value) { return(minus(chain10(value), -12i32)) }
+  [public return<i32>]
+  chain12([i32] value) { return(plus(chain11(value), 13i32)) }
+  [public return<i32>]
+  chain13([i32] value) { return(minus(chain12(value), -14i32)) }
+  [public return<i32>]
+  chain14([i32] value) { return(plus(chain13(value), 15i32)) }
+  [public return<i32>]
+  chain15([i32] value) { return(minus(chain14(value), -16i32)) }
+  [public return<i32>]
+  chain16([i32] value) { return(plus(chain15(value), 17i32)) }
+  [public return<i32>]
+  chain17([i32] value) { return(minus(chain16(value), -18i32)) }
+  [public return<i32>]
+  chain18([i32] value) { return(plus(chain17(value), 19i32)) }
+  [public return<i32>]
+  chain19([i32] value) { return(minus(chain18(value), -20i32)) }
+  [public return<i32>]
+  chain20([i32] value) { return(plus(chain19(value), 21i32)) }
+  [public return<i32>]
+  chain21([i32] value) { return(minus(chain20(value), -22i32)) }
+  [public return<i32>]
+  chain22([i32] value) { return(plus(chain21(value), 23i32)) }
+  [public return<i32>]
+  chain23([i32] value) { return(minus(chain22(value), -24i32)) }
+  [public return<i32>]
+  chain24([i32] value) { return(plus(chain23(value), 25i32)) }
+  [public return<i32>]
+  chain25([i32] value) { return(minus(chain24(value), -26i32)) }
+  [public return<i32>]
+  chain26([i32] value) { return(plus(chain25(value), 27i32)) }
+  [public return<i32>]
+  chain27([i32] value) { return(minus(chain26(value), -28i32)) }
+  [public return<i32>]
+  chain28([i32] value) { return(plus(chain27(value), 29i32)) }
+  [public return<i32>]
+  chain29([i32] value) { return(minus(chain28(value), -30i32)) }
+
+  [public return<i32>]
+  runChain() {
+    [i32 mut] value{seed()}
+    assign(value, chain00(value))
+    assign(value, chain01(value))
+    assign(value, chain02(value))
+    assign(value, chain03(value))
+    assign(value, chain04(value))
+    assign(value, chain05(value))
+    assign(value, chain06(value))
+    assign(value, chain07(value))
+    assign(value, chain08(value))
+    assign(value, chain09(value))
+    assign(value, chain10(value))
+    assign(value, chain11(value))
+    assign(value, chain12(value))
+    assign(value, chain13(value))
+    assign(value, chain14(value))
+    assign(value, chain15(value))
+    assign(value, chain16(value))
+    assign(value, chain17(value))
+    assign(value, chain18(value))
+    assign(value, chain19(value))
+    assign(value, chain20(value))
+    assign(value, chain21(value))
+    assign(value, chain22(value))
+    assign(value, chain23(value))
+    assign(value, chain24(value))
+    assign(value, chain25(value))
+    assign(value, chain26(value))
+    assign(value, chain27(value))
+    assign(value, chain28(value))
+    assign(value, chain29(value))
+    return(value)
+  }
+  }
+}

@@ -1,8 +1,8 @@
-import /std/collections/*
+import /std/bench_non_math/*
 
 namespace bench {
 [return<i32>]
 main() {
-  return(1i32)
+  return(/std/bench_non_math/runChain())
 }
 }

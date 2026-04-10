@@ -83,6 +83,76 @@ TEST_CASE("semantic memory primary fixture stays minimal math-star reproducer") 
   CHECK(fixture.size() <= 256);
 }
 
+TEST_CASE("semantic memory non-math include fixture keeps comparable definition scale") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path nonMathFixturePath =
+      repoRoot / "benchmarks" / "semantic_memory" / "fixtures" / "non_math_large_include.prime";
+  const std::string nonMathFixture = readFile(nonMathFixturePath.string());
+  REQUIRE_FALSE(nonMathFixture.empty());
+  CHECK(nonMathFixture.find("import /std/bench_non_math/*") != std::string::npos);
+  CHECK(nonMathFixture.find("import /std/math/*") == std::string::npos);
+
+  const std::filesystem::path primecPath = repoRoot / "build-release" / "primec";
+  if (!std::filesystem::exists(primecPath)) {
+    INFO("primec not available in build-release");
+    return;
+  }
+
+  const std::string nonMathDumpPath = writeTemp("semantic_memory_non_math_ast.txt", "");
+  const std::string nonMathErrPath = writeTemp("semantic_memory_non_math_ast.err", "");
+  const std::string mathDumpPath = writeTemp("semantic_memory_math_star_ast.txt", "");
+  const std::string mathErrPath = writeTemp("semantic_memory_math_star_ast.err", "");
+
+  const std::string nonMathCmd =
+      quoteShellArg(primecPath.string()) + " " + quoteShellArg(nonMathFixturePath.string()) +
+      " --entry=/bench/main --dump-stage=ast-semantic --emit=ir " +
+      "> " + quoteShellArg(nonMathDumpPath) + " 2> " + quoteShellArg(nonMathErrPath);
+  CHECK(runCommand(nonMathCmd) == 0);
+  CHECK(readFile(nonMathErrPath).empty());
+
+  const std::filesystem::path mathFixturePath =
+      repoRoot / "benchmarks" / "semantic_memory" / "fixtures" / "math_star_repro.prime";
+  const std::string mathCmd =
+      quoteShellArg(primecPath.string()) + " " + quoteShellArg(mathFixturePath.string()) +
+      " --entry=/bench/main --dump-stage=ast-semantic --emit=ir " +
+      "> " + quoteShellArg(mathDumpPath) + " 2> " + quoteShellArg(mathErrPath);
+  CHECK(runCommand(mathCmd) == 0);
+  CHECK(readFile(mathErrPath).empty());
+
+  const std::string validateOutPath = writeTemp("semantic_memory_non_math_validate.out", "");
+  const std::string validateErrPath = writeTemp("semantic_memory_non_math_validate.err", "");
+  const std::string validateCmd =
+      "python3 -c " +
+      quoteShellArg(
+          "import re, sys\n"
+          "def count_defs(path):\n"
+          "  count = 0\n"
+          "  with open(path, encoding='utf-8') as handle:\n"
+          "    for line in handle:\n"
+          "      if re.match(r'^  \\\\[.*\\\\] /', line):\n"
+          "        count += 1\n"
+          "  return count\n"
+          "non_math = count_defs(sys.argv[1])\n"
+          "math_star = count_defs(sys.argv[2])\n"
+          "ratio = (non_math / math_star) if math_star else 0.0\n"
+          "ok = non_math >= 64 and math_star >= 64 and ratio >= 0.80 and ratio <= 1.25\n"
+          "if not ok:\n"
+          "  print('non_math_defs=', non_math)\n"
+          "  print('math_star_defs=', math_star)\n"
+          "  print('ratio=', ratio)\n"
+          "sys.exit(0 if ok else 1)\n") +
+      " " + quoteShellArg(nonMathDumpPath) +
+      " " + quoteShellArg(mathDumpPath) +
+      " > " + quoteShellArg(validateOutPath) + " 2> " + quoteShellArg(validateErrPath);
+  CHECK(runCommand(validateCmd) == 0);
+  CHECK(readFile(validateErrPath).empty());
+}
+
 TEST_CASE("semantic memory baseline report is checked in with fixture phase coverage") {
   const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
   const std::filesystem::path baselinePath = repoRoot / "benchmarks" / "semantic_memory_baseline_report.json";

@@ -29,7 +29,6 @@ Sizing note: each leaf `○` item should fit in one code-affecting commit plus f
 Order rule: execute leaves top-to-bottom. Each leaf below is scoped to one code-affecting commit.
 
 P0 - Reproducible measurement and attribution
-- ◐ [P0-04] Add a large non-math include fixture with comparable definition count to separate math-specific behavior from include-scaling behavior.
 - ◐ [P0-05] Add paired fixtures that compile identical math bodies via inline source vs stdlib imports.
 - ◐ [P0-06] Add `1x/2x/4x` scale-step fixtures and report RSS/time slope.
 - ◐ [P0-07] Add a benchmark helper that captures wall time + peak RSS per fixture and emits a machine-readable report.

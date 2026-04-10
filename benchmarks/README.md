@@ -110,6 +110,9 @@ Semantic memory benchmark fixtures live under:
 - `math_vector_matrix.prime` and `math_star_repro.prime` are paired
   attribution fixtures for vector+matrix explicit imports versus `/std/math/*`
   star imports.
+- `non_math_large_include.prime` imports `/std/bench_non_math/*`, a non-math
+  benchmark include surface that pulls `/std/collections/*` + `/std/file/*`
+  and keeps top-level AST definition count comparable to `math_star_repro`.
 - The benchmark harness runs fixtures across both semantic phases by default:
   `ast-semantic` and `semantic-product`.
 
