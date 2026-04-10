@@ -13,7 +13,6 @@ Sizing note: each leaf `○` item should fit in one code-affecting commit plus f
 **Group 14 - SoA bring-up and end-state cleanup**
 - ◐ Retire remaining compiler-owned builtin `soa_vector` semantics/lowering/backend scaffolding as the stdlib `.prime` substrate becomes authoritative.
   - ◐ Migrate the next compiler-owned SoA fallback family onto shared stdlib helper/conversion paths.
-  - ◐ Add a guard test that fails if that removed branch behavior reappears. Progress: added a focused inline-parameter helper regression that asserts empty-callee-path calls reject builtin `soa_vector` -> `SoaVector__*` bridge matching while canonical `/std/collections/soa_vector/to_aos_ref` still succeeds.
 
 **Group 15 - Semantic memory footprint and multithread compile substrate**
 Order rule: execute leaves top-to-bottom. Each leaf below is scoped to one code-affecting commit.
