@@ -1453,6 +1453,73 @@ TEST_CASE("ir lowerer semantic-product adapter resolves try facts by operand pat
   CHECK(primec::semanticProgramTryFactOperandResolvedPath(semanticProgram, *tryFact) == "/lookup");
 }
 
+TEST_CASE("ir lowerer semantic-product adapter prefers try semantic-id matches over operand-path fallback") {
+  primec::Expr operandExpr;
+  operandExpr.kind = primec::Expr::Kind::Call;
+  operandExpr.name = "lookup";
+  operandExpr.semanticNodeId = 9201;
+
+  primec::Expr tryExpr;
+  tryExpr.kind = primec::Expr::Kind::Call;
+  tryExpr.name = "try";
+  tryExpr.args = {operandExpr};
+  tryExpr.semanticNodeId = 9202;
+  tryExpr.sourceLine = 41;
+  tryExpr.sourceColumn = 11;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .sourceLine = 41,
+      .sourceColumn = 11,
+      .semanticNodeId = 9201,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+  });
+
+  const primec::SymbolId operandResolvedPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup");
+
+  semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
+      .scopePath = "/main",
+      .operandBindingTypeText = "Result<i32, FileError>",
+      .operandReceiverBindingTypeText = "",
+      .operandQueryTypeText = "Result<i32, FileError>",
+      .valueType = "i32",
+      .errorType = "FileError",
+      .contextReturnKind = "return",
+      .onErrorHandlerPath = "/handler",
+      .onErrorErrorType = "FileError",
+      .onErrorBoundArgCount = 1,
+      .sourceLine = 41,
+      .sourceColumn = 11,
+      .semanticNodeId = 9202,
+      .operandResolvedPathId = operandResolvedPathId,
+  });
+  semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
+      .scopePath = "/main",
+      .operandBindingTypeText = "Result<f64, FileError>",
+      .operandReceiverBindingTypeText = "",
+      .operandQueryTypeText = "Result<f64, FileError>",
+      .valueType = "f64",
+      .errorType = "FileError",
+      .contextReturnKind = "return",
+      .onErrorHandlerPath = "/handler",
+      .onErrorErrorType = "FileError",
+      .onErrorBoundArgCount = 1,
+      .sourceLine = 41,
+      .sourceColumn = 11,
+      .semanticNodeId = 0,
+      .operandResolvedPathId = operandResolvedPathId,
+  });
+
+  const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto *tryFact = primec::ir_lowerer::findSemanticProductTryFact(adapter, tryExpr);
+  REQUIRE(tryFact != nullptr);
+  CHECK(tryFact->semanticNodeId == 9202);
+  CHECK(tryFact->valueType == "i32");
+}
+
 TEST_CASE("ir lowerer call helpers resolve definition calls through slashless map import aliases") {
   primec::Definition canonicalMapCountDef;
   canonicalMapCountDef.fullPath = "/std/collections/map/count";
