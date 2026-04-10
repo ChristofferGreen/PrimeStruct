@@ -17,8 +17,13 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     callTargetResolutionScratch_.executionOwner = activeExecution;
   } else if (!hasScopedOwner &&
              (!callTargetResolutionScratch_.definitionFamilyPathCache.empty() ||
+              !callTargetResolutionScratch_.overloadFamilyPathCache.empty() ||
+              !callTargetResolutionScratch_.overloadFamilyPrefixCache.empty() ||
+              !callTargetResolutionScratch_.specializationPrefixCache.empty() ||
+              !callTargetResolutionScratch_.overloadCandidatePathCache.empty() ||
               !callTargetResolutionScratch_.normalizedMethodNameCache.empty() ||
               !callTargetResolutionScratch_.explicitRemovedMethodPathCache.empty() ||
+              !callTargetResolutionScratch_.concreteCallBaseCandidates.empty() ||
               callTargetResolutionScratch_.definitionOwner != nullptr ||
               callTargetResolutionScratch_.executionOwner != nullptr)) {
     callTargetResolutionScratch_.resetArena();

@@ -537,10 +537,29 @@ private:
       }
     };
 
+    struct SymbolIndexKey {
+      SymbolId symbol = InvalidSymbolId;
+      uint32_t index = 0;
+
+      bool operator==(const SymbolIndexKey &other) const {
+        return symbol == other.symbol && index == other.index;
+      }
+    };
+
+    struct SymbolIndexKeyHash {
+      std::size_t operator()(const SymbolIndexKey &key) const {
+        std::size_t hash = std::hash<SymbolId>{}(key.symbol);
+        hash ^= std::hash<uint32_t>{}(key.index) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+        return hash;
+      }
+    };
+
     using PmrBoolMap = std::pmr::unordered_map<SymbolId, bool>;
     using PmrSymbolStringMap = std::pmr::unordered_map<SymbolId, std::string>;
     using PmrPairStringMap = std::pmr::unordered_map<SymbolPairKey, std::string, SymbolPairKeyHash>;
     using PmrMethodMemoMap = std::pmr::unordered_map<MethodTargetMemoKey, std::string, MethodTargetMemoKeyHash>;
+    using PmrIndexStringMap = std::pmr::unordered_map<SymbolIndexKey, std::string, SymbolIndexKeyHash>;
+    using PmrStringVector = std::pmr::vector<std::string>;
 
     const Definition *definitionOwner = nullptr;
     const Execution *executionOwner = nullptr;
@@ -551,12 +570,17 @@ private:
         inlineArenaBuffer.size(),
         std::pmr::new_delete_resource()};
     PmrBoolMap definitionFamilyPathCache{&arenaResource};
+    PmrBoolMap overloadFamilyPathCache{&arenaResource};
+    PmrSymbolStringMap overloadFamilyPrefixCache{&arenaResource};
+    PmrSymbolStringMap specializationPrefixCache{&arenaResource};
+    PmrIndexStringMap overloadCandidatePathCache{&arenaResource};
     PmrSymbolStringMap rootedCallNamePathCache{&arenaResource};
     PmrSymbolStringMap normalizedNamespacePrefixCache{&arenaResource};
     PmrPairStringMap joinedCallPathCache{&arenaResource};
     PmrSymbolStringMap normalizedMethodNameCache{&arenaResource};
     PmrPairStringMap explicitRemovedMethodPathCache{&arenaResource};
     PmrMethodMemoMap methodTargetMemoCache{&arenaResource};
+    PmrStringVector concreteCallBaseCandidates{&arenaResource};
 
     void resetArena() {
       this->~CallTargetResolutionScratch();

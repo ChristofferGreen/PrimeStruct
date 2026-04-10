@@ -827,7 +827,7 @@ inline std::string makeBuiltinCanonicalMapStructFieldInitializerConformanceSourc
   return source;
 }
 
-inline std::string makeBuiltinCanonicalMapInsertHelperReturnValueDirectRejectSource() {
+inline std::string makeBuiltinCanonicalMapInsertHelperReturnValueDirectConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
   source += "[return<map<i32, i32>> effects(heap_alloc)]\n";
@@ -843,7 +843,7 @@ inline std::string makeBuiltinCanonicalMapInsertHelperReturnValueDirectRejectSou
   return source;
 }
 
-inline std::string makeBuiltinCanonicalMapInsertHelperReturnValueMethodRejectSource() {
+inline std::string makeBuiltinCanonicalMapInsertHelperReturnValueMethodConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
   source += "[return<map<i32, i32>> effects(heap_alloc)]\n";
@@ -859,7 +859,7 @@ inline std::string makeBuiltinCanonicalMapInsertHelperReturnValueMethodRejectSou
   return source;
 }
 
-inline std::string makeBuiltinCanonicalMapInsertBorrowedHolderFieldDirectRejectSource() {
+inline std::string makeBuiltinCanonicalMapInsertBorrowedHolderFieldDirectConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
   source += "[struct]\n";

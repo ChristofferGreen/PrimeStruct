@@ -664,6 +664,54 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrGrow(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm) {
+  // Some call shapes (for example temporary value-return map receivers) can
+  // surface a null map pointer on first insert. Materialize a one-entry map
+  // directly in that case before the generic lookup/grow path, which assumes a
+  // non-null map header pointer.
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+  emitInstruction(IrOpcode::PushI64, 0);
+  emitInstruction(IrOpcode::CmpEqI64, 0);
+  const size_t jumpIfNotNullPtr = instructionCount();
+  emitInstruction(IrOpcode::JumpIfZero, 0);
+
+  const int32_t nullInsertPtrLocal = allocTempLocal();
+  emitInstruction(IrOpcode::PushI32, 3);
+  emitInstruction(IrOpcode::HeapAlloc, 0);
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(nullInsertPtrLocal));
+
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(nullInsertPtrLocal));
+  emitInstruction(IrOpcode::PushI32, 1);
+  emitInstruction(IrOpcode::StoreIndirect, 0);
+  emitInstruction(IrOpcode::Pop, 0);
+
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(nullInsertPtrLocal));
+  emitInstruction(IrOpcode::PushI32, IrSlotBytesI32);
+  emitInstruction(IrOpcode::AddI64, 0);
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(keyLocal));
+  emitInstruction(IrOpcode::StoreIndirect, 0);
+  emitInstruction(IrOpcode::Pop, 0);
+
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(nullInsertPtrLocal));
+  emitInstruction(IrOpcode::PushI32, static_cast<uint64_t>(2 * IrSlotBytesI32));
+  emitInstruction(IrOpcode::AddI64, 0);
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal));
+  emitInstruction(IrOpcode::StoreIndirect, 0);
+  emitInstruction(IrOpcode::Pop, 0);
+
+  if (valuesLocal >= 0) {
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(nullInsertPtrLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(valuesLocal));
+  } else if (valuesWrapperLocal >= 0) {
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(valuesWrapperLocal));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(nullInsertPtrLocal));
+    emitInstruction(IrOpcode::StoreIndirect, 0);
+    emitInstruction(IrOpcode::Pop, 0);
+  }
+  const size_t jumpAfterNullInsert = instructionCount();
+  emitInstruction(IrOpcode::Jump, 0);
+
+  patchInstructionImm(jumpIfNotNullPtr, static_cast<uint64_t>(instructionCount()));
+
   const auto loopLocals = emitMapLookupLoopSearchScaffold(
       ptrLocal, keyLocal, mapKeyKind, allocTempLocal, instructionCount, emitInstruction, patchInstructionImm);
 
@@ -832,6 +880,7 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrGrow(
   emitInstruction(IrOpcode::Pop, 0);
 
   patchInstructionImm(jumpAfterGenericGrow, static_cast<uint64_t>(instructionCount()));
+  patchInstructionImm(jumpAfterNullInsert, static_cast<uint64_t>(instructionCount()));
   return true;
 }
 

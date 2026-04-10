@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "primec/CliDriver.h"
@@ -692,14 +693,14 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
 
   semanticProgram.bindingFacts.back().resolvedPathId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "/main/selected");
-  semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
-      .scopePath = "/main",
-      .bindingName = "selected",
-      .bindingTypeText = "i32",
-      .semanticNodeId = 47,
-      .initializerResolvedPathId =
-          static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u),
-  });
+  primec::SemanticProgramLocalAutoFact localAutoFact;
+  localAutoFact.scopePath = "/main";
+  localAutoFact.bindingName = "selected";
+  localAutoFact.bindingTypeText = "i32";
+  localAutoFact.semanticNodeId = 47;
+  localAutoFact.initializerResolvedPathId =
+      static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u);
+  semanticProgram.localAutoFacts.push_back(std::move(localAutoFact));
   error.clear();
   diagnosticInfo = {};
   CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));

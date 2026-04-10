@@ -296,14 +296,14 @@ struct SemanticProgramModuleResolvedArtifacts {
   SemanticProgramModuleIdentity identity;
   std::vector<std::size_t> directCallTargetIndices;
   std::vector<std::size_t> methodCallTargetIndices;
-  std::vector<SemanticProgramBridgePathChoice> bridgePathChoices;
+  std::vector<std::size_t> bridgePathChoiceIndices;
   std::vector<std::size_t> callableSummaryIndices;
   std::vector<std::size_t> bindingFactIndices;
   std::vector<std::size_t> returnFactIndices;
   std::vector<std::size_t> localAutoFactIndices;
   std::vector<std::size_t> queryFactIndices;
-  std::vector<SemanticProgramTryFact> tryFacts;
-  std::vector<SemanticProgramOnErrorFact> onErrorFacts;
+  std::vector<std::size_t> tryFactIndices;
+  std::vector<std::size_t> onErrorFactIndices;
 };
 
 struct SemanticProgram {

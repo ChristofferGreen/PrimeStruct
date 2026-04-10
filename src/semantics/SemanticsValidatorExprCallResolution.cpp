@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <iomanip>
+#include <limits>
 #include <sstream>
 
 namespace primec::semantics {
@@ -85,11 +86,88 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     const std::unordered_map<std::string, BindingInfo> &locals,
     const Expr &expr,
     const std::string &candidatePath) const {
+  const Definition *activeDefinition = currentDefinitionContext_;
+  const Execution *activeExecution = currentExecutionContext_;
+  const bool hasScopedOwner = activeDefinition != nullptr || activeExecution != nullptr;
+  if (hasScopedOwner &&
+      (callTargetResolutionScratch_.definitionOwner != activeDefinition ||
+       callTargetResolutionScratch_.executionOwner != activeExecution)) {
+    callTargetResolutionScratch_.resetArena();
+    callTargetResolutionScratch_.definitionOwner = activeDefinition;
+    callTargetResolutionScratch_.executionOwner = activeExecution;
+  } else if (!hasScopedOwner &&
+             (!callTargetResolutionScratch_.definitionFamilyPathCache.empty() ||
+              !callTargetResolutionScratch_.overloadFamilyPathCache.empty() ||
+              !callTargetResolutionScratch_.overloadFamilyPrefixCache.empty() ||
+              !callTargetResolutionScratch_.specializationPrefixCache.empty() ||
+              !callTargetResolutionScratch_.overloadCandidatePathCache.empty() ||
+              !callTargetResolutionScratch_.normalizedMethodNameCache.empty() ||
+              !callTargetResolutionScratch_.explicitRemovedMethodPathCache.empty() ||
+              !callTargetResolutionScratch_.concreteCallBaseCandidates.empty() ||
+              callTargetResolutionScratch_.definitionOwner != nullptr ||
+              callTargetResolutionScratch_.executionOwner != nullptr)) {
+    callTargetResolutionScratch_.resetArena();
+  }
+
   auto pathExists = [&](const std::string &path) {
     return defMap_.count(path) > 0 || paramsByDef_.count(path) > 0;
   };
-  auto hasOverloadFamily = [&](const std::string &path) {
-    const std::string overloadPrefix = path + "__ov";
+  auto overloadFamilyPrefix = [&](const std::string &path) {
+    if (!hasScopedOwner) {
+      return path + "__ov";
+    }
+    const SymbolId pathKey = callTargetResolutionScratch_.keyInterner.intern(path);
+    if (pathKey == InvalidSymbolId) {
+      return path + "__ov";
+    }
+    if (const auto cacheIt = callTargetResolutionScratch_.overloadFamilyPrefixCache.find(pathKey);
+        cacheIt != callTargetResolutionScratch_.overloadFamilyPrefixCache.end()) {
+      return cacheIt->second;
+    }
+    auto [insertIt, inserted] =
+        callTargetResolutionScratch_.overloadFamilyPrefixCache.emplace(pathKey, path + "__ov");
+    (void)inserted;
+    return insertIt->second;
+  };
+  auto specializationPrefix = [&](const std::string &basePath) {
+    if (!hasScopedOwner) {
+      return basePath + "__t";
+    }
+    const SymbolId basePathKey = callTargetResolutionScratch_.keyInterner.intern(basePath);
+    if (basePathKey == InvalidSymbolId) {
+      return basePath + "__t";
+    }
+    if (const auto cacheIt = callTargetResolutionScratch_.specializationPrefixCache.find(basePathKey);
+        cacheIt != callTargetResolutionScratch_.specializationPrefixCache.end()) {
+      return cacheIt->second;
+    }
+    auto [insertIt, inserted] =
+        callTargetResolutionScratch_.specializationPrefixCache.emplace(basePathKey, basePath + "__t");
+    (void)inserted;
+    return insertIt->second;
+  };
+  auto overloadCandidatePath = [&](const std::string &path, size_t parameterCount) {
+    if (!hasScopedOwner || parameterCount > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
+      return overloadFamilyPrefix(path) + std::to_string(parameterCount);
+    }
+    const SymbolId pathKey = callTargetResolutionScratch_.keyInterner.intern(path);
+    if (pathKey == InvalidSymbolId) {
+      return overloadFamilyPrefix(path) + std::to_string(parameterCount);
+    }
+    const CallTargetResolutionScratch::SymbolIndexKey key{
+        pathKey, static_cast<uint32_t>(parameterCount)};
+    if (const auto cacheIt = callTargetResolutionScratch_.overloadCandidatePathCache.find(key);
+        cacheIt != callTargetResolutionScratch_.overloadCandidatePathCache.end()) {
+      return cacheIt->second;
+    }
+    const std::string cachedPath = overloadFamilyPrefix(path) + std::to_string(parameterCount);
+    auto [insertIt, inserted] =
+        callTargetResolutionScratch_.overloadCandidatePathCache.emplace(key, cachedPath);
+    (void)inserted;
+    return insertIt->second;
+  };
+  auto computeHasOverloadFamily = [&](const std::string &path) {
+    const std::string overloadPrefix = overloadFamilyPrefix(path);
     for (const auto &[candidate, defPtr] : defMap_) {
       (void)defPtr;
       if (candidate.rfind(overloadPrefix, 0) == 0) {
@@ -104,7 +182,24 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     }
     return false;
   };
-  auto appendIfMissing = [](std::vector<std::string> &paths, const std::string &path) {
+  auto hasOverloadFamily = [&](const std::string &path) {
+    if (!hasScopedOwner) {
+      return computeHasOverloadFamily(path);
+    }
+    const SymbolId pathKey = callTargetResolutionScratch_.keyInterner.intern(path);
+    if (pathKey != InvalidSymbolId) {
+      if (const auto cacheIt = callTargetResolutionScratch_.overloadFamilyPathCache.find(pathKey);
+          cacheIt != callTargetResolutionScratch_.overloadFamilyPathCache.end()) {
+        return cacheIt->second;
+      }
+    }
+    const bool hasOverloads = computeHasOverloadFamily(path);
+    if (pathKey != InvalidSymbolId) {
+      callTargetResolutionScratch_.overloadFamilyPathCache.emplace(pathKey, hasOverloads);
+    }
+    return hasOverloads;
+  };
+  auto appendIfMissing = [](auto &paths, const std::string &path) {
     if (path.empty()) {
       return;
     }
@@ -130,23 +225,26 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     }
     return out;
   };
-  auto specializedPathForBase = [&](const std::string &basePath) {
+  const std::string templateHashSuffix = [&]() {
     if (expr.templateArgs.empty()) {
       return std::string{};
     }
     std::ostringstream out;
-    out << basePath
-        << "__t"
-        << std::hex
-        << fnv1a64(stripWhitespace(joinTemplateArgs(expr.templateArgs)));
-    const std::string directCandidate = out.str();
+    out << std::hex << fnv1a64(stripWhitespace(joinTemplateArgs(expr.templateArgs)));
+    return out.str();
+  }();
+  auto specializedPathForBase = [&](const std::string &basePath) {
+    if (expr.templateArgs.empty()) {
+      return std::string{};
+    }
+    const std::string specializationPrefixText = specializationPrefix(basePath);
+    const std::string directCandidate = specializationPrefixText + templateHashSuffix;
     if (pathExists(directCandidate)) {
       return directCandidate;
     }
-    const std::string specializationPrefix = basePath + "__t";
     std::string singleCandidate;
     auto considerCandidate = [&](const std::string &candidate) {
-      if (candidate.rfind(specializationPrefix, 0) != 0) {
+      if (candidate.rfind(specializationPrefixText, 0) != 0) {
         return;
       }
       if (!singleCandidate.empty() && singleCandidate != candidate) {
@@ -173,7 +271,6 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     return singleCandidate == "__ambiguous__" ? std::string{} : singleCandidate;
   };
 
-  std::vector<std::string> baseCandidates;
   const bool hasTemplateOverloads = hasOverloadFamily(candidatePath);
   const bool isTypeNamespaceCall = isTypeNamespaceMethodCall(params, locals, expr, candidatePath);
   const bool hasExplicitReceiverBinding =
@@ -181,32 +278,42 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
       expr.args.front().kind == Expr::Kind::Name &&
       (findParamBinding(params, expr.args.front().name) != nullptr ||
        locals.count(expr.args.front().name) > 0);
-  if (hasTemplateOverloads) {
-    if (isTypeNamespaceCall && !expr.args.empty()) {
-      appendIfMissing(baseCandidates,
-                      candidatePath + "__ov" + std::to_string(expr.args.size() - 1));
-    } else if (expr.isMethodCall) {
-      const size_t parameterCount =
-          hasExplicitReceiverBinding ? expr.args.size() : expr.args.size() + 1;
-      appendIfMissing(baseCandidates,
-                      candidatePath + "__ov" + std::to_string(parameterCount));
-    } else {
-      appendIfMissing(baseCandidates,
-                      candidatePath + "__ov" + std::to_string(expr.args.size()));
+  auto buildBaseCandidates = [&](auto &baseCandidates) {
+    baseCandidates.clear();
+    if (hasTemplateOverloads) {
+      if (isTypeNamespaceCall && !expr.args.empty()) {
+        appendIfMissing(baseCandidates, overloadCandidatePath(candidatePath, expr.args.size() - 1));
+      } else if (expr.isMethodCall) {
+        const size_t parameterCount =
+            hasExplicitReceiverBinding ? expr.args.size() : expr.args.size() + 1;
+        appendIfMissing(baseCandidates, overloadCandidatePath(candidatePath, parameterCount));
+      } else {
+        appendIfMissing(baseCandidates, overloadCandidatePath(candidatePath, expr.args.size()));
+      }
     }
-  }
-  appendIfMissing(baseCandidates, candidatePath);
+    appendIfMissing(baseCandidates, candidatePath);
+  };
+  auto resolveFromBaseCandidates = [&](const auto &baseCandidates) {
+    for (const auto &basePath : baseCandidates) {
+      if (const std::string specializedPath = specializedPathForBase(basePath);
+          !specializedPath.empty()) {
+        return specializedPath;
+      }
+      if (pathExists(basePath)) {
+        return basePath;
+      }
+    }
+    return baseCandidates.empty() ? candidatePath : baseCandidates.front();
+  };
 
-  for (const auto &basePath : baseCandidates) {
-    if (const std::string specializedPath = specializedPathForBase(basePath);
-        !specializedPath.empty()) {
-      return specializedPath;
-    }
-    if (pathExists(basePath)) {
-      return basePath;
-    }
+  if (hasScopedOwner) {
+    auto &baseCandidates = callTargetResolutionScratch_.concreteCallBaseCandidates;
+    buildBaseCandidates(baseCandidates);
+    return resolveFromBaseCandidates(baseCandidates);
   }
-  return baseCandidates.empty() ? candidatePath : baseCandidates.front();
+  std::vector<std::string> baseCandidates;
+  buildBaseCandidates(baseCandidates);
+  return resolveFromBaseCandidates(baseCandidates);
 }
 
 } // namespace primec::semantics

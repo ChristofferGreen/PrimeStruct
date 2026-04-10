@@ -69,35 +69,6 @@ std::string formatSemanticSourceLocation(int line, int column) {
   return std::to_string(line) + ":" + std::to_string(column);
 }
 
-template <typename EntryT, typename ModuleEntriesFn, typename FlatEntriesFn>
-std::vector<const EntryT *> buildModuleOrFlatSemanticView(const SemanticProgram &semanticProgram,
-                                                          ModuleEntriesFn moduleEntries,
-                                                          FlatEntriesFn flatEntries) {
-  std::vector<const EntryT *> entries;
-  if (!semanticProgram.moduleResolvedArtifacts.empty()) {
-    size_t moduleEntryCount = 0;
-    for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
-      moduleEntryCount += moduleEntries(module).size();
-    }
-    entries.reserve(moduleEntryCount);
-    for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
-      for (const auto &entry : moduleEntries(module)) {
-        entries.push_back(&entry);
-      }
-    }
-    if (!entries.empty() || flatEntries(semanticProgram).empty()) {
-      return entries;
-    }
-  }
-
-  const auto &flat = flatEntries(semanticProgram);
-  entries.reserve(flat.size());
-  for (const auto &entry : flat) {
-    entries.push_back(&entry);
-  }
-  return entries;
-}
-
 } // namespace
 
 SymbolId semanticProgramInternCallTargetString(SemanticProgram &semanticProgram, std::string_view text) {
@@ -265,13 +236,30 @@ semanticProgramMethodCallTargetView(const SemanticProgram &semanticProgram) {
 
 std::vector<const SemanticProgramBridgePathChoice *>
 semanticProgramBridgePathChoiceView(const SemanticProgram &semanticProgram) {
-  return buildModuleOrFlatSemanticView<SemanticProgramBridgePathChoice>(
-      semanticProgram,
-      [](const SemanticProgramModuleResolvedArtifacts &module)
-          -> const std::vector<SemanticProgramBridgePathChoice> & { return module.bridgePathChoices; },
-      [](const SemanticProgram &program) -> const std::vector<SemanticProgramBridgePathChoice> & {
-        return program.bridgePathChoices;
-      });
+  std::vector<const SemanticProgramBridgePathChoice *> entries;
+  if (!semanticProgram.moduleResolvedArtifacts.empty()) {
+    size_t moduleEntryCount = 0;
+    for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
+      moduleEntryCount += module.bridgePathChoiceIndices.size();
+    }
+    entries.reserve(moduleEntryCount);
+    for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
+      for (const std::size_t entryIndex : module.bridgePathChoiceIndices) {
+        if (entryIndex < semanticProgram.bridgePathChoices.size()) {
+          entries.push_back(&semanticProgram.bridgePathChoices[entryIndex]);
+        }
+      }
+    }
+    if (!entries.empty() || semanticProgram.bridgePathChoices.empty()) {
+      return entries;
+    }
+  }
+
+  entries.reserve(semanticProgram.bridgePathChoices.size());
+  for (const auto &entry : semanticProgram.bridgePathChoices) {
+    entries.push_back(&entry);
+  }
+  return entries;
 }
 
 std::vector<const SemanticProgramCallableSummary *>
@@ -416,24 +404,58 @@ semanticProgramQueryFactView(const SemanticProgram &semanticProgram) {
 
 std::vector<const SemanticProgramTryFact *>
 semanticProgramTryFactView(const SemanticProgram &semanticProgram) {
-  return buildModuleOrFlatSemanticView<SemanticProgramTryFact>(
-      semanticProgram,
-      [](const SemanticProgramModuleResolvedArtifacts &module)
-          -> const std::vector<SemanticProgramTryFact> & { return module.tryFacts; },
-      [](const SemanticProgram &program) -> const std::vector<SemanticProgramTryFact> & {
-        return program.tryFacts;
-      });
+  std::vector<const SemanticProgramTryFact *> entries;
+  if (!semanticProgram.moduleResolvedArtifacts.empty()) {
+    size_t moduleEntryCount = 0;
+    for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
+      moduleEntryCount += module.tryFactIndices.size();
+    }
+    entries.reserve(moduleEntryCount);
+    for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
+      for (const std::size_t entryIndex : module.tryFactIndices) {
+        if (entryIndex < semanticProgram.tryFacts.size()) {
+          entries.push_back(&semanticProgram.tryFacts[entryIndex]);
+        }
+      }
+    }
+    if (!entries.empty() || semanticProgram.tryFacts.empty()) {
+      return entries;
+    }
+  }
+
+  entries.reserve(semanticProgram.tryFacts.size());
+  for (const auto &entry : semanticProgram.tryFacts) {
+    entries.push_back(&entry);
+  }
+  return entries;
 }
 
 std::vector<const SemanticProgramOnErrorFact *>
 semanticProgramOnErrorFactView(const SemanticProgram &semanticProgram) {
-  return buildModuleOrFlatSemanticView<SemanticProgramOnErrorFact>(
-      semanticProgram,
-      [](const SemanticProgramModuleResolvedArtifacts &module)
-          -> const std::vector<SemanticProgramOnErrorFact> & { return module.onErrorFacts; },
-      [](const SemanticProgram &program) -> const std::vector<SemanticProgramOnErrorFact> & {
-        return program.onErrorFacts;
-      });
+  std::vector<const SemanticProgramOnErrorFact *> entries;
+  if (!semanticProgram.moduleResolvedArtifacts.empty()) {
+    size_t moduleEntryCount = 0;
+    for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
+      moduleEntryCount += module.onErrorFactIndices.size();
+    }
+    entries.reserve(moduleEntryCount);
+    for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
+      for (const std::size_t entryIndex : module.onErrorFactIndices) {
+        if (entryIndex < semanticProgram.onErrorFacts.size()) {
+          entries.push_back(&semanticProgram.onErrorFacts[entryIndex]);
+        }
+      }
+    }
+    if (!entries.empty() || semanticProgram.onErrorFacts.empty()) {
+      return entries;
+    }
+  }
+
+  entries.reserve(semanticProgram.onErrorFacts.size());
+  for (const auto &entry : semanticProgram.onErrorFacts) {
+    entries.push_back(&entry);
+  }
+  return entries;
 }
 
 std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {

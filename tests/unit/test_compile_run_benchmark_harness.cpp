@@ -47,6 +47,23 @@ TEST_CASE("semantic memory baseline report is checked in with fixture phase cove
   CHECK(baseline.find("\"is_expensive_threshold_offender\": true") != std::string::npos);
 }
 
+TEST_CASE("semantic memory benchmark ctest target stays serial and expensive") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path cmakePath = cwd / "CMakeLists.txt";
+  if (!std::filesystem::exists(cmakePath)) {
+    cmakePath = cwd.parent_path() / "CMakeLists.txt";
+  }
+  REQUIRE(std::filesystem::exists(cmakePath));
+  const std::string cmakeText = readFile(cmakePath.string());
+  REQUIRE_FALSE(cmakeText.empty());
+
+  CHECK(cmakeText.find("NAME PrimeStruct_semantic_memory_benchmark") != std::string::npos);
+  CHECK(cmakeText.find("set_tests_properties(\n"
+                       "    PrimeStruct_semantic_memory_benchmark\n"
+                       "    PROPERTIES RUN_SERIAL TRUE TIMEOUT 1800 LABELS \"expensive\")") !=
+        std::string::npos);
+}
+
 TEST_CASE("semantic memory budget policy artifacts are checked in") {
   const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
   const std::filesystem::path policyPath = repoRoot / "benchmarks" / "semantic_memory_budget_policy.json";

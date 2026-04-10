@@ -476,8 +476,9 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.chosenPathId =
           semanticProgramInternCallTargetString(semanticProgram, snapshotEntry.chosenPath);
       semanticProgram.bridgePathChoices.push_back(std::move(entry));
-      const auto &storedEntry = semanticProgram.bridgePathChoices.back();
-      ensureModuleResolvedArtifacts(storedEntry.scopePath).bridgePathChoices.push_back(storedEntry);
+      const std::size_t entryIndex = semanticProgram.bridgePathChoices.size() - 1;
+      ensureModuleResolvedArtifacts(snapshotEntry.scopePath).bridgePathChoiceIndices.push_back(
+          entryIndex);
     }
   }
   if (isCollectorEnabled("callable_summaries")) {
@@ -780,8 +781,8 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.onErrorErrorTypeId =
           semanticProgramInternCallTargetString(semanticProgram, entry.onErrorErrorType);
       semanticProgram.tryFacts.push_back(std::move(entry));
-      const auto &storedEntry = semanticProgram.tryFacts.back();
-      ensureModuleResolvedArtifacts(storedEntry.scopePath).tryFacts.push_back(storedEntry);
+      const std::size_t entryIndex = semanticProgram.tryFacts.size() - 1;
+      ensureModuleResolvedArtifacts(snapshotEntry.scopePath).tryFactIndices.push_back(entryIndex);
     }
   }
   if (isCollectorEnabled("on_error_facts")) {
@@ -814,8 +815,8 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.returnResultErrorTypeId =
           semanticProgramInternCallTargetString(semanticProgram, entry.returnResultErrorType);
       semanticProgram.onErrorFacts.push_back(std::move(entry));
-      const auto &storedEntry = semanticProgram.onErrorFacts.back();
-      ensureModuleResolvedArtifacts(storedEntry.definitionPath).onErrorFacts.push_back(storedEntry);
+      const std::size_t entryIndex = semanticProgram.onErrorFacts.size() - 1;
+      ensureModuleResolvedArtifacts(snapshotEntry.definitionPath).onErrorFactIndices.push_back(entryIndex);
     }
   }
 
@@ -5569,6 +5570,16 @@ semantics::BindingInfo bindingInfoFromTypeText(const std::string &typeText) {
   return binding;
 }
 
+std::optional<semantics::BindingInfo> extractDefinitionReturnBinding(const Definition &def) {
+  for (const auto &transform : def.transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    return bindingInfoFromTypeText(transform.templateArgs.front());
+  }
+  return std::nullopt;
+}
+
 constexpr std::string_view kBuiltinCanonicalMapInsertPath = "/std/collections/map/insert";
 constexpr std::string_view kBuiltinCanonicalMapInsertRefPath = "/std/collections/map/insert_ref";
 constexpr std::string_view kBuiltinCanonicalMapInsertBuiltinPath =
@@ -5665,6 +5676,20 @@ std::optional<semantics::BindingInfo> resolveBuiltinMapInsertReceiverBinding(
       return std::nullopt;
     }
     return bindingInfoFromTypeText(borrowedBinding->typeTemplateArg);
+  }
+
+  if (expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
+    for (const std::string &candidatePath :
+         candidateDefinitionPaths(expr, definitionNamespace)) {
+      auto defIt = definitionMap.find(candidatePath);
+      if (defIt == definitionMap.end() || defIt->second == nullptr) {
+        continue;
+      }
+      if (auto returnBinding = extractDefinitionReturnBinding(*defIt->second);
+          returnBinding.has_value()) {
+        return *returnBinding;
+      }
+    }
   }
 
   return std::nullopt;

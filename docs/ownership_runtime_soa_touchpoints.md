@@ -351,46 +351,17 @@ path (based on current recognition hooks):
   `src/ir_lowerer/IrLowererCountAccessClassifiers.cpp`,
   `src/ir_lowerer/IrLowererStatementCallEmission.cpp`, and
   `src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h`).
+- Resolved temporary value-return receiver families (2026-04 refresh):
+  - Family A (direct canonical insert on temporary value-return map receivers)
+    now rewrites through `/std/collections/map/insert_builtin` and runs across
+    VM, C++ emitter, and native backend.
+  - Family B (method-sugar insert on temporary value-return map receivers) now
+    rewrites through `/std/collections/map/insert_builtin` and runs across VM,
+    C++ emitter, and native backend.
 - Still-unhandled non-local receiver families (2026-04 refresh):
-  - Family A: direct canonical insert on temporary value-return map receivers
-    (`/std/collections/map/insert(makeValues(), key, value)`).
-    - Minimal repro:
-      `main() { /std/collections/map/insert<i32, i32>(makeValues(), 1i32, 4i32) }`
-    - Current behavior:
-      compile reject in lowering (`native backend only supports ... calls in expressions`)
-      because the receiver has no stable write-back lvalue.
-    - Owning files:
-      `src/ir_lowerer/IrLowererStatementCallEmission.cpp`,
-      `src/ir_lowerer/IrLowererLowerStatementsExpr.h`,
-      `tests/unit/test_compile_run_map_conformance_sources.h` (`makeBuiltinCanonicalMapInsertHelperReturnValueDirectRejectSource`),
-      `tests/unit/test_compile_run_map_conformance_expectations.h` (`expectBuiltinCanonicalMapInsertHelperReturnValueDirectReject`).
-  - Family B: method-sugar insert on temporary value-return map receivers
-    (`makeValues().insert(key, value)`).
-    - Minimal repro:
-      `main() { makeValues().insert(1i32, 4i32) }`
-    - Current behavior:
-      semantic reject (`insert is statement-only`) before rewrite/lowering.
-    - Owning files:
-      `src/semantics/SemanticsValidatorExprPostAccessPrechecks.cpp`,
-      `tests/unit/test_compile_run_map_conformance_sources.h` (`makeBuiltinCanonicalMapInsertHelperReturnValueMethodRejectSource`),
-      `tests/unit/test_compile_run_map_conformance_expectations.h` (`expectBuiltinCanonicalMapInsertHelperReturnValueMethodReject`).
-  - Family C: direct canonical insert on helper-return borrowed struct-field
-    receivers (`borrowHolder(location(holder)).values`).
-    - Minimal repro:
-      `main() { /std/collections/map/insert<i32, i32>(borrowHolder(location(holder)).values, 1i32, 4i32) }`
-    - Current behavior:
-      compile reject in lowering (`native backend only supports ... calls in expressions`)
-      after canonical insert receiver rewrite still fails to materialize the
-      helper-return field receiver as a typed map lvalue for builtin
-      write-back/repoint handling.
-    - Owning files:
-      `src/ir_lowerer/IrLowererStatementCallEmission.cpp`,
-      `src/ir_lowerer/IrLowererAccessTargetResolution.cpp`,
-      `src/ir_lowerer/IrLowererLowerStatementsExpr.h`,
-      `src/ir_lowerer/IrLowererUninitializedStructInference.cpp`,
-      `tests/unit/test_compile_run_map_conformance_sources.h` (`makeBuiltinCanonicalMapInsertBorrowedHolderFieldDirectRejectSource`),
-      `tests/unit/test_compile_run_map_conformance_expectations.h` (`expectBuiltinCanonicalMapInsertBorrowedHolderFieldDirectReject`),
-      and the native/C++/VM conformance harness suites.
+  - None in the current inventory. Families A/B/C now canonicalize to
+    `/std/collections/map/insert_builtin` and run across VM, C++ emitter, and
+    native backend.
 
 ## 4) SoA compiler-owned fallback inventory by layer
 

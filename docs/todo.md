@@ -14,7 +14,7 @@ Sizing note: each leaf `○` item should fit in one code-affecting commit plus f
 - ◐ Route the remaining builtin canonical `map<K, V>` borrowed/non-local growth mutation surfaces through the shared grown-pointer write-back/repoint path.
   - ◐ Refresh section 3 of `docs/ownership_runtime_soa_touchpoints.md` with concrete still-unhandled non-local receiver families (one entry per family with minimal repro + owning source files).
   - ◐ Add one failing conformance case for the highest-priority unhandled non-local receiver family across native/C++/VM harnesses.
-  - ◐ Migrate that single highest-priority non-local receiver family onto the shared rewrite/lowering path and flip the new conformance case to passing.
+  - ◐ Migrate that single highest-priority non-local receiver family onto the shared rewrite/lowering path and flip the new conformance case to passing. Progress: direct + method helper-return map value receiver inserts and borrowed-holder field receiver inserts now rewrite to `/std/collections/map/insert_builtin` and run across VM/C++ emitter/native; section 3 currently reports no unhandled non-local receiver families in this inventory.
 
 **Group 14 - SoA bring-up and end-state cleanup**
 - ◐ Retire remaining compiler-owned builtin `soa_vector` semantics/lowering/backend scaffolding as the stdlib `.prime` substrate becomes authoritative.
@@ -42,7 +42,7 @@ P0 - Reproducible measurement and attribution
 - ◐ [P0-11] Add benchmark-only semantic-validation-without-fact-emission mode for validator-vs-fact A/B attribution.
 - ◐ [P0-12] Add benchmark-only semantic-product force on/off override for gate-effectiveness A/B runs.
 - ◐ [P0-13] Record and check in an initial baseline report (fixture + phase + RSS/time).
-- ◐ [P0-14] Mark semantic memory benchmark target as expensive + serial when runtime or RSS exceeds expensive-test thresholds.
+- ◐ [P0-14] Mark semantic memory benchmark target as expensive + serial when runtime or RSS exceeds expensive-test thresholds. Progress: `PrimeStruct_semantic_memory_benchmark` and `PrimeStruct_semantic_memory_trend` CTest entries are pinned `RUN_SERIAL` with `expensive` labels/timeouts in `CMakeLists.txt`, and benchmark-harness source-guard coverage now asserts the benchmark target remains serial + expensive.
 
 P1 - Immediate peak-RSS reductions in existing pipeline
 - ◐ [P1-01] Add explicit compile-pipeline `needs semantic product` decision for pure `ast-semantic` paths.
@@ -56,8 +56,8 @@ P1 - Immediate peak-RSS reductions in existing pipeline
 - ◐ [P1-07] Replace per-module full-entry copies for one high-volume semantic-product fact family with canonical vector references/indices.
 - ◐ [P1-08] Add formatter/update path that resolves module references without re-copying entries for that migrated fact family.
 - ◐ [P1-09] Add semantic-product text-parity regression test for the first dedup slice.
-- ◐ [P1-10] Migrate a second high-volume copied fact family to canonical reference/index storage. Progress: module-resolved `return_facts`, `local_auto_facts`, and `query_facts` now store `returnFactIndices`, `localAutoFactIndices`, and `queryFactIndices` into canonical semantic-program vectors (instead of full per-module entry copies), with deterministic module-index view/formatter parity coverage for each migrated family.
-- ◐ [P1-11] Add semantic-product text-parity regression test for the second dedup slice. Progress: added combined parity coverage that exercises flat-vs-module-index formatting equivalence across all second-slice families together (`return_facts`, `local_auto_facts`, and `query_facts`) in one semantic-product snapshot test.
+- ◐ [P1-10] Migrate a second high-volume copied fact family to canonical reference/index storage. Progress: module-resolved `return_facts`, `local_auto_facts`, and `query_facts` now store `returnFactIndices`, `localAutoFactIndices`, and `queryFactIndices` into canonical semantic-program vectors (instead of full per-module entry copies), with deterministic module-index view/formatter parity coverage for each migrated family; module-resolved `try_facts` and `on_error_facts` now likewise use `tryFactIndices`/`onErrorFactIndices` (no per-module struct copies) with deterministic ordering and flat-vs-module-index formatter parity coverage; module-resolved `bridge_path_choices` now uses `bridgePathChoiceIndices` instead of per-module copied entries, with deterministic ordering and flat-vs-module-index formatter parity coverage.
+- ◐ [P1-11] Add semantic-product text-parity regression test for the second dedup slice. Progress: added combined parity coverage that exercises flat-vs-module-index formatting equivalence across all second-slice families together (`return_facts`, `local_auto_facts`, `query_facts`, `bridge_path_choices`, `try_facts`, and `on_error_facts`) in one semantic-product snapshot test.
 
 P2 - Traversal and allocation churn reductions
 - ◐ [P2-01] Inventory snapshot passes by traversal shape and pick the highest-overlap pair.
@@ -65,9 +65,9 @@ P2 - Traversal and allocation churn reductions
 - ◐ [P2-03] Add output-order parity test for the first snapshot merge.
 - ◐ [P2-04] Merge a second high-overlap snapshot pair into the shared collector path.
 - ◐ [P2-05] Add output-order parity test for the second snapshot merge.
-- ◐ [P2-06] Introduce reusable per-definition scratch storage for call-target resolution transients.
+- ◐ [P2-06] Introduce reusable per-definition scratch storage for call-target resolution transients. Progress: `resolveExprConcreteCallPath(...)` now reuses per-definition PMR scratch (`CallTargetResolutionScratch::concreteCallBaseCandidates` + `overloadFamilyPathCache`) instead of rebuilding transient overload-family/candidate structures per call.
 - ◐ [P2-07] Extend reusable per-definition scratch storage to method-target resolution transients.
-- ◐ [P2-08] Replace repeated call-target path normalization/concatenation with cached canonical fragments.
+- ◐ [P2-08] Replace repeated call-target path normalization/concatenation with cached canonical fragments. Progress: call-target concrete-path resolution now caches overload/specialization canonical fragments (`overloadFamilyPrefixCache`, `specializationPrefixCache`, and `overloadCandidatePathCache`) in `CallTargetResolutionScratch`, reusing them across scoped-owner call resolution instead of rebuilding `path + "__ov..."`/`path + "__t..."` strings per call.
 - ◐ [P2-09] Extend cached canonical fragment reuse to method-target path construction.
 - ◐ [P2-10] Add method-target memoization keyed by semantic-node identity + receiver type + method name and report RSS/time delta.
 - ◐ [P2-11] Replace `graphLocalAuto*` string-concatenated map keys with compact structured keys and report RSS delta. Progress: `GraphLocalAutoKey` now stores interned `scopePathId` instead of copied `scopePath` text, and validator graph-local key maps now reuse a dedicated scope-path interner.

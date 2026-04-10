@@ -53,18 +53,35 @@ TEST_CASE("call target resolution reuses scoped scratch cache") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path headerPath = cwd / "src" / "semantics" / "SemanticsValidator.h";
   std::filesystem::path sourcePath = cwd / "src" / "semantics" / "SemanticsValidatorBuildCallResolution.cpp";
+  std::filesystem::path concreteSourcePath =
+      cwd / "src" / "semantics" / "SemanticsValidatorExprCallResolution.cpp";
   if (!std::filesystem::exists(headerPath)) {
     headerPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidator.h";
     sourcePath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorBuildCallResolution.cpp";
+    concreteSourcePath =
+        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorExprCallResolution.cpp";
   }
   REQUIRE(std::filesystem::exists(headerPath));
   REQUIRE(std::filesystem::exists(sourcePath));
+  REQUIRE(std::filesystem::exists(concreteSourcePath));
 
   const std::string header = readTextFile(headerPath);
   const std::string source = readTextFile(sourcePath);
+  const std::string concreteSource = readTextFile(concreteSourcePath);
   CHECK(header.find("struct CallTargetResolutionScratch {") != std::string::npos);
   CHECK(header.find("using PmrBoolMap = std::pmr::unordered_map<SymbolId, bool>;") != std::string::npos);
   CHECK(header.find("PmrBoolMap definitionFamilyPathCache{&arenaResource};") != std::string::npos);
+  CHECK(header.find("PmrBoolMap overloadFamilyPathCache{&arenaResource};") != std::string::npos);
+  CHECK(header.find("using PmrIndexStringMap = std::pmr::unordered_map<SymbolIndexKey, std::string, SymbolIndexKeyHash>;") !=
+        std::string::npos);
+  CHECK(header.find("using PmrStringVector = std::pmr::vector<std::string>;") != std::string::npos);
+  CHECK(header.find("PmrSymbolStringMap overloadFamilyPrefixCache{&arenaResource};") !=
+        std::string::npos);
+  CHECK(header.find("PmrSymbolStringMap specializationPrefixCache{&arenaResource};") !=
+        std::string::npos);
+  CHECK(header.find("PmrIndexStringMap overloadCandidatePathCache{&arenaResource};") !=
+        std::string::npos);
+  CHECK(header.find("PmrStringVector concreteCallBaseCandidates{&arenaResource};") != std::string::npos);
   CHECK(header.find("PmrSymbolStringMap rootedCallNamePathCache{&arenaResource};") !=
         std::string::npos);
   CHECK(header.find("PmrSymbolStringMap normalizedNamespacePrefixCache{&arenaResource};") !=
@@ -83,6 +100,20 @@ TEST_CASE("call target resolution reuses scoped scratch cache") {
   CHECK(source.find("callTargetResolutionScratch_.joinedCallPathCache.find(key)") !=
         std::string::npos);
   CHECK(source.find("callTargetResolutionScratch_.definitionFamilyPathCache.emplace(pathKey, hasPath);") !=
+        std::string::npos);
+  CHECK(concreteSource.find("callTargetResolutionScratch_.overloadFamilyPathCache.find(pathKey)") !=
+        std::string::npos);
+  CHECK(concreteSource.find("callTargetResolutionScratch_.overloadFamilyPathCache.emplace(pathKey, hasOverloads);") !=
+        std::string::npos);
+  CHECK(concreteSource.find("callTargetResolutionScratch_.overloadFamilyPrefixCache.find(pathKey)") !=
+        std::string::npos);
+  CHECK(concreteSource.find("callTargetResolutionScratch_.specializationPrefixCache.find(basePathKey)") !=
+        std::string::npos);
+  CHECK(concreteSource.find("callTargetResolutionScratch_.overloadCandidatePathCache.find(key)") !=
+        std::string::npos);
+  CHECK(concreteSource.find("appendIfMissing(baseCandidates, overloadCandidatePath(candidatePath,") !=
+        std::string::npos);
+  CHECK(concreteSource.find("auto &baseCandidates = callTargetResolutionScratch_.concreteCallBaseCandidates;") !=
         std::string::npos);
 }
 
@@ -748,6 +779,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticProduct.find("std::vector<std::size_t> methodCallTargetIndices;") !=
         std::string::npos);
+  CHECK(semanticProduct.find("std::vector<std::size_t> bridgePathChoiceIndices;") !=
+        std::string::npos);
   CHECK(semanticProduct.find("std::vector<std::size_t> callableSummaryIndices;") !=
         std::string::npos);
   CHECK(semanticProduct.find("std::vector<std::size_t> bindingFactIndices;") !=
@@ -757,6 +790,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticProduct.find("std::vector<std::size_t> localAutoFactIndices;") !=
         std::string::npos);
   CHECK(semanticProduct.find("std::vector<std::size_t> queryFactIndices;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::vector<std::size_t> tryFactIndices;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::vector<std::size_t> onErrorFactIndices;") !=
         std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramMethodCallTarget> methodCallTargets;") !=
         std::string::npos);
@@ -1407,6 +1444,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticProduct.find("std::vector<std::size_t> methodCallTargetIndices;") !=
         std::string::npos);
+  CHECK(semanticProduct.find("std::vector<std::size_t> bridgePathChoiceIndices;") !=
+        std::string::npos);
   CHECK(semanticProduct.find("std::vector<std::size_t> callableSummaryIndices;") !=
         std::string::npos);
   CHECK(semanticProduct.find("std::vector<std::size_t> bindingFactIndices;") !=
@@ -1416,6 +1455,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticProduct.find("std::vector<std::size_t> localAutoFactIndices;") !=
         std::string::npos);
   CHECK(semanticProduct.find("std::vector<std::size_t> queryFactIndices;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::vector<std::size_t> tryFactIndices;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::vector<std::size_t> onErrorFactIndices;") !=
         std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramStructFieldMetadata") != std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramModuleResolvedArtifacts> moduleResolvedArtifacts;") !=
@@ -1462,6 +1505,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).methodCallTargetIndices.push_back(") !=
         std::string::npos);
+  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).bridgePathChoiceIndices.push_back(") !=
+        std::string::npos);
   CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.fullPath).callableSummaryIndices.push_back(") !=
         std::string::npos);
   CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).bindingFactIndices.push_back(") !=
@@ -1469,6 +1514,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(entry.scopePath).directCallTargets.push_back(entry);") ==
         std::string::npos);
   CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(entry.scopePath).methodCallTargets.push_back(entry);") ==
+        std::string::npos);
+  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(storedEntry.scopePath).bridgePathChoices.push_back(storedEntry);") ==
         std::string::npos);
   CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.fullPath).callableSummaries.push_back(") ==
         std::string::npos);
@@ -1489,9 +1536,13 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).queryFactIndices.push_back(entryIndex);") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(storedEntry.scopePath).tryFacts.push_back(storedEntry);") !=
+  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).tryFactIndices.push_back(entryIndex);") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(storedEntry.definitionPath).onErrorFacts.push_back(storedEntry);") !=
+  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.definitionPath).onErrorFactIndices.push_back(entryIndex);") !=
+        std::string::npos);
+  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(storedEntry.scopePath).tryFacts.push_back(storedEntry);") ==
+        std::string::npos);
+  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(storedEntry.definitionPath).onErrorFacts.push_back(storedEntry);") ==
         std::string::npos);
 
   CHECK(semanticTargetAdapterHeader.find("struct SemanticProductTargetAdapter") != std::string::npos);
