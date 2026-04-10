@@ -565,7 +565,6 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
       .scopePath = "/main",
       .siteKind = "parameter",
       .name = "value",
-      .resolvedPath = "/main/value",
       .bindingTypeText = "array<string>",
       .isMutable = false,
       .isEntryArgString = false,
@@ -575,12 +574,13 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
       .sourceColumn = 0,
       .semanticNodeId = 45,
       .provenanceHandle = 0,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main/value"),
   });
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
       .scopePath = "/main",
       .siteKind = "local",
       .name = "selected",
-      .resolvedPath = "/main/selected",
       .bindingTypeText = "i32",
       .isMutable = false,
       .isEntryArgString = false,
@@ -590,6 +590,8 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
       .sourceColumn = 0,
       .semanticNodeId = 47,
       .provenanceHandle = 0,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main/selected"),
   });
 
   error.clear();

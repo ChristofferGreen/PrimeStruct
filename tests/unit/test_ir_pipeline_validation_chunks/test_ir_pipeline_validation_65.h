@@ -517,18 +517,19 @@ TEST_CASE("ir lowerer setup math helper builds bundled setup math and binding ad
 TEST_CASE("ir lowerer setup math helpers thread semantic product binding facts") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
-      "/main",
-      "temporary",
-      "readFile",
-      "/readFile",
-      "FileError",
-      false,
-      false,
-      false,
-      "",
-      21,
-      4,
-      33,
+      .scopePath = "/main",
+      .siteKind = "temporary",
+      .name = "readFile",
+      .bindingTypeText = "FileError",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 21,
+      .sourceColumn = 4,
+      .semanticNodeId = 33,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/readFile"),
   });
 
   const auto adapters = primec::ir_lowerer::makeSetupMathAndBindingAdapters(true, &semanticProgram);

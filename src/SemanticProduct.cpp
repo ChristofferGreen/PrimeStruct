@@ -150,6 +150,12 @@ std::string_view semanticProgramCallableSummaryFullPath(
   return semanticProgramResolveCallTargetString(semanticProgram, entry.fullPathId);
 }
 
+std::string_view semanticProgramBindingFactResolvedPath(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramBindingFact &entry) {
+  return semanticProgramResolveCallTargetString(semanticProgram, entry.resolvedPathId);
+}
+
 std::string formatSemanticStringListFromIds(const SemanticProgram &semanticProgram,
                                             const std::vector<SymbolId> &ids,
                                             const std::vector<std::string> &fallbackValues) {
@@ -532,8 +538,7 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   quoteSemanticString(siteKind.empty() ? entry.siteKind : siteKind) +
                                   " name=" + quoteSemanticString(name.empty() ? entry.name : name) +
                                   " resolved_path=" +
-                                  quoteSemanticString(resolvedPath.empty() ? entry.resolvedPath
-                                                                          : resolvedPath) +
+                                  quoteSemanticString(resolvedPath) +
                                   " binding_type_text=" +
                                   quoteSemanticString(bindingTypeText.empty()
                                                           ? entry.bindingTypeText

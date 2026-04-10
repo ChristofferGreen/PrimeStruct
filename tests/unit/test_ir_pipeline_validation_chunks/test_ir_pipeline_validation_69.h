@@ -256,18 +256,19 @@ TEST_CASE("ir lowerer statement binding helper infers vector kind from initializ
 TEST_CASE("ir lowerer statement binding helper prefers semantic temporary facts") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
-      "/main",
-      "temporary",
-      "makeVec",
-      "/makeVec",
-      "vector<i64>",
-      false,
-      false,
-      false,
-      "",
-      14,
-      5,
-      111,
+      .scopePath = "/main",
+      .siteKind = "temporary",
+      .name = "makeVec",
+      .bindingTypeText = "vector<i64>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 14,
+      .sourceColumn = 5,
+      .semanticNodeId = 111,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/makeVec"),
   });
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);

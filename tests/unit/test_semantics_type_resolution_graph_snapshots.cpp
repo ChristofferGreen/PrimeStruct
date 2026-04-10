@@ -986,19 +986,23 @@ TEST_CASE("semantic product binding facts carry interned text ids") {
   CHECK(aEntry->siteKindId == bEntry->siteKindId);
   CHECK(aEntry->bindingTypeTextId == bEntry->bindingTypeTextId);
   CHECK(aEntry->nameId != bEntry->nameId);
-  if (aEntry->resolvedPath.empty()) {
+  const std::string_view aResolvedPath =
+      primec::semanticProgramBindingFactResolvedPath(semanticProgram, *aEntry);
+  if (aResolvedPath.empty()) {
     CHECK(aEntry->resolvedPathId == primec::InvalidSymbolId);
   } else {
     REQUIRE(aEntry->resolvedPathId != primec::InvalidSymbolId);
     CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, aEntry->resolvedPathId) ==
-          aEntry->resolvedPath);
+          aResolvedPath);
   }
-  if (bEntry->resolvedPath.empty()) {
+  const std::string_view bResolvedPath =
+      primec::semanticProgramBindingFactResolvedPath(semanticProgram, *bEntry);
+  if (bResolvedPath.empty()) {
     CHECK(bEntry->resolvedPathId == primec::InvalidSymbolId);
   } else {
     REQUIRE(bEntry->resolvedPathId != primec::InvalidSymbolId);
     CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, bEntry->resolvedPathId) ==
-          bEntry->resolvedPath);
+          bResolvedPath);
   }
   CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, aEntry->scopePathId) == "/main");
   CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, aEntry->siteKindId) == "local");
@@ -2828,19 +2832,20 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       109,
   });
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
-      "/main",
-      "local",
-      "value",
-      "/main/value",
-      "i32",
-      true,
-      false,
-      false,
-      "",
-      12,
-      7,
-      20,
-      110,
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "value",
+      .bindingTypeText = "i32",
+      .isMutable = true,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 12,
+      .sourceColumn = 7,
+      .semanticNodeId = 20,
+      .provenanceHandle = 110,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main/value"),
   });
   semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
       "/main",

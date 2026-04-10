@@ -70,17 +70,18 @@ TEST_CASE("ir lowerer count access helpers prefer semantic product entry args fa
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
-      "/main",
-      "parameter",
-      "argv",
-      "/main/argv",
-      "array<string>",
-      false,
-      false,
-      false,
-      "",
-      2,
-      3,
+      .scopePath = "/main",
+      .siteKind = "parameter",
+      .name = "argv",
+      .bindingTypeText = "array<string>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 2,
+      .sourceColumn = 3,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main/argv"),
   });
 
   primec::ir_lowerer::EntryCountAccessSetup setup;

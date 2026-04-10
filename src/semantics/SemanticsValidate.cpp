@@ -445,7 +445,6 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.scopePath = snapshotEntry.scopePath;
       entry.siteKind = snapshotEntry.siteKind;
       entry.name = snapshotEntry.name;
-      entry.resolvedPath = snapshotEntry.resolvedPath;
       entry.bindingTypeText = bindingTypeTextForSemanticProduct(snapshotEntry.binding);
       entry.isMutable = snapshotEntry.binding.isMutable;
       entry.isEntryArgString = snapshotEntry.binding.isEntryArgString;
@@ -458,7 +457,8 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.scopePathId = semanticProgramInternCallTargetString(semanticProgram, entry.scopePath);
       entry.siteKindId = semanticProgramInternCallTargetString(semanticProgram, entry.siteKind);
       entry.nameId = semanticProgramInternCallTargetString(semanticProgram, entry.name);
-      entry.resolvedPathId = semanticProgramInternCallTargetString(semanticProgram, entry.resolvedPath);
+      entry.resolvedPathId =
+          semanticProgramInternCallTargetString(semanticProgram, snapshotEntry.resolvedPath);
       entry.bindingTypeTextId =
           semanticProgramInternCallTargetString(semanticProgram, entry.bindingTypeText);
       entry.referenceRootId = semanticProgramInternCallTargetString(semanticProgram, entry.referenceRoot);

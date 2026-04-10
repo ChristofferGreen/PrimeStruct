@@ -128,7 +128,6 @@ struct SemanticProgramBindingFact {
   std::string scopePath;
   std::string siteKind;
   std::string name;
-  std::string resolvedPath;
   std::string bindingTypeText;
   bool isMutable = false;
   bool isEntryArgString = false;
@@ -370,6 +369,9 @@ std::string_view semanticProgramBridgePathChoiceHelperName(
 std::string_view semanticProgramCallableSummaryFullPath(
     const SemanticProgram &semanticProgram,
     const SemanticProgramCallableSummary &entry);
+std::string_view semanticProgramBindingFactResolvedPath(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramBindingFact &entry);
 
 std::string formatSemanticProgram(const SemanticProgram &semanticProgram);
 

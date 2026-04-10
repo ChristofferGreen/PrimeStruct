@@ -554,7 +554,6 @@ TEST_CASE("ir lowerer setup inference helper prefers semantic binding facts for 
       .scopePath = "/main",
       .siteKind = "local",
       .name = "x",
-      .resolvedPath = "/main/x",
       .bindingTypeText = "i64",
       .isMutable = false,
       .isEntryArgString = false,
@@ -564,6 +563,8 @@ TEST_CASE("ir lowerer setup inference helper prefers semantic binding facts for 
       .sourceColumn = 0,
       .semanticNodeId = 321,
       .provenanceHandle = 0,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main/x"),
   });
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);

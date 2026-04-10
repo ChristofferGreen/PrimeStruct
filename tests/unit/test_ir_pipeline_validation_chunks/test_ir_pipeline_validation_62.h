@@ -422,32 +422,34 @@ TEST_CASE("ir lowerer binding type helpers build bundled setup adapters") {
 TEST_CASE("ir lowerer binding type helpers prefer semantic product temporary facts") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
-      "/main",
-      "temporary",
-      "makeVec",
-      "/makeVec",
-      "vector<i64>",
-      false,
-      false,
-      false,
-      "",
-      12,
-      7,
-      17,
+      .scopePath = "/main",
+      .siteKind = "temporary",
+      .name = "makeVec",
+      .bindingTypeText = "vector<i64>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 12,
+      .sourceColumn = 7,
+      .semanticNodeId = 17,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/makeVec"),
   });
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
-      "/main",
-      "temporary",
-      "loadArrayRef",
-      "/loadArrayRef",
-      "Reference<array<i64>>",
-      false,
-      false,
-      false,
-      "",
-      13,
-      9,
-      23,
+      .scopePath = "/main",
+      .siteKind = "temporary",
+      .name = "loadArrayRef",
+      .bindingTypeText = "Reference<array<i64>>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 13,
+      .sourceColumn = 9,
+      .semanticNodeId = 23,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/loadArrayRef"),
   });
 
   auto adapters = primec::ir_lowerer::makeBindingTypeAdapters(&semanticProgram);
@@ -515,18 +517,19 @@ TEST_CASE("ir lowerer binding type helpers stop using transform fallback for sem
 TEST_CASE("ir lowerer binding type helpers treat semantic local-auto facts as non-explicit bindings") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
-      "/main",
-      "local",
-      "selected",
-      "/id",
-      "i32",
-      false,
-      false,
-      false,
-      "",
-      11,
-      5,
-      114,
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "selected",
+      .bindingTypeText = "i32",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 11,
+      .sourceColumn = 5,
+      .semanticNodeId = 114,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/id"),
   });
   semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
       "/main",
@@ -619,17 +622,18 @@ TEST_CASE("ir lowerer count access helpers classify entry args and count calls")
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
-      "/main",
-      "parameter",
-      "semanticArgv",
-      "/main/semanticArgv",
-      "array<string>",
-      false,
-      false,
-      false,
-      "",
-      3,
-      1,
+      .scopePath = "/main",
+      .siteKind = "parameter",
+      .name = "semanticArgv",
+      .bindingTypeText = "array<string>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 3,
+      .sourceColumn = 1,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main/semanticArgv"),
   });
   entryDef.fullPath = "/main";
   entryDef.parameters.clear();
