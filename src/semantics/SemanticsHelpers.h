@@ -136,8 +136,6 @@ std::string soaFieldViewHelperPath(std::string_view fieldName);
 bool splitSoaFieldViewHelperPath(std::string_view path, std::string *fieldNameOut = nullptr);
 std::string soaDirectPendingUnavailableMethodDiagnostic(
     std::string_view resolvedPath);
-std::optional<std::string> soaPendingUnavailableMethodDiagnostic(
-    std::string_view resolvedPath, bool hasVisibleSoaBorrowedHelper);
 std::string soaUnavailableMethodDiagnostic(std::string_view resolvedPath,
                                            bool hasVisibleSoaBorrowedHelper);
 bool isSoaVectorStructElementType(const std::string &typeArg,

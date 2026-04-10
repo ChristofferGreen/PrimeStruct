@@ -10,6 +10,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `/std/collections/soa_vector/field_view/<field>`) instead of bespoke
   `soa_vector ... not implemented yet` strings, and source-lock tests now
   assert canonical helper-path usage in validator + monomorph fallback code.
+- `soa-pending-diagnostics-no-optional-branch`: semantics helpers no longer
+  expose the optional `soaPendingUnavailableMethodDiagnostic(...)` branch;
+  monomorph fallback and shared helper diagnostics now route SoA pending
+  borrowed/field-view rejects directly through canonical
+  `soaDirectPendingUnavailableMethodDiagnostic(...)` / `soaUnavailableMethodDiagnostic(...)`
+  unknown-method paths.
 - `arg-pack-dereference-struct-inference`: IR struct-type inference now
   propagates through `dereference(...)`, so indexed borrowed arg-pack values
   (for example `args<Reference<Map<K, V>>>`) preserve their struct identity

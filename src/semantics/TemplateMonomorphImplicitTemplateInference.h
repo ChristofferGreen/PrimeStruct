@@ -199,24 +199,10 @@ bool inferImplicitTemplateArgs(const Definition &def,
              ctx.sourceDefs.count(canonicalPath) > 0 ||
              ctx.helperOverloads.count(canonicalPath) > 0;
     };
-    auto hasVisibleSoaBorrowedHelperForPath = [&](std::string_view path) {
-      if (path == "/soa_vector/ref_ref" ||
-          path == "/std/collections/soa_vector/ref_ref") {
-        return hasVisibleSoaBorrowedHelper("ref_ref");
-      }
-      return hasVisibleSoaBorrowedHelper("ref");
-    };
     const bool hasVisibleSoaRefHelper =
         hasVisibleSoaBorrowedHelper("ref");
     const bool hasVisibleSoaRefRefHelper =
         hasVisibleSoaBorrowedHelper("ref_ref");
-    if (candidate.isMethodCall) {
-      if (const auto pending = soaPendingUnavailableMethodDiagnostic(
-              resolvedPath,
-              hasVisibleSoaBorrowedHelperForPath(resolvedPath))) {
-        return *pending;
-      }
-    }
     const bool isCanonicalBuiltinSoaRefCall =
         normalizedName == "std/collections/soa_vector/ref" ||
         resolvedPath == "/std/collections/soa_vector/ref";

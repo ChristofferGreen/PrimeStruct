@@ -478,13 +478,6 @@ std::string canonicalSoaPendingHelperPath(std::string_view resolvedPath) {
 
 } // namespace
 
-std::optional<std::string> soaPendingUnavailableMethodDiagnostic(
-    std::string_view resolvedPath, bool hasVisibleSoaBorrowedHelper) {
-  (void)resolvedPath;
-  (void)hasVisibleSoaBorrowedHelper;
-  return std::nullopt;
-}
-
 std::string soaDirectPendingUnavailableMethodDiagnostic(
     std::string_view resolvedPath) {
   return "unknown method: " + canonicalSoaPendingHelperPath(resolvedPath);
@@ -492,12 +485,8 @@ std::string soaDirectPendingUnavailableMethodDiagnostic(
 
 std::string soaUnavailableMethodDiagnostic(std::string_view resolvedPath,
                                            bool hasVisibleSoaBorrowedHelper) {
-  const std::string canonicalPath = canonicalSoaPendingHelperPath(resolvedPath);
-  if (const auto pending = soaPendingUnavailableMethodDiagnostic(
-          canonicalPath, hasVisibleSoaBorrowedHelper)) {
-    return *pending;
-  }
-  return "unknown method: " + canonicalPath;
+  (void)hasVisibleSoaBorrowedHelper;
+  return "unknown method: " + canonicalSoaPendingHelperPath(resolvedPath);
 }
 
 bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
