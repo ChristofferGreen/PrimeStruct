@@ -850,6 +850,51 @@ TEST_CASE("ir lowerer semantic-product adapter reuses method-call path ids") {
         "/std/collections/map/contains");
 }
 
+TEST_CASE("ir lowerer semantic-product adapter ignores method-call targets missing resolved path ids") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
+      .scopePath = "/main",
+      .methodName = "contains",
+      .receiverTypeText = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 144,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .methodNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "contains"),
+      .resolvedPathId = primec::InvalidSymbolId,
+  });
+  semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
+      .scopePath = "/main",
+      .methodName = "contains",
+      .receiverTypeText = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 145,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .methodNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "contains"),
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                        "/std/collections/map/contains"),
+  });
+
+  const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  CHECK(adapter.methodCallTargetIdsByExpr.count(144) == 0);
+  CHECK(adapter.methodCallTargetIdsByExpr.count(145) == 1);
+
+  primec::Expr missingPathExpr;
+  missingPathExpr.kind = primec::Expr::Kind::Call;
+  missingPathExpr.isMethodCall = true;
+  missingPathExpr.semanticNodeId = 144;
+  CHECK(primec::ir_lowerer::findSemanticProductMethodCallTarget(adapter, missingPathExpr).empty());
+
+  primec::Expr validExpr;
+  validExpr.kind = primec::Expr::Kind::Call;
+  validExpr.isMethodCall = true;
+  validExpr.semanticNodeId = 145;
+  CHECK(primec::ir_lowerer::findSemanticProductMethodCallTarget(adapter, validExpr) ==
+        "/std/collections/map/contains");
+}
+
 TEST_CASE("ir lowerer semantic-product adapter indexes callable summaries by full-path id") {
   primec::SemanticProgram semanticProgram;
   const auto mainPathId =
