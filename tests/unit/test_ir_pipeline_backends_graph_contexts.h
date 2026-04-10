@@ -1529,6 +1529,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(bindingTypeHelpersSource.find("bool validateSemanticProductLocalAutoCoverage(const Program &program,") !=
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find("missing semantic-product local-auto fact: ") != std::string::npos);
+  CHECK(bindingTypeHelpersSource.find("missing semantic-product local-auto initializer path id: ") !=
+        std::string::npos);
   CHECK(irLowererResultHelpers.find("missing semantic-product return definition path id") !=
         std::string::npos);
   CHECK(irMethodResolution.find("const auto &semanticAwareImportAliases =") != std::string::npos);
@@ -1723,6 +1725,42 @@ TEST_CASE("semantic product return facts use definitionPathId without definition
         std::string::npos);
 
   CHECK(irLowererResultHelpers.find("returnFact->definitionPathId == InvalidSymbolId") !=
+        std::string::npos);
+}
+
+TEST_CASE("semantic product local auto facts use initializerResolvedPathId without initializerResolvedPath shadow field") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  const std::filesystem::path root =
+      std::filesystem::exists(cwd / "include" / "primec" / "SemanticProduct.h")
+          ? cwd
+          : cwd.parent_path();
+  const std::string semanticProductHeader =
+      readTextFile(root / "include" / "primec" / "SemanticProduct.h");
+  const std::string semanticProductSource =
+      readTextFile(root / "src" / "SemanticProduct.cpp");
+  const std::string bindingTypeHelpersSource =
+      readTextFile(root / "src" / "ir_lowerer" / "IrLowererBindingTypeHelpers.cpp");
+
+  const std::size_t localAutoStart =
+      semanticProductHeader.find("struct SemanticProgramLocalAutoFact {");
+  const std::size_t queryStart =
+      semanticProductHeader.find("struct SemanticProgramQueryFact {");
+  REQUIRE(localAutoStart != std::string::npos);
+  REQUIRE(queryStart != std::string::npos);
+  REQUIRE(localAutoStart < queryStart);
+
+  const std::string localAutoBody =
+      semanticProductHeader.substr(localAutoStart, queryStart - localAutoStart);
+  CHECK(localAutoBody.find("SymbolId initializerResolvedPathId = InvalidSymbolId;") !=
+        std::string::npos);
+  CHECK(localAutoBody.find("std::string initializerResolvedPath;") == std::string::npos);
+
+  CHECK(semanticProductSource.find("semanticProgramLocalAutoFactInitializerResolvedPath(") !=
+        std::string::npos);
+  CHECK(semanticProductSource.find("initializerResolvedPath.empty() ? entry.initializerResolvedPath") ==
+        std::string::npos);
+
+  CHECK(bindingTypeHelpersSource.find("localAutoFact->initializerResolvedPathId != InvalidSymbolId") !=
         std::string::npos);
 }
 

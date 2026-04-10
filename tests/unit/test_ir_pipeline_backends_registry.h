@@ -607,6 +607,21 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
 
   semanticProgram.bindingFacts.back().resolvedPathId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "/main/selected");
+  semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
+      .scopePath = "/main",
+      .bindingName = "selected",
+      .bindingTypeText = "i32",
+      .semanticNodeId = 47,
+      .initializerResolvedPathId =
+          static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u),
+  });
+  error.clear();
+  diagnosticInfo = {};
+  CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
+  CHECK(error == "missing semantic-product local-auto initializer path id: /main -> local selected");
+  CHECK(diagnosticInfo.message == error);
+
+  semanticProgram.localAutoFacts.back().initializerResolvedPathId = primec::InvalidSymbolId;
   error.clear();
   diagnosticInfo = {};
   CHECK(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));

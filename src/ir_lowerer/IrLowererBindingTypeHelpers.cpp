@@ -330,6 +330,13 @@ bool validateSemanticProductLocalAutoCoverage(const Program &program,
                 describeBindingSite(scopePath, "local", expr);
         return false;
       }
+      if (localAutoFact != nullptr &&
+          localAutoFact->initializerResolvedPathId != InvalidSymbolId &&
+          semanticProgramLocalAutoFactInitializerResolvedPath(*semanticProgram, *localAutoFact).empty()) {
+        error = "missing semantic-product local-auto initializer path id: " +
+                describeBindingSite(scopePath, "local", expr);
+        return false;
+      }
     }
     return validateExprs(scopePath, expr.args) &&
            validateExprs(scopePath, expr.bodyArguments);
