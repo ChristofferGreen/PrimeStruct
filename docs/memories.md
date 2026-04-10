@@ -65,6 +65,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   benchmark-harness coverage asserts non-math-vs-math-star ast-semantic
   top-level definition counts stay both large and ratio-bounded for
   include-scaling attribution.
+- `semantic-memory-inline-vs-import-math-pair`: semantic-memory benchmark
+  harness now validates `inline_math_body.prime` and `imported_math_body.prime`
+  keep identical body text after stripping import lines, then executes
+  `semantic_memory_benchmark.py` with those fixtures across
+  `ast-semantic,semantic-product` and asserts the exact four fixture-phase
+  tuples to guard inline-vs-stdlib-import attribution runs.
 - `semantic-product-direct-call-routing`: production lowering now validates
   that every non-method direct call has a published semantic-product routing
   fact before lowering starts, and semantic-product-aware direct-call

@@ -113,6 +113,9 @@ Semantic memory benchmark fixtures live under:
 - `non_math_large_include.prime` imports `/std/bench_non_math/*`, a non-math
   benchmark include surface that pulls `/std/collections/*` + `/std/file/*`
   and keeps top-level AST definition count comparable to `math_star_repro`.
+- `inline_math_body.prime` and `imported_math_body.prime` are paired fixtures
+  with identical non-import body text; the imported variant adds
+  `/std/math/Vec2` to isolate stdlib-import overhead from body-shape effects.
 - The benchmark harness runs fixtures across both semantic phases by default:
   `ast-semantic` and `semantic-product`.
 

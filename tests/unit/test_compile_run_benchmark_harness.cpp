@@ -134,7 +134,7 @@ TEST_CASE("semantic memory non-math include fixture keeps comparable definition 
           "  count = 0\n"
           "  with open(path, encoding='utf-8') as handle:\n"
           "    for line in handle:\n"
-          "      if re.match(r'^  \\\\[.*\\\\] /', line):\n"
+          "      if re.match(r'^  \\[.*\\] /', line):\n"
           "        count += 1\n"
           "  return count\n"
           "non_math = count_defs(sys.argv[1])\n"
@@ -368,6 +368,101 @@ TEST_CASE("semantic memory benchmark helper covers math-vector-matrix and math-s
           "  ('math_vector_matrix', 'semantic-product'),\n"
           "  ('math_star_repro', 'ast-semantic'),\n"
           "  ('math_star_repro', 'semantic-product'),\n"
+          "}\n"
+          "ok = pairs == expected and len(report['results']) == 4\n"
+          "if not ok:\n"
+          "  print('pairs=', sorted(pairs))\n"
+          "  print('count=', len(report['results']))\n"
+          "sys.exit(0 if ok else 1)\n") +
+      " " + quoteShellArg(reportPath) +
+      " > " + quoteShellArg(validateOutPath) + " 2> " + quoteShellArg(validateErrPath);
+  CHECK(runCommand(validateCmd) == 0);
+  CHECK(readFile(validateErrPath).empty());
+}
+
+TEST_CASE("semantic memory benchmark helper covers inline-vs-import math fixture phases") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path inlineFixturePath =
+      repoRoot / "benchmarks" / "semantic_memory" / "fixtures" / "inline_math_body.prime";
+  const std::filesystem::path importedFixturePath =
+      repoRoot / "benchmarks" / "semantic_memory" / "fixtures" / "imported_math_body.prime";
+  const std::string inlineFixture = readFile(inlineFixturePath.string());
+  const std::string importedFixture = readFile(importedFixturePath.string());
+  REQUIRE_FALSE(inlineFixture.empty());
+  REQUIRE_FALSE(importedFixture.empty());
+  CHECK(inlineFixture.find("import /std/math/Vec2") == std::string::npos);
+  CHECK(importedFixture.find("import /std/math/Vec2") != std::string::npos);
+
+  const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";
+  const std::filesystem::path primecPath = repoRoot / "build-release" / "primec";
+  if (!std::filesystem::exists(primecPath)) {
+    INFO("primec not available in build-release");
+    return;
+  }
+
+  const std::string fixturesValidateOutPath = writeTemp("semantic_memory_inline_import_fixture_validate.out", "");
+  const std::string fixturesValidateErrPath = writeTemp("semantic_memory_inline_import_fixture_validate.err", "");
+  const std::string fixturesValidateCmd =
+      "python3 -c " +
+      quoteShellArg(
+          "import re, sys\n"
+          "def normalize(path):\n"
+          "  lines = []\n"
+          "  with open(path, encoding='utf-8') as handle:\n"
+          "    for raw in handle:\n"
+          "      stripped = raw.strip()\n"
+          "      if not stripped:\n"
+          "        continue\n"
+          "      if stripped.startswith('import '):\n"
+          "        continue\n"
+          "      lines.append(re.sub(r'\\s+', ' ', stripped))\n"
+          "  return lines\n"
+          "inline_lines = normalize(sys.argv[1])\n"
+          "import_lines = normalize(sys.argv[2])\n"
+          "ok = inline_lines == import_lines\n"
+          "if not ok:\n"
+          "  print('inline_lines=', inline_lines)\n"
+          "  print('import_lines=', import_lines)\n"
+          "sys.exit(0 if ok else 1)\n") +
+      " " + quoteShellArg(inlineFixturePath.string()) +
+      " " + quoteShellArg(importedFixturePath.string()) +
+      " > " + quoteShellArg(fixturesValidateOutPath) + " 2> " + quoteShellArg(fixturesValidateErrPath);
+  CHECK(runCommand(fixturesValidateCmd) == 0);
+  CHECK(readFile(fixturesValidateErrPath).empty());
+
+  const std::string reportPath = writeTemp("semantic_memory_inline_import_report.json", "");
+  const std::string stdoutPath = writeTemp("semantic_memory_inline_import.out", "");
+  const std::string stderrPath = writeTemp("semantic_memory_inline_import.err", "");
+
+  const std::string benchmarkCmd =
+      "python3 " + quoteShellArg(scriptPath.string()) +
+      " --repo-root " + quoteShellArg(repoRoot.string()) +
+      " --primec " + quoteShellArg(primecPath.string()) +
+      " --runs 1 --fixtures inline_math_body,imported_math_body "
+      "--phases ast-semantic,semantic-product "
+      "--report-json " + quoteShellArg(reportPath) +
+      " > " + quoteShellArg(stdoutPath) + " 2> " + quoteShellArg(stderrPath);
+  CHECK(runCommand(benchmarkCmd) == 0);
+  CHECK(readFile(stderrPath).empty());
+
+  const std::string validateOutPath = writeTemp("semantic_memory_inline_import_validate.out", "");
+  const std::string validateErrPath = writeTemp("semantic_memory_inline_import_validate.err", "");
+  const std::string validateCmd =
+      "python3 -c " +
+      quoteShellArg(
+          "import json, sys\n"
+          "report = json.load(open(sys.argv[1], encoding='utf-8'))\n"
+          "pairs = {(row['fixture'], row['phase']) for row in report['results']}\n"
+          "expected = {\n"
+          "  ('inline_math_body', 'ast-semantic'),\n"
+          "  ('inline_math_body', 'semantic-product'),\n"
+          "  ('imported_math_body', 'ast-semantic'),\n"
+          "  ('imported_math_body', 'semantic-product'),\n"
           "}\n"
           "ok = pairs == expected and len(report['results']) == 4\n"
           "if not ok:\n"
