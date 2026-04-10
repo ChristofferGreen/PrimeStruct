@@ -47,7 +47,6 @@ struct SemanticProgramMethodCallTarget {
   std::string scopePath;
   std::string methodName;
   std::string receiverTypeText;
-  std::string resolvedPath;
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
@@ -364,6 +363,9 @@ std::string_view semanticProgramResolveCallTargetString(const SemanticProgram &s
 std::string_view semanticProgramDirectCallTargetResolvedPath(
     const SemanticProgram &semanticProgram,
     const SemanticProgramDirectCallTarget &entry);
+std::string_view semanticProgramMethodCallTargetResolvedPath(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramMethodCallTarget &entry);
 
 std::string formatSemanticProgram(const SemanticProgram &semanticProgram);
 

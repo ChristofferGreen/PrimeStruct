@@ -1149,7 +1149,7 @@ TEST_CASE("cpp-ir backend accepts semantic-product prepared IR from compile pipe
   CHECK(conformance.resolvedDirectCallPath(*directCall).rfind("/id__t", 0) == 0);
   const auto *methodCall = conformance.findMethodCallTarget("/main", "count");
   REQUIRE(methodCall != nullptr);
-  CHECK(methodCall->resolvedPath == "/vector/count");
+  CHECK(conformance.resolvedMethodCallPath(*methodCall) == "/vector/count");
   CHECK(conformance.emitResult.exitCode == 0);
 
   const std::string cpp = readTextFile(conformance.outputPath);
@@ -1188,7 +1188,7 @@ TEST_CASE("vm backend executes semantic-product prepared IR from compile pipelin
   CHECK(conformance.resolvedDirectCallPath(*directCall).rfind("/id__t", 0) == 0);
   const auto *methodCall = conformance.findMethodCallTarget("/main", "count");
   REQUIRE(methodCall != nullptr);
-  CHECK(methodCall->resolvedPath == "/vector/count");
+  CHECK(conformance.resolvedMethodCallPath(*methodCall) == "/vector/count");
   CHECK(conformance.emitResult.exitCode == 18);
 }
 
@@ -1223,7 +1223,7 @@ TEST_CASE("native backend emits semantic-product prepared IR from compile pipeli
   CHECK(conformance.resolvedDirectCallPath(*directCall).rfind("/id__t", 0) == 0);
   const auto *methodCall = conformance.findMethodCallTarget("/main", "count");
   REQUIRE(methodCall != nullptr);
-  CHECK(methodCall->resolvedPath == "/vector/count");
+  CHECK(conformance.resolvedMethodCallPath(*methodCall) == "/vector/count");
   CHECK(conformance.emitResult.exitCode == 0);
   CHECK(std::filesystem::exists(conformance.outputPath));
   CHECK(std::filesystem::is_regular_file(conformance.outputPath));
@@ -1298,9 +1298,12 @@ main() {
   REQUIRE(cppMethod != nullptr);
   REQUIRE(vmMethod != nullptr);
   REQUIRE(nativeMethod != nullptr);
-  CHECK(cppMethod->resolvedPath == "/vector/count");
-  CHECK(vmMethod->resolvedPath == cppMethod->resolvedPath);
-  CHECK(nativeMethod->resolvedPath == cppMethod->resolvedPath);
+  const std::string_view cppMethodPath = cppConformance.resolvedMethodCallPath(*cppMethod);
+  const std::string_view vmMethodPath = vmConformance.resolvedMethodCallPath(*vmMethod);
+  const std::string_view nativeMethodPath = nativeConformance.resolvedMethodCallPath(*nativeMethod);
+  CHECK(cppMethodPath == "/vector/count");
+  CHECK(vmMethodPath == cppMethodPath);
+  CHECK(nativeMethodPath == cppMethodPath);
 
   const auto *cppBridge = findSemanticEntry(primec::semanticProgramBridgePathChoiceView(cppConformance.output.semanticProgram),
       [](const primec::SemanticProgramBridgePathChoice &entry) {

@@ -781,13 +781,17 @@ TEST_CASE("ir lowerer call helpers require semantic-product method-call targets"
   CHECK(resolveExprPath(methodExpr).empty());
 
   semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
-      "/main",
-      "contains",
-      "",
-      "/std/collections/map/contains",
-      0,
-      0,
-      44,
+      .scopePath = "/main",
+      .methodName = "contains",
+      .receiverTypeText = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 44,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .methodNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "contains"),
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                        "/std/collections/map/contains"),
   });
   semanticTargets = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   resolveExprPath =
@@ -798,22 +802,30 @@ TEST_CASE("ir lowerer call helpers require semantic-product method-call targets"
 TEST_CASE("ir lowerer semantic-product adapter interns method-call targets by SymbolId") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
-      "/main",
-      "contains",
-      "",
-      "/std/collections/map/contains",
-      0,
-      0,
-      44,
+      .scopePath = "/main",
+      .methodName = "contains",
+      .receiverTypeText = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 44,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .methodNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "contains"),
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                        "/std/collections/map/contains"),
   });
   semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
-      "/main",
-      "contains",
-      "",
-      "/std/collections/map/contains",
-      0,
-      0,
-      45,
+      .scopePath = "/main",
+      .methodName = "contains",
+      .receiverTypeText = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 45,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .methodNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "contains"),
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                        "/std/collections/map/contains"),
   });
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);

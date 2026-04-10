@@ -319,7 +319,6 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.scopePath = snapshotEntry.scopePath;
       entry.methodName = snapshotEntry.methodName;
       entry.receiverTypeText = bindingTypeTextForSemanticProduct(snapshotEntry.receiverBinding);
-      entry.resolvedPath = snapshotEntry.resolvedPath;
       entry.sourceLine = snapshotEntry.sourceLine;
       entry.sourceColumn = snapshotEntry.sourceColumn;
       entry.semanticNodeId = snapshotEntry.semanticNodeId;
@@ -327,7 +326,8 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.scopePathId = semanticProgramInternCallTargetString(semanticProgram, entry.scopePath);
       entry.methodNameId = semanticProgramInternCallTargetString(semanticProgram, entry.methodName);
       entry.receiverTypeTextId = semanticProgramInternCallTargetString(semanticProgram, entry.receiverTypeText);
-      entry.resolvedPathId = semanticProgramInternCallTargetString(semanticProgram, entry.resolvedPath);
+      entry.resolvedPathId =
+          semanticProgramInternCallTargetString(semanticProgram, snapshotEntry.resolvedPath);
       semanticProgram.methodCallTargets.push_back(std::move(entry));
       const std::size_t entryIndex = semanticProgram.methodCallTargets.size() - 1;
       ensureModuleResolvedArtifacts(snapshotEntry.scopePath).methodCallTargetIndices.push_back(

@@ -145,13 +145,16 @@ TEST_CASE("ir lowerer setup type helper requires semantic-product method targets
   CHECK(error == "missing semantic-product method-call target: push");
 
   semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
-      "/main",
-      "push",
-      "",
-      "/soa_vector/push",
-      0,
-      0,
-      17,
+      .scopePath = "/main",
+      .methodName = "push",
+      .receiverTypeText = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 17,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .methodNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "push"),
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/soa_vector/push"),
   });
   const auto populatedTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
@@ -197,13 +200,17 @@ TEST_CASE("ir lowerer setup type helper rejects semantic-product method targets 
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
-      "/main",
-      "contains",
-      "",
-      "/std/collections/map/contains",
-      0,
-      0,
-      91,
+      .scopePath = "/main",
+      .methodName = "contains",
+      .receiverTypeText = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 91,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .methodNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "contains"),
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                        "/std/collections/map/contains"),
   });
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);

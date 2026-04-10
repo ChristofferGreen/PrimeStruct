@@ -75,7 +75,7 @@ P2 - Traversal and allocation churn reductions
 - ◐ [P2-13] Prototype per-definition arena/pmr allocation for transient semantic maps/vectors and report RSS/time delta.
 
 P3 - Interning/ID migration for hot paths
-- ○ [P3-18] Remove `method_call_targets.resolvedPath` string shadow and require `resolvedPathId` on semantic-product paths.
+- ◐ [P3-18] Remove `method_call_targets.resolvedPath` string shadow and require `resolvedPathId` on semantic-product paths.
 - ○ [P3-19] Remove `bridge_path_choices.helperName` string shadow and require `helperNameId` on semantic-product paths.
 - ○ [P3-20] Remove `callable_summaries.fullPath` string shadow and require `fullPathId` in semantic-product consumers.
 - ○ [P3-21] Remove `binding_facts.resolvedPath` string shadow and require `resolvedPathId` in semantic-product consumers.

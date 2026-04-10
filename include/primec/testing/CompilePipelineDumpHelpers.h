@@ -69,6 +69,10 @@ struct CompilePipelineBackendConformance {
     return semanticProgramDirectCallTargetResolvedPath(output.semanticProgram, entry);
   }
 
+  std::string_view resolvedMethodCallPath(const SemanticProgramMethodCallTarget &entry) const {
+    return semanticProgramMethodCallTargetResolvedPath(output.semanticProgram, entry);
+  }
+
   const SemanticProgramMethodCallTarget *findMethodCallTarget(std::string_view scopePath,
                                                               std::string_view methodName) const {
     const auto methodCallTargets = semanticProgramMethodCallTargetView(output.semanticProgram);

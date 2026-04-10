@@ -132,6 +132,12 @@ std::string_view semanticProgramDirectCallTargetResolvedPath(
   return semanticProgramResolveCallTargetString(semanticProgram, entry.resolvedPathId);
 }
 
+std::string_view semanticProgramMethodCallTargetResolvedPath(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramMethodCallTarget &entry) {
+  return semanticProgramResolveCallTargetString(semanticProgram, entry.resolvedPathId);
+}
+
 std::string formatSemanticStringListFromIds(const SemanticProgram &semanticProgram,
                                             const std::vector<SymbolId> &ids,
                                             const std::vector<std::string> &fallbackValues) {
@@ -361,7 +367,7 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
     const std::string_view receiverTypeText =
         semanticProgramResolveCallTargetString(semanticProgram, entry.receiverTypeTextId);
     const std::string_view resolvedPath =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.resolvedPathId);
+        semanticProgramMethodCallTargetResolvedPath(semanticProgram, entry);
     appendSemanticIndexedLine(out,
                               "method_call_targets",
                               i,
@@ -374,7 +380,7 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                                           ? entry.receiverTypeText
                                                           : receiverTypeText) +
                                   " resolved_path=" +
-                                  quoteSemanticString(resolvedPath.empty() ? entry.resolvedPath : resolvedPath) +
+                                  quoteSemanticString(resolvedPath) +
                                   " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));

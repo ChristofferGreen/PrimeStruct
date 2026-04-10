@@ -53,6 +53,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   before lowering starts, and semantic-product-aware method resolution no
   longer falls back to receiver/helper inference when those facts are
   absent.
+- `semantic-product-method-call-path-id-only`: `SemanticProgramMethodCallTarget`
+  no longer stores a `resolvedPath` string shadow; semantic-product formatter,
+  backend conformance helpers, and IR-lowerer method-target adapters now read
+  method-call resolved paths exclusively via `resolvedPathId`.
 - `semantic-product-bridge-path-routing`: production lowering now requires
   published semantic-product bridge-path choices for collection-helper
   bridge calls, and semantic-aware direct-call resolution no longer routes

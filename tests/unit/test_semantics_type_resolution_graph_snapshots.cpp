@@ -689,10 +689,11 @@ TEST_CASE("semantic product publishes resolved method-call targets") {
 
   const auto *targetEntry = findSemanticEntry(
       primec::semanticProgramMethodCallTargetView(semanticProgram),
-      [](const primec::SemanticProgramMethodCallTarget &entry) {
+      [&semanticProgram](const primec::SemanticProgramMethodCallTarget &entry) {
         return entry.scopePath == "/main" &&
                entry.methodName == "count" &&
-               entry.resolvedPath == "/vector/count";
+               primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, entry) ==
+                   "/vector/count";
       });
   REQUIRE(targetEntry != nullptr);
   CHECK(targetEntry->receiverTypeText.find("vector") != std::string::npos);
@@ -739,16 +740,18 @@ TEST_CASE("semantic product method-call targets stay separated by receiver type"
   const auto hasAIdTarget = std::any_of(
       methodTargets.begin(),
       methodTargets.end(),
-      [](const primec::SemanticProgramMethodCallTarget *entry) {
+      [&semanticProgram](const primec::SemanticProgramMethodCallTarget *entry) {
         return entry->scopePath == "/main" && entry->methodName == "id" &&
-               entry->resolvedPath == "/A/id";
+               primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, *entry) ==
+                   "/A/id";
       });
   const auto hasBIdTarget = std::any_of(
       methodTargets.begin(),
       methodTargets.end(),
-      [](const primec::SemanticProgramMethodCallTarget *entry) {
+      [&semanticProgram](const primec::SemanticProgramMethodCallTarget *entry) {
         return entry->scopePath == "/main" && entry->methodName == "id" &&
-               entry->resolvedPath == "/B/id";
+               primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, *entry) ==
+                   "/B/id";
       });
   CHECK(hasAIdTarget);
   CHECK(hasBIdTarget);
@@ -815,7 +818,8 @@ TEST_CASE("semantic product method-call targets carry interned path ids") {
   std::vector<const primec::SemanticProgramMethodCallTarget *> mainTargets;
   for (const auto *entry : primec::semanticProgramMethodCallTargetView(semanticProgram)) {
     if (entry->scopePath == "/main" && entry->methodName == "count" &&
-        entry->resolvedPath == "/vector/count") {
+        primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, *entry) ==
+            "/vector/count") {
       mainTargets.push_back(entry);
     }
   }
@@ -2616,24 +2620,36 @@ TEST_CASE("semantic product formatter resolves module method-call indices determ
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
   semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
-      "/z",
-      "scale",
-      "matrix<f32>",
-      "/std/math/matrix/scale",
-      22,
-      6,
-      330,
-      930,
+      .scopePath = "/z",
+      .methodName = "scale",
+      .receiverTypeText = "matrix<f32>",
+      .sourceLine = 22,
+      .sourceColumn = 6,
+      .semanticNodeId = 330,
+      .provenanceHandle = 930,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/z"),
+      .methodNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "scale"),
+      .receiverTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "matrix<f32>"),
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                        "/std/math/matrix/scale"),
   });
   semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
-      "/a",
-      "length",
-      "vector<f32>",
-      "/std/math/vector/length",
-      12,
-      3,
-      230,
-      830,
+      .scopePath = "/a",
+      .methodName = "length",
+      .receiverTypeText = "vector<f32>",
+      .sourceLine = 12,
+      .sourceColumn = 3,
+      .semanticNodeId = 230,
+      .provenanceHandle = 830,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/a"),
+      .methodNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "length"),
+      .receiverTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "vector<f32>"),
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                        "/std/math/vector/length"),
   });
 
   primec::SemanticProgramModuleResolvedArtifacts moduleA;
@@ -2698,14 +2714,20 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/id"),
   });
   semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
-      "/main",
-      "count",
-      "vector<i32>",
-      "/std/collections/vector/count",
-      9,
-      13,
-      14,
-      104,
+      .scopePath = "/main",
+      .methodName = "count",
+      .receiverTypeText = "vector<i32>",
+      .sourceLine = 9,
+      .sourceColumn = 13,
+      .semanticNodeId = 14,
+      .provenanceHandle = 104,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .methodNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "count"),
+      .receiverTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "vector<i32>"),
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                        "/std/collections/vector/count"),
   });
   semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
       .scopePath = "/main",

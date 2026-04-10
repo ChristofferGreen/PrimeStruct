@@ -54,10 +54,8 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
   adapter.methodCallTargetPathsById.reserve(methodCallTargets.size());
   adapter.methodCallTargetIdsByPath.reserve(methodCallTargets.size());
   for (const auto *entry : methodCallTargets) {
-    const std::string_view resolvedPathView =
-        semanticProgramResolveCallTargetString(*semanticProgram, entry->resolvedPathId);
     const std::string_view resolvedPath =
-        resolvedPathView.empty() ? std::string_view(entry->resolvedPath) : resolvedPathView;
+        semanticProgramMethodCallTargetResolvedPath(*semanticProgram, *entry);
     if (entry->semanticNodeId != 0 && !resolvedPath.empty()) {
       const std::string resolvedPathText(resolvedPath);
       SymbolId pathId = InvalidSymbolId;
