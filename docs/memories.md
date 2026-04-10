@@ -252,6 +252,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   former 256-element local-capacity ceiling; compile-run coverage now locks
   successful native/VM materialization for 257-element root
   `soa_vector<Particle>(...)` literals.
+- `semantic-soa-s1-literal-diagnostics-semantic-stage-2026-04`: Group 14 now
+  archives the S1 diagnostics slice where non-struct non-empty builtin
+  `soa_vector` literal errors come from semantic validation (canonical
+  `soa_vector requires struct element type`, `stage: semantic`) instead of
+  lowering-specific diagnostics; VM/native compile-run regressions now lock the
+  semantic-stage provenance.
 - `semantic-method-target-scratch-candidates`: infer-stage method-target
   resolution now reuses `CallTargetResolutionScratch::methodReceiverResolutionCandidates`
   for scoped definitions/executions in `resolveInferMethodCallPath(...)`,

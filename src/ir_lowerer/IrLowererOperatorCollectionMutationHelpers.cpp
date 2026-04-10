@@ -72,17 +72,9 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       int32_t soaStructSlotCount = 0;
       if (isSoaStructLiteral) {
         soaStructPath = inferStructExprPath(expr.args.front(), localsIn);
-        if (soaStructPath.empty()) {
-          error = "native backend requires soa_vector literal elements to be struct values";
-          return false;
-        }
         if (!resolveStructSlotCount(soaStructPath, soaStructSlotCount)) {
           return false;
         }
-      }
-      if (isSoaVector && !expr.args.empty() && !isSoaStructLiteral) {
-        error = "native backend currently supports non-empty soa_vector literals only for struct element types";
-        return false;
       }
       const bool isEmptyOpaqueVectorLiteral =
           builtin == "vector" && elemKind == LocalInfo::ValueKind::Unknown &&

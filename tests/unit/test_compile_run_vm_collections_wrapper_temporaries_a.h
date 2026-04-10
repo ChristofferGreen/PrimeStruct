@@ -598,7 +598,9 @@ main() {
       (testScratchPath("") / "primec_vm_root_soa_vector_non_struct_literal_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("soa_vector requires struct element type") != std::string::npos);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("soa_vector requires struct element type") != std::string::npos);
+  CHECK(error.find("stage: semantic") != std::string::npos);
 }
 
 TEST_CASE("vm materializes non-empty root soa_vector literals above former local capacity limit") {

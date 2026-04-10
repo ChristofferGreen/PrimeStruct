@@ -607,11 +607,10 @@ Still-unhandled compiler-owned SoA fallback families (2026-04 refresh):
     `soa_vector<T>(...)` where non-empty `T` must lower as struct-backed
     experimental SoA payload (`soa_vector<i32>(1i32)` still rejects).
   - Current behavior:
-    lowering hard-fails with compiler-owned diagnostics for non-struct element
-    payloads (`native backend requires soa_vector literal elements to be struct
-    values` / `native backend currently supports non-empty soa_vector literals
-    only for struct element types`), while struct-element non-empty literals
-    now lower above the old 256-element local-capacity ceiling.
+    semantic validation now rejects non-struct element payloads before lowering
+    with the canonical diagnostic (`soa_vector requires struct element type`),
+    while struct-element non-empty literals now lower above the old 256-element
+    local-capacity ceiling.
   - Owning files:
     `src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp`.
 - Family S2: canonical `to_aos` argument bridging still depends on a
