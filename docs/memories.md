@@ -144,6 +144,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `skipSemanticProductForNonConsumingPath` for no-dump unknown emit kinds, so
   non-consuming unknown-backend dispatch paths avoid semantic-product
   allocation before reporting the canonical emit error.
+- `primevm-debug-replay-trace-only-fast-path`: `primevm` now keeps
+  `--debug-replay` on a trace-only fast path whenever no dump stage is
+  requested, so that non-consuming entrypoint bypasses compile-pipeline/IR
+  preparation semantic-product demand; backend-registry source-lock coverage
+  asserts this branch remains before the `runCompilePipeline(...)` call.
 - `semantic-product-direct-call-routing`: production lowering now validates
   that every non-method direct call has a published semantic-product routing
   fact before lowering starts, and semantic-product-aware direct-call

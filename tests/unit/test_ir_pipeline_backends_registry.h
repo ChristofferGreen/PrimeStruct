@@ -3213,6 +3213,13 @@ TEST_CASE("primevm uses shared ir preparation helper") {
   REQUIRE(std::filesystem::exists(mainPath));
 
   const std::string source = readTextFile(mainPath);
+  const size_t replayFastPathPos =
+      source.find("if (!options.debugReplayPath.empty() && options.dumpStage.empty())");
+  const size_t compilePipelinePos = source.find(
+      "if (!primec::runCompilePipeline(options, pipelineOutput, pipelineError, error, &pipelineDiagnosticInfo))");
+  REQUIRE(replayFastPathPos != std::string::npos);
+  REQUIRE(compilePipelinePos != std::string::npos);
+  CHECK(replayFastPathPos < compilePipelinePos);
   CHECK(source.find("vmIrBackendDiagnostics()") != std::string::npos);
   CHECK(source.find("normalizeVmLoweringError") != std::string::npos);
   CHECK(source.find("describeCompilePipelineFailure(pipelineOutput)") != std::string::npos);

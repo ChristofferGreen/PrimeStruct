@@ -31,7 +31,6 @@ Order rule: execute leaves top-to-bottom. Each leaf below is scoped to one code-
 P0 - Reproducible measurement and attribution
 
 P1 - Immediate peak-RSS reductions in existing pipeline
-- ◐ [P1-05] Migrate a second non-consuming backend IR-preparation entry point to skip semantic-product requests.
 - ◐ [P1-06] Add/refresh backend-entrypoint inventory (`docs/semantic_product_backend_entrypoint_inventory.md`) and append explicit one-leaf follow-ups for each remaining non-consuming backend family.
 - ◐ [P1-06a] Migrate `tests/unit/test_ir_pipeline_helpers.h::parseAndValidateThroughCompilePipeline` to skip semantic-product requests when semantic output is not requested.
 - ◐ [P1-06b] Add explicit semantic-product intent plumbing to `include/primec/testing/CompilePipelineDumpHelpers.h` so non-consuming dump families cannot regress into implicit semantic-product allocation.
