@@ -502,7 +502,6 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.scopePath = snapshotEntry.scopePath;
       entry.bindingName = snapshotEntry.bindingName;
       entry.bindingTypeText = bindingTypeTextForSemanticProduct(snapshotEntry.binding);
-      entry.initializerResolvedPath = snapshotEntry.initializerResolvedPath;
       entry.initializerBindingTypeText = bindingTypeTextForSemanticProduct(snapshotEntry.initializerBinding);
       entry.initializerReceiverBindingTypeText =
           bindingTypeTextForSemanticProduct(snapshotEntry.initializerReceiverBinding);
@@ -542,7 +541,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.bindingNameId = semanticProgramInternCallTargetString(semanticProgram, entry.bindingName);
       entry.bindingTypeTextId = semanticProgramInternCallTargetString(semanticProgram, entry.bindingTypeText);
       entry.initializerResolvedPathId =
-          semanticProgramInternCallTargetString(semanticProgram, entry.initializerResolvedPath);
+          semanticProgramInternCallTargetString(semanticProgram, snapshotEntry.initializerResolvedPath);
       entry.initializerBindingTypeTextId =
           semanticProgramInternCallTargetString(semanticProgram, entry.initializerBindingTypeText);
       entry.initializerReceiverBindingTypeTextId =

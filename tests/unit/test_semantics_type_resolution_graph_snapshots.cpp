@@ -1117,7 +1117,9 @@ TEST_CASE("semantic product local auto facts carry interned text ids") {
   checkTextId(firstEntry->scopePath, firstEntry->scopePathId);
   checkTextId(firstEntry->bindingName, firstEntry->bindingNameId);
   checkTextId(firstEntry->bindingTypeText, firstEntry->bindingTypeTextId);
-  checkTextId(firstEntry->initializerResolvedPath, firstEntry->initializerResolvedPathId);
+  checkTextId(
+      primec::semanticProgramLocalAutoFactInitializerResolvedPath(semanticProgram, *firstEntry),
+      firstEntry->initializerResolvedPathId);
   checkTextId(firstEntry->initializerBindingTypeText, firstEntry->initializerBindingTypeTextId);
   checkTextId(firstEntry->initializerReceiverBindingTypeText,
               firstEntry->initializerReceiverBindingTypeTextId);
@@ -1706,7 +1708,8 @@ main() {
       });
   REQUIRE(localAutoEntry != nullptr);
   CHECK(localAutoEntry->bindingTypeText == "int");
-  CHECK(localAutoEntry->initializerResolvedPath == "/lookup");
+  CHECK(primec::semanticProgramLocalAutoFactInitializerResolvedPath(
+            semanticProgram, *localAutoEntry) == "/lookup");
   CHECK(localAutoEntry->initializerDirectCallResolvedPath == "/lookup");
   CHECK(!localAutoEntry->initializerDirectCallReturnKind.empty());
   CHECK(localAutoEntry->initializerMethodCallResolvedPath.empty());
@@ -2880,35 +2883,36 @@ TEST_CASE("semantic product formatter exact golden is stable") {
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
   });
   semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
-      "/main",
-      "selected",
-      "i32",
-      "/id",
-      "i32",
-      "",
-      "i32",
-      false,
-      "",
-      "",
-      false,
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "return",
-      "",
-      "",
-      0,
-      14,
-      9,
-      22,
-      112,
-      "",
-      "",
-      "",
-      "",
+      .scopePath = "/main",
+      .bindingName = "selected",
+      .bindingTypeText = "i32",
+      .initializerBindingTypeText = "i32",
+      .initializerReceiverBindingTypeText = "",
+      .initializerQueryTypeText = "i32",
+      .initializerResultHasValue = false,
+      .initializerResultValueType = "",
+      .initializerResultErrorType = "",
+      .initializerHasTry = false,
+      .initializerTryOperandResolvedPath = "",
+      .initializerTryOperandBindingTypeText = "",
+      .initializerTryOperandReceiverBindingTypeText = "",
+      .initializerTryOperandQueryTypeText = "",
+      .initializerTryValueType = "",
+      .initializerTryErrorType = "",
+      .initializerTryContextReturnKind = "return",
+      .initializerTryOnErrorHandlerPath = "",
+      .initializerTryOnErrorErrorType = "",
+      .initializerTryOnErrorBoundArgCount = 0,
+      .sourceLine = 14,
+      .sourceColumn = 9,
+      .semanticNodeId = 22,
+      .provenanceHandle = 112,
+      .initializerDirectCallResolvedPath = "",
+      .initializerDirectCallReturnKind = "",
+      .initializerMethodCallResolvedPath = "",
+      .initializerMethodCallReturnKind = "",
+      .initializerResolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/id"),
   });
   semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
       "/main",

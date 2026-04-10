@@ -1373,7 +1373,8 @@ main() {
   REQUIRE(cppLocalAuto != nullptr);
   REQUIRE(vmLocalAuto != nullptr);
   REQUIRE(nativeLocalAuto != nullptr);
-  CHECK(cppLocalAuto->initializerResolvedPath == "/lookup");
+  CHECK(primec::semanticProgramLocalAutoFactInitializerResolvedPath(
+            cppConformance.output.semanticProgram, *cppLocalAuto) == "/lookup");
   CHECK(cppLocalAuto->initializerHasTry);
   CHECK(cppLocalAuto->initializerTryValueType == "int");
   CHECK(vmLocalAuto->bindingTypeText == cppLocalAuto->bindingTypeText);

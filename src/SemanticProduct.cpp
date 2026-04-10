@@ -162,6 +162,12 @@ std::string_view semanticProgramReturnFactDefinitionPath(
   return semanticProgramResolveCallTargetString(semanticProgram, entry.definitionPathId);
 }
 
+std::string_view semanticProgramLocalAutoFactInitializerResolvedPath(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramLocalAutoFact &entry) {
+  return semanticProgramResolveCallTargetString(semanticProgram, entry.initializerResolvedPathId);
+}
+
 std::string formatSemanticStringListFromIds(const SemanticProgram &semanticProgram,
                                             const std::vector<SymbolId> &ids,
                                             const std::vector<std::string> &fallbackValues) {
@@ -611,8 +617,9 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   quoteSemanticString(localAutoText(entry.bindingTypeTextId,
                                                                     entry.bindingTypeText)) +
                                   " initializer_resolved_path=" +
-                                  quoteSemanticString(localAutoText(entry.initializerResolvedPathId,
-                                                                    entry.initializerResolvedPath)) +
+                                  quoteSemanticString(
+                                      semanticProgramLocalAutoFactInitializerResolvedPath(
+                                          semanticProgram, entry)) +
                                   " initializer_binding_type_text=" +
                                   quoteSemanticString(localAutoText(entry.initializerBindingTypeTextId,
                                                                     entry.initializerBindingTypeText)) +
