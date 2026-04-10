@@ -444,16 +444,9 @@ std::string soaFieldViewHelperPath(std::string_view fieldName) {
 bool splitSoaFieldViewHelperPath(std::string_view path, std::string *fieldNameOut) {
   constexpr std::string_view kCanonicalSoaFieldViewPrefix =
       "/std/collections/soa_vector/field_view/";
-  constexpr std::string_view kLegacySoaFieldViewPrefix = "/soa_vector/field_view/";
   if (path.starts_with(kCanonicalSoaFieldViewPrefix)) {
     if (fieldNameOut != nullptr) {
       *fieldNameOut = std::string(path.substr(kCanonicalSoaFieldViewPrefix.size()));
-    }
-    return true;
-  }
-  if (path.starts_with(kLegacySoaFieldViewPrefix)) {
-    if (fieldNameOut != nullptr) {
-      *fieldNameOut = std::string(path.substr(kLegacySoaFieldViewPrefix.size()));
     }
     return true;
   }

@@ -18,6 +18,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   rejects through canonical single-argument
   `soaUnavailableMethodDiagnostic(...)` unknown-method paths after dropping
   the unused borrowed-helper visibility probe argument.
+- `soa-field-view-helper-canonical-prefix-only`: `splitSoaFieldViewHelperPath`
+  now accepts only the canonical `/std/collections/soa_vector/field_view/`
+  prefix and no longer matches legacy `/soa_vector/field_view/` helper paths;
+  source-lock IR pipeline coverage now asserts that the legacy prefix string
+  does not appear in `SemanticsBuiltinPathHelpers.cpp`.
 - `arg-pack-dereference-struct-inference`: IR struct-type inference now
   propagates through `dereference(...)`, so indexed borrowed arg-pack values
   (for example `args<Reference<Map<K, V>>>`) preserve their struct identity
