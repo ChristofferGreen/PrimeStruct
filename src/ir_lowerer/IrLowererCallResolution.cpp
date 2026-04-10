@@ -254,6 +254,14 @@ bool validateSemanticProductDirectCallCoverage(const Program &program,
 
   const SemanticProductTargetAdapter semanticProductTargets =
       buildSemanticProductTargetAdapter(semanticProgram);
+  const auto bridgePathChoices = semanticProgramBridgePathChoiceView(*semanticProgram);
+  std::unordered_map<uint64_t, const SemanticProgramBridgePathChoice *> bridgePathChoicesByExpr;
+  bridgePathChoicesByExpr.reserve(bridgePathChoices.size());
+  for (const auto *entry : bridgePathChoices) {
+    if (entry->semanticNodeId != 0) {
+      bridgePathChoicesByExpr.insert_or_assign(entry->semanticNodeId, entry);
+    }
+  }
   std::function<bool(const std::string &, const Expr &)> validateExpr;
   auto validateExprs = [&](const std::string &scopePath, const std::vector<Expr> &exprs) {
     for (const auto &expr : exprs) {
@@ -270,6 +278,10 @@ bool validateSemanticProductDirectCallCoverage(const Program &program,
         error = "missing semantic-product direct-call semantic id: " +
                 describeCallSite(scopePath, expr);
         return false;
+      }
+      if (bridgePathChoicesByExpr.contains(expr.semanticNodeId)) {
+        return validateExprs(scopePath, expr.args) &&
+               validateExprs(scopePath, expr.bodyArguments);
       }
       if (findSemanticProductBridgePathChoice(semanticProductTargets, expr).empty() &&
           findSemanticProductDirectCallTarget(semanticProductTargets, expr).empty()) {

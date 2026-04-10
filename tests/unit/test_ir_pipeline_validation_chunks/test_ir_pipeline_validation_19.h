@@ -893,6 +893,48 @@ TEST_CASE("ir lowerer call helpers require semantic-product bridge-path choices"
   CHECK(semanticResolveExprPath(callExpr) == "/vector/count");
 }
 
+TEST_CASE("ir lowerer semantic-product adapter ignores bridge-path choices missing helper name ids") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
+      .scopePath = "/main",
+      .collectionFamily = "vector",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 118,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .collectionFamilyId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "vector"),
+      .helperNameId = primec::InvalidSymbolId,
+      .chosenPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
+  });
+  semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
+      .scopePath = "/main",
+      .collectionFamily = "vector",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 119,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .collectionFamilyId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "vector"),
+      .helperNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "count"),
+      .chosenPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
+  });
+
+  const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  CHECK(adapter.bridgePathChoicesByExpr.count(118) == 0);
+  CHECK(adapter.bridgePathChoicesByExpr.count(119) == 1);
+
+  primec::Expr missingHelperExpr;
+  missingHelperExpr.kind = primec::Expr::Kind::Call;
+  missingHelperExpr.semanticNodeId = 118;
+  CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoice(adapter, missingHelperExpr).empty());
+
+  primec::Expr validExpr;
+  validExpr.kind = primec::Expr::Kind::Call;
+  validExpr.semanticNodeId = 119;
+  CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoice(adapter, validExpr) == "/vector/count");
+}
+
 TEST_CASE("ir lowerer semantic-product adapter joins return and inference facts by semantic id only") {
   primec::Definition mainDef;
   mainDef.fullPath = "/renamed_main";

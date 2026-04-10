@@ -1619,10 +1619,13 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterSource.find("adapter.semanticProgram = semanticProgram;") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("entry->resolvedPathId == InvalidSymbolId") != std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("entry->helperNameId != InvalidSymbolId") != std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramResolveCallTargetString(*adapter.semanticProgram, pathId)") !=
         std::string::npos);
 
   CHECK(irCallResolution.find("bool validateSemanticProductDirectCallCoverage(const Program &program,") !=
+        std::string::npos);
+  CHECK(irCallResolution.find("bridgePathChoicesByExpr.contains(expr.semanticNodeId)") !=
         std::string::npos);
   CHECK(irCallResolution.find("missing semantic-product direct-call target: ") != std::string::npos);
   CHECK(irCallResolution.find("bool validateSemanticProductBridgePathCoverage(const Program &program,") !=
