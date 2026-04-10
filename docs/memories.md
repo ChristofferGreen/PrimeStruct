@@ -246,6 +246,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_56.h`
   locks that empty-callee inputs fail while canonical
   `/std/collections/soa_vector/to_aos_ref` continues to pass.
+- `semantic-soa-s1-literal-capacity-slice-2026-04`: Group 14 archives the
+  S1 literal-capacity migration slice where VM/native lowering no longer
+  rejects struct-element non-empty builtin `soa_vector` literals above the
+  former 256-element local-capacity ceiling; compile-run coverage now locks
+  successful native/VM materialization for 257-element root
+  `soa_vector<Particle>(...)` literals.
 - `semantic-method-target-scratch-candidates`: infer-stage method-target
   resolution now reuses `CallTargetResolutionScratch::methodReceiverResolutionCandidates`
   for scoped definitions/executions in `resolveInferMethodCallPath(...)`,

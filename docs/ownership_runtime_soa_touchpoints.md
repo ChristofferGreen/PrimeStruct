@@ -610,8 +610,8 @@ Still-unhandled compiler-owned SoA fallback families (2026-04 refresh):
     lowering hard-fails with compiler-owned diagnostics for non-struct element
     payloads (`native backend requires soa_vector literal elements to be struct
     values` / `native backend currently supports non-empty soa_vector literals
-    only for struct element types`), and enforces a compiler-owned capacity
-    ceiling (`soa_vector literal exceeds local capacity limit (256)`).
+    only for struct element types`), while struct-element non-empty literals
+    now lower above the old 256-element local-capacity ceiling.
   - Owning files:
     `src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp`.
 - Family S2: canonical `to_aos` argument bridging still depends on a

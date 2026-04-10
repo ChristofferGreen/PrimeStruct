@@ -12,7 +12,9 @@ Sizing note: each leaf `○` item should fit in one code-affecting commit plus f
 
 **Group 14 - SoA bring-up and end-state cleanup**
 - ◐ Retire remaining compiler-owned builtin `soa_vector` semantics/lowering/backend scaffolding as the stdlib `.prime` substrate becomes authoritative.
-  - ◐ Migrate the next compiler-owned SoA fallback family onto shared stdlib helper/conversion paths.
+  - ◐ Migrate Family S1 builtin `soa_vector` literal fallback onto shared stdlib helper/conversion paths. Progress: removed compiler-owned VM/native rejection of struct-element `soa_vector` literals above the former 256-element local-capacity ceiling.
+    - ○ Migrate remaining struct-only non-empty builtin `soa_vector` literal fallback diagnostics off compiler-owned lowering checks.
+  - ○ Migrate the next still-unhandled compiler-owned SoA fallback family (S2 storage-layout bridge shim or S3 pending field-view diagnostics) onto shared stdlib helper/conversion paths.
 
 **Group 15 - Semantic memory footprint and multithread compile substrate**
 Order rule: execute leaves top-to-bottom. Each leaf below is scoped to one code-affecting commit.

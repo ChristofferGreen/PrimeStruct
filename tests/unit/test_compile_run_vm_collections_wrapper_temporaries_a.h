@@ -601,7 +601,7 @@ main() {
   CHECK(readFile(errPath).find("soa_vector requires struct element type") != std::string::npos);
 }
 
-TEST_CASE("vm rejects non-empty root soa_vector literals above local capacity limit") {
+TEST_CASE("vm materializes non-empty root soa_vector literals above former local capacity limit") {
   auto buildParticleLiteralArgs = [](int count) {
     std::string args;
     args.reserve(static_cast<size_t>(count) * 20);
@@ -627,12 +627,8 @@ TEST_CASE("vm rejects non-empty root soa_vector literals above local capacity li
                              "  return(0i32)\n"
                              "}\n";
   const std::string srcPath = writeTemp("vm_root_soa_vector_literal_limit_overflow.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_root_soa_vector_literal_limit_overflow_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("soa_vector literal exceeds local capacity limit (256)") !=
-        std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 0);
 }
 
 TEST_CASE("vm runs experimental soa_vector stdlib non-empty to-aos helper") {

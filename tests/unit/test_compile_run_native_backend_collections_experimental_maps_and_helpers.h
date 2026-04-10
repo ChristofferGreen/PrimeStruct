@@ -677,7 +677,7 @@ main() {
   CHECK(readFile(errPath).find("soa_vector requires struct element type") != std::string::npos);
 }
 
-TEST_CASE("native rejects non-empty root soa_vector literals above local capacity limit") {
+TEST_CASE("native materializes non-empty root soa_vector literals above former local capacity limit") {
   auto buildParticleLiteralArgs = [](int count) {
     std::string args;
     args.reserve(static_cast<size_t>(count) * 20);
@@ -704,13 +704,11 @@ TEST_CASE("native rejects non-empty root soa_vector literals above local capacit
                              "}\n";
   const std::string srcPath =
       writeTemp("compile_native_root_soa_vector_literal_limit_overflow.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_root_soa_vector_literal_limit_overflow_err.txt").string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("soa_vector literal exceeds local capacity limit (256)") !=
-        std::string::npos);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_root_soa_vector_literal_limit_overflow_exe").string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("native runs experimental soa_vector stdlib non-empty to-aos helper") {

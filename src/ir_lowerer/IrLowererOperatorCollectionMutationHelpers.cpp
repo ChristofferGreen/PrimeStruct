@@ -96,12 +96,8 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       const int32_t baseLocal = nextLocal;
       const int32_t headerSlots = isVectorLike ? 3 : 1;
       const int32_t literalCount = static_cast<int32_t>(expr.args.size());
-      if (isVectorLike && literalCount > kVectorLocalDynamicCapacityLimit) {
-        if (isSoaVector) {
-          error = "soa_vector literal exceeds local capacity limit (256)";
-        } else {
-          error = vectorLiteralExceedsLocalCapacityLimitMessage();
-        }
+      if (!isSoaVector && isVectorLike && literalCount > kVectorLocalDynamicCapacityLimit) {
+        error = vectorLiteralExceedsLocalCapacityLimitMessage();
         return false;
       }
       const int32_t storageCapacity =
