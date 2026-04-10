@@ -144,6 +144,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `skipSemanticProductForNonConsumingPath` for no-dump unknown emit kinds, so
   non-consuming unknown-backend dispatch paths avoid semantic-product
   allocation before reporting the canonical emit error.
+- `ir-pipeline-helper-non-consuming-semantic-intent`: the stdlib-import
+  test helper `parseAndValidateThroughCompilePipeline(...)` now selects
+  semantic-product intent from `semanticProgramOut` and applies
+  `SkipForNonConsumingPath` when semantic output is not requested, with
+  backend-registry source-lock coverage pinning this wiring.
 - `primevm-debug-replay-trace-only-fast-path`: `primevm` now keeps
   `--debug-replay` on a trace-only fast path whenever no dump stage is
   requested, so that non-consuming entrypoint bypasses compile-pipeline/IR

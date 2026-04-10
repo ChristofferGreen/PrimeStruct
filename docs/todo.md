@@ -31,7 +31,6 @@ Order rule: execute leaves top-to-bottom. Each leaf below is scoped to one code-
 P0 - Reproducible measurement and attribution
 
 P1 - Immediate peak-RSS reductions in existing pipeline
-- ◐ [P1-06a] Migrate `tests/unit/test_ir_pipeline_helpers.h::parseAndValidateThroughCompilePipeline` to skip semantic-product requests when semantic output is not requested.
 - ◐ [P1-06b] Add explicit semantic-product intent plumbing to `include/primec/testing/CompilePipelineDumpHelpers.h` so non-consuming dump families cannot regress into implicit semantic-product allocation.
 - ◐ [P1-07] Replace per-module full-entry copies for one high-volume semantic-product fact family with canonical vector references/indices.
 - ◐ [P1-08] Add formatter/update path that resolves module references without re-copying entries for that migrated fact family.

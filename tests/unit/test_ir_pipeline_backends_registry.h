@@ -3235,3 +3235,19 @@ TEST_CASE("primevm uses shared ir preparation helper") {
   CHECK(source.find("inlineIrModuleCalls(ir, error)") == std::string::npos);
   CHECK(source.find("validateIrModule(ir, primec::IrValidationTarget::Vm, error)") == std::string::npos);
 }
+
+TEST_CASE("ir pipeline helper skips semantic product for non-consuming requests") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path helperPath = cwd / "tests" / "unit" / "test_ir_pipeline_helpers.h";
+  if (!std::filesystem::exists(helperPath)) {
+    helperPath = cwd.parent_path() / "tests" / "unit" / "test_ir_pipeline_helpers.h";
+  }
+  REQUIRE(std::filesystem::exists(helperPath));
+
+  const std::string source = readTextFile(helperPath);
+  CHECK(source.find("CompilePipelineSemanticProductIntentForTesting::SkipForNonConsumingPath") !=
+        std::string::npos);
+  CHECK(source.find("semanticProgramOut != nullptr") != std::string::npos);
+  CHECK(source.find("applyCompilePipelineSemanticProductIntentForTesting(options, semanticProductIntent);") !=
+        std::string::npos);
+}
