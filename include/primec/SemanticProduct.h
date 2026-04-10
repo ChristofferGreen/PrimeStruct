@@ -60,7 +60,6 @@ struct SemanticProgramMethodCallTarget {
 struct SemanticProgramBridgePathChoice {
   std::string scopePath;
   std::string collectionFamily;
-  std::string helperName;
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
@@ -366,6 +365,9 @@ std::string_view semanticProgramDirectCallTargetResolvedPath(
 std::string_view semanticProgramMethodCallTargetResolvedPath(
     const SemanticProgram &semanticProgram,
     const SemanticProgramMethodCallTarget &entry);
+std::string_view semanticProgramBridgePathChoiceHelperName(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramBridgePathChoice &entry);
 
 std::string formatSemanticProgram(const SemanticProgram &semanticProgram);
 

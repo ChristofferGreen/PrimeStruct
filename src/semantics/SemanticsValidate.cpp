@@ -341,7 +341,6 @@ SemanticProgram buildSemanticProgram(const Program &program,
       SemanticProgramBridgePathChoice entry;
       entry.scopePath = snapshotEntry.scopePath;
       entry.collectionFamily = snapshotEntry.collectionFamily;
-      entry.helperName = snapshotEntry.helperName;
       entry.sourceLine = snapshotEntry.sourceLine;
       entry.sourceColumn = snapshotEntry.sourceColumn;
       entry.semanticNodeId = snapshotEntry.semanticNodeId;
@@ -349,7 +348,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.scopePathId = semanticProgramInternCallTargetString(semanticProgram, entry.scopePath);
       entry.collectionFamilyId =
           semanticProgramInternCallTargetString(semanticProgram, entry.collectionFamily);
-      entry.helperNameId = semanticProgramInternCallTargetString(semanticProgram, entry.helperName);
+      entry.helperNameId = semanticProgramInternCallTargetString(semanticProgram, snapshotEntry.helperName);
       entry.chosenPathId =
           semanticProgramInternCallTargetString(semanticProgram, snapshotEntry.chosenPath);
       semanticProgram.bridgePathChoices.push_back(std::move(entry));

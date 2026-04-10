@@ -1306,7 +1306,8 @@ TEST_CASE("semantic product publishes same-path collection bridge routing choice
       [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
         return entry.scopePath == "/main" &&
                entry.collectionFamily == "vector" &&
-               entry.helperName == "count" &&
+               primec::semanticProgramBridgePathChoiceHelperName(
+                   semanticProgram, entry) == "count" &&
                primec::semanticProgramResolveCallTargetString(
                    semanticProgram, entry.chosenPathId) == "/vector/count";
       });
@@ -1336,7 +1337,8 @@ TEST_CASE("semantic product publishes canonical collection bridge routing choice
       [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
         return entry.scopePath == "/main" &&
                entry.collectionFamily == "map" &&
-               entry.helperName == "count" &&
+               primec::semanticProgramBridgePathChoiceHelperName(
+                   semanticProgram, entry) == "count" &&
                primec::semanticProgramResolveCallTargetString(
                    semanticProgram, entry.chosenPathId) == "/std/collections/map/count";
       });
@@ -1353,7 +1355,6 @@ TEST_CASE("semantic product bridge routing choices carry interned path ids") {
     primec::SemanticProgramBridgePathChoice entry;
     entry.scopePath = "/main";
     entry.collectionFamily = "map";
-    entry.helperName = "count";
     entry.sourceLine = sourceLine;
     entry.sourceColumn = sourceColumn;
     entry.semanticNodeId = semanticNodeId;
@@ -1361,7 +1362,7 @@ TEST_CASE("semantic product bridge routing choices carry interned path ids") {
     entry.scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.scopePath);
     entry.collectionFamilyId =
         primec::semanticProgramInternCallTargetString(semanticProgram, entry.collectionFamily);
-    entry.helperNameId = primec::semanticProgramInternCallTargetString(semanticProgram, entry.helperName);
+    entry.helperNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "count");
     entry.chosenPathId =
         primec::semanticProgramInternCallTargetString(semanticProgram, "/std/collections/map/count");
     return entry;
@@ -1951,8 +1952,10 @@ TEST_CASE("semantic product source locations stay aligned with AST-owned lowerin
   CHECK(methodCallEntry->sourceColumn == methodCallExpr->sourceColumn);
 
   const auto *bridgeEntry = findSemanticEntry(primec::semanticProgramBridgePathChoiceView(semanticProgram),
-      [](const primec::SemanticProgramBridgePathChoice &entry) {
-        return entry.scopePath == "/main" && entry.helperName == "count";
+      [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
+        return entry.scopePath == "/main" &&
+               primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, entry) ==
+                   "count";
       });
   REQUIRE(bridgeEntry != nullptr);
   CHECK(bridgeEntry->sourceLine == bridgeCallExpr->sourceLine);
@@ -2306,8 +2309,10 @@ TEST_CASE("semantic product lowering preserves debug source-map provenance") {
                         });
   const auto *bridgeEntry =
       findSemanticEntry(primec::semanticProgramBridgePathChoiceView(semanticProgram),
-                        [](const primec::SemanticProgramBridgePathChoice &entry) {
-                          return entry.scopePath == "/main" && entry.helperName == "count";
+                        [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
+                          return entry.scopePath == "/main" &&
+                                 primec::semanticProgramBridgePathChoiceHelperName(
+                                     semanticProgram, entry) == "count";
                         });
   const auto *returnEntry =
       findSemanticEntry(primec::semanticProgramReturnFactView(semanticProgram),
@@ -2390,8 +2395,10 @@ main() {
                         });
   const auto *semanticBridgeEntry =
       findSemanticEntry(primec::semanticProgramBridgePathChoiceView(semanticProgram),
-                        [](const primec::SemanticProgramBridgePathChoice &entry) {
-                          return entry.scopePath == "/main" && entry.helperName == "count";
+                        [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
+                          return entry.scopePath == "/main" &&
+                                 primec::semanticProgramBridgePathChoiceHelperName(
+                                     semanticProgram, entry) == "count";
                         });
   const auto *semanticReturnEntry =
       findSemanticEntry(primec::semanticProgramReturnFactView(semanticProgram),
@@ -2466,7 +2473,8 @@ main() {
 
   CHECK(semanticDirectEntry->callName == "id");
   CHECK(semanticMethodEntry->methodName == "count");
-  CHECK(semanticBridgeEntry->helperName == "count");
+  CHECK(primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, *semanticBridgeEntry) ==
+        "count");
   CHECK(semanticReturnEntry->definitionPath == "/main");
 
   primec::IrLowerer lowerer;
@@ -2732,11 +2740,14 @@ TEST_CASE("semantic product formatter exact golden is stable") {
   semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
       .scopePath = "/main",
       .collectionFamily = "vector",
-      .helperName = "count",
       .sourceLine = 9,
       .sourceColumn = 13,
       .semanticNodeId = 15,
       .provenanceHandle = 105,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .collectionFamilyId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "vector"),
+      .helperNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "count"),
       .chosenPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram,
                                                         "/std/collections/vector/count"),

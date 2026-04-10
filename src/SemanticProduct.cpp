@@ -138,6 +138,12 @@ std::string_view semanticProgramMethodCallTargetResolvedPath(
   return semanticProgramResolveCallTargetString(semanticProgram, entry.resolvedPathId);
 }
 
+std::string_view semanticProgramBridgePathChoiceHelperName(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramBridgePathChoice &entry) {
+  return semanticProgramResolveCallTargetString(semanticProgram, entry.helperNameId);
+}
+
 std::string formatSemanticStringListFromIds(const SemanticProgram &semanticProgram,
                                             const std::vector<SymbolId> &ids,
                                             const std::vector<std::string> &fallbackValues) {
@@ -393,7 +399,7 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
     const std::string_view collectionFamily =
         semanticProgramResolveCallTargetString(semanticProgram, entry.collectionFamilyId);
     const std::string_view helperName =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.helperNameId);
+        semanticProgramBridgePathChoiceHelperName(semanticProgram, entry);
     const std::string_view chosenPath =
         semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId);
     appendSemanticIndexedLine(out,
@@ -406,7 +412,7 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                                           ? entry.collectionFamily
                                                           : collectionFamily) +
                                   " helper_name=" +
-                                  quoteSemanticString(helperName.empty() ? entry.helperName : helperName) +
+                                  quoteSemanticString(helperName) +
                                   " chosen_path=" +
                                   quoteSemanticString(chosenPath) +
                                   " provenance_handle=" +

@@ -875,10 +875,13 @@ TEST_CASE("ir lowerer call helpers require semantic-product bridge-path choices"
   semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
       .scopePath = "/main",
       .collectionFamily = "vector",
-      .helperName = "count",
       .sourceLine = 0,
       .sourceColumn = 0,
       .semanticNodeId = 18,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .collectionFamilyId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "vector"),
+      .helperNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "count"),
       .chosenPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
   });
   semanticTargets =

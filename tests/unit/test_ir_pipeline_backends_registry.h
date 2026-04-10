@@ -1306,16 +1306,22 @@ main() {
   CHECK(nativeMethodPath == cppMethodPath);
 
   const auto *cppBridge = findSemanticEntry(primec::semanticProgramBridgePathChoiceView(cppConformance.output.semanticProgram),
-      [](const primec::SemanticProgramBridgePathChoice &entry) {
-        return entry.scopePath == "/main" && entry.helperName == "count";
+      [&cppConformance](const primec::SemanticProgramBridgePathChoice &entry) {
+        return entry.scopePath == "/main" &&
+               primec::semanticProgramBridgePathChoiceHelperName(
+                   cppConformance.output.semanticProgram, entry) == "count";
       });
   const auto *vmBridge = findSemanticEntry(primec::semanticProgramBridgePathChoiceView(vmConformance.output.semanticProgram),
-      [](const primec::SemanticProgramBridgePathChoice &entry) {
-        return entry.scopePath == "/main" && entry.helperName == "count";
+      [&vmConformance](const primec::SemanticProgramBridgePathChoice &entry) {
+        return entry.scopePath == "/main" &&
+               primec::semanticProgramBridgePathChoiceHelperName(
+                   vmConformance.output.semanticProgram, entry) == "count";
       });
   const auto *nativeBridge = findSemanticEntry(primec::semanticProgramBridgePathChoiceView(nativeConformance.output.semanticProgram),
-      [](const primec::SemanticProgramBridgePathChoice &entry) {
-        return entry.scopePath == "/main" && entry.helperName == "count";
+      [&nativeConformance](const primec::SemanticProgramBridgePathChoice &entry) {
+        return entry.scopePath == "/main" &&
+               primec::semanticProgramBridgePathChoiceHelperName(
+                   nativeConformance.output.semanticProgram, entry) == "count";
       });
   REQUIRE(cppBridge != nullptr);
   REQUIRE(vmBridge != nullptr);
