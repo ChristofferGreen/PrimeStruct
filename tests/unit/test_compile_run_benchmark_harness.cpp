@@ -154,19 +154,57 @@ TEST_CASE("semantic memory non-math include fixture keeps comparable definition 
 }
 
 TEST_CASE("semantic memory baseline report is checked in with fixture phase coverage") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
   const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
   const std::filesystem::path baselinePath = repoRoot / "benchmarks" / "semantic_memory_baseline_report.json";
   const std::string baseline = readFile(baselinePath.string());
   REQUIRE_FALSE(baseline.empty());
-  CHECK(baseline.find("\"schema\": \"primestruct_semantic_memory_report_v1\"") != std::string::npos);
-  CHECK(baseline.find("\"fixture\": \"math_star_repro\"") != std::string::npos);
-  CHECK(baseline.find("\"fixture\": \"no_import\"") != std::string::npos);
-  CHECK(baseline.find("\"phase\": \"ast-semantic\"") != std::string::npos);
-  CHECK(baseline.find("\"phase\": \"semantic-product\"") != std::string::npos);
-  CHECK(baseline.find("\"worst_wall_seconds\"") != std::string::npos);
-  CHECK(baseline.find("\"worst_peak_rss_bytes\"") != std::string::npos);
-  CHECK(baseline.find("\"expensive_thresholds\"") != std::string::npos);
-  CHECK(baseline.find("\"is_expensive_threshold_offender\": true") != std::string::npos);
+
+  const std::string validateOutPath = writeTemp("semantic_memory_baseline_validate.out", "");
+  const std::string validateErrPath = writeTemp("semantic_memory_baseline_validate.err", "");
+  const std::string validateCmd =
+      "python3 -c " +
+      quoteShellArg(
+          "import json, math, sys\n"
+          "report = json.load(open(sys.argv[1], encoding='utf-8'))\n"
+          "fixtures = report.get('fixtures', [])\n"
+          "phases = report.get('phases', [])\n"
+          "results = report.get('results', [])\n"
+          "fixture_names = [row.get('name') for row in fixtures]\n"
+          "pairs = {(row.get('fixture'), row.get('phase')) for row in results}\n"
+          "expected_pairs = {(f, p) for f in fixture_names for p in phases}\n"
+          "required_fields = (\n"
+          "  'median_wall_seconds',\n"
+          "  'worst_wall_seconds',\n"
+          "  'median_peak_rss_bytes',\n"
+          "  'worst_peak_rss_bytes',\n"
+          ")\n"
+          "def row_has_required_metrics(row):\n"
+          "  for field in required_fields:\n"
+          "    value = row.get(field)\n"
+          "    if not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:\n"
+          "      return False\n"
+          "  return True\n"
+          "ok = report.get('schema') == 'primestruct_semantic_memory_report_v1'\n"
+          "ok = ok and report.get('runs') == 3\n"
+          "ok = ok and phases == ['ast-semantic', 'semantic-product']\n"
+          "ok = ok and len(fixtures) == 10\n"
+          "ok = ok and len(results) == len(expected_pairs)\n"
+          "ok = ok and pairs == expected_pairs\n"
+          "ok = ok and all(row_has_required_metrics(row) for row in results)\n"
+          "ok = ok and all('is_expensive_threshold_offender' in row for row in results)\n"
+          "ok = ok and len(report.get('expensive_offenders', [])) >= 1\n"
+          "if not ok:\n"
+          "  print(json.dumps(report, indent=2, sort_keys=True))\n"
+          "sys.exit(0 if ok else 1)\n") +
+      " " + quoteShellArg(baselinePath.string()) +
+      " > " + quoteShellArg(validateOutPath) + " 2> " + quoteShellArg(validateErrPath);
+  CHECK(runCommand(validateCmd) == 0);
+  CHECK(readFile(validateErrPath).empty());
 }
 
 TEST_CASE("semantic memory benchmark ctest target stays serial and expensive") {

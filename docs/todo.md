@@ -29,7 +29,6 @@ Sizing note: each leaf `○` item should fit in one code-affecting commit plus f
 Order rule: execute leaves top-to-bottom. Each leaf below is scoped to one code-affecting commit.
 
 P0 - Reproducible measurement and attribution
-- ◐ [P0-13] Record and check in an initial baseline report (fixture + phase + RSS/time).
 - ◐ [P0-14] Mark semantic memory benchmark target as expensive + serial when runtime or RSS exceeds expensive-test thresholds. Progress: `PrimeStruct_semantic_memory_benchmark` and `PrimeStruct_semantic_memory_trend` CTest entries are pinned `RUN_SERIAL` with `expensive` labels/timeouts in `CMakeLists.txt`, and benchmark-harness source-guard coverage now asserts the benchmark target remains serial + expensive.
 
 P1 - Immediate peak-RSS reductions in existing pipeline

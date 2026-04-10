@@ -115,6 +115,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   benchmark-harness coverage now asserts forced-on `ast-semantic` runs
   produce semantic-product-build facts while forced-off runs keep those fact
   counters at zero.
+- `semantic-memory-baseline-report-matrix-guard`: benchmark harness now
+  validates the checked-in baseline report as structured JSON (schema/runs,
+  full fixture×phase pair coverage, per-row RSS/time metrics, and expensive
+  offender annotations) instead of relying on substring presence checks.
 - `semantic-product-direct-call-routing`: production lowering now validates
   that every non-method direct call has a published semantic-product routing
   fact before lowering starts, and semantic-product-aware direct-call
