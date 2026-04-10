@@ -103,10 +103,18 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
 
   const auto queryFacts = semanticProgramQueryFactView(*semanticProgram);
   for (const auto *queryFact : queryFacts) {
+    const std::string_view resolvedPath =
+        semanticProgramQueryFactResolvedPath(*semanticProgram, *queryFact);
+    const std::string queryCallName =
+        queryFact->callName.empty() ? "<call>" : queryFact->callName;
+    if (queryFact->resolvedPathId == InvalidSymbolId || resolvedPath.empty()) {
+      error = "missing semantic-product query resolved path id: " + queryCallName;
+      return false;
+    }
     if (queryFact->hasResultType && queryFact->resultTypeHasValue) {
       ResultExprInfo resultInfo;
       if (!applySemanticResultValueTypeText(queryFact->resultValueType, resultInfo)) {
-        error = "incomplete semantic-product query fact: " + queryFact->callName;
+        error = "incomplete semantic-product query fact: " + queryCallName;
         return false;
       }
     }

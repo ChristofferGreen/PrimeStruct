@@ -1016,6 +1016,58 @@ TEST_CASE("ir lowerer rejects incomplete semantic-product query facts") {
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer rejects missing semantic-product query resolved path id") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "lookup";
+  callExpr.semanticNodeId = 8301;
+  mainDef.statements.push_back(callExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 8301,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+  });
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .queryTypeText = "Result<i32, FileError>",
+      .bindingTypeText = "Result<i32, FileError>",
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "i32",
+      .resultErrorType = "FileError",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 8301,
+      .resolvedPathId = primec::InvalidSymbolId,
+  });
+  primec::SemanticProgramCallableSummary callableSummary;
+  callableSummary.fullPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
+  callableSummary.returnKind = "i32";
+  semanticProgram.callableSummaries.push_back(std::move(callableSummary));
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product query resolved path id: lookup");
+  CHECK(diagnosticInfo.message == error);
+}
+
 TEST_CASE("ir lowerer rejects incomplete semantic-product try facts") {
   primec::Program program;
 
