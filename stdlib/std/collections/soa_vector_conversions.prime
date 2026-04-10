@@ -3,15 +3,8 @@ import /std/collections/experimental_soa_vector/*
 import /std/collections/experimental_soa_vector_conversions/*
 
 [public effects(heap_alloc), return<vector<T>>]
-/std/collections/soa_vector/to_aos<T>([SoaVector<T>] values) {
-  [i32] valueCount{count(values)}
-  [vector<T> mut] out{vector<T>()}
-  [i32 mut] index{0i32}
-  while(less_than(index, valueCount), do() {
-    /std/collections/vector/push<T>(out, get(values, index))
-    increment(index)
-  })
-  return(out)
+/std/collections/soa_vector/to_aos<T>([soa_vector<T>] values) {
+  return(/std/collections/experimental_soa_vector_conversions/soaVectorToAos<T>(values))
 }
 
 [public effects(heap_alloc), return<vector<T>>]

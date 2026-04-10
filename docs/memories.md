@@ -247,10 +247,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
   locks that empty-callee inputs fail while canonical
   `/std/collections/soa_vector/to_aos_ref` continues to pass.
 - `semantic-soa-s2-canonical-conversion-loops-2026-04`: Group 14 now archives
-  the S2 slice where canonical `/std/collections/soa_vector/to_aos` lowers
-  through a self-contained canonical helper loop in
-  `stdlib/std/collections/soa_vector_conversions.prime` (using builtin
-  `count`/`get`) instead of forwarding into experimental conversion signatures.
+  the S2 slice where canonical `/std/collections/soa_vector/to_aos` accepts
+  builtin `soa_vector<T>` at the canonical surface and forwards through
+  `/std/collections/experimental_soa_vector_conversions/soaVectorToAos`
+  instead of requiring canonical-call-site bridge eligibility.
+- `semantic-soa-s2-to-aos-bridge-eligibility-prune-2026-04`: Group 14 now
+  archives the S2 slice where inline-parameter bridge matching no longer
+  treats canonical `/std/collections/soa_vector/to_aos` as a builtin
+  `/soa_vector` -> `SoaVector__*` bridge-eligible callee path; focused IR
+  validation now locks canonical `to_aos` rejection while canonical
+  `to_aos_ref` continues to bridge-match.
 - `semantic-soa-s1-literal-capacity-slice-2026-04`: Group 14 archives the
   S1 literal-capacity migration slice where VM/native lowering no longer
   rejects struct-element non-empty builtin `soa_vector` literals above the
