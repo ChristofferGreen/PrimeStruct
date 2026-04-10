@@ -1681,6 +1681,45 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic canonical soa_vector to_aos_ref helper body uses canonical count_ref/get_ref loop") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<Particle> mut] values{soa_vector<Particle>()}
+  values.push(Particle(7i32))
+  [vector<Particle>] unpacked{/std/collections/soa_vector/to_aos_ref<Particle>(location(values))}
+  return(count(unpacked))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_dump_ast_semantic_canonical_soa_vector_to_aos_ref_body.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_dump_ast_semantic_canonical_soa_vector_to_aos_ref_body.txt").string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t helperPos = ast.find("/std/collections/soa_vector/to_aos_ref__");
+  const size_t mainPos = ast.find("/main()");
+  REQUIRE(helperPos != std::string::npos);
+  REQUIRE(mainPos != std::string::npos);
+  REQUIRE(helperPos < mainPos);
+  const std::string helperBlock = ast.substr(helperPos, mainPos - helperPos);
+  CHECK(helperBlock.find("/std/collections/soa_vector/count_ref__") != std::string::npos);
+  CHECK(helperBlock.find("/std/collections/soa_vector/get_ref__") != std::string::npos);
+  CHECK(helperBlock.find("/std/collections/soa_vector/to_aos__") == std::string::npos);
+  CHECK(helperBlock.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef__") ==
+        std::string::npos);
+}
+
 TEST_CASE("dump ast-semantic keeps imported experimental soa_vector to_aos helper path") {
   const std::string source = R"(
 import /std/collections/*
