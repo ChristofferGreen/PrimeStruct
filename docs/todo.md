@@ -33,4 +33,3 @@ P0 - Reproducible measurement and attribution
 P1 - Immediate peak-RSS reductions in existing pipeline
 
 P2 - Traversal and allocation churn reductions
-- ◐ [P2-13] Prototype per-definition arena/pmr allocation for transient semantic maps/vectors and report RSS/time delta. Progress: graph-local auto dependency-count transient map now uses a PMR `monotonic_buffer_resource`-backed container (`GraphLocalAutoDependencyScratch`) with benchmark A/B toggle `--benchmark-semantic-disable-graph-local-auto-dependency-scratch-pmr`; `scripts/semantic_memory_benchmark.py` now supports `--graph-local-auto-dependency-scratch-mode pmr|std|both` and emits per-fixture/phase `graph_local_auto_dependency_scratch_mode_deltas` RSS/time deltas.

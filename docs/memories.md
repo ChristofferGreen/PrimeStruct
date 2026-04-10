@@ -203,6 +203,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `scripts/semantic_memory_benchmark.py --graph-local-auto-side-channel-mode
   flat|legacy-shadow|both`, emitting per-fixture/phase
   `graph_local_auto_side_channel_mode_deltas` RSS/time rollups.
+- `semantic-graph-local-auto-dependency-scratch-pmr-ab-deltas`: graph-local
+  `auto` dependency-count transient storage now uses PMR-backed
+  `GraphLocalAutoDependencyScratch` (`std::pmr::monotonic_buffer_resource`
+  plus PMR dependency map) behind benchmark toggle
+  `--benchmark-semantic-disable-graph-local-auto-dependency-scratch-pmr`,
+  and semantic-memory benchmark A/B runs now support
+  `--graph-local-auto-dependency-scratch-mode pmr|std|both`, emitting
+  per-fixture/phase `graph_local_auto_dependency_scratch_mode_deltas`
+  RSS/time rollups.
 - `semantic-method-target-scratch-candidates`: infer-stage method-target
   resolution now reuses `CallTargetResolutionScratch::methodReceiverResolutionCandidates`
   for scoped definitions/executions in `resolveInferMethodCallPath(...)`,
