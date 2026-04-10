@@ -461,7 +461,8 @@ TEST_CASE("ir lowerer inline param helper materializes mixed struct variadic for
   CHECK(copySlots[2] == 2);
 }
 
-TEST_CASE("ir lowerer inline param helper requires canonical callee path for builtin soa to_aos bridge") {
+TEST_CASE(
+    "ir lowerer inline param helper rejects direct experimental conversion helper bridge for builtin soa") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;
   valuesParam.isBinding = true;
@@ -643,17 +644,18 @@ TEST_CASE("ir lowerer inline param helper requires canonical callee path for bui
     CHECK(calleeLocals.empty());
   }
 
-  {
+  for (const char *calleePath : {"/std/collections/experimental_soa_vector_conversions/soaVectorToAos",
+                                 "/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef"}) {
     int32_t nextLocal = 3;
     primec::ir_lowerer::LocalMap calleeLocals;
     std::vector<primec::IrInstruction> instructions;
     std::string error;
-    REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
+    CHECK_FALSE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
         {valuesParam},
         {&sourceArg},
         {},
         1,
-        "/std/collections/experimental_soa_vector_conversions/soaVectorToAos",
+        std::string(calleePath),
         callerLocals,
         nextLocal,
         calleeLocals,
@@ -682,9 +684,9 @@ TEST_CASE("ir lowerer inline param helper requires canonical callee path for bui
         [](int32_t) {},
         error,
         {}));
-    CHECK(error.empty());
-    REQUIRE(calleeLocals.count("values") == 1u);
-    CHECK_FALSE(instructions.empty());
+    CHECK(error.find("struct parameter type mismatch") != std::string::npos);
+    CHECK(instructions.empty());
+    CHECK(calleeLocals.empty());
   }
 }
 

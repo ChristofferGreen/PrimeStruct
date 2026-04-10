@@ -18,9 +18,7 @@ bool isCanonicalBuiltinSoaBridgePath(const std::string &calleePath) {
     return calleePath == path ||
            calleePath.rfind(std::string(path) + "__", 0) == 0;
   };
-  return matchesPath("/std/collections/experimental_soa_vector_conversions/soaVectorToAos") ||
-         matchesPath("/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef") ||
-         matchesPath("/std/collections/soa_vector/count") ||
+  return matchesPath("/std/collections/soa_vector/count") ||
          matchesPath("/std/collections/soa_vector/get") ||
          matchesPath("/soa_vector/count") ||
          matchesPath("/soa_vector/get");

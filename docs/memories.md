@@ -265,14 +265,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   and routes through canonical `/std/collections/soa_vector/to_aos` with
   `dereference(...)`, and inline-parameter bridge matching no longer treats
   canonical `to_aos_ref` as a bridge-eligible callee path.
-- `semantic-soa-s2-direct-helper-bridge-prereq-split-2026-04`: the remaining
-  S2 direct-helper bridge-removal leaf is now explicitly split in
-  `docs/todo.md`: disabling direct
+- `semantic-soa-s2-direct-helper-bridge-removal-2026-04`: S2 inline-parameter
+  lowering no longer treats direct
   `/std/collections/experimental_soa_vector_conversions/soaVectorToAos(_Ref)`
-  bridge matching currently regresses canonical builtin `soa_vector`
-  `/std/collections/soa_vector/to_aos(_ref)` flows, so a bridge-free canonical
-  builtin element-access/lowering substrate is a prerequisite before removing
-  direct-helper bridge handling.
+  callees as bridge-eligible for builtin `soa_vector`, and focused IR +
+  compile-run coverage now lock the resulting `struct parameter type mismatch`
+  contract on those direct helper paths.
 - `semantic-soa-s2-canonical-count-get-bridge-substrate-2026-04`: S2 inline-
   parameter bridge matching now treats canonical `/std/collections/soa_vector`
   `count|get` callee paths (plus same-path aliases) as bridge-eligible for
