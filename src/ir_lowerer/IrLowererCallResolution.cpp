@@ -309,6 +309,14 @@ bool validateSemanticProductBridgePathCoverage(const Program &program,
 
   const SemanticProductTargetAdapter semanticProductTargets =
       buildSemanticProductTargetAdapter(semanticProgram);
+  const auto bridgePathChoices = semanticProgramBridgePathChoiceView(*semanticProgram);
+  std::unordered_map<uint64_t, const SemanticProgramBridgePathChoice *> bridgePathChoicesByExpr;
+  bridgePathChoicesByExpr.reserve(bridgePathChoices.size());
+  for (const auto *entry : bridgePathChoices) {
+    if (entry->semanticNodeId != 0) {
+      bridgePathChoicesByExpr.insert_or_assign(entry->semanticNodeId, entry);
+    }
+  }
   std::function<bool(const std::string &, const Expr &)> validateExpr;
   auto validateExprs = [&](const std::string &scopePath, const std::vector<Expr> &exprs) {
     for (const auto &expr : exprs) {
@@ -321,6 +329,17 @@ bool validateSemanticProductBridgePathCoverage(const Program &program,
 
   validateExpr = [&](const std::string &scopePath, const Expr &expr) {
     if (expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
+      if (const auto it = bridgePathChoicesByExpr.find(expr.semanticNodeId);
+          it != bridgePathChoicesByExpr.end()) {
+        const auto &entry = *it->second;
+        const std::string_view helperName =
+            semanticProgramBridgePathChoiceHelperName(*semanticProgram, entry);
+        if (entry.helperNameId == InvalidSymbolId || helperName.empty()) {
+          error = "missing semantic-product bridge helper name id: " +
+                  describeCallSite(scopePath, expr);
+          return false;
+        }
+      }
       if (!findSemanticProductBridgePathChoice(semanticProductTargets, expr).empty()) {
         return validateExprs(scopePath, expr.args) &&
                validateExprs(scopePath, expr.bodyArguments);
@@ -363,6 +382,14 @@ bool validateSemanticProductMethodCallCoverage(const Program &program,
 
   const SemanticProductTargetAdapter semanticProductTargets =
       buildSemanticProductTargetAdapter(semanticProgram);
+  const auto methodCallTargets = semanticProgramMethodCallTargetView(*semanticProgram);
+  std::unordered_map<uint64_t, const SemanticProgramMethodCallTarget *> methodCallTargetsByExpr;
+  methodCallTargetsByExpr.reserve(methodCallTargets.size());
+  for (const auto *entry : methodCallTargets) {
+    if (entry->semanticNodeId != 0) {
+      methodCallTargetsByExpr.insert_or_assign(entry->semanticNodeId, entry);
+    }
+  }
   std::function<bool(const std::string &, const Expr &)> validateExpr;
   auto validateExprs = [&](const std::string &scopePath, const std::vector<Expr> &exprs) {
     for (const auto &expr : exprs) {
@@ -379,6 +406,17 @@ bool validateSemanticProductMethodCallCoverage(const Program &program,
         error = "missing semantic-product method-call semantic id: " +
                 describeCallSite(scopePath, expr);
         return false;
+      }
+      if (const auto it = methodCallTargetsByExpr.find(expr.semanticNodeId);
+          it != methodCallTargetsByExpr.end()) {
+        const auto &entry = *it->second;
+        const std::string_view resolvedPath =
+            semanticProgramMethodCallTargetResolvedPath(*semanticProgram, entry);
+        if (entry.resolvedPathId == InvalidSymbolId || resolvedPath.empty()) {
+          error = "missing semantic-product method-call resolved path id: " +
+                  describeCallSite(scopePath, expr);
+          return false;
+        }
       }
       if (findSemanticProductMethodCallTarget(semanticProductTargets, expr).empty()) {
         error = "missing semantic-product method-call target: " +

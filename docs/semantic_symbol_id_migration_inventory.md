@@ -15,6 +15,12 @@ implemented, parity-tested, and landed independently.
   `chosenPath` now resolves via `chosenPathId` only.
 - Direct-call resolved-path shadow removal landed (`P3-17`): direct-call target
   paths now resolve via `resolvedPathId` only.
+- Method-call resolved-path shadow removal landed (`P3-18`): method-call
+  targets now resolve via `resolvedPathId` only, and lowerer semantic-product
+  validation rejects invalid method-call resolved-path IDs.
+- Bridge helper-name shadow removal landed (`P3-19`): bridge-path choices now
+  resolve helper names via `helperNameId` only, and lowerer semantic-product
+  validation rejects invalid bridge helper-name IDs.
 - Callable-summary full-path shadow removal landed (`P3-20`): callable summaries
   now resolve paths via `fullPathId` only, and lowerer semantic-product
   validation rejects missing/invalid callable-summary path IDs.
@@ -40,10 +46,7 @@ implemented, parity-tested, and landed independently.
 
 ## Remaining families and next one-leaf follow-ups
 
-| Family | Current state | Next leaf follow-up |
-| --- | --- | --- |
-| `method_call_targets` | IDs + string shadows | `P3-18`: remove `resolvedPath` shadow and require `resolvedPathId` on semantic-product paths. |
-| `bridge_path_choices` | IDs + remaining string shadows | `P3-19`: remove `helperName` shadow and consume `helperNameId` only on semantic-product paths. |
+None. The current hot-path SymbolId migration family list is fully landed.
 
 ## Out of scope for this queue
 - `definitions`, `executions`, `type_metadata`, and `struct_field_metadata` are

@@ -1517,10 +1517,14 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(irCallResolution.find("missing semantic-product direct-call target: ") != std::string::npos);
   CHECK(irCallResolution.find("bool validateSemanticProductBridgePathCoverage(const Program &program,") !=
         std::string::npos);
+  CHECK(irCallResolution.find("missing semantic-product bridge helper name id: ") !=
+        std::string::npos);
   CHECK(irCallResolution.find("missing semantic-product bridge-path choice: ") != std::string::npos);
   CHECK(irCallResolution.find("!resolvedPath.empty() && !isResolvedBridgeHelperPath(resolvedPath)") !=
         std::string::npos);
   CHECK(irCallResolution.find("bool validateSemanticProductMethodCallCoverage(const Program &program,") !=
+        std::string::npos);
+  CHECK(irCallResolution.find("missing semantic-product method-call resolved path id: ") !=
         std::string::npos);
   CHECK(irCallResolution.find("missing semantic-product method-call target: ") != std::string::npos);
   CHECK(bindingTypeHelpersSource.find("bool validateSemanticProductBindingCoverage(const Program &program,") !=
@@ -1623,6 +1627,49 @@ TEST_CASE("semantic product bridge path choices use helperNameId without helperN
   CHECK(semanticProductSource.find("semanticProgramBridgePathChoiceHelperName(") !=
         std::string::npos);
   CHECK(semanticProductSource.find("helperName.empty() ? entry.helperName") ==
+        std::string::npos);
+  const std::string irCallResolutionSource =
+      readTextFile(root / "src" / "ir_lowerer" / "IrLowererCallResolution.cpp");
+  CHECK(irCallResolutionSource.find("entry.helperNameId == InvalidSymbolId") !=
+        std::string::npos);
+}
+
+TEST_CASE("semantic product method call targets use resolvedPathId without resolvedPath shadow field") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  const std::filesystem::path root =
+      std::filesystem::exists(cwd / "include" / "primec" / "SemanticProduct.h")
+          ? cwd
+          : cwd.parent_path();
+  const std::string semanticProductHeader =
+      readTextFile(root / "include" / "primec" / "SemanticProduct.h");
+  const std::string semanticProductSource =
+      readTextFile(root / "src" / "SemanticProduct.cpp");
+  const std::string semanticTargetAdapterSource =
+      readTextFile(root / "src" / "ir_lowerer" / "IrLowererSemanticProductTargetAdapters.cpp");
+  const std::string irCallResolutionSource =
+      readTextFile(root / "src" / "ir_lowerer" / "IrLowererCallResolution.cpp");
+
+  const std::size_t methodStart =
+      semanticProductHeader.find("struct SemanticProgramMethodCallTarget {");
+  const std::size_t bridgeStart =
+      semanticProductHeader.find("struct SemanticProgramBridgePathChoice {");
+  REQUIRE(methodStart != std::string::npos);
+  REQUIRE(bridgeStart != std::string::npos);
+  REQUIRE(methodStart < bridgeStart);
+
+  const std::string methodBody =
+      semanticProductHeader.substr(methodStart, bridgeStart - methodStart);
+  CHECK(methodBody.find("SymbolId resolvedPathId = InvalidSymbolId;") !=
+        std::string::npos);
+  CHECK(methodBody.find("std::string resolvedPath;") == std::string::npos);
+
+  CHECK(semanticProductSource.find("semanticProgramMethodCallTargetResolvedPath(") !=
+        std::string::npos);
+  CHECK(semanticProductSource.find("resolvedPath.empty() ? entry.resolvedPath") ==
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("entry->resolvedPathId == InvalidSymbolId") !=
+        std::string::npos);
+  CHECK(irCallResolutionSource.find("missing semantic-product method-call resolved path id: ") !=
         std::string::npos);
 }
 

@@ -300,6 +300,45 @@ TEST_CASE("ir lowerer rejects missing semantic-product method-call semantic ids"
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer rejects missing semantic-product method-call resolved path ids") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+  primec::Expr methodCallExpr;
+  methodCallExpr.kind = primec::Expr::Kind::Call;
+  methodCallExpr.name = "count";
+  methodCallExpr.isMethodCall = true;
+  methodCallExpr.semanticNodeId = 4201;
+  methodCallExpr.args.push_back(receiverExpr);
+  mainDef.statements.push_back(methodCallExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
+      .scopePath = "/main",
+      .methodName = "count",
+      .receiverTypeText = "vector<i32>",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 4201,
+      .resolvedPathId = primec::InvalidSymbolId,
+  });
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product method-call resolved path id: /main -> count");
+  CHECK(diagnosticInfo.message == error);
+}
+
 TEST_CASE("ir lowerer rejects missing semantic-product bridge-path choices") {
   primec::Program program;
 
@@ -334,6 +373,52 @@ TEST_CASE("ir lowerer rejects missing semantic-product bridge-path choices") {
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
   CHECK(error == "missing semantic-product bridge-path choice: /main -> count");
+  CHECK(diagnosticInfo.message == error);
+}
+
+TEST_CASE("ir lowerer rejects missing semantic-product bridge helper name ids") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "count";
+  callExpr.semanticNodeId = 5201;
+  callExpr.args.push_back(valuesExpr);
+  mainDef.statements.push_back(callExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "count",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 5201,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
+  });
+  semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
+      .scopePath = "/main",
+      .collectionFamily = "vector",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 5201,
+      .helperNameId = primec::InvalidSymbolId,
+      .chosenPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
+  });
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product bridge helper name id: /main -> count");
   CHECK(diagnosticInfo.message == error);
 }
 
