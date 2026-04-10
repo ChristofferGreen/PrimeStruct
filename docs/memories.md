@@ -233,6 +233,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   non-struct non-empty soa_vector literal with semantic/emit parity in C++
   emitter`), locking matching diagnostics across `--dump-stage ast-semantic`
   and `--emit=exe`.
+- `semantic-soa-to-aos-ref-bridge-migration-2026-04`: Group 14 archives the
+  S2 migration slice where canonical `/std/collections/soa_vector/to_aos_ref`
+  now shares the same inline-parameter SoA bridge compatibility path as
+  `to_aos`, and focused compile-run coverage for root
+  `/std/collections/soa_vector/to_aos_ref<T>(location(values))` in the C++
+  emitter is locked passing.
 - `semantic-method-target-scratch-candidates`: infer-stage method-target
   resolution now reuses `CallTargetResolutionScratch::methodReceiverResolutionCandidates`
   for scoped definitions/executions in `resolveInferMethodCallPath(...)`,
