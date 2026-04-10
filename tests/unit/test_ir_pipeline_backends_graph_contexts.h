@@ -362,12 +362,16 @@ TEST_CASE("public semantic-product dump helper is available for pipeline tests")
   CHECK(helper.find("\"heap_alloc\"") != std::string::npos);
   CHECK(helper.find("captureCompilePipelineDumpForTesting(") == std::string::npos);
   CHECK(helper.find("captureSemanticBoundaryDumpsForTesting(") != std::string::npos);
-  CHECK(helper.find("dumpStageRequiresSemanticProduct(") != std::string::npos);
+  CHECK(helper.find("dumpStageRequiresSemanticProduct(") == std::string::npos);
   CHECK(helper.find("enum class CompilePipelineSemanticProductIntent") != std::string::npos);
+  CHECK(helper.find("CompilePipelineSemanticProductIntent semanticProductIntent") != std::string::npos);
   CHECK(helper.find("applySemanticProductIntent(Options &options, CompilePipelineSemanticProductIntent intent)") !=
         std::string::npos);
   CHECK(helper.find("applySemanticProductIntent(options, semanticProductIntent);") !=
         std::string::npos);
+  CHECK(helper.find("CompilePipelineSemanticProductIntent::SkipForNonConsumingPath") !=
+        std::string::npos);
+  CHECK(helper.find("CompilePipelineSemanticProductIntent::Require") != std::string::npos);
   CHECK(helper.find("detail::applySemanticProductIntent(") !=
         std::string::npos);
   CHECK(helper.find("struct CompilePipelinePreparedIr") == std::string::npos);

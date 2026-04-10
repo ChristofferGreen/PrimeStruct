@@ -149,6 +149,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   semantic-product intent from `semanticProgramOut` and applies
   `SkipForNonConsumingPath` when semantic output is not requested, with
   backend-registry source-lock coverage pinning this wiring.
+- `compile-pipeline-dump-helper-explicit-semantic-intent`: compile-pipeline
+  dump capture helpers now require explicit
+  `CompilePipelineSemanticProductIntent` plumbing at callsites (instead of an
+  implicit dump-stage inference helper), with semantic-boundary helpers
+  passing `SkipForNonConsumingPath` for `ast-semantic`/`ir` and `Require` for
+  `semantic-product`; backend-registry source-lock coverage pins this contract.
 - `primevm-debug-replay-trace-only-fast-path`: `primevm` now keeps
   `--debug-replay` on a trace-only fast path whenever no dump stage is
   requested, so that non-consuming entrypoint bypasses compile-pipeline/IR

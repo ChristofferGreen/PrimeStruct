@@ -120,13 +120,10 @@ inline std::filesystem::path makeCompilePipelineDumpSourcePath() {
       "compile_pipeline_dumps/primestruct-dump-" + nonce + "-" + std::to_string(counter++) + ".prime");
 }
 
-inline bool dumpStageRequiresSemanticProduct(std::string_view dumpStage) {
-  return dumpStage == "semantic-product" || dumpStage == "semantic_product";
-}
-
 inline bool captureCompilePipelineDumpStageFromPath(const std::filesystem::path &sourcePath,
                                                     const std::string &entryPath,
                                                     std::string_view dumpStage,
+                                                    CompilePipelineSemanticProductIntent semanticProductIntent,
                                                     std::string &dump,
                                                     std::string &error,
                                                     CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr) {
@@ -138,10 +135,6 @@ inline bool captureCompilePipelineDumpStageFromPath(const std::filesystem::path 
   options.defaultEffects = detail::defaultCompilePipelineTestingEffects();
   options.entryDefaultEffects = options.defaultEffects;
   options.dumpStage = std::string(dumpStage);
-  const auto semanticProductIntent =
-      dumpStageRequiresSemanticProduct(dumpStage)
-          ? CompilePipelineSemanticProductIntent::Require
-          : CompilePipelineSemanticProductIntent::SkipForNonConsumingPath;
   applySemanticProductIntent(options, semanticProductIntent);
   options.collectDiagnostics = diagnosticInfo != nullptr;
   primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
@@ -173,14 +166,27 @@ inline bool captureSemanticBoundaryDumpsForTesting(const std::string &source,
     file << source;
   }
 
-  bool ok = detail::captureCompilePipelineDumpStageFromPath(
-      sourcePath, entryPath, "ast-semantic", dumps.astSemantic, error);
+  bool ok = detail::captureCompilePipelineDumpStageFromPath(sourcePath,
+                                                            entryPath,
+                                                            "ast-semantic",
+                                                            detail::CompilePipelineSemanticProductIntent::SkipForNonConsumingPath,
+                                                            dumps.astSemantic,
+                                                            error);
   if (ok) {
-    ok = detail::captureCompilePipelineDumpStageFromPath(
-        sourcePath, entryPath, "semantic-product", dumps.semanticProduct, error);
+    ok = detail::captureCompilePipelineDumpStageFromPath(sourcePath,
+                                                         entryPath,
+                                                         "semantic-product",
+                                                         detail::CompilePipelineSemanticProductIntent::Require,
+                                                         dumps.semanticProduct,
+                                                         error);
   }
   if (ok) {
-    ok = detail::captureCompilePipelineDumpStageFromPath(sourcePath, entryPath, "ir", dumps.ir, error);
+    ok = detail::captureCompilePipelineDumpStageFromPath(sourcePath,
+                                                         entryPath,
+                                                         "ir",
+                                                         detail::CompilePipelineSemanticProductIntent::SkipForNonConsumingPath,
+                                                         dumps.ir,
+                                                         error);
   }
 
   std::error_code ec;
