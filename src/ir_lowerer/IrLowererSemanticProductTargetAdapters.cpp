@@ -78,8 +78,10 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
   const auto bridgePathChoices = semanticProgramBridgePathChoiceView(*semanticProgram);
   adapter.bridgePathChoicesByExpr.reserve(bridgePathChoices.size());
   for (const auto *entry : bridgePathChoices) {
-    if (entry->semanticNodeId != 0 && !entry->chosenPath.empty()) {
-      adapter.bridgePathChoicesByExpr.insert_or_assign(entry->semanticNodeId, entry->chosenPath);
+    const std::string_view chosenPath =
+        semanticProgramResolveCallTargetString(*semanticProgram, entry->chosenPathId);
+    if (entry->semanticNodeId != 0 && !chosenPath.empty()) {
+      adapter.bridgePathChoicesByExpr.insert_or_assign(entry->semanticNodeId, std::string(chosenPath));
     }
   }
 

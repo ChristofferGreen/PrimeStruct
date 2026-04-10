@@ -396,7 +396,7 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   " helper_name=" +
                                   quoteSemanticString(helperName.empty() ? entry.helperName : helperName) +
                                   " chosen_path=" +
-                                  quoteSemanticString(chosenPath.empty() ? entry.chosenPath : chosenPath) +
+                                  quoteSemanticString(chosenPath) +
                                   " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));

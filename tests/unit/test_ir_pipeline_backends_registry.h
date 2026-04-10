@@ -1314,9 +1314,15 @@ main() {
   REQUIRE(cppBridge != nullptr);
   REQUIRE(vmBridge != nullptr);
   REQUIRE(nativeBridge != nullptr);
-  CHECK(cppBridge->chosenPath == "/vector/count");
-  CHECK(vmBridge->chosenPath == cppBridge->chosenPath);
-  CHECK(nativeBridge->chosenPath == cppBridge->chosenPath);
+  const std::string_view cppBridgePath = primec::semanticProgramResolveCallTargetString(
+      cppConformance.output.semanticProgram, cppBridge->chosenPathId);
+  const std::string_view vmBridgePath = primec::semanticProgramResolveCallTargetString(
+      vmConformance.output.semanticProgram, vmBridge->chosenPathId);
+  const std::string_view nativeBridgePath = primec::semanticProgramResolveCallTargetString(
+      nativeConformance.output.semanticProgram, nativeBridge->chosenPathId);
+  CHECK(cppBridgePath == "/vector/count");
+  CHECK(vmBridgePath == cppBridgePath);
+  CHECK(nativeBridgePath == cppBridgePath);
 
   const auto *cppLocalAuto = findSemanticEntry(primec::semanticProgramLocalAutoFactView(cppConformance.output.semanticProgram),
       [](const primec::SemanticProgramLocalAutoFact &entry) {

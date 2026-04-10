@@ -63,7 +63,6 @@ struct SemanticProgramBridgePathChoice {
   std::string scopePath;
   std::string collectionFamily;
   std::string helperName;
-  std::string chosenPath;
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;

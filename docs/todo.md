@@ -75,27 +75,4 @@ P2 - Traversal and allocation churn reductions
 - ◐ [P2-13] Prototype per-definition arena/pmr allocation for transient semantic maps/vectors and report RSS/time delta.
 
 P3 - Interning/ID migration for hot paths
-- ◐ [P3-01] Add deterministic compilation-local string interning (`SymbolId`) with explicit lifetime/ownership rules.
-- ◐ [P3-02] Add repeat-run determinism tests that identical single-thread inputs produce identical `SymbolId` assignments.
-- ◐ [P3-03] Add worker-local interner API boundaries (no shared mutex in hot paths) plus deterministic merge hooks.
-- ◐ [P3-04] Migrate call-target path keys from `std::string` to `SymbolId` while keeping diagnostics text unchanged.
-- ◐ [P3-05] Migrate method-target keys from `std::string` to `SymbolId` while keeping diagnostics text unchanged.
-- ◐ [P3-06] Migrate direct/method call-target semantic-product facts to ID-backed internal storage with unchanged dump output.
-- ◐ [P3-07] Migrate one additional semantic-product fact family to ID-backed internal storage with unchanged dump output.
-- ◐ [P3-08] Remove one transitional string shadow field whose owning family is fully migrated and parity-tested.
 - ◐ [P3-09] Update migration inventory with explicit one-leaf follow-ups for each remaining fact family not yet ID-backed.
-- ◐ [P3-10] Migrate `bridge_path_choices` semantic-product strings to ID-backed internal storage with unchanged dump output.
-
-P4 - Deterministic multithread compile substrate
-- ◐ [P4-01] Write a semantics multithread design note for phase boundaries, immutable shared state, and thread-local mutable state.
-- ◐ [P4-02] Write deterministic ordering rules for per-worker interner merge (tie-breaks, stable keys, collision handling).
-- ◐ [P4-03] Implement two-worker interner merge helper with deterministic ID assignment.
-- ◐ [P4-04] Add two-worker interner merge determinism regression tests.
-- ◐ [P4-05] Extend interner merge helper from 2 workers to N workers while preserving deterministic IDs.
-- ◐ [P4-06] Add N-worker interner merge determinism regression tests.
-- ◐ [P4-07] Extract read-only definition index/prepass (symbols + resolved declarations) with no validator-state mutation.
-- ◐ [P4-08] Route single-thread definition validation through the read-only prepass and add parity tests.
-- ◐ [P4-09] Implement deterministic N-way definition partitioner and standalone stability unit tests.
-- ◐ [P4-10] Run two deterministic definition-validation work chunks in parallel behind a feature flag.
-- ◐ [P4-11] Extend worker scheduling from two chunks to N chunks via deterministic partitioner.
-- ◐ [P4-12] Add focused ordering tests that lock diagnostic and semantic-product output order under N-chunk scheduling.

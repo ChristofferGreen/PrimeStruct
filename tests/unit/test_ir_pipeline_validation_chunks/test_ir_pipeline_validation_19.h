@@ -861,13 +861,13 @@ TEST_CASE("ir lowerer call helpers require semantic-product bridge-path choices"
   CHECK(semanticResolveExprPath(callExpr).empty());
 
   semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
-      "/main",
-      "vector",
-      "count",
-      "/vector/count",
-      0,
-      0,
-      18,
+      .scopePath = "/main",
+      .collectionFamily = "vector",
+      .helperName = "count",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 18,
+      .chosenPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
   });
   semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
