@@ -185,6 +185,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
   snapshots when both collector families are enabled, avoiding a second
   redundant traversal while keeping output-order parity locked by
   `compile pipeline direct and bridge collector merge keeps output-order parity`.
+- `semantic-graph-local-auto-structured-key-ab-deltas`: graph-local
+  `auto` fact storage now uses structured `GraphLocalAutoKey`
+  (`scopePathId`, `sourceLine`, `sourceColumn`) with a dedicated
+  `graphLocalAutoScopePathInterner_` instead of string-concatenated key
+  text, and benchmark A/B runs now support
+  `--benchmark-semantic-graph-local-auto-legacy-key-shadow` plus
+  `scripts/semantic_memory_benchmark.py --graph-local-auto-key-mode
+  compact|legacy-shadow|both`, emitting per-fixture/phase
+  `graph_local_auto_key_mode_deltas` RSS/time rollups.
 - `semantic-method-target-scratch-candidates`: infer-stage method-target
   resolution now reuses `CallTargetResolutionScratch::methodReceiverResolutionCandidates`
   for scoped definitions/executions in `resolveInferMethodCallPath(...)`,
