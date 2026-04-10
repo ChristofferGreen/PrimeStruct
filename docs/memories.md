@@ -53,6 +53,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   as the primary minimized high-RSS `/std/math/*` reproducer, with benchmark
   harness coverage locking that fixture as the first `primary` fixture and
   keeping its minimal three-step call-chain shape.
+- `semantic-memory-vector-matrix-math-star-phase-coverage`: semantic-memory
+  benchmark harness coverage now executes `semantic_memory_benchmark.py` with
+  `--fixtures math_vector_matrix,math_star_repro --phases ast-semantic,semantic-product`
+  and asserts the exact four fixture-phase output tuples, guarding the
+  vector+matrix-vs-star attribution fixture contract.
 - `semantic-product-direct-call-routing`: production lowering now validates
   that every non-method direct call has a published semantic-product routing
   fact before lowering starts, and semantic-product-aware direct-call

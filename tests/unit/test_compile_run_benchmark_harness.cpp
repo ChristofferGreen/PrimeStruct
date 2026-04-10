@@ -256,6 +256,60 @@ TEST_CASE("semantic memory benchmark helper covers no-import and math-vector pha
   CHECK(readFile(validateErrPath).empty());
 }
 
+TEST_CASE("semantic memory benchmark helper covers math-vector-matrix and math-star phases") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";
+  const std::filesystem::path primecPath = repoRoot / "build-release" / "primec";
+  if (!std::filesystem::exists(primecPath)) {
+    INFO("primec not available in build-release");
+    return;
+  }
+
+  const std::string reportPath = writeTemp("semantic_memory_matrix_star_report.json", "");
+  const std::string stdoutPath = writeTemp("semantic_memory_matrix_star.out", "");
+  const std::string stderrPath = writeTemp("semantic_memory_matrix_star.err", "");
+
+  const std::string benchmarkCmd =
+      "python3 " + quoteShellArg(scriptPath.string()) +
+      " --repo-root " + quoteShellArg(repoRoot.string()) +
+      " --primec " + quoteShellArg(primecPath.string()) +
+      " --runs 1 --fixtures math_vector_matrix,math_star_repro "
+      "--phases ast-semantic,semantic-product "
+      "--report-json " + quoteShellArg(reportPath) +
+      " > " + quoteShellArg(stdoutPath) + " 2> " + quoteShellArg(stderrPath);
+  CHECK(runCommand(benchmarkCmd) == 0);
+  CHECK(readFile(stderrPath).empty());
+
+  const std::string validateOutPath = writeTemp("semantic_memory_matrix_star_validate.out", "");
+  const std::string validateErrPath = writeTemp("semantic_memory_matrix_star_validate.err", "");
+  const std::string validateCmd =
+      "python3 -c " +
+      quoteShellArg(
+          "import json, sys\n"
+          "report = json.load(open(sys.argv[1], encoding='utf-8'))\n"
+          "pairs = {(row['fixture'], row['phase']) for row in report['results']}\n"
+          "expected = {\n"
+          "  ('math_vector_matrix', 'ast-semantic'),\n"
+          "  ('math_vector_matrix', 'semantic-product'),\n"
+          "  ('math_star_repro', 'ast-semantic'),\n"
+          "  ('math_star_repro', 'semantic-product'),\n"
+          "}\n"
+          "ok = pairs == expected and len(report['results']) == 4\n"
+          "if not ok:\n"
+          "  print('pairs=', sorted(pairs))\n"
+          "  print('count=', len(report['results']))\n"
+          "sys.exit(0 if ok else 1)\n") +
+      " " + quoteShellArg(reportPath) +
+      " > " + quoteShellArg(validateOutPath) + " 2> " + quoteShellArg(validateErrPath);
+  CHECK(runCommand(validateCmd) == 0);
+  CHECK(readFile(validateErrPath).empty());
+}
+
 TEST_CASE("semantic memory benchmark helper defines method-target memoization delta report fields") {
   const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
   const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";

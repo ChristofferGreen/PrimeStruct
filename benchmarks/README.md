@@ -107,6 +107,9 @@ Semantic memory benchmark fixtures live under:
   attribution runs.
 - `math_vector.prime` uses explicit vector-surface imports (`/std/math/Vec2`).
 - `math_vector_matrix.prime` uses explicit vector+matrix imports (`/std/math/Vec2 /std/math/Mat2`).
+- `math_vector_matrix.prime` and `math_star_repro.prime` are paired
+  attribution fixtures for vector+matrix explicit imports versus `/std/math/*`
+  star imports.
 - The benchmark harness runs fixtures across both semantic phases by default:
   `ast-semantic` and `semantic-product`.
 
