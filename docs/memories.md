@@ -173,6 +173,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
   flat vs module-index output for `return_facts`, `local_auto_facts`,
   `query_facts`, `bridge_path_choices`, `try_facts`, and `on_error_facts`
   in one semantic-product fixture.
+- `semantic-snapshot-traversal-overlap-ranking`: the snapshot traversal
+  inventory now includes an explicit overlap-scoring rubric and ranking table;
+  the highest-overlap first merge pair for P2 remains
+  `directCallTargetSnapshotForSemanticProduct` +
+  `bridgePathChoiceSnapshotForSemanticProduct` because both share the same
+  non-method recursive traversal and callee-path resolution path with minimal
+  collector-specific branching.
 - `compile-pipeline-dump-helper-explicit-semantic-intent`: compile-pipeline
   dump capture helpers now require explicit
   `CompilePipelineSemanticProductIntent` plumbing at callsites (instead of an

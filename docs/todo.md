@@ -33,7 +33,6 @@ P0 - Reproducible measurement and attribution
 P1 - Immediate peak-RSS reductions in existing pipeline
 
 P2 - Traversal and allocation churn reductions
-- ◐ [P2-01] Inventory snapshot passes by traversal shape and pick the highest-overlap pair.
 - ◐ [P2-02] Merge one high-overlap snapshot pair into a shared traversal collector.
 - ◐ [P2-03] Add output-order parity test for the first snapshot merge.
 - ◐ [P2-04] Merge a second high-overlap snapshot pair into the shared collector path.
