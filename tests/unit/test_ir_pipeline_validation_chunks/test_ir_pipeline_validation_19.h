@@ -937,10 +937,32 @@ TEST_CASE("ir lowerer semantic-product adapter indexes callable summaries by ful
       .provenanceHandle = 0,
       .fullPathId = primec::InvalidSymbolId,
   });
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "void",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 203,
+      .provenanceHandle = 0,
+      .fullPathId =
+          static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u),
+  });
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   CHECK(adapter.callableSummariesByPathId.count(mainPathId) == 1);
   CHECK(adapter.callableSummariesByPathId.count(primec::InvalidSymbolId) == 0);
+  CHECK(adapter.callableSummariesByPathId.count(
+            static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u)) == 0);
   const auto *summary = primec::ir_lowerer::findSemanticProductCallableSummary(adapter, "/main");
   REQUIRE(summary != nullptr);
   CHECK(summary->semanticNodeId == 201);

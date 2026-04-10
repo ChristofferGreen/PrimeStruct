@@ -1830,6 +1830,8 @@ TEST_CASE("semantic product callable summaries use fullPathId without fullPath s
       readTextFile(root / "src" / "SemanticProduct.cpp");
   const std::string irLowererResultHelpers =
       readTextFile(root / "src" / "ir_lowerer" / "IrLowererResultHelpers.cpp");
+  const std::string irLowererReturnInfoHelpers =
+      readTextFile(root / "src" / "ir_lowerer" / "IrLowererLowerInferenceReturnInfoHelpers.cpp");
 
   const std::size_t callableStart =
       semanticProductHeader.find("struct SemanticProgramCallableSummary {");
@@ -1851,6 +1853,8 @@ TEST_CASE("semantic product callable summaries use fullPathId without fullPath s
         std::string::npos);
 
   CHECK(irLowererResultHelpers.find("summary->fullPathId == InvalidSymbolId") !=
+        std::string::npos);
+  CHECK(irLowererReturnInfoHelpers.find("entry->fullPathId == InvalidSymbolId || callablePath.empty()") !=
         std::string::npos);
 }
 

@@ -255,6 +255,20 @@ bool precomputeSemanticProductReturnInfoCache(const LowerInferenceGetReturnInfoS
   auto &returnInfoCache = *input.returnInfoCache;
   returnInfoCache.clear();
 
+  const auto callableSummaries =
+      semanticProgramCallableSummaryView(*input.semanticProductTargets->semanticProgram);
+  for (const auto *entry : callableSummaries) {
+    if (entry == nullptr) {
+      continue;
+    }
+    const std::string_view callablePath =
+        semanticProgramCallableSummaryFullPath(*input.semanticProductTargets->semanticProgram, *entry);
+    if (entry->fullPathId == InvalidSymbolId || callablePath.empty()) {
+      errorOut = "missing semantic-product callable summary path id";
+      return false;
+    }
+  }
+
   std::vector<const Definition *> definitions;
   definitions.reserve(input.semanticProductTargets->callableSummariesByPathId.size());
   for (const auto &[pathId, callableSummary] : input.semanticProductTargets->callableSummariesByPathId) {

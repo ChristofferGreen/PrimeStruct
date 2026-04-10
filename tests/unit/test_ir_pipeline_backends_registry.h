@@ -855,7 +855,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product callable summaries") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product callable summary: /main");
+  CHECK(error == "missing semantic-product callable summary path id");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -1065,6 +1065,52 @@ TEST_CASE("ir lowerer rejects missing semantic-product callable summary path id"
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
   CHECK(error == "missing semantic-product callable summary path id");
+  CHECK(diagnosticInfo.message == error);
+}
+
+TEST_CASE("ir lowerer rejects invalid semantic-product callable summary path id") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 8202;
+  primec::Expr returnExpr;
+  returnExpr.kind = primec::Expr::Kind::Literal;
+  returnExpr.literalValue = 1;
+  returnExpr.intWidth = 32;
+  mainDef.returnExpr = returnExpr;
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "return",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 8202,
+      .provenanceHandle = 0,
+      .fullPathId =
+          static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u),
+  });
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product callable summary: /main");
   CHECK(diagnosticInfo.message == error);
 }
 

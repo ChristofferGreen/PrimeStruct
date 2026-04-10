@@ -9,6 +9,23 @@
 namespace primec::ir_lowerer {
 namespace {
 
+bool validateSemanticProductCallableSummaryPathIds(const SemanticProgram &semanticProgram,
+                                                   std::string &error) {
+  const auto callableSummaries = semanticProgramCallableSummaryView(semanticProgram);
+  for (const auto *summary : callableSummaries) {
+    if (summary == nullptr) {
+      continue;
+    }
+    const std::string_view callablePath =
+        semanticProgramCallableSummaryFullPath(semanticProgram, *summary);
+    if (summary->fullPathId == InvalidSymbolId || callablePath.empty()) {
+      error = "missing semantic-product callable summary path id";
+      return false;
+    }
+  }
+  return true;
+}
+
 bool buildOnErrorHandlerFromSemanticFact(const Definition &def,
                                          const SemanticProgram &semanticProgram,
                                          const SemanticProgramOnErrorFact &fact,
@@ -118,6 +135,10 @@ bool buildOnErrorByDefinition(const Program &program,
                               const DefinitionExistsFn &definitionExists,
                               OnErrorByDefinition &out,
                               std::string &error) {
+  if (semanticProgram != nullptr &&
+      !validateSemanticProductCallableSummaryPathIds(*semanticProgram, error)) {
+    return false;
+  }
   const SemanticProductTargetAdapter semanticProductTargets =
       buildSemanticProductTargetAdapter(semanticProgram);
   out.clear();
