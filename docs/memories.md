@@ -278,8 +278,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `/std/collections/soa_vector/to_aos_ref` accepts `Reference<soa_vector<T>>`
   and now loops through canonical
   `/std/collections/soa_vector/count_ref|get_ref` (instead of forwarding
-  through `to_aos(dereference(...))`), and inline-parameter bridge matching no
-  longer treats canonical `to_aos_ref` as a bridge-eligible callee path.
+  through `to_aos(dereference(...))`), with the helper signature now normalized
+  to `Reference<SoaVector<T>>` so canonical `to_aos_ref` still accepts borrowed
+  experimental `SoaVector<T>` receivers, and inline-parameter bridge matching
+  no longer treats canonical `to_aos_ref` as a bridge-eligible callee path.
 - `semantic-soa-s2-direct-helper-bridge-removal-2026-04`: S2 inline-parameter
   lowering no longer treats direct
   `/std/collections/experimental_soa_vector_conversions/soaVectorToAos(_Ref)`
