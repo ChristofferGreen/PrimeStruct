@@ -14,6 +14,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Group 14 - SoA bring-up and end-state cleanup**
 - ✓ Refreshed section 4 of `docs/ownership_runtime_soa_touchpoints.md` with concrete still-unhandled compiler-owned SoA fallback families. Completed: section 4 now records the 2026-04 inventory with explicit S1/S2/S3 family entries, helper shapes, current behavior notes, and owning files for each still-unhandled family.
+- ✓ Added a focused semantics/backend parity test for the highest-priority unhandled SoA fallback family. Completed: `tests/unit/test_compile_run_imports_operations.h` now includes `rejects root non-struct non-empty soa_vector literal with semantic/emit parity in C++ emitter`, which locks matching semantic-stage diagnostics across `--dump-stage ast-semantic` and `--emit=exe`.
 
 **Group 15 - Semantic memory footprint and multithread compile substrate**
 - ✓ [P0-01] Added a minimized checked-in reproducer fixture derived from the high-RSS `/std/math/*` case as the primary memory regression target. Completed: `benchmarks/semantic_memory/fixtures/math_star_repro.prime` is now explicitly documented as the primary high-RSS reproducer, and benchmark-harness guard coverage locks it as the first `primary` fixture with a minimal `/std/math/*` call-chain body.

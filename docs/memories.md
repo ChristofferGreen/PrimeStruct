@@ -227,6 +227,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   still-unhandled SoA fallback inventory as explicit S1/S2/S3 families with
   helper shapes, behavior notes, and owning-file touchpoints, and the
   matching refresh leaf is archived in `docs/todo_finished.md`.
+- `semantic-soa-non-struct-literal-parity-test-2026-04`: Group 14 now
+  archives the focused SoA fallback parity reject at
+  `tests/unit/test_compile_run_imports_operations.h` (`rejects root
+  non-struct non-empty soa_vector literal with semantic/emit parity in C++
+  emitter`), locking matching diagnostics across `--dump-stage ast-semantic`
+  and `--emit=exe`.
 - `semantic-method-target-scratch-candidates`: infer-stage method-target
   resolution now reuses `CallTargetResolutionScratch::methodReceiverResolutionCandidates`
   for scoped definitions/executions in `resolveInferMethodCallPath(...)`,
