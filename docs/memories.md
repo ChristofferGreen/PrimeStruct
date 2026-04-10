@@ -190,6 +190,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   for scoped definitions/executions in `resolveInferMethodCallPath(...)`,
   avoiding per-call receiver-candidate vector allocations when probing
   canonical receiver alias paths before return-type inference.
+- `semantic-call-target-canonical-fragment-caches`: scoped call-target
+  concrete-path resolution now caches canonical overload/specialization
+  fragments (`overloadFamilyPrefixCache`, `specializationPrefixCache`, and
+  `overloadCandidatePathCache`) in `CallTargetResolutionScratch`, avoiding
+  repeated `path + "__ov..."` / `path + "__t..."` concatenation churn on
+  repeated call-target resolution within the same owner scope.
 - `compile-pipeline-dump-helper-explicit-semantic-intent`: compile-pipeline
   dump capture helpers now require explicit
   `CompilePipelineSemanticProductIntent` plumbing at callsites (instead of an
