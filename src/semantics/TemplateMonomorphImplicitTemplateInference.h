@@ -226,9 +226,10 @@ bool inferImplicitTemplateArgs(const Definition &def,
       if ((isCanonicalBuiltinSoaRefCall || isCanonicalBuiltinSoaRefRefCall) &&
           !candidate.args.empty() &&
           candidate.args.front().kind == Expr::Kind::Call) {
-        return soaDirectPendingUnavailableMethodDiagnostic(
+        return soaUnavailableMethodDiagnostic(
             isRefRefCall ? "/std/collections/soa_vector/ref_ref"
-                         : "/std/collections/soa_vector/ref");
+                         : "/std/collections/soa_vector/ref",
+            false);
       }
       const bool isExplicitSoaRefCall =
           (!candidate.isMethodCall && normalizedPrefix == "soa_vector" &&
@@ -252,9 +253,10 @@ bool inferImplicitTemplateArgs(const Definition &def,
           (!candidate.isMethodCall &&
            (isSimpleCallName(candidate, "ref") ||
             isSimpleCallName(candidate, "ref_ref")))) {
-        return soaDirectPendingUnavailableMethodDiagnostic(
+        return soaUnavailableMethodDiagnostic(
             isRefRefCall ? "/std/collections/soa_vector/ref_ref"
-                         : "/std/collections/soa_vector/ref");
+                         : "/std/collections/soa_vector/ref",
+            false);
       }
       return {};
     }
@@ -273,8 +275,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
         ctx.helperOverloads.count(canonicalPath) > 0) {
       return {};
     }
-    return soaDirectPendingUnavailableMethodDiagnostic(
-        soaFieldViewHelperPath(normalizedName));
+    return soaUnavailableMethodDiagnostic(
+        soaFieldViewHelperPath(normalizedName), false);
   };
   const bool hasLeadingReceiverParam = [&]() {
     if (callParams.empty()) {

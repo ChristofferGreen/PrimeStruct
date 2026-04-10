@@ -496,13 +496,17 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "soaDirectPendingUnavailableMethodDiagnostic(\n"
-            "        soaFieldViewHelperPath(normalizedName))") !=
+            "        soaFieldViewHelperPath(normalizedName))") ==
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "soaUnavailableMethodDiagnostic(\n"
+            "        soaFieldViewHelperPath(normalizedName), false)") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "soaDirectBorrowedViewPendingDiagnostic()") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "soaDirectPendingUnavailableMethodDiagnostic(") !=
+            "soaDirectPendingUnavailableMethodDiagnostic(") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "\"/std/collections/soa_vector/ref_ref\"") !=

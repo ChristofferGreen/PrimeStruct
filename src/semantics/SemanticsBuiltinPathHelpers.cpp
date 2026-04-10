@@ -478,11 +478,6 @@ std::string canonicalSoaPendingHelperPath(std::string_view resolvedPath) {
 
 } // namespace
 
-std::string soaDirectPendingUnavailableMethodDiagnostic(
-    std::string_view resolvedPath) {
-  return "unknown method: " + canonicalSoaPendingHelperPath(resolvedPath);
-}
-
 std::string soaUnavailableMethodDiagnostic(std::string_view resolvedPath,
                                            bool hasVisibleSoaBorrowedHelper) {
   (void)hasVisibleSoaBorrowedHelper;

@@ -134,8 +134,6 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out);
 bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collectionOut, std::string &helperOut);
 std::string soaFieldViewHelperPath(std::string_view fieldName);
 bool splitSoaFieldViewHelperPath(std::string_view path, std::string *fieldNameOut = nullptr);
-std::string soaDirectPendingUnavailableMethodDiagnostic(
-    std::string_view resolvedPath);
 std::string soaUnavailableMethodDiagnostic(std::string_view resolvedPath,
                                            bool hasVisibleSoaBorrowedHelper);
 bool isSoaVectorStructElementType(const std::string &typeArg,

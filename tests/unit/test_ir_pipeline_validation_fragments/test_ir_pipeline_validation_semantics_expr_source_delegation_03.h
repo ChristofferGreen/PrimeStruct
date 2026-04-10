@@ -766,10 +766,10 @@
             "unknown method: /std/collections/soa_vector/field_view/") ==
         std::string::npos);
   CHECK(semanticsExprMapSoaBuiltinsSource.find(
-            "soaDirectPendingUnavailableMethodDiagnostic(resolved)") !=
+            "soaDirectPendingUnavailableMethodDiagnostic(resolved)") ==
         std::string::npos);
   CHECK(semanticsExprMapSoaBuiltinsSource.find(
-            "soaUnavailableMethodDiagnostic(resolved, false)") ==
+            "soaUnavailableMethodDiagnostic(resolved, false)") !=
         std::string::npos);
   CHECK(semanticsExprMapSoaBuiltinsSource.find(
             "soaFieldViewPendingDiagnostic(soaFieldViewName)") ==

@@ -723,9 +723,8 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       std::string accessName;
       if (!(getBuiltinArrayAccessName(target, accessName) &&
             target.args.size() == 2)) {
-        return failMutationBorrowDiagnostic(
-            soaDirectPendingUnavailableMethodDiagnostic(
-                soaFieldViewHelperPath(standaloneSoaFieldViewName)));
+        return failMutationBorrowDiagnostic(soaUnavailableMethodDiagnostic(
+            soaFieldViewHelperPath(standaloneSoaFieldViewName), false));
       }
     }
     const bool targetIsName = target.kind == Expr::Kind::Name;
@@ -805,7 +804,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
               builtinSoaDirectPendingHelperPath(fieldTarget, params, locals);
           pendingPath.has_value()) {
         return failMutationBorrowDiagnostic(
-            soaDirectPendingUnavailableMethodDiagnostic(*pendingPath));
+            soaUnavailableMethodDiagnostic(*pendingPath, false));
       }
       if (!validateExpr(params, locals, fieldTarget)) {
         return false;

@@ -12,9 +12,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   assert canonical helper-path usage in validator + monomorph fallback code.
 - `soa-pending-diagnostics-no-optional-branch`: semantics helpers no longer
   expose the optional `soaPendingUnavailableMethodDiagnostic(...)` branch;
-  monomorph fallback and shared helper diagnostics now route SoA pending
-  borrowed/field-view rejects directly through canonical
-  `soaDirectPendingUnavailableMethodDiagnostic(...)` / `soaUnavailableMethodDiagnostic(...)`
+  semantics helpers also no longer expose
+  `soaDirectPendingUnavailableMethodDiagnostic(...)`, and monomorph fallback
+  plus shared helper diagnostics now route SoA pending borrowed/field-view
+  rejects through canonical `soaUnavailableMethodDiagnostic(..., false)`
   unknown-method paths.
 - `arg-pack-dereference-struct-inference`: IR struct-type inference now
   propagates through `dereference(...)`, so indexed borrowed arg-pack values

@@ -269,11 +269,11 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
     if (const auto pendingPath =
             builtinSoaDirectPendingHelperPath(returnExpr, params, locals)) {
       return failReturnDiagnostic(
-          soaDirectPendingUnavailableMethodDiagnostic(*pendingPath));
+          soaUnavailableMethodDiagnostic(*pendingPath, false));
     }
     if (const auto pendingFieldPath = pendingFieldViewPathFromHelper()) {
       return failReturnDiagnostic(
-          soaDirectPendingUnavailableMethodDiagnostic(*pendingFieldPath));
+          soaUnavailableMethodDiagnostic(*pendingFieldPath, false));
     }
     auto declaredReferenceReturnTarget = [&]() -> std::optional<std::string> {
       auto defIt = defMap_.find(currentValidationState_.context.definitionPath);

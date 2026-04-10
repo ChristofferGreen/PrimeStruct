@@ -35,7 +35,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
   if (splitSoaFieldViewHelperPath(resolved)) {
     handledOut = true;
     return failMapSoaBuiltinDiagnostic(
-        soaDirectPendingUnavailableMethodDiagnostic(resolved));
+        soaUnavailableMethodDiagnostic(resolved, false));
   }
   auto returnKindForBinding = [](const BindingInfo &binding) -> ReturnKind {
     if (binding.typeName == "Reference") {
