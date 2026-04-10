@@ -7,6 +7,9 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 10, 2026)**
 
+**Group 13 - Ownership/runtime substrate**
+- ✓ Refreshed section 3 of `docs/ownership_runtime_soa_touchpoints.md` with concrete still-unhandled non-local receiver-family inventory. Completed: section 3 now records the 2026-04 inventory with resolved non-local receiver families, per-family rewrite/parity touchpoints, and an explicit `Still-unhandled non-local receiver families` entry (`None in the current inventory`).
+
 **Group 15 - Semantic memory footprint and multithread compile substrate**
 - ✓ [P0-01] Added a minimized checked-in reproducer fixture derived from the high-RSS `/std/math/*` case as the primary memory regression target. Completed: `benchmarks/semantic_memory/fixtures/math_star_repro.prime` is now explicitly documented as the primary high-RSS reproducer, and benchmark-harness guard coverage locks it as the first `primary` fixture with a minimal `/std/math/*` call-chain body.
 - ✓ [P0-02] Added benchmark fixtures for no-import and `/std/math/vector` semantic runs (`ast-semantic` + `semantic-product`). Completed: benchmark docs now call out `no_import.prime` and `math_vector.prime` as semantic-memory attribution fixtures, and benchmark-harness execution coverage now runs `semantic_memory_benchmark.py` on exactly those fixtures and asserts the four required fixture-phase result tuples (`no_import`/`math_vector` × `ast-semantic`/`semantic-product`).

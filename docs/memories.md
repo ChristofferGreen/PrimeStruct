@@ -212,6 +212,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `--graph-local-auto-dependency-scratch-mode pmr|std|both`, emitting
   per-fixture/phase `graph_local_auto_dependency_scratch_mode_deltas`
   RSS/time rollups.
+- `semantic-map-non-local-growth-inventory-2026-04`: section 3 of
+  `docs/ownership_runtime_soa_touchpoints.md` now carries the refreshed
+  Group 13 non-local map-growth receiver inventory with per-family rewrite
+  touchpoints and an explicit `Still-unhandled non-local receiver families`
+  state of `None in the current inventory`.
 - `semantic-method-target-scratch-candidates`: infer-stage method-target
   resolution now reuses `CallTargetResolutionScratch::methodReceiverResolutionCandidates`
   for scoped definitions/executions in `resolveInferMethodCallPath(...)`,

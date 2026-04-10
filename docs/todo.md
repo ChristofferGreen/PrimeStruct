@@ -12,7 +12,6 @@ Sizing note: each leaf `○` item should fit in one code-affecting commit plus f
 
 **Group 13 - Ownership/runtime substrate**
 - ◐ Route the remaining builtin canonical `map<K, V>` borrowed/non-local growth mutation surfaces through the shared grown-pointer write-back/repoint path.
-  - ◐ Refresh section 3 of `docs/ownership_runtime_soa_touchpoints.md` with concrete still-unhandled non-local receiver families (one entry per family with minimal repro + owning source files).
   - ◐ Add one failing conformance case for the highest-priority unhandled non-local receiver family across native/C++/VM harnesses.
   - ◐ Migrate that single highest-priority non-local receiver family onto the shared rewrite/lowering path and flip the new conformance case to passing. Progress: direct + method helper-return map value receiver inserts and borrowed-holder field receiver inserts now rewrite to `/std/collections/map/insert_builtin` and run across VM/C++ emitter/native; section 3 currently reports no unhandled non-local receiver families in this inventory.
 
