@@ -41,6 +41,16 @@ uint64_t makeQueryFactResolvedPathCallNameKey(SymbolId resolvedPathId, SymbolId 
          static_cast<uint64_t>(callNameId);
 }
 
+uint64_t makeTryFactOperandPathSourceKey(SymbolId operandPathId, int sourceLine, int sourceColumn) {
+  const uint64_t lineBits = static_cast<uint64_t>(
+      static_cast<uint32_t>(sourceLine > 0 ? sourceLine : 0));
+  const uint64_t columnBits = static_cast<uint64_t>(
+      static_cast<uint32_t>(sourceColumn > 0 ? sourceColumn : 0));
+  return (static_cast<uint64_t>(operandPathId) << 32) ^
+         (lineBits * 1315423911ULL) ^
+         columnBits;
+}
+
 std::optional<SymbolId> resolveSemanticExprPathId(const SemanticProductTargetAdapter &adapter,
                                                   const Expr &expr) {
   if (adapter.semanticProgram == nullptr) {
@@ -247,9 +257,22 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
 
   const auto tryFacts = semanticProgramTryFactView(*semanticProgram);
   adapter.tryFactsByExpr.reserve(tryFacts.size());
+  adapter.tryFactsByOperandPathAndSource.reserve(tryFacts.size());
   for (const auto *entry : tryFacts) {
     if (entry->semanticNodeId != 0) {
       adapter.tryFactsByExpr.insert_or_assign(entry->semanticNodeId, entry);
+    }
+    const std::string_view operandResolvedPath =
+        semanticProgramTryFactOperandResolvedPath(*semanticProgram, *entry);
+    if (entry->operandResolvedPathId != InvalidSymbolId &&
+        !operandResolvedPath.empty() &&
+        entry->sourceLine > 0 &&
+        entry->sourceColumn > 0) {
+      adapter.tryFactsByOperandPathAndSource.insert_or_assign(
+          makeTryFactOperandPathSourceKey(entry->operandResolvedPathId,
+                                          entry->sourceLine,
+                                          entry->sourceColumn),
+          entry);
     }
   }
 
@@ -427,7 +450,24 @@ const SemanticProgramQueryFact *findSemanticProductQueryFact(const SemanticProdu
 
 const SemanticProgramTryFact *findSemanticProductTryFact(const SemanticProductTargetAdapter &adapter,
                                                         const Expr &expr) {
-  return findExpressionScopedSemanticFact(adapter.tryFactsByExpr, expr);
+  if (const auto *fact = findExpressionScopedSemanticFact(adapter.tryFactsByExpr, expr);
+      fact != nullptr) {
+    return fact;
+  }
+  if (adapter.semanticProgram == nullptr || expr.kind != Expr::Kind::Call || expr.name != "try" ||
+      expr.args.empty() || expr.sourceLine <= 0 || expr.sourceColumn <= 0) {
+    return nullptr;
+  }
+  const auto operandPathId = resolveSemanticExprPathId(adapter, expr.args.front());
+  if (!operandPathId.has_value()) {
+    return nullptr;
+  }
+  if (const auto it = adapter.tryFactsByOperandPathAndSource.find(
+          makeTryFactOperandPathSourceKey(*operandPathId, expr.sourceLine, expr.sourceColumn));
+      it != adapter.tryFactsByOperandPathAndSource.end()) {
+    return it->second;
+  }
+  return nullptr;
 }
 
 const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticProductTargetAdapter &adapter,

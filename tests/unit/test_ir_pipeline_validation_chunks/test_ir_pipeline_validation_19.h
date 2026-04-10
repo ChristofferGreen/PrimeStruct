@@ -1239,6 +1239,53 @@ TEST_CASE("ir lowerer semantic-product adapter resolves query facts by resolved-
   CHECK(primec::semanticProgramQueryFactResolvedPath(semanticProgram, *queryFact) == "/lookup");
 }
 
+TEST_CASE("ir lowerer semantic-product adapter resolves try facts by operand path and source fallback") {
+  primec::Expr operandExpr;
+  operandExpr.kind = primec::Expr::Kind::Call;
+  operandExpr.name = "lookup";
+  operandExpr.semanticNodeId = 9101;
+
+  primec::Expr tryExpr;
+  tryExpr.kind = primec::Expr::Kind::Call;
+  tryExpr.name = "try";
+  tryExpr.args = {operandExpr};
+  tryExpr.semanticNodeId = 0;
+  tryExpr.sourceLine = 33;
+  tryExpr.sourceColumn = 9;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .sourceLine = 33,
+      .sourceColumn = 9,
+      .semanticNodeId = 9101,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+  });
+  semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
+      .scopePath = "/main",
+      .operandBindingTypeText = "Result<i32, FileError>",
+      .operandReceiverBindingTypeText = "",
+      .operandQueryTypeText = "Result<i32, FileError>",
+      .valueType = "i32",
+      .errorType = "FileError",
+      .contextReturnKind = "return",
+      .onErrorHandlerPath = "/handler",
+      .onErrorErrorType = "FileError",
+      .onErrorBoundArgCount = 1,
+      .sourceLine = 33,
+      .sourceColumn = 9,
+      .semanticNodeId = 0,
+      .operandResolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+  });
+
+  const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto *tryFact = primec::ir_lowerer::findSemanticProductTryFact(adapter, tryExpr);
+  REQUIRE(tryFact != nullptr);
+  CHECK(tryFact->operandResolvedPathId != primec::InvalidSymbolId);
+  CHECK(primec::semanticProgramTryFactOperandResolvedPath(semanticProgram, *tryFact) == "/lookup");
+}
+
 TEST_CASE("ir lowerer call helpers resolve definition calls through slashless map import aliases") {
   primec::Definition canonicalMapCountDef;
   canonicalMapCountDef.fullPath = "/std/collections/map/count";
