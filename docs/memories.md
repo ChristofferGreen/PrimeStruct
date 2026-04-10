@@ -248,9 +248,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   remains explicit.
 - `semantic-soa-s2-canonical-conversion-loops-2026-04`: Group 14 now archives
   the S2 slice where canonical `/std/collections/soa_vector/to_aos` accepts
-  builtin `soa_vector<T>` at the canonical surface and forwards through
-  `/std/collections/experimental_soa_vector_conversions/soaVectorToAos`
-  instead of requiring canonical-call-site bridge eligibility.
+  builtin `soa_vector<T>` at the canonical surface and now loops through
+  canonical `/std/collections/soa_vector/count|get` helpers (instead of
+  directly forwarding to experimental conversion helpers), with AST-semantic
+  dump coverage in `tests/unit/test_compile_run_text_filters_dumps.h`
+  locking canonical helper calls inside the canonical `to_aos` body.
 - `semantic-soa-s2-to-aos-bridge-eligibility-prune-2026-04`: Group 14 now
   archives the S2 slice where inline-parameter bridge matching no longer
   treats canonical `/std/collections/soa_vector/to_aos` as a builtin
