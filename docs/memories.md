@@ -160,6 +160,14 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `semanticProgramBindingFactView(...)`, and combined first-slice parity
   coverage now locks identical semantic-product formatter output between flat
   and module-index storage for those families.
+- `semantic-product-second-module-index-slice`: module-resolved
+  `bridge_path_choices`, `return_facts`, `local_auto_facts`, `query_facts`,
+  `try_facts`, and `on_error_facts` now route through
+  `bridgePathChoiceIndices`, `returnFactIndices`, `localAutoFactIndices`,
+  `queryFactIndices`, `tryFactIndices`, and `onErrorFactIndices` into
+  canonical semantic-program vectors, and source-lock coverage now rejects
+  regression strings that would repopulate per-module copied
+  `returnFacts`/`localAutoFacts`/`queryFacts` vectors.
 - `compile-pipeline-dump-helper-explicit-semantic-intent`: compile-pipeline
   dump capture helpers now require explicit
   `CompilePipelineSemanticProductIntent` plumbing at callsites (instead of an

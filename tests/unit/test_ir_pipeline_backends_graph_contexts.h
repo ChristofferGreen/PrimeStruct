@@ -1635,6 +1635,18 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.definitionPath).onErrorFactIndices.push_back(entryIndex);") !=
         std::string::npos);
+  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.definitionPath).returnFacts.push_back(entry);") ==
+        std::string::npos);
+  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).localAutoFacts.push_back(entry);") ==
+        std::string::npos);
+  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).queryFacts.push_back(entry);") ==
+        std::string::npos);
+  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(storedEntry.definitionPath).returnFacts.push_back(storedEntry);") ==
+        std::string::npos);
+  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(storedEntry.scopePath).localAutoFacts.push_back(storedEntry);") ==
+        std::string::npos);
+  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(storedEntry.scopePath).queryFacts.push_back(storedEntry);") ==
+        std::string::npos);
   CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(storedEntry.scopePath).tryFacts.push_back(storedEntry);") ==
         std::string::npos);
   CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(storedEntry.definitionPath).onErrorFacts.push_back(storedEntry);") ==
