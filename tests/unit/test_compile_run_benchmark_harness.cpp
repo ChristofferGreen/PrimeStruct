@@ -273,6 +273,88 @@ TEST_CASE("semantic memory benchmark helper accepts benchmark-only collector con
   CHECK(report.find("\"is_expensive_threshold_offender\": false") != std::string::npos);
 }
 
+TEST_CASE("semantic memory benchmark helper toggles fact families independently") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";
+  const std::filesystem::path primecPath = repoRoot / "build-release" / "primec";
+  if (!std::filesystem::exists(primecPath)) {
+    INFO("primec not available in build-release");
+    return;
+  }
+
+  const std::string directReportPath = writeTemp("semantic_memory_fact_direct_report.json", "");
+  const std::string methodReportPath = writeTemp("semantic_memory_fact_method_report.json", "");
+  const std::string bothReportPath = writeTemp("semantic_memory_fact_both_report.json", "");
+  const std::string stdoutPath = writeTemp("semantic_memory_fact_families.out", "");
+  const std::string stderrPath = writeTemp("semantic_memory_fact_families.err", "");
+
+  const auto runBenchmark = [&](const std::string& families, const std::string& reportPath) {
+    const std::string cmd =
+        "python3 " + quoteShellArg(scriptPath.string()) +
+        " --repo-root " + quoteShellArg(repoRoot.string()) +
+        " --primec " + quoteShellArg(primecPath.string()) +
+        " --runs 1 --fixtures math_vector --phases semantic-product --fact-families " +
+        quoteShellArg(families) +
+        " --report-json " + quoteShellArg(reportPath) +
+        " > " + quoteShellArg(stdoutPath) + " 2> " + quoteShellArg(stderrPath);
+    CHECK(runCommand(cmd) == 0);
+    CHECK(readFile(stderrPath).empty());
+  };
+
+  runBenchmark("direct_call_targets", directReportPath);
+  runBenchmark("method_call_targets", methodReportPath);
+  runBenchmark("direct_call_targets,method_call_targets", bothReportPath);
+
+  const std::string validateOutPath = writeTemp("semantic_memory_fact_families_validate.out", "");
+  const std::string validateErrPath = writeTemp("semantic_memory_fact_families_validate.err", "");
+  const std::string validateCmd =
+      "python3 -c " +
+      quoteShellArg(
+          "import json, sys\n"
+          "def load_row(path):\n"
+          "  report = json.load(open(path, encoding='utf-8'))\n"
+          "  rows = report.get('results', [])\n"
+          "  if len(rows) != 1:\n"
+          "    return None\n"
+          "  return rows[0]\n"
+          "direct = load_row(sys.argv[1])\n"
+          "method = load_row(sys.argv[2])\n"
+          "both = load_row(sys.argv[3])\n"
+          "ok = direct is not None and method is not None and both is not None\n"
+          "if ok:\n"
+          "  d = direct.get('key_cardinality', {})\n"
+          "  m = method.get('key_cardinality', {})\n"
+          "  b = both.get('key_cardinality', {})\n"
+          "  ok = ok and direct.get('fact_families') == 'direct_call_targets'\n"
+          "  ok = ok and method.get('fact_families') == 'method_call_targets'\n"
+          "  ok = ok and both.get('fact_families') == 'direct_call_targets,method_call_targets'\n"
+          "  ok = ok and int(d.get('distinct_direct_call_target_keys', -1)) > 0\n"
+          "  ok = ok and int(d.get('distinct_method_call_target_keys', -1)) == 0\n"
+          "  ok = ok and int(m.get('distinct_direct_call_target_keys', -1)) == 0\n"
+          "  ok = ok and int(m.get('distinct_method_call_target_keys', -1)) > 0\n"
+          "  ok = ok and int(b.get('distinct_direct_call_target_keys', -1)) > 0\n"
+          "  ok = ok and int(b.get('distinct_method_call_target_keys', -1)) > 0\n"
+          "  ok = ok and int(d.get('max_target_key_length', -1)) > 0\n"
+          "  ok = ok and int(m.get('max_target_key_length', -1)) > 0\n"
+          "  ok = ok and int(b.get('max_target_key_length', -1)) > 0\n"
+          "if not ok:\n"
+          "  print('direct=', json.dumps(direct, indent=2, sort_keys=True) if direct else None)\n"
+          "  print('method=', json.dumps(method, indent=2, sort_keys=True) if method else None)\n"
+          "  print('both=', json.dumps(both, indent=2, sort_keys=True) if both else None)\n"
+          "sys.exit(0 if ok else 1)\n") +
+      " " + quoteShellArg(directReportPath) +
+      " " + quoteShellArg(methodReportPath) +
+      " " + quoteShellArg(bothReportPath) +
+      " > " + quoteShellArg(validateOutPath) + " 2> " + quoteShellArg(validateErrPath);
+  CHECK(runCommand(validateCmd) == 0);
+  CHECK(readFile(validateErrPath).empty());
+}
+
 TEST_CASE("semantic memory benchmark helper emits wall-rss machine report rows") {
   if (!hasPython3()) {
     INFO("python3 not available");

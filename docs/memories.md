@@ -94,6 +94,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
   explicit `--runs` override and asserts the default `runs == 3` contract,
   three-sample `wall_seconds`/`peak_rss_bytes` arrays, and row
   median/worst rollups that match computed values from those samples.
+- `semantic-memory-independent-fact-family-toggles`: semantic-memory
+  benchmark harness coverage now runs `semantic_memory_benchmark.py` with
+  `--fact-families direct_call_targets`, `method_call_targets`, and
+  `direct_call_targets,method_call_targets` on the same semantic-product
+  fixture and asserts direct/method key-cardinality metrics toggle
+  independently while `fact_families` row metadata preserves the selected
+  collector set.
 - `semantic-product-direct-call-routing`: production lowering now validates
   that every non-method direct call has a published semantic-product routing
   fact before lowering starts, and semantic-product-aware direct-call
