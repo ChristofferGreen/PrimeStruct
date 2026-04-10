@@ -89,6 +89,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   and asserts semantic-product rows carry `key_cardinality` fields
   (`distinct_direct_call_target_keys`, `distinct_method_call_target_keys`,
   `max_target_key_length`) while ast-semantic rows omit that payload.
+- `semantic-memory-default-three-run-rollups`: semantic-memory benchmark
+  harness coverage now executes `semantic_memory_benchmark.py` without an
+  explicit `--runs` override and asserts the default `runs == 3` contract,
+  three-sample `wall_seconds`/`peak_rss_bytes` arrays, and row
+  median/worst rollups that match computed values from those samples.
 - `semantic-product-direct-call-routing`: production lowering now validates
   that every non-method direct call has a published semantic-product routing
   fact before lowering starts, and semantic-product-aware direct-call
