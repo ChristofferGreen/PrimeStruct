@@ -327,6 +327,10 @@ TEST_CASE("soa_vector builtin ref call argument escapes use pending diagnostic")
   checkReject("ref(values, 0i32)", "unknown method: /std/collections/soa_vector/ref");
   checkReject("values.ref(0i32)", "unknown method: /std/collections/soa_vector/ref");
   checkReject("/soa_vector/ref(values, 0i32)", "unknown method: /std/collections/soa_vector/ref");
+  checkReject("ref_ref(values, 0i32)", "unknown method: /std/collections/soa_vector/ref_ref");
+  checkReject("values.ref_ref(0i32)", "unknown method: /std/collections/soa_vector/ref_ref");
+  checkReject("/soa_vector/ref_ref(values, 0i32)",
+              "unknown method: /std/collections/soa_vector/ref_ref");
 }
 
 TEST_CASE("soa_vector helper-return ref call argument escapes use borrowed-view diagnostic") {

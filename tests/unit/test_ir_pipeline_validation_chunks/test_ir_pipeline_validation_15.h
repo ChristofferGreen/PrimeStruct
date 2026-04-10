@@ -682,6 +682,18 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "bool splitSoaFieldViewHelperPath(std::string_view path, std::string *fieldNameOut)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find("\"/soa_vector/field_view/\"") == std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
+            "const size_t templateSuffix = resolvedPath.find(\"__t\");") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
+            "std::string_view normalizedResolvedPath = resolvedPath;") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
+            "if (normalizedResolvedPath == \"/soa_vector/ref\")") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
+            "if (normalizedResolvedPath == \"/soa_vector/ref_ref\")") !=
+        std::string::npos);
   CHECK(builtinPathHelpersSource.find("namespace {\n\nstd::string soaFieldViewPendingDiagnostic(") ==
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(

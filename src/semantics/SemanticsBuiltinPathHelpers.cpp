@@ -456,14 +456,21 @@ bool splitSoaFieldViewHelperPath(std::string_view path, std::string *fieldNameOu
 namespace {
 
 std::string canonicalSoaPendingHelperPath(std::string_view resolvedPath) {
+  std::string resolvedPathNoTemplate;
+  std::string_view normalizedResolvedPath = resolvedPath;
+  const size_t templateSuffix = resolvedPath.find("__t");
+  if (templateSuffix != std::string_view::npos) {
+    resolvedPathNoTemplate = std::string(resolvedPath.substr(0, templateSuffix));
+    normalizedResolvedPath = resolvedPathNoTemplate;
+  }
   std::string fieldName;
-  if (splitSoaFieldViewHelperPath(resolvedPath, &fieldName)) {
+  if (splitSoaFieldViewHelperPath(normalizedResolvedPath, &fieldName)) {
     return soaFieldViewHelperPath(fieldName);
   }
-  if (resolvedPath == "/soa_vector/ref") {
+  if (normalizedResolvedPath == "/soa_vector/ref") {
     return "/std/collections/soa_vector/ref";
   }
-  if (resolvedPath == "/soa_vector/ref_ref") {
+  if (normalizedResolvedPath == "/soa_vector/ref_ref") {
     return "/std/collections/soa_vector/ref_ref";
   }
   return std::string(resolvedPath);

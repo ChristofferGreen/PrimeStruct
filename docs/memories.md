@@ -23,6 +23,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   prefix and no longer matches legacy `/soa_vector/field_view/` helper paths;
   source-lock IR pipeline coverage now asserts that the legacy prefix string
   does not appear in `SemanticsBuiltinPathHelpers.cpp`.
+- `soa-pending-diagnostics-template-normalization`: pending helper diagnostic
+  canonicalization now strips resolved helper template suffixes (`__t...`)
+  before applying legacy `/soa_vector/ref(_ref)` remapping, so templated
+  legacy helper spellings also report canonical
+  `/std/collections/soa_vector/ref(_ref)` unknown-method diagnostics; semantic
+  coverage now explicitly checks canonical `ref_ref` rejects alongside `ref`.
 - `arg-pack-dereference-struct-inference`: IR struct-type inference now
   propagates through `dereference(...)`, so indexed borrowed arg-pack values
   (for example `args<Reference<Map<K, V>>>`) preserve their struct identity
