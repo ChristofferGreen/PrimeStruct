@@ -100,6 +100,9 @@ Baseline thresholds are stored in:
 Semantic memory benchmark fixtures live under:
 
 - `benchmarks/semantic_memory/fixtures/`
+- `math_star_repro.prime` is the primary high-RSS regression target: a
+  minimized checked-in `/std/math/*` reproducer used for budget and phase-one
+  success checks.
 - `math_vector.prime` uses explicit vector-surface imports (`/std/math/Vec2`).
 - `math_vector_matrix.prime` uses explicit vector+matrix imports (`/std/math/Vec2 /std/math/Mat2`).
 

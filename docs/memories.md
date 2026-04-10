@@ -43,6 +43,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   access behavior; the C++ emitter now matches that direct-call contract for
   bare `at` / `at_unsafe` calls instead of compiling them through the old
   builtin access fallback.
+- `semantic-memory-primary-math-star-repro-fixture`: semantic-memory
+  benchmarking now treats `benchmarks/semantic_memory/fixtures/math_star_repro.prime`
+  as the primary minimized high-RSS `/std/math/*` reproducer, with benchmark
+  harness coverage locking that fixture as the first `primary` fixture and
+  keeping its minimal three-step call-chain shape.
 - `semantic-product-direct-call-routing`: production lowering now validates
   that every non-method direct call has a published semantic-product routing
   fact before lowering starts, and semantic-product-aware direct-call

@@ -2,6 +2,23 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.benchmark_harness");
 
+namespace {
+
+std::size_t countOccurrences(const std::string &text, const std::string &needle) {
+  if (needle.empty()) {
+    return 0;
+  }
+  std::size_t count = 0;
+  std::size_t pos = 0;
+  while ((pos = text.find(needle, pos)) != std::string::npos) {
+    ++count;
+    pos += needle.size();
+  }
+  return count;
+}
+
+} // namespace
+
 TEST_CASE("benchmark baseline artifact includes native allocator coverage") {
   const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
   const std::filesystem::path baselinePath = repoRoot / "benchmarks" / "benchmark_baseline.json";
@@ -29,6 +46,41 @@ TEST_CASE("semantic memory benchmark fixtures are checked in") {
   CHECK(std::filesystem::exists(fixtureRoot / "scale_1x.prime"));
   CHECK(std::filesystem::exists(fixtureRoot / "scale_2x.prime"));
   CHECK(std::filesystem::exists(fixtureRoot / "scale_4x.prime"));
+}
+
+TEST_CASE("semantic memory benchmark helper keeps primary fixture first") {
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";
+  const std::string script = readFile(scriptPath.string());
+  REQUIRE_FALSE(script.empty());
+
+  const std::string primaryFixtureDecl =
+      "FixtureSpec(\"math_star_repro\", \"benchmarks/semantic_memory/fixtures/math_star_repro.prime\", \"primary\")";
+  const std::string importsFixtureDecl =
+      "FixtureSpec(\"no_import\", \"benchmarks/semantic_memory/fixtures/no_import.prime\", \"imports\")";
+  const std::size_t primaryPos = script.find(primaryFixtureDecl);
+  const std::size_t importsPos = script.find(importsFixtureDecl);
+  REQUIRE(primaryPos != std::string::npos);
+  REQUIRE(importsPos != std::string::npos);
+  CHECK(primaryPos < importsPos);
+}
+
+TEST_CASE("semantic memory primary fixture stays minimal math-star reproducer") {
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path fixturePath =
+      repoRoot / "benchmarks" / "semantic_memory" / "fixtures" / "math_star_repro.prime";
+  const std::string fixture = readFile(fixturePath.string());
+  REQUIRE_FALSE(fixture.empty());
+
+  CHECK(fixture.find("import /std/math/*") != std::string::npos);
+  CHECK(fixture.find("import /std/math/Vec2") == std::string::npos);
+  CHECK(fixture.find("import /std/math/Mat2") == std::string::npos);
+  CHECK(fixture.find("[void]\nstep0()") != std::string::npos);
+  CHECK(fixture.find("[void]\nstep1()") != std::string::npos);
+  CHECK(fixture.find("[void]\nstep2()") != std::string::npos);
+  CHECK(fixture.find("[return<i32>]\nmain()") != std::string::npos);
+  CHECK(countOccurrences(fixture, "[void]\nstep") == 3);
+  CHECK(fixture.size() <= 256);
 }
 
 TEST_CASE("semantic memory baseline report is checked in with fixture phase coverage") {
