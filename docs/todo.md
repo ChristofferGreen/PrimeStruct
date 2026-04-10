@@ -33,12 +33,6 @@ P0 - Reproducible measurement and attribution
 P1 - Immediate peak-RSS reductions in existing pipeline
 
 P2 - Traversal and allocation churn reductions
-- ◐ [P2-02] Merge one high-overlap snapshot pair into a shared traversal collector.
-- ◐ [P2-03] Add output-order parity test for the first snapshot merge.
-- ◐ [P2-04] Merge a second high-overlap snapshot pair into the shared collector path.
-- ◐ [P2-05] Add output-order parity test for the second snapshot merge.
-- ◐ [P2-06] Introduce reusable per-definition scratch storage for call-target resolution transients. Progress: `resolveExprConcreteCallPath(...)` now reuses per-definition PMR scratch (`CallTargetResolutionScratch::concreteCallBaseCandidates` + `overloadFamilyPathCache`) instead of rebuilding transient overload-family/candidate structures per call.
-- ◐ [P2-07] Extend reusable per-definition scratch storage to method-target resolution transients.
 - ◐ [P2-08] Replace repeated call-target path normalization/concatenation with cached canonical fragments. Progress: call-target concrete-path resolution now caches overload/specialization canonical fragments (`overloadFamilyPrefixCache`, `specializationPrefixCache`, and `overloadCandidatePathCache`) in `CallTargetResolutionScratch`, reusing them across scoped-owner call resolution instead of rebuilding `path + "__ov..."`/`path + "__t..."` strings per call.
 - ◐ [P2-09] Extend cached canonical fragment reuse to method-target path construction. Progress: method-target receiver alias candidate construction now routes through `joinMethodTarget(...)` via a shared `appendCanonicalReceiverResolutionCandidates(...)` helper (`/vector`↔`/std/collections/vector`, `/map`↔`/std/collections/map`) so canonical helper fragments are reused through the scoped method-path cache instead of ad-hoc string concatenation.
 - ◐ [P2-10] Add method-target memoization keyed by semantic-node identity + receiver type + method name and report RSS/time delta. Progress: method-target resolution now supports benchmark-controlled memoization A/B via `--benchmark-semantic-disable-method-target-memoization`, threading through options/pipeline/validator to bypass `methodTargetMemoCache` lookup/store when disabled; `scripts/semantic_memory_benchmark.py` now supports `--method-target-memoization on|off|both` and emits per-fixture/phase `method_target_memoization_deltas` (RSS/time on-minus-off medians + worst-case deltas).

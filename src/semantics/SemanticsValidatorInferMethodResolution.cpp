@@ -29,6 +29,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
               !callTargetResolutionScratch_.normalizedMethodNameCache.empty() ||
               !callTargetResolutionScratch_.explicitRemovedMethodPathCache.empty() ||
               !callTargetResolutionScratch_.concreteCallBaseCandidates.empty() ||
+              !callTargetResolutionScratch_.methodReceiverResolutionCandidates.empty() ||
               callTargetResolutionScratch_.definitionOwner != nullptr ||
               callTargetResolutionScratch_.executionOwner != nullptr)) {
     callTargetResolutionScratch_.resetArena();
@@ -914,31 +915,41 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   }
   if (typeName.empty() && receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
     BindingInfo callBinding;
-    std::vector<std::string> resolvedCandidates;
-    auto appendResolvedCandidate = [&](const std::string &candidate) {
-      if (candidate.empty()) {
-        return;
-      }
-      for (const auto &existing : resolvedCandidates) {
-        if (existing == candidate) {
+    const std::string resolvedReceiverPath = resolveCalleePath(receiver);
+    auto resolveReceiverCandidates = [&](auto &resolvedCandidates) {
+      resolvedCandidates.clear();
+      auto appendResolvedCandidate = [&](const std::string &candidate) {
+        if (candidate.empty()) {
           return;
         }
+        for (const auto &existing : resolvedCandidates) {
+          if (existing == candidate) {
+            return;
+          }
+        }
+        resolvedCandidates.push_back(candidate);
+      };
+      appendCanonicalReceiverResolutionCandidates(resolvedReceiverPath, appendResolvedCandidate);
+      for (const auto &candidate : resolvedCandidates) {
+        auto defIt = defMap_.find(candidate);
+        if (defIt == defMap_.end() || defIt->second == nullptr) {
+          continue;
+        }
+        if (!inferDefinitionReturnBinding(*defIt->second, callBinding)) {
+          continue;
+        }
+        typeName = callBinding.typeName;
+        typeTemplateArg = callBinding.typeTemplateArg;
+        return;
       }
-      resolvedCandidates.push_back(candidate);
     };
-    const std::string resolvedReceiverPath = resolveCalleePath(receiver);
-    appendCanonicalReceiverResolutionCandidates(resolvedReceiverPath, appendResolvedCandidate);
-    for (const auto &candidate : resolvedCandidates) {
-      auto defIt = defMap_.find(candidate);
-      if (defIt == defMap_.end() || defIt->second == nullptr) {
-        continue;
-      }
-      if (!inferDefinitionReturnBinding(*defIt->second, callBinding)) {
-        continue;
-      }
-      typeName = callBinding.typeName;
-      typeTemplateArg = callBinding.typeTemplateArg;
-      break;
+
+    if (hasScopedOwner) {
+      auto &resolvedCandidates = callTargetResolutionScratch_.methodReceiverResolutionCandidates;
+      resolveReceiverCandidates(resolvedCandidates);
+    } else {
+      std::vector<std::string> resolvedCandidates;
+      resolveReceiverCandidates(resolvedCandidates);
     }
   }
   if (receiver.kind == Expr::Kind::Name && receiver.name == "FileError" &&

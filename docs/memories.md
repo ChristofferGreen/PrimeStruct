@@ -180,6 +180,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `bridgePathChoiceSnapshotForSemanticProduct` because both share the same
   non-method recursive traversal and callee-path resolution path with minimal
   collector-specific branching.
+- `semantic-snapshot-direct-bridge-shared-collection`: semantic-product build
+  now derives bridge-path snapshots from already-collected direct-call
+  snapshots when both collector families are enabled, avoiding a second
+  redundant traversal while keeping output-order parity locked by
+  `compile pipeline direct and bridge collector merge keeps output-order parity`.
+- `semantic-method-target-scratch-candidates`: infer-stage method-target
+  resolution now reuses `CallTargetResolutionScratch::methodReceiverResolutionCandidates`
+  for scoped definitions/executions in `resolveInferMethodCallPath(...)`,
+  avoiding per-call receiver-candidate vector allocations when probing
+  canonical receiver alias paths before return-type inference.
 - `compile-pipeline-dump-helper-explicit-semantic-intent`: compile-pipeline
   dump capture helpers now require explicit
   `CompilePipelineSemanticProductIntent` plumbing at callsites (instead of an

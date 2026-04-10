@@ -136,6 +136,8 @@ TEST_CASE("method target resolution reuses scoped scratch cache") {
         std::string::npos);
   CHECK(header.find("PmrMethodMemoMap methodTargetMemoCache{&arenaResource};") !=
         std::string::npos);
+  CHECK(header.find("PmrStringVector methodReceiverResolutionCandidates{&arenaResource};") !=
+        std::string::npos);
   CHECK(header.find("bool methodTargetMemoizationEnabled_ = true;") !=
         std::string::npos);
   CHECK(header.find("void resetArena() {") != std::string::npos);
@@ -167,6 +169,10 @@ TEST_CASE("method target resolution reuses scoped scratch cache") {
         std::string::npos);
   CHECK(source.find("return CallTargetResolutionScratch::MethodTargetMemoKey{") != std::string::npos);
   CHECK(source.find("callTargetResolutionScratch_.methodTargetMemoCache.find(*key)") !=
+        std::string::npos);
+  CHECK(source.find("!callTargetResolutionScratch_.methodReceiverResolutionCandidates.empty()") !=
+        std::string::npos);
+  CHECK(source.find("auto &resolvedCandidates = callTargetResolutionScratch_.methodReceiverResolutionCandidates;") !=
         std::string::npos);
   CHECK(source.find("if (!methodTargetMemoizationEnabled_) {") !=
         std::string::npos);
