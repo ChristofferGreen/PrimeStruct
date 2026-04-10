@@ -122,6 +122,12 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
 
   const auto tryFacts = semanticProgramTryFactView(*semanticProgram);
   for (const auto *tryFact : tryFacts) {
+    const std::string_view operandResolvedPath =
+        semanticProgramTryFactOperandResolvedPath(*semanticProgram, *tryFact);
+    if (tryFact->operandResolvedPathId == InvalidSymbolId || operandResolvedPath.empty()) {
+      error = "missing semantic-product try operand resolved path id: try";
+      return false;
+    }
     if (trimTemplateTypeText(tryFact->valueType).empty()) {
       error = "incomplete semantic-product try fact: try";
       return false;

@@ -1535,6 +1535,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irLowererResultHelpers.find("missing semantic-product query resolved path id: ") !=
         std::string::npos);
+  CHECK(irLowererResultHelpers.find("missing semantic-product try operand resolved path id: try") !=
+        std::string::npos);
   CHECK(irMethodResolution.find("const auto &semanticAwareImportAliases =") != std::string::npos);
   CHECK(statementCallHelpersHeader.find("const SemanticProgram *semanticProgram,") !=
         std::string::npos);
@@ -1799,6 +1801,42 @@ TEST_CASE("semantic product query facts use resolvedPathId without resolvedPath 
         std::string::npos);
 
   CHECK(irLowererResultHelpers.find("queryFact->resolvedPathId == InvalidSymbolId") !=
+        std::string::npos);
+}
+
+TEST_CASE("semantic product try facts use operandResolvedPathId without operandResolvedPath shadow field") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  const std::filesystem::path root =
+      std::filesystem::exists(cwd / "include" / "primec" / "SemanticProduct.h")
+          ? cwd
+          : cwd.parent_path();
+  const std::string semanticProductHeader =
+      readTextFile(root / "include" / "primec" / "SemanticProduct.h");
+  const std::string semanticProductSource =
+      readTextFile(root / "src" / "SemanticProduct.cpp");
+  const std::string irLowererResultHelpers =
+      readTextFile(root / "src" / "ir_lowerer" / "IrLowererResultHelpers.cpp");
+
+  const std::size_t tryStart =
+      semanticProductHeader.find("struct SemanticProgramTryFact {");
+  const std::size_t onErrorStart =
+      semanticProductHeader.find("struct SemanticProgramOnErrorFact {");
+  REQUIRE(tryStart != std::string::npos);
+  REQUIRE(onErrorStart != std::string::npos);
+  REQUIRE(tryStart < onErrorStart);
+
+  const std::string tryBody =
+      semanticProductHeader.substr(tryStart, onErrorStart - tryStart);
+  CHECK(tryBody.find("SymbolId operandResolvedPathId = InvalidSymbolId;") !=
+        std::string::npos);
+  CHECK(tryBody.find("std::string operandResolvedPath;") == std::string::npos);
+
+  CHECK(semanticProductSource.find("semanticProgramTryFactOperandResolvedPath(") !=
+        std::string::npos);
+  CHECK(semanticProductSource.find("operandResolvedPath.empty() ? entry.operandResolvedPath") ==
+        std::string::npos);
+
+  CHECK(irLowererResultHelpers.find("tryFact->operandResolvedPathId == InvalidSymbolId") !=
         std::string::npos);
 }
 

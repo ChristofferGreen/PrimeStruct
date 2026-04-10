@@ -1126,6 +1126,64 @@ TEST_CASE("ir lowerer rejects incomplete semantic-product try facts") {
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer rejects missing semantic-product try operand resolved path id") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  primec::Expr sourceExpr;
+  sourceExpr.kind = primec::Expr::Kind::Name;
+  sourceExpr.name = "value";
+  primec::Expr tryExpr;
+  tryExpr.kind = primec::Expr::Kind::Call;
+  tryExpr.name = "try";
+  tryExpr.args.push_back(sourceExpr);
+  tryExpr.semanticNodeId = 8401;
+  mainDef.statements.push_back(tryExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "try",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 8401,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/try"),
+  });
+  semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
+      .scopePath = "/main",
+      .operandBindingTypeText = "Result<i32, FileError>",
+      .operandReceiverBindingTypeText = "",
+      .operandQueryTypeText = "Result<i32, FileError>",
+      .valueType = "i32",
+      .errorType = "FileError",
+      .contextReturnKind = "return",
+      .onErrorHandlerPath = "/handler",
+      .onErrorErrorType = "FileError",
+      .onErrorBoundArgCount = 1,
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 8401,
+      .operandResolvedPathId = primec::InvalidSymbolId,
+  });
+  primec::SemanticProgramCallableSummary callableSummary;
+  callableSummary.fullPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
+  callableSummary.returnKind = "i32";
+  semanticProgram.callableSummaries.push_back(std::move(callableSummary));
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product try operand resolved path id: try");
+  CHECK(diagnosticInfo.message == error);
+}
+
 TEST_CASE("ir lowerer rejects missing semantic-product on_error facts") {
   primec::Program program;
 
