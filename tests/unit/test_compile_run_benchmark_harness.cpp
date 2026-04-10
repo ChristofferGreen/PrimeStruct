@@ -273,6 +273,66 @@ TEST_CASE("semantic memory benchmark helper accepts benchmark-only collector con
   CHECK(report.find("\"is_expensive_threshold_offender\": false") != std::string::npos);
 }
 
+TEST_CASE("semantic memory benchmark helper emits wall-rss machine report rows") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";
+  const std::filesystem::path primecPath = repoRoot / "build-release" / "primec";
+  if (!std::filesystem::exists(primecPath)) {
+    INFO("primec not available in build-release");
+    return;
+  }
+
+  const std::string reportPath = writeTemp("semantic_memory_wall_rss_report.json", "");
+  const std::string stdoutPath = writeTemp("semantic_memory_wall_rss.out", "");
+  const std::string stderrPath = writeTemp("semantic_memory_wall_rss.err", "");
+
+  const std::string benchmarkCmd =
+      "python3 " + quoteShellArg(scriptPath.string()) +
+      " --repo-root " + quoteShellArg(repoRoot.string()) +
+      " --primec " + quoteShellArg(primecPath.string()) +
+      " --runs 1 --fixtures no_import --phases ast-semantic "
+      "--report-json " + quoteShellArg(reportPath) +
+      " > " + quoteShellArg(stdoutPath) + " 2> " + quoteShellArg(stderrPath);
+  CHECK(runCommand(benchmarkCmd) == 0);
+  CHECK(readFile(stderrPath).empty());
+
+  const std::string validateOutPath = writeTemp("semantic_memory_wall_rss_validate.out", "");
+  const std::string validateErrPath = writeTemp("semantic_memory_wall_rss_validate.err", "");
+  const std::string validateCmd =
+      "python3 -c " +
+      quoteShellArg(
+          "import json, sys\n"
+          "report = json.load(open(sys.argv[1], encoding='utf-8'))\n"
+          "rows = report.get('results', [])\n"
+          "ok = report.get('schema') == 'primestruct_semantic_memory_report_v1'\n"
+          "ok = ok and len(rows) == 1\n"
+          "if rows:\n"
+          "  row = rows[0]\n"
+          "  wall = row.get('wall_seconds', [])\n"
+          "  peak = row.get('peak_rss_bytes', [])\n"
+          "  ok = ok and row.get('fixture') == 'no_import'\n"
+          "  ok = ok and row.get('phase') == 'ast-semantic'\n"
+          "  ok = ok and row.get('runs') == 1\n"
+          "  ok = ok and isinstance(wall, list) and len(wall) == 1 and float(wall[0]) >= 0.0\n"
+          "  ok = ok and isinstance(peak, list) and len(peak) == 1 and int(peak[0]) > 0\n"
+          "  ok = ok and abs(float(row.get('median_wall_seconds', -1.0)) - float(wall[0])) < 1e-12\n"
+          "  ok = ok and abs(float(row.get('worst_wall_seconds', -1.0)) - float(wall[0])) < 1e-12\n"
+          "  ok = ok and int(row.get('median_peak_rss_bytes', -1)) == int(peak[0])\n"
+          "  ok = ok and int(row.get('worst_peak_rss_bytes', -1)) == int(peak[0])\n"
+          "if not ok:\n"
+          "  print(json.dumps(report, indent=2, sort_keys=True))\n"
+          "sys.exit(0 if ok else 1)\n") +
+      " " + quoteShellArg(reportPath) +
+      " > " + quoteShellArg(validateOutPath) + " 2> " + quoteShellArg(validateErrPath);
+  CHECK(runCommand(validateCmd) == 0);
+  CHECK(readFile(validateErrPath).empty());
+}
+
 TEST_CASE("semantic memory benchmark helper covers no-import and math-vector phases") {
   if (!hasPython3()) {
     INFO("python3 not available");

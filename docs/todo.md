@@ -29,7 +29,6 @@ Sizing note: each leaf `○` item should fit in one code-affecting commit plus f
 Order rule: execute leaves top-to-bottom. Each leaf below is scoped to one code-affecting commit.
 
 P0 - Reproducible measurement and attribution
-- ◐ [P0-07] Add a benchmark helper that captures wall time + peak RSS per fixture and emits a machine-readable report.
 - ◐ [P0-08] Extend the benchmark report with key-cardinality metrics (distinct call/method target keys and max key length).
 - ◐ [P0-09] Run each fixture 3 times and report median + worst-case RSS/time.
 - ◐ [P0-10] Add benchmark-only per-fact-family collection toggles so each collector can be enabled/disabled independently.

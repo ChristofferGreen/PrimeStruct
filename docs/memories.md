@@ -77,6 +77,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   --phases ast-semantic,semantic-product`, asserting the exact six
   fixture-phase tuples plus canonical per-phase `scale_slopes` rows
   (`x_axis=[1,2,4]`, ordered fixtures, finite RSS/time slope values).
+- `semantic-memory-wall-rss-machine-report-rows`: semantic-memory benchmark
+  harness coverage now executes `semantic_memory_benchmark.py` with
+  `--runs 1 --fixtures no_import --phases ast-semantic --report-json ...`
+  and asserts machine-readable report contract rows include the schema,
+  one-sample `wall_seconds`/`peak_rss_bytes` arrays, and median/worst
+  aggregates equal to that single sample for the fixture-phase tuple.
 - `semantic-product-direct-call-routing`: production lowering now validates
   that every non-method direct call has a published semantic-product routing
   fact before lowering starts, and semantic-product-aware direct-call
