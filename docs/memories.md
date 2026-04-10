@@ -196,6 +196,14 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `joinMethodTarget(...)` fragments (`/vector`↔`/std/collections/vector`,
   `/map`↔`/std/collections/map`) so scoped method-path resolution avoids
   ad-hoc repeated canonical-path concatenation churn.
+- `semantic-method-target-memoization-ab-deltas`: infer-stage method-target
+  resolution now memoizes resolved method targets in
+  `methodTargetMemoCache` keyed by semantic node + receiver type + method
+  name, with benchmark-controlled bypass via
+  `--benchmark-semantic-disable-method-target-memoization`; semantic-memory
+  benchmark A/B runs now support `--method-target-memoization on|off|both`
+  and emit per-fixture/phase `method_target_memoization_deltas` RSS/time
+  rollups.
 - `semantic-call-target-canonical-fragment-caches`: scoped call-target
   concrete-path resolution now caches canonical overload/specialization
   fragments (`overloadFamilyPrefixCache`, `specializationPrefixCache`, and
