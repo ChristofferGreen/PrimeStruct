@@ -985,6 +985,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<uint64_t, const SemanticProgramQueryFact *> queryFactsByExpr;") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("std::unordered_map<uint64_t, const SemanticProgramQueryFact *> queryFactsByResolvedPathAndCallNameId;") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<uint64_t, const SemanticProgramTryFact *> tryFactsByExpr;") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(") !=
@@ -1046,6 +1048,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterSource.find("semanticProgramQueryFactView(*semanticProgram)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.queryFactsByExpr.reserve(queryFacts.size())") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.queryFactsByResolvedPathAndCallNameId.reserve(queryFacts.size())") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("resolveSemanticExprPathId(adapter, expr)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramTryFactView(*semanticProgram)") !=
         std::string::npos);

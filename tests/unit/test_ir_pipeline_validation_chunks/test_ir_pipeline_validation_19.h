@@ -1201,6 +1201,44 @@ TEST_CASE("ir lowerer semantic-product adapter resolves local-auto facts by init
   CHECK(primec::semanticProgramLocalAutoFactInitializerResolvedPath(semanticProgram, *localAutoFact) == "/id");
 }
 
+TEST_CASE("ir lowerer semantic-product adapter resolves query facts by resolved-path fallback") {
+  primec::Expr queryExpr;
+  queryExpr.kind = primec::Expr::Kind::Call;
+  queryExpr.name = "lookup";
+  queryExpr.semanticNodeId = 8101;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .sourceLine = 15,
+      .sourceColumn = 5,
+      .semanticNodeId = 8101,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+  });
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .queryTypeText = "Result<i32, FileError>",
+      .bindingTypeText = "Result<i32, FileError>",
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "i32",
+      .resultErrorType = "FileError",
+      .sourceLine = 15,
+      .sourceColumn = 5,
+      .semanticNodeId = 0,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+      .callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "lookup"),
+  });
+
+  const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto *queryFact = primec::ir_lowerer::findSemanticProductQueryFact(adapter, queryExpr);
+  REQUIRE(queryFact != nullptr);
+  CHECK(queryFact->resolvedPathId != primec::InvalidSymbolId);
+  CHECK(primec::semanticProgramQueryFactResolvedPath(semanticProgram, *queryFact) == "/lookup");
+}
+
 TEST_CASE("ir lowerer call helpers resolve definition calls through slashless map import aliases") {
   primec::Definition canonicalMapCountDef;
   canonicalMapCountDef.fullPath = "/std/collections/map/count";

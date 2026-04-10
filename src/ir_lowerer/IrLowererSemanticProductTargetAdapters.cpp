@@ -36,13 +36,17 @@ uint64_t makeLocalAutoInitPathBindingNameKey(SymbolId initializerPathId, SymbolI
          static_cast<uint64_t>(bindingNameId);
 }
 
-std::optional<SymbolId> resolveLocalAutoInitializerPathId(const SemanticProductTargetAdapter &adapter,
-                                                          const Expr &bindingExpr) {
-  if (adapter.semanticProgram == nullptr || bindingExpr.args.empty()) {
+uint64_t makeQueryFactResolvedPathCallNameKey(SymbolId resolvedPathId, SymbolId callNameId) {
+  return (static_cast<uint64_t>(resolvedPathId) << 32) |
+         static_cast<uint64_t>(callNameId);
+}
+
+std::optional<SymbolId> resolveSemanticExprPathId(const SemanticProductTargetAdapter &adapter,
+                                                  const Expr &expr) {
+  if (adapter.semanticProgram == nullptr) {
     return std::nullopt;
   }
 
-  const Expr &initializerExpr = bindingExpr.args.front();
   auto lookupPathId = [&](const std::string &resolvedPath) -> std::optional<SymbolId> {
     if (resolvedPath.empty()) {
       return std::nullopt;
@@ -51,19 +55,36 @@ std::optional<SymbolId> resolveLocalAutoInitializerPathId(const SemanticProductT
   };
 
   if (const auto directPathId =
-          lookupPathId(findSemanticProductDirectCallTarget(adapter, initializerExpr));
+          lookupPathId(findSemanticProductDirectCallTarget(adapter, expr));
       directPathId.has_value()) {
     return directPathId;
   }
   if (const auto methodPathId =
-          lookupPathId(findSemanticProductMethodCallTarget(adapter, initializerExpr));
+          lookupPathId(findSemanticProductMethodCallTarget(adapter, expr));
       methodPathId.has_value()) {
     return methodPathId;
   }
   if (const auto bridgePathId =
-          lookupPathId(findSemanticProductBridgePathChoice(adapter, initializerExpr));
+          lookupPathId(findSemanticProductBridgePathChoice(adapter, expr));
       bridgePathId.has_value()) {
     return bridgePathId;
+  }
+  if (!expr.name.empty() && expr.name.front() == '/') {
+    return lookupPathId(expr.name);
+  }
+  return std::nullopt;
+}
+
+std::optional<SymbolId> resolveLocalAutoInitializerPathId(const SemanticProductTargetAdapter &adapter,
+                                                          const Expr &bindingExpr) {
+  if (bindingExpr.args.empty()) {
+    return std::nullopt;
+  }
+
+  const Expr &initializerExpr = bindingExpr.args.front();
+  if (const auto initializerPathId = resolveSemanticExprPathId(adapter, initializerExpr);
+      initializerPathId.has_value()) {
+    return initializerPathId;
   }
   return std::nullopt;
 }
@@ -205,9 +226,22 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
 
   const auto queryFacts = semanticProgramQueryFactView(*semanticProgram);
   adapter.queryFactsByExpr.reserve(queryFacts.size());
+  adapter.queryFactsByResolvedPathAndCallNameId.reserve(queryFacts.size());
   for (const auto *entry : queryFacts) {
     if (entry->semanticNodeId != 0) {
       adapter.queryFactsByExpr.insert_or_assign(entry->semanticNodeId, entry);
+    }
+    const std::string_view resolvedPath =
+        semanticProgramQueryFactResolvedPath(*semanticProgram, *entry);
+    const std::string_view callName =
+        semanticProgramResolveCallTargetString(*semanticProgram, entry->callNameId);
+    if (entry->resolvedPathId != InvalidSymbolId &&
+        !resolvedPath.empty() &&
+        entry->callNameId != InvalidSymbolId &&
+        !callName.empty()) {
+      adapter.queryFactsByResolvedPathAndCallNameId.insert_or_assign(
+          makeQueryFactResolvedPathCallNameKey(entry->resolvedPathId, entry->callNameId),
+          entry);
     }
   }
 
@@ -367,7 +401,28 @@ const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(const Seman
 
 const SemanticProgramQueryFact *findSemanticProductQueryFact(const SemanticProductTargetAdapter &adapter,
                                                             const Expr &expr) {
-  return findExpressionScopedSemanticFact(adapter.queryFactsByExpr, expr);
+  if (const auto *fact = findExpressionScopedSemanticFact(adapter.queryFactsByExpr, expr);
+      fact != nullptr) {
+    return fact;
+  }
+  if (adapter.semanticProgram == nullptr || expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return nullptr;
+  }
+  const auto callNameId =
+      semanticProgramLookupCallTargetStringId(*adapter.semanticProgram, expr.name);
+  if (!callNameId.has_value()) {
+    return nullptr;
+  }
+  const auto resolvedPathId = resolveSemanticExprPathId(adapter, expr);
+  if (!resolvedPathId.has_value()) {
+    return nullptr;
+  }
+  if (const auto it = adapter.queryFactsByResolvedPathAndCallNameId.find(
+          makeQueryFactResolvedPathCallNameKey(*resolvedPathId, *callNameId));
+      it != adapter.queryFactsByResolvedPathAndCallNameId.end()) {
+    return it->second;
+  }
+  return nullptr;
 }
 
 const SemanticProgramTryFact *findSemanticProductTryFact(const SemanticProductTargetAdapter &adapter,

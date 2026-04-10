@@ -28,6 +28,7 @@ struct SemanticProductTargetAdapter {
   std::unordered_map<uint64_t, const SemanticProgramLocalAutoFact *> localAutoFactsByExpr;
   std::unordered_map<uint64_t, const SemanticProgramLocalAutoFact *> localAutoFactsByInitPathAndBindingNameId;
   std::unordered_map<uint64_t, const SemanticProgramQueryFact *> queryFactsByExpr;
+  std::unordered_map<uint64_t, const SemanticProgramQueryFact *> queryFactsByResolvedPathAndCallNameId;
   std::unordered_map<uint64_t, const SemanticProgramTryFact *> tryFactsByExpr;
   std::unordered_map<uint64_t, const SemanticProgramBindingFact *> bindingFactsByExpr;
 };
