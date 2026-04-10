@@ -524,18 +524,18 @@ TEST_CASE("ir lowerer result helpers require semantic query facts for generic ca
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
-      "/main",
-      "lookup",
-      "/lookup",
-      "Result<i32, FileError>",
-      "Result<i32, FileError>",
-      true,
-      true,
-      "i32",
-      "FileError",
-      11,
-      7,
-      63,
+      .scopePath = "/main",
+      .callName = "lookup",
+      .queryTypeText = "Result<i32, FileError>",
+      .bindingTypeText = "Result<i32, FileError>",
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "i32",
+      .resultErrorType = "FileError",
+      .sourceLine = 11,
+      .sourceColumn = 7,
+      .semanticNodeId = 63,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);

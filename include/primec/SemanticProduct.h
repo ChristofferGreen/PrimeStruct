@@ -220,7 +220,6 @@ struct SemanticProgramLocalAutoFact {
 struct SemanticProgramQueryFact {
   std::string scopePath;
   std::string callName;
-  std::string resolvedPath;
   std::string queryTypeText;
   std::string bindingTypeText;
   bool hasResultType = false;
@@ -376,6 +375,9 @@ std::string_view semanticProgramReturnFactDefinitionPath(
 std::string_view semanticProgramLocalAutoFactInitializerResolvedPath(
     const SemanticProgram &semanticProgram,
     const SemanticProgramLocalAutoFact &entry);
+std::string_view semanticProgramQueryFactResolvedPath(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramQueryFact &entry);
 
 std::string formatSemanticProgram(const SemanticProgram &semanticProgram);
 

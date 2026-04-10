@@ -1720,8 +1720,9 @@ main() {
 
   const auto *queryEntry = findSemanticEntry(
       primec::semanticProgramQueryFactView(semanticProgram),
-      [](const primec::SemanticProgramQueryFact &entry) {
-        return entry.scopePath == "/main" && entry.resolvedPath == "/lookup";
+      [&semanticProgram](const primec::SemanticProgramQueryFact &entry) {
+        return entry.scopePath == "/main" &&
+               primec::semanticProgramQueryFactResolvedPath(semanticProgram, entry) == "/lookup";
       });
   REQUIRE(queryEntry != nullptr);
   const std::string_view queryReceiverBindingTypeText =
@@ -2064,12 +2065,14 @@ TEST_CASE("semantic product semantic ids stay deterministic across repeated vali
   CHECK(firstDirectCall->provenanceHandle == secondDirectCall->provenanceHandle);
 
   const auto *firstQuery = findSemanticEntry(primec::semanticProgramQueryFactView(first),
-      [](const primec::SemanticProgramQueryFact &entry) {
-        return entry.scopePath == "/main" && entry.resolvedPath == "/lookup";
+      [&first](const primec::SemanticProgramQueryFact &entry) {
+        return entry.scopePath == "/main" &&
+               primec::semanticProgramQueryFactResolvedPath(first, entry) == "/lookup";
       });
   const auto *secondQuery = findSemanticEntry(primec::semanticProgramQueryFactView(second),
-      [](const primec::SemanticProgramQueryFact &entry) {
-        return entry.scopePath == "/main" && entry.resolvedPath == "/lookup";
+      [&second](const primec::SemanticProgramQueryFact &entry) {
+        return entry.scopePath == "/main" &&
+               primec::semanticProgramQueryFactResolvedPath(second, entry) == "/lookup";
       });
   REQUIRE(firstQuery != nullptr);
   REQUIRE(secondQuery != nullptr);
@@ -2915,19 +2918,19 @@ TEST_CASE("semantic product formatter exact golden is stable") {
           primec::semanticProgramInternCallTargetString(semanticProgram, "/id"),
   });
   semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
-      "/main",
-      "lookup",
-      "/lookup",
-      "Result<i32, MyError>",
-      "Result<i32, MyError>",
-      true,
-      true,
-      "i32",
-      "MyError",
-      15,
-      4,
-      23,
-      113,
+      .scopePath = "/main",
+      .callName = "lookup",
+      .queryTypeText = "Result<i32, MyError>",
+      .bindingTypeText = "Result<i32, MyError>",
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "i32",
+      .resultErrorType = "MyError",
+      .sourceLine = 15,
+      .sourceColumn = 4,
+      .semanticNodeId = 23,
+      .provenanceHandle = 113,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
   semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
       "/main",

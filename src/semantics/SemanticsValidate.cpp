@@ -592,7 +592,6 @@ SemanticProgram buildSemanticProgram(const Program &program,
       SemanticProgramQueryFact entry;
       entry.scopePath = snapshotEntry.scopePath;
       entry.callName = snapshotEntry.callName;
-      entry.resolvedPath = snapshotEntry.resolvedPath;
       entry.queryTypeText = snapshotEntry.typeText;
       entry.bindingTypeText = bindingTypeTextForSemanticProduct(snapshotEntry.binding);
       entry.hasResultType = snapshotEntry.hasResultType;
@@ -605,7 +604,8 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.provenanceHandle = semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId);
       entry.scopePathId = semanticProgramInternCallTargetString(semanticProgram, entry.scopePath);
       entry.callNameId = semanticProgramInternCallTargetString(semanticProgram, entry.callName);
-      entry.resolvedPathId = semanticProgramInternCallTargetString(semanticProgram, entry.resolvedPath);
+      entry.resolvedPathId =
+          semanticProgramInternCallTargetString(semanticProgram, snapshotEntry.resolvedPath);
       entry.queryTypeTextId = semanticProgramInternCallTargetString(semanticProgram, entry.queryTypeText);
       entry.bindingTypeTextId = semanticProgramInternCallTargetString(semanticProgram, entry.bindingTypeText);
       entry.receiverBindingTypeTextId =

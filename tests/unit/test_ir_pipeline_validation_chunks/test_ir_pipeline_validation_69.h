@@ -668,18 +668,18 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic Result parame
 TEST_CASE("ir lowerer statement binding helper uses semantic query facts for default Result params") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
-      "/main",
-      "loadValue",
-      "/loadValue",
-      "Result<i64, ParseError>",
-      "Result<i64, ParseError>",
-      true,
-      true,
-      "i64",
-      "ParseError",
-      27,
-      9,
-      313,
+      .scopePath = "/main",
+      .callName = "loadValue",
+      .queryTypeText = "Result<i64, ParseError>",
+      .bindingTypeText = "Result<i64, ParseError>",
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "i64",
+      .resultErrorType = "ParseError",
+      .sourceLine = 27,
+      .sourceColumn = 9,
+      .semanticNodeId = 313,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/loadValue"),
   });
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);

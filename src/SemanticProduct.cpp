@@ -168,6 +168,12 @@ std::string_view semanticProgramLocalAutoFactInitializerResolvedPath(
   return semanticProgramResolveCallTargetString(semanticProgram, entry.initializerResolvedPathId);
 }
 
+std::string_view semanticProgramQueryFactResolvedPath(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramQueryFact &entry) {
+  return semanticProgramResolveCallTargetString(semanticProgram, entry.resolvedPathId);
+}
+
 std::string formatSemanticStringListFromIds(const SemanticProgram &semanticProgram,
                                             const std::vector<SymbolId> &ids,
                                             const std::vector<std::string> &fallbackValues) {
@@ -698,8 +704,7 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
         semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId);
     const std::string_view callName =
         semanticProgramResolveCallTargetString(semanticProgram, entry.callNameId);
-    const std::string_view resolvedPath =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.resolvedPathId);
+    const std::string_view resolvedPath = semanticProgramQueryFactResolvedPath(semanticProgram, entry);
     const std::string_view queryTypeText =
         semanticProgramResolveCallTargetString(semanticProgram, entry.queryTypeTextId);
     const std::string_view bindingTypeText =
@@ -718,7 +723,7 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   " call_name=" +
                                   quoteSemanticString(callName.empty() ? entry.callName : callName) +
                                   " resolved_path=" +
-                                  quoteSemanticString(resolvedPath.empty() ? entry.resolvedPath : resolvedPath) +
+                                  quoteSemanticString(resolvedPath) +
                                   " query_type_text=" +
                                   quoteSemanticString(queryTypeText.empty() ? entry.queryTypeText : queryTypeText) +
                                   " binding_type_text=" +
