@@ -253,7 +253,7 @@ bool validateSemanticProductBindingCoverage(const Program &program,
               describeBindingSite(scopePath, siteKind, expr);
       return false;
     }
-    if (bindingFact->resolvedPathId != InvalidSymbolId &&
+    if (bindingFact->resolvedPathId == InvalidSymbolId ||
         semanticProgramBindingFactResolvedPath(*semanticProgram, *bindingFact).empty()) {
       error = "missing semantic-product binding resolved path id: " +
               describeBindingSite(scopePath, siteKind, expr);

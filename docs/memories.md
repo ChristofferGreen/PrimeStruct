@@ -78,7 +78,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - `semantic-product-binding-routing`: production lowering now validates
   that parameter/local binding facts are published before lowering starts,
   and semantic-aware binding classification no longer falls back to AST
-  transforms for semantic-id-backed binding expressions.
+  transforms for semantic-id-backed binding expressions. Binding
+  completeness now rejects facts with missing/invalid `resolvedPathId`
+  values (including `InvalidSymbolId`).
 - `semantic-product-cross-backend-conformance`: compile-pipeline backend
   conformance now pins the same semantic-product-owned direct-call,
   method-call, bridge-path, local-`auto`, query, `try(...)`, `on_error`,

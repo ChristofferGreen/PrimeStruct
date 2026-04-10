@@ -211,6 +211,25 @@ std::string semanticModuleKeyForPath(const std::string &path) {
   return normalized.substr(0, nextSlash);
 }
 
+std::string fallbackBindingResolvedPathForSemanticProduct(std::string_view scopePath,
+                                                          std::string_view bindingName) {
+  if (scopePath.empty() || bindingName.empty()) {
+    return {};
+  }
+  if (bindingName.front() == '/') {
+    return std::string(bindingName);
+  }
+  std::string normalizedScope(scopePath);
+  if (!normalizedScope.empty() && normalizedScope.front() != '/') {
+    normalizedScope.insert(normalizedScope.begin(), '/');
+  }
+  if (!normalizedScope.empty() && normalizedScope.back() != '/') {
+    normalizedScope.push_back('/');
+  }
+  normalizedScope.append(bindingName);
+  return normalizedScope;
+}
+
 bool isBridgeHelperNameForSemanticProductBuild(std::string_view collectionFamily,
                                                std::string_view helperName) {
   if (collectionFamily == "vector") {
@@ -583,8 +602,12 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.scopePathId = semanticProgramInternCallTargetString(semanticProgram, entry.scopePath);
       entry.siteKindId = semanticProgramInternCallTargetString(semanticProgram, entry.siteKind);
       entry.nameId = semanticProgramInternCallTargetString(semanticProgram, entry.name);
+      const std::string resolvedPath = snapshotEntry.resolvedPath.empty()
+                                           ? fallbackBindingResolvedPathForSemanticProduct(
+                                                 snapshotEntry.scopePath, snapshotEntry.name)
+                                           : snapshotEntry.resolvedPath;
       entry.resolvedPathId =
-          semanticProgramInternCallTargetString(semanticProgram, snapshotEntry.resolvedPath);
+          semanticProgramInternCallTargetString(semanticProgram, resolvedPath);
       entry.bindingTypeTextId =
           semanticProgramInternCallTargetString(semanticProgram, entry.bindingTypeText);
       entry.referenceRootId = semanticProgramInternCallTargetString(semanticProgram, entry.referenceRoot);

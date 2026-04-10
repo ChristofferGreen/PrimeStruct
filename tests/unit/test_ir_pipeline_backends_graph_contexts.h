@@ -1886,7 +1886,7 @@ TEST_CASE("semantic product binding facts use resolvedPathId without resolvedPat
   CHECK(semanticProductSource.find("resolvedPath.empty() ? entry.resolvedPath") ==
         std::string::npos);
 
-  CHECK(bindingTypeHelpersSource.find("bindingFact->resolvedPathId != InvalidSymbolId") !=
+  CHECK(bindingTypeHelpersSource.find("bindingFact->resolvedPathId == InvalidSymbolId ||") !=
         std::string::npos);
 }
 

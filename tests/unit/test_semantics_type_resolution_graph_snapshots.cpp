@@ -877,7 +877,10 @@ main() {
       source, "/main", dumps, error));
   CHECK(error.empty());
   CHECK(dumps.semanticProduct.find(
-            "/set_field_capacity\" site_kind=\"parameter\" name=\"value\" resolved_path=\"\" binding_type_text=\"i32\"") !=
+            "/set_field_capacity\" site_kind=\"parameter\" name=\"value\"") !=
+        std::string::npos);
+  CHECK(dumps.semanticProduct.find(
+            "site_kind=\"parameter\" name=\"value\" resolved_path=\"/") !=
         std::string::npos);
 }
 
