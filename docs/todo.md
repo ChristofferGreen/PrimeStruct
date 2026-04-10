@@ -31,7 +31,6 @@ Order rule: execute leaves top-to-bottom. Each leaf below is scoped to one code-
 P0 - Reproducible measurement and attribution
 
 P1 - Immediate peak-RSS reductions in existing pipeline
-- ◐ [P1-11] Add semantic-product text-parity regression test for the second dedup slice. Progress: added combined parity coverage that exercises flat-vs-module-index formatting equivalence across all second-slice families together (`return_facts`, `local_auto_facts`, `query_facts`, `bridge_path_choices`, `try_facts`, and `on_error_facts`) in one semantic-product snapshot test.
 
 P2 - Traversal and allocation churn reductions
 - ◐ [P2-01] Inventory snapshot passes by traversal shape and pick the highest-overlap pair.

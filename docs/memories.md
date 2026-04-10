@@ -168,6 +168,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   canonical semantic-program vectors, and source-lock coverage now rejects
   regression strings that would repopulate per-module copied
   `returnFacts`/`localAutoFacts`/`queryFacts` vectors.
+- `semantic-product-second-slice-parity`: semantic snapshot coverage now
+  includes a combined second-slice formatter parity regression that compares
+  flat vs module-index output for `return_facts`, `local_auto_facts`,
+  `query_facts`, `bridge_path_choices`, `try_facts`, and `on_error_facts`
+  in one semantic-product fixture.
 - `compile-pipeline-dump-helper-explicit-semantic-intent`: compile-pipeline
   dump capture helpers now require explicit
   `CompilePipelineSemanticProductIntent` plumbing at callsites (instead of an
