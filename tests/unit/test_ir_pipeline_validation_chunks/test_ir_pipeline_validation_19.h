@@ -670,12 +670,12 @@ TEST_CASE("ir lowerer call helpers require semantic-product direct-call targets"
   CHECK(semanticResolveExprPath(callExpr).empty());
 
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
-      "/main",
-      "callee",
-      "/callee",
-      0,
-      0,
-      17,
+      .scopePath = "/main",
+      .callName = "callee",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 17,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/callee"),
   });
   const auto populatedTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
@@ -701,12 +701,12 @@ TEST_CASE("ir lowerer call helpers remap unresolved rooted semantic operator tar
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
-      "/main",
-      "multiply",
-      "/multiply",
-      0,
-      0,
-      71,
+      .scopePath = "/main",
+      .callName = "multiply",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 71,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/multiply"),
   });
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
@@ -731,12 +731,12 @@ TEST_CASE("ir lowerer call helpers prefer rooted rewritten direct-call paths ove
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
-      "/main",
-      "/legacy",
-      "/semantic/target",
-      0,
-      0,
-      19,
+      .scopePath = "/main",
+      .callName = "/legacy",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 19,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/semantic/target"),
   });
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
@@ -847,12 +847,12 @@ TEST_CASE("ir lowerer call helpers require semantic-product bridge-path choices"
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
-      "/main",
-      "count",
-      "/vector/count",
-      0,
-      0,
-      18,
+      .scopePath = "/main",
+      .callName = "count",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 18,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
   });
   auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
@@ -1023,12 +1023,12 @@ TEST_CASE("ir lowerer call helpers prefer rooted rewritten helper paths over sta
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
-      "/main",
-      "multiply",
-      "/multiply",
-      12,
-      3,
-      42,
+      .scopePath = "/main",
+      .callName = "multiply",
+      .sourceLine = 12,
+      .sourceColumn = 3,
+      .semanticNodeId = 42,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/multiply"),
   });
 
   const auto resolveExprPath =

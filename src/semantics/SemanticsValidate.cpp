@@ -297,14 +297,14 @@ SemanticProgram buildSemanticProgram(const Program &program,
       SemanticProgramDirectCallTarget entry;
       entry.scopePath = snapshotEntry.scopePath;
       entry.callName = snapshotEntry.callName;
-      entry.resolvedPath = snapshotEntry.resolvedPath;
       entry.sourceLine = snapshotEntry.sourceLine;
       entry.sourceColumn = snapshotEntry.sourceColumn;
       entry.semanticNodeId = snapshotEntry.semanticNodeId;
       entry.provenanceHandle = semantics::makeSemanticProvenanceHandle(snapshotEntry.semanticNodeId);
       entry.scopePathId = semanticProgramInternCallTargetString(semanticProgram, entry.scopePath);
       entry.callNameId = semanticProgramInternCallTargetString(semanticProgram, entry.callName);
-      entry.resolvedPathId = semanticProgramInternCallTargetString(semanticProgram, entry.resolvedPath);
+      entry.resolvedPathId =
+          semanticProgramInternCallTargetString(semanticProgram, snapshotEntry.resolvedPath);
       semanticProgram.directCallTargets.push_back(std::move(entry));
       const std::size_t entryIndex = semanticProgram.directCallTargets.size() - 1;
       ensureModuleResolvedArtifacts(snapshotEntry.scopePath).directCallTargetIndices.push_back(

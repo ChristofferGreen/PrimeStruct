@@ -319,12 +319,12 @@ TEST_CASE("ir lowerer rejects missing semantic-product bridge-path choices") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
-      "/main",
-      "count",
-      "/vector/count",
-      1,
-      1,
-      52,
+      .scopePath = "/main",
+      .callName = "count",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 52,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
   });
 
   primec::IrLowerer lowerer;
@@ -546,10 +546,10 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
       .scopePath = "/main",
       .callName = "callee",
-      .resolvedPath = "/callee",
       .sourceLine = 0,
       .sourceColumn = 0,
       .semanticNodeId = 46,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/callee"),
   });
 
   error.clear();
@@ -834,10 +834,10 @@ TEST_CASE("ir lowerer rejects incomplete semantic-product query facts") {
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
       .scopePath = "/main",
       .callName = "lookup",
-      .resolvedPath = "/lookup",
       .sourceLine = 1,
       .sourceColumn = 1,
       .semanticNodeId = 83,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
   semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
       .scopePath = "/main",
@@ -1146,7 +1146,7 @@ TEST_CASE("cpp-ir backend accepts semantic-product prepared IR from compile pipe
   CHECK(conformance.backendKind == "cpp-ir");
   const auto *directCall = conformance.findDirectCallTarget("/main", "id");
   REQUIRE(directCall != nullptr);
-  CHECK(directCall->resolvedPath.rfind("/id__t", 0) == 0);
+  CHECK(conformance.resolvedDirectCallPath(*directCall).rfind("/id__t", 0) == 0);
   const auto *methodCall = conformance.findMethodCallTarget("/main", "count");
   REQUIRE(methodCall != nullptr);
   CHECK(methodCall->resolvedPath == "/vector/count");
@@ -1185,7 +1185,7 @@ TEST_CASE("vm backend executes semantic-product prepared IR from compile pipelin
   CHECK(conformance.backendKind == "vm");
   const auto *directCall = conformance.findDirectCallTarget("/main", "id");
   REQUIRE(directCall != nullptr);
-  CHECK(directCall->resolvedPath.rfind("/id__t", 0) == 0);
+  CHECK(conformance.resolvedDirectCallPath(*directCall).rfind("/id__t", 0) == 0);
   const auto *methodCall = conformance.findMethodCallTarget("/main", "count");
   REQUIRE(methodCall != nullptr);
   CHECK(methodCall->resolvedPath == "/vector/count");
@@ -1220,7 +1220,7 @@ TEST_CASE("native backend emits semantic-product prepared IR from compile pipeli
   CHECK(conformance.backendKind == "native");
   const auto *directCall = conformance.findDirectCallTarget("/main", "id");
   REQUIRE(directCall != nullptr);
-  CHECK(directCall->resolvedPath.rfind("/id__t", 0) == 0);
+  CHECK(conformance.resolvedDirectCallPath(*directCall).rfind("/id__t", 0) == 0);
   const auto *methodCall = conformance.findMethodCallTarget("/main", "count");
   REQUIRE(methodCall != nullptr);
   CHECK(methodCall->resolvedPath == "/vector/count");
@@ -1285,9 +1285,12 @@ main() {
   REQUIRE(cppDirect != nullptr);
   REQUIRE(vmDirect != nullptr);
   REQUIRE(nativeDirect != nullptr);
-  CHECK(cppDirect->resolvedPath.rfind("/id__t", 0) == 0);
-  CHECK(vmDirect->resolvedPath == cppDirect->resolvedPath);
-  CHECK(nativeDirect->resolvedPath == cppDirect->resolvedPath);
+  const std::string_view cppDirectPath = cppConformance.resolvedDirectCallPath(*cppDirect);
+  const std::string_view vmDirectPath = vmConformance.resolvedDirectCallPath(*vmDirect);
+  const std::string_view nativeDirectPath = nativeConformance.resolvedDirectCallPath(*nativeDirect);
+  CHECK(cppDirectPath.rfind("/id__t", 0) == 0);
+  CHECK(vmDirectPath == cppDirectPath);
+  CHECK(nativeDirectPath == cppDirectPath);
 
   const auto *cppMethod = cppConformance.findMethodCallTarget("/main", "count");
   const auto *vmMethod = vmConformance.findMethodCallTarget("/main", "count");

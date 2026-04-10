@@ -13,6 +13,8 @@ implemented, parity-tested, and landed independently.
   `P3-07`, `P3-10` to `P3-16`).
 - First transitional shadow-field removal landed (`P3-08`): bridge-path
   `chosenPath` now resolves via `chosenPathId` only.
+- Direct-call resolved-path shadow removal landed (`P3-17`): direct-call target
+  paths now resolve via `resolvedPathId` only.
 
 ## Remaining families and next one-leaf follow-ups
 

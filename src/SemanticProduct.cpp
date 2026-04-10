@@ -126,6 +126,12 @@ std::string_view semanticProgramResolveCallTargetString(const SemanticProgram &s
   return semanticProgram.callTargetStringTable[id - 1];
 }
 
+std::string_view semanticProgramDirectCallTargetResolvedPath(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramDirectCallTarget &entry) {
+  return semanticProgramResolveCallTargetString(semanticProgram, entry.resolvedPathId);
+}
+
 std::string formatSemanticStringListFromIds(const SemanticProgram &semanticProgram,
                                             const std::vector<SymbolId> &ids,
                                             const std::vector<std::string> &fallbackValues) {
@@ -340,7 +346,7 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   " call_name=" +
                                   quoteSemanticString(callName.empty() ? entry.callName : callName) +
                                   " resolved_path=" +
-                                  quoteSemanticString(resolvedPath.empty() ? entry.resolvedPath : resolvedPath) +
+                                  quoteSemanticString(resolvedPath) +
                                   " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));

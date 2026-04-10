@@ -124,6 +124,11 @@ const Entry *findSemanticEntry(const std::vector<const Entry *> &entries, const 
   return it == entries.end() ? nullptr : *it;
 }
 
+std::string_view resolveDirectCallPath(const primec::SemanticProgram &semanticProgram,
+                                       const primec::SemanticProgramDirectCallTarget &entry) {
+  return primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, entry);
+}
+
 bool hasCanonicalSourceMapEntry(const primec::IrModule &module, int sourceLine, int sourceColumn) {
   return std::any_of(module.instructionSourceMap.begin(),
                      module.instructionSourceMap.end(),
@@ -651,10 +656,10 @@ TEST_CASE("semantic product publishes resolved direct-call targets") {
 
   const auto *targetEntry = findSemanticEntry(
       primec::semanticProgramDirectCallTargetView(semanticProgram),
-      [](const primec::SemanticProgramDirectCallTarget &entry) {
+      [&semanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
         return entry.scopePath == "/main" &&
                (entry.callName == "id" || entry.callName.rfind("/id__t", 0) == 0) &&
-               entry.resolvedPath.rfind("/id__t", 0) == 0;
+               resolveDirectCallPath(semanticProgram, entry).rfind("/id__t", 0) == 0;
       });
   REQUIRE(targetEntry != nullptr);
   CHECK(targetEntry->sourceLine > 0);
@@ -773,7 +778,8 @@ TEST_CASE("semantic product direct-call targets carry interned path ids") {
 
   std::vector<const primec::SemanticProgramDirectCallTarget *> mainTargets;
   for (const auto *entry : primec::semanticProgramDirectCallTargetView(semanticProgram)) {
-    if (entry->scopePath == "/main" && entry->resolvedPath == "/id_i32") {
+    if (entry->scopePath == "/main" &&
+        resolveDirectCallPath(semanticProgram, *entry) == "/id_i32") {
       mainTargets.push_back(entry);
     }
   }
@@ -2559,22 +2565,22 @@ TEST_CASE("semantic product formatter resolves module direct-call indices determ
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
-      "/z",
-      "last",
-      "/last",
-      20,
-      2,
-      300,
-      900,
+      .scopePath = "/z",
+      .callName = "last",
+      .sourceLine = 20,
+      .sourceColumn = 2,
+      .semanticNodeId = 300,
+      .provenanceHandle = 900,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/last"),
   });
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
-      "/a",
-      "first",
-      "/first",
-      10,
-      1,
-      200,
-      800,
+      .scopePath = "/a",
+      .callName = "first",
+      .sourceLine = 10,
+      .sourceColumn = 1,
+      .semanticNodeId = 200,
+      .provenanceHandle = 800,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/first"),
   });
 
   primec::SemanticProgramModuleResolvedArtifacts moduleA;
@@ -2683,13 +2689,13 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       102,
   });
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
-      "/main",
-      "id",
-      "/id",
-      9,
-      10,
-      13,
-      103,
+      .scopePath = "/main",
+      .callName = "id",
+      .sourceLine = 9,
+      .sourceColumn = 10,
+      .semanticNodeId = 13,
+      .provenanceHandle = 103,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/id"),
   });
   semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
       "/main",

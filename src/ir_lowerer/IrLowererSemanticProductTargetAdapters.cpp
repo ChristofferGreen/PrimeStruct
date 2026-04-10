@@ -42,10 +42,8 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
   const auto directCallTargets = semanticProgramDirectCallTargetView(*semanticProgram);
   adapter.directCallTargetsByExpr.reserve(directCallTargets.size());
   for (const auto *entry : directCallTargets) {
-    const std::string_view resolvedPathView =
-        semanticProgramResolveCallTargetString(*semanticProgram, entry->resolvedPathId);
     const std::string_view resolvedPath =
-        resolvedPathView.empty() ? std::string_view(entry->resolvedPath) : resolvedPathView;
+        semanticProgramResolveCallTargetString(*semanticProgram, entry->resolvedPathId);
     if (entry->semanticNodeId != 0 && !resolvedPath.empty()) {
       adapter.directCallTargetsByExpr.insert_or_assign(entry->semanticNodeId, std::string(resolvedPath));
     }

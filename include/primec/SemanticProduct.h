@@ -34,7 +34,6 @@ struct SemanticProgramExecution {
 struct SemanticProgramDirectCallTarget {
   std::string scopePath;
   std::string callName;
-  std::string resolvedPath;
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
@@ -362,6 +361,9 @@ semanticProgramOnErrorFactView(const SemanticProgram &semanticProgram);
 
 SymbolId semanticProgramInternCallTargetString(SemanticProgram &semanticProgram, std::string_view text);
 std::string_view semanticProgramResolveCallTargetString(const SemanticProgram &semanticProgram, SymbolId id);
+std::string_view semanticProgramDirectCallTargetResolvedPath(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramDirectCallTarget &entry);
 
 std::string formatSemanticProgram(const SemanticProgram &semanticProgram);
 
