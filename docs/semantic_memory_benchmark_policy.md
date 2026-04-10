@@ -52,6 +52,22 @@ Current rule:
 This sustained rule exists to avoid fail/noise on one-off machine variance while
 still catching trend regressions.
 
+## Expensive Test Classification
+
+Semantic-memory benchmark and trend CTest entries are treated as expensive tests
+and must stay serial when semantic-memory reports exceed expensive thresholds.
+
+Current expensive thresholds (from benchmark report payload):
+
+- max wall time: `3.0` seconds
+- max peak RSS: `524288000` bytes
+
+When `benchmarks/semantic_memory_baseline_report.json` reports one or more
+`expensive_offenders` above either threshold, keep:
+
+- `PrimeStruct_semantic_memory_benchmark` as `RUN_SERIAL` + `LABELS "expensive"`
+- `PrimeStruct_semantic_memory_trend` as `RUN_SERIAL` + `LABELS "expensive"`
+
 ## Update Workflow
 
 When semantic behavior changes intentionally shift memory/runtime:

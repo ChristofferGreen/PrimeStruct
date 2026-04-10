@@ -207,21 +207,65 @@ TEST_CASE("semantic memory baseline report is checked in with fixture phase cove
   CHECK(readFile(validateErrPath).empty());
 }
 
-TEST_CASE("semantic memory benchmark ctest target stays serial and expensive") {
-  const std::filesystem::path cwd = std::filesystem::current_path();
-  std::filesystem::path cmakePath = cwd / "CMakeLists.txt";
-  if (!std::filesystem::exists(cmakePath)) {
-    cmakePath = cwd.parent_path() / "CMakeLists.txt";
+TEST_CASE("semantic memory ctest targets stay serial and expensive when baseline exceeds thresholds") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
   }
-  REQUIRE(std::filesystem::exists(cmakePath));
-  const std::string cmakeText = readFile(cmakePath.string());
-  REQUIRE_FALSE(cmakeText.empty());
 
-  CHECK(cmakeText.find("NAME PrimeStruct_semantic_memory_benchmark") != std::string::npos);
-  CHECK(cmakeText.find("set_tests_properties(\n"
-                       "    PrimeStruct_semantic_memory_benchmark\n"
-                       "    PROPERTIES RUN_SERIAL TRUE TIMEOUT 1800 LABELS \"expensive\")") !=
-        std::string::npos);
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path cmakePath = repoRoot / "CMakeLists.txt";
+  const std::filesystem::path baselinePath = repoRoot / "benchmarks" / "semantic_memory_baseline_report.json";
+  REQUIRE(std::filesystem::exists(cmakePath));
+  REQUIRE(std::filesystem::exists(baselinePath));
+
+  const std::string validateOutPath = writeTemp("semantic_memory_ctest_expensive_validate.out", "");
+  const std::string validateErrPath = writeTemp("semantic_memory_ctest_expensive_validate.err", "");
+  const std::string validateCmd =
+      "python3 -c " +
+      quoteShellArg(
+          "import json, re, sys\n"
+          "baseline = json.load(open(sys.argv[1], encoding='utf-8'))\n"
+          "cmake_text = open(sys.argv[2], encoding='utf-8').read()\n"
+          "thresholds = baseline.get('expensive_thresholds', {})\n"
+          "offenders = baseline.get('expensive_offenders', [])\n"
+          "runtime_limit = thresholds.get('max_wall_seconds')\n"
+          "rss_limit = thresholds.get('max_peak_rss_bytes')\n"
+          "has_thresholds = runtime_limit == 3.0 and rss_limit == 500 * 1024 * 1024\n"
+          "has_offenders = isinstance(offenders, list) and len(offenders) >= 1\n"
+          "offender_exceeds = has_offenders and any(\n"
+          "  bool(row.get('exceeds_expensive_runtime_threshold'))\n"
+          "  or bool(row.get('exceeds_expensive_rss_threshold'))\n"
+          "  for row in offenders\n"
+          ")\n"
+          "benchmark_guard = re.search(\n"
+          "  r'set_tests_properties\\(\\s*PrimeStruct_semantic_memory_benchmark\\s*'\n"
+          "  r'PROPERTIES\\s*RUN_SERIAL TRUE\\s*TIMEOUT 1800\\s*LABELS \"expensive\"\\s*\\)',\n"
+          "  cmake_text,\n"
+          "  re.S,\n"
+          ") is not None\n"
+          "trend_guard = re.search(\n"
+          "  r'set_tests_properties\\(\\s*PrimeStruct_semantic_memory_trend\\s*'\n"
+          "  r'PROPERTIES\\s*DEPENDS PrimeStruct_semantic_memory_benchmark\\s*'\n"
+          "  r'RUN_SERIAL TRUE\\s*TIMEOUT 300\\s*LABELS \"expensive\"\\s*\\)',\n"
+          "  cmake_text,\n"
+          "  re.S,\n"
+          ") is not None\n"
+          "ok = has_thresholds and has_offenders and offender_exceeds and benchmark_guard and trend_guard\n"
+          "if not ok:\n"
+          "  print(json.dumps({\n"
+          "    'thresholds': thresholds,\n"
+          "    'offender_count': len(offenders) if isinstance(offenders, list) else -1,\n"
+          "    'offender_exceeds': offender_exceeds,\n"
+          "    'benchmark_guard': benchmark_guard,\n"
+          "    'trend_guard': trend_guard,\n"
+          "  }, indent=2, sort_keys=True))\n"
+          "sys.exit(0 if ok else 1)\n") +
+      " " + quoteShellArg(baselinePath.string()) +
+      " " + quoteShellArg(cmakePath.string()) +
+      " > " + quoteShellArg(validateOutPath) + " 2> " + quoteShellArg(validateErrPath);
+  CHECK(runCommand(validateCmd) == 0);
+  CHECK(readFile(validateErrPath).empty());
 }
 
 TEST_CASE("semantic memory budget policy artifacts are checked in") {

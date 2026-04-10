@@ -119,6 +119,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   validates the checked-in baseline report as structured JSON (schema/runs,
   full fixture×phase pair coverage, per-row RSS/time metrics, and expensive
   offender annotations) instead of relying on substring presence checks.
+- `semantic-memory-expensive-ctest-threshold-guard`: benchmark harness now
+  validates baseline expensive-threshold exceedance evidence and locks both
+  semantic-memory CTest entries (`PrimeStruct_semantic_memory_benchmark` and
+  `PrimeStruct_semantic_memory_trend`) to serial expensive properties.
 - `semantic-product-direct-call-routing`: production lowering now validates
   that every non-method direct call has a published semantic-product routing
   fact before lowering starts, and semantic-product-aware direct-call
