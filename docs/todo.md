@@ -10,11 +10,6 @@ Finished items are periodically moved to `docs/todo_finished.md`.
 Roadmap note: completed map/vector migration, compatibility-cleanup, graph queue, and semantics/lowering boundary slices now live in `docs/todo_finished.md`.
 Sizing note: each leaf `○` item should fit in one code-affecting commit plus focused conformance updates for that slice. If a leaf needs multiple behavior changes, split it first.
 
-**Group 13 - Ownership/runtime substrate**
-- ◐ Route the remaining builtin canonical `map<K, V>` borrowed/non-local growth mutation surfaces through the shared grown-pointer write-back/repoint path.
-  - ◐ Add one failing conformance case for the highest-priority unhandled non-local receiver family across native/C++/VM harnesses.
-  - ◐ Migrate that single highest-priority non-local receiver family onto the shared rewrite/lowering path and flip the new conformance case to passing. Progress: direct + method helper-return map value receiver inserts and borrowed-holder field receiver inserts now rewrite to `/std/collections/map/insert_builtin` and run across VM/C++ emitter/native; section 3 currently reports no unhandled non-local receiver families in this inventory.
-
 **Group 14 - SoA bring-up and end-state cleanup**
 - ◐ Retire remaining compiler-owned builtin `soa_vector` semantics/lowering/backend scaffolding as the stdlib `.prime` substrate becomes authoritative.
   - ◐ Migrate the next compiler-owned SoA fallback family onto shared stdlib helper/conversion paths.

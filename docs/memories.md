@@ -217,6 +217,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   Group 13 non-local map-growth receiver inventory with per-family rewrite
   touchpoints and an explicit `Still-unhandled non-local receiver families`
   state of `None in the current inventory`.
+- `semantic-map-non-local-growth-group13-closed-2026-04`: Group 13 map
+  non-local growth TODO leaves are now fully archived to
+  `docs/todo_finished.md`, with compile-run conformance coverage for helper-
+  return receiver insert forms across C++/VM/native harnesses and rewrite
+  coverage locking `/std/collections/map/insert_builtin` normalization.
 - `semantic-method-target-scratch-candidates`: infer-stage method-target
   resolution now reuses `CallTargetResolutionScratch::methodReceiverResolutionCandidates`
   for scoped definitions/executions in `resolveInferMethodCallPath(...)`,
