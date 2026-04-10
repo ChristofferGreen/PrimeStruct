@@ -140,9 +140,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   semantic-id-first and then fall back deterministically to
   (`resolvedPathId`, `callNameId`), try lookups stay semantic-id-first and
   then fall back deterministically to (`operandResolvedPathId`, source
-  location), while return/`on_error` lookups keep deterministic
-  `definitionPathId` fallback when definition semantic ids are absent in
-  manual fixture coverage.
+  location), and return/`on_error` lookups stay semantic-id-first while
+  keeping deterministic `definitionPathId` fallback when definition semantic
+  ids are absent in manual fixture coverage.
 - `semantic-product-structural-node-ids`: validated AST definitions,
   executions, and expressions now carry deterministic structural
   `semanticNodeId` values hashed from their resolved scope path plus traversal

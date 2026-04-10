@@ -336,6 +336,131 @@ TEST_CASE("ir lowerer on_error helpers resolve semantic metadata by definition p
   CHECK(onErrorByDef.at("/main")->handlerPath == "/handler");
 }
 
+TEST_CASE("ir lowerer on_error helpers prefer semantic-id facts over definition path fallback") {
+  primec::Program program;
+
+  primec::Definition semanticHandlerDef;
+  semanticHandlerDef.fullPath = "/handler_semantic";
+  semanticHandlerDef.namespacePrefix = "";
+  program.definitions.push_back(semanticHandlerDef);
+
+  primec::Definition fallbackHandlerDef;
+  fallbackHandlerDef.fullPath = "/handler_fallback";
+  fallbackHandlerDef.namespacePrefix = "";
+  program.definitions.push_back(fallbackHandlerDef);
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.namespacePrefix = "";
+  mainDef.semanticNodeId = 222;
+  program.definitions.push_back(mainDef);
+
+  auto resolveExprPath = [](const primec::Expr &expr) {
+    if (!expr.name.empty() && expr.name[0] == '/') {
+      return expr.name;
+    }
+    return std::string("/") + expr.name;
+  };
+  auto definitionExists = [](const std::string &path) {
+    return path == "/handler_semantic" || path == "/handler_fallback" || path == "/main";
+  };
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "void",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 221,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler_semantic"),
+  });
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "void",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 223,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler_fallback"),
+  });
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "void",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = true,
+      .onErrorHandlerPath = "/handler_semantic",
+      .onErrorErrorType = "FileError",
+      .onErrorBoundArgCount = 1,
+      .semanticNodeId = 222,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+  });
+  semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
+      .definitionPath = "/semantic/main",
+      .returnKind = "void",
+      .errorType = "FileError",
+      .boundArgCount = 1,
+      .boundArgTexts = {"2i32"},
+      .returnResultHasValue = false,
+      .returnResultValueType = "",
+      .returnResultErrorType = "",
+      .semanticNodeId = 222,
+      .handlerPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler_semantic"),
+  });
+  semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
+      .definitionPath = "/legacy/main",
+      .returnKind = "void",
+      .errorType = "FileError",
+      .boundArgCount = 1,
+      .boundArgTexts = {"3i32"},
+      .returnResultHasValue = false,
+      .returnResultValueType = "",
+      .returnResultErrorType = "",
+      .semanticNodeId = 0,
+      .definitionPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .handlerPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler_fallback"),
+  });
+
+  primec::ir_lowerer::OnErrorByDefinition onErrorByDef;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::buildOnErrorByDefinition(
+      program, &semanticProgram, resolveExprPath, definitionExists, onErrorByDef, error));
+  CHECK(error.empty());
+  REQUIRE(onErrorByDef.count("/main") == 1);
+  REQUIRE(onErrorByDef.at("/main").has_value());
+  CHECK(onErrorByDef.at("/main")->handlerPath == "/handler_semantic");
+  REQUIRE(onErrorByDef.at("/main")->boundArgs.size() == 1);
+  CHECK(onErrorByDef.at("/main")->boundArgs.front().literalValue == 2);
+}
+
 TEST_CASE("ir lowerer on_error helpers build bundled entry call and on_error setup") {
   primec::Program program;
 
