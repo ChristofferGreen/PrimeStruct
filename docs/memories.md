@@ -194,6 +194,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `scripts/semantic_memory_benchmark.py --graph-local-auto-key-mode
   compact|legacy-shadow|both`, emitting per-fixture/phase
   `graph_local_auto_key_mode_deltas` RSS/time rollups.
+- `semantic-graph-local-auto-side-channel-flat-map-ab-deltas`: graph-local
+  `auto` side-channel state now co-locates binding/initializer/query/try/
+  direct/method fields in single-map `GraphLocalAutoFacts` entries keyed by
+  `GraphLocalAutoKey` via `graphLocalAutoFacts_` (instead of maintaining
+  nine separate keyed maps), and benchmark A/B runs now support
+  `--benchmark-semantic-graph-local-auto-legacy-side-channel-shadow` plus
+  `scripts/semantic_memory_benchmark.py --graph-local-auto-side-channel-mode
+  flat|legacy-shadow|both`, emitting per-fixture/phase
+  `graph_local_auto_side_channel_mode_deltas` RSS/time rollups.
 - `semantic-method-target-scratch-candidates`: infer-stage method-target
   resolution now reuses `CallTargetResolutionScratch::methodReceiverResolutionCandidates`
   for scoped definitions/executions in `resolveInferMethodCallPath(...)`,
