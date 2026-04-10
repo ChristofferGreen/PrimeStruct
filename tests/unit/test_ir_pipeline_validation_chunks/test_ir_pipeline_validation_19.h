@@ -1347,6 +1347,65 @@ TEST_CASE("ir lowerer semantic-product adapter resolves query facts by resolved-
   CHECK(primec::semanticProgramQueryFactResolvedPath(semanticProgram, *queryFact) == "/lookup");
 }
 
+TEST_CASE("ir lowerer semantic-product adapter prefers query semantic-id matches over resolved-path fallback") {
+  primec::Expr queryExpr;
+  queryExpr.kind = primec::Expr::Kind::Call;
+  queryExpr.name = "lookup";
+  queryExpr.semanticNodeId = 8202;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .sourceLine = 17,
+      .sourceColumn = 5,
+      .semanticNodeId = 8202,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+  });
+
+  const primec::SymbolId callNameId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "lookup");
+  const primec::SymbolId resolvedPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup");
+
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .queryTypeText = "Result<i32, FileError>",
+      .bindingTypeText = "Result<i32, FileError>",
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "i32",
+      .resultErrorType = "FileError",
+      .sourceLine = 17,
+      .sourceColumn = 5,
+      .semanticNodeId = 8202,
+      .callNameId = callNameId,
+      .resolvedPathId = resolvedPathId,
+  });
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .queryTypeText = "Result<f64, FileError>",
+      .bindingTypeText = "Result<f64, FileError>",
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "f64",
+      .resultErrorType = "FileError",
+      .sourceLine = 17,
+      .sourceColumn = 5,
+      .semanticNodeId = 0,
+      .callNameId = callNameId,
+      .resolvedPathId = resolvedPathId,
+  });
+
+  const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto *queryFact = primec::ir_lowerer::findSemanticProductQueryFact(adapter, queryExpr);
+  REQUIRE(queryFact != nullptr);
+  CHECK(queryFact->semanticNodeId == 8202);
+  CHECK(queryFact->queryTypeText == "Result<i32, FileError>");
+}
+
 TEST_CASE("ir lowerer semantic-product adapter resolves try facts by operand path and source fallback") {
   primec::Expr operandExpr;
   operandExpr.kind = primec::Expr::Kind::Call;

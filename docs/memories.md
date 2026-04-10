@@ -136,9 +136,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   semantic-product adapter now keys return, local-`auto`, query, `try(...)`,
   and `on_error` facts by structural semantic ids; local-`auto` lookups stay
   semantic-id-first and then fall back deterministically to
-  (`initializerResolvedPathId`, `bindingNameId`), while return/`on_error`
-  lookups keep deterministic `definitionPathId` fallback when definition
-  semantic ids are absent in manual fixture coverage.
+  (`initializerResolvedPathId`, `bindingNameId`), query lookups stay
+  semantic-id-first and then fall back deterministically to
+  (`resolvedPathId`, `callNameId`), while return/`on_error` lookups keep
+  deterministic `definitionPathId` fallback when definition semantic ids are
+  absent in manual fixture coverage.
 - `semantic-product-structural-node-ids`: validated AST definitions,
   executions, and expressions now carry deterministic structural
   `semanticNodeId` values hashed from their resolved scope path plus traversal
