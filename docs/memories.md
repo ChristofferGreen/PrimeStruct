@@ -222,6 +222,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `docs/todo_finished.md`, with compile-run conformance coverage for helper-
   return receiver insert forms across C++/VM/native harnesses and rewrite
   coverage locking `/std/collections/map/insert_builtin` normalization.
+- `semantic-soa-fallback-inventory-2026-04`: section 4 of
+  `docs/ownership_runtime_soa_touchpoints.md` now carries the Group 14
+  still-unhandled SoA fallback inventory as explicit S1/S2/S3 families with
+  helper shapes, behavior notes, and owning-file touchpoints, and the
+  matching refresh leaf is archived in `docs/todo_finished.md`.
 - `semantic-method-target-scratch-candidates`: infer-stage method-target
   resolution now reuses `CallTargetResolutionScratch::methodReceiverResolutionCandidates`
   for scoped definitions/executions in `resolveInferMethodCallPath(...)`,
