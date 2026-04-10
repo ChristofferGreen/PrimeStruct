@@ -81,6 +81,15 @@ bool SemanticsValidator::inferUnknownReturnKinds() {
 bool SemanticsValidator::inferUnknownReturnKindsGraph() {
   graphLocalAutoScopePathInterner_.clear();
   graphLocalAutoLegacyKeyShadow_.clear();
+  graphLocalAutoLegacyBindingShadow_.clear();
+  graphLocalAutoLegacyInitializerResolvedPathShadow_.clear();
+  graphLocalAutoLegacyInitializerBindingShadow_.clear();
+  graphLocalAutoLegacyQuerySnapshotShadow_.clear();
+  graphLocalAutoLegacyTryValueShadow_.clear();
+  graphLocalAutoLegacyDirectCallPathShadow_.clear();
+  graphLocalAutoLegacyDirectCallReturnKindShadow_.clear();
+  graphLocalAutoLegacyMethodCallPathShadow_.clear();
+  graphLocalAutoLegacyMethodCallReturnKindShadow_.clear();
   graphLocalAutoFacts_.clear();
   const TypeResolutionGraph graph = buildTypeResolutionGraph(program_);
   const CondensationDag dag = computeTypeResolutionDependencyDag(graph);
@@ -667,6 +676,64 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
     if (def.returnExpr.has_value()) {
       ActiveLocalBindings returnLocals = definitionLocals;
       visitExpr(def, defParams, *def.returnExpr, returnLocals);
+    }
+  }
+
+  if (benchmarkGraphLocalAutoLegacySideChannelShadowEnabled_) {
+    graphLocalAutoLegacyBindingShadow_.clear();
+    graphLocalAutoLegacyInitializerResolvedPathShadow_.clear();
+    graphLocalAutoLegacyInitializerBindingShadow_.clear();
+    graphLocalAutoLegacyQuerySnapshotShadow_.clear();
+    graphLocalAutoLegacyTryValueShadow_.clear();
+    graphLocalAutoLegacyDirectCallPathShadow_.clear();
+    graphLocalAutoLegacyDirectCallReturnKindShadow_.clear();
+    graphLocalAutoLegacyMethodCallPathShadow_.clear();
+    graphLocalAutoLegacyMethodCallReturnKindShadow_.clear();
+
+    graphLocalAutoLegacyBindingShadow_.reserve(graphLocalAutoFacts_.size());
+    graphLocalAutoLegacyInitializerResolvedPathShadow_.reserve(graphLocalAutoFacts_.size());
+    graphLocalAutoLegacyInitializerBindingShadow_.reserve(graphLocalAutoFacts_.size());
+    graphLocalAutoLegacyQuerySnapshotShadow_.reserve(graphLocalAutoFacts_.size());
+    graphLocalAutoLegacyTryValueShadow_.reserve(graphLocalAutoFacts_.size());
+    graphLocalAutoLegacyDirectCallPathShadow_.reserve(graphLocalAutoFacts_.size());
+    graphLocalAutoLegacyDirectCallReturnKindShadow_.reserve(graphLocalAutoFacts_.size());
+    graphLocalAutoLegacyMethodCallPathShadow_.reserve(graphLocalAutoFacts_.size());
+    graphLocalAutoLegacyMethodCallReturnKindShadow_.reserve(graphLocalAutoFacts_.size());
+
+    for (const auto &[bindingKey, fact] : graphLocalAutoFacts_) {
+      if (fact.hasBinding) {
+        graphLocalAutoLegacyBindingShadow_.try_emplace(bindingKey, fact.binding);
+      }
+      if (!fact.initializerResolvedPath.empty()) {
+        graphLocalAutoLegacyInitializerResolvedPathShadow_.try_emplace(
+            bindingKey, fact.initializerResolvedPath);
+      }
+      if (fact.hasInitializerBinding) {
+        graphLocalAutoLegacyInitializerBindingShadow_.try_emplace(
+            bindingKey, fact.initializerBinding);
+      }
+      if (fact.hasQuerySnapshot) {
+        graphLocalAutoLegacyQuerySnapshotShadow_.try_emplace(bindingKey, fact.querySnapshot);
+      }
+      if (fact.hasTryValue) {
+        graphLocalAutoLegacyTryValueShadow_.try_emplace(bindingKey, fact.tryValue);
+      }
+      if (!fact.directCallResolvedPath.empty()) {
+        graphLocalAutoLegacyDirectCallPathShadow_.try_emplace(
+            bindingKey, fact.directCallResolvedPath);
+      }
+      if (fact.hasDirectCallReturnKind) {
+        graphLocalAutoLegacyDirectCallReturnKindShadow_.try_emplace(
+            bindingKey, fact.directCallReturnKind);
+      }
+      if (!fact.methodCallResolvedPath.empty()) {
+        graphLocalAutoLegacyMethodCallPathShadow_.try_emplace(
+            bindingKey, fact.methodCallResolvedPath);
+      }
+      if (fact.hasMethodCallReturnKind) {
+        graphLocalAutoLegacyMethodCallReturnKindShadow_.try_emplace(
+            bindingKey, fact.methodCallReturnKind);
+      }
     }
   }
 }

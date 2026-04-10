@@ -24,6 +24,15 @@ bool SemanticsValidator::buildDefinitionMaps() {
   graphLocalAutoFacts_.clear();
   graphLocalAutoScopePathInterner_.clear();
   graphLocalAutoLegacyKeyShadow_.clear();
+  graphLocalAutoLegacyBindingShadow_.clear();
+  graphLocalAutoLegacyInitializerResolvedPathShadow_.clear();
+  graphLocalAutoLegacyInitializerBindingShadow_.clear();
+  graphLocalAutoLegacyQuerySnapshotShadow_.clear();
+  graphLocalAutoLegacyTryValueShadow_.clear();
+  graphLocalAutoLegacyDirectCallPathShadow_.clear();
+  graphLocalAutoLegacyDirectCallReturnKindShadow_.clear();
+  graphLocalAutoLegacyMethodCallPathShadow_.clear();
+  graphLocalAutoLegacyMethodCallReturnKindShadow_.clear();
   structNames_.clear();
   publicDefinitions_.clear();
   paramsByDef_.clear();

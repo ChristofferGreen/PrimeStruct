@@ -241,6 +241,7 @@ int main(int argc, char **argv) {
                 << "[--benchmark-semantic-rss-checkpoints] "
                 << "[--benchmark-semantic-disable-method-target-memoization] "
                 << "[--benchmark-semantic-graph-local-auto-legacy-key-shadow] "
+                << "[--benchmark-semantic-graph-local-auto-legacy-side-channel-shadow] "
                 << "[--benchmark-semantic-repeat-count <n>] "
                 << "[--dump-stage pre_ast|ast|ast-semantic|semantic-product|type-graph|ir] [-- <program args...>]\n"
                 << "Dump-stage note: lowering-facing dumps now include semantic-product between ast-semantic and ir.\n";

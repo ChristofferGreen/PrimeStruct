@@ -331,18 +331,28 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(optionsParser.find("--type-resolver") == std::string::npos);
   CHECK(optionsHeader.find("benchmarkSemanticDisableMethodTargetMemoization") != std::string::npos);
   CHECK(optionsHeader.find("benchmarkSemanticGraphLocalAutoLegacyKeyShadow") != std::string::npos);
+  CHECK(optionsHeader.find("benchmarkSemanticGraphLocalAutoLegacySideChannelShadow") != std::string::npos);
   CHECK(optionsParser.find("--benchmark-semantic-disable-method-target-memoization") != std::string::npos);
   CHECK(optionsParser.find("--benchmark-semantic-graph-local-auto-legacy-key-shadow") != std::string::npos);
+  CHECK(optionsParser.find("--benchmark-semantic-graph-local-auto-legacy-side-channel-shadow") !=
+        std::string::npos);
   CHECK(semanticsHeader.find("typeResolver") == std::string::npos);
   CHECK(semanticsHeader.find("benchmarkSemanticDisableMethodTargetMemoization") != std::string::npos);
   CHECK(semanticsHeader.find("benchmarkSemanticGraphLocalAutoLegacyKeyShadow") != std::string::npos);
+  CHECK(semanticsHeader.find("benchmarkSemanticGraphLocalAutoLegacySideChannelShadow") != std::string::npos);
   CHECK(semanticsValidate.find("collectDiagnostics") != std::string::npos);
   CHECK(semanticsValidate.find("benchmarkSemanticDisableMethodTargetMemoization") != std::string::npos);
   CHECK(semanticsValidate.find("benchmarkSemanticGraphLocalAutoLegacyKeyShadow") != std::string::npos);
+  CHECK(semanticsValidate.find("benchmarkSemanticGraphLocalAutoLegacySideChannelShadow") !=
+        std::string::npos);
   CHECK(pipeline.find("options.benchmarkSemanticDisableMethodTargetMemoization") != std::string::npos);
   CHECK(pipeline.find("options.benchmarkSemanticGraphLocalAutoLegacyKeyShadow") != std::string::npos);
+  CHECK(pipeline.find("options.benchmarkSemanticGraphLocalAutoLegacySideChannelShadow") !=
+        std::string::npos);
   CHECK(primecMain.find("--benchmark-semantic-disable-method-target-memoization") != std::string::npos);
   CHECK(primecMain.find("--benchmark-semantic-graph-local-auto-legacy-key-shadow") != std::string::npos);
+  CHECK(primecMain.find("--benchmark-semantic-graph-local-auto-legacy-side-channel-shadow") !=
+        std::string::npos);
   CHECK(validatorHeader.find("bool inferUnknownReturnKindsGraph();") != std::string::npos);
   CHECK(validatorHeader.find("void collectGraphLocalAutoBindings(const TypeResolutionGraph &graph);") !=
         std::string::npos);
