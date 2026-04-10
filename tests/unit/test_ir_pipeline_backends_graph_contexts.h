@@ -1522,6 +1522,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(bindingTypeHelpersSource.find("bool validateSemanticProductBindingCoverage(const Program &program,") !=
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find("missing semantic-product binding fact: ") != std::string::npos);
+  CHECK(bindingTypeHelpersSource.find("missing semantic-product binding resolved path id: ") !=
+        std::string::npos);
   CHECK(bindingTypeHelpersSource.find("bool validateSemanticProductLocalAutoCoverage(const Program &program,") !=
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find("missing semantic-product local-auto fact: ") != std::string::npos);
@@ -1645,6 +1647,42 @@ TEST_CASE("semantic product callable summaries use fullPathId without fullPath s
         std::string::npos);
 
   CHECK(irLowererResultHelpers.find("summary->fullPathId == InvalidSymbolId") !=
+        std::string::npos);
+}
+
+TEST_CASE("semantic product binding facts use resolvedPathId without resolvedPath shadow field") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  const std::filesystem::path root =
+      std::filesystem::exists(cwd / "include" / "primec" / "SemanticProduct.h")
+          ? cwd
+          : cwd.parent_path();
+  const std::string semanticProductHeader =
+      readTextFile(root / "include" / "primec" / "SemanticProduct.h");
+  const std::string semanticProductSource =
+      readTextFile(root / "src" / "SemanticProduct.cpp");
+  const std::string bindingTypeHelpersSource =
+      readTextFile(root / "src" / "ir_lowerer" / "IrLowererBindingTypeHelpers.cpp");
+
+  const std::size_t bindingStart =
+      semanticProductHeader.find("struct SemanticProgramBindingFact {");
+  const std::size_t returnStart =
+      semanticProductHeader.find("struct SemanticProgramReturnFact {");
+  REQUIRE(bindingStart != std::string::npos);
+  REQUIRE(returnStart != std::string::npos);
+  REQUIRE(bindingStart < returnStart);
+
+  const std::string bindingBody =
+      semanticProductHeader.substr(bindingStart, returnStart - bindingStart);
+  CHECK(bindingBody.find("SymbolId resolvedPathId = InvalidSymbolId;") !=
+        std::string::npos);
+  CHECK(bindingBody.find("std::string resolvedPath;") == std::string::npos);
+
+  CHECK(semanticProductSource.find("semanticProgramBindingFactResolvedPath(") !=
+        std::string::npos);
+  CHECK(semanticProductSource.find("resolvedPath.empty() ? entry.resolvedPath") ==
+        std::string::npos);
+
+  CHECK(bindingTypeHelpersSource.find("bindingFact->resolvedPathId != InvalidSymbolId") !=
         std::string::npos);
 }
 

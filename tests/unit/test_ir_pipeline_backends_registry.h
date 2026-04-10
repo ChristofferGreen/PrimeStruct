@@ -597,6 +597,16 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main/selected"),
   });
 
+  semanticProgram.bindingFacts.back().resolvedPathId =
+      static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u);
+  error.clear();
+  diagnosticInfo = {};
+  CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
+  CHECK(error == "missing semantic-product binding resolved path id: /main -> local selected");
+  CHECK(diagnosticInfo.message == error);
+
+  semanticProgram.bindingFacts.back().resolvedPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/main/selected");
   error.clear();
   diagnosticInfo = {};
   CHECK(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
