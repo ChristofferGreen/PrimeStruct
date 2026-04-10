@@ -43,6 +43,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   access behavior; the C++ emitter now matches that direct-call contract for
   bare `at` / `at_unsafe` calls instead of compiling them through the old
   builtin access fallback.
+- `semantic-memory-no-import-math-vector-phase-coverage`: semantic-memory
+  benchmark harness coverage now executes `semantic_memory_benchmark.py` with
+  `--fixtures no_import,math_vector --phases ast-semantic,semantic-product`
+  and asserts the exact four fixture-phase output tuples, guarding the P0
+  attribution fixture contract.
 - `semantic-memory-primary-math-star-repro-fixture`: semantic-memory
   benchmarking now treats `benchmarks/semantic_memory/fixtures/math_star_repro.prime`
   as the primary minimized high-RSS `/std/math/*` reproducer, with benchmark
