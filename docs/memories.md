@@ -190,6 +190,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   for scoped definitions/executions in `resolveInferMethodCallPath(...)`,
   avoiding per-call receiver-candidate vector allocations when probing
   canonical receiver alias paths before return-type inference.
+- `semantic-method-target-canonical-fragment-reuse`: infer-stage method-target
+  receiver alias candidate construction now routes through
+  `appendCanonicalReceiverResolutionCandidates(...)` and cached
+  `joinMethodTarget(...)` fragments (`/vector`↔`/std/collections/vector`,
+  `/map`↔`/std/collections/map`) so scoped method-path resolution avoids
+  ad-hoc repeated canonical-path concatenation churn.
 - `semantic-call-target-canonical-fragment-caches`: scoped call-target
   concrete-path resolution now caches canonical overload/specialization
   fragments (`overloadFamilyPrefixCache`, `specializationPrefixCache`, and
