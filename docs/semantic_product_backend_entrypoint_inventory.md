@@ -24,11 +24,13 @@ It exists to support Group 15 `P1-06` follow-up slicing.
 
 | Family | Primary callsites | Semantic product consumption | Status |
 |---|---|---|---|
-| IR helper parse/validate path with stdlib imports | `tests/unit/test_ir_pipeline_helpers.h` (`parseAndValidateThroughCompilePipeline`) | Mixed: optional, currently requested by default | Remaining non-consuming family |
-| Compile-pipeline dump helper | `include/primec/testing/CompilePipelineDumpHelpers.h` (`captureCompilePipelineDumpStageFromPath`) | Mixed: stage-dependent | Remaining mixed family (needs explicit intent plumbing) |
+| IR helper parse/validate path with stdlib imports | `tests/unit/test_ir_pipeline_helpers.h` (`parseAndValidateThroughCompilePipeline`) | Mixed: optional, currently requested by default | Remaining non-consuming family (`P1-06a`) |
+| Compile-pipeline dump helper | `include/primec/testing/CompilePipelineDumpHelpers.h` (`captureCompilePipelineDumpStageFromPath`) | Mixed: stage-dependent | Remaining mixed family (`P1-06b`) |
 | Semantics helper compile-pipeline validation path | `tests/unit/test_semantics_helpers.h` (`dumpStage = ast_semantic`) | Not required | Non-consuming (already aligned with `P1-01`) |
 
-## Remaining Non-Consuming Families Requiring Follow-Up Leaves
+## Remaining Non-Consuming Families With Explicit Follow-Up Leaves
 
-1. `tests/unit/test_ir_pipeline_helpers.h` parse/validate helper calls that do not request semantic output.
-2. `include/primec/testing/CompilePipelineDumpHelpers.h` stage-driven dump helper where semantic-product intent is implicit instead of explicit.
+| Family | Gap to close | Follow-up leaf |
+|---|---|---|
+| `tests/unit/test_ir_pipeline_helpers.h` parse/validate helper | Non-semantic-output calls still request semantic products by default. | `P1-06a` |
+| `include/primec/testing/CompilePipelineDumpHelpers.h` dump helper | Semantic-product intent is inferred from stage instead of explicit at callsites. | `P1-06b` |
