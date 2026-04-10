@@ -850,6 +850,58 @@ TEST_CASE("ir lowerer semantic-product adapter reuses method-call path ids") {
         "/std/collections/map/contains");
 }
 
+TEST_CASE("ir lowerer semantic-product adapter indexes callable summaries by full-path id") {
+  primec::SemanticProgram semanticProgram;
+  const auto mainPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "void",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 201,
+      .provenanceHandle = 0,
+      .fullPathId = mainPathId,
+  });
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "void",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 202,
+      .provenanceHandle = 0,
+      .fullPathId = primec::InvalidSymbolId,
+  });
+
+  const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  CHECK(adapter.callableSummariesByPathId.count(mainPathId) == 1);
+  CHECK(adapter.callableSummariesByPathId.count(primec::InvalidSymbolId) == 0);
+  const auto *summary = primec::ir_lowerer::findSemanticProductCallableSummary(adapter, "/main");
+  REQUIRE(summary != nullptr);
+  CHECK(summary->semanticNodeId == 201);
+  CHECK(primec::ir_lowerer::findSemanticProductCallableSummary(adapter, "/missing") == nullptr);
+}
+
 TEST_CASE("ir lowerer call helpers require semantic-product bridge-path choices") {
   const std::unordered_map<std::string, const primec::Definition *> defMap;
   const std::unordered_map<std::string, std::string> importAliases;

@@ -1004,7 +1004,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramCallableSummaryView(*semanticProgram)") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.callableSummariesByPath.reserve(") != std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.callableSummariesByPathId.reserve(") != std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("semanticProgramLookupCallTargetStringId(*adapter.semanticProgram, fullPath)") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramOnErrorFactView(*semanticProgram)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.onErrorFactsByDefinitionId.reserve(onErrorFacts.size())") !=

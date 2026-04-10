@@ -256,12 +256,18 @@ bool precomputeSemanticProductReturnInfoCache(const LowerInferenceGetReturnInfoS
   returnInfoCache.clear();
 
   std::vector<const Definition *> definitions;
-  definitions.reserve(input.semanticProductTargets->callableSummariesByPath.size());
-  for (const auto &[path, callableSummary] : input.semanticProductTargets->callableSummariesByPath) {
+  definitions.reserve(input.semanticProductTargets->callableSummariesByPathId.size());
+  for (const auto &[pathId, callableSummary] : input.semanticProductTargets->callableSummariesByPathId) {
     (void)callableSummary;
-    const auto defIt = input.defMap->find(path);
+    const std::string_view pathView = semanticProgramResolveCallTargetString(
+        *input.semanticProductTargets->semanticProgram, pathId);
+    if (pathView.empty()) {
+      errorOut = "missing semantic-product callable summary path id";
+      return false;
+    }
+    const auto defIt = input.defMap->find(std::string(pathView));
     if (defIt == input.defMap->end() || defIt->second == nullptr) {
-      errorOut = "native backend cannot resolve definition: " + path;
+      errorOut = "native backend cannot resolve definition: " + std::string(pathView);
       return false;
     }
     definitions.push_back(defIt->second);

@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -351,6 +352,8 @@ std::vector<const SemanticProgramOnErrorFact *>
 semanticProgramOnErrorFactView(const SemanticProgram &semanticProgram);
 
 SymbolId semanticProgramInternCallTargetString(SemanticProgram &semanticProgram, std::string_view text);
+std::optional<SymbolId> semanticProgramLookupCallTargetStringId(const SemanticProgram &semanticProgram,
+                                                                std::string_view text);
 std::string_view semanticProgramResolveCallTargetString(const SemanticProgram &semanticProgram, SymbolId id);
 std::string_view semanticProgramDirectCallTargetResolvedPath(
     const SemanticProgram &semanticProgram,

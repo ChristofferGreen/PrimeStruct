@@ -79,12 +79,15 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
   }
 
   const auto callableSummaries = semanticProgramCallableSummaryView(*semanticProgram);
-  adapter.callableSummariesByPath.reserve(callableSummaries.size());
+  adapter.callableSummariesByPathId.reserve(callableSummaries.size());
   for (const auto *entry : callableSummaries) {
+    if (entry->fullPathId == InvalidSymbolId) {
+      continue;
+    }
     const std::string_view fullPath =
         semanticProgramCallableSummaryFullPath(*semanticProgram, *entry);
     if (!fullPath.empty()) {
-      adapter.callableSummariesByPath[std::string(fullPath)] = entry;
+      adapter.callableSummariesByPathId.insert_or_assign(entry->fullPathId, entry);
     }
   }
 
@@ -214,10 +217,15 @@ std::string findSemanticProductBridgePathChoice(const SemanticProductTargetAdapt
 
 const SemanticProgramCallableSummary *findSemanticProductCallableSummary(const SemanticProductTargetAdapter &adapter,
                                                                         const std::string &fullPath) {
-  if (fullPath.empty()) {
+  if (fullPath.empty() || adapter.semanticProgram == nullptr) {
     return nullptr;
   }
-  if (const auto it = adapter.callableSummariesByPath.find(fullPath); it != adapter.callableSummariesByPath.end()) {
+  const auto fullPathId = semanticProgramLookupCallTargetStringId(*adapter.semanticProgram, fullPath);
+  if (!fullPathId.has_value()) {
+    return nullptr;
+  }
+  if (const auto it = adapter.callableSummariesByPathId.find(*fullPathId);
+      it != adapter.callableSummariesByPathId.end()) {
     return it->second;
   }
   return nullptr;

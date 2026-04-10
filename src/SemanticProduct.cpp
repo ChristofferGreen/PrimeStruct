@@ -90,6 +90,19 @@ SymbolId semanticProgramInternCallTargetString(SemanticProgram &semanticProgram,
   return id;
 }
 
+std::optional<SymbolId> semanticProgramLookupCallTargetStringId(const SemanticProgram &semanticProgram,
+                                                                std::string_view text) {
+  if (text.empty()) {
+    return std::nullopt;
+  }
+  const std::string key(text);
+  if (const auto existing = semanticProgram.callTargetStringIdsByText.find(key);
+      existing != semanticProgram.callTargetStringIdsByText.end()) {
+    return existing->second;
+  }
+  return std::nullopt;
+}
+
 std::string_view semanticProgramResolveCallTargetString(const SemanticProgram &semanticProgram, SymbolId id) {
   if (id == InvalidSymbolId || id > semanticProgram.callTargetStringTable.size()) {
     return {};
