@@ -157,8 +157,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `semanticProgramDirectCallTargetView(...)`,
   `semanticProgramMethodCallTargetView(...)`,
   `semanticProgramCallableSummaryView(...)`, and
-  `semanticProgramBindingFactView(...)`, and snapshot coverage locks
-  deterministic module-index view ordering for those families.
+  `semanticProgramBindingFactView(...)`, and combined first-slice parity
+  coverage now locks identical semantic-product formatter output between flat
+  and module-index storage for those families.
 - `compile-pipeline-dump-helper-explicit-semantic-intent`: compile-pipeline
   dump capture helpers now require explicit
   `CompilePipelineSemanticProductIntent` plumbing at callsites (instead of an

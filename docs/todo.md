@@ -31,7 +31,6 @@ Order rule: execute leaves top-to-bottom. Each leaf below is scoped to one code-
 P0 - Reproducible measurement and attribution
 
 P1 - Immediate peak-RSS reductions in existing pipeline
-- ◐ [P1-09] Add semantic-product text-parity regression test for the first dedup slice.
 - ◐ [P1-10] Migrate a second high-volume copied fact family to canonical reference/index storage. Progress: module-resolved `return_facts`, `local_auto_facts`, and `query_facts` now store `returnFactIndices`, `localAutoFactIndices`, and `queryFactIndices` into canonical semantic-program vectors (instead of full per-module entry copies), with deterministic module-index view/formatter parity coverage for each migrated family; module-resolved `try_facts` and `on_error_facts` now likewise use `tryFactIndices`/`onErrorFactIndices` (no per-module struct copies) with deterministic ordering and flat-vs-module-index formatter parity coverage; module-resolved `bridge_path_choices` now uses `bridgePathChoiceIndices` instead of per-module copied entries, with deterministic ordering and flat-vs-module-index formatter parity coverage.
 - ◐ [P1-11] Add semantic-product text-parity regression test for the second dedup slice. Progress: added combined parity coverage that exercises flat-vs-module-index formatting equivalence across all second-slice families together (`return_facts`, `local_auto_facts`, `query_facts`, `bridge_path_choices`, `try_facts`, and `on_error_facts`) in one semantic-product snapshot test.
 
