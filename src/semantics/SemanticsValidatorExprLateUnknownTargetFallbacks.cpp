@@ -250,7 +250,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
   if (splitSoaFieldViewHelperPath(resolvedTarget)) {
     handledOut = true;
     return failLateUnknownTargetDiagnostic(
-        soaUnavailableMethodDiagnostic(resolvedTarget, false));
+        soaUnavailableMethodDiagnostic(resolvedTarget));
   }
 
   handledOut = true;

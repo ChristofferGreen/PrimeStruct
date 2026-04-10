@@ -15,8 +15,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   semantics helpers also no longer expose
   `soaDirectPendingUnavailableMethodDiagnostic(...)`, and monomorph fallback
   plus shared helper diagnostics now route SoA pending borrowed/field-view
-  rejects through canonical `soaUnavailableMethodDiagnostic(..., false)`
-  unknown-method paths.
+  rejects through canonical single-argument
+  `soaUnavailableMethodDiagnostic(...)` unknown-method paths after dropping
+  the unused borrowed-helper visibility probe argument.
 - `arg-pack-dereference-struct-inference`: IR struct-type inference now
   propagates through `dereference(...)`, so indexed borrowed arg-pack values
   (for example `args<Reference<Map<K, V>>>`) preserve their struct identity

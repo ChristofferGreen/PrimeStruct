@@ -769,7 +769,7 @@
             "soaDirectPendingUnavailableMethodDiagnostic(resolved)") ==
         std::string::npos);
   CHECK(semanticsExprMapSoaBuiltinsSource.find(
-            "soaUnavailableMethodDiagnostic(resolved, false)") !=
+            "soaUnavailableMethodDiagnostic(resolved)") !=
         std::string::npos);
   CHECK(semanticsExprMapSoaBuiltinsSource.find(
             "soaFieldViewPendingDiagnostic(soaFieldViewName)") ==

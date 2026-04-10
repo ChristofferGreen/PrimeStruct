@@ -223,7 +223,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     if (const auto pendingPath =
             builtinSoaDirectPendingHelperPath(initializer, params, locals)) {
       return failBindingDiagnostic(
-          soaUnavailableMethodDiagnostic(*pendingPath, false));
+          soaUnavailableMethodDiagnostic(*pendingPath));
     }
     if (error_.empty()) {
       return failBindingDiagnostic("binding initializer validateExpr failed");
@@ -233,7 +233,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   if (const auto pendingPath =
           builtinSoaDirectPendingHelperPath(initializer, params, locals)) {
     return failBindingDiagnostic(
-        soaUnavailableMethodDiagnostic(*pendingPath, false));
+        soaUnavailableMethodDiagnostic(*pendingPath));
   }
   if (isBuiltinSoaFieldViewExpr(initializer, params, locals, nullptr) &&
       !initializer.args.empty()) {

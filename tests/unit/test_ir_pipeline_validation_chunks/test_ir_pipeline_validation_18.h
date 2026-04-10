@@ -398,21 +398,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferLateFallbackBuiltinsSource.find(
             "if (!expr.isMethodCall && isSimpleCallName(expr, \"buffer_load\") &&") !=
         std::string::npos);
-  CHECK((semanticsInferLateFallbackBuiltinsSource.find(
-            "return failInferLateFallbackDiagnostic(\n"
-            "              soaUnavailableMethodDiagnostic(\n"
-            "                  methodResolved,\n"
-            "                  usesSamePathSoaHelperTargetForCurrentImports(\"ref\")));") !=
-        std::string::npos ||
-        semanticsInferLateFallbackBuiltinsSource.find(
-            "return failInferLateFallbackDiagnostic(\n"
-            "              soaUnavailableMethodDiagnostic(\n"
-            "                  methodResolved,\n"
-            "                  hasVisibleSoaHelperTargetForCurrentImports(\"ref\")));") !=
-            std::string::npos ||
-        semanticsInferLateFallbackBuiltinsSource.find(
-            "hasVisibleSoaBorrowedHelperForPath(methodResolved)));") !=
-            std::string::npos));
+  CHECK(semanticsInferLateFallbackBuiltinsSource.find(
+            "soaUnavailableMethodDiagnostic(methodResolved));") !=
+        std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find("ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(") !=
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find(
@@ -427,21 +415,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find("if (getVectorStatementHelperName(expr, vectorHelper) && !expr.args.empty()) {") !=
         std::string::npos);
-  CHECK((semanticsInferPreDispatchCallsSource.find(
-            "return failInferPreDispatchDiagnostic(\n"
-            "            soaUnavailableMethodDiagnostic(\n"
-            "                methodResolved,\n"
-            "                usesSamePathSoaHelperTargetForCurrentImports(\"ref\")));") !=
-        std::string::npos ||
-        semanticsInferPreDispatchCallsSource.find(
-            "return failInferPreDispatchDiagnostic(\n"
-            "            soaUnavailableMethodDiagnostic(\n"
-            "                methodResolved,\n"
-            "                hasVisibleSoaHelperTargetForCurrentImports(\"ref\")));") !=
-            std::string::npos ||
-        semanticsInferPreDispatchCallsSource.find(
-            "hasVisibleSoaBorrowedHelperForPath(methodResolved)));") !=
-            std::string::npos));
+  CHECK(semanticsInferPreDispatchCallsSource.find(
+            "soaUnavailableMethodDiagnostic(methodResolved));") !=
+        std::string::npos);
   CHECK(semanticsBuiltinPathHelpersSource.find(
             "std::string soaFieldViewOrUnknownMethodDiagnostic(std::string_view resolvedPath)") ==
         std::string::npos);

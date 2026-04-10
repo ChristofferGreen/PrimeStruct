@@ -200,7 +200,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (const auto pendingFieldName =
               pendingFieldViewNameFromRewrittenHelper()) {
         return failExprRootDiagnostic(soaUnavailableMethodDiagnostic(
-            soaFieldViewHelperPath(*pendingFieldName), false));
+            soaFieldViewHelperPath(*pendingFieldName)));
       }
     }
     auto isPendingSoaSchemaHelperCall = [&]() {
@@ -245,7 +245,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         std::string pendingFieldName;
         if (splitSoaFieldViewHelperPath(*pendingPath, &pendingFieldName)) {
           return failExprRootDiagnostic(
-              soaUnavailableMethodDiagnostic(*pendingPath, false));
+              soaUnavailableMethodDiagnostic(*pendingPath));
         }
       }
     }

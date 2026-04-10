@@ -166,7 +166,7 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
               builtinSoaDirectPendingHelperPath(*valueExpr, defParams,
                                                 activeLocals)) {
         return failInferDefinitionDiagnostic(
-            soaUnavailableMethodDiagnostic(*pendingPath, false));
+            soaUnavailableMethodDiagnostic(*pendingPath));
       }
     }
     if (deferUnknownReturnInferenceErrors_) {

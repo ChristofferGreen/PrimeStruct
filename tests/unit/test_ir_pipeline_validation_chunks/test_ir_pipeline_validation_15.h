@@ -787,7 +787,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "std::string soaDirectPendingUnavailableMethodDiagnostic(") ==
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
-            "std::string soaUnavailableMethodDiagnostic(std::string_view resolvedPath,") !=
+            "std::string soaUnavailableMethodDiagnostic(std::string_view resolvedPath);") !=
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("unknown method: /std/collections/soa_vector/field_view/") ==
         std::string::npos);
@@ -799,7 +799,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "soaDirectPendingUnavailableMethodDiagnostic(resolved)") ==
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
-            "soaUnavailableMethodDiagnostic(resolved, false)") !=
+            "soaUnavailableMethodDiagnostic(resolved)") !=
         std::string::npos);
   CHECK((exprMapSoaBuiltinsSource.find(
             "hasVisibleDefinitionPathForCurrentImports(\n"
@@ -953,37 +953,15 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "this->resolveSoaVectorOrExperimentalBorrowedReceiver(\n"
             "            receiverCandidate,") !=
         std::string::npos);
-  CHECK((exprMethodCompatibilitySetupSource.find(
-            "soaUnavailableMethodDiagnostic(\n"
-            "        resolvedPath,\n"
-            "        this->usesSamePathSoaHelperTargetForCurrentImports(\"ref\"))") !=
-        std::string::npos ||
-        exprMethodCompatibilitySetupSource.find(
-            "soaUnavailableMethodDiagnostic(\n"
-            "        resolvedPath,\n"
-            "        this->hasVisibleSoaHelperTargetForCurrentImports(\"ref\"))") !=
-            std::string::npos ||
-        exprMethodCompatibilitySetupSource.find(
-            "this->hasVisibleSoaHelperTargetForCurrentImports(helperName)") !=
-            std::string::npos));
-  CHECK((inferPreDispatchCallsSource.find(
-            "usesSamePathSoaHelperTargetForCurrentImports(\"ref\")))") !=
-        std::string::npos ||
-        inferPreDispatchCallsSource.find(
-            "hasVisibleSoaHelperTargetForCurrentImports(\"ref\")))") !=
-            std::string::npos ||
-        inferPreDispatchCallsSource.find(
-            "hasVisibleSoaBorrowedHelperForPath(methodResolved))") !=
-            std::string::npos));
-  CHECK((inferLateFallbackBuiltinsSource.find(
-            "usesSamePathSoaHelperTargetForCurrentImports(\"ref\")))") !=
-        std::string::npos ||
-        inferLateFallbackBuiltinsSource.find(
-            "hasVisibleSoaHelperTargetForCurrentImports(\"ref\")))") !=
-            std::string::npos ||
-        inferLateFallbackBuiltinsSource.find(
-            "hasVisibleSoaBorrowedHelperForPath(methodResolved))") !=
-            std::string::npos));
+  CHECK(exprMethodCompatibilitySetupSource.find(
+            "return soaUnavailableMethodDiagnostic(resolvedPath);") !=
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find(
+            "soaUnavailableMethodDiagnostic(methodResolved));") !=
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "soaUnavailableMethodDiagnostic(methodResolved));") !=
+        std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "usesSamePathSoaHelperTargetForCollectionType(\"count\", \"/vector\")") !=
         std::string::npos);
@@ -1046,7 +1024,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "soaDirectPendingUnavailableMethodDiagnostic(") ==
         std::string::npos);
   CHECK(inferDefinitionSource.find(
-            "soaUnavailableMethodDiagnostic(*pendingPath, false)") !=
+            "soaUnavailableMethodDiagnostic(*pendingPath)") !=
         std::string::npos);
   CHECK(exprCollectionAccessValidationSource.find(
             "reportBuiltinSoaPendingExprDiagnostic(expr.args.front(), params, locals)") ==
@@ -1070,7 +1048,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "soaDirectPendingUnavailableMethodDiagnostic(") ==
         std::string::npos);
   CHECK(statementBindingsSource.find(
-            "soaUnavailableMethodDiagnostic(*pendingPath, false)") !=
+            "soaUnavailableMethodDiagnostic(*pendingPath)") !=
         std::string::npos);
   CHECK(statementBindingsSource.find(
             "builtinSoaDirectPendingHelperPath(initializer, params, locals)") !=

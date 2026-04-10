@@ -135,17 +135,11 @@ bool SemanticsValidator::prepareExprMethodCompatibilitySetup(
   };
   setupOut.unavailableMethodDiagnostic =
       [this](const std::string &resolvedPath) -> std::string {
-    const bool usesRefRefHelper =
-        resolvedPath.rfind("/soa_vector/ref_ref", 0) == 0 ||
-        resolvedPath.rfind("/std/collections/soa_vector/ref_ref", 0) == 0;
-    const std::string helperName = usesRefRefHelper ? "ref_ref" : "ref";
     if (resolvedPath == "/std/gfx/experimental/Device/create_pipeline") {
       return "experimental gfx entry point not implemented yet: "
              "Device.create_pipeline([vertex_type] type, ...)";
     }
-    return soaUnavailableMethodDiagnostic(
-        resolvedPath,
-        this->hasVisibleSoaHelperTargetForCurrentImports(helperName));
+    return soaUnavailableMethodDiagnostic(resolvedPath);
   };
   return true;
 }

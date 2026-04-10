@@ -228,8 +228,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
           candidate.args.front().kind == Expr::Kind::Call) {
         return soaUnavailableMethodDiagnostic(
             isRefRefCall ? "/std/collections/soa_vector/ref_ref"
-                         : "/std/collections/soa_vector/ref",
-            false);
+                         : "/std/collections/soa_vector/ref");
       }
       const bool isExplicitSoaRefCall =
           (!candidate.isMethodCall && normalizedPrefix == "soa_vector" &&
@@ -255,8 +254,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
             isSimpleCallName(candidate, "ref_ref")))) {
         return soaUnavailableMethodDiagnostic(
             isRefRefCall ? "/std/collections/soa_vector/ref_ref"
-                         : "/std/collections/soa_vector/ref",
-            false);
+                         : "/std/collections/soa_vector/ref");
       }
       return {};
     }
@@ -276,7 +274,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
       return {};
     }
     return soaUnavailableMethodDiagnostic(
-        soaFieldViewHelperPath(normalizedName), false);
+        soaFieldViewHelperPath(normalizedName));
   };
   const bool hasLeadingReceiverParam = [&]() {
     if (callParams.empty()) {
