@@ -329,14 +329,48 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
     PmrDependencyCountMap dependencyCountByBindingKey{&arenaResource};
   };
 
+  using StdDependencyCountMap = std::unordered_map<GraphLocalAutoKey, size_t, GraphLocalAutoKeyHash>;
+  StdDependencyCountMap stdDependencyCountByBindingKey;
   GraphLocalAutoDependencyScratch dependencyScratch;
   auto &dependencyCountByBindingKey = dependencyScratch.dependencyCountByBindingKey;
+  const bool usePmrDependencyScratch = benchmarkGraphLocalAutoDependencyScratchPmrEnabled_;
+  if (!usePmrDependencyScratch) {
+    stdDependencyCountByBindingKey.reserve(graph.nodes.size());
+  }
+  auto dependencyCountTryEmplaceZero = [&](const GraphLocalAutoKey &bindingKey) {
+    if (usePmrDependencyScratch) {
+      dependencyCountByBindingKey.try_emplace(bindingKey, 0);
+      return;
+    }
+    stdDependencyCountByBindingKey.try_emplace(bindingKey, 0);
+  };
+  auto dependencyCountIncrement = [&](const GraphLocalAutoKey &bindingKey) {
+    if (usePmrDependencyScratch) {
+      ++dependencyCountByBindingKey[bindingKey];
+      return;
+    }
+    ++stdDependencyCountByBindingKey[bindingKey];
+  };
+  auto dependencyCountFind = [&](const GraphLocalAutoKey &bindingKey) -> const size_t * {
+    if (usePmrDependencyScratch) {
+      const auto dependencyIt = dependencyCountByBindingKey.find(bindingKey);
+      if (dependencyIt == dependencyCountByBindingKey.end()) {
+        return nullptr;
+      }
+      return &dependencyIt->second;
+    }
+    const auto dependencyIt = stdDependencyCountByBindingKey.find(bindingKey);
+    if (dependencyIt == stdDependencyCountByBindingKey.end()) {
+      return nullptr;
+    }
+    return &dependencyIt->second;
+  };
   for (const TypeResolutionGraphNode &node : graph.nodes) {
     if (node.kind != TypeResolutionNodeKind::LocalAuto) {
       continue;
     }
-    dependencyCountByBindingKey.try_emplace(
-        graphLocalAutoBindingKey(node.scopePath, node.sourceLine, node.sourceColumn), 0);
+    dependencyCountTryEmplaceZero(
+        graphLocalAutoBindingKey(node.scopePath, node.sourceLine, node.sourceColumn));
   }
   for (const TypeResolutionGraphEdge &edge : graph.edges) {
     if (edge.kind != TypeResolutionEdgeKind::Dependency || edge.sourceId >= graph.nodes.size() ||
@@ -349,8 +383,8 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
         targetNode.kind != TypeResolutionNodeKind::CallConstraint) {
       continue;
     }
-    ++dependencyCountByBindingKey[graphLocalAutoBindingKey(
-        sourceNode.scopePath, sourceNode.sourceLine, sourceNode.sourceColumn)];
+    dependencyCountIncrement(graphLocalAutoBindingKey(
+        sourceNode.scopePath, sourceNode.sourceLine, sourceNode.sourceColumn));
   }
 
   using ActiveLocalBindings = std::unordered_map<std::string, BindingInfo>;
@@ -375,8 +409,8 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
     if (isStructFieldOmittedEnvelope) {
       return true;
     }
-    const auto dependencyIt = dependencyCountByBindingKey.find(bindingKey);
-    if (dependencyIt == dependencyCountByBindingKey.end()) {
+    const size_t *dependencyCount = dependencyCountFind(bindingKey);
+    if (dependencyCount == nullptr) {
       return false;
     }
     if (bindingExpr.args.size() != 1) {
@@ -389,7 +423,7 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
     if (isIfCall(initializer) || isMatchCall(initializer) || isBuiltinBlockCall(initializer)) {
       return true;
     }
-    return dependencyIt->second == 1;
+    return *dependencyCount == 1;
   };
 
   auto inferBindingForLocals = [&](const Definition &def,

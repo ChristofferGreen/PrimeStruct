@@ -738,6 +738,8 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       out.benchmarkSemanticGraphLocalAutoLegacyKeyShadow = true;
     } else if (arg == "--benchmark-semantic-graph-local-auto-legacy-side-channel-shadow") {
       out.benchmarkSemanticGraphLocalAutoLegacySideChannelShadow = true;
+    } else if (arg == "--benchmark-semantic-disable-graph-local-auto-dependency-scratch-pmr") {
+      out.benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr = true;
     } else if (arg == "--benchmark-semantic-repeat-count" && i + 1 < argc) {
       uint32_t repeatCount = 0;
       if (!parsePositiveUint32(argv[++i], repeatCount, error, "--benchmark-semantic-repeat-count")) {

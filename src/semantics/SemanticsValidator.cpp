@@ -35,7 +35,8 @@ SemanticsValidator::SemanticsValidator(const Program &program,
                                        bool benchmarkSemanticPhaseCountersEnabled,
                                        bool benchmarkSemanticDisableMethodTargetMemoization,
                                        bool benchmarkSemanticGraphLocalAutoLegacyKeyShadow,
-                                       bool benchmarkSemanticGraphLocalAutoLegacySideChannelShadow)
+                                       bool benchmarkSemanticGraphLocalAutoLegacySideChannelShadow,
+                                       bool benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr)
     : program_(program),
       entryPath_(entryPath),
       error_(error),
@@ -51,7 +52,9 @@ SemanticsValidator::SemanticsValidator(const Program &program,
       benchmarkGraphLocalAutoLegacyKeyShadowEnabled_(
           benchmarkSemanticGraphLocalAutoLegacyKeyShadow),
       benchmarkGraphLocalAutoLegacySideChannelShadowEnabled_(
-          benchmarkSemanticGraphLocalAutoLegacySideChannelShadow) {
+          benchmarkSemanticGraphLocalAutoLegacySideChannelShadow),
+      benchmarkGraphLocalAutoDependencyScratchPmrEnabled_(
+          !benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr) {
   diagnosticSink_.reset();
   auto registerMathImport = [&](const std::string &importPath) {
     if (importPath == "/std/math/*") {

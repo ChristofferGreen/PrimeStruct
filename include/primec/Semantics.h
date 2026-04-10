@@ -52,7 +52,8 @@ public:
                 bool benchmarkSemanticRssCheckpointsEnabled = false,
                 bool benchmarkSemanticDisableMethodTargetMemoization = false,
                 bool benchmarkSemanticGraphLocalAutoLegacyKeyShadow = false,
-                bool benchmarkSemanticGraphLocalAutoLegacySideChannelShadow = false) const;
+                bool benchmarkSemanticGraphLocalAutoLegacySideChannelShadow = false,
+                bool benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr = false) const;
 };
 
 } // namespace primec

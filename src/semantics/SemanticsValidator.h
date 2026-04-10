@@ -317,7 +317,8 @@ public:
                      bool benchmarkSemanticPhaseCountersEnabled = false,
                      bool benchmarkSemanticDisableMethodTargetMemoization = false,
                      bool benchmarkSemanticGraphLocalAutoLegacyKeyShadow = false,
-                     bool benchmarkSemanticGraphLocalAutoLegacySideChannelShadow = false);
+                     bool benchmarkSemanticGraphLocalAutoLegacySideChannelShadow = false,
+                     bool benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr = false);
 
   bool run();
   const ValidationCounters &validationCounters() const { return validationCounters_; }
@@ -604,6 +605,7 @@ private:
   bool methodTargetMemoizationEnabled_ = true;
   bool benchmarkGraphLocalAutoLegacyKeyShadowEnabled_ = false;
   bool benchmarkGraphLocalAutoLegacySideChannelShadowEnabled_ = false;
+  bool benchmarkGraphLocalAutoDependencyScratchPmrEnabled_ = true;
   ValidationCounters validationCounters_;
   bool allowRecursiveReturnInference_ = true;
   bool deferUnknownReturnInferenceErrors_ = false;

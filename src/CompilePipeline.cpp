@@ -658,7 +658,8 @@ bool runCompilePipeline(const Options &options,
                           options.benchmarkSemanticRssCheckpoints,
                           options.benchmarkSemanticDisableMethodTargetMemoization,
                           options.benchmarkSemanticGraphLocalAutoLegacyKeyShadow,
-                          options.benchmarkSemanticGraphLocalAutoLegacySideChannelShadow)) {
+                          options.benchmarkSemanticGraphLocalAutoLegacySideChannelShadow,
+                          options.benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr)) {
     if (semanticDiagnosticInfo.message.empty()) {
       semanticDiagnosticInfo.message = error;
     }

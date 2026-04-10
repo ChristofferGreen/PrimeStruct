@@ -263,6 +263,13 @@ TEST_CASE("graph local auto facts use compact structured keys") {
   CHECK(inferGraph.find("GraphLocalAutoDependencyScratch dependencyScratch;") != std::string::npos);
   CHECK(inferGraph.find("auto &dependencyCountByBindingKey = dependencyScratch.dependencyCountByBindingKey;") !=
         std::string::npos);
+  CHECK(inferGraph.find("using StdDependencyCountMap = std::unordered_map<GraphLocalAutoKey, size_t, GraphLocalAutoKeyHash>;") !=
+        std::string::npos);
+  CHECK(inferGraph.find("const bool usePmrDependencyScratch = benchmarkGraphLocalAutoDependencyScratchPmrEnabled_;") !=
+        std::string::npos);
+  CHECK(inferGraph.find("if (!usePmrDependencyScratch) {") != std::string::npos);
+  CHECK(inferGraph.find("stdDependencyCountByBindingKey.reserve(graph.nodes.size());") !=
+        std::string::npos);
 }
 
 TEST_CASE("type resolution graph builder is wired through semantics testing api") {

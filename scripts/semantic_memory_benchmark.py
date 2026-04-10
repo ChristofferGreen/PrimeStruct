@@ -148,6 +148,12 @@ def parse_args() -> argparse.Namespace:
         default="flat",
         help="Graph-local-auto side-channel mode: flat, legacy-shadow, or both for RSS deltas.",
     )
+    parser.add_argument(
+        "--graph-local-auto-dependency-scratch-mode",
+        choices=("pmr", "std", "both"),
+        default="pmr",
+        help="Graph-local-auto dependency scratch mode: pmr, std, or both for RSS deltas.",
+    )
     parser.add_argument("--report-json", default="", help="Optional report output path.")
     return parser.parse_args()
 
@@ -265,7 +271,8 @@ def measure_fixture_phase(primec: Path,
                          repeat_compile_leak_check_runs: int,
                          method_target_memoization: str,
                          graph_local_auto_key_mode: str,
-                         graph_local_auto_side_channel_mode: str) -> dict:
+                         graph_local_auto_side_channel_mode: str,
+                         graph_local_auto_dependency_scratch_mode: str) -> dict:
     fixture_path = (repo_root / fixture.source).resolve()
     if not fixture_path.is_file():
         raise FileNotFoundError(f"fixture not found: {fixture_path}")
@@ -293,6 +300,8 @@ def measure_fixture_phase(primec: Path,
         command.append("--benchmark-semantic-graph-local-auto-legacy-key-shadow")
     if graph_local_auto_side_channel_mode == "legacy-shadow":
         command.append("--benchmark-semantic-graph-local-auto-legacy-side-channel-shadow")
+    if graph_local_auto_dependency_scratch_mode == "std":
+        command.append("--benchmark-semantic-disable-graph-local-auto-dependency-scratch-pmr")
 
     semantic_phase_counter_runs: list[dict] = []
 
@@ -351,6 +360,7 @@ def measure_fixture_phase(primec: Path,
         "method_target_memoization": method_target_memoization,
         "graph_local_auto_key_mode": graph_local_auto_key_mode,
         "graph_local_auto_side_channel_mode": graph_local_auto_side_channel_mode,
+        "graph_local_auto_dependency_scratch_mode": graph_local_auto_dependency_scratch_mode,
     }
     if semantic_phase_counters or semantic_allocation_counters or semantic_rss_checkpoints:
         result["semantic_phase_counters_runs"] = semantic_phase_counter_runs
@@ -635,6 +645,57 @@ def compute_graph_local_auto_side_channel_mode_deltas(results: list[dict]) -> li
     return deltas
 
 
+def selected_graph_local_auto_dependency_scratch_modes(selection: str) -> list[str]:
+    if selection == "both":
+        return ["pmr", "std"]
+    return [selection]
+
+
+def compute_graph_local_auto_dependency_scratch_mode_deltas(results: list[dict]) -> list[dict]:
+    grouped: dict[tuple[str, str, str, str, str], dict[str, dict]] = {}
+    for row in results:
+        mode = str(row.get("graph_local_auto_dependency_scratch_mode", "pmr"))
+        if mode not in ("pmr", "std"):
+            continue
+        method_mode = str(row.get("method_target_memoization", "on"))
+        key_mode = str(row.get("graph_local_auto_key_mode", "compact"))
+        side_channel_mode = str(row.get("graph_local_auto_side_channel_mode", "flat"))
+        grouped.setdefault((row["fixture"], row["phase"], method_mode, key_mode, side_channel_mode), {})[mode] = row
+
+    deltas: list[dict] = []
+    for (fixture, phase, method_mode, key_mode, side_channel_mode), by_mode in sorted(grouped.items()):
+        pmr_row = by_mode.get("pmr")
+        std_row = by_mode.get("std")
+        if pmr_row is None or std_row is None:
+            continue
+        deltas.append(
+            {
+                "fixture": fixture,
+                "phase": phase,
+                "method_target_memoization": method_mode,
+                "graph_local_auto_key_mode": key_mode,
+                "graph_local_auto_side_channel_mode": side_channel_mode,
+                "median_peak_rss_bytes_pmr": pmr_row["median_peak_rss_bytes"],
+                "median_peak_rss_bytes_std": std_row["median_peak_rss_bytes"],
+                "median_peak_rss_bytes_std_minus_pmr":
+                    int(std_row["median_peak_rss_bytes"]) - int(pmr_row["median_peak_rss_bytes"]),
+                "worst_peak_rss_bytes_pmr": pmr_row["worst_peak_rss_bytes"],
+                "worst_peak_rss_bytes_std": std_row["worst_peak_rss_bytes"],
+                "worst_peak_rss_bytes_std_minus_pmr":
+                    int(std_row["worst_peak_rss_bytes"]) - int(pmr_row["worst_peak_rss_bytes"]),
+                "median_wall_seconds_pmr": pmr_row["median_wall_seconds"],
+                "median_wall_seconds_std": std_row["median_wall_seconds"],
+                "median_wall_seconds_std_minus_pmr":
+                    float(std_row["median_wall_seconds"]) - float(pmr_row["median_wall_seconds"]),
+                "worst_wall_seconds_pmr": pmr_row["worst_wall_seconds"],
+                "worst_wall_seconds_std": std_row["worst_wall_seconds"],
+                "worst_wall_seconds_std_minus_pmr":
+                    float(std_row["worst_wall_seconds"]) - float(pmr_row["worst_wall_seconds"]),
+            }
+        )
+    return deltas
+
+
 def main() -> int:
     args = parse_args()
     repo_root = Path(args.repo_root).resolve()
@@ -673,6 +734,7 @@ def main() -> int:
         f"method_target_memoization={args.method_target_memoization} "
         f"graph_local_auto_key_mode={args.graph_local_auto_key_mode} "
         f"graph_local_auto_side_channel_mode={args.graph_local_auto_side_channel_mode} "
+        f"graph_local_auto_dependency_scratch_mode={args.graph_local_auto_dependency_scratch_mode} "
         f"repeat_compile_leak_check_runs={args.repeat_compile_leak_check_runs}"
     )
 
@@ -686,42 +748,48 @@ def main() -> int:
     graph_local_auto_side_channel_modes = selected_graph_local_auto_side_channel_modes(
         args.graph_local_auto_side_channel_mode
     )
+    graph_local_auto_dependency_scratch_modes = selected_graph_local_auto_dependency_scratch_modes(
+        args.graph_local_auto_dependency_scratch_mode
+    )
 
     for fixture in fixtures:
         for phase in phases:
             for method_target_memoization in method_target_memoization_modes:
                 for graph_local_auto_key_mode in graph_local_auto_key_modes:
                     for graph_local_auto_side_channel_mode in graph_local_auto_side_channel_modes:
-                        row = measure_fixture_phase(
-                            primec,
-                            repo_root,
-                            fixture,
-                            phase,
-                            args.runs,
-                            args.entry,
-                            args.semantic_product_force,
-                            args.no_fact_emission,
-                            fact_families,
-                            args.semantic_phase_counters,
-                            args.semantic_allocation_counters,
-                            args.semantic_rss_checkpoints,
-                            args.repeat_compile_leak_check_runs,
-                            method_target_memoization,
-                            graph_local_auto_key_mode,
-                            graph_local_auto_side_channel_mode,
-                        )
-                        results.append(row)
-                        print(
-                            "[semantic_memory_benchmark] "
-                            f"fixture={row['fixture']} phase={row['phase']} "
-                            f"method_target_memoization={row['method_target_memoization']} "
-                            f"graph_local_auto_key_mode={row['graph_local_auto_key_mode']} "
-                            f"graph_local_auto_side_channel_mode={row['graph_local_auto_side_channel_mode']} "
-                            f"median_wall={row['median_wall_seconds']:.6f}s "
-                            f"worst_wall={row['worst_wall_seconds']:.6f}s "
-                            f"median_rss={row['median_peak_rss_bytes']} "
-                            f"worst_rss={row['worst_peak_rss_bytes']}"
-                        )
+                        for graph_local_auto_dependency_scratch_mode in graph_local_auto_dependency_scratch_modes:
+                            row = measure_fixture_phase(
+                                primec,
+                                repo_root,
+                                fixture,
+                                phase,
+                                args.runs,
+                                args.entry,
+                                args.semantic_product_force,
+                                args.no_fact_emission,
+                                fact_families,
+                                args.semantic_phase_counters,
+                                args.semantic_allocation_counters,
+                                args.semantic_rss_checkpoints,
+                                args.repeat_compile_leak_check_runs,
+                                method_target_memoization,
+                                graph_local_auto_key_mode,
+                                graph_local_auto_side_channel_mode,
+                                graph_local_auto_dependency_scratch_mode,
+                            )
+                            results.append(row)
+                            print(
+                                "[semantic_memory_benchmark] "
+                                f"fixture={row['fixture']} phase={row['phase']} "
+                                f"method_target_memoization={row['method_target_memoization']} "
+                                f"graph_local_auto_key_mode={row['graph_local_auto_key_mode']} "
+                                f"graph_local_auto_side_channel_mode={row['graph_local_auto_side_channel_mode']} "
+                                f"graph_local_auto_dependency_scratch_mode={row['graph_local_auto_dependency_scratch_mode']} "
+                                f"median_wall={row['median_wall_seconds']:.6f}s "
+                                f"worst_wall={row['worst_wall_seconds']:.6f}s "
+                                f"median_rss={row['median_peak_rss_bytes']} "
+                                f"worst_rss={row['worst_peak_rss_bytes']}"
+                            )
 
     report = {
         "schema": REPORT_SCHEMA,
@@ -745,6 +813,7 @@ def main() -> int:
             "method_target_memoization": args.method_target_memoization,
             "graph_local_auto_key_mode": args.graph_local_auto_key_mode,
             "graph_local_auto_side_channel_mode": args.graph_local_auto_side_channel_mode,
+            "graph_local_auto_dependency_scratch_mode": args.graph_local_auto_dependency_scratch_mode,
             "repeat_compile_leak_check_runs": args.repeat_compile_leak_check_runs,
         },
         "expensive_thresholds": {
@@ -764,6 +833,8 @@ def main() -> int:
         "method_target_memoization_deltas": compute_method_target_memoization_deltas(results),
         "graph_local_auto_key_mode_deltas": compute_graph_local_auto_key_mode_deltas(results),
         "graph_local_auto_side_channel_mode_deltas": compute_graph_local_auto_side_channel_mode_deltas(results),
+        "graph_local_auto_dependency_scratch_mode_deltas":
+            compute_graph_local_auto_dependency_scratch_mode_deltas(results),
         "expensive_offenders": collect_expensive_offenders(results),
         "scale_slopes": compute_scale_slopes(results),
     }

@@ -140,6 +140,7 @@ TEST_CASE("semantic memory benchmark helper accepts benchmark-only collector con
   CHECK(report.find("\"method_target_memoization\": \"on\"") != std::string::npos);
   CHECK(report.find("\"graph_local_auto_key_mode\": \"compact\"") != std::string::npos);
   CHECK(report.find("\"graph_local_auto_side_channel_mode\": \"flat\"") != std::string::npos);
+  CHECK(report.find("\"graph_local_auto_dependency_scratch_mode\": \"pmr\"") != std::string::npos);
   CHECK(report.find("\"semantic_rss_checkpoints\": true") != std::string::npos);
   CHECK(report.find("\"repeat_compile_leak_check_runs\": 3") != std::string::npos);
   CHECK(report.find("\"rss_before_bytes\"") != std::string::npos);
@@ -158,21 +159,27 @@ TEST_CASE("semantic memory benchmark helper defines method-target memoization de
   CHECK(script.find("--method-target-memoization") != std::string::npos);
   CHECK(script.find("--graph-local-auto-key-mode") != std::string::npos);
   CHECK(script.find("--graph-local-auto-side-channel-mode") != std::string::npos);
+  CHECK(script.find("--graph-local-auto-dependency-scratch-mode") != std::string::npos);
   CHECK(script.find("selected_method_target_memoization_modes") != std::string::npos);
   CHECK(script.find("selected_graph_local_auto_key_modes") != std::string::npos);
   CHECK(script.find("selected_graph_local_auto_side_channel_modes") != std::string::npos);
+  CHECK(script.find("selected_graph_local_auto_dependency_scratch_modes") != std::string::npos);
   CHECK(script.find("compute_method_target_memoization_deltas") != std::string::npos);
   CHECK(script.find("compute_graph_local_auto_key_mode_deltas") != std::string::npos);
   CHECK(script.find("compute_graph_local_auto_side_channel_mode_deltas") != std::string::npos);
+  CHECK(script.find("compute_graph_local_auto_dependency_scratch_mode_deltas") != std::string::npos);
   CHECK(script.find("\"method_target_memoization_deltas\"") != std::string::npos);
   CHECK(script.find("\"graph_local_auto_key_mode_deltas\"") != std::string::npos);
   CHECK(script.find("\"graph_local_auto_side_channel_mode_deltas\"") != std::string::npos);
+  CHECK(script.find("\"graph_local_auto_dependency_scratch_mode_deltas\"") != std::string::npos);
   CHECK(script.find("\"median_peak_rss_bytes_on_minus_off\"") != std::string::npos);
   CHECK(script.find("\"median_peak_rss_bytes_legacy_shadow_minus_compact\"") != std::string::npos);
   CHECK(script.find("\"median_peak_rss_bytes_legacy_shadow_minus_flat\"") != std::string::npos);
+  CHECK(script.find("\"median_peak_rss_bytes_std_minus_pmr\"") != std::string::npos);
   CHECK(script.find("\"median_wall_seconds_on_minus_off\"") != std::string::npos);
   CHECK(script.find("\"median_wall_seconds_legacy_shadow_minus_compact\"") != std::string::npos);
   CHECK(script.find("\"median_wall_seconds_legacy_shadow_minus_flat\"") != std::string::npos);
+  CHECK(script.find("\"median_wall_seconds_std_minus_pmr\"") != std::string::npos);
 }
 
 TEST_CASE("benchmark regression checker passes for in-threshold report") {
