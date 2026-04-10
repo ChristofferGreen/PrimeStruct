@@ -6194,6 +6194,7 @@ bool Semantics::validate(Program &program,
     }
     *semanticProgramOut = buildSemanticProgram(program, entryPath, validator, semanticProductBuildConfig);
     if (benchmarkSemanticPhaseCounters != nullptr) {
+      benchmarkSemanticPhaseCounters->semanticProductBuild.callsVisited = 1;
       benchmarkSemanticPhaseCounters->semanticProductBuild.factsProduced =
           semanticProgramFactCount(*semanticProgramOut);
       if (benchmarkSemanticAllocationCountersEnabled) {

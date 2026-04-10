@@ -2499,6 +2499,54 @@ main() {
   CHECK(output.semanticProgram.queryFacts.empty());
 }
 
+TEST_CASE("compile pipeline ast-semantic phase counters prove semantic-product build skip") {
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << R"(namespace bench {
+[return<i32>]
+callee([i32] value) {
+  return(value)
+}
+[return<i32>]
+main() {
+  [i32 mut] value{4i32}
+  return(callee(value))
+}
+}
+)";
+  }
+
+  primec::Options options;
+  options.inputPath = tempPath.string();
+  options.entryPath = "/bench/main";
+  options.emitKind = "native";
+  options.dumpStage = "ast-semantic";
+  options.benchmarkSemanticPhaseCounters = true;
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  const bool ok = primec::runCompilePipeline(options, output, errorStage, error);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  REQUIRE(ok);
+  CHECK(error.empty());
+  CHECK(output.semanticProductDecision ==
+        primec::CompilePipelineSemanticProductDecision::SkipForAstSemanticDump);
+  CHECK_FALSE(output.semanticProductRequested);
+  CHECK_FALSE(output.semanticProductBuilt);
+  CHECK_FALSE(output.hasSemanticProgram);
+  REQUIRE(output.hasSemanticPhaseCounters);
+  CHECK(output.semanticPhaseCounters.validation.callsVisited > 0);
+  CHECK(output.semanticPhaseCounters.semanticProductBuild.callsVisited == 0);
+  CHECK(output.semanticPhaseCounters.semanticProductBuild.factsProduced == 0);
+}
+
 TEST_CASE("compile pipeline benchmark semantic phase counters are opt-in and populated") {
   const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
   {
@@ -2552,7 +2600,7 @@ main() {
   CHECK(countersOutput.semanticPhaseCounters.validation.callsVisited > 0);
   CHECK(countersOutput.semanticPhaseCounters.validation.peakLocalMapSize > 0);
   CHECK(countersOutput.semanticPhaseCounters.validation.factsProduced == 0);
-  CHECK(countersOutput.semanticPhaseCounters.semanticProductBuild.callsVisited == 0);
+  CHECK(countersOutput.semanticPhaseCounters.semanticProductBuild.callsVisited > 0);
   CHECK(countersOutput.semanticPhaseCounters.semanticProductBuild.peakLocalMapSize == 0);
   CHECK(countersOutput.semanticPhaseCounters.semanticProductBuild.factsProduced > 0);
 }

@@ -128,6 +128,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   (`SkipForAstSemanticDump`, non-consuming skip, and benchmark force on/off
   states), and semantic-product request/build behavior derives from that
   decision helper instead of an inline boolean expression.
+- `compile-pipeline-ast-semantic-phase-counter-proof`: semantic phase
+  counters now set `semanticProductBuild.callsVisited = 1` only when
+  semantic-product build runs, and compile-pipeline ast-semantic benchmark
+  counter coverage asserts that validation counters are populated while
+  semantic-product build counters stay zero on skipped paths.
 - `semantic-product-direct-call-routing`: production lowering now validates
   that every non-method direct call has a published semantic-product routing
   fact before lowering starts, and semantic-product-aware direct-call
