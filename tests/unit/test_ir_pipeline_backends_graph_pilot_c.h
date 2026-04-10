@@ -156,7 +156,7 @@
   CHECK(validatorInfer.find("buildTypeResolutionGraph(program_)") != std::string::npos);
   CHECK(validatorInfer.find("collectGraphLocalAutoBindings(graph);") != std::string::npos);
   CHECK(validatorInfer.find("dependencyCountByBindingKey") != std::string::npos);
-  CHECK(validatorInfer.find("dependencyIt->second == 1") != std::string::npos);
+  CHECK(validatorInfer.find("return *dependencyCount == 1;") != std::string::npos);
   CHECK(validatorInfer.find("isIfCall(initializer) || isMatchCall(initializer) || isBuiltinBlockCall(initializer)") !=
         std::string::npos);
   CHECK(validatorInfer.find("auto [factIt, inserted] = graphLocalAutoFacts_.try_emplace(bindingKey);") !=

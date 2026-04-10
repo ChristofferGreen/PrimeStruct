@@ -987,7 +987,7 @@ TEST_CASE("ir lowerer semantic-product adapter ignores bridge-path choices missi
   CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoice(adapter, validExpr) == "/vector/count");
 }
 
-TEST_CASE("ir lowerer semantic-product adapter joins return and inference facts by semantic id only") {
+TEST_CASE("ir lowerer semantic-product adapter joins facts by semantic id with return-path fallback") {
   primec::Definition mainDef;
   mainDef.fullPath = "/renamed_main";
   mainDef.semanticNodeId = 61;
@@ -1095,7 +1095,12 @@ TEST_CASE("ir lowerer semantic-product adapter joins return and inference facts 
 
   primec::Definition legacyFixtureDef;
   legacyFixtureDef.fullPath = "/legacy_main";
-  CHECK(primec::ir_lowerer::findSemanticProductReturnFact(semanticTargets, legacyFixtureDef) == nullptr);
+  const auto *legacyReturnFact =
+      primec::ir_lowerer::findSemanticProductReturnFact(semanticTargets, legacyFixtureDef);
+  REQUIRE(legacyReturnFact != nullptr);
+  CHECK(legacyReturnFact == returnFact);
+  CHECK(primec::semanticProgramReturnFactDefinitionPath(semanticProgram, *legacyReturnFact) ==
+        "/legacy_main");
 
   const auto *localAutoFact = primec::ir_lowerer::findSemanticProductLocalAutoFact(semanticTargets, localAutoExpr);
   REQUIRE(localAutoFact != nullptr);
@@ -1228,8 +1233,8 @@ TEST_CASE("ir lowerer semantic-product adapter resolves query facts by resolved-
       .sourceLine = 15,
       .sourceColumn = 5,
       .semanticNodeId = 0,
-      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
       .callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "lookup"),
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);

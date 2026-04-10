@@ -134,10 +134,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   entrypoint instead of surfacing later inside result/return inference.
 - `semantic-product-return-query-try-on-error-joins`: the temporary lowerer
   semantic-product adapter now keys return, local-`auto`, query, `try(...)`,
-  and `on_error` facts by structural semantic ids, and semantic-product-backed
-  entry return plus `on_error` lowering now join through definition semantic
-  ids without any definition-path compatibility fallback for unannotated
-  manual fixtures.
+  and `on_error` facts by structural semantic ids, and return/`on_error`
+  adapter lookups keep deterministic `definitionPathId` fallback when
+  definition semantic ids are absent in manual fixture coverage.
 - `semantic-product-structural-node-ids`: validated AST definitions,
   executions, and expressions now carry deterministic structural
   `semanticNodeId` values hashed from their resolved scope path plus traversal
