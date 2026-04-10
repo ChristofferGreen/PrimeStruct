@@ -12,7 +12,9 @@ Sizing note: each leaf `○` item should fit in one code-affecting commit plus f
 
 **Group 14 - SoA bring-up and end-state cleanup**
 - ◐ Retire remaining compiler-owned builtin `soa_vector` semantics/lowering/backend scaffolding as the stdlib `.prime` substrate becomes authoritative.
-  - ○ Migrate the next still-unhandled compiler-owned SoA fallback family (S2 storage-layout bridge shim or S3 pending field-view diagnostics) onto shared stdlib helper/conversion paths.
+  - ◐ Migrate Family S2 canonical `to_aos(_ref)` bridge-shim dependence onto shared stdlib helper/conversion paths. Progress: canonical `/std/collections/soa_vector/to_aos` now lowers through a self-contained canonical helper loop and no longer forwards into experimental conversion signatures.
+    - ○ Remove remaining compiler-owned inline-parameter SoA bridge shim dependence for canonical `/std/collections/soa_vector/to_aos_ref` and direct experimental conversion helper callees (`/std/collections/experimental_soa_vector_conversions/soaVectorToAos(_Ref)`).
+  - ○ Migrate Family S3 pending borrowed field-view diagnostics onto finalized stdlib helper contracts.
 
 **Group 15 - Semantic memory footprint and multithread compile substrate**
 Order rule: execute leaves top-to-bottom. Each leaf below is scoped to one code-affecting commit.

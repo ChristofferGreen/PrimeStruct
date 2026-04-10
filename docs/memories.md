@@ -235,8 +235,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   and `--emit=exe`.
 - `semantic-soa-to-aos-ref-bridge-migration-2026-04`: Group 14 archives the
   S2 migration slice where canonical `/std/collections/soa_vector/to_aos_ref`
-  now shares the same inline-parameter SoA bridge compatibility path as
-  `to_aos`, and focused compile-run coverage for root
+  compatibility was brought to parity with `to_aos` for inline-parameter SoA
+  bridge matching, and focused compile-run coverage for root
   `/std/collections/soa_vector/to_aos_ref<T>(location(values))` in the C++
   emitter is locked passing.
 - `semantic-soa-inline-param-canonical-callee-guard-2026-04`: Group 14 now
@@ -246,6 +246,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `tests/unit/test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_56.h`
   locks that empty-callee inputs fail while canonical
   `/std/collections/soa_vector/to_aos_ref` continues to pass.
+- `semantic-soa-s2-canonical-conversion-loops-2026-04`: Group 14 now archives
+  the S2 slice where canonical `/std/collections/soa_vector/to_aos` lowers
+  through a self-contained canonical helper loop in
+  `stdlib/std/collections/soa_vector_conversions.prime` (using builtin
+  `count`/`get`) instead of forwarding into experimental conversion signatures.
 - `semantic-soa-s1-literal-capacity-slice-2026-04`: Group 14 archives the
   S1 literal-capacity migration slice where VM/native lowering no longer
   rejects struct-element non-empty builtin `soa_vector` literals above the

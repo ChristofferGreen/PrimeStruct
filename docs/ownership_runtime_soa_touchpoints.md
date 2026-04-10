@@ -613,23 +613,27 @@ Still-unhandled compiler-owned SoA fallback families (2026-04 refresh):
     local-capacity ceiling.
   - Owning files:
     `src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp`.
-- Family S2: canonical `to_aos` argument bridging still depends on a
-  compiler-owned storage-layout copy shim.
+- Family S2: canonical/direct conversion helper argument bridging still
+  depends in part on a compiler-owned storage-layout copy shim.
   - Helper shape:
-    `/std/collections/soa_vector/to_aos(...)` and
-    `/std/collections/soa_vector/to_aos_ref(...)` passing builtin
-    `soa_vector` arguments into experimental `SoaVector__*` parameter layouts.
+    canonical `/std/collections/soa_vector/to_aos_ref(...)` and direct
+    `/std/collections/experimental_soa_vector_conversions/soaVectorToAos(...)`
+    + `/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef(...)`
+    calls passing builtin `soa_vector` arguments into experimental
+    `SoaVector__*` parameter layouts.
   - Current behavior:
+    canonical `/std/collections/soa_vector/to_aos` now lowers through a
+    self-contained canonical helper loop and no longer depends on this bridge
+    path. Canonical `/std/collections/soa_vector/to_aos_ref` and direct
+    experimental conversion helper calls still route through
+    inline-parameter lowering
     inline-parameter lowering routes through
     `emitBuiltinSoaToAosStructBridge(...)`, which assumes a concrete storage
     slot layout and emits direct slot-copy glue; failures surface as
     `builtin soa_vector to_aos bridge requires SoaVector storage layout`.
-    Root `soa_vector` receiver compatibility now also covers canonical
-    `to_aos_ref` call-shape variants (including specialized helper suffixes)
-    via the same bridge-match path in inline parameter lowering. The bridge
-    matcher no longer accepts empty callee paths, so this compatibility now
-    requires explicit canonical helper-path classification (`to_aos` /
-    `to_aos_ref`) instead of falling back to compiler-owned pathless matching.
+    The bridge matcher no longer accepts empty callee paths, so this
+    compatibility still requires explicit canonical/experimental helper-path
+    classification.
   - Owning files:
     `src/ir_lowerer/IrLowererInlineParamHelpers.cpp`.
 - Family S3: direct old-surface/pending SoA field-view helper calls still rely
