@@ -48,6 +48,7 @@ struct Options {
   bool benchmarkSemanticPhaseCounters = false;
   bool benchmarkSemanticAllocationCounters = false;
   bool benchmarkSemanticRssCheckpoints = false;
+  bool benchmarkSemanticDisableMethodTargetMemoization = false;
   std::optional<uint32_t> benchmarkSemanticRepeatCompileCount;
 };
 } // namespace primec

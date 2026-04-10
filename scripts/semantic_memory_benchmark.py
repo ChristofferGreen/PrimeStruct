@@ -130,6 +130,12 @@ def parse_args() -> argparse.Namespace:
         default=0,
         help="Benchmark-only mode: run repeated compile in one primec process and report RSS drift (0 disables).",
     )
+    parser.add_argument(
+        "--method-target-memoization",
+        choices=("on", "off", "both"),
+        default="on",
+        help="Benchmark mode for method-target memoization: on, off, or both for A/B deltas.",
+    )
     parser.add_argument("--report-json", default="", help="Optional report output path.")
     return parser.parse_args()
 
@@ -244,7 +250,8 @@ def measure_fixture_phase(primec: Path,
                          semantic_phase_counters: bool,
                          semantic_allocation_counters: bool,
                          semantic_rss_checkpoints: bool,
-                         repeat_compile_leak_check_runs: int) -> dict:
+                         repeat_compile_leak_check_runs: int,
+                         method_target_memoization: str) -> dict:
     fixture_path = (repo_root / fixture.source).resolve()
     if not fixture_path.is_file():
         raise FileNotFoundError(f"fixture not found: {fixture_path}")
@@ -266,6 +273,8 @@ def measure_fixture_phase(primec: Path,
         command.append("--benchmark-semantic-allocation-counters")
     if semantic_rss_checkpoints:
         command.append("--benchmark-semantic-rss-checkpoints")
+    if method_target_memoization == "off":
+        command.append("--benchmark-semantic-disable-method-target-memoization")
 
     semantic_phase_counter_runs: list[dict] = []
 
@@ -321,6 +330,7 @@ def measure_fixture_phase(primec: Path,
         "semantic_product_force": semantic_product_force,
         "no_fact_emission": no_fact_emission,
         "fact_families": fact_families,
+        "method_target_memoization": method_target_memoization,
     }
     if semantic_phase_counters or semantic_allocation_counters or semantic_rss_checkpoints:
         result["semantic_phase_counters_runs"] = semantic_phase_counter_runs
@@ -463,6 +473,52 @@ def collect_expensive_offenders(results: list[dict]) -> list[dict]:
     return offenders
 
 
+def selected_method_target_memoization_modes(selection: str) -> list[str]:
+    if selection == "both":
+        return ["on", "off"]
+    return [selection]
+
+
+def compute_method_target_memoization_deltas(results: list[dict]) -> list[dict]:
+    grouped: dict[tuple[str, str], dict[str, dict]] = {}
+    for row in results:
+        mode = str(row.get("method_target_memoization", "on"))
+        if mode not in ("on", "off"):
+            continue
+        grouped.setdefault((row["fixture"], row["phase"]), {})[mode] = row
+
+    deltas: list[dict] = []
+    for (fixture, phase), by_mode in sorted(grouped.items()):
+        on_row = by_mode.get("on")
+        off_row = by_mode.get("off")
+        if on_row is None or off_row is None:
+            continue
+
+        deltas.append(
+            {
+                "fixture": fixture,
+                "phase": phase,
+                "median_peak_rss_bytes_on": on_row["median_peak_rss_bytes"],
+                "median_peak_rss_bytes_off": off_row["median_peak_rss_bytes"],
+                "median_peak_rss_bytes_on_minus_off":
+                    int(on_row["median_peak_rss_bytes"]) - int(off_row["median_peak_rss_bytes"]),
+                "worst_peak_rss_bytes_on": on_row["worst_peak_rss_bytes"],
+                "worst_peak_rss_bytes_off": off_row["worst_peak_rss_bytes"],
+                "worst_peak_rss_bytes_on_minus_off":
+                    int(on_row["worst_peak_rss_bytes"]) - int(off_row["worst_peak_rss_bytes"]),
+                "median_wall_seconds_on": on_row["median_wall_seconds"],
+                "median_wall_seconds_off": off_row["median_wall_seconds"],
+                "median_wall_seconds_on_minus_off":
+                    float(on_row["median_wall_seconds"]) - float(off_row["median_wall_seconds"]),
+                "worst_wall_seconds_on": on_row["worst_wall_seconds"],
+                "worst_wall_seconds_off": off_row["worst_wall_seconds"],
+                "worst_wall_seconds_on_minus_off":
+                    float(on_row["worst_wall_seconds"]) - float(off_row["worst_wall_seconds"]),
+            }
+        )
+    return deltas
+
+
 def main() -> int:
     args = parse_args()
     repo_root = Path(args.repo_root).resolve()
@@ -498,37 +554,44 @@ def main() -> int:
         f"semantic_phase_counters={args.semantic_phase_counters} "
         f"semantic_allocation_counters={args.semantic_allocation_counters} "
         f"semantic_rss_checkpoints={args.semantic_rss_checkpoints} "
+        f"method_target_memoization={args.method_target_memoization} "
         f"repeat_compile_leak_check_runs={args.repeat_compile_leak_check_runs}"
     )
 
     results: list[dict] = []
+    method_target_memoization_modes = selected_method_target_memoization_modes(
+        args.method_target_memoization
+    )
 
     for fixture in fixtures:
         for phase in phases:
-            row = measure_fixture_phase(
-                primec,
-                repo_root,
-                fixture,
-                phase,
-                args.runs,
-                args.entry,
-                args.semantic_product_force,
-                args.no_fact_emission,
-                fact_families,
-                args.semantic_phase_counters,
-                args.semantic_allocation_counters,
-                args.semantic_rss_checkpoints,
-                args.repeat_compile_leak_check_runs,
-            )
-            results.append(row)
-            print(
-                "[semantic_memory_benchmark] "
-                f"fixture={row['fixture']} phase={row['phase']} "
-                f"median_wall={row['median_wall_seconds']:.6f}s "
-                f"worst_wall={row['worst_wall_seconds']:.6f}s "
-                f"median_rss={row['median_peak_rss_bytes']} "
-                f"worst_rss={row['worst_peak_rss_bytes']}"
-            )
+            for method_target_memoization in method_target_memoization_modes:
+                row = measure_fixture_phase(
+                    primec,
+                    repo_root,
+                    fixture,
+                    phase,
+                    args.runs,
+                    args.entry,
+                    args.semantic_product_force,
+                    args.no_fact_emission,
+                    fact_families,
+                    args.semantic_phase_counters,
+                    args.semantic_allocation_counters,
+                    args.semantic_rss_checkpoints,
+                    args.repeat_compile_leak_check_runs,
+                    method_target_memoization,
+                )
+                results.append(row)
+                print(
+                    "[semantic_memory_benchmark] "
+                    f"fixture={row['fixture']} phase={row['phase']} "
+                    f"method_target_memoization={row['method_target_memoization']} "
+                    f"median_wall={row['median_wall_seconds']:.6f}s "
+                    f"worst_wall={row['worst_wall_seconds']:.6f}s "
+                    f"median_rss={row['median_peak_rss_bytes']} "
+                    f"worst_rss={row['worst_peak_rss_bytes']}"
+                )
 
     report = {
         "schema": REPORT_SCHEMA,
@@ -549,6 +612,7 @@ def main() -> int:
             "semantic_phase_counters": args.semantic_phase_counters,
             "semantic_allocation_counters": args.semantic_allocation_counters,
             "semantic_rss_checkpoints": args.semantic_rss_checkpoints,
+            "method_target_memoization": args.method_target_memoization,
             "repeat_compile_leak_check_runs": args.repeat_compile_leak_check_runs,
         },
         "expensive_thresholds": {
@@ -565,6 +629,7 @@ def main() -> int:
             for fixture in fixtures
         ],
         "results": results,
+        "method_target_memoization_deltas": compute_method_target_memoization_deltas(results),
         "expensive_offenders": collect_expensive_offenders(results),
         "scale_slopes": compute_scale_slopes(results),
     }

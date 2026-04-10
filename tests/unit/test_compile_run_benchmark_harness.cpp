@@ -137,6 +137,7 @@ TEST_CASE("semantic memory benchmark helper accepts benchmark-only collector con
   CHECK(report.find("\"phase\": \"ast-semantic\"") != std::string::npos);
   CHECK(report.find("\"semantic_product_force\": \"on\"") != std::string::npos);
   CHECK(report.find("\"fact_families\": \"callable_summaries\"") != std::string::npos);
+  CHECK(report.find("\"method_target_memoization\": \"on\"") != std::string::npos);
   CHECK(report.find("\"semantic_rss_checkpoints\": true") != std::string::npos);
   CHECK(report.find("\"repeat_compile_leak_check_runs\": 3") != std::string::npos);
   CHECK(report.find("\"rss_before_bytes\"") != std::string::npos);
@@ -145,6 +146,19 @@ TEST_CASE("semantic memory benchmark helper accepts benchmark-only collector con
   CHECK(report.find("\"rss_drift_bytes\"") != std::string::npos);
   CHECK(report.find("\"expensive_thresholds\"") != std::string::npos);
   CHECK(report.find("\"is_expensive_threshold_offender\": false") != std::string::npos);
+}
+
+TEST_CASE("semantic memory benchmark helper defines method-target memoization delta report fields") {
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";
+  const std::string script = readFile(scriptPath.string());
+  REQUIRE_FALSE(script.empty());
+  CHECK(script.find("--method-target-memoization") != std::string::npos);
+  CHECK(script.find("selected_method_target_memoization_modes") != std::string::npos);
+  CHECK(script.find("compute_method_target_memoization_deltas") != std::string::npos);
+  CHECK(script.find("\"method_target_memoization_deltas\"") != std::string::npos);
+  CHECK(script.find("\"median_peak_rss_bytes_on_minus_off\"") != std::string::npos);
+  CHECK(script.find("\"median_wall_seconds_on_minus_off\"") != std::string::npos);
 }
 
 TEST_CASE("benchmark regression checker passes for in-threshold report") {

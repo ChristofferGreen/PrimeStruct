@@ -655,7 +655,8 @@ bool runCompilePipeline(const Options &options,
                           benchmarkSemanticDefinitionValidationWorkerCount,
                           benchmarkSemanticPhaseCountersPtr,
                           options.benchmarkSemanticAllocationCounters,
-                          options.benchmarkSemanticRssCheckpoints)) {
+                          options.benchmarkSemanticRssCheckpoints,
+                          options.benchmarkSemanticDisableMethodTargetMemoization)) {
     if (semanticDiagnosticInfo.message.empty()) {
       semanticDiagnosticInfo.message = error;
     }

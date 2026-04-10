@@ -49,7 +49,8 @@ public:
                 uint32_t benchmarkSemanticDefinitionValidationWorkerCount = 1,
                 SemanticPhaseCounters *benchmarkSemanticPhaseCounters = nullptr,
                 bool benchmarkSemanticAllocationCountersEnabled = false,
-                bool benchmarkSemanticRssCheckpointsEnabled = false) const;
+                bool benchmarkSemanticRssCheckpointsEnabled = false,
+                bool benchmarkSemanticDisableMethodTargetMemoization = false) const;
 };
 
 } // namespace primec

@@ -32,7 +32,8 @@ SemanticsValidator::SemanticsValidator(const Program &program,
                                        SemanticDiagnosticInfo *diagnosticInfo,
                                        bool collectDiagnostics,
                                        uint32_t benchmarkSemanticDefinitionValidationWorkerCount,
-                                       bool benchmarkSemanticPhaseCountersEnabled)
+                                       bool benchmarkSemanticPhaseCountersEnabled,
+                                       bool benchmarkSemanticDisableMethodTargetMemoization)
     : program_(program),
       entryPath_(entryPath),
       error_(error),
@@ -43,7 +44,8 @@ SemanticsValidator::SemanticsValidator(const Program &program,
       collectDiagnostics_(collectDiagnostics),
       benchmarkSemanticDefinitionValidationWorkerCount_(
           benchmarkSemanticDefinitionValidationWorkerCount),
-      benchmarkSemanticPhaseCountersEnabled_(benchmarkSemanticPhaseCountersEnabled) {
+      benchmarkSemanticPhaseCountersEnabled_(benchmarkSemanticPhaseCountersEnabled),
+      methodTargetMemoizationEnabled_(!benchmarkSemanticDisableMethodTargetMemoization) {
   diagnosticSink_.reset();
   auto registerMathImport = [&](const std::string &importPath) {
     if (importPath == "/std/math/*") {

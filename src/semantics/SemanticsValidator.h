@@ -314,7 +314,8 @@ public:
                      SemanticDiagnosticInfo *diagnosticInfo,
                      bool collectDiagnostics,
                      uint32_t benchmarkSemanticDefinitionValidationWorkerCount = 1,
-                     bool benchmarkSemanticPhaseCountersEnabled = false);
+                     bool benchmarkSemanticPhaseCountersEnabled = false,
+                     bool benchmarkSemanticDisableMethodTargetMemoization = false);
 
   bool run();
   const ValidationCounters &validationCounters() const { return validationCounters_; }
@@ -598,6 +599,7 @@ private:
   bool collectDiagnostics_ = false;
   uint32_t benchmarkSemanticDefinitionValidationWorkerCount_ = 1;
   bool benchmarkSemanticPhaseCountersEnabled_ = false;
+  bool methodTargetMemoizationEnabled_ = true;
   ValidationCounters validationCounters_;
   bool allowRecursiveReturnInference_ = true;
   bool deferUnknownReturnInferenceErrors_ = false;

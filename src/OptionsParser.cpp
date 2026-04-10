@@ -732,6 +732,8 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       out.benchmarkSemanticAllocationCounters = true;
     } else if (arg == "--benchmark-semantic-rss-checkpoints") {
       out.benchmarkSemanticRssCheckpoints = true;
+    } else if (arg == "--benchmark-semantic-disable-method-target-memoization") {
+      out.benchmarkSemanticDisableMethodTargetMemoization = true;
     } else if (arg == "--benchmark-semantic-repeat-count" && i + 1 < argc) {
       uint32_t repeatCount = 0;
       if (!parsePositiveUint32(argv[++i], repeatCount, error, "--benchmark-semantic-repeat-count")) {

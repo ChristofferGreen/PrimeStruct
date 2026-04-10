@@ -210,6 +210,9 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   auto lookupMethodTargetMemo = [&](std::string_view receiverTypeText,
                                     std::string &resolvedPathOut,
                                     bool &successOut) -> bool {
+    if (!methodTargetMemoizationEnabled_) {
+      return false;
+    }
     const auto key = methodTargetMemoKey(receiverTypeText);
     if (!key.has_value()) {
       return false;
@@ -223,6 +226,9 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     return true;
   };
   auto storeMethodTargetMemo = [&](std::string_view receiverTypeText, bool success) {
+    if (!methodTargetMemoizationEnabled_) {
+      return;
+    }
     const auto key = methodTargetMemoKey(receiverTypeText);
     if (!key.has_value()) {
       return;

@@ -6017,7 +6017,8 @@ bool Semantics::validate(Program &program,
                          uint32_t benchmarkSemanticDefinitionValidationWorkerCount,
                          SemanticPhaseCounters *benchmarkSemanticPhaseCounters,
                          bool benchmarkSemanticAllocationCountersEnabled,
-                         bool benchmarkSemanticRssCheckpointsEnabled) const {
+                         bool benchmarkSemanticRssCheckpointsEnabled,
+                         bool benchmarkSemanticDisableMethodTargetMemoization) const {
   error.clear();
   if (benchmarkSemanticPhaseCounters != nullptr) {
     *benchmarkSemanticPhaseCounters = {};
@@ -6113,7 +6114,8 @@ bool Semantics::validate(Program &program,
       diagnosticInfo,
       collectDiagnostics,
       benchmarkSemanticDefinitionValidationWorkerCount,
-      benchmarkSemanticPhaseCounters != nullptr);
+      benchmarkSemanticPhaseCounters != nullptr,
+      benchmarkSemanticDisableMethodTargetMemoization);
   ProcessAllocationSample validationAllocationBefore;
   ProcessRssSample validationRssBefore;
   if (benchmarkSemanticPhaseCounters != nullptr && benchmarkSemanticAllocationCountersEnabled) {
