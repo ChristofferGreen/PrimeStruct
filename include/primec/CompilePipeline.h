@@ -21,6 +21,14 @@ enum class CompilePipelineErrorStage {
 
 using CompilePipelineDiagnosticInfo = DiagnosticSinkReport;
 
+enum class CompilePipelineSemanticProductDecision {
+  RequireForConsumingPath,
+  SkipForAstSemanticDump,
+  SkipForNonConsumingPath,
+  ForcedOnForBenchmark,
+  ForcedOffForBenchmark,
+};
+
 struct CompilePipelineFailure {
   CompilePipelineErrorStage stage = CompilePipelineErrorStage::None;
   std::string message;
@@ -31,6 +39,8 @@ struct CompilePipelineOutput {
   Program program;
   SemanticProgram semanticProgram;
   bool hasSemanticProgram = false;
+  CompilePipelineSemanticProductDecision semanticProductDecision =
+      CompilePipelineSemanticProductDecision::RequireForConsumingPath;
   bool semanticProductRequested = false;
   bool semanticProductBuilt = false;
   SemanticPhaseCounters semanticPhaseCounters;

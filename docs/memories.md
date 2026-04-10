@@ -123,6 +123,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   validates baseline expensive-threshold exceedance evidence and locks both
   semantic-memory CTest entries (`PrimeStruct_semantic_memory_benchmark` and
   `PrimeStruct_semantic_memory_trend`) to serial expensive properties.
+- `compile-pipeline-semantic-product-decision-states`: compile-pipeline
+  output now publishes an explicit `CompilePipelineSemanticProductDecision`
+  (`SkipForAstSemanticDump`, non-consuming skip, and benchmark force on/off
+  states), and semantic-product request/build behavior derives from that
+  decision helper instead of an inline boolean expression.
 - `semantic-product-direct-call-routing`: production lowering now validates
   that every non-method direct call has a published semantic-product routing
   fact before lowering starts, and semantic-product-aware direct-call

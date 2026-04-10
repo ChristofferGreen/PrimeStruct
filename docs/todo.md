@@ -31,7 +31,6 @@ Order rule: execute leaves top-to-bottom. Each leaf below is scoped to one code-
 P0 - Reproducible measurement and attribution
 
 P1 - Immediate peak-RSS reductions in existing pipeline
-- ◐ [P1-01] Add explicit compile-pipeline `needs semantic product` decision for pure `ast-semantic` paths.
 - ◐ [P1-02] Add phase-level assertions/counters proving semantic-product builder is skipped on `ast-semantic` paths.
 - ◐ [P1-03] Add focused tests that semantic-product generation occurs only for `semantic-product` dumps and emit paths that consume it.
 - ◐ [P1-04] Migrate one non-consuming backend IR-preparation entry point to skip semantic-product requests.

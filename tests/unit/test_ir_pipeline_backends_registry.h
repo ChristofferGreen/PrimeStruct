@@ -2185,6 +2185,8 @@ main() {
   CHECK_FALSE(output.hasFailure);
   CHECK(output.semanticProductRequested == false);
   CHECK(output.semanticProductBuilt == false);
+  CHECK(output.semanticProductDecision ==
+        primec::CompilePipelineSemanticProductDecision::SkipForAstSemanticDump);
   CHECK_FALSE(output.hasSemanticProgram);
   CHECK(output.dumpOutput.find("ast {") != std::string::npos);
   CHECK(output.dumpOutput.find("/bench/main()") != std::string::npos);
@@ -2230,6 +2232,8 @@ main() {
   CHECK_FALSE(output.hasFailure);
   CHECK(output.semanticProductRequested);
   CHECK(output.semanticProductBuilt);
+  CHECK(output.semanticProductDecision ==
+        primec::CompilePipelineSemanticProductDecision::RequireForConsumingPath);
   REQUIRE(output.hasSemanticProgram);
   CHECK(output.semanticProgram.entryPath == "/bench/main");
   CHECK(output.dumpOutput.find("semantic_product {") != std::string::npos);
@@ -2272,6 +2276,8 @@ main() {
   CHECK_FALSE(output.hasFailure);
   CHECK(output.semanticProductRequested);
   CHECK(output.semanticProductBuilt);
+  CHECK(output.semanticProductDecision ==
+        primec::CompilePipelineSemanticProductDecision::RequireForConsumingPath);
   REQUIRE(output.hasSemanticProgram);
   CHECK(output.semanticProgram.entryPath == "/bench/main");
 }
@@ -2313,6 +2319,8 @@ main() {
   CHECK_FALSE(output.hasFailure);
   CHECK_FALSE(output.semanticProductRequested);
   CHECK_FALSE(output.semanticProductBuilt);
+  CHECK(output.semanticProductDecision ==
+        primec::CompilePipelineSemanticProductDecision::SkipForNonConsumingPath);
   CHECK_FALSE(output.hasSemanticProgram);
 }
 
@@ -2367,6 +2375,8 @@ main() {
   CHECK_FALSE(ok);
   CHECK(errorStage == primec::CompilePipelineErrorStage::Semantic);
   CHECK(error == "semantic-product dump requested without semantic product");
+  CHECK(output.semanticProductDecision ==
+        primec::CompilePipelineSemanticProductDecision::SkipForNonConsumingPath);
   CHECK_FALSE(output.hasSemanticProgram);
 }
 
@@ -2404,6 +2414,8 @@ main() {
   CHECK(output.hasDumpOutput);
   CHECK(output.semanticProductRequested);
   CHECK(output.semanticProductBuilt);
+  CHECK(output.semanticProductDecision ==
+        primec::CompilePipelineSemanticProductDecision::ForcedOnForBenchmark);
   CHECK(output.hasSemanticProgram);
 }
 
@@ -2440,6 +2452,8 @@ main() {
   CHECK_FALSE(ok);
   CHECK(errorStage == primec::CompilePipelineErrorStage::Semantic);
   CHECK(error == "semantic-product dump requested without semantic product");
+  CHECK(output.semanticProductDecision ==
+        primec::CompilePipelineSemanticProductDecision::ForcedOffForBenchmark);
   CHECK_FALSE(output.hasSemanticProgram);
 }
 

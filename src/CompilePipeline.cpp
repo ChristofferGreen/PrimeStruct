@@ -82,6 +82,34 @@ bool isKnownSemanticCollectorFamily(std::string_view name) {
          SemanticCollectorFamilies.end();
 }
 
+CompilePipelineSemanticProductDecision decideSemanticProductDecision(DumpStage dumpStage, const Options &options) {
+  if (options.benchmarkForceSemanticProduct.has_value()) {
+    return *options.benchmarkForceSemanticProduct
+               ? CompilePipelineSemanticProductDecision::ForcedOnForBenchmark
+               : CompilePipelineSemanticProductDecision::ForcedOffForBenchmark;
+  }
+  if (dumpStage == DumpStage::AstSemantic) {
+    return CompilePipelineSemanticProductDecision::SkipForAstSemanticDump;
+  }
+  if (options.skipSemanticProductForNonConsumingPath) {
+    return CompilePipelineSemanticProductDecision::SkipForNonConsumingPath;
+  }
+  return CompilePipelineSemanticProductDecision::RequireForConsumingPath;
+}
+
+bool semanticProductDecisionRequestsBuild(CompilePipelineSemanticProductDecision decision) {
+  switch (decision) {
+    case CompilePipelineSemanticProductDecision::RequireForConsumingPath:
+    case CompilePipelineSemanticProductDecision::ForcedOnForBenchmark:
+      return true;
+    case CompilePipelineSemanticProductDecision::SkipForAstSemanticDump:
+    case CompilePipelineSemanticProductDecision::SkipForNonConsumingPath:
+    case CompilePipelineSemanticProductDecision::ForcedOffForBenchmark:
+      return false;
+  }
+  return true;
+}
+
 bool shouldAutoIncludeStdlib(const std::string &source) {
   size_t pos = 0;
   while ((pos = source.find("import /std", pos)) != std::string::npos) {
@@ -608,10 +636,9 @@ bool runCompilePipeline(const Options &options,
   Semantics semantics;
   SemanticDiagnosticInfo semanticDiagnosticInfo;
   SemanticProgram semanticProgram;
-  bool needsSemanticProduct = dumpStage != DumpStage::AstSemantic && !options.skipSemanticProductForNonConsumingPath;
-  if (options.benchmarkForceSemanticProduct.has_value()) {
-    needsSemanticProduct = *options.benchmarkForceSemanticProduct;
-  }
+  const CompilePipelineSemanticProductDecision semanticProductDecision =
+      decideSemanticProductDecision(dumpStage, options);
+  const bool needsSemanticProduct = semanticProductDecisionRequestsBuild(semanticProductDecision);
   SemanticProductBuildConfig semanticProductBuildConfig;
   const SemanticProductBuildConfig *semanticProductBuildConfigPtr = nullptr;
   if (options.benchmarkSemanticNoFactEmission || options.benchmarkSemanticFactFamiliesSpecified) {
@@ -641,6 +668,7 @@ bool runCompilePipeline(const Options &options,
       options.benchmarkSemanticRssCheckpoints;
   SemanticPhaseCounters *benchmarkSemanticPhaseCountersPtr =
       benchmarkSemanticCountersRequested ? &benchmarkSemanticPhaseCounters : nullptr;
+  output.semanticProductDecision = semanticProductDecision;
   output.semanticProductRequested = needsSemanticProduct;
   if (!semantics.validate(output.program,
                           options.entryPath,
