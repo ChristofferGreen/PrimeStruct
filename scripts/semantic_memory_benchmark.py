@@ -95,9 +95,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--semantic-product-force",
-        choices=("auto", "on", "off"),
+        choices=("auto", "on", "off", "both"),
         default="auto",
-        help="Benchmark-only semantic-product gate override (default: auto).",
+        help="Benchmark semantic-product gate mode: auto, on, off, or both for A/B deltas.",
     )
     parser.add_argument(
         "--semantic-validation-without-fact-emission",
@@ -520,6 +520,12 @@ def selected_semantic_validation_without_fact_emission_modes(
     return [normalized == "on"]
 
 
+def selected_semantic_product_force_modes(selection: str) -> list[str]:
+    if selection == "both":
+        return ["on", "off"]
+    return [selection]
+
+
 def compute_semantic_validation_without_fact_emission_deltas(results: list[dict]) -> list[dict]:
     grouped: dict[tuple[str, str, str, str, str, str, str, str], dict[bool, dict]] = {}
     for row in results:
@@ -580,6 +586,68 @@ def compute_semantic_validation_without_fact_emission_deltas(results: list[dict]
                 "worst_wall_seconds_no_fact_emission_minus_fact_emission":
                     float(no_fact_emission_row["worst_wall_seconds"]) -
                     float(fact_emission_row["worst_wall_seconds"]),
+            }
+        )
+    return deltas
+
+
+def compute_semantic_product_force_deltas(results: list[dict]) -> list[dict]:
+    grouped: dict[tuple[str, str, bool, str, str, str, str, str], dict[str, dict]] = {}
+    for row in results:
+        mode = str(row.get("semantic_product_force", "auto"))
+        if mode not in ("on", "off"):
+            continue
+        key = (
+            row["fixture"],
+            row["phase"],
+            bool(row.get("no_fact_emission", False)),
+            str(row.get("fact_families", "auto")),
+            str(row.get("method_target_memoization", "on")),
+            str(row.get("graph_local_auto_key_mode", "compact")),
+            str(row.get("graph_local_auto_side_channel_mode", "flat")),
+            str(row.get("graph_local_auto_dependency_scratch_mode", "pmr")),
+        )
+        grouped.setdefault(key, {})[mode] = row
+
+    deltas: list[dict] = []
+    for (fixture,
+         phase,
+         no_fact_emission,
+         fact_families,
+         method_target_memoization,
+         graph_local_auto_key_mode,
+         graph_local_auto_side_channel_mode,
+         graph_local_auto_dependency_scratch_mode), by_mode in sorted(grouped.items()):
+        on_row = by_mode.get("on")
+        off_row = by_mode.get("off")
+        if on_row is None or off_row is None:
+            continue
+        deltas.append(
+            {
+                "fixture": fixture,
+                "phase": phase,
+                "no_fact_emission": no_fact_emission,
+                "fact_families": fact_families,
+                "method_target_memoization": method_target_memoization,
+                "graph_local_auto_key_mode": graph_local_auto_key_mode,
+                "graph_local_auto_side_channel_mode": graph_local_auto_side_channel_mode,
+                "graph_local_auto_dependency_scratch_mode": graph_local_auto_dependency_scratch_mode,
+                "median_peak_rss_bytes_on": on_row["median_peak_rss_bytes"],
+                "median_peak_rss_bytes_off": off_row["median_peak_rss_bytes"],
+                "median_peak_rss_bytes_on_minus_off":
+                    int(on_row["median_peak_rss_bytes"]) - int(off_row["median_peak_rss_bytes"]),
+                "worst_peak_rss_bytes_on": on_row["worst_peak_rss_bytes"],
+                "worst_peak_rss_bytes_off": off_row["worst_peak_rss_bytes"],
+                "worst_peak_rss_bytes_on_minus_off":
+                    int(on_row["worst_peak_rss_bytes"]) - int(off_row["worst_peak_rss_bytes"]),
+                "median_wall_seconds_on": on_row["median_wall_seconds"],
+                "median_wall_seconds_off": off_row["median_wall_seconds"],
+                "median_wall_seconds_on_minus_off":
+                    float(on_row["median_wall_seconds"]) - float(off_row["median_wall_seconds"]),
+                "worst_wall_seconds_on": on_row["worst_wall_seconds"],
+                "worst_wall_seconds_off": off_row["worst_wall_seconds"],
+                "worst_wall_seconds_on_minus_off":
+                    float(on_row["worst_wall_seconds"]) - float(off_row["worst_wall_seconds"]),
             }
         )
     return deltas
@@ -806,6 +874,13 @@ def main() -> int:
     except ValueError as exc:
         print(f"[semantic_memory_benchmark] {exc}", file=sys.stderr)
         return 2
+    if args.semantic_product_force == "both" and "semantic-product" in phases:
+        print(
+            "[semantic_memory_benchmark] --semantic-product-force both requires "
+            "--phases without semantic-product (use ast-semantic for A/B gate attribution)",
+            file=sys.stderr,
+        )
+        return 2
 
     print(f"[semantic_memory_benchmark] repo_root={repo_root}")
     print(f"[semantic_memory_benchmark] primec={primec}")
@@ -830,6 +905,7 @@ def main() -> int:
         semantic_validation_without_fact_emission_mode,
         args.no_fact_emission,
     )
+    semantic_product_force_modes = selected_semantic_product_force_modes(args.semantic_product_force)
     method_target_memoization_modes = selected_method_target_memoization_modes(
         args.method_target_memoization
     )
@@ -846,43 +922,45 @@ def main() -> int:
     for fixture in fixtures:
         for phase in phases:
             for no_fact_emission in no_fact_emission_modes:
-                for method_target_memoization in method_target_memoization_modes:
-                    for graph_local_auto_key_mode in graph_local_auto_key_modes:
-                        for graph_local_auto_side_channel_mode in graph_local_auto_side_channel_modes:
-                            for graph_local_auto_dependency_scratch_mode in graph_local_auto_dependency_scratch_modes:
-                                row = measure_fixture_phase(
-                                    primec,
-                                    repo_root,
-                                    fixture,
-                                    phase,
-                                    args.runs,
-                                    args.entry,
-                                    args.semantic_product_force,
-                                    no_fact_emission,
-                                    fact_families,
-                                    args.semantic_phase_counters,
-                                    args.semantic_allocation_counters,
-                                    args.semantic_rss_checkpoints,
-                                    args.repeat_compile_leak_check_runs,
-                                    method_target_memoization,
-                                    graph_local_auto_key_mode,
-                                    graph_local_auto_side_channel_mode,
-                                    graph_local_auto_dependency_scratch_mode,
-                                )
-                                results.append(row)
-                                print(
-                                    "[semantic_memory_benchmark] "
-                                    f"fixture={row['fixture']} phase={row['phase']} "
-                                    f"no_fact_emission={row['no_fact_emission']} "
-                                    f"method_target_memoization={row['method_target_memoization']} "
-                                    f"graph_local_auto_key_mode={row['graph_local_auto_key_mode']} "
-                                    f"graph_local_auto_side_channel_mode={row['graph_local_auto_side_channel_mode']} "
-                                    f"graph_local_auto_dependency_scratch_mode={row['graph_local_auto_dependency_scratch_mode']} "
-                                    f"median_wall={row['median_wall_seconds']:.6f}s "
-                                    f"worst_wall={row['worst_wall_seconds']:.6f}s "
-                                    f"median_rss={row['median_peak_rss_bytes']} "
-                                    f"worst_rss={row['worst_peak_rss_bytes']}"
-                                )
+                for semantic_product_force in semantic_product_force_modes:
+                    for method_target_memoization in method_target_memoization_modes:
+                        for graph_local_auto_key_mode in graph_local_auto_key_modes:
+                            for graph_local_auto_side_channel_mode in graph_local_auto_side_channel_modes:
+                                for graph_local_auto_dependency_scratch_mode in graph_local_auto_dependency_scratch_modes:
+                                    row = measure_fixture_phase(
+                                        primec,
+                                        repo_root,
+                                        fixture,
+                                        phase,
+                                        args.runs,
+                                        args.entry,
+                                        semantic_product_force,
+                                        no_fact_emission,
+                                        fact_families,
+                                        args.semantic_phase_counters,
+                                        args.semantic_allocation_counters,
+                                        args.semantic_rss_checkpoints,
+                                        args.repeat_compile_leak_check_runs,
+                                        method_target_memoization,
+                                        graph_local_auto_key_mode,
+                                        graph_local_auto_side_channel_mode,
+                                        graph_local_auto_dependency_scratch_mode,
+                                    )
+                                    results.append(row)
+                                    print(
+                                        "[semantic_memory_benchmark] "
+                                        f"fixture={row['fixture']} phase={row['phase']} "
+                                        f"semantic_product_force={row['semantic_product_force']} "
+                                        f"no_fact_emission={row['no_fact_emission']} "
+                                        f"method_target_memoization={row['method_target_memoization']} "
+                                        f"graph_local_auto_key_mode={row['graph_local_auto_key_mode']} "
+                                        f"graph_local_auto_side_channel_mode={row['graph_local_auto_side_channel_mode']} "
+                                        f"graph_local_auto_dependency_scratch_mode={row['graph_local_auto_dependency_scratch_mode']} "
+                                        f"median_wall={row['median_wall_seconds']:.6f}s "
+                                        f"worst_wall={row['worst_wall_seconds']:.6f}s "
+                                        f"median_rss={row['median_peak_rss_bytes']} "
+                                        f"worst_rss={row['worst_peak_rss_bytes']}"
+                                    )
 
     report = {
         "schema": REPORT_SCHEMA,
@@ -924,6 +1002,7 @@ def main() -> int:
             for fixture in fixtures
         ],
         "results": results,
+        "semantic_product_force_deltas": compute_semantic_product_force_deltas(results),
         "semantic_validation_without_fact_emission_deltas":
             compute_semantic_validation_without_fact_emission_deltas(results),
         "method_target_memoization_deltas": compute_method_target_memoization_deltas(results),

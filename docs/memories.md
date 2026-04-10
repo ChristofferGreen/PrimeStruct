@@ -108,6 +108,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
   runtime benchmark-harness coverage now asserts `both` mode yields paired
   facts-on/facts-off semantic-product rows with the expected key-cardinality
   suppression and delta-report metadata.
+- `semantic-memory-semantic-product-force-ab-mode`: semantic-memory
+  benchmark harness now supports `--semantic-product-force both` for paired
+  forced on/off A/B runs (restricted to non-`semantic-product` phases),
+  emits `semantic_product_force_deltas` in report output, and runtime
+  benchmark-harness coverage now asserts forced-on `ast-semantic` runs
+  produce semantic-product-build facts while forced-off runs keep those fact
+  counters at zero.
 - `semantic-product-direct-call-routing`: production lowering now validates
   that every non-method direct call has a published semantic-product routing
   fact before lowering starts, and semantic-product-aware direct-call

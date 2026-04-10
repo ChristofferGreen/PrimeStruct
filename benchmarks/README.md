@@ -127,6 +127,7 @@ Run the semantic memory harness after building `primec`:
 - `./scripts/semantic_memory_benchmark.sh`
 - `python3 scripts/semantic_memory_benchmark.py --repo-root . --primec build-release/primec --runs 3 --report-json build-release/benchmarks/semantic_memory_report.json`
 - `python3 scripts/semantic_memory_benchmark.py --repo-root . --primec build-release/primec --runs 3 --semantic-product-force on --report-json build-release/benchmarks/semantic_memory_force_on_report.json`
+- `python3 scripts/semantic_memory_benchmark.py --repo-root . --primec build-release/primec --runs 3 --phases ast-semantic --semantic-product-force both --semantic-phase-counters --report-json build-release/benchmarks/semantic_memory_force_ab_report.json`
 - `python3 scripts/semantic_memory_benchmark.py --repo-root . --primec build-release/primec --runs 3 --semantic-validation-without-fact-emission on --report-json build-release/benchmarks/semantic_memory_no_facts_report.json`
 - `python3 scripts/semantic_memory_benchmark.py --repo-root . --primec build-release/primec --runs 3 --semantic-validation-without-fact-emission both --report-json build-release/benchmarks/semantic_memory_validation_vs_facts_ab_report.json`
 - `python3 scripts/semantic_memory_benchmark.py --repo-root . --primec build-release/primec --runs 3 --fact-families callable_summaries --report-json build-release/benchmarks/semantic_memory_callable_only_report.json`
@@ -145,7 +146,7 @@ This report captures:
 
 Benchmark-only collector controls are forwarded to `primec`:
 
-- `--semantic-product-force auto|on|off` maps to compile-pipeline semantic-product gate override.
+- `--semantic-product-force auto|on|off|both` maps to compile-pipeline semantic-product gate override; `both` emits `semantic_product_force_deltas` for `ast-semantic` A/B runs.
 - `--semantic-validation-without-fact-emission off|on|both` controls validation-only runs and emits validator-vs-fact A/B deltas in report output.
 - `--no-fact-emission` remains as a compatibility alias for `--semantic-validation-without-fact-emission on`.
 - `--fact-families <csv>` allows only the specified semantic collector families.
