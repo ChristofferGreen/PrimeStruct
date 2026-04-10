@@ -1139,6 +1139,68 @@ TEST_CASE("ir lowerer semantic-product adapter resolves return facts by definiti
   CHECK(primec::semanticProgramReturnFactDefinitionPath(semanticProgram, *returnFact) == "/main");
 }
 
+TEST_CASE("ir lowerer semantic-product adapter resolves local-auto facts by initializer path fallback") {
+  primec::Expr initCall;
+  initCall.kind = primec::Expr::Kind::Call;
+  initCall.name = "id";
+  initCall.semanticNodeId = 7101;
+
+  primec::Expr localBinding;
+  localBinding.kind = primec::Expr::Kind::Name;
+  localBinding.isBinding = true;
+  localBinding.name = "value";
+  localBinding.semanticNodeId = 0;
+  localBinding.args = {initCall};
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "id",
+      .sourceLine = 12,
+      .sourceColumn = 5,
+      .semanticNodeId = 7101,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/id"),
+  });
+  semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
+      .scopePath = "/main",
+      .bindingName = "value",
+      .bindingTypeText = "i32",
+      .initializerBindingTypeText = "i32",
+      .initializerReceiverBindingTypeText = "",
+      .initializerQueryTypeText = "",
+      .initializerResultHasValue = false,
+      .initializerResultValueType = "",
+      .initializerResultErrorType = "",
+      .initializerHasTry = false,
+      .initializerTryOperandResolvedPath = "",
+      .initializerTryOperandBindingTypeText = "",
+      .initializerTryOperandReceiverBindingTypeText = "",
+      .initializerTryOperandQueryTypeText = "",
+      .initializerTryValueType = "",
+      .initializerTryErrorType = "",
+      .initializerTryContextReturnKind = "",
+      .initializerTryOnErrorHandlerPath = "",
+      .initializerTryOnErrorErrorType = "",
+      .initializerTryOnErrorBoundArgCount = 0,
+      .sourceLine = 12,
+      .sourceColumn = 3,
+      .semanticNodeId = 0,
+      .provenanceHandle = 0,
+      .initializerDirectCallResolvedPath = "",
+      .initializerDirectCallReturnKind = "",
+      .initializerMethodCallResolvedPath = "",
+      .initializerMethodCallReturnKind = "",
+      .bindingNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "value"),
+      .initializerResolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/id"),
+  });
+
+  const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto *localAutoFact = primec::ir_lowerer::findSemanticProductLocalAutoFact(adapter, localBinding);
+  REQUIRE(localAutoFact != nullptr);
+  CHECK(localAutoFact->bindingTypeText == "i32");
+  CHECK(primec::semanticProgramLocalAutoFactInitializerResolvedPath(semanticProgram, *localAutoFact) == "/id");
+}
+
 TEST_CASE("ir lowerer call helpers resolve definition calls through slashless map import aliases") {
   primec::Definition canonicalMapCountDef;
   canonicalMapCountDef.fullPath = "/std/collections/map/count";
