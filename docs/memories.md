@@ -101,6 +101,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
   fixture and asserts direct/method key-cardinality metrics toggle
   independently while `fact_families` row metadata preserves the selected
   collector set.
+- `semantic-memory-validator-vs-fact-ab-mode`: semantic-memory benchmark
+  harness now supports `--semantic-validation-without-fact-emission
+  off|on|both` (with `--no-fact-emission` as a compatibility alias), emits
+  `semantic_validation_without_fact_emission_deltas` in report output, and
+  runtime benchmark-harness coverage now asserts `both` mode yields paired
+  facts-on/facts-off semantic-product rows with the expected key-cardinality
+  suppression and delta-report metadata.
 - `semantic-product-direct-call-routing`: production lowering now validates
   that every non-method direct call has a published semantic-product routing
   fact before lowering starts, and semantic-product-aware direct-call

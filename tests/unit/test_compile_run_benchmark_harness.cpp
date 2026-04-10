@@ -273,6 +273,71 @@ TEST_CASE("semantic memory benchmark helper accepts benchmark-only collector con
   CHECK(report.find("\"is_expensive_threshold_offender\": false") != std::string::npos);
 }
 
+TEST_CASE("semantic memory benchmark helper supports validator-vs-fact A/B mode") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";
+  const std::filesystem::path primecPath = repoRoot / "build-release" / "primec";
+  if (!std::filesystem::exists(primecPath)) {
+    INFO("primec not available in build-release");
+    return;
+  }
+
+  const std::string reportPath = writeTemp("semantic_memory_no_fact_mode_report.json", "");
+  const std::string stdoutPath = writeTemp("semantic_memory_no_fact_mode.out", "");
+  const std::string stderrPath = writeTemp("semantic_memory_no_fact_mode.err", "");
+  const std::string benchmarkCmd =
+      "python3 " + quoteShellArg(scriptPath.string()) +
+      " --repo-root " + quoteShellArg(repoRoot.string()) +
+      " --primec " + quoteShellArg(primecPath.string()) +
+      " --runs 1 --fixtures math_vector --phases semantic-product "
+      "--semantic-validation-without-fact-emission both "
+      "--report-json " + quoteShellArg(reportPath) +
+      " > " + quoteShellArg(stdoutPath) + " 2> " + quoteShellArg(stderrPath);
+  CHECK(runCommand(benchmarkCmd) == 0);
+  CHECK(readFile(stderrPath).empty());
+
+  const std::string validateOutPath = writeTemp("semantic_memory_no_fact_mode_validate.out", "");
+  const std::string validateErrPath = writeTemp("semantic_memory_no_fact_mode_validate.err", "");
+  const std::string validateCmd =
+      "python3 -c " +
+      quoteShellArg(
+          "import json, sys\n"
+          "report = json.load(open(sys.argv[1], encoding='utf-8'))\n"
+          "rows = report.get('results', [])\n"
+          "by_mode = {bool(row.get('no_fact_emission', False)): row for row in rows}\n"
+          "deltas = report.get('semantic_validation_without_fact_emission_deltas', [])\n"
+          "options = report.get('benchmark_options', {})\n"
+          "ok = options.get('semantic_validation_without_fact_emission') == 'both'\n"
+          "ok = ok and len(rows) == 2 and len(by_mode) == 2 and False in by_mode and True in by_mode\n"
+          "ok = ok and len(deltas) == 1\n"
+          "if ok:\n"
+          "  with_facts = by_mode[False].get('key_cardinality', {})\n"
+          "  no_facts = by_mode[True].get('key_cardinality', {})\n"
+          "  delta = deltas[0]\n"
+          "  ok = ok and int(with_facts.get('distinct_direct_call_target_keys', -1)) > 0\n"
+          "  ok = ok and int(with_facts.get('distinct_method_call_target_keys', -1)) > 0\n"
+          "  ok = ok and int(no_facts.get('distinct_direct_call_target_keys', -1)) == 0\n"
+          "  ok = ok and int(no_facts.get('distinct_method_call_target_keys', -1)) == 0\n"
+          "  ok = ok and delta.get('fixture') == 'math_vector'\n"
+          "  ok = ok and delta.get('phase') == 'semantic-product'\n"
+          "  ok = ok and isinstance(\n"
+          "    delta.get('median_peak_rss_bytes_no_fact_emission_minus_fact_emission'), int)\n"
+          "  ok = ok and isinstance(\n"
+          "    delta.get('median_wall_seconds_no_fact_emission_minus_fact_emission'), (int, float))\n"
+          "if not ok:\n"
+          "  print(json.dumps(report, indent=2, sort_keys=True))\n"
+          "sys.exit(0 if ok else 1)\n") +
+      " " + quoteShellArg(reportPath) +
+      " > " + quoteShellArg(validateOutPath) + " 2> " + quoteShellArg(validateErrPath);
+  CHECK(runCommand(validateCmd) == 0);
+  CHECK(readFile(validateErrPath).empty());
+}
+
 TEST_CASE("semantic memory benchmark helper toggles fact families independently") {
   if (!hasPython3()) {
     INFO("python3 not available");
@@ -852,26 +917,33 @@ TEST_CASE("semantic memory benchmark helper defines method-target memoization de
   const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";
   const std::string script = readFile(scriptPath.string());
   REQUIRE_FALSE(script.empty());
+  CHECK(script.find("--semantic-validation-without-fact-emission") != std::string::npos);
   CHECK(script.find("--method-target-memoization") != std::string::npos);
   CHECK(script.find("--graph-local-auto-key-mode") != std::string::npos);
   CHECK(script.find("--graph-local-auto-side-channel-mode") != std::string::npos);
   CHECK(script.find("--graph-local-auto-dependency-scratch-mode") != std::string::npos);
+  CHECK(script.find("selected_semantic_validation_without_fact_emission_modes") != std::string::npos);
   CHECK(script.find("selected_method_target_memoization_modes") != std::string::npos);
   CHECK(script.find("selected_graph_local_auto_key_modes") != std::string::npos);
   CHECK(script.find("selected_graph_local_auto_side_channel_modes") != std::string::npos);
   CHECK(script.find("selected_graph_local_auto_dependency_scratch_modes") != std::string::npos);
+  CHECK(script.find("compute_semantic_validation_without_fact_emission_deltas") != std::string::npos);
   CHECK(script.find("compute_method_target_memoization_deltas") != std::string::npos);
   CHECK(script.find("compute_graph_local_auto_key_mode_deltas") != std::string::npos);
   CHECK(script.find("compute_graph_local_auto_side_channel_mode_deltas") != std::string::npos);
   CHECK(script.find("compute_graph_local_auto_dependency_scratch_mode_deltas") != std::string::npos);
+  CHECK(script.find("\"semantic_validation_without_fact_emission\"") != std::string::npos);
+  CHECK(script.find("\"semantic_validation_without_fact_emission_deltas\"") != std::string::npos);
   CHECK(script.find("\"method_target_memoization_deltas\"") != std::string::npos);
   CHECK(script.find("\"graph_local_auto_key_mode_deltas\"") != std::string::npos);
   CHECK(script.find("\"graph_local_auto_side_channel_mode_deltas\"") != std::string::npos);
   CHECK(script.find("\"graph_local_auto_dependency_scratch_mode_deltas\"") != std::string::npos);
+  CHECK(script.find("\"median_peak_rss_bytes_no_fact_emission_minus_fact_emission\"") != std::string::npos);
   CHECK(script.find("\"median_peak_rss_bytes_on_minus_off\"") != std::string::npos);
   CHECK(script.find("\"median_peak_rss_bytes_legacy_shadow_minus_compact\"") != std::string::npos);
   CHECK(script.find("\"median_peak_rss_bytes_legacy_shadow_minus_flat\"") != std::string::npos);
   CHECK(script.find("\"median_peak_rss_bytes_std_minus_pmr\"") != std::string::npos);
+  CHECK(script.find("\"median_wall_seconds_no_fact_emission_minus_fact_emission\"") != std::string::npos);
   CHECK(script.find("\"median_wall_seconds_on_minus_off\"") != std::string::npos);
   CHECK(script.find("\"median_wall_seconds_legacy_shadow_minus_compact\"") != std::string::npos);
   CHECK(script.find("\"median_wall_seconds_legacy_shadow_minus_flat\"") != std::string::npos);
