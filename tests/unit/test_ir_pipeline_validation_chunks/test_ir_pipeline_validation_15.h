@@ -1131,7 +1131,16 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "normalizedMethodName == \"get\" || normalizedMethodName == \"get_ref\"") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
-            "resolvedOut == \"/std/collections/soa_vector/get_ref\"") !=
+            "const std::string resolvedSoaGetCanonical =") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "canonicalizeLegacySoaGetHelperPath(resolvedOut)") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "resolvedSoaGetCanonical == \"/std/collections/soa_vector/get\"") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "resolvedSoaGetCanonical == \"/std/collections/soa_vector/get_ref\"") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "const std::string resolvedSoaToAosCanonical =") !=
@@ -1174,6 +1183,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "canonicalizeLegacySoaRefHelperPath(resolvedOut)") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "hasImportedDefinitionPath(resolvedSoaGetCanonical)") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "hasImportedDefinitionPath(resolvedSoaToAosCanonical)") !=
