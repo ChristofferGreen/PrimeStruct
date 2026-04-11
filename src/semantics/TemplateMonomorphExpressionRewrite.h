@@ -446,10 +446,7 @@ bool rewriteExpr(Expr &expr,
     }
     if (helperName == "get" || helperName == "get_ref") {
       const std::string samePathGetHelper = "/soa_vector/" + helperName;
-      const std::string canonicalGetHelper =
-          canonicalizeLegacySoaGetHelperPath(samePathGetHelper);
       if (hasDefinitionFamilyPath(samePathGetHelper) &&
-          isLegacyOrCanonicalSoaHelperPath(canonicalGetHelper, helperName) &&
           (receiverFamily == "soa_vector" || receiverFamily == "vector")) {
         return samePathGetHelper;
       }
