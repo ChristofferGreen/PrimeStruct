@@ -289,6 +289,26 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(operatorCollectionMutationHelpersSource.find(
             "samePathCallee->fullPath.rfind(\"/soa_vector/ref\", 0) == 0") ==
         std::string::npos);
+  CHECK(operatorCollectionMutationHelpersSource.find(
+            "normalizedMethodName == \"std/collections/soa_vector/ref\"") ==
+        std::string::npos);
+  CHECK(operatorCollectionMutationHelpersSource.find(
+            "normalizedMethodName == \"soa_vector/ref\"") ==
+        std::string::npos);
+  CHECK(operatorCollectionMutationHelpersSource.find("normalizedMethodName != \"ref\"") ==
+        std::string::npos);
+  CHECK(operatorCollectionMutationHelpersSource.find(
+            "const std::string methodPath = \"/\" + normalizedMethodName;") !=
+        std::string::npos);
+  CHECK(operatorCollectionMutationHelpersSource.find(
+            "const std::string canonicalMethodPath =") !=
+        std::string::npos);
+  CHECK(operatorCollectionMutationHelpersSource.find(
+            "semantics::isLegacyOrCanonicalSoaHelperPath(canonicalMethodPath, \"ref\")") !=
+        std::string::npos);
+  CHECK(operatorCollectionMutationHelpersSource.find(
+            "methodPath.rfind(\"/std/collections/soa_vector/\", 0) == 0") !=
+        std::string::npos);
   CHECK(inlineDispatchSource.find("ResolvedInlineCallResult emitResolvedInlineDefinitionCall(") !=
         std::string::npos);
   CHECK(inlineDispatchSource.find("InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(") !=

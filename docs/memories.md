@@ -23,6 +23,14 @@ This file stores durable session-derived facts that are useful in later work. Ke
   visibility probes and builtin-path matching) instead of direct canonical
   `/std/collections/soa_vector/ref*` prefix checks, and source-lock coverage
   in `test_ir_pipeline_validation_19` asserts that wiring.
+- `soa-ir-lowerer-ref-method-path-canonicalization`: ir-lowerer
+  collection-mutation SoA method-call `ref` helper matching now canonicalizes
+  `normalizedMethodName` spellings through shared
+  `canonicalizeLegacySoaRefHelperPath(...)` plus
+  `isLegacyOrCanonicalSoaHelperPath(..., "ref")` checks while preserving the
+  canonical-stdlib method-path preference and same-path visibility guards, and
+  source-lock coverage in `test_ir_pipeline_validation_19` rejects the old
+  direct `normalizedMethodName == ".../ref"` disjunctions.
 - `soa-mutation-borrow-ref-family-shared-predicate`: mutation-borrow SoA
   `ref`/`ref_ref` receiver detection now canonicalizes helper paths through
   shared `canonicalizeLegacySoaRefHelperPath(...)` and routes canonical

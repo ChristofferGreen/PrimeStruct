@@ -765,25 +765,20 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
           normalizedMethodName.erase(normalizedMethodName.begin());
         }
-        if (normalizedMethodName == "std/collections/soa_vector/ref") {
-          valuesExprOut = &candidate.args.front();
-          indexExprOut = &candidate.args[1];
-          return true;
-        }
-        if (normalizedMethodName == "soa_vector/ref") {
-          if (hasVisibleLegacySamePathSoaRef(candidate)) {
-            return false;
-          }
-
-          valuesExprOut = &candidate.args.front();
-          indexExprOut = &candidate.args[1];
-          return true;
-        }
-        if (normalizedMethodName != "ref") {
+        const bool isBareRefMethodName = normalizedMethodName == "ref";
+        const std::string methodPath = "/" + normalizedMethodName;
+        const std::string canonicalMethodPath =
+            semantics::canonicalizeLegacySoaRefHelperPath(methodPath);
+        const bool isLegacyOrCanonicalRefMethodPath =
+            semantics::isLegacyOrCanonicalSoaHelperPath(canonicalMethodPath, "ref");
+        if (!isLegacyOrCanonicalRefMethodPath && !isBareRefMethodName) {
           return false;
         }
 
-        if (hasVisibleLegacySamePathSoaRef(candidate)) {
+        const bool usesCanonicalStdlibMethodPath =
+            methodPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
+            semantics::isLegacyOrCanonicalSoaHelperPath(canonicalMethodPath, "ref");
+        if (!usesCanonicalStdlibMethodPath && hasVisibleLegacySamePathSoaRef(candidate)) {
           return false;
         }
 
