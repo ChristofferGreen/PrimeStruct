@@ -107,20 +107,6 @@ bool rewriteExpr(Expr &expr,
            path == "/std/collections/soa_vector/reserve" || path == "/std/collections/soa_vector/push" ||
            path == "/std/collections/soa_vector/to_aos" || path == "/std/collections/soa_vector/to_aos_ref";
   };
-  auto canonicalizeLegacySoaRefHelperPath = [](const std::string &path) {
-    std::string canonicalPath(path);
-    const size_t templateSuffix = canonicalPath.find("__t");
-    if (templateSuffix != std::string::npos) {
-      canonicalPath.erase(templateSuffix);
-    }
-    if (canonicalPath == "/soa_vector/ref") {
-      return std::string("/std/collections/soa_vector/ref");
-    }
-    if (canonicalPath == "/soa_vector/ref_ref") {
-      return std::string("/std/collections/soa_vector/ref_ref");
-    }
-    return canonicalPath;
-  };
   auto isSyntheticSamePathSoaHelperTemplateCarryPath = [&](const std::string &path) {
     const std::string canonicalPath = canonicalizeLegacySoaRefHelperPath(path);
     return path == "/soa_vector/count" || path == "/soa_vector/get" ||
