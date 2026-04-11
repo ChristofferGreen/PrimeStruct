@@ -208,7 +208,22 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "canonicalizeLegacySoaToAosHelperPath(resolveCalleePath(target))") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
-            "isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical)") !=
+            "const bool matchesSoaToAosTarget =") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
+            "const bool matchesBorrowedSoaToAosTarget =") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
+            "resolvedSoaToAosCanonical, \"to_aos\")") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
+            "resolvedSoaToAosCanonical, \"to_aos_ref\")") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
+            "isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical)") ==
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
+            "(matchesSoaToAosTarget || matchesBorrowedSoaToAosTarget)") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
             "resolveCalleePath(target) == \"/to_aos\"") ==

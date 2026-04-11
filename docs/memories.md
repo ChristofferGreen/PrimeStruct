@@ -522,7 +522,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   visibility probes, and expr/expr-map borrowed canonical `to_aos_ref`
   gating now routes through shared
   `isLegacyOrCanonicalSoaHelperPath(..., "to_aos_ref")` checks instead of
-  direct canonical-path equality checks.
+  direct canonical-path equality checks, and infer-collection/expr-method-
+  target `to_aos(_ref)` vector-target inference now routes through per-helper
+  `isLegacyOrCanonicalSoaHelperPath(...)` checks for `to_aos` and
+  `to_aos_ref` instead of broad canonical-family predicate checks.
 - `semantic-soa-s2-canonical-count-get-bridge-substrate-2026-04`: S2 inline-
   parameter bridge matching now treats canonical `/std/collections/soa_vector`
   `count|get` callee paths (plus same-path aliases) as bridge-eligible for

@@ -1094,6 +1094,18 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "const std::string resolvedSoaToAosCanonical =") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
+            "const bool matchesSoaToAosTarget =") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "const bool matchesBorrowedSoaToAosTarget =") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "resolvedSoaToAosCanonical, \"to_aos\")") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "resolvedSoaToAosCanonical, \"to_aos_ref\")") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
             "canonicalizeLegacySoaToAosHelperPath(resolveCalleePath(target))") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(

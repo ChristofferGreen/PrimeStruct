@@ -908,9 +908,15 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       }
       const std::string resolvedSoaToAosCanonical =
           canonicalizeLegacySoaToAosHelperPath(resolveCalleePath(target));
-      if (((!target.isMethodCall && isSimpleCallName(target, "to_aos")) ||
-           (!target.isMethodCall && isSimpleCallName(target, "to_aos_ref")) ||
-           isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical)) &&
+      const bool matchesSoaToAosTarget =
+          (!target.isMethodCall && isSimpleCallName(target, "to_aos")) ||
+          isLegacyOrCanonicalSoaHelperPath(
+              resolvedSoaToAosCanonical, "to_aos");
+      const bool matchesBorrowedSoaToAosTarget =
+          (!target.isMethodCall && isSimpleCallName(target, "to_aos_ref")) ||
+          isLegacyOrCanonicalSoaHelperPath(
+              resolvedSoaToAosCanonical, "to_aos_ref");
+      if ((matchesSoaToAosTarget || matchesBorrowedSoaToAosTarget) &&
           target.args.size() == 1) {
         std::string sourceElemType;
         const Expr &source = target.args.front();
