@@ -184,10 +184,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `isLegacyOrCanonicalSoaHelperPath(...)` instead of duplicated direct
   `/soa_vector/get_ref` and `/std/collections/soa_vector/get_ref` path checks.
 - `soa-monomorph-fallback-ref-like-canonical-path-factoring`:
-  template-monomorph fallback stdlib implicit-template path gating now routes
-  canonical `ref`/`ref_ref` `pathCanonical` checks through
-  `isCanonicalSoaRefLikePath(...)` instead of duplicated direct
-  `pathCanonical == "/std/collections/soa_vector/ref(_ref)"` comparisons.
+  canonical SoA `ref`/`ref_ref` helper-family detection is now shared through
+  `isCanonicalSoaRefLikeHelperPath(...)` in semantics helpers, and both
+  template-monomorph fallback stdlib implicit-template path gating plus
+  pending unknown-method helper canonicalization now reuse that shared
+  predicate instead of duplicated direct canonical-path comparisons.
 - `soa-monomorph-implicit-ref-path-canonicalization`: template-monomorph
   implicit-template SoA pending `ref`/`ref_ref` helper gating now canonicalizes
   resolved helper paths (template-suffix stripping plus legacy

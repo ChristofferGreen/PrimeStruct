@@ -135,6 +135,7 @@ bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collection
 std::string soaFieldViewHelperPath(std::string_view fieldName);
 bool splitSoaFieldViewHelperPath(std::string_view path, std::string *fieldNameOut = nullptr);
 std::string canonicalizeLegacySoaRefHelperPath(std::string_view path);
+bool isCanonicalSoaRefLikeHelperPath(std::string_view path);
 std::string soaUnavailableMethodDiagnostic(std::string_view resolvedPath);
 bool isSoaVectorStructElementType(const std::string &typeArg,
                                   const std::string &namespacePrefix,

@@ -468,6 +468,11 @@ std::string canonicalizeLegacySoaRefHelperPath(std::string_view path) {
   return canonicalPath;
 }
 
+bool isCanonicalSoaRefLikeHelperPath(std::string_view path) {
+  return path == "/std/collections/soa_vector/ref" ||
+         path == "/std/collections/soa_vector/ref_ref";
+}
+
 namespace {
 
 std::string canonicalSoaPendingHelperPath(std::string_view resolvedPath) {
@@ -484,8 +489,7 @@ std::string canonicalSoaPendingHelperPath(std::string_view resolvedPath) {
   }
   const std::string canonicalSoaRefPath =
       canonicalizeLegacySoaRefHelperPath(normalizedResolvedPath);
-  if (canonicalSoaRefPath == "/std/collections/soa_vector/ref" ||
-      canonicalSoaRefPath == "/std/collections/soa_vector/ref_ref") {
+  if (isCanonicalSoaRefLikeHelperPath(canonicalSoaRefPath)) {
     return canonicalSoaRefPath;
   }
   return std::string(resolvedPath);
