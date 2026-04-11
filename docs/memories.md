@@ -160,6 +160,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `canonicalizeLegacySoaRefHelperPath(...)` before builtin
   import/local-definition gating, and source-lock coverage now asserts that
   shared helper call path in method-target resolution.
+- `soa-monomorph-template-carry-shared-helper-predicate`:
+  template-monomorph expression-rewrite synthetic same-path SoA template-carry
+  gating now removes duplicated inline helper-family ref/ref_ref path lists
+  and reuses `isSyntheticSamePathSoaHelperTemplateCarryPath(...)` for both
+  call and method resolved-path branches, while preserving the
+  call-receiver/`vector`-receiver behavior gate.
 - `soa-monomorph-implicit-ref-path-canonicalization`: template-monomorph
   implicit-template SoA pending `ref`/`ref_ref` helper gating now canonicalizes
   resolved helper paths (template-suffix stripping plus legacy
