@@ -867,12 +867,20 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const std::string helperNameString(helperName);") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
+            "auto soaCanonicalMethodPath = [&](const std::string &helperNameString) {\n"
+            "    return \"/std/collections/soa_vector/\" + helperNameString;\n"
+            "  };") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
             "const std::string canonicalPath =\n"
             "        \"/std/collections/soa_vector/\" + std::string(helperName);") ==
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
             "const std::string canonicalPath =\n"
-            "        \"/std/collections/soa_vector/\" + helperNameString;") !=
+            "        \"/std/collections/soa_vector/\" + helperNameString;") ==
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "const std::string canonicalPath = soaCanonicalMethodPath(helperNameString);") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
             "const std::string samePath = \"/\" + std::string(helperName);") ==
@@ -924,7 +932,16 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "return \"/std/collections/soa_vector/\" + std::string(helperName);") ==
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
-            "return \"/std/collections/soa_vector/\" + helperNameString;") !=
+            "if (hasDefinitionFamilyPath(samePath)) {\n"
+            "      return samePath;\n"
+            "    }\n"
+            "    return \"/std/collections/soa_vector/\" + helperNameString;") ==
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "if (hasDefinitionFamilyPath(samePath)) {\n"
+            "      return samePath;\n"
+            "    }\n"
+            "    return soaCanonicalMethodPath(helperNameString);") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
             "if (hasDefinitionFamilyPath(canonical)) {\n"
