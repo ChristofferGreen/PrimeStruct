@@ -470,9 +470,7 @@ bool rewriteExpr(Expr &expr,
       }
     }
     if (helperName == "to_aos" || helperName == "to_aos_ref") {
-      const std::string samePathToAosHelper =
-          helperName == "to_aos" ? std::string("/to_aos")
-                                 : std::string("/to_aos_ref");
+      const std::string samePathToAosHelper = "/" + helperName;
       const std::string canonicalSoaToAosHelper =
           canonicalizeLegacySoaToAosHelperPath(samePathToAosHelper);
       const bool matchesSoaToAosHelperPath =
