@@ -550,7 +550,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   instead of legacy `/soa_vector/to_aos_ref`, and
   `canonicalizeLegacySoaToAosHelperPath(...)` now only remaps root
   same-path aliases (`/to_aos`, `/to_aos_ref`) and no longer remaps
-  `/soa_vector/to_aos_ref`.
+  `/soa_vector/to_aos_ref`, and duplicated legacy `/soa_vector/get(_ref)`
+  remap ternaries in build-initializer classification, expr-map builtin
+  dispatch, infer-collection dispatch, and infer-collection return inference
+  now route through shared `canonicalizeLegacySoaGetHelperPath(...)`.
 - `semantic-soa-s2-canonical-count-get-bridge-substrate-2026-04`: S2 inline-
   parameter bridge matching now treats canonical `/std/collections/soa_vector`
   `count|get` callee paths (plus same-path aliases) as bridge-eligible for

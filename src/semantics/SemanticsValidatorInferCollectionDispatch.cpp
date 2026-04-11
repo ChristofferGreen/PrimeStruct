@@ -8,12 +8,7 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     const BuiltinCollectionDispatchResolvers &resolvers,
     ReturnKind &kindOut) const {
   std::string resolvedSoaCanonical =
-      canonicalizeLegacySoaRefHelperPath(resolvedPath);
-  if (resolvedSoaCanonical == "/soa_vector/get") {
-    resolvedSoaCanonical = "/std/collections/soa_vector/get";
-  } else if (resolvedSoaCanonical == "/soa_vector/get_ref") {
-    resolvedSoaCanonical = "/std/collections/soa_vector/get_ref";
-  }
+      canonicalizeLegacySoaGetHelperPath(resolvedPath);
   if (resolvedPath == "/array/count" || resolvedPath == "/vector/count" ||
       resolvedPath == "/std/collections/vector/count" || resolvedPath == "/string/count" ||
       resolvedPath == "/map/count" || resolvedPath == "/std/collections/map/count" ||

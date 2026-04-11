@@ -399,7 +399,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "const auto canonicalizeSoaMethodResolvedPath = [](std::string path)") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSource.find(
-            "canonicalizeLegacySoaRefHelperPath(resolvedPath)") !=
+            "canonicalizeLegacySoaGetHelperPath(resolvedPath)") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSource.find(
             "std::string resolvedSoaCanonical =") !=

@@ -136,6 +136,7 @@ std::string soaFieldViewHelperPath(std::string_view fieldName);
 bool splitSoaFieldViewHelperPath(std::string_view path, std::string *fieldNameOut = nullptr);
 std::string canonicalizeLegacySoaToAosHelperPath(std::string_view path);
 std::string canonicalizeLegacySoaRefHelperPath(std::string_view path);
+std::string canonicalizeLegacySoaGetHelperPath(std::string_view path);
 bool isLegacyOrCanonicalSoaHelperPath(std::string_view path, std::string_view helperName);
 bool isCanonicalSoaRefLikeHelperPath(std::string_view path);
 std::string soaUnavailableMethodDiagnostic(std::string_view resolvedPath);

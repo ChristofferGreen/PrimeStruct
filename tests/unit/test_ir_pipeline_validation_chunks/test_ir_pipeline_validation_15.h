@@ -693,6 +693,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "std::string canonicalizeLegacySoaToAosHelperPath(std::string_view path)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
+            "std::string canonicalizeLegacySoaGetHelperPath(std::string_view path)") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
             "if (canonicalPath == \"/to_aos_ref\")") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find("\"/soa_vector/to_aos_ref\"") ==
@@ -766,10 +769,16 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "const auto canonicalizeSoaResolvedPath = [](std::string_view path) -> std::string {") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "canonicalizeLegacySoaRefHelperPath(resolved)") !=
+            "canonicalizeLegacySoaGetHelperPath(resolved)") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "const std::string resolvedCanonicalRaw =") !=
+            "const std::string resolvedCanonicalRaw =") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "resolvedCanonicalRaw == \"/soa_vector/get\"") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "resolvedCanonicalRaw == \"/soa_vector/get_ref\"") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
             "const std::string resolvedCanonical =") !=
@@ -878,6 +887,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "std::string canonicalizeLegacySoaRefHelperPath(std::string_view path);") !=
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
+            "std::string canonicalizeLegacySoaGetHelperPath(std::string_view path);") !=
+        std::string::npos);
+  CHECK(semanticsHelpersSource.find(
             "bool isLegacyOrCanonicalSoaHelperPath(std::string_view path, std::string_view helperName);") !=
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
@@ -949,7 +961,13 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "const auto canonicalizeLegacySoaHelperPath = [](std::string_view path) -> std::string {") ==
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
-            "canonicalizeLegacySoaRefHelperPath(resolvedNoTemplate)") !=
+            "canonicalizeLegacySoaGetHelperPath(resolvedNoTemplate)") !=
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "resolvedSoaCanonicalRaw == \"/soa_vector/get\"") ==
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "resolvedSoaCanonicalRaw == \"/soa_vector/get_ref\"") ==
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
             "const std::string resolvedSoaCanonical =") !=
@@ -1421,7 +1439,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "const auto canonicalizeLegacySoaHelperResolvedPath = [](std::string_view path) -> std::string {") ==
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
-            "canonicalizeLegacySoaRefHelperPath(resolvedCandidate)") !=
+            "canonicalizeLegacySoaGetHelperPath(resolvedCandidate)") !=
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
             "std::string resolvedSoaCanonical =") !=

@@ -443,12 +443,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     }
     const std::string resolvedCandidate = resolveCalleePath(candidate);
     std::string resolvedSoaCanonical =
-        canonicalizeLegacySoaRefHelperPath(resolvedCandidate);
-    if (resolvedSoaCanonical == "/soa_vector/get") {
-      resolvedSoaCanonical = "/std/collections/soa_vector/get";
-    } else if (resolvedSoaCanonical == "/soa_vector/get_ref") {
-      resolvedSoaCanonical = "/std/collections/soa_vector/get_ref";
-    }
+        canonicalizeLegacySoaGetHelperPath(resolvedCandidate);
     const auto soaAccessHelper =
         candidate.args.size() == 2
             ? builtinSoaAccessHelperName(candidate, params, locals)

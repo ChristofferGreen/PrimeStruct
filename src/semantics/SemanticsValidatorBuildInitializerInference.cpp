@@ -205,14 +205,8 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
   };
 
   const std::string resolved = resolveCalleePath(candidate);
-  const std::string resolvedCanonicalRaw =
-      canonicalizeLegacySoaRefHelperPath(resolved);
   const std::string resolvedCanonical =
-      resolvedCanonicalRaw == "/soa_vector/get"
-          ? "/std/collections/soa_vector/get"
-          : (resolvedCanonicalRaw == "/soa_vector/get_ref"
-                 ? "/std/collections/soa_vector/get_ref"
-                 : resolvedCanonicalRaw);
+      canonicalizeLegacySoaGetHelperPath(resolved);
   std::string normalizedName = candidate.name;
   if (!normalizedName.empty() && normalizedName.front() == '/') {
     normalizedName.erase(normalizedName.begin());
