@@ -202,7 +202,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   implicit-template SoA pending `ref`/`ref_ref` helper gating now canonicalizes
   resolved helper paths (template-suffix stripping plus legacy
   `/soa_vector/ref(_ref)` remapping) before helper-family checks, and
-  source-lock coverage now rejects the old direct
+  canonical `ref`/`ref_ref` helper-family gating there now also routes
+  through shared `isCanonicalSoaRefLikeHelperPath(...)` predicate checks
+  instead of direct canonical-path disjunctions, and source-lock coverage now
+  rejects the old direct
   `if (resolvedPath == "/soa_vector/ref" || ...)` call-shape check there.
 - `soa-monomorph-fallback-ref-path-canonicalization`: template-monomorph
   fallback stdlib implicit-template path gating now canonicalizes legacy

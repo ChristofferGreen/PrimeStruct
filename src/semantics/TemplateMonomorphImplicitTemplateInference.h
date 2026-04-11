@@ -242,8 +242,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
       const bool isBuiltinSoaRefMethod = candidate.isMethodCall && normalizedName == "ref";
       const bool isBuiltinSoaRefRefMethod =
           candidate.isMethodCall && normalizedName == "ref_ref";
-      if (resolvedSoaCanonical == "/std/collections/soa_vector/ref" ||
-          resolvedSoaCanonical == "/std/collections/soa_vector/ref_ref" ||
+      if (isCanonicalSoaRefLikeHelperPath(resolvedSoaCanonical) ||
           isExplicitSoaRefCall ||
           isExplicitSoaRefRefCall ||
           isBuiltinSoaRefMethod ||
