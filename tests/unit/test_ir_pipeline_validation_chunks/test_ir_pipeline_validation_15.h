@@ -1052,6 +1052,19 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprMapSoaBuiltinsSource.find(
             "isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, \"ref_ref\")") !=
         std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "resolvedSoaCanonical == \"/std/collections/soa_vector/get\"") ==
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "resolvedSoaCanonical == \"/std/collections/soa_vector/get_ref\"") ==
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, \"get\")") !=
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical,\n"
+            "                                             \"get_ref\")") !=
+        std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("(helperName == \"get_ref\" &&") !=
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(

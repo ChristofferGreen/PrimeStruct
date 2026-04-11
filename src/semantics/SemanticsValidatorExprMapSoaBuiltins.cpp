@@ -417,8 +417,8 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
        expr.namespacePrefix == "soa_vector");
   if ((resolvedMethod || resolvedMissing ||
        hasExplicitSoaAccessSpelling ||
-       resolvedSoaCanonical == "/std/collections/soa_vector/get" ||
-       resolvedSoaCanonical == "/std/collections/soa_vector/get_ref" ||
+       isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "get") ||
+       isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "get_ref") ||
        isCanonicalSoaRefLikeHelperPath(resolvedSoaCanonical) ||
        resolvedNoTemplate == "/std/collections/experimental_soa_vector/soaVectorGetRef" ||
        resolvedNoTemplate == "/std/collections/experimental_soa_vector/soaVectorRefRef") &&
@@ -450,11 +450,12 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
           (helperName == "get" &&
            (isSimpleCallName(expr, "get") ||
             (expr.isMethodCall && expr.name == "get") ||
-            resolvedSoaCanonical == "/std/collections/soa_vector/get")) ||
+            isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "get"))) ||
           (helperName == "get_ref" &&
            (isSimpleCallName(expr, "get_ref") ||
             (expr.isMethodCall && expr.name == "get_ref") ||
-            resolvedSoaCanonical == "/std/collections/soa_vector/get_ref")) ||
+            isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical,
+                                             "get_ref"))) ||
           (helperName == "ref" &&
            (isSimpleCallName(expr, "ref") ||
             (expr.isMethodCall && expr.name == "ref") ||

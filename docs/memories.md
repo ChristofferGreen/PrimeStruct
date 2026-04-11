@@ -210,6 +210,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `isCanonicalSoaRefLikeHelperPath(...)` predicate checks instead of direct
   canonical-path comparisons, and source-lock coverage now asserts those
   shared helper call paths.
+- `soa-expr-map-shared-get-helper-path`: expr-map SoA builtin dispatch now
+  routes canonicalized `get`/`get_ref` helper-family checks through shared
+  `isLegacyOrCanonicalSoaHelperPath(...)` in both the dispatch prefilter and
+  old-surface call-shape gating instead of direct canonical
+  `"/std/collections/soa_vector/get(_ref)"` comparisons, and source-lock
+  coverage in `test_ir_pipeline_validation_15` now asserts that shared
+  helper-path wiring.
 - `soa-build-initializer-shared-ref-canonicalizer`: build-initializer SoA
   access-helper classification now reuses shared
   `canonicalizeLegacySoaRefHelperPath(...)` for SoA `ref`/`ref_ref`
