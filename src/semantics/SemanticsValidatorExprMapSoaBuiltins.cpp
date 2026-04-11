@@ -21,6 +21,23 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
   if (resolvedTemplateSuffix != std::string::npos) {
     resolvedNoTemplate.erase(resolvedTemplateSuffix);
   }
+  const auto canonicalizeLegacySoaHelperPath = [](std::string_view path) -> std::string {
+    if (path == "/soa_vector/get") {
+      return "/std/collections/soa_vector/get";
+    }
+    if (path == "/soa_vector/get_ref") {
+      return "/std/collections/soa_vector/get_ref";
+    }
+    if (path == "/soa_vector/ref") {
+      return "/std/collections/soa_vector/ref";
+    }
+    if (path == "/soa_vector/ref_ref") {
+      return "/std/collections/soa_vector/ref_ref";
+    }
+    return std::string(path);
+  };
+  const std::string resolvedSoaCanonical =
+      canonicalizeLegacySoaHelperPath(resolvedNoTemplate);
   auto failMapSoaBuiltinDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(expr, std::move(message));
   };
@@ -412,16 +429,12 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
        expr.namespacePrefix == "soa_vector");
   if ((resolvedMethod || resolvedMissing ||
        hasExplicitSoaAccessSpelling ||
-       resolvedNoTemplate == "/soa_vector/get" ||
-       resolvedNoTemplate == "/soa_vector/get_ref" ||
-       resolvedNoTemplate == "/soa_vector/ref" ||
-       resolvedNoTemplate == "/soa_vector/ref_ref" ||
+       resolvedSoaCanonical == "/std/collections/soa_vector/get" ||
+       resolvedSoaCanonical == "/std/collections/soa_vector/get_ref" ||
+       resolvedSoaCanonical == "/std/collections/soa_vector/ref" ||
+       resolvedSoaCanonical == "/std/collections/soa_vector/ref_ref" ||
        resolvedNoTemplate == "/std/collections/experimental_soa_vector/soaVectorGetRef" ||
-       resolvedNoTemplate == "/std/collections/experimental_soa_vector/soaVectorRefRef" ||
-       resolvedNoTemplate == "/std/collections/soa_vector/get" ||
-       resolvedNoTemplate == "/std/collections/soa_vector/get_ref" ||
-       resolvedNoTemplate == "/std/collections/soa_vector/ref" ||
-       resolvedNoTemplate == "/std/collections/soa_vector/ref_ref") &&
+       resolvedNoTemplate == "/std/collections/experimental_soa_vector/soaVectorRefRef") &&
       soaAccessHelperName.has_value()) {
     handledOut = true;
     if (hasNamedArguments(expr.argNames) &&
@@ -450,23 +463,19 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
           (helperName == "get" &&
            (isSimpleCallName(expr, "get") ||
             (expr.isMethodCall && expr.name == "get") ||
-            resolvedNoTemplate == "/soa_vector/get" ||
-            resolvedNoTemplate == "/std/collections/soa_vector/get")) ||
+            resolvedSoaCanonical == "/std/collections/soa_vector/get")) ||
           (helperName == "get_ref" &&
            (isSimpleCallName(expr, "get_ref") ||
             (expr.isMethodCall && expr.name == "get_ref") ||
-            resolvedNoTemplate == "/soa_vector/get_ref" ||
-            resolvedNoTemplate == "/std/collections/soa_vector/get_ref")) ||
+            resolvedSoaCanonical == "/std/collections/soa_vector/get_ref")) ||
           (helperName == "ref" &&
            (isSimpleCallName(expr, "ref") ||
             (expr.isMethodCall && expr.name == "ref") ||
-            resolvedNoTemplate == "/soa_vector/ref" ||
-            resolvedNoTemplate == "/std/collections/soa_vector/ref")) ||
+            resolvedSoaCanonical == "/std/collections/soa_vector/ref")) ||
           (helperName == "ref_ref" &&
            (isSimpleCallName(expr, "ref_ref") ||
             (expr.isMethodCall && expr.name == "ref_ref") ||
-            resolvedNoTemplate == "/soa_vector/ref_ref" ||
-            resolvedNoTemplate == "/std/collections/soa_vector/ref_ref"));
+            resolvedSoaCanonical == "/std/collections/soa_vector/ref_ref"));
     if (!this->resolveSoaVectorOrExperimentalBorrowedReceiver(
             expr.args.front(),
             params,

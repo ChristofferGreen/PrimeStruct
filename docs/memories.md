@@ -29,6 +29,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   legacy helper spellings also report canonical
   `/std/collections/soa_vector/ref(_ref)` unknown-method diagnostics; semantic
   coverage now explicitly checks canonical `ref_ref` rejects alongside `ref`.
+- `soa-map-builtin-resolved-path-canonicalization`: expr-map SoA builtin
+  validation now canonicalizes resolved legacy helper spellings
+  (`/soa_vector/get|get_ref|ref|ref_ref`) onto
+  `/std/collections/soa_vector/*` before dispatch matching, reducing direct
+  legacy resolved-path comparisons while preserving helper compatibility.
 - `arg-pack-dereference-struct-inference`: IR struct-type inference now
   propagates through `dereference(...)`, so indexed borrowed arg-pack values
   (for example `args<Reference<Map<K, V>>>`) preserve their struct identity
