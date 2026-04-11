@@ -468,11 +468,7 @@ bool rewriteExpr(Expr &expr,
     }
     if (helperName == "to_aos" || helperName == "to_aos_ref") {
       const std::string samePathToAosHelper = "/" + helperName;
-      const std::string canonicalSoaToAosHelper =
-          canonicalizeLegacySoaToAosHelperPath(samePathToAosHelper);
-      if ((isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosHelper, "to_aos") ||
-           isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosHelper, "to_aos_ref")) &&
-          hasVisibleRootBuiltinSoaConversionHelper(samePathToAosHelper) &&
+      if (hasVisibleRootBuiltinSoaConversionHelper(samePathToAosHelper) &&
           resolvesBuiltinSoaToAosShadowReceiver(receiverExpr)) {
         return samePathToAosHelper;
       }

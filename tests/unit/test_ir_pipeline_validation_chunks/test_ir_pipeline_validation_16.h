@@ -692,7 +692,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const std::string canonicalSoaToAosPath =") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "canonicalizeLegacySoaToAosHelperPath(samePathToAosHelper)") !=
+            "canonicalizeLegacySoaToAosHelperPath(samePathToAosHelper)") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "const std::string samePathToAosHelper = \"/\" + helperName;") !=
@@ -704,10 +704,14 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, \"to_aos_ref\")") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosHelper, \"to_aos\")") !=
+            "isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosHelper, \"to_aos\")") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosHelper, \"to_aos_ref\")") !=
+            "isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosHelper, \"to_aos_ref\")") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "if (hasVisibleRootBuiltinSoaConversionHelper(samePathToAosHelper) &&\n"
+            "          resolvesBuiltinSoaToAosShadowReceiver(receiverExpr)) {") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "const bool matchesSoaToAosHelperPath =") ==
