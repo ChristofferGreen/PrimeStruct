@@ -497,8 +497,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   compile-run coverage now lock the resulting `struct parameter type mismatch`
   contract on those direct helper paths.
 - `semantic-soa-s2-to-aos-canonical-helper-path-factoring-2026-04`: infer-
-  collection, expr-method-target, expr-map late-builtin, and expr
-  late-map/soa pre-dispatch `to_aos(_ref)` gating now canonicalize legacy
+  collection, expr-method-target, expr-map late-builtin, expr
+  late-map/soa pre-dispatch, and method-target builtin
+  import/local-definition `to_aos(_ref)` gating now canonicalize legacy
   resolved helper spellings (`/to_aos`, `/to_aos_ref`,
   `/soa_vector/to_aos_ref`) through shared
   `canonicalizeLegacySoaToAosHelperPath(...)` +
