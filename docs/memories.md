@@ -519,7 +519,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   same-path helper spellings through shared
   `canonicalizeLegacySoaToAosHelperPath(...)` +
   `isCanonicalSoaToAosHelperPath(...)` guards before root-builtin helper
-  visibility probes.
+  visibility probes, and expr/expr-map borrowed canonical `to_aos_ref`
+  gating now routes through shared
+  `isLegacyOrCanonicalSoaHelperPath(..., "to_aos_ref")` checks instead of
+  direct canonical-path equality checks.
 - `semantic-soa-s2-canonical-count-get-bridge-substrate-2026-04`: S2 inline-
   parameter bridge matching now treats canonical `/std/collections/soa_vector`
   `count|get` callee paths (plus same-path aliases) as bridge-eligible for

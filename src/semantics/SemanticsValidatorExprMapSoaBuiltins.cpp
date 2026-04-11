@@ -339,7 +339,8 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
   const bool isCanonicalSoaToAosResolved =
       isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical);
   const bool isBorrowedSoaToAosResolved =
-      resolvedSoaToAosCanonical == "/std/collections/soa_vector/to_aos_ref";
+      isLegacyOrCanonicalSoaHelperPath(
+          resolvedSoaToAosCanonical, "to_aos_ref");
 
   if ((!resolvedMethod &&
        (isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos") ||
