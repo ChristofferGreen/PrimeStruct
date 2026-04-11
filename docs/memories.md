@@ -178,6 +178,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
   routes through shared `isLegacyOrCanonicalSoaHelperPath(...)` checks
   instead of direct canonical-path comparisons, and source-lock coverage now
   asserts those shared helper call paths.
+- `soa-infer-return-shared-get-helper-path`: infer-collection return
+  inference old-surface SoA `get`/`get_ref` call-shape gating now routes
+  canonicalized resolved-path checks through shared
+  `isLegacyOrCanonicalSoaHelperPath(...)` checks instead of direct canonical
+  `"/std/collections/soa_vector/get(_ref)"` comparisons, and source-lock
+  coverage in `test_ir_pipeline_validation_15` now asserts that shared
+  helper-path wiring.
 - `soa-ir-lowerer-mutation-shared-ref-canonicalizer`: IR-lowerer
   collection-mutation same-path SoA `ref` write-target visibility probes now
   reuse shared `semantics::canonicalizeLegacySoaRefHelperPath(...)` wiring

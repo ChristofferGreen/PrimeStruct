@@ -1505,6 +1505,19 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find("resolvedCandidate == \"/soa_vector/get_ref\"") ==
         std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "resolvedSoaCanonical == \"/std/collections/soa_vector/get\"") ==
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "resolvedSoaCanonical == \"/std/collections/soa_vector/get_ref\"") ==
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, \"get\")") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical,\n"
+            "                                             \"get_ref\")") !=
+        std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find("resolvedCandidate == \"/soa_vector/ref\"") ==
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find("resolvedCandidate == \"/soa_vector/ref_ref\"") ==
