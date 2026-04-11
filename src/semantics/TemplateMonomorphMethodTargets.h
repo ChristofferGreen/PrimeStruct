@@ -253,17 +253,18 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   if (!normalizedTypeName.empty() && normalizedTypeName.front() == '/') {
     normalizedTypeName.erase(normalizedTypeName.begin());
   }
-  if (normalizedTypeName == "soa_vector" &&
-      (normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref")) {
-    pathOut = selectHelperOverloadPath(
-        expr, preferredSamePathSoaMethodTarget(normalizedMethodName, "/"), ctx);
-    return true;
-  }
-  if (normalizedTypeName == "soa_vector" &&
-      (normalizedMethodName == "push" || normalizedMethodName == "reserve")) {
-    pathOut = selectHelperOverloadPath(
-        expr, preferredSamePathSoaMethodTarget(normalizedMethodName, "/soa_vector/"), ctx);
-    return true;
+  if (normalizedTypeName == "soa_vector") {
+    std::string_view samePathPrefix;
+    if (normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") {
+      samePathPrefix = "/";
+    } else if (normalizedMethodName == "push" || normalizedMethodName == "reserve") {
+      samePathPrefix = "/soa_vector/";
+    }
+    if (!samePathPrefix.empty()) {
+      pathOut = selectHelperOverloadPath(
+          expr, preferredSamePathSoaMethodTarget(normalizedMethodName, samePathPrefix), ctx);
+      return true;
+    }
   }
   std::string resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
   const bool isCollectionFamilyReceiver =

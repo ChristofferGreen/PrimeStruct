@@ -575,6 +575,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   helper only composes canonical `/std/collections/soa_vector/<helper>` paths
   from its argument; source-lock coverage now asserts the captureless form and
   rejects the prior capturing (`[&]`) variant.
+- `semantic-soa-method-target-prefix-branch-unified-2026-04`: Group 14
+  method-target fallback dispatch for builtin `soa_vector` now routes both
+  `to_aos(_ref)` and `push/reserve` through one `samePathPrefix` selection
+  branch before `preferredSamePathSoaMethodTarget(...)`, replacing duplicate
+  adjacent branch bodies while preserving helper-family-specific prefixes and
+  fallback behavior.
 - `semantic-soa-s2-canonical-count-get-bridge-substrate-2026-04`: S2 inline-
   parameter bridge matching now treats canonical `/std/collections/soa_vector`
   `count|get` callee paths (plus same-path aliases) as bridge-eligible for
