@@ -450,9 +450,7 @@ bool rewriteExpr(Expr &expr,
       }
     }
     if (helperName == "get" || helperName == "get_ref") {
-      const std::string samePathGetHelper =
-          helperName == "get_ref" ? std::string("/soa_vector/get_ref")
-                                  : std::string("/soa_vector/get");
+      const std::string samePathGetHelper = "/soa_vector/" + helperName;
       const std::string canonicalGetHelper =
           canonicalizeLegacySoaGetHelperPath(samePathGetHelper);
       if (hasDefinitionFamilyPath(samePathGetHelper) &&
@@ -463,9 +461,7 @@ bool rewriteExpr(Expr &expr,
       }
     }
     if (helperName == "ref" || helperName == "ref_ref") {
-      const std::string samePathRefHelper =
-          helperName == "ref_ref" ? std::string("/soa_vector/ref_ref")
-                                  : std::string("/soa_vector/ref");
+      const std::string samePathRefHelper = "/soa_vector/" + helperName;
       const std::string canonicalRefHelper =
           canonicalizeLegacySoaRefHelperPath(samePathRefHelper);
       if (hasDefinitionFamilyPath(samePathRefHelper) &&
