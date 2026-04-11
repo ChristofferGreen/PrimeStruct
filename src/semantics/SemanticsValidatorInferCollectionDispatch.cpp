@@ -62,8 +62,7 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
   }
   if (resolvedSoaCanonical == "/std/collections/soa_vector/get" ||
       resolvedSoaCanonical == "/std/collections/soa_vector/get_ref" ||
-      resolvedSoaCanonical == "/std/collections/soa_vector/ref" ||
-      resolvedSoaCanonical == "/std/collections/soa_vector/ref_ref" ||
+      isCanonicalSoaRefLikeHelperPath(resolvedSoaCanonical) ||
       resolvedSoaCanonical == "/std/collections/experimental_soa_vector/soaVectorGetRef" ||
       resolvedSoaCanonical == "/std/collections/experimental_soa_vector/soaVectorRefRef") {
     std::string elemType;

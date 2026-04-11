@@ -380,7 +380,13 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferCollectionDispatchSource.find("resolvedPath == \"/soa_vector/ref_ref\"") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSource.find(
-            "resolvedSoaCanonical == \"/std/collections/soa_vector/ref_ref\"") !=
+            "isCanonicalSoaRefLikeHelperPath(resolvedSoaCanonical)") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find(
+            "resolvedSoaCanonical == \"/std/collections/soa_vector/ref\"") ==
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find(
+            "resolvedSoaCanonical == \"/std/collections/soa_vector/ref_ref\"") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find("void SemanticsValidator::prepareInferCollectionDispatchSetup") !=
         std::string::npos);

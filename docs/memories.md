@@ -129,8 +129,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   method return-kind resolution now reuses shared
   `canonicalizeLegacySoaRefHelperPath(...)` for SoA `ref`/`ref_ref`
   canonicalization instead of a local lambda, while keeping explicit legacy
-  get/get_ref remapping, and source-lock coverage now asserts that shared
-  helper call path.
+  get/get_ref remapping; canonical SoA `ref`/`ref_ref` helper-family checks
+  there now also route through shared
+  `isCanonicalSoaRefLikeHelperPath(...)` predicate wiring instead of direct
+  canonical-path comparisons, and source-lock coverage now asserts those
+  shared helper call paths.
 - `soa-expr-map-shared-ref-canonicalizer`: expr-map SoA builtin dispatch now
   reuses shared `canonicalizeLegacySoaRefHelperPath(...)` for SoA
   `ref`/`ref_ref` canonicalization instead of a local lambda, while keeping
