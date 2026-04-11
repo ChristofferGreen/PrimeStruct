@@ -1165,6 +1165,23 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "const bool oldSurfaceCallShape =") !=
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
+            "const auto canonicalizeLegacySoaHelperResolvedPath = [](std::string_view path) -> std::string {") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "const std::string resolvedSoaCanonical =") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find("resolvedCandidate == \"/soa_vector/get\"") ==
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find("resolvedCandidate == \"/soa_vector/get_ref\"") ==
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find("resolvedCandidate == \"/soa_vector/ref\"") ==
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find("resolvedCandidate == \"/soa_vector/ref_ref\"") ==
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "resolvedSoaCanonical == \"/std/collections/soa_vector/ref_ref\"") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
             "(*soaAccessHelper == \"get_ref\" &&") !=
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(

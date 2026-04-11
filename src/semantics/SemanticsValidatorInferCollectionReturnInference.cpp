@@ -442,6 +442,28 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       return !currentTypeTextOut.empty();
     }
     const std::string resolvedCandidate = resolveCalleePath(candidate);
+    const auto canonicalizeLegacySoaHelperResolvedPath = [](std::string_view path) -> std::string {
+      std::string resolvedPath(path);
+      const size_t templateSuffix = resolvedPath.find("__t");
+      if (templateSuffix != std::string::npos) {
+        resolvedPath.erase(templateSuffix);
+      }
+      if (resolvedPath == "/soa_vector/get") {
+        return "/std/collections/soa_vector/get";
+      }
+      if (resolvedPath == "/soa_vector/get_ref") {
+        return "/std/collections/soa_vector/get_ref";
+      }
+      if (resolvedPath == "/soa_vector/ref") {
+        return "/std/collections/soa_vector/ref";
+      }
+      if (resolvedPath == "/soa_vector/ref_ref") {
+        return "/std/collections/soa_vector/ref_ref";
+      }
+      return resolvedPath;
+    };
+    const std::string resolvedSoaCanonical =
+        canonicalizeLegacySoaHelperResolvedPath(resolvedCandidate);
     const auto soaAccessHelper =
         candidate.args.size() == 2
             ? builtinSoaAccessHelperName(candidate, params, locals)
@@ -451,23 +473,19 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
           (*soaAccessHelper == "get" &&
            (isSimpleCallName(candidate, "get") ||
             (candidate.isMethodCall && candidate.name == "get") ||
-            resolvedCandidate == "/soa_vector/get" ||
-            resolvedCandidate == "/std/collections/soa_vector/get")) ||
+            resolvedSoaCanonical == "/std/collections/soa_vector/get")) ||
           (*soaAccessHelper == "get_ref" &&
            (isSimpleCallName(candidate, "get_ref") ||
             (candidate.isMethodCall && candidate.name == "get_ref") ||
-            resolvedCandidate == "/soa_vector/get_ref" ||
-            resolvedCandidate == "/std/collections/soa_vector/get_ref")) ||
+            resolvedSoaCanonical == "/std/collections/soa_vector/get_ref")) ||
           (*soaAccessHelper == "ref" &&
            (isSimpleCallName(candidate, "ref") ||
             (candidate.isMethodCall && candidate.name == "ref") ||
-            resolvedCandidate == "/soa_vector/ref" ||
-            resolvedCandidate == "/std/collections/soa_vector/ref")) ||
+            resolvedSoaCanonical == "/std/collections/soa_vector/ref")) ||
           (*soaAccessHelper == "ref_ref" &&
            (isSimpleCallName(candidate, "ref_ref") ||
             (candidate.isMethodCall && candidate.name == "ref_ref") ||
-            resolvedCandidate == "/soa_vector/ref_ref" ||
-            resolvedCandidate == "/std/collections/soa_vector/ref_ref"));
+            resolvedSoaCanonical == "/std/collections/soa_vector/ref_ref"));
       if (!(hasVisibleSoaHelperTargetForCurrentImports(*soaAccessHelper) &&
             oldSurfaceCallShape)) {
         std::string elemType;
