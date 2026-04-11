@@ -123,8 +123,7 @@ bool rewriteExpr(Expr &expr,
     };
     const std::string canonicalPath = canonicalizeLegacySoaRefHelperPath(path);
     return isSyntheticSamePathSoaCarryNonRefHelperPath(path) ||
-           canonicalPath == "/std/collections/soa_vector/ref" ||
-           canonicalPath == "/std/collections/soa_vector/ref_ref";
+           isCanonicalSoaRefLikeHelperPath(canonicalPath);
   };
   auto mapHelperReceiverExpr = [&](const Expr &candidate) -> const Expr * {
     if (candidate.isMethodCall) {

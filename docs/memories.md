@@ -168,10 +168,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   call-receiver/`vector`-receiver behavior gate.
 - `soa-monomorph-template-carry-redundant-canonical-ref-checks-removed`:
   template-monomorph expression-rewrite synthetic same-path SoA template-carry
-  helper-path predicate no longer duplicates direct canonical
-  `/std/collections/soa_vector/ref(_ref)` path checks after
-  `canonicalizeLegacySoaRefHelperPath(...)`; ref-family matching now relies on
-  canonicalized-path checks in that predicate.
+  helper-path predicate now routes canonicalized SoA `ref`/`ref_ref` matching
+  through shared `isCanonicalSoaRefLikeHelperPath(...)` checks instead of
+  duplicating direct canonical `/std/collections/soa_vector/ref(_ref)` path
+  comparisons.
 - `soa-monomorph-template-carry-nonref-helper-path-factoring`:
   template-monomorph expression-rewrite synthetic same-path SoA template-carry
   helper-path predicate now factors legacy/canonical non-ref helper-path
