@@ -725,6 +725,33 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
                                           const Expr *&indexExprOut) -> bool {
         valuesExprOut = nullptr;
         indexExprOut = nullptr;
+        auto canonicalizeLegacySoaRefHelperPath = [](const std::string &path) {
+          std::string canonicalPath(path);
+          const size_t templateSuffix = canonicalPath.find("__t");
+          if (templateSuffix != std::string::npos) {
+            canonicalPath.erase(templateSuffix);
+          }
+          if (canonicalPath == "/soa_vector/ref") {
+            return std::string("/std/collections/soa_vector/ref");
+          }
+          if (canonicalPath == "/soa_vector/ref_ref") {
+            return std::string("/std/collections/soa_vector/ref_ref");
+          }
+          return canonicalPath;
+        };
+        auto hasVisibleLegacySamePathSoaRef = [&](const Expr &callCandidate) {
+          Expr samePathCandidate = callCandidate;
+          samePathCandidate.isMethodCall = false;
+          samePathCandidate.name = "/soa_vector/ref";
+          samePathCandidate.namespacePrefix.clear();
+          if (const Definition *samePathCallee = context.resolveDefinitionCall(samePathCandidate);
+              samePathCallee != nullptr) {
+            const std::string canonicalPath =
+                canonicalizeLegacySoaRefHelperPath(samePathCallee->fullPath);
+            return canonicalPath.rfind("/std/collections/soa_vector/ref", 0) == 0;
+          }
+          return false;
+        };
         auto matchesBuiltinRefPath = [](const std::string &path) {
           return path.rfind("/std/collections/experimental_soa_vector/soaVectorRef", 0) == 0 ||
                  path.rfind("/std/collections/soa_vector/ref", 0) == 0;
@@ -754,12 +781,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           return true;
         }
         if (normalizedMethodName == "soa_vector/ref") {
-          Expr samePathCandidate = candidate;
-          samePathCandidate.isMethodCall = false;
-          samePathCandidate.name = "/soa_vector/ref";
-          samePathCandidate.namespacePrefix.clear();
-          if (const Definition *samePathCallee = context.resolveDefinitionCall(samePathCandidate);
-              samePathCallee != nullptr && samePathCallee->fullPath.rfind("/soa_vector/ref", 0) == 0) {
+          if (hasVisibleLegacySamePathSoaRef(candidate)) {
             return false;
           }
 
@@ -771,12 +793,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           return false;
         }
 
-        Expr samePathCandidate = candidate;
-        samePathCandidate.isMethodCall = false;
-        samePathCandidate.name = "/soa_vector/ref";
-        samePathCandidate.namespacePrefix.clear();
-        if (const Definition *samePathCallee = context.resolveDefinitionCall(samePathCandidate);
-            samePathCallee != nullptr && samePathCallee->fullPath.rfind("/soa_vector/ref", 0) == 0) {
+        if (hasVisibleLegacySamePathSoaRef(candidate)) {
           return false;
         }
 

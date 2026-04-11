@@ -27,6 +27,8 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
       repoRoot / "src" / "ir_lowerer" / "IrLowererCountAccessClassifiers.cpp";
   const std::filesystem::path nativeTailDispatchPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererNativeTailDispatch.cpp";
+  const std::filesystem::path operatorCollectionMutationHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererOperatorCollectionMutationHelpers.cpp";
   const std::filesystem::path astCallPathHelpersPath =
       repoRoot / "include" / "primec" / "AstCallPathHelpers.h";
   REQUIRE(std::filesystem::exists(callHelpersPath));
@@ -37,6 +39,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   REQUIRE(std::filesystem::exists(inlineDispatchPath));
   REQUIRE(std::filesystem::exists(countAccessClassifiersPath));
   REQUIRE(std::filesystem::exists(nativeTailDispatchPath));
+  REQUIRE(std::filesystem::exists(operatorCollectionMutationHelpersPath));
   REQUIRE(std::filesystem::exists(astCallPathHelpersPath));
   const std::string callHelpersSource = readText(callHelpersPath);
   const std::string accessTargetResolutionSource = readText(accessTargetResolutionPath);
@@ -46,6 +49,8 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   const std::string inlineDispatchSource = readText(inlineDispatchPath);
   const std::string countAccessClassifiersSource = readText(countAccessClassifiersPath);
   const std::string nativeTailDispatchSource = readText(nativeTailDispatchPath);
+  const std::string operatorCollectionMutationHelpersSource =
+      readText(operatorCollectionMutationHelpersPath);
   const std::string astCallPathHelpersSource = readText(astCallPathHelpersPath);
 
   CHECK(callHelpersSource.find("const Definition *resolveDefinitionCall(const Expr &callExpr,") ==
@@ -260,6 +265,18 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(inlineDispatchSource.find("std/collections/soa_vector/count") == std::string::npos);
   CHECK(inlineDispatchSource.find("std/collections/soa_vector/push") == std::string::npos);
   CHECK(inlineDispatchSource.find("std/collections/soa_vector/reserve") == std::string::npos);
+  CHECK(operatorCollectionMutationHelpersSource.find(
+            "auto canonicalizeLegacySoaRefHelperPath = [](const std::string &path)") !=
+        std::string::npos);
+  CHECK(operatorCollectionMutationHelpersSource.find(
+            "const std::string canonicalPath =") !=
+        std::string::npos);
+  CHECK(operatorCollectionMutationHelpersSource.find(
+            "canonicalPath.rfind(\"/std/collections/soa_vector/ref\", 0) == 0") !=
+        std::string::npos);
+  CHECK(operatorCollectionMutationHelpersSource.find(
+            "samePathCallee->fullPath.rfind(\"/soa_vector/ref\", 0) == 0") ==
+        std::string::npos);
   CHECK(inlineDispatchSource.find("ResolvedInlineCallResult emitResolvedInlineDefinitionCall(") !=
         std::string::npos);
   CHECK(inlineDispatchSource.find("InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(") !=

@@ -79,6 +79,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `/soa_vector/ref(_ref)` remapping) before helper-family checks, and
   source-lock coverage now rejects direct legacy
   `resolvedPath.rfind("/soa_vector/ref(_ref)", 0) == 0` checks there.
+- `soa-ir-lowerer-mutation-ref-write-target-canonicalization`: IR lowerer
+  collection-mutation SoA `ref` write-target same-path visibility probes now
+  canonicalize templated and legacy resolved helper spellings before
+  fallback gating, and source-lock coverage now rejects direct
+  `samePathCallee->fullPath.rfind("/soa_vector/ref", 0) == 0` checks there.
 - `soa-monomorph-expression-rewrite-ref-path-canonicalization`:
   template-monomorph expression rewrite now canonicalizes templated and
   legacy resolved SoA `ref`/`ref_ref` helper spellings before helper-family
