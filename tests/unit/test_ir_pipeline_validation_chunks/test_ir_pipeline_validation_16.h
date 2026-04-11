@@ -872,6 +872,10 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "  };") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
+            "auto preferredSamePathSoaMethodTarget =\n"
+            "      [&](std::string_view helperName, std::string_view samePathPrefix) {") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
             "const std::string canonicalPath =\n"
             "        \"/std/collections/soa_vector/\" + std::string(helperName);") ==
         std::string::npos);
@@ -880,13 +884,16 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "        \"/std/collections/soa_vector/\" + helperNameString;") ==
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
-            "const std::string canonicalPath = soaCanonicalMethodPath(helperNameString);") !=
+            "const std::string canonicalPath = soaCanonicalMethodPath(helperNameString);") ==
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
             "const std::string samePath = \"/\" + std::string(helperName);") ==
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
-            "const std::string samePath = \"/\" + helperNameString;") !=
+            "const std::string samePath = \"/\" + helperNameString;") ==
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "const std::string samePath = std::string(samePathPrefix) + helperNameString;") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
             "const std::string pathString(path);") !=
@@ -917,13 +924,19 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "if (hasDefinitionFamilyPath(samePath)) {\n"
             "      return samePath;\n"
             "    }\n"
-            "    return canonicalPath;") !=
+            "    return canonicalPath;") ==
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "if (hasDefinitionFamilyPath(samePath)) {\n"
+            "      return samePath;\n"
+            "    }\n"
+            "    return soaCanonicalMethodPath(helperNameString);") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
             "const std::string samePath = \"/soa_vector/\" + std::string(helperName);") ==
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
-            "const std::string samePath = \"/soa_vector/\" + helperNameString;") !=
+            "const std::string samePath = \"/soa_vector/\" + helperNameString;") ==
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
             "const std::string canonical = \"/std/collections/soa_vector/\" + std::string(helperName);") ==
@@ -938,10 +951,10 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "    return \"/std/collections/soa_vector/\" + helperNameString;") ==
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
-            "if (hasDefinitionFamilyPath(samePath)) {\n"
-            "      return samePath;\n"
-            "    }\n"
-            "    return soaCanonicalMethodPath(helperNameString);") !=
+            "return preferredSamePathSoaMethodTarget(helperName, \"/\");") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "return preferredSamePathSoaMethodTarget(helperName, \"/soa_vector/\");") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
             "if (hasDefinitionFamilyPath(canonical)) {\n"
