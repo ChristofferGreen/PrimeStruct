@@ -278,7 +278,10 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
             "semantics::canonicalizeLegacySoaRefHelperPath(path)") !=
         std::string::npos);
   CHECK(operatorCollectionMutationHelpersSource.find(
-            "canonicalPath.rfind(\"/std/collections/soa_vector/ref\", 0) == 0") !=
+            "canonicalPath.rfind(\"/std/collections/soa_vector/ref\", 0) == 0") ==
+        std::string::npos);
+  CHECK(operatorCollectionMutationHelpersSource.find(
+            "semantics::isCanonicalSoaRefLikeHelperPath(canonicalPath)") !=
         std::string::npos);
   CHECK(operatorCollectionMutationHelpersSource.find(
             "path.rfind(\"/std/collections/soa_vector/ref\", 0) == 0") ==

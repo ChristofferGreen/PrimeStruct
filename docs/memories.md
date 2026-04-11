@@ -16,6 +16,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
   through shared `isCanonicalSoaRefLikeHelperPath(path)` instead of a direct
   canonical-path disjunction, and source-lock coverage in
   `test_ir_pipeline_validation_16` asserts that wiring.
+- `soa-ir-lowerer-ref-write-target-shared-ref-predicate`: ir-lowerer
+  collection-mutation SoA `ref` write-target helper matching now routes
+  canonicalized helper-path checks through shared
+  `isCanonicalSoaRefLikeHelperPath(canonicalPath)` (for both same-path
+  visibility probes and builtin-path matching) instead of direct canonical
+  `/std/collections/soa_vector/ref*` prefix checks, and source-lock coverage
+  in `test_ir_pipeline_validation_19` asserts that wiring.
 - `soa-mutation-borrow-ref-family-shared-predicate`: mutation-borrow SoA
   `ref`/`ref_ref` receiver detection now canonicalizes helper paths through
   shared `canonicalizeLegacySoaRefHelperPath(...)` and routes canonical

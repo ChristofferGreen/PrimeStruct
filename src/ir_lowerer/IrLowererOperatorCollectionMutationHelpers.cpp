@@ -736,7 +736,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
               samePathCallee != nullptr) {
             const std::string canonicalPath =
                 semantics::canonicalizeLegacySoaRefHelperPath(samePathCallee->fullPath);
-            return canonicalPath.rfind("/std/collections/soa_vector/ref", 0) == 0;
+            return semantics::isCanonicalSoaRefLikeHelperPath(canonicalPath);
           }
           return false;
         };
@@ -744,7 +744,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           const std::string canonicalPath =
               semantics::canonicalizeLegacySoaRefHelperPath(path);
           return canonicalPath.rfind("/std/collections/experimental_soa_vector/soaVectorRef", 0) == 0 ||
-                 canonicalPath.rfind("/std/collections/soa_vector/ref", 0) == 0;
+                 semantics::isCanonicalSoaRefLikeHelperPath(canonicalPath);
         };
         if (candidate.kind != Expr::Kind::Call || candidate.args.size() != 2 ||
             !candidate.templateArgs.empty() || candidate.hasBodyArguments ||
