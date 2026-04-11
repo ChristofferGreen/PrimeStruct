@@ -1091,6 +1091,23 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(statementReturnsSource.find("builtinSoaPendingExprDiagnostic(stmt.args.front(), params, locals)") ==
         std::string::npos);
+  CHECK(statementReturnsSource.find(
+            "const auto canonicalizeLegacySoaRefHelperPath =") !=
+        std::string::npos);
+  CHECK(statementReturnsSource.find(
+            "const std::string resolvedPathCanonical =") !=
+        std::string::npos);
+  CHECK(statementReturnsSource.find("resolvedPath == \"/soa_vector/ref\"") ==
+        std::string::npos);
+  CHECK(statementReturnsSource.find("resolvedPath == \"/soa_vector/ref_ref\"") ==
+        std::string::npos);
+  CHECK(statementReturnsSource.find(
+            "resolvedPathCanonical == \"/std/collections/soa_vector/ref_ref\"") !=
+        std::string::npos);
+  CHECK(statementReturnsSource.find("resolvedPath.rfind(\"/soa_vector/ref\", 0)") ==
+        std::string::npos);
+  CHECK(statementReturnsSource.find("resolvedPath.rfind(\"/soa_vector/ref_ref\", 0)") ==
+        std::string::npos);
   CHECK(inferDefinitionSource.find("unknown method: /std/collections/soa_vector/ref") ==
         std::string::npos);
   CHECK(inferDefinitionSource.find("soaBorrowedViewPendingDiagnostic()") ==

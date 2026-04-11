@@ -34,6 +34,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
   (`/soa_vector/get|get_ref|ref|ref_ref`) onto
   `/std/collections/soa_vector/*` before dispatch matching, reducing direct
   legacy resolved-path comparisons while preserving helper compatibility.
+- `soa-statement-return-ref-path-canonicalization`: statement-return SoA
+  ref/ref_ref escape detection now canonicalizes legacy resolved helper
+  spellings (`/soa_vector/ref(_ref)`) onto canonical
+  `/std/collections/soa_vector/ref(_ref)` before old-surface/helper-family
+  checks, and source-lock coverage now rejects direct statement-return
+  `resolvedPath == "/soa_vector/ref(_ref)"` or
+  `resolvedPath.rfind("/soa_vector/ref(_ref)", 0)` checks.
 - `arg-pack-dereference-struct-inference`: IR struct-type inference now
   propagates through `dereference(...)`, so indexed borrowed arg-pack values
   (for example `args<Reference<Map<K, V>>>`) preserve their struct identity
