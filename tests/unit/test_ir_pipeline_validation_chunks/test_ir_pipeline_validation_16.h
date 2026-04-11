@@ -764,7 +764,11 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const std::string samePathSoaNonRefHelper = \"/soa_vector/\" + helperName;") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "isLegacyOrCanonicalSoaHelperPath(samePathSoaNonRefHelper,") !=
+            "isLegacyOrCanonicalSoaHelperPath(samePathSoaNonRefHelper,") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "if (receiverEligibleForSamePathSoaHelper &&\n"
+            "          hasDefinitionFamilyPath(samePathSoaNonRefHelper)) {") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "return samePathSoaNonRefHelper;") !=

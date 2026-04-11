@@ -440,9 +440,7 @@ bool rewriteExpr(Expr &expr,
           receiverFamily == "soa_vector" ||
           (helperName == "count" && receiverFamily == "vector");
       if (receiverEligibleForSamePathSoaHelper &&
-          hasDefinitionFamilyPath(samePathSoaNonRefHelper) &&
-          isLegacyOrCanonicalSoaHelperPath(samePathSoaNonRefHelper,
-                                           helperName)) {
+          hasDefinitionFamilyPath(samePathSoaNonRefHelper)) {
         return samePathSoaNonRefHelper;
       }
     }
