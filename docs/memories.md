@@ -532,7 +532,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   method-target builtin SoA helper import/local-definition `to_aos(_ref)`
   matching now routes through explicit shared
   `isLegacyOrCanonicalSoaHelperPath(...)` checks for both `to_aos` and
-  `to_aos_ref` instead of broad canonical-family predicates.
+  `to_aos_ref` instead of broad canonical-family predicates, and template-
+  monomorph method-target same-path `to_aos(_ref)` fallback family gating now
+  routes through explicit shared `isLegacyOrCanonicalSoaHelperPath(...)`
+  checks for `to_aos` and `to_aos_ref` instead of broad
+  `isCanonicalSoaToAosHelperPath(...)` family predicates.
 - `semantic-soa-s2-canonical-count-get-bridge-substrate-2026-04`: S2 inline-
   parameter bridge matching now treats canonical `/std/collections/soa_vector`
   `count|get` callee paths (plus same-path aliases) as bridge-eligible for
