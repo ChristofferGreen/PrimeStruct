@@ -1561,6 +1561,14 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticProduct.find("std::vector<std::size_t> onErrorFactIndices;") !=
         std::string::npos);
+  const size_t moduleArtifactsStart =
+      semanticProduct.find("struct SemanticProgramModuleResolvedArtifacts {");
+  REQUIRE(moduleArtifactsStart != std::string::npos);
+  const size_t moduleArtifactsEnd = semanticProduct.find("};", moduleArtifactsStart);
+  REQUIRE(moduleArtifactsEnd != std::string::npos);
+  const std::string moduleArtifactsBlock =
+      semanticProduct.substr(moduleArtifactsStart, moduleArtifactsEnd - moduleArtifactsStart);
+  CHECK(moduleArtifactsBlock.find("std::vector<SemanticProgram") == std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramStructFieldMetadata") != std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramModuleResolvedArtifacts> moduleResolvedArtifacts;") !=
         std::string::npos);

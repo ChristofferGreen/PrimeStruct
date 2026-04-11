@@ -25,7 +25,6 @@ Order rule: execute leaves top-to-bottom. Each leaf below is scoped to one code-
 P0 - Reproducible measurement and attribution
 
 P1 - Immediate peak-RSS reductions in existing pipeline
-- ○ [P1-13] Migrate one remaining high-volume semantic-product fact family (if any still copied per-module) to canonical vector index storage with formatter parity checks.
 
 P2 - Traversal and allocation churn reductions
 - ○ [P2-11] Merge one additional overlapping semantic snapshot traversal pair into a shared collector path with output-order parity coverage.
