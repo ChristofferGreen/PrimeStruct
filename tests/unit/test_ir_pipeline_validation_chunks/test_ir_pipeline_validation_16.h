@@ -587,7 +587,16 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "path == \"/std/collections/soa_vector/get_ref\"") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "path == \"/soa_vector/get_ref\"") !=
+            "path == \"/soa_vector/get_ref\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "constexpr const char *kLegacyPrefix = \"/soa_vector/\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "constexpr const char *kCanonicalPrefix = \"/std/collections/soa_vector/\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "isSyntheticSamePathSoaCarryNonRefHelperPath(path)") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "auto canonicalizeLegacySoaRefHelperPath =") ==

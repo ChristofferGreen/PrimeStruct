@@ -172,6 +172,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `/std/collections/soa_vector/ref(_ref)` path checks after
   `canonicalizeLegacySoaRefHelperPath(...)`; ref-family matching now relies on
   canonicalized-path checks in that predicate.
+- `soa-monomorph-template-carry-nonref-helper-path-factoring`:
+  template-monomorph expression-rewrite synthetic same-path SoA template-carry
+  helper-path predicate now factors legacy/canonical non-ref helper-path
+  matching through `isSyntheticSamePathSoaCarryNonRefHelperPath(...)` instead
+  of duplicated inline helper-path disjunctions, while keeping canonicalized
+  `ref`/`ref_ref` matching unchanged.
 - `soa-monomorph-implicit-ref-path-canonicalization`: template-monomorph
   implicit-template SoA pending `ref`/`ref_ref` helper gating now canonicalizes
   resolved helper paths (template-suffix stripping plus legacy

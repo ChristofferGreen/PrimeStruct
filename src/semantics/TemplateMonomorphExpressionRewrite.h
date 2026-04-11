@@ -108,17 +108,23 @@ bool rewriteExpr(Expr &expr,
            path == "/std/collections/soa_vector/to_aos" || path == "/std/collections/soa_vector/to_aos_ref";
   };
   auto isSyntheticSamePathSoaHelperTemplateCarryPath = [&](const std::string &path) {
+    auto isSyntheticSamePathSoaCarryNonRefHelperPath = [](const std::string &candidate) {
+      constexpr const char *kLegacyPrefix = "/soa_vector/";
+      constexpr const char *kCanonicalPrefix = "/std/collections/soa_vector/";
+      std::string helperName;
+      if (candidate.rfind(kLegacyPrefix, 0) == 0) {
+        helperName = candidate.substr(std::char_traits<char>::length(kLegacyPrefix));
+      } else if (candidate.rfind(kCanonicalPrefix, 0) == 0) {
+        helperName = candidate.substr(std::char_traits<char>::length(kCanonicalPrefix));
+      }
+      return helperName == "count" || helperName == "get" ||
+             helperName == "get_ref" || helperName == "push" ||
+             helperName == "reserve";
+    };
     const std::string canonicalPath = canonicalizeLegacySoaRefHelperPath(path);
-    return path == "/soa_vector/count" || path == "/soa_vector/get" ||
-           path == "/soa_vector/get_ref" ||
+    return isSyntheticSamePathSoaCarryNonRefHelperPath(path) ||
            canonicalPath == "/std/collections/soa_vector/ref" ||
-           canonicalPath == "/std/collections/soa_vector/ref_ref" ||
-           path == "/soa_vector/push" || path == "/soa_vector/reserve" ||
-           path == "/std/collections/soa_vector/count" ||
-           path == "/std/collections/soa_vector/get" ||
-           path == "/std/collections/soa_vector/get_ref" ||
-           path == "/std/collections/soa_vector/push" ||
-           path == "/std/collections/soa_vector/reserve";
+           canonicalPath == "/std/collections/soa_vector/ref_ref";
   };
   auto mapHelperReceiverExpr = [&](const Expr &candidate) -> const Expr * {
     if (candidate.isMethodCall) {
