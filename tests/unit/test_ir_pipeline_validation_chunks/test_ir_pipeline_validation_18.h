@@ -363,10 +363,13 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferCollectionDispatchSource.find("bool SemanticsValidator::resolveBuiltinCollectionAccessCallReturnKind") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSource.find(
-            "const auto canonicalizeSoaMethodResolvedPath = [](std::string path)") !=
+            "const auto canonicalizeSoaMethodResolvedPath = [](std::string path)") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSource.find(
-            "const std::string resolvedSoaCanonical = canonicalizeSoaMethodResolvedPath(resolvedPath);") !=
+            "canonicalizeLegacySoaRefHelperPath(resolvedPath)") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find(
+            "std::string resolvedSoaCanonical =") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSource.find("resolvedPath == \"/soa_vector/get\"") ==
         std::string::npos);

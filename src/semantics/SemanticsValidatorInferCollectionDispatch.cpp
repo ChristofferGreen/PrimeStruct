@@ -7,26 +7,13 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     const Expr &receiverExpr,
     const BuiltinCollectionDispatchResolvers &resolvers,
     ReturnKind &kindOut) const {
-  const auto canonicalizeSoaMethodResolvedPath = [](std::string path) {
-    const size_t templateSuffix = path.find("__t");
-    if (templateSuffix != std::string::npos) {
-      path.erase(templateSuffix);
-    }
-    if (path == "/soa_vector/get") {
-      return std::string("/std/collections/soa_vector/get");
-    }
-    if (path == "/soa_vector/get_ref") {
-      return std::string("/std/collections/soa_vector/get_ref");
-    }
-    if (path == "/soa_vector/ref") {
-      return std::string("/std/collections/soa_vector/ref");
-    }
-    if (path == "/soa_vector/ref_ref") {
-      return std::string("/std/collections/soa_vector/ref_ref");
-    }
-    return path;
-  };
-  const std::string resolvedSoaCanonical = canonicalizeSoaMethodResolvedPath(resolvedPath);
+  std::string resolvedSoaCanonical =
+      canonicalizeLegacySoaRefHelperPath(resolvedPath);
+  if (resolvedSoaCanonical == "/soa_vector/get") {
+    resolvedSoaCanonical = "/std/collections/soa_vector/get";
+  } else if (resolvedSoaCanonical == "/soa_vector/get_ref") {
+    resolvedSoaCanonical = "/std/collections/soa_vector/get_ref";
+  }
   if (resolvedPath == "/array/count" || resolvedPath == "/vector/count" ||
       resolvedPath == "/std/collections/vector/count" || resolvedPath == "/string/count" ||
       resolvedPath == "/map/count" || resolvedPath == "/std/collections/map/count" ||
