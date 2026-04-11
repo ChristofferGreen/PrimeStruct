@@ -122,33 +122,32 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       }
       const std::string resolvedPathCanonical =
           canonicalizeLegacySoaRefHelperPath(resolvedPathNoTemplate);
+      const bool resolvedCanonicalRefLike =
+          isCanonicalSoaRefLikeHelperPath(resolvedPathCanonical);
+      const bool resolvedExperimentalRefLike =
+          resolvedPathNoTemplate.rfind(
+              "/std/collections/experimental_soa_vector/soaVectorRef",
+              0) == 0 ||
+          resolvedPathNoTemplate.rfind(
+              "/std/collections/experimental_soa_vector/soaVectorRefRef",
+              0) == 0;
       const auto soaAccessHelper = builtinSoaAccessHelperName(expr, params, locals);
       const bool oldSurfaceCallShape =
           soaAccessHelper.has_value() &&
-          ((*soaAccessHelper == "ref" &&
-            ((isSimpleCallName(expr, "ref")) ||
-             (expr.isMethodCall && expr.name == "ref") ||
-             resolvedPathCanonical == "/std/collections/soa_vector/ref")) ||
-           (*soaAccessHelper == "ref_ref" &&
-            ((isSimpleCallName(expr, "ref_ref")) ||
-             (expr.isMethodCall && expr.name == "ref_ref") ||
-             resolvedPathCanonical == "/std/collections/soa_vector/ref_ref")));
+          (((*soaAccessHelper == "ref" &&
+             isSimpleCallName(expr, "ref")) ||
+            (*soaAccessHelper == "ref_ref" &&
+             isSimpleCallName(expr, "ref_ref"))) ||
+           (expr.isMethodCall && expr.name == *soaAccessHelper) ||
+           isLegacyOrCanonicalSoaHelperPath(resolvedPathCanonical,
+                                            *soaAccessHelper));
       if (oldSurfaceCallShape &&
           hasVisibleSoaHelperTargetForCurrentImports(*soaAccessHelper)) {
         return false;
       }
       if (expr.isMethodCall) {
         if (expr.name != "ref" && expr.name != "ref_ref" &&
-            resolvedPathCanonical.rfind("/std/collections/soa_vector/ref", 0) !=
-                0 &&
-            resolvedPathCanonical.rfind("/std/collections/soa_vector/ref_ref",
-                                        0) != 0 &&
-            resolvedPathNoTemplate.rfind(
-                "/std/collections/experimental_soa_vector/soaVectorRef",
-                0) != 0 &&
-            resolvedPathNoTemplate.rfind(
-                "/std/collections/experimental_soa_vector/soaVectorRefRef",
-                0) != 0) {
+            !resolvedCanonicalRefLike && !resolvedExperimentalRefLike) {
           return false;
         }
         receiverOut = &expr.args.front();
@@ -156,16 +155,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       }
       if (!isSimpleCallName(expr, "ref") &&
           !isSimpleCallName(expr, "ref_ref") &&
-          resolvedPathCanonical.rfind("/std/collections/soa_vector/ref", 0) !=
-              0 &&
-          resolvedPathCanonical.rfind("/std/collections/soa_vector/ref_ref",
-                                      0) != 0 &&
-          resolvedPathNoTemplate.rfind(
-              "/std/collections/experimental_soa_vector/soaVectorRef",
-              0) != 0 &&
-          resolvedPathNoTemplate.rfind(
-              "/std/collections/experimental_soa_vector/soaVectorRefRef",
-              0) != 0 &&
+          !resolvedCanonicalRefLike && !resolvedExperimentalRefLike &&
           resolvedPathNoTemplate.rfind(
               "/std/collections/experimental_soa_storage/soaColumnRef",
               0) != 0) {

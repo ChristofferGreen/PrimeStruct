@@ -111,13 +111,19 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - `soa-statement-returns-shared-ref-canonicalizer`: statement-return SoA
   `ref`/`ref_ref` escape classification now reuses shared
   `canonicalizeLegacySoaRefHelperPath(...)` semantics helper wiring instead
-  of a local lambda, and source-lock coverage now asserts the shared helper
-  call path while rejecting local canonicalization lambda definitions there.
+  of a local lambda; canonical SoA `ref`/`ref_ref` helper-family detection
+  there now routes through shared `isCanonicalSoaRefLikeHelperPath(...)`
+  checks instead of duplicated canonical-path prefix comparisons, and
+  source-lock coverage now asserts those shared helper call paths while
+  rejecting local canonicalization lambda definitions there.
 - `soa-statement-bindings-shared-ref-canonicalizer`: statement-binding SoA
   standalone `ref`/`ref_ref` classifiers now reuse shared
   `canonicalizeLegacySoaRefHelperPath(...)` semantics helper wiring instead
-  of a local lambda, and source-lock coverage now asserts the shared helper
-  call path while rejecting local canonicalization lambda definitions there.
+  of a local lambda; canonical SoA `ref`/`ref_ref` helper-family detection
+  there now routes through shared `isCanonicalSoaRefLikeHelperPath(...)`
+  checks instead of duplicated canonical-path prefix comparisons, and
+  source-lock coverage now asserts those shared helper call paths while
+  rejecting local canonicalization lambda definitions there.
 - `soa-infer-return-shared-ref-canonicalizer`: infer-collection return
   inference now reuses shared `canonicalizeLegacySoaRefHelperPath(...)`
   semantics helper wiring for SoA `ref`/`ref_ref` canonicalization instead of

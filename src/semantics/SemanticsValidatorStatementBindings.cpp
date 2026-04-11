@@ -902,30 +902,21 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       (void)resolveConcreteCallPath(expr, resolvedPath);
       const std::string resolvedPathCanonical =
           canonicalizeLegacySoaRefHelperPath(resolvedPath);
+      const bool resolvedCanonicalRefLike =
+          isCanonicalSoaRefLikeHelperPath(resolvedPathCanonical);
+      const bool resolvedExperimentalRefLike =
+          resolvedPathCanonical.rfind(
+              "/std/collections/experimental_soa_vector/soaVectorRef",
+              0) == 0 ||
+          resolvedPathCanonical.rfind(
+              "/std/collections/experimental_soa_vector/soaVectorRefRef",
+              0) == 0;
       if (expr.isMethodCall) {
         return expr.name == "ref" ||
-               resolvedPathCanonical.rfind("/std/collections/soa_vector/ref",
-                                           0) == 0 ||
-               resolvedPathCanonical.rfind("/std/collections/soa_vector/ref_ref",
-                                           0) == 0 ||
-               resolvedPathCanonical.rfind(
-                   "/std/collections/experimental_soa_vector/soaVectorRef",
-                   0) == 0 ||
-               resolvedPathCanonical.rfind(
-                   "/std/collections/experimental_soa_vector/soaVectorRefRef",
-                   0) == 0;
+               resolvedCanonicalRefLike || resolvedExperimentalRefLike;
       }
       return isSimpleCallName(expr, "ref") ||
-             resolvedPathCanonical.rfind("/std/collections/soa_vector/ref",
-                                         0) == 0 ||
-             resolvedPathCanonical.rfind("/std/collections/soa_vector/ref_ref",
-                                         0) == 0 ||
-             resolvedPathCanonical.rfind(
-                 "/std/collections/experimental_soa_vector/soaVectorRef",
-                 0) == 0 ||
-             resolvedPathCanonical.rfind(
-                 "/std/collections/experimental_soa_vector/soaVectorRefRef",
-                 0) == 0 ||
+             resolvedCanonicalRefLike || resolvedExperimentalRefLike ||
              resolvedPathCanonical.rfind(
                  "/std/collections/experimental_soa_storage/soaColumnRef",
                  0) == 0;
@@ -1043,32 +1034,23 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
             (void)resolveConcreteCallPath(expr, resolvedPath);
             const std::string resolvedPathCanonical =
                 canonicalizeLegacySoaRefHelperPath(resolvedPath);
+            const bool resolvedCanonicalRefLike =
+                isCanonicalSoaRefLikeHelperPath(resolvedPathCanonical);
+            const bool resolvedExperimentalRefLike =
+                resolvedPathCanonical.rfind(
+                    "/std/collections/experimental_soa_vector/soaVectorRef",
+                    0) == 0 ||
+                resolvedPathCanonical.rfind(
+                    "/std/collections/experimental_soa_vector/soaVectorRefRef",
+                    0) == 0;
             const bool isMethodRefCall =
                 expr.isMethodCall &&
                 (expr.name == "ref" ||
-                 resolvedPathCanonical.rfind("/std/collections/soa_vector/ref",
-                                             0) == 0 ||
-                 resolvedPathCanonical.rfind("/std/collections/soa_vector/ref_ref",
-                                             0) == 0 ||
-                 resolvedPathCanonical.rfind(
-                     "/std/collections/experimental_soa_vector/soaVectorRef",
-                     0) == 0 ||
-                 resolvedPathCanonical.rfind(
-                     "/std/collections/experimental_soa_vector/soaVectorRefRef",
-                     0) == 0);
+                 resolvedCanonicalRefLike || resolvedExperimentalRefLike);
             const bool isHelperRefCall =
                 !expr.isMethodCall &&
                 (isSimpleCallName(expr, "ref") ||
-                 resolvedPathCanonical.rfind("/std/collections/soa_vector/ref",
-                                             0) == 0 ||
-                 resolvedPathCanonical.rfind("/std/collections/soa_vector/ref_ref",
-                                             0) == 0 ||
-                 resolvedPathCanonical.rfind(
-                     "/std/collections/experimental_soa_vector/soaVectorRef",
-                     0) == 0 ||
-                 resolvedPathCanonical.rfind(
-                     "/std/collections/experimental_soa_vector/soaVectorRefRef",
-                     0) == 0 ||
+                 resolvedCanonicalRefLike || resolvedExperimentalRefLike ||
                  resolvedPathCanonical.rfind(
                      "/std/collections/experimental_soa_storage/soaColumnRef",
                      0) == 0);
