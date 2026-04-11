@@ -183,6 +183,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   legacy/canonical `get_ref` helper-path matching through
   `isLegacyOrCanonicalSoaHelperPath(...)` instead of duplicated direct
   `/soa_vector/get_ref` and `/std/collections/soa_vector/get_ref` path checks.
+- `soa-monomorph-fallback-ref-like-canonical-path-factoring`:
+  template-monomorph fallback stdlib implicit-template path gating now routes
+  canonical `ref`/`ref_ref` `pathCanonical` checks through
+  `isCanonicalSoaRefLikePath(...)` instead of duplicated direct
+  `pathCanonical == "/std/collections/soa_vector/ref(_ref)"` comparisons.
 - `soa-monomorph-implicit-ref-path-canonicalization`: template-monomorph
   implicit-template SoA pending `ref`/`ref_ref` helper gating now canonicalizes
   resolved helper paths (template-suffix stripping plus legacy

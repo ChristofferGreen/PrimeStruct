@@ -676,10 +676,13 @@ std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
     }
     return false;
   };
+  auto isCanonicalSoaRefLikePath = [](const std::string &candidate) {
+    return candidate == "/std/collections/soa_vector/ref" ||
+           candidate == "/std/collections/soa_vector/ref_ref";
+  };
   const std::string pathCanonical = canonicalizeLegacySoaRefHelperPath(path);
   if (isLegacyOrCanonicalSoaHelperPath(path, "get_ref") ||
-      pathCanonical == "/std/collections/soa_vector/ref" ||
-      pathCanonical == "/std/collections/soa_vector/ref_ref") {
+      isCanonicalSoaRefLikePath(pathCanonical)) {
     return path;
   }
   const bool preserveCompatibilityTemplatePath = isCollectionCompatibilityTemplateFallbackPath(path);
