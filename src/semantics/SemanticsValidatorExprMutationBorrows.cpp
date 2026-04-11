@@ -368,21 +368,6 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
   };
   auto resolveExperimentalSoaRefReceiverTarget =
       [&](const Expr &refExpr, const Expr *&receiverTargetOut) -> bool {
-    const auto canonicalizeLegacySoaRefPath =
-        [](std::string_view resolvedPath) -> std::string {
-      std::string canonicalPath(resolvedPath);
-      const size_t templateSuffix = canonicalPath.find("__t");
-      if (templateSuffix != std::string::npos) {
-        canonicalPath.erase(templateSuffix);
-      }
-      if (canonicalPath == "/soa_vector/ref") {
-        return "/std/collections/soa_vector/ref";
-      }
-      if (canonicalPath == "/soa_vector/ref_ref") {
-        return "/std/collections/soa_vector/ref_ref";
-      }
-      return canonicalPath;
-    };
     auto hasRefLikeSuffix = [](const std::string &resolvedPath) {
       return (resolvedPath.size() >= 4 &&
               resolvedPath.compare(resolvedPath.size() - 4, 4, "/ref") == 0) ||
@@ -443,7 +428,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
             0) == 0;
     const std::string resolvedCallPath = resolveCalleePath(refExpr);
     const std::string resolvedPathCanonical =
-        canonicalizeLegacySoaRefPath(resolvedCallPath);
+        canonicalizeLegacySoaRefHelperPath(resolvedCallPath);
     if ((!isBareRefCall && !isCanonicalRefCall &&
          !isBuiltinSoaRefPath(resolvedPathCanonical, false)) ||
         refExpr.args.size() != 2) {

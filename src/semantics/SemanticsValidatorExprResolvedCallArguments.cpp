@@ -25,21 +25,6 @@ bool isCanonicalMapConstructorResolvedPath(const std::string &resolvedPath) {
          normalizedPath == "/std/collections/mapOct";
 }
 
-std::string canonicalizeLegacySoaRefResolvedPath(std::string_view path) {
-  std::string resolvedPath(path);
-  const size_t templateSuffix = resolvedPath.find("__t");
-  if (templateSuffix != std::string::npos) {
-    resolvedPath.erase(templateSuffix);
-  }
-  if (resolvedPath == "/soa_vector/ref") {
-    return "/std/collections/soa_vector/ref";
-  }
-  if (resolvedPath == "/soa_vector/ref_ref") {
-    return "/std/collections/soa_vector/ref_ref";
-  }
-  return resolvedPath;
-}
-
 } // namespace
 
 bool SemanticsValidator::validateExprResolvedCallArguments(
@@ -249,7 +234,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     }
     const std::string resolvedPath = resolveCalleePath(arg);
     const std::string resolvedPathCanonical =
-        canonicalizeLegacySoaRefResolvedPath(resolvedPath);
+        canonicalizeLegacySoaRefHelperPath(resolvedPath);
     if (!isSimpleCallName(arg, "ref") &&
         !isSimpleCallName(arg, "ref_ref") &&
         resolvedPathCanonical.rfind("/std/collections/soa_vector/ref", 0) != 0 &&

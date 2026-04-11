@@ -1106,7 +1106,10 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprResolvedCallArgumentsSource.find("reportBuiltinSoaPendingExprDiagnostic(*arg, params, locals)") ==
         std::string::npos);
   CHECK(exprResolvedCallArgumentsSource.find(
-            "std::string canonicalizeLegacySoaRefResolvedPath(std::string_view path)") !=
+            "std::string canonicalizeLegacySoaRefResolvedPath(std::string_view path)") ==
+        std::string::npos);
+  CHECK(exprResolvedCallArgumentsSource.find(
+            "canonicalizeLegacySoaRefHelperPath(resolvedPath)") !=
         std::string::npos);
   CHECK(exprResolvedCallArgumentsSource.find(
             "const std::string resolvedPathCanonical =") !=
@@ -1121,7 +1124,10 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "resolvedPathCanonical.rfind(\"/std/collections/soa_vector/ref_ref\", 0) !=") !=
         std::string::npos);
   CHECK(exprMutationBorrowsSource.find(
-            "const auto canonicalizeLegacySoaRefPath =") !=
+            "const auto canonicalizeLegacySoaRefPath =") ==
+        std::string::npos);
+  CHECK(exprMutationBorrowsSource.find(
+            "canonicalizeLegacySoaRefHelperPath(resolvedCallPath)") !=
         std::string::npos);
   CHECK(exprMutationBorrowsSource.find(
             "const std::string resolvedPathCanonical =") !=
