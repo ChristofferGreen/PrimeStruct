@@ -4,6 +4,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `soa-inline-param-direct-experimental-reject-coverage`: native compile-run
+  coverage now locks that direct
+  `/std/collections/experimental_soa_vector_conversions/soaVectorToAos`
+  calls on builtin `soa_vector<T>` fail during lowering with a struct-parameter
+  mismatch (`got /soa_vector`), complementing existing IR inline-parameter
+  rejection coverage for both `soaVectorToAos` and `soaVectorToAosRef`.
 - `soa-pending-diagnostics-canonicalized`: direct pending SoA borrowed/field-view
   rejects now canonicalize onto stdlib helper-contract unavailable-method
   diagnostics (`/std/collections/soa_vector/ref(_ref)` and
