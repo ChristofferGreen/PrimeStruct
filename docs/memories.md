@@ -16,6 +16,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
   helper-family matching through `isCanonicalSoaRefLikeHelperPath(...)`
   instead of direct canonical-path prefix checks; source-lock coverage in
   `test_ir_pipeline_validation_15` asserts that shared predicate wiring.
+- `soa-resolved-call-args-ref-family-shared-predicate`: resolved-call
+  argument SoA `ref`/`ref_ref` helper detection now canonicalizes helper
+  paths and routes canonical helper-family matching through
+  `isCanonicalSoaRefLikeHelperPath(...)` (while preserving experimental helper
+  checks) instead of direct canonical-path prefix comparisons; source-lock
+  coverage in `test_ir_pipeline_validation_15` asserts that shared predicate
+  wiring.
 - `soa-pending-diagnostics-canonicalized`: direct pending SoA borrowed/field-view
   rejects now canonicalize onto stdlib helper-contract unavailable-method
   diagnostics (`/std/collections/soa_vector/ref(_ref)` and

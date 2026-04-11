@@ -235,16 +235,22 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     const std::string resolvedPath = resolveCalleePath(arg);
     const std::string resolvedPathCanonical =
         canonicalizeLegacySoaRefHelperPath(resolvedPath);
+    const bool matchesCanonicalSoaRefHelperPath =
+        isCanonicalSoaRefLikeHelperPath(resolvedPathCanonical);
+    const bool matchesExperimentalSoaRefHelperPath =
+        resolvedPathCanonical.rfind(
+            "/std/collections/experimental_soa_vector/soaVectorRef",
+            0) == 0 ||
+        resolvedPathCanonical.rfind(
+            "/std/collections/experimental_soa_vector/soaVectorRefRef",
+            0) == 0 ||
+        resolvedPathCanonical.rfind(
+            "/std/collections/experimental_soa_storage/soaColumnRef",
+            0) == 0;
     if (!isSimpleCallName(arg, "ref") &&
         !isSimpleCallName(arg, "ref_ref") &&
-        resolvedPathCanonical.rfind("/std/collections/soa_vector/ref", 0) != 0 &&
-        resolvedPathCanonical.rfind("/std/collections/soa_vector/ref_ref", 0) != 0 &&
-        resolvedPathCanonical.rfind("/std/collections/experimental_soa_vector/soaVectorRef", 0) !=
-            0 &&
-        resolvedPathCanonical.rfind("/std/collections/experimental_soa_vector/soaVectorRefRef",
-                                    0) != 0 &&
-        resolvedPathCanonical.rfind("/std/collections/experimental_soa_storage/soaColumnRef", 0) !=
-            0) {
+        !matchesCanonicalSoaRefHelperPath &&
+        !matchesExperimentalSoaRefHelperPath) {
       return false;
     }
     receiverOut = &arg.args.front();
