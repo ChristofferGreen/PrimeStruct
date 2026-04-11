@@ -463,14 +463,14 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
            (isSimpleCallName(candidate, "get_ref") ||
             (candidate.isMethodCall && candidate.name == "get_ref") ||
             resolvedSoaCanonical == "/std/collections/soa_vector/get_ref")) ||
-          (*soaAccessHelper == "ref" &&
-           (isSimpleCallName(candidate, "ref") ||
-            (candidate.isMethodCall && candidate.name == "ref") ||
-            resolvedSoaCanonical == "/std/collections/soa_vector/ref")) ||
-          (*soaAccessHelper == "ref_ref" &&
-           (isSimpleCallName(candidate, "ref_ref") ||
-            (candidate.isMethodCall && candidate.name == "ref_ref") ||
-            resolvedSoaCanonical == "/std/collections/soa_vector/ref_ref"));
+          ((*soaAccessHelper == "ref" || *soaAccessHelper == "ref_ref") &&
+           (((*soaAccessHelper == "ref" &&
+              isSimpleCallName(candidate, "ref")) ||
+             (*soaAccessHelper == "ref_ref" &&
+              isSimpleCallName(candidate, "ref_ref"))) ||
+            (candidate.isMethodCall && candidate.name == *soaAccessHelper) ||
+            isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical,
+                                             *soaAccessHelper)));
       if (!(hasVisibleSoaHelperTargetForCurrentImports(*soaAccessHelper) &&
             oldSurfaceCallShape)) {
         std::string elemType;

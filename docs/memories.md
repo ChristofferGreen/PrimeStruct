@@ -118,8 +118,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - `soa-infer-return-shared-ref-canonicalizer`: infer-collection return
   inference now reuses shared `canonicalizeLegacySoaRefHelperPath(...)`
   semantics helper wiring for SoA `ref`/`ref_ref` canonicalization instead of
-  a local lambda, while keeping explicit legacy get/get_ref remapping, and
-  source-lock coverage now asserts that shared helper call path.
+  a local lambda, while keeping explicit legacy get/get_ref remapping;
+  canonical SoA `ref`/`ref_ref` helper-family old-surface gating there now
+  routes through shared `isLegacyOrCanonicalSoaHelperPath(...)` checks
+  instead of direct canonical-path comparisons, and source-lock coverage now
+  asserts those shared helper call paths.
 - `soa-ir-lowerer-mutation-shared-ref-canonicalizer`: IR-lowerer
   collection-mutation same-path SoA `ref` write-target visibility probes now
   reuse shared `semantics::canonicalizeLegacySoaRefHelperPath(...)` wiring

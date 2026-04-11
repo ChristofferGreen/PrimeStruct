@@ -1285,7 +1285,25 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(inferCollectionReturnInferenceSource.find("resolvedCandidate == \"/soa_vector/ref_ref\"") ==
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
-            "resolvedSoaCanonical == \"/std/collections/soa_vector/ref_ref\"") !=
+            "(*soaAccessHelper == \"ref\" &&") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "isSimpleCallName(candidate, \"ref\")") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "isSimpleCallName(candidate, \"ref_ref\")") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "isSimpleCallName(candidate, *soaAccessHelper)") ==
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "candidate.name == *soaAccessHelper") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical,") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "resolvedSoaCanonical == \"/std/collections/soa_vector/ref_ref\"") ==
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
             "(*soaAccessHelper == \"get_ref\" &&") !=
