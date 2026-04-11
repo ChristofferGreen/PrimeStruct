@@ -685,6 +685,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(builtinPathHelpersSource.find(
             "bool splitSoaFieldViewHelperPath(std::string_view path, std::string *fieldNameOut)") !=
         std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
+            "std::string canonicalizeLegacySoaToAosHelperPath(std::string_view path)") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
+            "bool isCanonicalSoaToAosHelperPath(std::string_view path)") !=
+        std::string::npos);
   CHECK(builtinPathHelpersSource.find("\"/soa_vector/field_view/\"") == std::string::npos);
   CHECK(builtinPathHelpersSource.find(
             "const size_t templateSuffix = resolvedPath.find(\"__t\");") !=
@@ -845,10 +851,16 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "std::string soaUnavailableMethodDiagnostic(std::string_view resolvedPath);") !=
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
+            "std::string canonicalizeLegacySoaToAosHelperPath(std::string_view path);") !=
+        std::string::npos);
+  CHECK(semanticsHelpersSource.find(
             "std::string canonicalizeLegacySoaRefHelperPath(std::string_view path);") !=
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
             "bool isLegacyOrCanonicalSoaHelperPath(std::string_view path, std::string_view helperName);") !=
+        std::string::npos);
+  CHECK(semanticsHelpersSource.find(
+            "bool isCanonicalSoaToAosHelperPath(std::string_view path);") !=
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
             "bool isCanonicalSoaRefLikeHelperPath(std::string_view path);") !=
@@ -1020,6 +1032,24 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "resolvedOut == \"/std/collections/soa_vector/get_ref\"") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "const std::string resolvedSoaToAosCanonical =") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "canonicalizeLegacySoaToAosHelperPath(resolveCalleePath(target))") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical)") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "resolveCalleePath(target) == \"/to_aos\"") ==
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "resolveCalleePath(target) == \"/to_aos_ref\"") ==
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "resolveCalleePath(target) == \"/soa_vector/to_aos_ref\"") ==
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "const std::string resolvedSoaRefCanonical =") !=

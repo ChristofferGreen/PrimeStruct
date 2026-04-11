@@ -201,6 +201,24 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::resolveCallCollectionTemplateArgs(") !=
         std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
+            "const std::string resolvedSoaToAosCanonical =") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
+            "canonicalizeLegacySoaToAosHelperPath(resolveCalleePath(target))") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
+            "isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical)") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
+            "resolveCalleePath(target) == \"/to_aos\"") ==
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
+            "resolveCalleePath(target) == \"/to_aos_ref\"") ==
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
+            "resolveCalleePath(target) == \"/soa_vector/to_aos_ref\"") ==
+        std::string::npos);
   CHECK(semanticsInferSource.find("auto resolveIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==
         std::string::npos);
   CHECK(semanticsInferSource.find("auto resolveDereferencedIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") ==

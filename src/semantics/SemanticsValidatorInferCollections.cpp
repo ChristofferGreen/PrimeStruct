@@ -489,13 +489,11 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
         }
         return false;
       }
+      const std::string resolvedSoaToAosCanonical =
+          canonicalizeLegacySoaToAosHelperPath(resolveCalleePath(target));
       if (((!target.isMethodCall && isSimpleCallName(target, "to_aos")) ||
            (!target.isMethodCall && isSimpleCallName(target, "to_aos_ref")) ||
-           resolveCalleePath(target) == "/to_aos" ||
-           resolveCalleePath(target) == "/to_aos_ref" ||
-           resolveCalleePath(target) == "/soa_vector/to_aos_ref" ||
-           resolveCalleePath(target) == "/std/collections/soa_vector/to_aos" ||
-           resolveCalleePath(target) == "/std/collections/soa_vector/to_aos_ref") &&
+           isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical)) &&
           target.args.size() == 1) {
         return state->resolveSoaVectorTarget(target.args.front(), elemType);
       }

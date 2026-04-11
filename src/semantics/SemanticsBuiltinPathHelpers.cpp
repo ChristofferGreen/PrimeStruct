@@ -453,6 +453,21 @@ bool splitSoaFieldViewHelperPath(std::string_view path, std::string *fieldNameOu
   return false;
 }
 
+std::string canonicalizeLegacySoaToAosHelperPath(std::string_view path) {
+  std::string canonicalPath(path);
+  const size_t templateSuffix = canonicalPath.find("__t");
+  if (templateSuffix != std::string::npos) {
+    canonicalPath.erase(templateSuffix);
+  }
+  if (canonicalPath == "/to_aos") {
+    return "/std/collections/soa_vector/to_aos";
+  }
+  if (canonicalPath == "/to_aos_ref" || canonicalPath == "/soa_vector/to_aos_ref") {
+    return "/std/collections/soa_vector/to_aos_ref";
+  }
+  return canonicalPath;
+}
+
 std::string canonicalizeLegacySoaRefHelperPath(std::string_view path) {
   std::string canonicalPath(path);
   const size_t templateSuffix = canonicalPath.find("__t");
@@ -478,6 +493,11 @@ bool isLegacyOrCanonicalSoaHelperPath(std::string_view path, std::string_view he
     return path.substr(kCanonicalPrefix.size()) == helperName;
   }
   return false;
+}
+
+bool isCanonicalSoaToAosHelperPath(std::string_view path) {
+  return path == "/std/collections/soa_vector/to_aos" ||
+         path == "/std/collections/soa_vector/to_aos_ref";
 }
 
 bool isCanonicalSoaRefLikeHelperPath(std::string_view path) {

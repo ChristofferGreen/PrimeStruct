@@ -906,13 +906,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           return true;
         }
       }
+      const std::string resolvedSoaToAosCanonical =
+          canonicalizeLegacySoaToAosHelperPath(resolveCalleePath(target));
       if (((!target.isMethodCall && isSimpleCallName(target, "to_aos")) ||
            (!target.isMethodCall && isSimpleCallName(target, "to_aos_ref")) ||
-           resolveCalleePath(target) == "/to_aos" ||
-           resolveCalleePath(target) == "/to_aos_ref" ||
-           resolveCalleePath(target) == "/soa_vector/to_aos_ref" ||
-           resolveCalleePath(target) == "/std/collections/soa_vector/to_aos" ||
-           resolveCalleePath(target) == "/std/collections/soa_vector/to_aos_ref") &&
+           isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical)) &&
           target.args.size() == 1) {
         std::string sourceElemType;
         const Expr &source = target.args.front();
