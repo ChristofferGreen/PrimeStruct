@@ -436,9 +436,9 @@ bool rewriteExpr(Expr &expr,
         helperName != "to_aos_ref") {
       return path;
     }
+    const std::string receiverFamily = inferCollectionReceiverFamily(receiverExpr);
     if (helperName == "count" || helperName == "push" || helperName == "reserve") {
       const std::string samePathSoaNonRefHelper = "/soa_vector/" + helperName;
-      const std::string receiverFamily = inferCollectionReceiverFamily(receiverExpr);
       const bool receiverEligibleForSamePathSoaHelper =
           receiverFamily == "soa_vector" ||
           (helperName == "count" && receiverFamily == "vector");
@@ -455,8 +455,7 @@ bool rewriteExpr(Expr &expr,
           canonicalizeLegacySoaGetHelperPath(samePathGetHelper);
       if (hasDefinitionFamilyPath(samePathGetHelper) &&
           isLegacyOrCanonicalSoaHelperPath(canonicalGetHelper, helperName) &&
-          (inferCollectionReceiverFamily(receiverExpr) == "soa_vector" ||
-           inferCollectionReceiverFamily(receiverExpr) == "vector")) {
+          (receiverFamily == "soa_vector" || receiverFamily == "vector")) {
         return samePathGetHelper;
       }
     }
@@ -466,8 +465,7 @@ bool rewriteExpr(Expr &expr,
           canonicalizeLegacySoaRefHelperPath(samePathRefHelper);
       if (hasDefinitionFamilyPath(samePathRefHelper) &&
           isCanonicalSoaRefLikeHelperPath(canonicalRefHelper) &&
-          (inferCollectionReceiverFamily(receiverExpr) == "soa_vector" ||
-           inferCollectionReceiverFamily(receiverExpr) == "vector")) {
+          (receiverFamily == "soa_vector" || receiverFamily == "vector")) {
         return samePathRefHelper;
       }
     }
@@ -487,7 +485,6 @@ bool rewriteExpr(Expr &expr,
         return samePathToAosHelper;
       }
     }
-    const std::string receiverFamily = inferCollectionReceiverFamily(receiverExpr);
     if (receiverFamily == "soa_vector" && resolvesVectorFamilyPath) {
       const std::string preferred = "/std/collections/soa_vector/" + helperName;
       if (ctx.sourceDefs.count(preferred) > 0) {

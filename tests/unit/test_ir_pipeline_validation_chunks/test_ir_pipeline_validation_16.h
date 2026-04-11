@@ -716,6 +716,9 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "helperName == \"get\" || helperName == \"get_ref\"") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
+            "const std::string receiverFamily = inferCollectionReceiverFamily(receiverExpr);") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
             "const std::string samePathGetHelper = \"/soa_vector/\" + helperName;") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
@@ -765,6 +768,12 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "const std::string samePathRefHelper = \"/soa_vector/\" + helperName;") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "inferCollectionReceiverFamily(receiverExpr) == \"soa_vector\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "inferCollectionReceiverFamily(receiverExpr) == \"vector\"") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "canonicalizeLegacySoaRefHelperPath(samePathRefHelper)") !=
