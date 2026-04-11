@@ -543,7 +543,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   checks for `to_aos` and `to_aos_ref` instead of broad
   `isCanonicalSoaToAosHelperPath(...)` family predicates; after that
   migration, the now-unused `isCanonicalSoaToAosHelperPath(...)`
-  semantics-helper declaration/definition surface was removed.
+  semantics-helper declaration/definition surface was removed, and
+  build-initializer SoA helper same-path target synthesis now routes
+  through shared `preferredSamePathSoaHelperTarget(...)` so both `to_aos`
+  and `to_aos_ref` use root same-path helper targets (`/to_aos(_ref)`)
+  instead of legacy `/soa_vector/to_aos_ref`.
 - `semantic-soa-s2-canonical-count-get-bridge-substrate-2026-04`: S2 inline-
   parameter bridge matching now treats canonical `/std/collections/soa_vector`
   `count|get` callee paths (plus same-path aliases) as bridge-eligible for

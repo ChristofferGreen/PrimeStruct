@@ -11,6 +11,13 @@ std::string bindingTypeText(const BindingInfo &binding) {
   return binding.typeName + "<" + binding.typeTemplateArg + ">";
 }
 
+std::string preferredSamePathSoaHelperTarget(std::string_view helperName) {
+  if (helperName == "to_aos" || helperName == "to_aos_ref") {
+    return "/" + std::string(helperName);
+  }
+  return "/soa_vector/" + std::string(helperName);
+}
+
 } // namespace
 
 bool SemanticsValidator::graphBindingIsUsable(const BindingInfo &binding) const {
@@ -483,8 +490,7 @@ bool SemanticsValidator::hasVisibleDefinitionPathForCurrentImports(
 std::string SemanticsValidator::preferredSoaHelperTargetForCurrentImports(
     std::string_view helperName) const {
   const std::string helper(helperName);
-  const std::string samePath =
-      helper == "to_aos" ? "/to_aos" : "/soa_vector/" + helper;
+  const std::string samePath = preferredSamePathSoaHelperTarget(helper);
   if (hasVisibleDefinitionPathForCurrentImports(samePath)) {
     return samePath;
   }
@@ -494,16 +500,14 @@ std::string SemanticsValidator::preferredSoaHelperTargetForCurrentImports(
 bool SemanticsValidator::usesSamePathSoaHelperTargetForCurrentImports(
     std::string_view helperName) const {
   const std::string helper(helperName);
-  const std::string samePath =
-      helper == "to_aos" ? "/to_aos" : "/soa_vector/" + helper;
+  const std::string samePath = preferredSamePathSoaHelperTarget(helper);
   return preferredSoaHelperTargetForCurrentImports(helperName) == samePath;
 }
 
 bool SemanticsValidator::hasVisibleSoaHelperTargetForCurrentImports(
     std::string_view helperName) const {
   const std::string helper(helperName);
-  const std::string samePath =
-      helper == "to_aos" ? "/to_aos" : "/soa_vector/" + helper;
+  const std::string samePath = preferredSamePathSoaHelperTarget(helper);
   const std::string canonicalPath = "/std/collections/soa_vector/" + helper;
   return hasVisibleDefinitionPathForCurrentImports(samePath) ||
          hasVisibleDefinitionPathForCurrentImports(canonicalPath);
@@ -513,8 +517,7 @@ std::string SemanticsValidator::preferredSoaHelperTargetForCollectionType(
     std::string_view helperName,
     std::string_view collectionTypePath) const {
   const std::string helper(helperName);
-  const std::string samePath =
-      helper == "to_aos" ? "/to_aos" : "/soa_vector/" + helper;
+  const std::string samePath = preferredSamePathSoaHelperTarget(helper);
   const std::string preferredTarget =
       preferredSoaHelperTargetForCurrentImports(helperName);
   if (preferredTarget != samePath) {
@@ -547,8 +550,7 @@ bool SemanticsValidator::usesSamePathSoaHelperTargetForCollectionType(
     std::string_view helperName,
     std::string_view collectionTypePath) const {
   const std::string helper(helperName);
-  const std::string samePath =
-      helper == "to_aos" ? "/to_aos" : "/soa_vector/" + helper;
+  const std::string samePath = preferredSamePathSoaHelperTarget(helper);
   return preferredSoaHelperTargetForCollectionType(helperName,
                                                    collectionTypePath) ==
          samePath;

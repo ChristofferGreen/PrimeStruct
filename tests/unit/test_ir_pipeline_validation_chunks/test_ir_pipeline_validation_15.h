@@ -743,6 +743,15 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "std::string SemanticsValidator::preferredSoaHelperTargetForCurrentImports(") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
+            "std::string preferredSamePathSoaHelperTarget(std::string_view helperName)") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "if (helperName == \"to_aos\" || helperName == \"to_aos_ref\")") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "return \"/\" + std::string(helperName);") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
             "std::string SemanticsValidator::preferredVisibleDefinitionPathForCurrentImports(") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
@@ -767,6 +776,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(buildInitializerInferenceSource.find("resolved == \"/soa_vector/get\"") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find("resolved == \"/soa_vector/get_ref\"") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "helper == \"to_aos\" ? \"/to_aos\" : \"/soa_vector/\" + helper") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
             "resolvedCanonical == \"/std/collections/soa_vector/get_ref\"") !=
