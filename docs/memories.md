@@ -67,6 +67,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   canonical `/std/collections/soa_vector/*` before old-surface helper-family
   checks, and source-lock coverage now rejects direct
   `resolvedCandidate == "/soa_vector/*"` comparisons there.
+- `soa-expr-call-args-ref-path-canonicalization`: resolved-call argument SoA
+  standalone `ref`/`ref_ref` escape classification now canonicalizes resolved
+  helper paths (template-suffix stripping plus legacy `/soa_vector/ref(_ref)`
+  remapping) onto canonical `/std/collections/soa_vector/ref(_ref)` before
+  helper-family matching, and source-lock coverage now rejects direct legacy
+  `resolvedPath.rfind("/soa_vector/ref(_ref)", 0)` checks there.
 - `arg-pack-dereference-struct-inference`: IR struct-type inference now
   propagates through `dereference(...)`, so indexed borrowed arg-pack values
   (for example `args<Reference<Map<K, V>>>`) preserve their struct identity

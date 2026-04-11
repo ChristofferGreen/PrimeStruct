@@ -3,6 +3,7 @@
 
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace primec::semantics {
@@ -22,6 +23,21 @@ bool isCanonicalMapConstructorResolvedPath(const std::string &resolvedPath) {
          normalizedPath == "/std/collections/mapSext" ||
          normalizedPath == "/std/collections/mapSept" ||
          normalizedPath == "/std/collections/mapOct";
+}
+
+std::string canonicalizeLegacySoaRefResolvedPath(std::string_view path) {
+  std::string resolvedPath(path);
+  const size_t templateSuffix = resolvedPath.find("__t");
+  if (templateSuffix != std::string::npos) {
+    resolvedPath.erase(templateSuffix);
+  }
+  if (resolvedPath == "/soa_vector/ref") {
+    return "/std/collections/soa_vector/ref";
+  }
+  if (resolvedPath == "/soa_vector/ref_ref") {
+    return "/std/collections/soa_vector/ref_ref";
+  }
+  return resolvedPath;
 }
 
 } // namespace
@@ -232,15 +248,18 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
       return true;
     }
     const std::string resolvedPath = resolveCalleePath(arg);
+    const std::string resolvedPathCanonical =
+        canonicalizeLegacySoaRefResolvedPath(resolvedPath);
     if (!isSimpleCallName(arg, "ref") &&
         !isSimpleCallName(arg, "ref_ref") &&
-        resolvedPath.rfind("/std/collections/soa_vector/ref", 0) != 0 &&
-        resolvedPath.rfind("/std/collections/soa_vector/ref_ref", 0) != 0 &&
-        resolvedPath.rfind("/soa_vector/ref", 0) != 0 &&
-        resolvedPath.rfind("/soa_vector/ref_ref", 0) != 0 &&
-        resolvedPath.rfind("/std/collections/experimental_soa_vector/soaVectorRef", 0) != 0 &&
-        resolvedPath.rfind("/std/collections/experimental_soa_vector/soaVectorRefRef", 0) != 0 &&
-        resolvedPath.rfind("/std/collections/experimental_soa_storage/soaColumnRef", 0) != 0) {
+        resolvedPathCanonical.rfind("/std/collections/soa_vector/ref", 0) != 0 &&
+        resolvedPathCanonical.rfind("/std/collections/soa_vector/ref_ref", 0) != 0 &&
+        resolvedPathCanonical.rfind("/std/collections/experimental_soa_vector/soaVectorRef", 0) !=
+            0 &&
+        resolvedPathCanonical.rfind("/std/collections/experimental_soa_vector/soaVectorRefRef",
+                                    0) != 0 &&
+        resolvedPathCanonical.rfind("/std/collections/experimental_soa_storage/soaColumnRef", 0) !=
+            0) {
       return false;
     }
     receiverOut = &arg.args.front();
