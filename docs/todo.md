@@ -23,7 +23,6 @@ Sizing note: each leaf `○` item should fit in one code-affecting commit plus f
 Order rule: execute leaves top-to-bottom. Each leaf below is scoped to one code-affecting commit.
 
 P0 - Reproducible measurement and attribution
-- ○ [P0-15] Add a canonical benchmark regeneration command snippet in docs that maps each fixture/phase pair to its expected report rows.
 - ○ [P0-16] Add a focused benchmark-harness test that fails when required fixture/phase tuples are missing from regenerated reports.
 
 P1 - Immediate peak-RSS reductions in existing pipeline

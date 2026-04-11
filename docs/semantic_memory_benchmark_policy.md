@@ -79,6 +79,46 @@ When semantic behavior changes intentionally shift memory/runtime:
 4. Include rationale in the same change that modified semantic behavior.
 5. Keep this policy note and benchmark README references aligned.
 
+### Canonical Regeneration Command and Expected Rows
+
+Use this canonical regeneration command when refreshing the benchmark report used
+for policy updates:
+
+```bash
+python3 scripts/semantic_memory_benchmark.py \
+  --repo-root . \
+  --primec build-release/primec \
+  --runs 3 \
+  --phases ast-semantic,semantic-product \
+  --fixtures math_star_repro,no_import,math_vector,math_vector_matrix,non_math_large_include,inline_math_body,imported_math_body,scale_1x,scale_2x,scale_4x \
+  --report-json build-release/benchmarks/semantic_memory_report.json
+```
+
+Expected `(fixture, phase)` report rows for that canonical run:
+
+| Fixture | Phase |
+| --- | --- |
+| `math_star_repro` | `ast-semantic` |
+| `math_star_repro` | `semantic-product` |
+| `no_import` | `ast-semantic` |
+| `no_import` | `semantic-product` |
+| `math_vector` | `ast-semantic` |
+| `math_vector` | `semantic-product` |
+| `math_vector_matrix` | `ast-semantic` |
+| `math_vector_matrix` | `semantic-product` |
+| `non_math_large_include` | `ast-semantic` |
+| `non_math_large_include` | `semantic-product` |
+| `inline_math_body` | `ast-semantic` |
+| `inline_math_body` | `semantic-product` |
+| `imported_math_body` | `ast-semantic` |
+| `imported_math_body` | `semantic-product` |
+| `scale_1x` | `ast-semantic` |
+| `scale_1x` | `semantic-product` |
+| `scale_2x` | `ast-semantic` |
+| `scale_2x` | `semantic-product` |
+| `scale_4x` | `ast-semantic` |
+| `scale_4x` | `semantic-product` |
+
 ## Validation Tooling
 
 The policy can be checked locally with:
