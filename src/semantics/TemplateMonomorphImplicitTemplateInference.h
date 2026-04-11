@@ -203,23 +203,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
         hasVisibleSoaBorrowedHelper("ref");
     const bool hasVisibleSoaRefRefHelper =
         hasVisibleSoaBorrowedHelper("ref_ref");
-    const auto canonicalizeLegacySoaResolvedPath =
-        [](std::string_view path) -> std::string {
-      std::string resolvedPath(path);
-      const size_t templateSuffix = resolvedPath.find("__t");
-      if (templateSuffix != std::string::npos) {
-        resolvedPath.erase(templateSuffix);
-      }
-      if (resolvedPath == "/soa_vector/ref") {
-        return "/std/collections/soa_vector/ref";
-      }
-      if (resolvedPath == "/soa_vector/ref_ref") {
-        return "/std/collections/soa_vector/ref_ref";
-      }
-      return resolvedPath;
-    };
     const std::string resolvedSoaCanonical =
-        canonicalizeLegacySoaResolvedPath(resolvedPath);
+        canonicalizeLegacySoaRefHelperPath(resolvedPath);
     const bool isCanonicalBuiltinSoaRefCall =
         normalizedName == "std/collections/soa_vector/ref" ||
         resolvedSoaCanonical == "/std/collections/soa_vector/ref";

@@ -693,10 +693,16 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "std::string_view normalizedResolvedPath = resolvedPath;") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
-            "if (normalizedResolvedPath == \"/soa_vector/ref\")") !=
+            "const std::string canonicalSoaRefPath =") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
-            "if (normalizedResolvedPath == \"/soa_vector/ref_ref\")") !=
+            "canonicalizeLegacySoaRefHelperPath(normalizedResolvedPath)") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
+            "if (normalizedResolvedPath == \"/soa_vector/ref\")") ==
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
+            "if (normalizedResolvedPath == \"/soa_vector/ref_ref\")") ==
         std::string::npos);
   CHECK(builtinPathHelpersSource.find("namespace {\n\nstd::string soaFieldViewPendingDiagnostic(") ==
         std::string::npos);
@@ -822,6 +828,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
             "std::string soaUnavailableMethodDiagnostic(std::string_view resolvedPath);") !=
+        std::string::npos);
+  CHECK(semanticsHelpersSource.find(
+            "std::string canonicalizeLegacySoaRefHelperPath(std::string_view path);") !=
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("unknown method: /std/collections/soa_vector/field_view/") ==
         std::string::npos);

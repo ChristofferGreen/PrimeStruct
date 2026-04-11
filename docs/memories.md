@@ -90,6 +90,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   checks in both call and method dispatch paths, and source-lock coverage now
   rejects direct `resolvedPath == "/soa_vector/ref"` and
   `methodPath == "/soa_vector/ref"` checks there.
+- `soa-monomorph-implicit-shared-ref-canonicalizer`: template-monomorph
+  implicit-template pending SoA `ref`/`ref_ref` helper gating now reuses the
+  shared `canonicalizeLegacySoaRefHelperPath(...)` semantics helper instead
+  of a local lambda, and source-lock coverage now asserts that shared helper
+  call path and declaration contract.
 - `soa-monomorph-implicit-ref-path-canonicalization`: template-monomorph
   implicit-template SoA pending `ref`/`ref_ref` helper gating now canonicalizes
   resolved helper paths (template-suffix stripping plus legacy

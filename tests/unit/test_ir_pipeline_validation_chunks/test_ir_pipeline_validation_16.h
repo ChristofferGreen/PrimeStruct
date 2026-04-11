@@ -463,10 +463,13 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const bool hasVisibleSoaRefRefHelper =") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "const auto canonicalizeLegacySoaResolvedPath =") !=
+            "const auto canonicalizeLegacySoaResolvedPath =") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const std::string resolvedSoaCanonical =") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "canonicalizeLegacySoaRefHelperPath(resolvedPath)") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "if (resolvedPath == \"/soa_vector/ref\" ||") ==

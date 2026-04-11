@@ -453,6 +453,21 @@ bool splitSoaFieldViewHelperPath(std::string_view path, std::string *fieldNameOu
   return false;
 }
 
+std::string canonicalizeLegacySoaRefHelperPath(std::string_view path) {
+  std::string canonicalPath(path);
+  const size_t templateSuffix = canonicalPath.find("__t");
+  if (templateSuffix != std::string::npos) {
+    canonicalPath.erase(templateSuffix);
+  }
+  if (canonicalPath == "/soa_vector/ref") {
+    return "/std/collections/soa_vector/ref";
+  }
+  if (canonicalPath == "/soa_vector/ref_ref") {
+    return "/std/collections/soa_vector/ref_ref";
+  }
+  return canonicalPath;
+}
+
 namespace {
 
 std::string canonicalSoaPendingHelperPath(std::string_view resolvedPath) {
@@ -467,11 +482,11 @@ std::string canonicalSoaPendingHelperPath(std::string_view resolvedPath) {
   if (splitSoaFieldViewHelperPath(normalizedResolvedPath, &fieldName)) {
     return soaFieldViewHelperPath(fieldName);
   }
-  if (normalizedResolvedPath == "/soa_vector/ref") {
-    return "/std/collections/soa_vector/ref";
-  }
-  if (normalizedResolvedPath == "/soa_vector/ref_ref") {
-    return "/std/collections/soa_vector/ref_ref";
+  const std::string canonicalSoaRefPath =
+      canonicalizeLegacySoaRefHelperPath(normalizedResolvedPath);
+  if (canonicalSoaRefPath == "/std/collections/soa_vector/ref" ||
+      canonicalSoaRefPath == "/std/collections/soa_vector/ref_ref") {
+    return canonicalSoaRefPath;
   }
   return std::string(resolvedPath);
 }
