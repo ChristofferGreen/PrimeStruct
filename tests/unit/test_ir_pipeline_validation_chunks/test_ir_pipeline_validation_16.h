@@ -571,13 +571,16 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "path == \"/std/collections/soa_vector/get_ref\"") ==
         std::string::npos);
   CHECK(templateMonomorphFallbackSource.find(
-            "constexpr const char kLegacyPrefix[] = \"/soa_vector/\"") !=
-        std::string::npos);
-  CHECK(templateMonomorphFallbackSource.find(
-            "constexpr const char kCanonicalPrefix[] = \"/std/collections/soa_vector/\"") !=
-        std::string::npos);
-  CHECK(templateMonomorphFallbackSource.find(
             "isLegacyOrCanonicalSoaHelperPath(path, \"get_ref\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphFallbackSource.find(
+            "auto isLegacyOrCanonicalSoaHelperPath = [](const std::string &candidate,") ==
+        std::string::npos);
+  CHECK(templateMonomorphFallbackSource.find(
+            "constexpr const char kLegacyPrefix[] = \"/soa_vector/\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphFallbackSource.find(
+            "constexpr const char kCanonicalPrefix[] = \"/std/collections/soa_vector/\"") ==
         std::string::npos);
   CHECK(templateMonomorphFallbackSource.find(
             "isCanonicalSoaRefLikeHelperPath(pathCanonical)") !=

@@ -179,10 +179,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   of duplicated inline helper-path disjunctions, while keeping canonicalized
   `ref`/`ref_ref` matching unchanged.
 - `soa-monomorph-fallback-get-ref-helper-path-factoring`:
-  template-monomorph fallback stdlib implicit-template path gating now factors
-  legacy/canonical `get_ref` helper-path matching through
-  `isLegacyOrCanonicalSoaHelperPath(...)` instead of duplicated direct
-  `/soa_vector/get_ref` and `/std/collections/soa_vector/get_ref` path checks.
+  legacy/canonical SoA helper-path matching is now shared through
+  `isLegacyOrCanonicalSoaHelperPath(...)` in semantics helpers, and
+  template-monomorph fallback stdlib implicit-template path gating now reuses
+  that shared predicate for `get_ref` helper paths instead of a local helper.
 - `soa-monomorph-fallback-ref-like-canonical-path-factoring`:
   canonical SoA `ref`/`ref_ref` helper-family detection is now shared through
   `isCanonicalSoaRefLikeHelperPath(...)` in semantics helpers, and both

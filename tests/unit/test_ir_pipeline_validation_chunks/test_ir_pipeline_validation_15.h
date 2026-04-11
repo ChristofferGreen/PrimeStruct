@@ -848,6 +848,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "std::string canonicalizeLegacySoaRefHelperPath(std::string_view path);") !=
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
+            "bool isLegacyOrCanonicalSoaHelperPath(std::string_view path, std::string_view helperName);") !=
+        std::string::npos);
+  CHECK(semanticsHelpersSource.find(
             "bool isCanonicalSoaRefLikeHelperPath(std::string_view path);") !=
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("unknown method: /std/collections/soa_vector/field_view/") ==

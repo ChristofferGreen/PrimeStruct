@@ -468,6 +468,18 @@ std::string canonicalizeLegacySoaRefHelperPath(std::string_view path) {
   return canonicalPath;
 }
 
+bool isLegacyOrCanonicalSoaHelperPath(std::string_view path, std::string_view helperName) {
+  constexpr std::string_view kLegacyPrefix = "/soa_vector/";
+  constexpr std::string_view kCanonicalPrefix = "/std/collections/soa_vector/";
+  if (path.starts_with(kLegacyPrefix)) {
+    return path.substr(kLegacyPrefix.size()) == helperName;
+  }
+  if (path.starts_with(kCanonicalPrefix)) {
+    return path.substr(kCanonicalPrefix.size()) == helperName;
+  }
+  return false;
+}
+
 bool isCanonicalSoaRefLikeHelperPath(std::string_view path) {
   return path == "/std/collections/soa_vector/ref" ||
          path == "/std/collections/soa_vector/ref_ref";
