@@ -514,7 +514,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   method-target `to_aos(_ref)` fallback preference now canonicalizes same-path
   helper spellings through shared `canonicalizeLegacySoaToAosHelperPath(...)`
   plus `isCanonicalSoaToAosHelperPath(...)` guards instead of hardcoded
-  canonical-path literals.
+  canonical-path literals, and template-monomorph expression-rewrite
+  root-builtin `to_aos(_ref)` shadow-receiver fallback now canonicalizes
+  same-path helper spellings through shared
+  `canonicalizeLegacySoaToAosHelperPath(...)` +
+  `isCanonicalSoaToAosHelperPath(...)` guards before root-builtin helper
+  visibility probes.
 - `semantic-soa-s2-canonical-count-get-bridge-substrate-2026-04`: S2 inline-
   parameter bridge matching now treats canonical `/std/collections/soa_vector`
   `count|get` callee paths (plus same-path aliases) as bridge-eligible for

@@ -466,12 +466,17 @@ bool rewriteExpr(Expr &expr,
       return helperName == "ref_ref" ? std::string("/soa_vector/ref_ref")
                                      : std::string("/soa_vector/ref");
     }
-    if ((helperName == "to_aos" || helperName == "to_aos_ref") &&
-        hasVisibleRootBuiltinSoaConversionHelper(
-            helperName == "to_aos" ? "/to_aos" : "/to_aos_ref") &&
-        resolvesBuiltinSoaToAosShadowReceiver(receiverExpr)) {
-      return helperName == "to_aos" ? std::string("/to_aos")
-                                    : std::string("/to_aos_ref");
+    if (helperName == "to_aos" || helperName == "to_aos_ref") {
+      const std::string samePathToAosHelper =
+          helperName == "to_aos" ? std::string("/to_aos")
+                                 : std::string("/to_aos_ref");
+      const std::string canonicalSoaToAosHelper =
+          canonicalizeLegacySoaToAosHelperPath(samePathToAosHelper);
+      if (isCanonicalSoaToAosHelperPath(canonicalSoaToAosHelper) &&
+          hasVisibleRootBuiltinSoaConversionHelper(samePathToAosHelper) &&
+          resolvesBuiltinSoaToAosShadowReceiver(receiverExpr)) {
+        return samePathToAosHelper;
+      }
     }
     const std::string receiverFamily = inferCollectionReceiverFamily(receiverExpr);
     if (receiverFamily == "soa_vector" && resolvesVectorFamilyPath) {
