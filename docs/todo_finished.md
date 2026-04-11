@@ -5,6 +5,14 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Cleanup (April 11, 2026)**
+
+**Group 14 - SoA bring-up and end-state cleanup**
+- ✓ [S3-01] Split remaining `TemplateMonomorphMethodTargets.h` SoA fallback cleanup into one-helper-family slices so each commit touches one dispatch family plus source-lock updates. Completed: method-target SoA fallback now routes `to_aos(_ref)`, `get(_ref)`, `push/reserve`, and `ref(_ref)` through dedicated helper-family wrappers around `preferredSamePathSoaMethodTarget(...)`, with source-lock coverage in `test_ir_pipeline_validation_chunks/test_ir_pipeline_validation_16.h`.
+- ✓ [S3-02a] Add helper-return method-shadow precedence coverage for SoA read-only helper families in compile-run suites. Completed: mirrored C++/native compile-run coverage now defines same-path `/soa_vector/get`, `/soa_vector/ref`, and `/to_aos` shadows and asserts helper-return method-like calls (`cloneValues().get/.ref/.to_aos`) use those same-path shadows.
+- ✓ [S3-02b] Add focused non-borrowed helper-return precedence tests that pair same-path overrides with explicit canonical-fallback expectations for `to_aos`, `get/ref`, and `push/reserve`. Completed: mirrored C++/native compile-run coverage now locks helper-return direct-call behavior to canonical fallback result `16` while compile-checking explicit canonical experimental helper calls (`soaVectorGet/Ref/Reserve/Push` and `soaVectorToAos`) through a dedicated probe helper.
+- ✓ [S3-03] Archive completed S3 refactor micro-slices to `docs/todo_finished.md` once the remaining helper-family leaves are finished to keep the active TODO surface actionable. Completed: finished S3 leaves were removed from `docs/todo.md` and archived in this section.
+
 **Todo Cleanup (April 10, 2026)**
 
 **Group 13 - Ownership/runtime substrate**

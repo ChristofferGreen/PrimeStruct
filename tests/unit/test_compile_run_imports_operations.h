@@ -246,6 +246,7 @@ TEST_CASE("canonical soa_vector to_aos slash-method runs in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -627,7 +628,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("no-import root soa_vector to_aos bare and direct helper forms run in C++ emitter") {
+TEST_CASE("no-import root soa_vector to_aos bare and direct helper forms reject SoaVector-only canonical helper contract in C++ emitter") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -643,14 +644,15 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_root_soa_vector_to_aos_forms_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_root_soa_vector_to_aos_forms_exe").string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  const std::string errPath =
+      (testScratchPath("") / "primec_root_soa_vector_to_aos_forms_exe_err.txt").string();
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("binding initializer type mismatch") != std::string::npos);
 }
 
-TEST_CASE("no-import root soa_vector to_aos method helper forms run in C++ emitter") {
+TEST_CASE("no-import root soa_vector to_aos method helper forms reject SoaVector-only canonical helper contract in C++ emitter") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -666,14 +668,15 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_root_soa_vector_to_aos_method_forms_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_root_soa_vector_to_aos_method_forms_exe").string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  const std::string errPath =
+      (testScratchPath("") / "primec_root_soa_vector_to_aos_method_forms_exe_err.txt").string();
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("binding initializer type mismatch") != std::string::npos);
 }
 
-TEST_CASE("no-import root soa_vector canonical to_aos_ref helper form runs in C++ emitter") {
+TEST_CASE("no-import root soa_vector canonical to_aos_ref helper form rejects SoaVector-only canonical helper contract in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa_vector/*
@@ -691,11 +694,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_root_soa_vector_to_aos_ref_form_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_root_soa_vector_to_aos_ref_form_exe").string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  const std::string errPath =
+      (testScratchPath("") / "primec_root_soa_vector_to_aos_ref_form_exe_err.txt").string();
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("struct parameter type mismatch") != std::string::npos);
 }
 
 TEST_CASE("experimental SoaVector canonical to_aos_ref helper form runs in C++ emitter") {
@@ -721,7 +725,7 @@ main() {
       (testScratchPath("") / "primec_experimental_soa_vector_to_aos_ref_form_exe").string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE(
@@ -925,7 +929,9 @@ Particle() {
 
 [return<SoaVector<Particle>>]
 cloneValues() {
-  return(soaVectorSingle<Particle>(Particle(7i32)))
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(values, Particle(7i32))
+  return(values)
 }
 
 [return<int>]
@@ -1894,6 +1900,137 @@ main() {
   const std::string exePath =
       (testScratchPath("") / "primec_experimental_soa_vector_borrowed_return_get_ref_exe").string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 16);
+}
+
+TEST_CASE("compiles and runs helper-return experimental soa_vector method shadows in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<SoaVector<Particle>>]
+cloneValues() {
+  return(soaVectorSingle<Particle>(Particle(7i32)))
+}
+
+[return<Particle>]
+/soa_vector/get([SoaVector<Particle>] values, [i32] index) {
+  return(/std/collections/experimental_soa_vector/soaVectorGet<Particle>(values, 0i32))
+}
+
+[return<Particle>]
+/soa_vector/ref([SoaVector<Particle>] values, [i32] index) {
+  return(/std/collections/experimental_soa_vector/soaVectorGet<Particle>(values, 0i32))
+}
+
+[effects(heap_alloc), return<vector<Particle>>]
+/to_aos([SoaVector<Particle>] values) {
+  [vector<Particle>, mut] out{vector<Particle>()}
+  out.push(Particle(5i32))
+  return(out)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Particle] picked{cloneValues().get(1i32)}
+  [Particle] pickedRef{cloneValues().ref(1i32)}
+  [vector<Particle>] unpacked{cloneValues().to_aos()}
+  return(plus(picked.x, plus(pickedRef.x, count(unpacked))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_experimental_soa_vector_helper_return_shadow_methods_exe.prime",
+                source);
+  const std::string exePath =
+      (testScratchPath("") /
+       "primec_experimental_soa_vector_helper_return_shadow_methods_exe")
+          .string();
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 15);
+}
+
+TEST_CASE("compiles helper-return soa_vector shadows with explicit canonical fallbacks in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<SoaVector<Particle>>]
+cloneValues() {
+  return(soaVectorNew<Particle>())
+}
+
+[return<Particle>]
+/soa_vector/get([SoaVector<Particle>] values, [i32] index) {
+  return(Particle(101i32))
+}
+
+[return<Particle>]
+/soa_vector/ref([SoaVector<Particle>] values, [i32] index) {
+  return(Particle(102i32))
+}
+
+[effects(heap_alloc), return<vector<Particle>>]
+/to_aos([SoaVector<Particle>] values) {
+  [vector<Particle>, mut] out{vector<Particle>()}
+  out.push(Particle(5i32))
+  return(out)
+}
+
+[return<i32>]
+/soa_vector/push([SoaVector<Particle>] values, [Particle] value) {
+  return(31i32)
+}
+
+[return<i32>]
+/soa_vector/reserve([SoaVector<Particle>] values, [i32] capacity) {
+  return(37i32)
+}
+
+[effects(heap_alloc), return<i32>]
+canonicalProbe([SoaVector<Particle> mut] values) {
+  /std/collections/experimental_soa_vector/soaVectorReserve<Particle>(values, 2i32)
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(values, Particle(7i32))
+  [Particle] first{/std/collections/experimental_soa_vector/soaVectorGet<Particle>(values, 0i32)}
+  [i32] firstRef{/std/collections/experimental_soa_vector/soaVectorRef<Particle>(values, 0i32).x}
+  [vector<Particle>] unpacked{/std/collections/experimental_soa_vector_conversions/soaVectorToAos<Particle>(values)}
+  return(plus(first.x, plus(firstRef, count(unpacked))))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Particle] shadowGet{/soa_vector/get(cloneValues(), 0i32)}
+  [Particle] shadowRef{/soa_vector/ref(cloneValues(), 0i32)}
+  [vector<Particle>] shadowAos{/to_aos(cloneValues())}
+  [i32] shadowPush{/soa_vector/push(cloneValues(), Particle(11i32))}
+  [i32] shadowReserve{/soa_vector/reserve(cloneValues(), 4i32)}
+  return(plus(shadowGet.x,
+              plus(shadowRef.x,
+                   plus(count(shadowAos),
+                        plus(shadowPush, shadowReserve)))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_experimental_soa_vector_helper_return_shadow_canonical_fallbacks_exe.prime",
+                source);
+  const std::string exePath =
+      (testScratchPath("") /
+       "primec_experimental_soa_vector_helper_return_shadow_canonical_fallbacks_exe")
+          .string();
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 16);
 }

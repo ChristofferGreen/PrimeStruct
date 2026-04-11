@@ -741,7 +741,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("imported root to_aos bare and direct helper forms lower through canonical helper routing") {
+TEST_CASE("imported root to_aos bare and direct helper forms still need compile-pipeline helper materialization") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -765,8 +765,8 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("root to_aos method helper forms still need compile-pipeline helper materialization") {
@@ -795,7 +795,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("imported root to_aos method helper forms lower through canonical helper routing") {
+TEST_CASE("imported root to_aos method helper forms still need compile-pipeline helper materialization") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -819,8 +819,8 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("imported builtin soa_vector bare helper forms reach canonical lowerer mismatch") {

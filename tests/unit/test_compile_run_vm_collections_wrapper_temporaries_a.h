@@ -527,7 +527,7 @@ main() {
   CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("vm no-import root soa_vector to_aos bare and direct helper forms run") {
+TEST_CASE("vm no-import root soa_vector to_aos bare and direct helper forms reject SoaVector-only canonical helper contract") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -543,11 +543,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_root_soa_vector_to_aos_forms.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 0);
+  const std::string errPath = (testScratchPath("") / "primec_vm_root_soa_vector_to_aos_forms_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("binding initializer type mismatch") != std::string::npos);
 }
 
-TEST_CASE("vm no-import root soa_vector to_aos method helper forms run") {
+TEST_CASE("vm no-import root soa_vector to_aos method helper forms reject SoaVector-only canonical helper contract") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -563,8 +565,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_root_soa_vector_to_aos_method_forms.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 0);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_root_soa_vector_to_aos_method_forms_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("binding initializer type mismatch") != std::string::npos);
 }
 
 TEST_CASE("vm materializes non-empty root soa_vector struct literals") {

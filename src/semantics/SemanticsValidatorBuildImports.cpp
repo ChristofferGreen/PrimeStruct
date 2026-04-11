@@ -102,6 +102,19 @@ bool SemanticsValidator::buildImportAliases() {
     }
     return true;
   };
+  auto registerExperimentalSoaVectorConversionWildcardAliases = [&](const std::string &prefix) {
+    if (prefix != "/std/collections/experimental_soa_vector_conversions") {
+      return false;
+    }
+    static constexpr std::array<std::pair<std::string_view, std::string_view>, 2> aliases = {{
+        {"soaVectorToAos", "/std/collections/experimental_soa_vector_conversions/soaVectorToAos"},
+        {"soaVectorToAosRef", "/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef"},
+    }};
+    for (const auto &[name, path] : aliases) {
+      importAliases_[std::string(name)] = std::string(path);
+    }
+    return true;
+  };
 
   const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
   for (const auto &importPath : importPaths) {
@@ -128,6 +141,9 @@ bool SemanticsValidator::buildImportAliases() {
     }
     if (isWildcard) {
       if (registerCanonicalSoaVectorWildcardAliases(prefix)) {
+        continue;
+      }
+      if (registerExperimentalSoaVectorConversionWildcardAliases(prefix)) {
         continue;
       }
       const std::string scopedPrefix = prefix + "/";
