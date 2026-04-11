@@ -1117,7 +1117,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "canonicalizeLegacySoaToAosHelperPath(resolveCalleePath(target))") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
-            "isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical)") !=
+            "isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical)") ==
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "resolveCalleePath(target) == \"/to_aos\"") ==
@@ -1150,7 +1150,15 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "isCanonicalSoaRefLikeHelperPath(resolvedSoaRefCanonical)") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
-            "isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical)") !=
+            "isLegacyOrCanonicalSoaHelperPath(\n"
+            "            resolvedSoaToAosCanonical, \"to_aos\")") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(\n"
+            "            resolvedSoaToAosCanonical, \"to_aos_ref\")") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical)") ==
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "resolvedOut == \"/std/collections/soa_vector/to_aos\"") ==

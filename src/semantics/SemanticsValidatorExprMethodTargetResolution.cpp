@@ -1551,11 +1551,18 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         canonicalizeLegacySoaRefHelperPath(resolvedOut);
     const std::string resolvedSoaToAosCanonical =
         canonicalizeLegacySoaToAosHelperPath(resolvedOut);
+    const bool matchesSoaToAosHelperPath =
+        isLegacyOrCanonicalSoaHelperPath(
+            resolvedSoaToAosCanonical, "to_aos");
+    const bool matchesBorrowedSoaToAosHelperPath =
+        isLegacyOrCanonicalSoaHelperPath(
+            resolvedSoaToAosCanonical, "to_aos_ref");
     const bool matchesBuiltinSoaCollectionHelper =
         resolvedOut == "/std/collections/soa_vector/count" ||
         resolvedOut == "/std/collections/soa_vector/get" ||
         resolvedOut == "/std/collections/soa_vector/get_ref" ||
-        isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical) ||
+        matchesSoaToAosHelperPath ||
+        matchesBorrowedSoaToAosHelperPath ||
         isCanonicalSoaRefLikeHelperPath(resolvedSoaRefCanonical);
     const bool hasImportedBuiltinSoaCollectionHelper =
         hasImportedDefinitionPath(resolvedOut) ||
