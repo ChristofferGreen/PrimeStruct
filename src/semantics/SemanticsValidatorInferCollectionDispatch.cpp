@@ -55,8 +55,12 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     }
     return false;
   }
-  if (resolvedSoaCanonical == "/std/collections/soa_vector/get" ||
-      resolvedSoaCanonical == "/std/collections/soa_vector/get_ref" ||
+  const bool resolvedSoaCanonicalIsGet =
+      isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "get");
+  const bool resolvedSoaCanonicalIsGetRef =
+      isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "get_ref");
+  if (resolvedSoaCanonicalIsGet ||
+      resolvedSoaCanonicalIsGetRef ||
       isCanonicalSoaRefLikeHelperPath(resolvedSoaCanonical) ||
       resolvedSoaCanonical == "/std/collections/experimental_soa_vector/soaVectorGetRef" ||
       resolvedSoaCanonical == "/std/collections/experimental_soa_vector/soaVectorRefRef") {
