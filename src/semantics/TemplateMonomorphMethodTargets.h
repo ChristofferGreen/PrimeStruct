@@ -124,7 +124,8 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   auto preferredSamePathSoaMethodTarget =
       [&](std::string_view helperName, std::string_view samePathPrefix) {
     const std::string helperNameString(helperName);
-    const std::string samePath = std::string(samePathPrefix) + helperNameString;
+    const std::string samePathPrefixString(samePathPrefix);
+    const std::string samePath = samePathPrefixString + helperNameString;
     if (hasDefinitionFamilyPath(samePath)) {
       return samePath;
     }
