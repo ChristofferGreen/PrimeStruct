@@ -939,10 +939,16 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (handledCountCapacityMapBuiltin) {
       return true;
     }
+    const std::string resolvedSoaToAosCanonical =
+        canonicalizeLegacySoaToAosHelperPath(resolved);
+    const bool resolvedUsesCanonicalSoaNamespace =
+        resolved.rfind("/std/collections/soa_vector/", 0) == 0;
     const bool shouldLateValidateCanonicalSoaToAos =
-        resolved.rfind("/std/collections/soa_vector/to_aos", 0) == 0;
+        resolvedUsesCanonicalSoaNamespace &&
+        isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical);
     const bool shouldLateValidateCanonicalSoaToAosRef =
-        resolved.rfind("/std/collections/soa_vector/to_aos_ref", 0) == 0;
+        resolvedUsesCanonicalSoaNamespace &&
+        resolvedSoaToAosCanonical == "/std/collections/soa_vector/to_aos_ref";
     if (it == defMap_.end() || resolvedMethod || shouldLateValidateCanonicalSoaToAos ||
         shouldLateValidateCanonicalSoaToAosRef) {
       ExprLateMapSoaBuiltinContext lateMapSoaBuiltinContext;

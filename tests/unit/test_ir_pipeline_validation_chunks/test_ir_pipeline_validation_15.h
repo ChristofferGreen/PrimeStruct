@@ -608,6 +608,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprArgumentValidationCollections.cpp";
   const std::filesystem::path exprMapSoaBuiltinsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprMapSoaBuiltins.cpp";
+  const std::filesystem::path exprPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExpr.cpp";
   const std::filesystem::path exprCountCapacityMapBuiltinsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCountCapacityMapBuiltins.cpp";
   const std::filesystem::path exprMethodCompatibilitySetupPath =
@@ -641,6 +643,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   REQUIRE(std::filesystem::exists(buildInitializerInferencePath));
   REQUIRE(std::filesystem::exists(exprArgumentValidationCollectionsPath));
   REQUIRE(std::filesystem::exists(exprMapSoaBuiltinsPath));
+  REQUIRE(std::filesystem::exists(exprPath));
   REQUIRE(std::filesystem::exists(exprCountCapacityMapBuiltinsPath));
   REQUIRE(std::filesystem::exists(exprMethodCompatibilitySetupPath));
   REQUIRE(std::filesystem::exists(inferPreDispatchCallsPath));
@@ -662,6 +665,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   const std::string exprArgumentValidationCollectionsSource =
       readText(exprArgumentValidationCollectionsPath);
   const std::string exprMapSoaBuiltinsSource = readText(exprMapSoaBuiltinsPath);
+  const std::string exprSource = readText(exprPath);
   const std::string exprCountCapacityMapBuiltinsSource = readText(exprCountCapacityMapBuiltinsPath);
   const std::string exprMethodCompatibilitySetupSource =
       readText(exprMethodCompatibilitySetupPath);
@@ -864,6 +868,30 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
             "bool isCanonicalSoaRefLikeHelperPath(std::string_view path);") !=
+        std::string::npos);
+  CHECK(exprSource.find(
+            "const std::string resolvedSoaToAosCanonical =") !=
+        std::string::npos);
+  CHECK(exprSource.find(
+            "const bool resolvedUsesCanonicalSoaNamespace =") !=
+        std::string::npos);
+  CHECK(exprSource.find(
+            "canonicalizeLegacySoaToAosHelperPath(resolved)") !=
+        std::string::npos);
+  CHECK(exprSource.find(
+            "resolved.rfind(\"/std/collections/soa_vector/\", 0) == 0") !=
+        std::string::npos);
+  CHECK(exprSource.find(
+            "isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical)") !=
+        std::string::npos);
+  CHECK(exprSource.find(
+            "resolvedSoaToAosCanonical == \"/std/collections/soa_vector/to_aos_ref\"") !=
+        std::string::npos);
+  CHECK(exprSource.find(
+            "resolved.rfind(\"/std/collections/soa_vector/to_aos\", 0)") ==
+        std::string::npos);
+  CHECK(exprSource.find(
+            "resolved.rfind(\"/std/collections/soa_vector/to_aos_ref\", 0)") ==
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("unknown method: /std/collections/soa_vector/field_view/") ==
         std::string::npos);
