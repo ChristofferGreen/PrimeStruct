@@ -148,6 +148,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `canonicalizeLegacySoaRefHelperPath(...)` wiring instead of local
   canonicalization helpers, and source-lock coverage now asserts those shared
   helper call paths.
+- `soa-ir-lowerer-ref-matcher-shared-canonicalizer`: ir-lowerer
+  collection-mutation non-method SoA `ref` write-target builtin-path matching
+  now canonicalizes candidate callee paths through shared
+  `semantics::canonicalizeLegacySoaRefHelperPath(...)` before builtin
+  ref-family checks, and source-lock coverage now asserts that shared helper
+  call path in the matcher.
 - `soa-monomorph-implicit-ref-path-canonicalization`: template-monomorph
   implicit-template SoA pending `ref`/`ref_ref` helper gating now canonicalizes
   resolved helper paths (template-suffix stripping plus legacy

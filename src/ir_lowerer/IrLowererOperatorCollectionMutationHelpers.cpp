@@ -741,8 +741,10 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           return false;
         };
         auto matchesBuiltinRefPath = [](const std::string &path) {
-          return path.rfind("/std/collections/experimental_soa_vector/soaVectorRef", 0) == 0 ||
-                 path.rfind("/std/collections/soa_vector/ref", 0) == 0;
+          const std::string canonicalPath =
+              semantics::canonicalizeLegacySoaRefHelperPath(path);
+          return canonicalPath.rfind("/std/collections/experimental_soa_vector/soaVectorRef", 0) == 0 ||
+                 canonicalPath.rfind("/std/collections/soa_vector/ref", 0) == 0;
         };
         if (candidate.kind != Expr::Kind::Call || candidate.args.size() != 2 ||
             !candidate.templateArgs.empty() || candidate.hasBodyArguments ||
