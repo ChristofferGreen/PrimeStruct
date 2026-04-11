@@ -48,6 +48,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
   family detection in both `isStandaloneRefCall` and
   `resolveStandaloneRefRootExpr`; source-lock coverage now rejects direct
   legacy `resolvedPath.rfind("/soa_vector/ref(_ref)", 0)` checks there.
+- `soa-infer-collection-dispatch-ref-path-canonicalization`: collection
+  method return-kind dispatch now canonicalizes resolved SoA helper paths
+  (including templated and legacy `/soa_vector/get|get_ref|ref|ref_ref`
+  spellings) onto canonical `/std/collections/soa_vector/*` before helper
+  family checks in `resolveBuiltinCollectionMethodReturnKind`, and source-lock
+  coverage now rejects direct `resolvedPath == "/soa_vector/*"` comparisons
+  there.
 - `arg-pack-dereference-struct-inference`: IR struct-type inference now
   propagates through `dereference(...)`, so indexed borrowed arg-pack values
   (for example `args<Reference<Map<K, V>>>`) preserve their struct identity

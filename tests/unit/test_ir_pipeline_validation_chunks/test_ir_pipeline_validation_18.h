@@ -362,6 +362,23 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSource.find("bool SemanticsValidator::resolveBuiltinCollectionAccessCallReturnKind") !=
         std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find(
+            "const auto canonicalizeSoaMethodResolvedPath = [](std::string path)") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find(
+            "const std::string resolvedSoaCanonical = canonicalizeSoaMethodResolvedPath(resolvedPath);") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find("resolvedPath == \"/soa_vector/get\"") ==
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find("resolvedPath == \"/soa_vector/get_ref\"") ==
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find("resolvedPath == \"/soa_vector/ref\"") ==
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find("resolvedPath == \"/soa_vector/ref_ref\"") ==
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find(
+            "resolvedSoaCanonical == \"/std/collections/soa_vector/ref_ref\"") !=
+        std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find("void SemanticsValidator::prepareInferCollectionDispatchSetup") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find("std::string namespacedCollection;") !=
