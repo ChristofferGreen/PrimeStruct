@@ -154,6 +154,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `semantics::canonicalizeLegacySoaRefHelperPath(...)` before builtin
   ref-family checks, and source-lock coverage now asserts that shared helper
   call path in the matcher.
+- `soa-method-target-shared-ref-canonicalizer`: method-target SoA
+  builtin-helper classification now canonicalizes legacy resolved
+  `ref`/`ref_ref` spellings through shared
+  `canonicalizeLegacySoaRefHelperPath(...)` before builtin
+  import/local-definition gating, and source-lock coverage now asserts that
+  shared helper call path in method-target resolution.
 - `soa-monomorph-implicit-ref-path-canonicalization`: template-monomorph
   implicit-template SoA pending `ref`/`ref_ref` helper gating now canonicalizes
   resolved helper paths (template-suffix stripping plus legacy

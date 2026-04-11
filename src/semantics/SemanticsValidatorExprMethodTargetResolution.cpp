@@ -1543,15 +1543,27 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       isBuiltinOut = true;
       return true;
     }
-    if ((resolvedOut == "/std/collections/soa_vector/count" ||
-         resolvedOut == "/std/collections/soa_vector/get" ||
-         resolvedOut == "/std/collections/soa_vector/get_ref" ||
-         resolvedOut == "/std/collections/soa_vector/ref" ||
-         resolvedOut == "/std/collections/soa_vector/ref_ref" ||
-         resolvedOut == "/std/collections/soa_vector/to_aos" ||
-         resolvedOut == "/std/collections/soa_vector/to_aos_ref") &&
-        hasImportedDefinitionPath(resolvedOut) &&
-        defMap_.count(resolvedOut) == 0) {
+    const std::string resolvedSoaRefCanonical =
+        canonicalizeLegacySoaRefHelperPath(resolvedOut);
+    const bool matchesBuiltinSoaCollectionHelper =
+        resolvedOut == "/std/collections/soa_vector/count" ||
+        resolvedOut == "/std/collections/soa_vector/get" ||
+        resolvedOut == "/std/collections/soa_vector/get_ref" ||
+        resolvedOut == "/std/collections/soa_vector/to_aos" ||
+        resolvedOut == "/std/collections/soa_vector/to_aos_ref" ||
+        resolvedSoaRefCanonical == "/std/collections/soa_vector/ref" ||
+        resolvedSoaRefCanonical == "/std/collections/soa_vector/ref_ref";
+    const bool hasImportedBuiltinSoaCollectionHelper =
+        hasImportedDefinitionPath(resolvedOut) ||
+        (resolvedSoaRefCanonical != resolvedOut &&
+         hasImportedDefinitionPath(resolvedSoaRefCanonical));
+    const bool hasLocalBuiltinSoaCollectionHelperDefinition =
+        defMap_.count(resolvedOut) != 0 ||
+        (resolvedSoaRefCanonical != resolvedOut &&
+         defMap_.count(resolvedSoaRefCanonical) != 0);
+    if (matchesBuiltinSoaCollectionHelper &&
+        hasImportedBuiltinSoaCollectionHelper &&
+        !hasLocalBuiltinSoaCollectionHelperDefinition) {
       isBuiltinOut = true;
       return true;
     }

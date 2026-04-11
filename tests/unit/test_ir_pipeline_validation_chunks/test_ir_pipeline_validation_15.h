@@ -1003,6 +1003,18 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprMethodTargetResolutionSource.find(
             "resolvedOut == \"/std/collections/soa_vector/get_ref\"") !=
         std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "const std::string resolvedSoaRefCanonical =") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "canonicalizeLegacySoaRefHelperPath(resolvedOut)") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "hasImportedDefinitionPath(resolvedSoaRefCanonical)") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "resolvedOut == \"/std/collections/soa_vector/ref\"") ==
+        std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find("preferredBorrowedSoaAccessHelperTarget(") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
