@@ -729,6 +729,12 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "path == \"/std/collections/soa_vector/to_aos\" || path == \"/std/collections/soa_vector/to_aos_ref\"") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
+            "path == \"/std/collections/soa_vector/ref\" || path == \"/std/collections/soa_vector/ref_ref\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "isCanonicalSoaRefLikeHelperPath(path)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
             "helperName == \"to_aos\" ? \"/to_aos\" : \"/to_aos_ref\"") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(

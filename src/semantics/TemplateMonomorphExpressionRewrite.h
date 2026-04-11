@@ -105,7 +105,7 @@ bool rewriteExpr(Expr &expr,
            path == "/std/collections/vector/at" || path == "/std/collections/vector/at_unsafe" ||
            path == "/std/collections/soa_vector/count" || path == "/std/collections/soa_vector/count_ref" ||
            path == "/std/collections/soa_vector/get" || path == "/std/collections/soa_vector/get_ref" ||
-           path == "/std/collections/soa_vector/ref" || path == "/std/collections/soa_vector/ref_ref" ||
+           isCanonicalSoaRefLikeHelperPath(path) ||
            path == "/std/collections/soa_vector/reserve" || path == "/std/collections/soa_vector/push" ||
            isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, "to_aos") ||
            isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, "to_aos_ref");
