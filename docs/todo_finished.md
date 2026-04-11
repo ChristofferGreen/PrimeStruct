@@ -15,6 +15,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Group 15 - Semantic memory footprint and multithread compile substrate**
 - ✓ [P0-15] Added a canonical benchmark regeneration command snippet in docs that maps each fixture/phase pair to expected report rows. Completed: `docs/semantic_memory_benchmark_policy.md` now includes an explicit canonical `semantic_memory_benchmark.py` command (fixed fixture list + phases + report path) and a full `(fixture, phase)` expected-row mapping table for the 10-fixture two-phase run.
+- ✓ [P0-16] Added focused benchmark-harness coverage that fails when required fixture/phase tuples are missing from regenerated reports. Completed: `test_compile_run_benchmark_harness.cpp` now runs a partial regenerated report (`no_import,math_vector`) and asserts required canonical tuple-matrix validation exits nonzero with explicit missing tuple output.
 
 **Todo Cleanup (April 10, 2026)**
 

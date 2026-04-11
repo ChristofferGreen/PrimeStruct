@@ -1057,6 +1057,68 @@ TEST_CASE("semantic memory benchmark helper reports 1x-2x-4x scale slopes") {
   CHECK(readFile(validateErrPath).empty());
 }
 
+TEST_CASE("semantic memory benchmark required fixture-phase matrix fails when tuples are missing") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";
+  const std::filesystem::path primecPath = repoRoot / "build-release" / "primec";
+  if (!std::filesystem::exists(primecPath)) {
+    INFO("primec not available in build-release");
+    return;
+  }
+
+  const std::string reportPath = writeTemp("semantic_memory_required_pairs_report.json", "");
+  const std::string stdoutPath = writeTemp("semantic_memory_required_pairs.out", "");
+  const std::string stderrPath = writeTemp("semantic_memory_required_pairs.err", "");
+
+  const std::string benchmarkCmd =
+      "python3 " + quoteShellArg(scriptPath.string()) +
+      " --repo-root " + quoteShellArg(repoRoot.string()) +
+      " --primec " + quoteShellArg(primecPath.string()) +
+      " --runs 1 --fixtures no_import,math_vector --phases ast-semantic,semantic-product "
+      "--report-json " + quoteShellArg(reportPath) +
+      " > " + quoteShellArg(stdoutPath) + " 2> " + quoteShellArg(stderrPath);
+  CHECK(runCommand(benchmarkCmd) == 0);
+  CHECK(readFile(stderrPath).empty());
+
+  const std::string validateOutPath = writeTemp("semantic_memory_required_pairs_validate.out", "");
+  const std::string validateErrPath = writeTemp("semantic_memory_required_pairs_validate.err", "");
+  const std::string validateCmd =
+      "python3 -c " +
+      quoteShellArg(
+          "import json, sys\n"
+          "report = json.load(open(sys.argv[1], encoding='utf-8'))\n"
+          "pairs = {(row.get('fixture'), row.get('phase')) for row in report.get('results', [])}\n"
+          "fixtures = [\n"
+          "  'math_star_repro',\n"
+          "  'no_import',\n"
+          "  'math_vector',\n"
+          "  'math_vector_matrix',\n"
+          "  'non_math_large_include',\n"
+          "  'inline_math_body',\n"
+          "  'imported_math_body',\n"
+          "  'scale_1x',\n"
+          "  'scale_2x',\n"
+          "  'scale_4x',\n"
+          "]\n"
+          "phases = ['ast-semantic', 'semantic-product']\n"
+          "required = {(fixture, phase) for fixture in fixtures for phase in phases}\n"
+          "missing = sorted(required - pairs)\n"
+          "ok = not missing\n"
+          "if not ok:\n"
+          "  print('missing=', missing)\n"
+          "sys.exit(0 if ok else 1)\n") +
+      " " + quoteShellArg(reportPath) +
+      " > " + quoteShellArg(validateOutPath) + " 2> " + quoteShellArg(validateErrPath);
+  CHECK(runCommand(validateCmd) == 1);
+  CHECK(readFile(validateOutPath).find("missing=") != std::string::npos);
+  CHECK(readFile(validateErrPath).empty());
+}
+
 TEST_CASE("semantic memory benchmark helper defines method-target memoization delta report fields") {
   const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
   const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";
