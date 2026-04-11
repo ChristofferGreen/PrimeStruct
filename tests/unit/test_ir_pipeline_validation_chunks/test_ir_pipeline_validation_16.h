@@ -871,6 +871,13 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const std::string samePath = \"/\" + std::string(helperName);") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
+            "if (defPath == path || defPath.rfind(templatedPrefix, 0) == 0 ||") ==
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "if (defPath.rfind(templatedPrefix, 0) == 0 ||\n"
+            "          defPath.rfind(specializedPrefix, 0) == 0) {") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
             "isLegacyOrCanonicalSoaHelperPath(canonicalPath, \"to_aos\")") ==
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(

@@ -110,7 +110,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     const std::string templatedPrefix = std::string(path) + "<";
     const std::string specializedPrefix = std::string(path) + "__t";
     for (const auto &[defPath, _] : ctx.sourceDefs) {
-      if (defPath == path || defPath.rfind(templatedPrefix, 0) == 0 ||
+      if (defPath.rfind(templatedPrefix, 0) == 0 ||
           defPath.rfind(specializedPrefix, 0) == 0) {
         return true;
       }
