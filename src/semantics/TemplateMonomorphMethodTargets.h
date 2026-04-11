@@ -128,11 +128,10 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   };
   auto preferredSoaMethodTarget = [&](std::string_view helperName) {
     const std::string samePath = "/soa_vector/" + std::string(helperName);
-    const std::string canonical = "/std/collections/soa_vector/" + std::string(helperName);
     if (hasDefinitionFamilyPath(samePath)) {
       return samePath;
     }
-    return canonical;
+    return "/std/collections/soa_vector/" + std::string(helperName);
   };
   const Expr &receiver = expr.args.front();
   if (receiver.kind == Expr::Kind::Name && normalizeBindingTypeName(receiver.name) == "FileError") {

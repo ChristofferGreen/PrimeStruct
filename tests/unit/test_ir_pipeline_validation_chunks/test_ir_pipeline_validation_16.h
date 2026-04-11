@@ -889,7 +889,10 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const std::string samePath = \"/soa_vector/\" + std::string(helperName);") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
-            "const std::string canonical = \"/std/collections/soa_vector/\" + std::string(helperName);") !=
+            "const std::string canonical = \"/std/collections/soa_vector/\" + std::string(helperName);") ==
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "return \"/std/collections/soa_vector/\" + std::string(helperName);") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
             "if (hasDefinitionFamilyPath(canonical)) {\n"
