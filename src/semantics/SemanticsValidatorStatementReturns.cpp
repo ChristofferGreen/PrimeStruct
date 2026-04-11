@@ -120,16 +120,6 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       if (resolvedTemplateSuffix != std::string::npos) {
         resolvedPathNoTemplate.erase(resolvedTemplateSuffix);
       }
-      const auto canonicalizeLegacySoaRefHelperPath =
-          [](std::string_view path) -> std::string {
-        if (path == "/soa_vector/ref") {
-          return "/std/collections/soa_vector/ref";
-        }
-        if (path == "/soa_vector/ref_ref") {
-          return "/std/collections/soa_vector/ref_ref";
-        }
-        return std::string(path);
-      };
       const std::string resolvedPathCanonical =
           canonicalizeLegacySoaRefHelperPath(resolvedPathNoTemplate);
       const auto soaAccessHelper = builtinSoaAccessHelperName(expr, params, locals);

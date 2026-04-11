@@ -1166,7 +1166,10 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(statementReturnsSource.find("builtinSoaPendingExprDiagnostic(stmt.args.front(), params, locals)") ==
         std::string::npos);
   CHECK(statementReturnsSource.find(
-            "const auto canonicalizeLegacySoaRefHelperPath =") !=
+            "const auto canonicalizeLegacySoaRefHelperPath =") ==
+        std::string::npos);
+  CHECK(statementReturnsSource.find(
+            "canonicalizeLegacySoaRefHelperPath(resolvedPathNoTemplate)") !=
         std::string::npos);
   CHECK(statementReturnsSource.find(
             "const std::string resolvedPathCanonical =") !=
