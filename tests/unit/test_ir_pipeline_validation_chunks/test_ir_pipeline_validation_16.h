@@ -707,6 +707,18 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find("inferDefinitionReturnBindingForTemplatedFallback(") !=
         std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "canonicalizeLegacySoaToAosHelperPath(samePath)") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "isCanonicalSoaToAosHelperPath(canonicalPath)") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "const std::string canonical = \"/std/collections/soa_vector/to_aos\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "preferredSoaToAosMethodTarget()") ==
+        std::string::npos);
   CHECK(templateMonomorphTypeResolutionSource.find("ResolvedType resolveTypeStringImpl(std::string input,") !=
         std::string::npos);
   CHECK(templateMonomorphTypeResolutionSource.find("bool rewriteTransforms(std::vector<Transform> &transforms,") !=

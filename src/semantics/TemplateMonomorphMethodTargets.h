@@ -117,16 +117,19 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     }
     return false;
   };
-  auto preferredSoaToAosMethodTarget = [&]() {
-    const std::string canonical = "/std/collections/soa_vector/to_aos";
-    const std::string samePath = "/to_aos";
+  auto preferredSoaToAosMethodTarget = [&](std::string_view helperName) {
+    const std::string samePath =
+        helperName == "to_aos" ? std::string("/to_aos")
+                               : std::string("/soa_vector/") + std::string(helperName);
+    const std::string canonicalPath = canonicalizeLegacySoaToAosHelperPath(samePath);
     if (hasDefinitionFamilyPath(samePath)) {
       return samePath;
     }
-    if (hasDefinitionFamilyPath(canonical)) {
-      return canonical;
+    if (isCanonicalSoaToAosHelperPath(canonicalPath) &&
+        hasDefinitionFamilyPath(canonicalPath)) {
+      return canonicalPath;
     }
-    return canonical;
+    return canonicalPath;
   };
   auto preferredSoaMethodTarget = [&](std::string_view helperName) {
     const std::string samePath = "/soa_vector/" + std::string(helperName);
@@ -262,11 +265,11 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     normalizedTypeName.erase(normalizedTypeName.begin());
   }
   if (normalizedTypeName == "soa_vector" && normalizedMethodName == "to_aos") {
-    pathOut = selectHelperOverloadPath(expr, preferredSoaToAosMethodTarget(), ctx);
+    pathOut = selectHelperOverloadPath(expr, preferredSoaToAosMethodTarget(normalizedMethodName), ctx);
     return true;
   }
   if (normalizedTypeName == "soa_vector" && normalizedMethodName == "to_aos_ref") {
-    pathOut = selectHelperOverloadPath(expr, preferredSoaMethodTarget(normalizedMethodName), ctx);
+    pathOut = selectHelperOverloadPath(expr, preferredSoaToAosMethodTarget(normalizedMethodName), ctx);
     return true;
   }
   if (normalizedTypeName == "soa_vector" &&

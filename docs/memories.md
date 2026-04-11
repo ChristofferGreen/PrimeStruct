@@ -510,7 +510,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   unchanged, and template-monomorph expression-rewrite canonical stdlib
   collection helper whitelisting now routes `to_aos(_ref)` canonical-path
   checks through shared `isCanonicalSoaToAosHelperPath(...)` matching instead
-  of duplicated direct canonical-path disjunctions.
+  of duplicated direct canonical-path disjunctions, and template-monomorph
+  method-target `to_aos(_ref)` fallback preference now canonicalizes same-path
+  helper spellings through shared `canonicalizeLegacySoaToAosHelperPath(...)`
+  plus `isCanonicalSoaToAosHelperPath(...)` guards instead of hardcoded
+  canonical-path literals.
 - `semantic-soa-s2-canonical-count-get-bridge-substrate-2026-04`: S2 inline-
   parameter bridge matching now treats canonical `/std/collections/soa_vector`
   `count|get` callee paths (plus same-path aliases) as bridge-eligible for
