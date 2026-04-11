@@ -336,9 +336,10 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
 
   const std::string resolvedSoaToAosCanonical =
       canonicalizeLegacySoaToAosHelperPath(resolved);
-  const bool isCanonicalSoaToAosResolved =
-      isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical);
-  const bool isBorrowedSoaToAosResolved =
+  const bool matchesSoaToAosResolved =
+      isLegacyOrCanonicalSoaHelperPath(
+          resolvedSoaToAosCanonical, "to_aos");
+  const bool matchesBorrowedSoaToAosResolved =
       isLegacyOrCanonicalSoaHelperPath(
           resolvedSoaToAosCanonical, "to_aos_ref");
 
@@ -348,9 +349,9 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
        resolvedMissing) ||
       (resolvedMethod &&
        (resolved == "/to_soa" || resolved == "/to_aos" ||
-        isBorrowedSoaToAosResolved || isCanonicalSoaToAosResolved)) ||
+        matchesBorrowedSoaToAosResolved || matchesSoaToAosResolved)) ||
       (!resolvedMethod &&
-       (isBorrowedSoaToAosResolved || isCanonicalSoaToAosResolved))) {
+       (matchesBorrowedSoaToAosResolved || matchesSoaToAosResolved))) {
     handledOut = true;
     if (hasNamedArguments(expr.argNames) &&
         !(context.isNamedArgsPackMethodAccessCall != nullptr &&
@@ -386,7 +387,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
                   context.resolveSoaVectorTarget,
                   elemType);
     if (!targetValid) {
-      if (helperName == "to_aos" && isCanonicalSoaToAosResolved) {
+      if (helperName == "to_aos" && matchesSoaToAosResolved) {
         return failMapSoaBuiltinDiagnostic(
             "argument type mismatch for /std/collections/soa_vector/to_aos parameter values");
       } else {

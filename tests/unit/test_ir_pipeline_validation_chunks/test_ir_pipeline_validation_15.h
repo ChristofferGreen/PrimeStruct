@@ -882,7 +882,11 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "resolved.rfind(\"/std/collections/soa_vector/\", 0) == 0") !=
         std::string::npos);
   CHECK(exprSource.find(
-            "isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical)") !=
+            "isLegacyOrCanonicalSoaHelperPath(\n"
+            "            resolvedSoaToAosCanonical, \"to_aos\")") !=
+        std::string::npos);
+  CHECK(exprSource.find(
+            "isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical)") ==
         std::string::npos);
   CHECK(exprSource.find(
             "isLegacyOrCanonicalSoaHelperPath(\n"
@@ -940,7 +944,11 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "canonicalizeLegacySoaToAosHelperPath(resolved)") !=
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
-            "isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical)") !=
+            "isLegacyOrCanonicalSoaHelperPath(\n"
+            "          resolvedSoaToAosCanonical, \"to_aos\")") !=
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical)") ==
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
             "isLegacyOrCanonicalSoaHelperPath(\n"
