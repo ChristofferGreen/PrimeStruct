@@ -105,7 +105,7 @@ bool rewriteExpr(Expr &expr,
            path == "/std/collections/soa_vector/get" || path == "/std/collections/soa_vector/get_ref" ||
            path == "/std/collections/soa_vector/ref" || path == "/std/collections/soa_vector/ref_ref" ||
            path == "/std/collections/soa_vector/reserve" || path == "/std/collections/soa_vector/push" ||
-           path == "/std/collections/soa_vector/to_aos" || path == "/std/collections/soa_vector/to_aos_ref";
+           isCanonicalSoaToAosHelperPath(path);
   };
   auto isSyntheticSamePathSoaHelperTemplateCarryPath = [&](const std::string &path) {
     auto isSyntheticSamePathSoaCarryNonRefHelperPath = [](const std::string &candidate) {
