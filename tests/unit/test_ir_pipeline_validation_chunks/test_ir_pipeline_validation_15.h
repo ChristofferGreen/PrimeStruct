@@ -1031,6 +1031,15 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "hasImportedDefinitionPath(resolvedSoaRefCanonical)") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
+            "isCanonicalSoaRefLikeHelperPath(resolvedSoaRefCanonical)") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "resolvedSoaRefCanonical == \"/std/collections/soa_vector/ref\"") ==
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "resolvedSoaRefCanonical == \"/std/collections/soa_vector/ref_ref\"") ==
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
             "resolvedOut == \"/std/collections/soa_vector/ref\"") ==
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find("preferredBorrowedSoaAccessHelperTarget(") !=

@@ -164,8 +164,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   builtin-helper classification now canonicalizes legacy resolved
   `ref`/`ref_ref` spellings through shared
   `canonicalizeLegacySoaRefHelperPath(...)` before builtin
-  import/local-definition gating, and source-lock coverage now asserts that
-  shared helper call path in method-target resolution.
+  import/local-definition gating; canonical `ref`/`ref_ref` helper-family
+  detection there now routes through shared
+  `isCanonicalSoaRefLikeHelperPath(...)` predicate checks instead of direct
+  canonical-path comparisons, and source-lock coverage now asserts those
+  shared helper call paths in method-target resolution.
 - `soa-monomorph-template-carry-shared-helper-predicate`:
   template-monomorph expression-rewrite synthetic same-path SoA template-carry
   gating now removes duplicated inline helper-family ref/ref_ref path lists

@@ -1551,8 +1551,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         resolvedOut == "/std/collections/soa_vector/get_ref" ||
         resolvedOut == "/std/collections/soa_vector/to_aos" ||
         resolvedOut == "/std/collections/soa_vector/to_aos_ref" ||
-        resolvedSoaRefCanonical == "/std/collections/soa_vector/ref" ||
-        resolvedSoaRefCanonical == "/std/collections/soa_vector/ref_ref";
+        isCanonicalSoaRefLikeHelperPath(resolvedSoaRefCanonical);
     const bool hasImportedBuiltinSoaCollectionHelper =
         hasImportedDefinitionPath(resolvedOut) ||
         (resolvedSoaRefCanonical != resolvedOut &&
