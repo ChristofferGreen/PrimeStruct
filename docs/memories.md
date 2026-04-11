@@ -79,6 +79,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `/soa_vector/ref(_ref)` remapping) before helper-family checks, and
   source-lock coverage now rejects direct legacy
   `resolvedPath.rfind("/soa_vector/ref(_ref)", 0) == 0` checks there.
+- `soa-monomorph-implicit-ref-path-canonicalization`: template-monomorph
+  implicit-template SoA pending `ref`/`ref_ref` helper gating now canonicalizes
+  resolved helper paths (template-suffix stripping plus legacy
+  `/soa_vector/ref(_ref)` remapping) before helper-family checks, and
+  source-lock coverage now rejects the old direct
+  `if (resolvedPath == "/soa_vector/ref" || ...)` call-shape check there.
 - `arg-pack-dereference-struct-inference`: IR struct-type inference now
   propagates through `dereference(...)`, so indexed borrowed arg-pack values
   (for example `args<Reference<Map<K, V>>>`) preserve their struct identity

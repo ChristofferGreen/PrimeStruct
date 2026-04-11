@@ -203,17 +203,33 @@ bool inferImplicitTemplateArgs(const Definition &def,
         hasVisibleSoaBorrowedHelper("ref");
     const bool hasVisibleSoaRefRefHelper =
         hasVisibleSoaBorrowedHelper("ref_ref");
+    const auto canonicalizeLegacySoaResolvedPath =
+        [](std::string_view path) -> std::string {
+      std::string resolvedPath(path);
+      const size_t templateSuffix = resolvedPath.find("__t");
+      if (templateSuffix != std::string::npos) {
+        resolvedPath.erase(templateSuffix);
+      }
+      if (resolvedPath == "/soa_vector/ref") {
+        return "/std/collections/soa_vector/ref";
+      }
+      if (resolvedPath == "/soa_vector/ref_ref") {
+        return "/std/collections/soa_vector/ref_ref";
+      }
+      return resolvedPath;
+    };
+    const std::string resolvedSoaCanonical =
+        canonicalizeLegacySoaResolvedPath(resolvedPath);
     const bool isCanonicalBuiltinSoaRefCall =
         normalizedName == "std/collections/soa_vector/ref" ||
-        resolvedPath == "/std/collections/soa_vector/ref";
+        resolvedSoaCanonical == "/std/collections/soa_vector/ref";
     const bool isCanonicalBuiltinSoaRefRefCall =
         normalizedName == "std/collections/soa_vector/ref_ref" ||
-        resolvedPath == "/std/collections/soa_vector/ref_ref";
+        resolvedSoaCanonical == "/std/collections/soa_vector/ref_ref";
     const bool isOldSurfaceBuiltinSoaRefCall =
-        normalizedName == "soa_vector/ref" || resolvedPath == "/soa_vector/ref";
+        normalizedName == "soa_vector/ref";
     const bool isOldSurfaceBuiltinSoaRefRefCall =
-        normalizedName == "soa_vector/ref_ref" ||
-        resolvedPath == "/soa_vector/ref_ref";
+        normalizedName == "soa_vector/ref_ref";
     if (normalizedName == "ref" || normalizedName == "ref_ref" ||
         isCanonicalBuiltinSoaRefCall || isCanonicalBuiltinSoaRefRefCall ||
         isOldSurfaceBuiltinSoaRefCall || isOldSurfaceBuiltinSoaRefRefCall) {
@@ -241,10 +257,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
       const bool isBuiltinSoaRefMethod = candidate.isMethodCall && normalizedName == "ref";
       const bool isBuiltinSoaRefRefMethod =
           candidate.isMethodCall && normalizedName == "ref_ref";
-      if (resolvedPath == "/soa_vector/ref" ||
-          resolvedPath == "/std/collections/soa_vector/ref" ||
-          resolvedPath == "/soa_vector/ref_ref" ||
-          resolvedPath == "/std/collections/soa_vector/ref_ref" ||
+      if (resolvedSoaCanonical == "/std/collections/soa_vector/ref" ||
+          resolvedSoaCanonical == "/std/collections/soa_vector/ref_ref" ||
           isExplicitSoaRefCall ||
           isExplicitSoaRefRefCall ||
           isBuiltinSoaRefMethod ||
