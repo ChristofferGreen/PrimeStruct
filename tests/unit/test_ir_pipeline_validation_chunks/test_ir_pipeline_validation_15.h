@@ -1214,10 +1214,13 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "const bool oldSurfaceCallShape =") !=
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
-            "const auto canonicalizeLegacySoaHelperResolvedPath = [](std::string_view path) -> std::string {") !=
+            "const auto canonicalizeLegacySoaHelperResolvedPath = [](std::string_view path) -> std::string {") ==
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
-            "const std::string resolvedSoaCanonical =") !=
+            "canonicalizeLegacySoaRefHelperPath(resolvedCandidate)") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "std::string resolvedSoaCanonical =") !=
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find("resolvedCandidate == \"/soa_vector/get\"") ==
         std::string::npos);

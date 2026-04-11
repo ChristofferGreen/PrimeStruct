@@ -442,28 +442,13 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       return !currentTypeTextOut.empty();
     }
     const std::string resolvedCandidate = resolveCalleePath(candidate);
-    const auto canonicalizeLegacySoaHelperResolvedPath = [](std::string_view path) -> std::string {
-      std::string resolvedPath(path);
-      const size_t templateSuffix = resolvedPath.find("__t");
-      if (templateSuffix != std::string::npos) {
-        resolvedPath.erase(templateSuffix);
-      }
-      if (resolvedPath == "/soa_vector/get") {
-        return "/std/collections/soa_vector/get";
-      }
-      if (resolvedPath == "/soa_vector/get_ref") {
-        return "/std/collections/soa_vector/get_ref";
-      }
-      if (resolvedPath == "/soa_vector/ref") {
-        return "/std/collections/soa_vector/ref";
-      }
-      if (resolvedPath == "/soa_vector/ref_ref") {
-        return "/std/collections/soa_vector/ref_ref";
-      }
-      return resolvedPath;
-    };
-    const std::string resolvedSoaCanonical =
-        canonicalizeLegacySoaHelperResolvedPath(resolvedCandidate);
+    std::string resolvedSoaCanonical =
+        canonicalizeLegacySoaRefHelperPath(resolvedCandidate);
+    if (resolvedSoaCanonical == "/soa_vector/get") {
+      resolvedSoaCanonical = "/std/collections/soa_vector/get";
+    } else if (resolvedSoaCanonical == "/soa_vector/get_ref") {
+      resolvedSoaCanonical = "/std/collections/soa_vector/get_ref";
+    }
     const auto soaAccessHelper =
         candidate.args.size() == 2
             ? builtinSoaAccessHelperName(candidate, params, locals)
