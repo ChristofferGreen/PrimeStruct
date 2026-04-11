@@ -266,11 +266,8 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   if (!normalizedTypeName.empty() && normalizedTypeName.front() == '/') {
     normalizedTypeName.erase(normalizedTypeName.begin());
   }
-  if (normalizedTypeName == "soa_vector" && normalizedMethodName == "to_aos") {
-    pathOut = selectHelperOverloadPath(expr, preferredSoaToAosMethodTarget(normalizedMethodName), ctx);
-    return true;
-  }
-  if (normalizedTypeName == "soa_vector" && normalizedMethodName == "to_aos_ref") {
+  if (normalizedTypeName == "soa_vector" &&
+      (normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref")) {
     pathOut = selectHelperOverloadPath(expr, preferredSoaToAosMethodTarget(normalizedMethodName), ctx);
     return true;
   }

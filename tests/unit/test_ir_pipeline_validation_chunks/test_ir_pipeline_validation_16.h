@@ -834,6 +834,13 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "helperName == \"to_aos\" ? std::string(\"/to_aos\")") ==
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
+            "normalizedTypeName == \"soa_vector\" &&\n"
+            "      (normalizedMethodName == \"to_aos\" || normalizedMethodName == \"to_aos_ref\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "normalizedTypeName == \"soa_vector\" && normalizedMethodName == \"to_aos\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
             "isCanonicalSoaToAosHelperPath(canonicalPath)") ==
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
