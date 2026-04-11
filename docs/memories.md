@@ -560,7 +560,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   gating, and template-monomorph fallback stdlib implicit-template path
   gating now canonicalizes helper paths through
   `canonicalizeLegacySoaGetHelperPath(...)` before legacy/canonical
-  `get_ref` and canonical `ref/ref_ref` helper-family checks.
+  `get_ref` and canonical `ref/ref_ref` helper-family checks, and
+  template-monomorph expression-rewrite same-path `get/get_ref` fallback
+  now canonicalizes the same-path helper through
+  `canonicalizeLegacySoaGetHelperPath(...)` before same-path/canonical
+  helper-family definition probes.
 - `semantic-soa-s2-canonical-count-get-bridge-substrate-2026-04`: S2 inline-
   parameter bridge matching now treats canonical `/std/collections/soa_vector`
   `count|get` callee paths (plus same-path aliases) as bridge-eligible for

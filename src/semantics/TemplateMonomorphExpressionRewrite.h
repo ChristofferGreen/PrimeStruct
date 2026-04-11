@@ -454,13 +454,18 @@ bool rewriteExpr(Expr &expr,
         inferCollectionReceiverFamily(receiverExpr) == "soa_vector") {
       return std::string("/soa_vector/reserve");
     }
-    if ((helperName == "get" || helperName == "get_ref") &&
-        hasDefinitionFamilyPath(helperName == "get_ref" ? "/soa_vector/get_ref"
-                                                        : "/soa_vector/get") &&
-        (inferCollectionReceiverFamily(receiverExpr) == "soa_vector" ||
-         inferCollectionReceiverFamily(receiverExpr) == "vector")) {
-      return helperName == "get_ref" ? std::string("/soa_vector/get_ref")
-                                     : std::string("/soa_vector/get");
+    if (helperName == "get" || helperName == "get_ref") {
+      const std::string samePathGetHelper =
+          helperName == "get_ref" ? std::string("/soa_vector/get_ref")
+                                  : std::string("/soa_vector/get");
+      const std::string canonicalGetHelper =
+          canonicalizeLegacySoaGetHelperPath(samePathGetHelper);
+      if (hasDefinitionFamilyPath(samePathGetHelper) &&
+          isLegacyOrCanonicalSoaHelperPath(canonicalGetHelper, helperName) &&
+          (inferCollectionReceiverFamily(receiverExpr) == "soa_vector" ||
+           inferCollectionReceiverFamily(receiverExpr) == "vector")) {
+        return samePathGetHelper;
+      }
     }
     const bool isSyntacticSoaRefHelper =
         helperName == "ref" || helperName == "ref_ref";
