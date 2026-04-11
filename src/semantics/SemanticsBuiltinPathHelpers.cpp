@@ -462,7 +462,7 @@ std::string canonicalizeLegacySoaToAosHelperPath(std::string_view path) {
   if (canonicalPath == "/to_aos") {
     return "/std/collections/soa_vector/to_aos";
   }
-  if (canonicalPath == "/to_aos_ref" || canonicalPath == "/soa_vector/to_aos_ref") {
+  if (canonicalPath == "/to_aos_ref") {
     return "/std/collections/soa_vector/to_aos_ref";
   }
   return canonicalPath;

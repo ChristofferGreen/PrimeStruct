@@ -693,6 +693,11 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "std::string canonicalizeLegacySoaToAosHelperPath(std::string_view path)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
+            "if (canonicalPath == \"/to_aos_ref\")") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find("\"/soa_vector/to_aos_ref\"") ==
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
             "bool isCanonicalSoaToAosHelperPath(std::string_view path)") ==
         std::string::npos);
   CHECK(builtinPathHelpersSource.find("\"/soa_vector/field_view/\"") == std::string::npos);
