@@ -664,9 +664,20 @@ std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
   if (defIt == ctx.sourceDefs.end() || ctx.templateDefs.count(path) > 0) {
     return path;
   }
+  auto isLegacyOrCanonicalSoaHelperPath = [](const std::string &candidate,
+                                             const std::string &helperName) {
+    constexpr const char kLegacyPrefix[] = "/soa_vector/";
+    constexpr const char kCanonicalPrefix[] = "/std/collections/soa_vector/";
+    if (candidate.rfind(kLegacyPrefix, 0) == 0) {
+      return candidate.substr(sizeof(kLegacyPrefix) - 1) == helperName;
+    }
+    if (candidate.rfind(kCanonicalPrefix, 0) == 0) {
+      return candidate.substr(sizeof(kCanonicalPrefix) - 1) == helperName;
+    }
+    return false;
+  };
   const std::string pathCanonical = canonicalizeLegacySoaRefHelperPath(path);
-  if (path == "/soa_vector/get_ref" ||
-      path == "/std/collections/soa_vector/get_ref" ||
+  if (isLegacyOrCanonicalSoaHelperPath(path, "get_ref") ||
       pathCanonical == "/std/collections/soa_vector/ref" ||
       pathCanonical == "/std/collections/soa_vector/ref_ref") {
     return path;

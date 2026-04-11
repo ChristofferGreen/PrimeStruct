@@ -565,7 +565,19 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphFallbackSource.find("std::string preferVectorStdlibImplicitTemplatePath(") !=
         std::string::npos);
-  CHECK(templateMonomorphFallbackSource.find("path == \"/soa_vector/get_ref\"") !=
+  CHECK(templateMonomorphFallbackSource.find("path == \"/soa_vector/get_ref\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphFallbackSource.find(
+            "path == \"/std/collections/soa_vector/get_ref\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphFallbackSource.find(
+            "constexpr const char kLegacyPrefix[] = \"/soa_vector/\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphFallbackSource.find(
+            "constexpr const char kCanonicalPrefix[] = \"/std/collections/soa_vector/\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphFallbackSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(path, \"get_ref\")") !=
         std::string::npos);
   CHECK(templateMonomorphFallbackSource.find(
             "const auto canonicalizeLegacySoaRefHelperPath =") ==
@@ -582,9 +594,6 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphFallbackSource.find(
             "pathCanonical == \"/std/collections/soa_vector/ref_ref\"") !=
-        std::string::npos);
-  CHECK(templateMonomorphFallbackSource.find(
-            "path == \"/std/collections/soa_vector/get_ref\"") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "path == \"/soa_vector/get_ref\"") ==
