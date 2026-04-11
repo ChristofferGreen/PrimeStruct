@@ -374,29 +374,29 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
              (resolvedPath.size() >= 8 &&
               resolvedPath.compare(resolvedPath.size() - 8, 8, "/ref_ref") == 0);
     };
-    auto isBuiltinSoaRefPath = [&](const std::string &resolvedPath,
+    auto isBuiltinSoaRefPath = [&](std::string_view resolvedPath,
                                    bool methodForm) -> bool {
       if (resolvedPath.empty()) {
         return false;
       }
-      if (resolvedPath.rfind(
+      const std::string canonicalResolvedPath =
+          canonicalizeLegacySoaRefHelperPath(resolvedPath);
+      if (canonicalResolvedPath.rfind(
               "/std/collections/experimental_soa_vector/soaVectorRef",
               0) == 0) {
         return true;
       }
-      if (resolvedPath.rfind(
+      if (canonicalResolvedPath.rfind(
               "/std/collections/experimental_soa_vector/soaVectorRefRef",
               0) == 0) {
         return true;
       }
       if (methodForm) {
-        return resolvedPath.rfind(
+        return canonicalResolvedPath.rfind(
                    "/std/collections/experimental_soa_vector/", 0) == 0 &&
-               hasRefLikeSuffix(resolvedPath);
+               hasRefLikeSuffix(canonicalResolvedPath);
       }
-      return resolvedPath.rfind("/std/collections/soa_vector/ref", 0) == 0 ||
-             resolvedPath.rfind("/std/collections/soa_vector/ref_ref", 0) ==
-                 0;
+      return isCanonicalSoaRefLikeHelperPath(canonicalResolvedPath);
     };
 
     receiverTargetOut = nullptr;
@@ -427,10 +427,8 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
             "/std/collections/experimental_soa_vector/soaVectorRefRef",
             0) == 0;
     const std::string resolvedCallPath = resolveCalleePath(refExpr);
-    const std::string resolvedPathCanonical =
-        canonicalizeLegacySoaRefHelperPath(resolvedCallPath);
     if ((!isBareRefCall && !isCanonicalRefCall &&
-         !isBuiltinSoaRefPath(resolvedPathCanonical, false)) ||
+         !isBuiltinSoaRefPath(resolvedCallPath, false)) ||
         refExpr.args.size() != 2) {
       return false;
     }

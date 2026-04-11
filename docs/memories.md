@@ -10,6 +10,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   calls on builtin `soa_vector<T>` fail during lowering with a struct-parameter
   mismatch (`got /soa_vector`), complementing existing IR inline-parameter
   rejection coverage for both `soaVectorToAos` and `soaVectorToAosRef`.
+- `soa-mutation-borrow-ref-family-shared-predicate`: mutation-borrow SoA
+  `ref`/`ref_ref` receiver detection now canonicalizes helper paths through
+  shared `canonicalizeLegacySoaRefHelperPath(...)` and routes canonical
+  helper-family matching through `isCanonicalSoaRefLikeHelperPath(...)`
+  instead of direct canonical-path prefix checks; source-lock coverage in
+  `test_ir_pipeline_validation_15` asserts that shared predicate wiring.
 - `soa-pending-diagnostics-canonicalized`: direct pending SoA borrowed/field-view
   rejects now canonicalize onto stdlib helper-contract unavailable-method
   diagnostics (`/std/collections/soa_vector/ref(_ref)` and
