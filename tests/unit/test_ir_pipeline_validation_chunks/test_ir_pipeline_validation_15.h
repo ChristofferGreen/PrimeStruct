@@ -720,6 +720,23 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
+            "const auto canonicalizeSoaResolvedPath = [](std::string_view path) -> std::string {") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "const std::string resolvedCanonical = canonicalizeSoaResolvedPath(resolved);") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find("resolved == \"/soa_vector/ref\"") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find("resolved == \"/soa_vector/ref_ref\"") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find("resolved == \"/soa_vector/get\"") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find("resolved == \"/soa_vector/get_ref\"") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "resolvedCanonical == \"/std/collections/soa_vector/get_ref\"") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
             "bool SemanticsValidator::isBuiltinSoaRefExpr(") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
@@ -1052,7 +1069,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find("normalizedName == \"get_ref\"") !=
         std::string::npos);
-  CHECK(buildInitializerInferenceSource.find("resolved == \"/soa_vector/get_ref\"") !=
+  CHECK(buildInitializerInferenceSource.find(
+            "resolvedCanonical == \"/std/collections/soa_vector/get_ref\"") !=
         std::string::npos);
   CHECK(inferDefinitionSource.find(
             "soaDirectPendingUnavailableMethodDiagnostic(") ==
