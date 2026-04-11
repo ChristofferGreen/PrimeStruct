@@ -95,6 +95,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   shared `canonicalizeLegacySoaRefHelperPath(...)` semantics helper instead
   of a local lambda, and source-lock coverage now asserts that shared helper
   call path and declaration contract.
+- `soa-monomorph-fallback-shared-ref-canonicalizer`: template-monomorph
+  fallback stdlib implicit-template path gating now reuses shared
+  `canonicalizeLegacySoaRefHelperPath(...)` semantics helper wiring instead
+  of a local lambda, and source-lock coverage now asserts that shared helper
+  call path in fallback canonicalization checks.
 - `soa-monomorph-implicit-ref-path-canonicalization`: template-monomorph
   implicit-template SoA pending `ref`/`ref_ref` helper gating now canonicalizes
   resolved helper paths (template-suffix stripping plus legacy

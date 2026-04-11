@@ -568,10 +568,13 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphFallbackSource.find("path == \"/soa_vector/get_ref\"") !=
         std::string::npos);
   CHECK(templateMonomorphFallbackSource.find(
-            "const auto canonicalizeLegacySoaRefHelperPath =") !=
+            "const auto canonicalizeLegacySoaRefHelperPath =") ==
         std::string::npos);
   CHECK(templateMonomorphFallbackSource.find(
             "const std::string pathCanonical =") !=
+        std::string::npos);
+  CHECK(templateMonomorphFallbackSource.find(
+            "canonicalizeLegacySoaRefHelperPath(path)") !=
         std::string::npos);
   CHECK(templateMonomorphFallbackSource.find("path == \"/soa_vector/ref\"") ==
         std::string::npos);
