@@ -495,11 +495,6 @@ bool isLegacyOrCanonicalSoaHelperPath(std::string_view path, std::string_view he
   return false;
 }
 
-bool isCanonicalSoaToAosHelperPath(std::string_view path) {
-  return path == "/std/collections/soa_vector/to_aos" ||
-         path == "/std/collections/soa_vector/to_aos_ref";
-}
-
 bool isCanonicalSoaRefLikeHelperPath(std::string_view path) {
   return path == "/std/collections/soa_vector/ref" ||
          path == "/std/collections/soa_vector/ref_ref";

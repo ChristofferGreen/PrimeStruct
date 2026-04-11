@@ -137,7 +137,6 @@ bool splitSoaFieldViewHelperPath(std::string_view path, std::string *fieldNameOu
 std::string canonicalizeLegacySoaToAosHelperPath(std::string_view path);
 std::string canonicalizeLegacySoaRefHelperPath(std::string_view path);
 bool isLegacyOrCanonicalSoaHelperPath(std::string_view path, std::string_view helperName);
-bool isCanonicalSoaToAosHelperPath(std::string_view path);
 bool isCanonicalSoaRefLikeHelperPath(std::string_view path);
 std::string soaUnavailableMethodDiagnostic(std::string_view resolvedPath);
 bool isSoaVectorStructElementType(const std::string &typeArg,

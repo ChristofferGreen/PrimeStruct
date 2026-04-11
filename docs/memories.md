@@ -541,7 +541,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   monomorph method-target same-path `to_aos(_ref)` fallback family gating now
   routes through explicit shared `isLegacyOrCanonicalSoaHelperPath(...)`
   checks for `to_aos` and `to_aos_ref` instead of broad
-  `isCanonicalSoaToAosHelperPath(...)` family predicates.
+  `isCanonicalSoaToAosHelperPath(...)` family predicates; after that
+  migration, the now-unused `isCanonicalSoaToAosHelperPath(...)`
+  semantics-helper declaration/definition surface was removed.
 - `semantic-soa-s2-canonical-count-get-bridge-substrate-2026-04`: S2 inline-
   parameter bridge matching now treats canonical `/std/collections/soa_vector`
   `count|get` callee paths (plus same-path aliases) as bridge-eligible for
