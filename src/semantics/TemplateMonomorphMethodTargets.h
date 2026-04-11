@@ -119,7 +119,8 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   };
   auto preferredSoaToAosMethodTarget = [&](std::string_view helperName) {
     const std::string samePath = "/" + std::string(helperName);
-    const std::string canonicalPath = canonicalizeLegacySoaToAosHelperPath(samePath);
+    const std::string canonicalPath =
+        "/std/collections/soa_vector/" + std::string(helperName);
     if (hasDefinitionFamilyPath(samePath)) {
       return samePath;
     }

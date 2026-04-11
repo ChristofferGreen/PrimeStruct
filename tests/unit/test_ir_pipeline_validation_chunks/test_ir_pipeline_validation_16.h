@@ -861,7 +861,11 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphMethodTargetsSource.find("inferDefinitionReturnBindingForTemplatedFallback(") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
-            "canonicalizeLegacySoaToAosHelperPath(samePath)") !=
+            "canonicalizeLegacySoaToAosHelperPath(samePath)") ==
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "const std::string canonicalPath =\n"
+            "        \"/std/collections/soa_vector/\" + std::string(helperName);") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
             "const std::string samePath = \"/\" + std::string(helperName);") !=
