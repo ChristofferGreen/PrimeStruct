@@ -131,6 +131,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   canonicalization instead of a local lambda, while keeping explicit legacy
   get/get_ref remapping, and source-lock coverage now asserts that shared
   helper call path.
+- `soa-expr-map-shared-ref-canonicalizer`: expr-map SoA builtin dispatch now
+  reuses shared `canonicalizeLegacySoaRefHelperPath(...)` for SoA
+  `ref`/`ref_ref` canonicalization instead of a local lambda, while keeping
+  explicit legacy get/get_ref remapping, and source-lock coverage now asserts
+  that shared helper call path.
 - `soa-monomorph-implicit-ref-path-canonicalization`: template-monomorph
   implicit-template SoA pending `ref`/`ref_ref` helper gating now canonicalizes
   resolved helper paths (template-suffix stripping plus legacy

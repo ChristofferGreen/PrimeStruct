@@ -21,23 +21,14 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
   if (resolvedTemplateSuffix != std::string::npos) {
     resolvedNoTemplate.erase(resolvedTemplateSuffix);
   }
-  const auto canonicalizeLegacySoaHelperPath = [](std::string_view path) -> std::string {
-    if (path == "/soa_vector/get") {
-      return "/std/collections/soa_vector/get";
-    }
-    if (path == "/soa_vector/get_ref") {
-      return "/std/collections/soa_vector/get_ref";
-    }
-    if (path == "/soa_vector/ref") {
-      return "/std/collections/soa_vector/ref";
-    }
-    if (path == "/soa_vector/ref_ref") {
-      return "/std/collections/soa_vector/ref_ref";
-    }
-    return std::string(path);
-  };
+  const std::string resolvedSoaCanonicalRaw =
+      canonicalizeLegacySoaRefHelperPath(resolvedNoTemplate);
   const std::string resolvedSoaCanonical =
-      canonicalizeLegacySoaHelperPath(resolvedNoTemplate);
+      resolvedSoaCanonicalRaw == "/soa_vector/get"
+          ? "/std/collections/soa_vector/get"
+          : (resolvedSoaCanonicalRaw == "/soa_vector/get_ref"
+                 ? "/std/collections/soa_vector/get_ref"
+                 : resolvedSoaCanonicalRaw);
   auto failMapSoaBuiltinDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(expr, std::move(message));
   };
