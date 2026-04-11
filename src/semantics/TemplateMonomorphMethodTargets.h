@@ -118,9 +118,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     return false;
   };
   auto preferredSoaToAosMethodTarget = [&](std::string_view helperName) {
-    const std::string samePath =
-        helperName == "to_aos" ? std::string("/to_aos")
-                               : std::string("/soa_vector/") + std::string(helperName);
+    const std::string samePath = "/" + std::string(helperName);
     const std::string canonicalPath = canonicalizeLegacySoaToAosHelperPath(samePath);
     const bool matchesSoaToAosHelperPath =
         isLegacyOrCanonicalSoaHelperPath(canonicalPath, "to_aos");
