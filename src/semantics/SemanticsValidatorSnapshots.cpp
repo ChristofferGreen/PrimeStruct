@@ -468,6 +468,92 @@ SemanticsValidator::callBindingSnapshotForTesting() {
   return callBindingSnapshotCache_;
 }
 
+void SemanticsValidator::ensureCallableAndOnErrorSnapshotFactCaches() const {
+  if (callableAndOnErrorSnapshotFactCacheValid_) {
+    return;
+  }
+
+  callableSummaryDefinitionSnapshotCache_.clear();
+  onErrorSnapshotCache_.clear();
+  callableSummaryDefinitionSnapshotCache_.reserve(program_.definitions.size());
+  onErrorSnapshotCache_.reserve(program_.definitions.size());
+
+  for (const auto &def : program_.definitions) {
+    const auto state = buildDefinitionValidationState(def);
+    const auto &context = state.context;
+    ReturnKind returnKind = ReturnKind::Unknown;
+    if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {
+      returnKind = returnKindIt->second;
+    }
+
+    callableSummaryDefinitionSnapshotCache_.push_back(CallableSummarySnapshotEntry{
+        def.fullPath,
+        false,
+        returnKind,
+        context.definitionIsCompute,
+        context.definitionIsUnsafe,
+        std::vector<std::string>(context.activeEffects.begin(), context.activeEffects.end()),
+        snapshotCapabilities(def.transforms),
+        context.resultType.has_value() && context.resultType->isResult,
+        context.resultType.has_value() && context.resultType->isResult && context.resultType->hasValue,
+        context.resultType.has_value() && context.resultType->isResult ? context.resultType->valueType : std::string{},
+        context.resultType.has_value() && context.resultType->isResult ? context.resultType->errorType : std::string{},
+        context.onError.has_value(),
+        context.onError.has_value() ? context.onError->handlerPath : std::string{},
+        context.onError.has_value() ? context.onError->errorType : std::string{},
+        context.onError.has_value() ? context.onError->boundArgs.size() : 0,
+        def.semanticNodeId,
+    });
+
+    if (!context.onError.has_value()) {
+      continue;
+    }
+    std::vector<std::string> boundArgTexts;
+    boundArgTexts.reserve(context.onError->boundArgs.size());
+    for (const auto &transform : def.transforms) {
+      if (transform.name != "on_error") {
+        continue;
+      }
+      boundArgTexts = transform.arguments;
+      break;
+    }
+
+    onErrorSnapshotCache_.push_back(OnErrorSnapshotEntry{
+        def.fullPath,
+        returnKind,
+        context.onError->handlerPath,
+        context.onError->errorType,
+        context.onError->boundArgs.size(),
+        std::move(boundArgTexts),
+        context.resultType.has_value() && context.resultType->isResult && context.resultType->hasValue,
+        context.resultType.has_value() && context.resultType->isResult ? context.resultType->valueType : std::string{},
+        context.resultType.has_value() && context.resultType->isResult ? context.resultType->errorType : std::string{},
+        def.semanticNodeId,
+    });
+  }
+
+  for (auto &entry : callableSummaryDefinitionSnapshotCache_) {
+    std::sort(entry.activeEffects.begin(), entry.activeEffects.end());
+    entry.activeEffects.erase(std::unique(entry.activeEffects.begin(), entry.activeEffects.end()),
+                              entry.activeEffects.end());
+  }
+
+  std::stable_sort(callableSummaryDefinitionSnapshotCache_.begin(),
+                   callableSummaryDefinitionSnapshotCache_.end(),
+                   [](const auto &left, const auto &right) {
+                     if (left.fullPath != right.fullPath) {
+                       return left.fullPath < right.fullPath;
+                     }
+                     return left.isExecution < right.isExecution;
+                   });
+  std::stable_sort(onErrorSnapshotCache_.begin(),
+                   onErrorSnapshotCache_.end(),
+                   [](const auto &left, const auto &right) {
+                     return left.definitionPath < right.definitionPath;
+                   });
+  callableAndOnErrorSnapshotFactCacheValid_ = true;
+}
+
 std::vector<SemanticsValidator::DirectCallTargetSnapshotEntry>
 SemanticsValidator::directCallTargetSnapshotForSemanticProduct() const {
   std::vector<DirectCallTargetSnapshotEntry> entries;
@@ -622,35 +708,9 @@ SemanticsValidator::bridgePathChoiceSnapshotForSemanticProduct() const {
 
 std::vector<SemanticsValidator::CallableSummarySnapshotEntry>
 SemanticsValidator::callableSummarySnapshotForSemanticProduct() const {
-  std::vector<CallableSummarySnapshotEntry> entries;
-  entries.reserve(program_.definitions.size() + program_.executions.size());
-
-  for (const auto &def : program_.definitions) {
-    const auto state = buildDefinitionValidationState(def);
-    const auto &context = state.context;
-    ReturnKind returnKind = ReturnKind::Unknown;
-    if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {
-      returnKind = returnKindIt->second;
-    }
-    entries.push_back(CallableSummarySnapshotEntry{
-        def.fullPath,
-        false,
-        returnKind,
-        context.definitionIsCompute,
-        context.definitionIsUnsafe,
-        std::vector<std::string>(context.activeEffects.begin(), context.activeEffects.end()),
-        snapshotCapabilities(def.transforms),
-        context.resultType.has_value() && context.resultType->isResult,
-        context.resultType.has_value() && context.resultType->isResult && context.resultType->hasValue,
-        context.resultType.has_value() && context.resultType->isResult ? context.resultType->valueType : std::string{},
-        context.resultType.has_value() && context.resultType->isResult ? context.resultType->errorType : std::string{},
-        context.onError.has_value(),
-        context.onError.has_value() ? context.onError->handlerPath : std::string{},
-        context.onError.has_value() ? context.onError->errorType : std::string{},
-        context.onError.has_value() ? context.onError->boundArgs.size() : 0,
-        def.semanticNodeId,
-    });
-  }
+  ensureCallableAndOnErrorSnapshotFactCaches();
+  std::vector<CallableSummarySnapshotEntry> entries = callableSummaryDefinitionSnapshotCache_;
+  entries.reserve(entries.size() + program_.executions.size());
 
   for (const auto &exec : program_.executions) {
     const auto state = buildExecutionValidationState(exec);
@@ -1081,47 +1141,8 @@ SemanticsValidator::queryReceiverBindingSnapshotForTesting() {
 
 std::vector<SemanticsValidator::OnErrorSnapshotEntry>
 SemanticsValidator::onErrorSnapshotForTesting() {
-  std::vector<OnErrorSnapshotEntry> entries;
-  entries.reserve(program_.definitions.size());
-  for (const auto &def : program_.definitions) {
-    const auto state = buildDefinitionValidationState(def);
-    const auto &context = state.context;
-    if (!context.onError.has_value()) {
-      continue;
-    }
-    ReturnKind returnKind = ReturnKind::Unknown;
-    if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {
-      returnKind = returnKindIt->second;
-    }
-
-    std::vector<std::string> boundArgTexts;
-    boundArgTexts.reserve(context.onError->boundArgs.size());
-    for (const auto &transform : def.transforms) {
-      if (transform.name != "on_error") {
-        continue;
-      }
-      boundArgTexts = transform.arguments;
-      break;
-    }
-
-    entries.push_back(OnErrorSnapshotEntry{
-        def.fullPath,
-        returnKind,
-        context.onError->handlerPath,
-        context.onError->errorType,
-        context.onError->boundArgs.size(),
-        std::move(boundArgTexts),
-        context.resultType.has_value() && context.resultType->isResult && context.resultType->hasValue,
-        context.resultType.has_value() && context.resultType->isResult ? context.resultType->valueType : std::string{},
-        context.resultType.has_value() && context.resultType->isResult ? context.resultType->errorType : std::string{},
-        def.semanticNodeId,
-    });
-  }
-
-  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
-    return left.definitionPath < right.definitionPath;
-  });
-  return entries;
+  ensureCallableAndOnErrorSnapshotFactCaches();
+  return onErrorSnapshotCache_;
 }
 
 std::vector<SemanticsValidator::ValidationContextSnapshotEntry>

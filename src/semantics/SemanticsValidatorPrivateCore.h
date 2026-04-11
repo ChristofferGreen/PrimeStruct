@@ -9,6 +9,7 @@
       const std::function<void(const Definition &, const Expr &, QuerySnapshotData &&)> &visitor);
   void ensureQuerySnapshotFactCaches();
   void ensureCallAndTrySnapshotFactCaches();
+  void ensureCallableAndOnErrorSnapshotFactCaches() const;
   bool buildDefinitionMaps();
   bool validateDefinitionBuildTransforms(const Definition &def,
                                          bool isStructHelper,

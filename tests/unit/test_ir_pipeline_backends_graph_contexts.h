@@ -2242,3 +2242,54 @@ TEST_CASE("semantic snapshot shared traversal keeps call and try ordering keys")
   CHECK(callTryCacheHelperBody.find("return left.operandResolvedPath < right.operandResolvedPath;") !=
         std::string::npos);
 }
+
+TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_error ordering keys") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  const std::filesystem::path root =
+      std::filesystem::exists(cwd / "src" / "semantics" / "SemanticsValidatorSnapshots.cpp")
+          ? cwd
+          : cwd.parent_path();
+  const std::string semanticsSnapshots =
+      readTextFile(root / "src" / "semantics" / "SemanticsValidatorSnapshots.cpp");
+
+  const std::size_t cacheHelperStart =
+      semanticsSnapshots.find("SemanticsValidator::ensureCallableAndOnErrorSnapshotFactCaches() const {");
+  const std::size_t callableSummaryStart =
+      semanticsSnapshots.find("SemanticsValidator::callableSummarySnapshotForSemanticProduct() const {");
+  const std::size_t typeMetadataStart =
+      semanticsSnapshots.find("SemanticsValidator::typeMetadataSnapshotForSemanticProduct() const {");
+  const std::size_t onErrorStart =
+      semanticsSnapshots.find("SemanticsValidator::onErrorSnapshotForTesting() {");
+  const std::size_t validationContextStart =
+      semanticsSnapshots.find("SemanticsValidator::validationContextSnapshotForTesting() const {");
+  REQUIRE(cacheHelperStart != std::string::npos);
+  REQUIRE(callableSummaryStart != std::string::npos);
+  REQUIRE(typeMetadataStart != std::string::npos);
+  REQUIRE(onErrorStart != std::string::npos);
+  REQUIRE(validationContextStart != std::string::npos);
+  REQUIRE(cacheHelperStart < callableSummaryStart);
+  REQUIRE(callableSummaryStart < typeMetadataStart);
+  REQUIRE(onErrorStart < validationContextStart);
+
+  const std::string cacheHelperBody =
+      semanticsSnapshots.substr(cacheHelperStart, callableSummaryStart - cacheHelperStart);
+  CHECK(cacheHelperBody.find("callableSummaryDefinitionSnapshotCache_.push_back(") != std::string::npos);
+  CHECK(cacheHelperBody.find("onErrorSnapshotCache_.push_back(") != std::string::npos);
+  CHECK(cacheHelperBody.find("std::stable_sort(callableSummaryDefinitionSnapshotCache_.begin(),") !=
+        std::string::npos);
+  CHECK(cacheHelperBody.find("std::stable_sort(onErrorSnapshotCache_.begin(),") != std::string::npos);
+  CHECK(cacheHelperBody.find("if (left.fullPath != right.fullPath)") != std::string::npos);
+  CHECK(cacheHelperBody.find("return left.definitionPath < right.definitionPath;") !=
+        std::string::npos);
+
+  const std::string callableSummaryBody =
+      semanticsSnapshots.substr(callableSummaryStart, typeMetadataStart - callableSummaryStart);
+  CHECK(callableSummaryBody.find("ensureCallableAndOnErrorSnapshotFactCaches();") != std::string::npos);
+  CHECK(callableSummaryBody.find("std::vector<CallableSummarySnapshotEntry> entries = callableSummaryDefinitionSnapshotCache_;") !=
+        std::string::npos);
+
+  const std::string onErrorBody =
+      semanticsSnapshots.substr(onErrorStart, validationContextStart - onErrorStart);
+  CHECK(onErrorBody.find("ensureCallableAndOnErrorSnapshotFactCaches();") != std::string::npos);
+  CHECK(onErrorBody.find("return onErrorSnapshotCache_;") != std::string::npos);
+}

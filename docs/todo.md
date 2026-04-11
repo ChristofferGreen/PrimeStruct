@@ -27,5 +27,4 @@ P0 - Reproducible measurement and attribution
 P1 - Immediate peak-RSS reductions in existing pipeline
 
 P2 - Traversal and allocation churn reductions
-- ○ [P2-11] Merge one additional overlapping semantic snapshot traversal pair into a shared collector path with output-order parity coverage.
 - ○ [P2-12] Extend scoped scratch/canonical-fragment reuse to one additional high-churn method/call target resolution path and lock it with source-lock coverage.

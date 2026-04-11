@@ -657,6 +657,9 @@ private:
   bool callAndTrySnapshotFactCacheValid_ = false;
   std::vector<TryValueSnapshotEntry> tryValueSnapshotCache_;
   std::vector<CallBindingSnapshotEntry> callBindingSnapshotCache_;
+  mutable bool callableAndOnErrorSnapshotFactCacheValid_ = false;
+  mutable std::vector<CallableSummarySnapshotEntry> callableSummaryDefinitionSnapshotCache_;
+  mutable std::vector<OnErrorSnapshotEntry> onErrorSnapshotCache_;
   std::unordered_map<std::string, EffectFreeSummary> effectFreeDefCache_;
   std::unordered_set<std::string> effectFreeDefStack_;
   std::unordered_map<std::string, bool> effectFreeStructCache_;
