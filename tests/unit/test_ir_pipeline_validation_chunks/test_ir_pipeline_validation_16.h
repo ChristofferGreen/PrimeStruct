@@ -584,6 +584,24 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "path == \"/soa_vector/get_ref\"") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
+            "auto canonicalizeLegacySoaRefHelperPath =") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "const std::string resolvedPathCanonical =") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "const std::string methodPathCanonical =") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "resolvedPath == \"/soa_vector/ref\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "methodPath == \"/soa_vector/ref\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "methodPathCanonical == \"/std/collections/soa_vector/ref_ref\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
             "path == \"/std/collections/soa_vector/get_ref\"") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(

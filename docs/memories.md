@@ -79,6 +79,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `/soa_vector/ref(_ref)` remapping) before helper-family checks, and
   source-lock coverage now rejects direct legacy
   `resolvedPath.rfind("/soa_vector/ref(_ref)", 0) == 0` checks there.
+- `soa-monomorph-expression-rewrite-ref-path-canonicalization`:
+  template-monomorph expression rewrite now canonicalizes templated and
+  legacy resolved SoA `ref`/`ref_ref` helper spellings before helper-family
+  checks in both call and method dispatch paths, and source-lock coverage now
+  rejects direct `resolvedPath == "/soa_vector/ref"` and
+  `methodPath == "/soa_vector/ref"` checks there.
 - `soa-monomorph-implicit-ref-path-canonicalization`: template-monomorph
   implicit-template SoA pending `ref`/`ref_ref` helper gating now canonicalizes
   resolved helper paths (template-suffix stripping plus legacy
