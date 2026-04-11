@@ -40,6 +40,17 @@ inline std::filesystem::path makeTempSemanticSourcePath() {
       "semantics/primestruct-semantics-" + nonce + "-" + std::to_string(counter++) + ".prime");
 }
 
+enum class SemanticsCompilePipelineSemanticProductIntentForTesting {
+  Require,
+  SkipForNonConsumingPath,
+};
+
+inline void applySemanticsCompilePipelineSemanticProductIntentForTesting(
+    primec::Options &options, SemanticsCompilePipelineSemanticProductIntentForTesting intent) {
+  options.skipSemanticProductForNonConsumingPath =
+      (intent == SemanticsCompilePipelineSemanticProductIntentForTesting::SkipForNonConsumingPath);
+}
+
 inline bool validateProgramThroughCompilePipeline(const std::string &source,
                                                   const std::string &entry,
                                                   const std::vector<std::string> &defaultEffects,
@@ -66,6 +77,8 @@ inline bool validateProgramThroughCompilePipeline(const std::string &source,
   options.defaultEffects = defaultEffects;
   options.entryDefaultEffects = entryDefaultEffects;
   options.dumpStage = "ast_semantic";
+  applySemanticsCompilePipelineSemanticProductIntentForTesting(
+      options, SemanticsCompilePipelineSemanticProductIntentForTesting::SkipForNonConsumingPath);
   options.collectDiagnostics = diagnosticInfo != nullptr;
   primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
 
@@ -139,6 +152,8 @@ inline bool validateProgramCapturingProgram(const std::string &source,
     options.defaultEffects = defaults;
     options.entryDefaultEffects = defaults;
     options.dumpStage = "ast_semantic";
+    applySemanticsCompilePipelineSemanticProductIntentForTesting(
+        options, SemanticsCompilePipelineSemanticProductIntentForTesting::SkipForNonConsumingPath);
     primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
 
     primec::CompilePipelineOutput output;

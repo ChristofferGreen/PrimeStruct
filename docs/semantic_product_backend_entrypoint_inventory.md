@@ -26,7 +26,7 @@ It exists to support Group 15 `P1-06` follow-up slicing.
 |---|---|---|---|
 | IR helper parse/validate path with stdlib imports | `tests/unit/test_ir_pipeline_helpers.h` (`parseAndValidateThroughCompilePipeline`) | Mixed: required only when semantic output is requested | Non-consuming path optimized in `P1-06a` (source-locked in `test_ir_pipeline_backends_registry`) |
 | Compile-pipeline dump helper | `include/primec/testing/CompilePipelineDumpHelpers.h` (`captureCompilePipelineDumpStageFromPath`) | Mixed: stage-dependent | Explicit semantic-product intent is now required at callsites (`P1-06b`, source-locked in `test_ir_pipeline_backends_registry`) |
-| Semantics helper compile-pipeline validation path | `tests/unit/test_semantics_helpers.h` (`dumpStage = ast_semantic`) | Not required | Non-consuming (already aligned with `P1-01`) |
+| Semantics helper compile-pipeline validation path | `tests/unit/test_semantics_helpers.h` (`dumpStage = ast_semantic`) | Not required | Explicit non-consuming semantic-product intent wired in `P1-12` (source-locked in `test_ir_pipeline_backends_registry`) |
 
 ## Remaining Non-Consuming Families With Explicit Follow-Up Leaves
 

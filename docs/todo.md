@@ -25,7 +25,6 @@ Order rule: execute leaves top-to-bottom. Each leaf below is scoped to one code-
 P0 - Reproducible measurement and attribution
 
 P1 - Immediate peak-RSS reductions in existing pipeline
-- ○ [P1-12] Audit remaining compile-pipeline/non-consuming entrypoints for explicit semantic-product intent wiring and add one leaf per missing entrypoint.
 - ○ [P1-13] Migrate one remaining high-volume semantic-product fact family (if any still copied per-module) to canonical vector index storage with formatter parity checks.
 
 P2 - Traversal and allocation churn reductions
