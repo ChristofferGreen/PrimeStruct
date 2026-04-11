@@ -23,6 +23,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   checks) instead of direct canonical-path prefix comparisons; source-lock
   coverage in `test_ir_pipeline_validation_15` asserts that shared predicate
   wiring.
+- `soa-expr-map-ref-family-shared-helper-path`: expr-map SoA old-surface
+  `ref`/`ref_ref` call-shape matching now uses shared
+  `isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "ref(_ref)")`
+  helper-family checks instead of direct canonical-path equality checks, and
+  source-lock coverage in `test_ir_pipeline_validation_15` asserts that
+  shared helper-path wiring.
 - `soa-pending-diagnostics-canonicalized`: direct pending SoA borrowed/field-view
   rejects now canonicalize onto stdlib helper-contract unavailable-method
   diagnostics (`/std/collections/soa_vector/ref(_ref)` and
