@@ -465,15 +465,18 @@ bool rewriteExpr(Expr &expr,
         return samePathGetHelper;
       }
     }
-    const bool isSyntacticSoaRefHelper =
-        helperName == "ref" || helperName == "ref_ref";
-    if (isSyntacticSoaRefHelper &&
-        hasDefinitionFamilyPath(helperName == "ref_ref" ? "/soa_vector/ref_ref"
-                                                        : "/soa_vector/ref") &&
-        (inferCollectionReceiverFamily(receiverExpr) == "soa_vector" ||
-         inferCollectionReceiverFamily(receiverExpr) == "vector")) {
-      return helperName == "ref_ref" ? std::string("/soa_vector/ref_ref")
-                                     : std::string("/soa_vector/ref");
+    if (helperName == "ref" || helperName == "ref_ref") {
+      const std::string samePathRefHelper =
+          helperName == "ref_ref" ? std::string("/soa_vector/ref_ref")
+                                  : std::string("/soa_vector/ref");
+      const std::string canonicalRefHelper =
+          canonicalizeLegacySoaRefHelperPath(samePathRefHelper);
+      if (hasDefinitionFamilyPath(samePathRefHelper) &&
+          isCanonicalSoaRefLikeHelperPath(canonicalRefHelper) &&
+          (inferCollectionReceiverFamily(receiverExpr) == "soa_vector" ||
+           inferCollectionReceiverFamily(receiverExpr) == "vector")) {
+        return samePathRefHelper;
+      }
     }
     if (helperName == "to_aos" || helperName == "to_aos_ref") {
       const std::string samePathToAosHelper =
