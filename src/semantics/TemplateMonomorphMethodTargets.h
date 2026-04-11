@@ -120,16 +120,8 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   auto preferredSoaToAosMethodTarget = [&](std::string_view helperName) {
     const std::string samePath = "/" + std::string(helperName);
     const std::string canonicalPath = canonicalizeLegacySoaToAosHelperPath(samePath);
-    const bool matchesSoaToAosHelperPath =
-        isLegacyOrCanonicalSoaHelperPath(canonicalPath, "to_aos");
-    const bool matchesBorrowedSoaToAosHelperPath =
-        isLegacyOrCanonicalSoaHelperPath(canonicalPath, "to_aos_ref");
     if (hasDefinitionFamilyPath(samePath)) {
       return samePath;
-    }
-    if ((matchesSoaToAosHelperPath || matchesBorrowedSoaToAosHelperPath) &&
-        hasDefinitionFamilyPath(canonicalPath)) {
-      return canonicalPath;
     }
     return canonicalPath;
   };
