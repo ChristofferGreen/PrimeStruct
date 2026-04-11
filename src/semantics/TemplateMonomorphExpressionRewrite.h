@@ -436,21 +436,18 @@ bool rewriteExpr(Expr &expr,
         helperName != "to_aos_ref") {
       return path;
     }
-    if (helperName == "count" &&
-        hasDefinitionFamilyPath("/soa_vector/count") &&
-        (inferCollectionReceiverFamily(receiverExpr) == "soa_vector" ||
-         inferCollectionReceiverFamily(receiverExpr) == "vector")) {
-      return std::string("/soa_vector/count");
-    }
-    if (helperName == "push" &&
-        hasDefinitionFamilyPath("/soa_vector/push") &&
-        inferCollectionReceiverFamily(receiverExpr) == "soa_vector") {
-      return std::string("/soa_vector/push");
-    }
-    if (helperName == "reserve" &&
-        hasDefinitionFamilyPath("/soa_vector/reserve") &&
-        inferCollectionReceiverFamily(receiverExpr) == "soa_vector") {
-      return std::string("/soa_vector/reserve");
+    if (helperName == "count" || helperName == "push" || helperName == "reserve") {
+      const std::string samePathSoaNonRefHelper = "/soa_vector/" + helperName;
+      const std::string receiverFamily = inferCollectionReceiverFamily(receiverExpr);
+      const bool receiverEligibleForSamePathSoaHelper =
+          receiverFamily == "soa_vector" ||
+          (helperName == "count" && receiverFamily == "vector");
+      if (receiverEligibleForSamePathSoaHelper &&
+          hasDefinitionFamilyPath(samePathSoaNonRefHelper) &&
+          isLegacyOrCanonicalSoaHelperPath(samePathSoaNonRefHelper,
+                                           helperName)) {
+        return samePathSoaNonRefHelper;
+      }
     }
     if (helperName == "get" || helperName == "get_ref") {
       const std::string samePathGetHelper =

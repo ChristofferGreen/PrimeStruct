@@ -716,6 +716,36 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "helperName == \"get\" || helperName == \"get_ref\"") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
+            "helperName == \"count\" || helperName == \"push\" || helperName == \"reserve\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "const std::string samePathSoaNonRefHelper = \"/soa_vector/\" + helperName;") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(samePathSoaNonRefHelper,") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "return samePathSoaNonRefHelper;") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "hasDefinitionFamilyPath(\"/soa_vector/count\")") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "hasDefinitionFamilyPath(\"/soa_vector/push\")") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "hasDefinitionFamilyPath(\"/soa_vector/reserve\")") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "return std::string(\"/soa_vector/count\")") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "return std::string(\"/soa_vector/push\")") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "return std::string(\"/soa_vector/reserve\")") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
             "canonicalizeLegacySoaGetHelperPath(samePathGetHelper)") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
