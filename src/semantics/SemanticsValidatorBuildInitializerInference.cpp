@@ -198,27 +198,14 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
   };
 
   const std::string resolved = resolveCalleePath(candidate);
-  const auto canonicalizeSoaResolvedPath = [](std::string_view path) -> std::string {
-    std::string resolvedPath(path);
-    const size_t templateSuffix = resolvedPath.find("__t");
-    if (templateSuffix != std::string::npos) {
-      resolvedPath.erase(templateSuffix);
-    }
-    if (resolvedPath == "/soa_vector/ref") {
-      return "/std/collections/soa_vector/ref";
-    }
-    if (resolvedPath == "/soa_vector/ref_ref") {
-      return "/std/collections/soa_vector/ref_ref";
-    }
-    if (resolvedPath == "/soa_vector/get") {
-      return "/std/collections/soa_vector/get";
-    }
-    if (resolvedPath == "/soa_vector/get_ref") {
-      return "/std/collections/soa_vector/get_ref";
-    }
-    return resolvedPath;
-  };
-  const std::string resolvedCanonical = canonicalizeSoaResolvedPath(resolved);
+  const std::string resolvedCanonicalRaw =
+      canonicalizeLegacySoaRefHelperPath(resolved);
+  const std::string resolvedCanonical =
+      resolvedCanonicalRaw == "/soa_vector/get"
+          ? "/std/collections/soa_vector/get"
+          : (resolvedCanonicalRaw == "/soa_vector/get_ref"
+                 ? "/std/collections/soa_vector/get_ref"
+                 : resolvedCanonicalRaw);
   std::string normalizedName = candidate.name;
   if (!normalizedName.empty() && normalizedName.front() == '/') {
     normalizedName.erase(normalizedName.begin());

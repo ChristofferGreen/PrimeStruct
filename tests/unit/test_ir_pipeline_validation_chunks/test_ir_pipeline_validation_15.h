@@ -730,10 +730,16 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "const auto canonicalizeSoaResolvedPath = [](std::string_view path) -> std::string {") !=
+            "const auto canonicalizeSoaResolvedPath = [](std::string_view path) -> std::string {") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "const std::string resolvedCanonical = canonicalizeSoaResolvedPath(resolved);") !=
+            "canonicalizeLegacySoaRefHelperPath(resolved)") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "const std::string resolvedCanonicalRaw =") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "const std::string resolvedCanonical =") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find("resolved == \"/soa_vector/ref\"") ==
         std::string::npos);
