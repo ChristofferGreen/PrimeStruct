@@ -894,27 +894,14 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         resolveReceiverRootExpr;
     std::function<bool(const Expr &, const ExprSubstitutions &, std::string &)>
         resolveStandaloneRefRootExpr;
-    const auto canonicalizeSoaRefResolvedPath = [](std::string_view path) -> std::string {
-      std::string resolvedPath = std::string(path);
-      const size_t templateSuffix = resolvedPath.find("__t");
-      if (templateSuffix != std::string::npos) {
-        resolvedPath.erase(templateSuffix);
-      }
-      if (resolvedPath == "/soa_vector/ref") {
-        return "/std/collections/soa_vector/ref";
-      }
-      if (resolvedPath == "/soa_vector/ref_ref") {
-        return "/std/collections/soa_vector/ref_ref";
-      }
-      return resolvedPath;
-    };
     auto isStandaloneRefCall = [&](const Expr &expr) -> bool {
       if (expr.kind != Expr::Kind::Call || expr.args.size() != 2) {
         return false;
       }
       std::string resolvedPath = resolveCalleePath(expr);
       (void)resolveConcreteCallPath(expr, resolvedPath);
-      const std::string resolvedPathCanonical = canonicalizeSoaRefResolvedPath(resolvedPath);
+      const std::string resolvedPathCanonical =
+          canonicalizeLegacySoaRefHelperPath(resolvedPath);
       if (expr.isMethodCall) {
         return expr.name == "ref" ||
                resolvedPathCanonical.rfind("/std/collections/soa_vector/ref",
@@ -1055,7 +1042,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
             std::string resolvedPath = resolveCalleePath(expr);
             (void)resolveConcreteCallPath(expr, resolvedPath);
             const std::string resolvedPathCanonical =
-                canonicalizeSoaRefResolvedPath(resolvedPath);
+                canonicalizeLegacySoaRefHelperPath(resolvedPath);
             const bool isMethodRefCall =
                 expr.isMethodCall &&
                 (expr.name == "ref" ||
