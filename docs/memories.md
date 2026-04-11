@@ -208,6 +208,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   SoA `ref`/`ref_ref` now routes through shared
   `isCanonicalSoaRefLikeHelperPath(...)` plus per-helper
   `isLegacyOrCanonicalSoaHelperPath(...)` checks instead of direct canonical
+  path comparisons; canonical build-initializer resolved-path gating for SoA
+  `get`/`get_ref` now also routes through shared
+  `isLegacyOrCanonicalSoaHelperPath(...)` checks instead of direct canonical
   path comparisons, and source-lock coverage now asserts that shared helper
   wiring.
 - `soa-arg-and-borrow-shared-ref-canonicalizer`: resolved-call argument SoA
