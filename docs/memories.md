@@ -557,7 +557,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   method-target builtin SoA collection helper `get/get_ref` matching now
   canonicalizes resolved helper spellings through that shared helper while
   reusing the canonicalized path for imported/local helper visibility
-  gating.
+  gating, and template-monomorph fallback stdlib implicit-template path
+  gating now canonicalizes helper paths through
+  `canonicalizeLegacySoaGetHelperPath(...)` before legacy/canonical
+  `get_ref` and canonical `ref/ref_ref` helper-family checks.
 - `semantic-soa-s2-canonical-count-get-bridge-substrate-2026-04`: S2 inline-
   parameter bridge matching now treats canonical `/std/collections/soa_vector`
   `count|get` callee paths (plus same-path aliases) as bridge-eligible for

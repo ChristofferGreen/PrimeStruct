@@ -664,8 +664,8 @@ std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
   if (defIt == ctx.sourceDefs.end() || ctx.templateDefs.count(path) > 0) {
     return path;
   }
-  const std::string pathCanonical = canonicalizeLegacySoaRefHelperPath(path);
-  if (isLegacyOrCanonicalSoaHelperPath(path, "get_ref") ||
+  const std::string pathCanonical = canonicalizeLegacySoaGetHelperPath(path);
+  if (isLegacyOrCanonicalSoaHelperPath(pathCanonical, "get_ref") ||
       isCanonicalSoaRefLikeHelperPath(pathCanonical)) {
     return path;
   }
