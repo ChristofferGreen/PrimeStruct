@@ -223,7 +223,15 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
   const bool isBuiltinSoaRefMethod =
       candidate.isMethodCall && normalizedName == "ref" &&
       !candidate.args.empty() && isDirectSoaVectorTarget(candidate.args.front());
-  if (resolvedCanonical == "/std/collections/soa_vector/ref" ||
+  const bool resolvedCanonicalIsRefLike =
+      isCanonicalSoaRefLikeHelperPath(resolvedCanonical);
+  const bool resolvedCanonicalIsRef =
+      resolvedCanonicalIsRefLike &&
+      isLegacyOrCanonicalSoaHelperPath(resolvedCanonical, "ref");
+  const bool resolvedCanonicalIsRefRef =
+      resolvedCanonicalIsRefLike &&
+      isLegacyOrCanonicalSoaHelperPath(resolvedCanonical, "ref_ref");
+  if (resolvedCanonicalIsRef ||
       isExplicitSoaRefCall ||
       isBuiltinSoaRefMethod ||
       (!candidate.isMethodCall && isSimpleCallName(candidate, "ref"))) {
@@ -236,7 +244,7 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
   const bool isBuiltinSoaRefRefMethod =
       candidate.isMethodCall && normalizedName == "ref_ref" &&
       !candidate.args.empty() && isDirectSoaVectorTarget(candidate.args.front());
-  if (resolvedCanonical == "/std/collections/soa_vector/ref_ref" ||
+  if (resolvedCanonicalIsRefRef ||
       isExplicitSoaRefRefCall ||
       isBuiltinSoaRefRefMethod ||
       (!candidate.isMethodCall && isSimpleCallName(candidate, "ref_ref"))) {

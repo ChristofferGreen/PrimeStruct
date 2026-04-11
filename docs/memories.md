@@ -204,8 +204,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   access-helper classification now reuses shared
   `canonicalizeLegacySoaRefHelperPath(...)` for SoA `ref`/`ref_ref`
   canonicalization instead of a local lambda, while keeping explicit legacy
-  get/get_ref remapping, and source-lock coverage now asserts that shared
-  helper call path.
+  get/get_ref remapping; canonical build-initializer resolved-path gating for
+  SoA `ref`/`ref_ref` now routes through shared
+  `isCanonicalSoaRefLikeHelperPath(...)` plus per-helper
+  `isLegacyOrCanonicalSoaHelperPath(...)` checks instead of direct canonical
+  path comparisons, and source-lock coverage now asserts that shared helper
+  wiring.
 - `soa-arg-and-borrow-shared-ref-canonicalizer`: resolved-call argument SoA
   standalone `ref`/`ref_ref` escape classification and expr-mutation borrow SoA
   receiver helper-path detection now both reuse shared

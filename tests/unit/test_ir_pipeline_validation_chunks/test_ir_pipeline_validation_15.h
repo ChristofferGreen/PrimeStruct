@@ -798,6 +798,24 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "resolvedCanonical == \"/std/collections/soa_vector/get_ref\"") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
+            "resolvedCanonical == \"/std/collections/soa_vector/ref\"") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "resolvedCanonical == \"/std/collections/soa_vector/ref_ref\"") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "const bool resolvedCanonicalIsRefLike =") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "isCanonicalSoaRefLikeHelperPath(resolvedCanonical)") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(resolvedCanonical, \"ref\")") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(resolvedCanonical, \"ref_ref\")") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
             "bool SemanticsValidator::isBuiltinSoaRefExpr(") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
