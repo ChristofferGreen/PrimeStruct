@@ -497,14 +497,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
   compile-run coverage now lock the resulting `struct parameter type mismatch`
   contract on those direct helper paths.
 - `semantic-soa-s2-to-aos-canonical-helper-path-factoring-2026-04`: infer-
-  collection and expr-method-target `to_aos(_ref)` helper-family gating now
-  canonicalizes legacy resolved helper spellings (`/to_aos`, `/to_aos_ref`,
-  `/soa_vector/to_aos_ref`) through shared
+  collection, expr-method-target, and expr-map late-builtin `to_aos(_ref)`
+  helper-family gating now canonicalize legacy resolved helper spellings
+  (`/to_aos`, `/to_aos_ref`, `/soa_vector/to_aos_ref`) through shared
   `canonicalizeLegacySoaToAosHelperPath(...)` +
   `isCanonicalSoaToAosHelperPath(...)` checks instead of duplicated direct
   resolved-path comparisons; source-lock IR validation now asserts the shared
-  helper usage and rejects the old direct
-  `resolveCalleePath(target) == ...` comparisons.
+  helper usage and rejects the old direct resolved-path comparisons.
 - `semantic-soa-s2-canonical-count-get-bridge-substrate-2026-04`: S2 inline-
   parameter bridge matching now treats canonical `/std/collections/soa_vector`
   `count|get` callee paths (plus same-path aliases) as bridge-eligible for

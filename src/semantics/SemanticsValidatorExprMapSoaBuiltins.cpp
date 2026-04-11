@@ -334,11 +334,12 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
         resolved == "/std/collections/map/contains_ref" ? "contains_ref" : "contains");
   }
 
+  const std::string resolvedSoaToAosCanonical =
+      canonicalizeLegacySoaToAosHelperPath(resolved);
   const bool isCanonicalSoaToAosResolved =
-      resolved.rfind("/std/collections/soa_vector/to_aos", 0) == 0;
+      isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical);
   const bool isBorrowedSoaToAosResolved =
-      resolved == "/to_aos_ref" ||
-      resolved.rfind("/soa_vector/to_aos_ref", 0) == 0;
+      resolvedSoaToAosCanonical == "/std/collections/soa_vector/to_aos_ref";
 
   if ((!resolvedMethod &&
        (isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos") ||
