@@ -564,7 +564,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   template-monomorph expression-rewrite same-path `get/get_ref` fallback
   now canonicalizes the same-path helper through
   `canonicalizeLegacySoaGetHelperPath(...)` before same-path/canonical
-  helper-family definition probes.
+  helper-family definition probes, and template-monomorph expression-rewrite
+  synthetic same-path SoA non-ref helper carry-path detection now uses
+  shared `isLegacyOrCanonicalSoaHelperPath(...)` helper-family matching plus
+  `canonicalizeLegacySoaGetHelperPath(...)` for `get/get_ref` checks instead
+  of local prefix parsing.
 - `semantic-soa-s2-canonical-count-get-bridge-substrate-2026-04`: S2 inline-
   parameter bridge matching now treats canonical `/std/collections/soa_vector`
   `count|get` callee paths (plus same-path aliases) as bridge-eligible for
