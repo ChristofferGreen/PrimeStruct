@@ -630,6 +630,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollectionReturnInference.cpp";
   const std::filesystem::path exprResolvedCallArgumentsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprResolvedCallArguments.cpp";
+  const std::filesystem::path exprMutationBorrowsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprMutationBorrows.cpp";
   const std::filesystem::path statementBindingsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorStatementBindings.cpp";
   const std::filesystem::path statementReturnsPath =
@@ -650,6 +652,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   REQUIRE(std::filesystem::exists(inferDefinitionPath));
   REQUIRE(std::filesystem::exists(inferCollectionReturnInferencePath));
   REQUIRE(std::filesystem::exists(exprResolvedCallArgumentsPath));
+  REQUIRE(std::filesystem::exists(exprMutationBorrowsPath));
   REQUIRE(std::filesystem::exists(statementBindingsPath));
   REQUIRE(std::filesystem::exists(statementReturnsPath));
 
@@ -673,6 +676,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   const std::string inferCollectionReturnInferenceSource =
       readText(inferCollectionReturnInferencePath);
   const std::string exprResolvedCallArgumentsSource = readText(exprResolvedCallArgumentsPath);
+  const std::string exprMutationBorrowsSource = readText(exprMutationBorrowsPath);
   const std::string statementBindingsSource = readText(statementBindingsPath);
   const std::string statementReturnsSource = readText(statementReturnsPath);
 
@@ -1097,6 +1101,21 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(exprResolvedCallArgumentsSource.find(
             "resolvedPathCanonical.rfind(\"/std/collections/soa_vector/ref_ref\", 0) !=") !=
+        std::string::npos);
+  CHECK(exprMutationBorrowsSource.find(
+            "const auto canonicalizeLegacySoaRefPath =") !=
+        std::string::npos);
+  CHECK(exprMutationBorrowsSource.find(
+            "const std::string resolvedPathCanonical =") !=
+        std::string::npos);
+  CHECK(exprMutationBorrowsSource.find(
+            "resolvedPath.rfind(\"/soa_vector/ref\", 0) == 0") ==
+        std::string::npos);
+  CHECK(exprMutationBorrowsSource.find(
+            "resolvedPath.rfind(\"/soa_vector/ref_ref\", 0) == 0") ==
+        std::string::npos);
+  CHECK(exprMutationBorrowsSource.find(
+            "resolvedPath.rfind(\"/std/collections/soa_vector/ref_ref\", 0) ==") !=
         std::string::npos);
   CHECK(statementBindingsSource.find(
             "reportBuiltinSoaPendingExprDiagnostic(*initializerExprForValidation, params, locals)") ==

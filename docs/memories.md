@@ -73,6 +73,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   remapping) onto canonical `/std/collections/soa_vector/ref(_ref)` before
   helper-family matching, and source-lock coverage now rejects direct legacy
   `resolvedPath.rfind("/soa_vector/ref(_ref)", 0)` checks there.
+- `soa-expr-mutation-borrows-ref-path-canonicalization`: SoA receiver
+  detection for mutation-borrow `ref`/`ref_ref` calls now canonicalizes
+  resolved helper paths (template-suffix stripping plus legacy
+  `/soa_vector/ref(_ref)` remapping) before helper-family checks, and
+  source-lock coverage now rejects direct legacy
+  `resolvedPath.rfind("/soa_vector/ref(_ref)", 0) == 0` checks there.
 - `arg-pack-dereference-struct-inference`: IR struct-type inference now
   propagates through `dereference(...)`, so indexed borrowed arg-pack values
   (for example `args<Reference<Map<K, V>>>`) preserve their struct identity
