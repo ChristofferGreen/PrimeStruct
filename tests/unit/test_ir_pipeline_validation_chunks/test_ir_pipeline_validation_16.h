@@ -869,6 +869,11 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphMethodTargetsSource.find(
             "auto soaCanonicalMethodPath = [&](const std::string &helperNameString) {\n"
             "    return \"/std/collections/soa_vector/\" + helperNameString;\n"
+            "  };") ==
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "auto soaCanonicalMethodPath = [](const std::string &helperNameString) {\n"
+            "    return \"/std/collections/soa_vector/\" + helperNameString;\n"
             "  };") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(

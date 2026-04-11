@@ -118,7 +118,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     }
     return false;
   };
-  auto soaCanonicalMethodPath = [&](const std::string &helperNameString) {
+  auto soaCanonicalMethodPath = [](const std::string &helperNameString) {
     return "/std/collections/soa_vector/" + helperNameString;
   };
   auto preferredSamePathSoaMethodTarget =
