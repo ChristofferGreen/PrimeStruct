@@ -477,16 +477,11 @@ bool rewriteExpr(Expr &expr,
         return samePathToAosHelper;
       }
     }
-    if (receiverFamily == "soa_vector" && resolvesVectorFamilyPath) {
+    if (receiverFamily == "soa_vector") {
       const std::string preferred = "/std/collections/soa_vector/" + helperName;
-      if (ctx.sourceDefs.count(preferred) > 0) {
-        return preferred;
-      }
-    }
-    if (receiverFamily == "soa_vector" && !resolvesVectorFamilyPath) {
-      const std::string preferred = "/std/collections/soa_vector/" + helperName;
-      if (hasVisibleStdCollectionsImportForPath(ctx, preferred) &&
-          ctx.sourceDefs.count(preferred) > 0) {
+      if (ctx.sourceDefs.count(preferred) > 0 &&
+          (resolvesVectorFamilyPath ||
+           hasVisibleStdCollectionsImportForPath(ctx, preferred))) {
         return preferred;
       }
     }

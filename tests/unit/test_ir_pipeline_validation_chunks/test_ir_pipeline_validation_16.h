@@ -734,6 +734,20 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const std::string samePathGetHelper = \"/soa_vector/\" + helperName;") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
+            "if (receiverFamily == \"soa_vector\") {\n"
+            "      const std::string preferred = \"/std/collections/soa_vector/\" + helperName;") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "(resolvesVectorFamilyPath ||\n"
+            "           hasVisibleStdCollectionsImportForPath(ctx, preferred))") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "if (receiverFamily == \"soa_vector\" && resolvesVectorFamilyPath)") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "if (receiverFamily == \"soa_vector\" && !resolvesVectorFamilyPath)") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
             "helperName == \"count\" || helperName == \"push\" || helperName == \"reserve\"") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
