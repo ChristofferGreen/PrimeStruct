@@ -453,10 +453,7 @@ bool rewriteExpr(Expr &expr,
     }
     if (helperName == "ref" || helperName == "ref_ref") {
       const std::string samePathRefHelper = "/soa_vector/" + helperName;
-      const std::string canonicalRefHelper =
-          canonicalizeLegacySoaRefHelperPath(samePathRefHelper);
       if (hasDefinitionFamilyPath(samePathRefHelper) &&
-          isCanonicalSoaRefLikeHelperPath(canonicalRefHelper) &&
           (receiverFamily == "soa_vector" || receiverFamily == "vector")) {
         return samePathRefHelper;
       }
