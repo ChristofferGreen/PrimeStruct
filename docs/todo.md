@@ -27,4 +27,3 @@ P0 - Reproducible measurement and attribution
 P1 - Immediate peak-RSS reductions in existing pipeline
 
 P2 - Traversal and allocation churn reductions
-- ○ [P2-12] Extend scoped scratch/canonical-fragment reuse to one additional high-churn method/call target resolution path and lock it with source-lock coverage.

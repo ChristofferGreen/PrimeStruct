@@ -30,6 +30,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
               !callTargetResolutionScratch_.explicitRemovedMethodPathCache.empty() ||
               !callTargetResolutionScratch_.concreteCallBaseCandidates.empty() ||
               !callTargetResolutionScratch_.methodReceiverResolutionCandidates.empty() ||
+              !callTargetResolutionScratch_.canonicalReceiverAliasPathCache.empty() ||
               callTargetResolutionScratch_.definitionOwner != nullptr ||
               callTargetResolutionScratch_.executionOwner != nullptr)) {
     callTargetResolutionScratch_.resetArena();
@@ -147,25 +148,57 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     (void)inserted;
     return insertIt->second;
   };
+  auto canonicalReceiverAliasPath = [&](const std::string &resolvedReceiverPath) -> std::string {
+    auto buildAliasPath = [&]() -> std::string {
+      if (resolvedReceiverPath.rfind("/vector/", 0) == 0) {
+        const std::string_view helperSuffix =
+            std::string_view(resolvedReceiverPath).substr(std::string_view("/vector/").size());
+        return joinMethodTarget("/std/collections/vector", helperSuffix);
+      }
+      if (resolvedReceiverPath.rfind("/std/collections/vector/", 0) == 0) {
+        const std::string_view helperSuffix = std::string_view(resolvedReceiverPath).substr(
+            std::string_view("/std/collections/vector/").size());
+        return joinMethodTarget("/vector", helperSuffix);
+      }
+      if (resolvedReceiverPath.rfind("/map/", 0) == 0) {
+        const std::string_view helperSuffix =
+            std::string_view(resolvedReceiverPath).substr(std::string_view("/map/").size());
+        return joinMethodTarget("/std/collections/map", helperSuffix);
+      }
+      if (resolvedReceiverPath.rfind("/std/collections/map/", 0) == 0) {
+        const std::string_view helperSuffix = std::string_view(resolvedReceiverPath).substr(
+            std::string_view("/std/collections/map/").size());
+        return joinMethodTarget("/map", helperSuffix);
+      }
+      return {};
+    };
+
+    if (!hasScopedOwner) {
+      return buildAliasPath();
+    }
+
+    const SymbolId resolvedReceiverPathKey =
+        callTargetResolutionScratch_.keyInterner.intern(resolvedReceiverPath);
+    if (resolvedReceiverPathKey == InvalidSymbolId) {
+      return buildAliasPath();
+    }
+    if (const auto cacheIt =
+            callTargetResolutionScratch_.canonicalReceiverAliasPathCache.find(resolvedReceiverPathKey);
+        cacheIt != callTargetResolutionScratch_.canonicalReceiverAliasPathCache.end()) {
+      return cacheIt->second;
+    }
+    auto [insertIt, inserted] = callTargetResolutionScratch_.canonicalReceiverAliasPathCache.emplace(
+        resolvedReceiverPathKey,
+        buildAliasPath());
+    (void)inserted;
+    return insertIt->second;
+  };
   auto appendCanonicalReceiverResolutionCandidates = [&](const std::string &resolvedReceiverPath,
                                                          const auto &appendCandidate) {
     appendCandidate(resolvedReceiverPath);
-    if (resolvedReceiverPath.rfind("/vector/", 0) == 0) {
-      const std::string_view helperSuffix =
-          std::string_view(resolvedReceiverPath).substr(std::string_view("/vector/").size());
-      appendCandidate(joinMethodTarget("/std/collections/vector", helperSuffix));
-    } else if (resolvedReceiverPath.rfind("/std/collections/vector/", 0) == 0) {
-      const std::string_view helperSuffix =
-          std::string_view(resolvedReceiverPath).substr(std::string_view("/std/collections/vector/").size());
-      appendCandidate(joinMethodTarget("/vector", helperSuffix));
-    } else if (resolvedReceiverPath.rfind("/map/", 0) == 0) {
-      const std::string_view helperSuffix =
-          std::string_view(resolvedReceiverPath).substr(std::string_view("/map/").size());
-      appendCandidate(joinMethodTarget("/std/collections/map", helperSuffix));
-    } else if (resolvedReceiverPath.rfind("/std/collections/map/", 0) == 0) {
-      const std::string_view helperSuffix =
-          std::string_view(resolvedReceiverPath).substr(std::string_view("/std/collections/map/").size());
-      appendCandidate(joinMethodTarget("/map", helperSuffix));
+    const std::string aliasPath = canonicalReceiverAliasPath(resolvedReceiverPath);
+    if (!aliasPath.empty()) {
+      appendCandidate(aliasPath);
     }
   };
   const auto isValueSurfaceAccessMethodName = [](std::string_view helperName) {

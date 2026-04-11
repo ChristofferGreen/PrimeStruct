@@ -138,6 +138,8 @@ TEST_CASE("method target resolution reuses scoped scratch cache") {
         std::string::npos);
   CHECK(header.find("PmrStringVector methodReceiverResolutionCandidates{&arenaResource};") !=
         std::string::npos);
+  CHECK(header.find("PmrSymbolStringMap canonicalReceiverAliasPathCache{&arenaResource};") !=
+        std::string::npos);
   CHECK(header.find("bool methodTargetMemoizationEnabled_ = true;") !=
         std::string::npos);
   CHECK(header.find("void resetArena() {") != std::string::npos);
@@ -151,13 +153,19 @@ TEST_CASE("method target resolution reuses scoped scratch cache") {
   CHECK(source.find("callTargetResolutionScratch_.joinedCallPathCache.find(joinKey)") !=
         std::string::npos);
   CHECK(source.find("appendCanonicalReceiverResolutionCandidates") != std::string::npos);
-  CHECK(source.find("appendCandidate(joinMethodTarget(\"/std/collections/vector\", helperSuffix));") !=
+  CHECK(source.find("return joinMethodTarget(\"/std/collections/vector\", helperSuffix);") !=
         std::string::npos);
-  CHECK(source.find("appendCandidate(joinMethodTarget(\"/vector\", helperSuffix));") !=
+  CHECK(source.find("return joinMethodTarget(\"/vector\", helperSuffix);") !=
         std::string::npos);
-  CHECK(source.find("appendCandidate(joinMethodTarget(\"/std/collections/map\", helperSuffix));") !=
+  CHECK(source.find("return joinMethodTarget(\"/std/collections/map\", helperSuffix);") !=
         std::string::npos);
-  CHECK(source.find("appendCandidate(joinMethodTarget(\"/map\", helperSuffix));") !=
+  CHECK(source.find("return joinMethodTarget(\"/map\", helperSuffix);") !=
+        std::string::npos);
+  CHECK(source.find("callTargetResolutionScratch_.canonicalReceiverAliasPathCache.find(resolvedReceiverPathKey)") !=
+        std::string::npos);
+  CHECK(source.find("callTargetResolutionScratch_.canonicalReceiverAliasPathCache.emplace(") !=
+        std::string::npos);
+  CHECK(source.find("const std::string aliasPath = canonicalReceiverAliasPath(resolvedReceiverPath);") !=
         std::string::npos);
   CHECK(source.find("appendCanonicalReceiverResolutionCandidates(resolvedReceiverPath, appendResolvedCandidate);") !=
         std::string::npos);

@@ -586,6 +586,7 @@ private:
     PmrMethodMemoMap methodTargetMemoCache{&arenaResource};
     PmrStringVector concreteCallBaseCandidates{&arenaResource};
     PmrStringVector methodReceiverResolutionCandidates{&arenaResource};
+    PmrSymbolStringMap canonicalReceiverAliasPathCache{&arenaResource};
 
     void resetArena() {
       this->~CallTargetResolutionScratch();
