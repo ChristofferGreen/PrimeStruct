@@ -130,12 +130,6 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     }
     return soaCanonicalMethodPath(helperNameString);
   };
-  auto preferredSoaToAosMethodTarget = [&](std::string_view helperName) {
-    return preferredSamePathSoaMethodTarget(helperName, "/");
-  };
-  auto preferredSoaMethodTarget = [&](std::string_view helperName) {
-    return preferredSamePathSoaMethodTarget(helperName, "/soa_vector/");
-  };
   const Expr &receiver = expr.args.front();
   if (receiver.kind == Expr::Kind::Name && normalizeBindingTypeName(receiver.name) == "FileError") {
     if (methodName == "result") {
@@ -260,12 +254,14 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   }
   if (normalizedTypeName == "soa_vector" &&
       (normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref")) {
-    pathOut = selectHelperOverloadPath(expr, preferredSoaToAosMethodTarget(normalizedMethodName), ctx);
+    pathOut = selectHelperOverloadPath(
+        expr, preferredSamePathSoaMethodTarget(normalizedMethodName, "/"), ctx);
     return true;
   }
   if (normalizedTypeName == "soa_vector" &&
       (normalizedMethodName == "push" || normalizedMethodName == "reserve")) {
-    pathOut = selectHelperOverloadPath(expr, preferredSoaMethodTarget(normalizedMethodName), ctx);
+    pathOut = selectHelperOverloadPath(
+        expr, preferredSamePathSoaMethodTarget(normalizedMethodName, "/soa_vector/"), ctx);
     return true;
   }
   std::string resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);

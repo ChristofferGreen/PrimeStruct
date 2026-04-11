@@ -951,10 +951,22 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "    return \"/std/collections/soa_vector/\" + helperNameString;") ==
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
-            "return preferredSamePathSoaMethodTarget(helperName, \"/\");") !=
+            "return preferredSamePathSoaMethodTarget(helperName, \"/\");") ==
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
-            "return preferredSamePathSoaMethodTarget(helperName, \"/soa_vector/\");") !=
+            "return preferredSamePathSoaMethodTarget(helperName, \"/soa_vector/\");") ==
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "auto preferredSoaToAosMethodTarget =") ==
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "auto preferredSoaMethodTarget =") ==
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "preferredSamePathSoaMethodTarget(normalizedMethodName, \"/\"), ctx);") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "preferredSamePathSoaMethodTarget(normalizedMethodName, \"/soa_vector/\"), ctx);") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
             "if (hasDefinitionFamilyPath(canonical)) {\n"
