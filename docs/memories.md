@@ -508,18 +508,23 @@ This file stores durable session-derived facts that are useful in later work. Ke
   canonical `/std/collections/soa_vector/` namespace before forcing late
   builtin validation so same-path `/to_aos(_ref)` helper contracts stay
   unchanged, and template-monomorph expression-rewrite canonical stdlib
-  collection helper whitelisting now routes `to_aos(_ref)` canonical-path
-  checks through shared `isCanonicalSoaToAosHelperPath(...)` matching instead
-  of duplicated direct canonical-path disjunctions, and template-monomorph
-  method-target `to_aos(_ref)` fallback preference now canonicalizes same-path
-  helper spellings through shared `canonicalizeLegacySoaToAosHelperPath(...)`
-  plus `isCanonicalSoaToAosHelperPath(...)` guards instead of hardcoded
-  canonical-path literals, and template-monomorph expression-rewrite
-  root-builtin `to_aos(_ref)` shadow-receiver fallback now canonicalizes
-  same-path helper spellings through shared
-  `canonicalizeLegacySoaToAosHelperPath(...)` +
-  `isCanonicalSoaToAosHelperPath(...)` guards before root-builtin helper
-  visibility probes, and expr/expr-map borrowed canonical `to_aos_ref`
+  collection helper whitelisting now canonicalizes helper spellings through
+  shared `canonicalizeLegacySoaToAosHelperPath(...)` and routes helper-family
+  checks through explicit shared
+  `isLegacyOrCanonicalSoaHelperPath(..., "to_aos")` and
+  `isLegacyOrCanonicalSoaHelperPath(..., "to_aos_ref")` predicates instead of
+  broad canonical-family predicates, and template-monomorph method-target
+  `to_aos(_ref)` fallback preference now canonicalizes same-path helper
+  spellings through shared `canonicalizeLegacySoaToAosHelperPath(...)` plus
+  `isCanonicalSoaToAosHelperPath(...)` guards instead of hardcoded canonical-
+  path literals, and template-monomorph expression-rewrite root-builtin
+  `to_aos(_ref)` shadow-receiver fallback now canonicalizes same-path helper
+  spellings through shared `canonicalizeLegacySoaToAosHelperPath(...)` and
+  routes helper-family checks through explicit shared
+  `isLegacyOrCanonicalSoaHelperPath(..., "to_aos")` and
+  `isLegacyOrCanonicalSoaHelperPath(..., "to_aos_ref")` predicates instead of
+  broad canonical-family predicates before root-builtin helper visibility
+  probes, and expr/expr-map borrowed canonical `to_aos_ref`
   gating now routes through shared
   `isLegacyOrCanonicalSoaHelperPath(..., "to_aos_ref")` checks instead of
   direct canonical-path equality checks, and infer-collection/expr-method-

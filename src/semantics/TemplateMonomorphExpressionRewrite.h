@@ -96,6 +96,12 @@ bool rewriteExpr(Expr &expr,
     if (isCanonicalBuiltinMapHelperPath(path)) {
       return true;
     }
+    const std::string canonicalSoaToAosPath =
+        canonicalizeLegacySoaToAosHelperPath(path);
+    const bool matchesSoaToAosHelperPath =
+        isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, "to_aos");
+    const bool matchesBorrowedSoaToAosHelperPath =
+        isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, "to_aos_ref");
     return path == "/std/collections/vector/count" || path == "/std/collections/vector/capacity" ||
            path == "/std/collections/vector/push" || path == "/std/collections/vector/pop" ||
            path == "/std/collections/vector/reserve" || path == "/std/collections/vector/clear" ||
@@ -105,7 +111,7 @@ bool rewriteExpr(Expr &expr,
            path == "/std/collections/soa_vector/get" || path == "/std/collections/soa_vector/get_ref" ||
            path == "/std/collections/soa_vector/ref" || path == "/std/collections/soa_vector/ref_ref" ||
            path == "/std/collections/soa_vector/reserve" || path == "/std/collections/soa_vector/push" ||
-           isCanonicalSoaToAosHelperPath(path);
+           matchesSoaToAosHelperPath || matchesBorrowedSoaToAosHelperPath;
   };
   auto isSyntheticSamePathSoaHelperTemplateCarryPath = [&](const std::string &path) {
     auto isSyntheticSamePathSoaCarryNonRefHelperPath = [](const std::string &candidate) {
@@ -472,7 +478,11 @@ bool rewriteExpr(Expr &expr,
                                  : std::string("/to_aos_ref");
       const std::string canonicalSoaToAosHelper =
           canonicalizeLegacySoaToAosHelperPath(samePathToAosHelper);
-      if (isCanonicalSoaToAosHelperPath(canonicalSoaToAosHelper) &&
+      const bool matchesSoaToAosHelperPath =
+          isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosHelper, "to_aos");
+      const bool matchesBorrowedSoaToAosHelperPath =
+          isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosHelper, "to_aos_ref");
+      if ((matchesSoaToAosHelperPath || matchesBorrowedSoaToAosHelperPath) &&
           hasVisibleRootBuiltinSoaConversionHelper(samePathToAosHelper) &&
           resolvesBuiltinSoaToAosShadowReceiver(receiverExpr)) {
         return samePathToAosHelper;

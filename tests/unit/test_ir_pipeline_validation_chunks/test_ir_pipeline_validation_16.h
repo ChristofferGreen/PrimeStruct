@@ -674,13 +674,28 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "path == \"/std/collections/soa_vector/get_ref\"") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "isCanonicalSoaToAosHelperPath(path)") !=
+            "const std::string canonicalSoaToAosPath =") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "canonicalizeLegacySoaToAosHelperPath(samePathToAosHelper)") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "isCanonicalSoaToAosHelperPath(canonicalSoaToAosHelper)") !=
+            "isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, \"to_aos\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, \"to_aos_ref\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosHelper, \"to_aos\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosHelper, \"to_aos_ref\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "isCanonicalSoaToAosHelperPath(path)") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "isCanonicalSoaToAosHelperPath(canonicalSoaToAosHelper)") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "path == \"/std/collections/soa_vector/to_aos\" || path == \"/std/collections/soa_vector/to_aos_ref\"") ==
