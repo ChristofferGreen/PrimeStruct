@@ -119,20 +119,22 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     return false;
   };
   auto preferredSoaToAosMethodTarget = [&](std::string_view helperName) {
-    const std::string samePath = "/" + std::string(helperName);
+    const std::string helperNameString(helperName);
+    const std::string samePath = "/" + helperNameString;
     const std::string canonicalPath =
-        "/std/collections/soa_vector/" + std::string(helperName);
+        "/std/collections/soa_vector/" + helperNameString;
     if (hasDefinitionFamilyPath(samePath)) {
       return samePath;
     }
     return canonicalPath;
   };
   auto preferredSoaMethodTarget = [&](std::string_view helperName) {
-    const std::string samePath = "/soa_vector/" + std::string(helperName);
+    const std::string helperNameString(helperName);
+    const std::string samePath = "/soa_vector/" + helperNameString;
     if (hasDefinitionFamilyPath(samePath)) {
       return samePath;
     }
-    return "/std/collections/soa_vector/" + std::string(helperName);
+    return "/std/collections/soa_vector/" + helperNameString;
   };
   const Expr &receiver = expr.args.front();
   if (receiver.kind == Expr::Kind::Name && normalizeBindingTypeName(receiver.name) == "FileError") {
