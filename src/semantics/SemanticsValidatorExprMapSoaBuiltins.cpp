@@ -422,8 +422,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
        hasExplicitSoaAccessSpelling ||
        resolvedSoaCanonical == "/std/collections/soa_vector/get" ||
        resolvedSoaCanonical == "/std/collections/soa_vector/get_ref" ||
-       resolvedSoaCanonical == "/std/collections/soa_vector/ref" ||
-       resolvedSoaCanonical == "/std/collections/soa_vector/ref_ref" ||
+       isCanonicalSoaRefLikeHelperPath(resolvedSoaCanonical) ||
        resolvedNoTemplate == "/std/collections/experimental_soa_vector/soaVectorGetRef" ||
        resolvedNoTemplate == "/std/collections/experimental_soa_vector/soaVectorRefRef") &&
       soaAccessHelperName.has_value()) {
