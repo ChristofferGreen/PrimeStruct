@@ -104,11 +104,12 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     return resolvedPath;
   };
   auto hasDefinitionFamilyPath = [&](std::string_view path) {
-    if (ctx.sourceDefs.count(std::string(path)) > 0 || ctx.helperOverloads.count(std::string(path)) > 0) {
+    const std::string pathString(path);
+    if (ctx.sourceDefs.count(pathString) > 0 || ctx.helperOverloads.count(pathString) > 0) {
       return true;
     }
-    const std::string templatedPrefix = std::string(path) + "<";
-    const std::string specializedPrefix = std::string(path) + "__t";
+    const std::string templatedPrefix = pathString + "<";
+    const std::string specializedPrefix = pathString + "__t";
     for (const auto &[defPath, _] : ctx.sourceDefs) {
       if (defPath.rfind(templatedPrefix, 0) == 0 ||
           defPath.rfind(specializedPrefix, 0) == 0) {

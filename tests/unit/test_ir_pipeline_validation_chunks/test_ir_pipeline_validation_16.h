@@ -871,6 +871,15 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const std::string samePath = \"/\" + std::string(helperName);") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
+            "const std::string pathString(path);") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "ctx.sourceDefs.count(std::string(path)) > 0 || ctx.helperOverloads.count(std::string(path)) > 0") ==
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "ctx.sourceDefs.count(pathString) > 0 || ctx.helperOverloads.count(pathString) > 0") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
             "if (defPath == path || defPath.rfind(templatedPrefix, 0) == 0 ||") ==
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
