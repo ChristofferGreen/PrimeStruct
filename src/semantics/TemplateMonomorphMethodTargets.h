@@ -131,9 +131,6 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     if (hasDefinitionFamilyPath(samePath)) {
       return samePath;
     }
-    if (hasDefinitionFamilyPath(canonical)) {
-      return canonical;
-    }
     return canonical;
   };
   const Expr &receiver = expr.args.front();
