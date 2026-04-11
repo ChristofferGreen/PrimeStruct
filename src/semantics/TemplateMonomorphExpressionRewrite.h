@@ -117,8 +117,6 @@ bool rewriteExpr(Expr &expr,
            path == "/std/collections/soa_vector/count" ||
            path == "/std/collections/soa_vector/get" ||
            path == "/std/collections/soa_vector/get_ref" ||
-           path == "/std/collections/soa_vector/ref" ||
-           path == "/std/collections/soa_vector/ref_ref" ||
            path == "/std/collections/soa_vector/push" ||
            path == "/std/collections/soa_vector/reserve";
   };

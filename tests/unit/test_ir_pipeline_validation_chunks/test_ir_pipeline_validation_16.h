@@ -596,6 +596,12 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "canonicalizeLegacySoaRefHelperPath(path)") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
+            "canonicalPath == \"/std/collections/soa_vector/ref\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "canonicalPath == \"/std/collections/soa_vector/ref_ref\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
             "const std::string resolvedPathCanonical =") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
@@ -629,10 +635,10 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "helperName == \"get_ref\" ? \"/soa_vector/get_ref\"") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "resolvedPath == \"/soa_vector/get_ref\"") !=
+            "resolvedPath == \"/soa_vector/get_ref\"") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "methodPath == \"/std/collections/soa_vector/get_ref\"") !=
+            "methodPath == \"/std/collections/soa_vector/get_ref\"") ==
         std::string::npos);
   CHECK(templateMonomorphBindingCallSource.find("bool inferCallBindingTypeForMonomorph(const Expr &initializer,") !=
         std::string::npos);

@@ -166,6 +166,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   and reuses `isSyntheticSamePathSoaHelperTemplateCarryPath(...)` for both
   call and method resolved-path branches, while preserving the
   call-receiver/`vector`-receiver behavior gate.
+- `soa-monomorph-template-carry-redundant-canonical-ref-checks-removed`:
+  template-monomorph expression-rewrite synthetic same-path SoA template-carry
+  helper-path predicate no longer duplicates direct canonical
+  `/std/collections/soa_vector/ref(_ref)` path checks after
+  `canonicalizeLegacySoaRefHelperPath(...)`; ref-family matching now relies on
+  canonicalized-path checks in that predicate.
 - `soa-monomorph-implicit-ref-path-canonicalization`: template-monomorph
   implicit-template SoA pending `ref`/`ref_ref` helper gating now canonicalizes
   resolved helper paths (template-suffix stripping plus legacy
