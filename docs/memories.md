@@ -85,6 +85,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `/soa_vector/ref(_ref)` remapping) before helper-family checks, and
   source-lock coverage now rejects the old direct
   `if (resolvedPath == "/soa_vector/ref" || ...)` call-shape check there.
+- `soa-monomorph-fallback-ref-path-canonicalization`: template-monomorph
+  fallback stdlib implicit-template path gating now canonicalizes legacy
+  resolved SoA `ref`/`ref_ref` helper spellings before helper-family checks,
+  and source-lock coverage now rejects direct
+  `path == "/soa_vector/ref(_ref)"` checks there.
 - `arg-pack-dereference-struct-inference`: IR struct-type inference now
   propagates through `dereference(...)`, so indexed borrowed arg-pack values
   (for example `args<Reference<Map<K, V>>>`) preserve their struct identity

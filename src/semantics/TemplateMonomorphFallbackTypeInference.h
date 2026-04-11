@@ -664,12 +664,26 @@ std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
   if (defIt == ctx.sourceDefs.end() || ctx.templateDefs.count(path) > 0) {
     return path;
   }
+  const auto canonicalizeLegacySoaRefHelperPath =
+      [](const std::string &resolvedPath) -> std::string {
+    std::string canonicalPath(resolvedPath);
+    const size_t templateSuffix = canonicalPath.find("__t");
+    if (templateSuffix != std::string::npos) {
+      canonicalPath.erase(templateSuffix);
+    }
+    if (canonicalPath == "/soa_vector/ref") {
+      return "/std/collections/soa_vector/ref";
+    }
+    if (canonicalPath == "/soa_vector/ref_ref") {
+      return "/std/collections/soa_vector/ref_ref";
+    }
+    return canonicalPath;
+  };
+  const std::string pathCanonical = canonicalizeLegacySoaRefHelperPath(path);
   if (path == "/soa_vector/get_ref" ||
-      path == "/soa_vector/ref" ||
-      path == "/soa_vector/ref_ref" ||
       path == "/std/collections/soa_vector/get_ref" ||
-      path == "/std/collections/soa_vector/ref" ||
-      path == "/std/collections/soa_vector/ref_ref") {
+      pathCanonical == "/std/collections/soa_vector/ref" ||
+      pathCanonical == "/std/collections/soa_vector/ref_ref") {
     return path;
   }
   const bool preserveCompatibilityTemplatePath = isCollectionCompatibilityTemplateFallbackPath(path);
