@@ -329,48 +329,43 @@ std::string SemanticsValidator::resolveEffectFreeBareMapCallPath(const Expr &cal
   if (defMap_.count("/" + helperName) > 0) {
     return "";
   }
-  std::vector<size_t> receiverIndices;
-  auto appendReceiverIndex = [&](size_t index) {
+  auto tryResolveReceiverIndex = [&](size_t index) -> bool {
     if (index >= callExpr.args.size()) {
-      return;
+      return false;
     }
-    for (size_t existing : receiverIndices) {
-      if (existing == index) {
-        return;
+    const Expr &receiver = callExpr.args[index];
+    if (receiver.kind == Expr::Kind::Name) {
+      auto it = ctx.locals.find(receiver.name);
+      if (it != ctx.locals.end() && effectFreeCollectionPathFromBinding(it->second) == "/map") {
+        return true;
       }
     }
-    receiverIndices.push_back(index);
+    return effectFreeCollectionPathFromCallExpr(receiver) == "/map";
   };
   if (hasNamedArguments(callExpr.argNames)) {
     bool foundValues = false;
     for (size_t i = 0; i < callExpr.args.size(); ++i) {
       if (i < callExpr.argNames.size() && callExpr.argNames[i].has_value() &&
           *callExpr.argNames[i] == "values") {
-        appendReceiverIndex(i);
         foundValues = true;
+        if (tryResolveReceiverIndex(i)) {
+          return "/std/collections/map/" + helperName;
+        }
         break;
       }
     }
     if (!foundValues) {
       for (size_t i = 0; i < callExpr.args.size(); ++i) {
-        appendReceiverIndex(i);
+        if (tryResolveReceiverIndex(i)) {
+          return "/std/collections/map/" + helperName;
+        }
       }
     }
   } else {
     for (size_t i = 0; i < callExpr.args.size(); ++i) {
-      appendReceiverIndex(i);
-    }
-  }
-  for (size_t receiverIndex : receiverIndices) {
-    const Expr &receiver = callExpr.args[receiverIndex];
-    if (receiver.kind == Expr::Kind::Name) {
-      auto it = ctx.locals.find(receiver.name);
-      if (it != ctx.locals.end() && effectFreeCollectionPathFromBinding(it->second) == "/map") {
+      if (tryResolveReceiverIndex(i)) {
         return "/std/collections/map/" + helperName;
       }
-    }
-    if (effectFreeCollectionPathFromCallExpr(receiver) == "/map") {
-      return "/std/collections/map/" + helperName;
     }
   }
   return "";

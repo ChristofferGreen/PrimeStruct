@@ -42,6 +42,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollections.cpp";
   const std::filesystem::path semanticsInferCollectionCompatibilityPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollectionCompatibility.cpp";
+  const std::filesystem::path semanticsEffectFreeCollectionsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorEffectFreeCollections.cpp";
   const std::filesystem::path semanticsInferCollectionReturnInferencePath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollectionReturnInference.cpp";
   const std::filesystem::path semanticsInferCollectionCallResolutionPath =
@@ -80,6 +82,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsInferResolvedCallsPath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionsPath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionCompatibilityPath));
+  REQUIRE(std::filesystem::exists(semanticsEffectFreeCollectionsPath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionReturnInferencePath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionCallResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionBufferAndMapResolversPath));
@@ -147,6 +150,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       semanticsInferCollectionBufferAndMapResolversPath,
       semanticsInferCollectionStringResolverPath,
   });
+  const std::string semanticsEffectFreeCollectionsSource =
+      readText(semanticsEffectFreeCollectionsPath);
   const std::string semanticsInferCollectionCompatibilitySource =
       readText(semanticsInferCollectionCompatibilityPath);
   const std::string semanticsInferControlFlowSource = readText(semanticsInferControlFlowPath);
@@ -580,6 +585,21 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "auto appendReceiverIndex = [&](size_t index)") ==
         std::string::npos);
   CHECK(semanticsInferCollectionCompatibilitySource.find(
+            "for (size_t receiverIndex : receiverIndices)") ==
+        std::string::npos);
+  CHECK(semanticsEffectFreeCollectionsSource.find(
+            "std::string SemanticsValidator::resolveEffectFreeBareMapCallPath(") !=
+        std::string::npos);
+  CHECK(semanticsEffectFreeCollectionsSource.find(
+            "auto tryResolveReceiverIndex = [&](size_t index) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsEffectFreeCollectionsSource.find(
+            "std::vector<size_t> receiverIndices;") ==
+        std::string::npos);
+  CHECK(semanticsEffectFreeCollectionsSource.find(
+            "auto appendReceiverIndex = [&](size_t index)") ==
+        std::string::npos);
+  CHECK(semanticsEffectFreeCollectionsSource.find(
             "for (size_t receiverIndex : receiverIndices)") ==
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("SemanticsValidator::makeBuiltinCollectionDispatchResolvers(") !=
