@@ -74,6 +74,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
   inline `vectorHelper == ...` comparisons; source-lock coverage in
   `test_ir_pipeline_validation_18` now asserts the hoisted standalone
   borrow-check helper-family bool.
+- `statement-vector-late-named-shape-cache-reuse`:
+  statement vector helper late builtin-shape validation now reuses the
+  statement-scope `hasNamedStatementArgs` cache in
+  `validateBuiltinNamedReceiverShape(...)`,
+  `findCanonicalBuiltinCompatibilityOperandIndex(...)`, and downstream
+  named-argument gating, and it hoists
+  `helperAllowsSoaVectorTarget = helperName == "push" || helperName == "reserve"`
+  outside the inner candidate-receiver loop so helper-family checks are no
+  longer repeated per loop iteration; source-lock coverage in
+  `test_ir_pipeline_validation_18` now asserts the hoisted helper bool.
 - `expr-collection-access-builtin-direct-receiver-probe`:
   the primary expr collection-access builtin dispatch branch now probes
   receiver candidates directly through `tryResolveReceiverIndex(...)` in

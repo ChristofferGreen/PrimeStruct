@@ -1045,6 +1045,9 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "const bool vectorHelperNeedsStandaloneSoaBorrowCheck =") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
+            "const bool helperAllowsSoaVectorTarget = helperName == \"push\" || helperName == \"reserve\";") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
             "vectorHelperResolvedCanonical.rfind(\"/std/collections/soa_vector/\", 0) == 0") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(

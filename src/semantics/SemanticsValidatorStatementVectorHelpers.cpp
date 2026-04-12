@@ -847,9 +847,10 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     return failStatementDiagnostic("unknown call target: " + vectorHelperResolved);
   }
   auto validateBuiltinNamedReceiverShape = [&](const std::string &helperName) -> bool {
-    if (!hasNamedArguments(stmt.argNames) || stmt.args.empty()) {
+    if (!hasNamedStatementArgs || stmt.args.empty()) {
       return true;
     }
+    const bool helperAllowsSoaVectorTarget = helperName == "push" || helperName == "reserve";
     size_t receiverIndex = 0;
     bool hasExplicitValuesReceiver = false;
     for (size_t i = 0; i < stmt.args.size(); ++i) {
@@ -865,9 +866,8 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
         if (!resolveVectorStatementBinding(params, locals, stmt.args[i], candidateBinding)) {
           continue;
         }
-        const bool allowSoaVectorTarget = helperName == "push" || helperName == "reserve";
         if (candidateBinding.typeName == "vector" ||
-            (allowSoaVectorTarget && candidateBinding.typeName == "soa_vector")) {
+            (helperAllowsSoaVectorTarget && candidateBinding.typeName == "soa_vector")) {
           receiverIndex = i;
           break;
         }
@@ -890,7 +890,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     if (!shouldUseCanonicalBuiltinCompatibilityFallback || stmt.args.empty()) {
       return 0;
     }
-    if (hasNamedArguments(stmt.argNames)) {
+    if (hasNamedStatementArgs) {
       for (size_t i = 0; i < stmt.args.size(); ++i) {
         if (i == canonicalBuiltinCompatibilityReceiverIndex) {
           continue;
@@ -907,7 +907,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     return stmt.args.size();
   };
-  if (hasNamedArguments(stmt.argNames)) {
+  if (hasNamedStatementArgs) {
     if (!validateBuiltinNamedReceiverShape(vectorHelper)) {
       return false;
     }
