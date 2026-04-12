@@ -169,13 +169,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
         return std::nullopt;
       }
       const std::string resolvedPath = resolveCalleePath(returnExpr);
-      const bool isFieldViewHelper =
-          resolvedPath.rfind(
-              "/std/collections/experimental_soa_vector/soaVectorFieldView", 0) == 0 ||
-          resolvedPath.rfind(
-              "/std/collections/experimental_soa_storage/soaColumnFieldViewUnsafe",
-              0) == 0;
-      if (!isFieldViewHelper) {
+      if (!isExperimentalSoaFieldViewHelperPath(resolvedPath)) {
         return std::nullopt;
       }
       auto inferStructTypeText = [&]() -> std::optional<std::string> {
