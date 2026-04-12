@@ -27,6 +27,8 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
       repoRoot / "src" / "ir_lowerer" / "IrLowererInlineParamHelpers.cpp";
   const std::filesystem::path uninitializedStructInferencePath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererUninitializedStructInference.cpp";
+  const std::filesystem::path setupTypeMethodTargetHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererSetupTypeMethodTargetHelpers.cpp";
   const std::filesystem::path countAccessClassifiersPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererCountAccessClassifiers.cpp";
   const std::filesystem::path nativeTailDispatchPath =
@@ -43,6 +45,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   REQUIRE(std::filesystem::exists(inlineDispatchPath));
   REQUIRE(std::filesystem::exists(inlineParamHelpersPath));
   REQUIRE(std::filesystem::exists(uninitializedStructInferencePath));
+  REQUIRE(std::filesystem::exists(setupTypeMethodTargetHelpersPath));
   REQUIRE(std::filesystem::exists(countAccessClassifiersPath));
   REQUIRE(std::filesystem::exists(nativeTailDispatchPath));
   REQUIRE(std::filesystem::exists(operatorCollectionMutationHelpersPath));
@@ -56,6 +59,8 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   const std::string inlineParamHelpersSource = readText(inlineParamHelpersPath);
   const std::string uninitializedStructInferenceSource =
       readText(uninitializedStructInferencePath);
+  const std::string setupTypeMethodTargetHelpersSource =
+      readText(setupTypeMethodTargetHelpersPath);
   const std::string countAccessClassifiersSource = readText(countAccessClassifiersPath);
   const std::string nativeTailDispatchSource = readText(nativeTailDispatchPath);
   const std::string operatorCollectionMutationHelpersSource =
@@ -285,6 +290,15 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(uninitializedStructInferenceSource.find(
             "normalizedReceiverStruct.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) != 0") ==
+        std::string::npos);
+  CHECK(setupTypeMethodTargetHelpersSource.find(
+            "semantics::isExperimentalSoaVectorSpecializedTypePath(normalized)") !=
+        std::string::npos);
+  CHECK(setupTypeMethodTargetHelpersSource.find(
+            "normalized.rfind(\"SoaVector__\", 0) == 0") ==
+        std::string::npos);
+  CHECK(setupTypeMethodTargetHelpersSource.find(
+            "normalized.rfind(\"std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") ==
         std::string::npos);
   CHECK(operatorCollectionMutationHelpersSource.find(
             "auto canonicalizeLegacySoaRefHelperPath = [](const std::string &path)") ==

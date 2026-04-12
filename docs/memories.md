@@ -4,6 +4,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `soa-ir-lowerer-setup-method-target-specialized-type-shared-helper`:
+  ir-lowerer setup-type method-target SoA receiver-family matching now routes
+  specialized SoA checks through shared
+  `semantics::isExperimentalSoaVectorSpecializedTypePath(normalized)` in
+  `isSoaVectorReceiverTarget(...)` instead of direct
+  `normalized.rfind("SoaVector__", 0)` and
+  `normalized.rfind("std/collections/experimental_soa_vector/SoaVector__", 0)`
+  checks; source-lock coverage in `test_ir_pipeline_validation_19` asserts
+  shared helper usage while rejecting those removed direct prefix checks.
 - `soa-ir-lowerer-binding-type-normalization-specialized-type-shared-helper`:
   ir-lowerer binding-type normalization now routes specialized experimental SoA
   type checks through shared

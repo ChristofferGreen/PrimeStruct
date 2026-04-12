@@ -1,5 +1,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 
+#include "../semantics/SemanticsHelpers.h"
+
 #include "IrLowererSetupTypeCollectionHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -72,10 +74,9 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
            normalized == "std/collections/soa_vector" ||
            normalized.rfind("std/collections/soa_vector<", 0) == 0 ||
            normalized == "SoaVector" || normalized.rfind("SoaVector<", 0) == 0 ||
-           normalized.rfind("SoaVector__", 0) == 0 ||
            normalized == "std/collections/experimental_soa_vector/SoaVector" ||
            normalized.rfind("std/collections/experimental_soa_vector/SoaVector<", 0) == 0 ||
-           normalized.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+           semantics::isExperimentalSoaVectorSpecializedTypePath(normalized);
   };
   auto isRawBuiltinSoaVectorReceiverTarget = [&](const std::string &candidate) {
     const std::string normalized = stripReceiverPrefix(candidate);
