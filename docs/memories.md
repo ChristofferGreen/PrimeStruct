@@ -251,6 +251,14 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `isCanonicalSoaRefLikeHelperPath(...)` predicate checks instead of direct
   canonical-path comparisons, and source-lock coverage now asserts those
   shared helper call paths in method-target resolution.
+- `soa-method-target-shared-get-helper-path`: method-target SoA builtin
+  helper classification now routes canonicalized `get`/`get_ref`
+  helper-family matching through shared
+  `isLegacyOrCanonicalSoaHelperPath(...)` checks instead of direct canonical
+  `"/std/collections/soa_vector/get(_ref)"` comparisons when classifying
+  builtin SoA collection helpers, and source-lock coverage in
+  `test_ir_pipeline_validation_15` now asserts that shared helper-path
+  wiring.
 - `soa-monomorph-template-carry-shared-helper-predicate`:
   template-monomorph expression-rewrite synthetic same-path SoA template-carry
   gating now removes duplicated inline helper-family ref/ref_ref path lists
