@@ -1108,6 +1108,22 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "hasVisibleSoaHelperTarget(normalizedName)") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "const bool isKnownBuiltinSoaHelperName =\n"
+            "        normalizedName == \"count\" || normalizedName == \"get\" ||\n"
+            "        normalizedName == \"to_soa\" || normalizedName == \"to_aos\" ||\n"
+            "        normalizedName == \"to_aos_ref\" ||\n"
+            "        normalizedName == \"contains\";") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "if (isKnownBuiltinSoaHelperName)") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "if (normalizedName == \"count\" || normalizedName == \"get\" ||\n"
+            "        normalizedName == \"to_soa\" || normalizedName == \"to_aos\" ||\n"
+            "        normalizedName == \"to_aos_ref\" ||\n"
+            "        normalizedName == \"contains\")") ==
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "ctx.sourceDefs.count(ownedPath) > 0 ||\n"
             "        ctx.helperOverloads.count(ownedPath) > 0") !=
         std::string::npos);

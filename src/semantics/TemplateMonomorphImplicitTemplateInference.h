@@ -341,10 +341,12 @@ bool inferImplicitTemplateArgs(const Definition &def,
       }
       return {};
     }
-    if (normalizedName == "count" || normalizedName == "get" ||
+    const bool isKnownBuiltinSoaHelperName =
+        normalizedName == "count" || normalizedName == "get" ||
         normalizedName == "to_soa" || normalizedName == "to_aos" ||
         normalizedName == "to_aos_ref" ||
-        normalizedName == "contains") {
+        normalizedName == "contains";
+    if (isKnownBuiltinSoaHelperName) {
       return {};
     }
     const std::string ownedPath = "/soa_vector/" + normalizedName;
