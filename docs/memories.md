@@ -300,6 +300,14 @@ This file stores durable session-derived facts that are useful in later work. Ke
   canonical `matchesPath(...)` checks, and source-lock coverage in
   `test_ir_pipeline_validation_16` now asserts that shared helper-path
   wiring.
+- `soa-monomorph-expression-shared-count-push-reserve-helper-path`:
+  template-monomorph expression-rewrite canonical stdlib helper whitelisting
+  now routes SoA `count`/`count_ref`/`push`/`reserve` checks through shared
+  `isLegacyOrCanonicalSoaHelperPath(...)` helper-family matching behind a
+  canonical `/std/collections/soa_vector/` prefix guard (with specialization
+  suffix stripping) instead of direct canonical path comparisons, and
+  source-lock coverage in `test_ir_pipeline_validation_16` now asserts that
+  shared helper-path wiring.
 - `soa-monomorph-template-carry-shared-helper-predicate`:
   template-monomorph expression-rewrite synthetic same-path SoA template-carry
   gating now removes duplicated inline helper-family ref/ref_ref path lists

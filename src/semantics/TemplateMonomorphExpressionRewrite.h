@@ -96,6 +96,19 @@ bool rewriteExpr(Expr &expr,
     if (isCanonicalBuiltinMapHelperPath(path)) {
       return true;
     }
+    auto canonicalizeSoaHelperPath = [](std::string canonicalPath) {
+      const size_t specializationSuffix = canonicalPath.find("__");
+      if (specializationSuffix != std::string::npos) {
+        canonicalPath.erase(specializationSuffix);
+      }
+      return canonicalPath;
+    };
+    auto isCanonicalSoaHelperPath = [](const std::string &candidate,
+                                       std::string_view helperName) {
+      return candidate.rfind("/std/collections/soa_vector/", 0) == 0 &&
+             isLegacyOrCanonicalSoaHelperPath(candidate, helperName);
+    };
+    const std::string canonicalSoaCountPath = canonicalizeSoaHelperPath(path);
     const std::string canonicalSoaGetPath =
         canonicalizeLegacySoaGetHelperPath(path);
     const std::string canonicalSoaToAosPath =
@@ -105,11 +118,13 @@ bool rewriteExpr(Expr &expr,
            path == "/std/collections/vector/reserve" || path == "/std/collections/vector/clear" ||
            path == "/std/collections/vector/remove_at" || path == "/std/collections/vector/remove_swap" ||
            path == "/std/collections/vector/at" || path == "/std/collections/vector/at_unsafe" ||
-           path == "/std/collections/soa_vector/count" || path == "/std/collections/soa_vector/count_ref" ||
+           isCanonicalSoaHelperPath(canonicalSoaCountPath, "count") ||
+           isCanonicalSoaHelperPath(canonicalSoaCountPath, "count_ref") ||
            isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get") ||
            isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get_ref") ||
            isCanonicalSoaRefLikeHelperPath(path) ||
-           path == "/std/collections/soa_vector/reserve" || path == "/std/collections/soa_vector/push" ||
+           isCanonicalSoaHelperPath(canonicalSoaCountPath, "reserve") ||
+           isCanonicalSoaHelperPath(canonicalSoaCountPath, "push") ||
            isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, "to_aos") ||
            isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, "to_aos_ref");
   };

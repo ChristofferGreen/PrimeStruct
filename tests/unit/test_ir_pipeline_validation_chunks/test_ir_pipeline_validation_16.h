@@ -692,6 +692,36 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "path == \"/std/collections/soa_vector/get_ref\"") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
+            "path == \"/std/collections/soa_vector/count\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "path == \"/std/collections/soa_vector/count_ref\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "path == \"/std/collections/soa_vector/reserve\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "path == \"/std/collections/soa_vector/push\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "auto isCanonicalSoaHelperPath = [](const std::string &candidate,") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "const std::string canonicalSoaCountPath = canonicalizeSoaHelperPath(path);") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "isCanonicalSoaHelperPath(canonicalSoaCountPath, \"count\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "isCanonicalSoaHelperPath(canonicalSoaCountPath, \"count_ref\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "isCanonicalSoaHelperPath(canonicalSoaCountPath, \"reserve\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "isCanonicalSoaHelperPath(canonicalSoaCountPath, \"push\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
             "const std::string canonicalSoaGetPath =") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
