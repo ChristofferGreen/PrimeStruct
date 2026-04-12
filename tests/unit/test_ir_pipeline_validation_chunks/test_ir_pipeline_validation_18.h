@@ -1090,6 +1090,9 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "auto hasDeclaredOrImportedPath = [&](const std::string &path) {") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
+            "auto failIfStandaloneSoaGrowthBorrowed = [&](const BindingInfo &binding, const Expr &receiverExpr) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
             "const bool hasVisibleResolvedVectorHelper =") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
@@ -1098,6 +1101,12 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
   CHECK(semanticsStatementVectorHelpersSource.find(
             "helperCall.templateArgs.empty() &&\n"
             "        vectorHelperResolved.rfind(\"/std/collections/experimental_vector/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "if (isSoaGrowthBinding(binding) &&\n"
+            "        resolveStandaloneSoaGrowthRoot(stmt.args[receiverIndex], borrowRoot,\n"
+            "                                       ignoreBorrowName) &&\n"
+            "        hasActiveBorrowForRoot(borrowRoot, ignoreBorrowName)) {") ==
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
             "(defMap_.find(vectorHelperResolved) == defMap_.end() || isNamespacedVectorHelperCall) &&") ==

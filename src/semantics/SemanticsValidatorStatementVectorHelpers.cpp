@@ -909,6 +909,20 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
     return failStatementDiagnostic(vectorHelper + " does not accept block arguments");
   }
+  auto failIfStandaloneSoaGrowthBorrowed = [&](const BindingInfo &binding, const Expr &receiverExpr) -> bool {
+    if (!isSoaGrowthBinding(binding)) {
+      return false;
+    }
+    std::string borrowRoot;
+    std::string ignoreBorrowName;
+    if (!resolveStandaloneSoaGrowthRoot(receiverExpr, borrowRoot, ignoreBorrowName) ||
+        !hasActiveBorrowForRoot(borrowRoot, ignoreBorrowName)) {
+      return false;
+    }
+    const std::string borrowSink =
+        !ignoreBorrowName.empty() ? ignoreBorrowName : borrowRoot;
+    return failBorrowedBindingDiagnostic(borrowRoot, borrowSink);
+  };
   if (vectorHelperIsPush) {
     if (stmt.args.size() != 2) {
       return failStatementDiagnostic("push requires exactly two arguments");
@@ -929,15 +943,8 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     if (!validateVectorStatementHelperTarget(params, locals, stmt.args[receiverIndex], "push", binding)) {
       return publishExistingStatementDiagnostic();
     }
-    std::string borrowRoot;
-    std::string ignoreBorrowName;
-    if (isSoaGrowthBinding(binding) &&
-        resolveStandaloneSoaGrowthRoot(stmt.args[receiverIndex], borrowRoot,
-                                       ignoreBorrowName) &&
-        hasActiveBorrowForRoot(borrowRoot, ignoreBorrowName)) {
-      const std::string borrowSink =
-          !ignoreBorrowName.empty() ? ignoreBorrowName : borrowRoot;
-      return failBorrowedBindingDiagnostic(borrowRoot, borrowSink);
+    if (failIfStandaloneSoaGrowthBorrowed(binding, stmt.args[receiverIndex])) {
+      return false;
     }
     if (currentValidationState_.context.activeEffects.count("heap_alloc") == 0) {
       return failStatementDiagnostic("push requires heap_alloc effect");
@@ -973,15 +980,8 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     if (!validateVectorStatementHelperTarget(params, locals, stmt.args[receiverIndex], "reserve", binding)) {
       return publishExistingStatementDiagnostic();
     }
-    std::string borrowRoot;
-    std::string ignoreBorrowName;
-    if (isSoaGrowthBinding(binding) &&
-        resolveStandaloneSoaGrowthRoot(stmt.args[receiverIndex], borrowRoot,
-                                       ignoreBorrowName) &&
-        hasActiveBorrowForRoot(borrowRoot, ignoreBorrowName)) {
-      const std::string borrowSink =
-          !ignoreBorrowName.empty() ? ignoreBorrowName : borrowRoot;
-      return failBorrowedBindingDiagnostic(borrowRoot, borrowSink);
+    if (failIfStandaloneSoaGrowthBorrowed(binding, stmt.args[receiverIndex])) {
+      return false;
     }
     if (currentValidationState_.context.activeEffects.count("heap_alloc") == 0) {
       return failStatementDiagnostic("reserve requires heap_alloc effect");
@@ -1018,15 +1018,8 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
             params, locals, stmt.args[receiverIndex], vectorHelper.c_str(), binding)) {
       return publishExistingStatementDiagnostic();
     }
-    std::string borrowRoot;
-    std::string ignoreBorrowName;
-    if (isSoaGrowthBinding(binding) &&
-        resolveStandaloneSoaGrowthRoot(stmt.args[receiverIndex], borrowRoot,
-                                       ignoreBorrowName) &&
-        hasActiveBorrowForRoot(borrowRoot, ignoreBorrowName)) {
-      const std::string borrowSink =
-          !ignoreBorrowName.empty() ? ignoreBorrowName : borrowRoot;
-      return failBorrowedBindingDiagnostic(borrowRoot, borrowSink);
+    if (failIfStandaloneSoaGrowthBorrowed(binding, stmt.args[receiverIndex])) {
+      return false;
     }
     if (!validateExpr(params, locals, stmt.args[indexArgIndex])) {
       return false;
@@ -1057,15 +1050,9 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
             params, locals, stmt.args[receiverIndex], vectorHelper.c_str(), binding)) {
       return publishExistingStatementDiagnostic();
     }
-    std::string borrowRoot;
-    std::string ignoreBorrowName;
-    if (isSoaGrowthBinding(binding) && vectorHelperIsClear &&
-        resolveStandaloneSoaGrowthRoot(stmt.args[receiverIndex], borrowRoot,
-                                       ignoreBorrowName) &&
-        hasActiveBorrowForRoot(borrowRoot, ignoreBorrowName)) {
-      const std::string borrowSink =
-          !ignoreBorrowName.empty() ? ignoreBorrowName : borrowRoot;
-      return failBorrowedBindingDiagnostic(borrowRoot, borrowSink);
+    if (vectorHelperIsClear &&
+        failIfStandaloneSoaGrowthBorrowed(binding, stmt.args[receiverIndex])) {
+      return false;
     }
     return true;
   }

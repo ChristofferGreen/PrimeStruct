@@ -47,6 +47,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `test_ir_pipeline_validation_18` now asserts this direct-probe helper and
   rejects the removed staged-vector shape in the
   `isStdNamespacedSoaCanonicalMutatorHelperCall` fallback block.
+- `statement-vector-standalone-soa-growth-borrow-helper`:
+  statement vector helper builtin branches now share one
+  `failIfStandaloneSoaGrowthBorrowed(...)` helper in
+  `SemanticsValidatorStatementVectorHelpers.cpp` for standalone SoA growth
+  borrow conflict diagnostics, replacing repeated inline
+  `isSoaGrowthBinding(...)` + `resolveStandaloneSoaGrowthRoot(...)` +
+  `hasActiveBorrowForRoot(...)` blocks across `push`, `reserve`,
+  `remove_at/remove_swap`, and clear-only borrow checks while preserving
+  clear-only gating; source-lock coverage in
+  `test_ir_pipeline_validation_18` now asserts the shared helper and rejects
+  the removed repeated inline borrow block.
 - `statement-vector-shared-named-arg-scan-cache`:
   statement vector helper fallback validation in
   `SemanticsValidatorStatementVectorHelpers.cpp` now caches
