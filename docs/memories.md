@@ -4,6 +4,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `soa-ir-lowerer-binding-type-shared-type-path-helper`:
+  ir-lowerer binding-type normalization now routes experimental SoA vector type
+  matching through shared
+  `semantics::isExperimentalSoaVectorTypePath(name)` in
+  `normalizeCollectionBindingTypeName(...)` instead of duplicated direct
+  `SoaVector`/`std/collections/experimental_soa_vector/SoaVector` equality
+  checks plus a separate specialized-only helper check; coverage in
+  `test_ir_pipeline_validation_62` now validates base/template/specialized
+  normalization and source-lock helper usage.
 - `soa-ir-lowerer-setup-method-target-shared-type-path-helper`:
   ir-lowerer setup-type method-target SoA receiver-family matching now routes
   experimental SoA vector type checks through shared

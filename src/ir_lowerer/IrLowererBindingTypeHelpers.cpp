@@ -370,10 +370,8 @@ std::string normalizeCollectionBindingTypeName(const std::string &name) {
     return "map";
   }
   if (name == "/soa_vector" || name == "std/collections/soa_vector" ||
-      name == "/std/collections/soa_vector" || name == "SoaVector" ||
-      name == "std/collections/experimental_soa_vector/SoaVector" ||
-      name == "/std/collections/experimental_soa_vector/SoaVector" ||
-      semantics::isExperimentalSoaVectorSpecializedTypePath(name)) {
+      name == "/std/collections/soa_vector" ||
+      semantics::isExperimentalSoaVectorTypePath(name)) {
     return "soa_vector";
   }
   if (name == "Buffer" || name == "std/gfx/Buffer" || name == "/std/gfx/Buffer" ||

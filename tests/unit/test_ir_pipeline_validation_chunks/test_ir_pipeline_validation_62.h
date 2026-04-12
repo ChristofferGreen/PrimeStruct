@@ -277,6 +277,52 @@ TEST_CASE("ir lowerer binding type helpers classify binding kind and string/file
         "soa_vector");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName("SoaVector__Particle") ==
         "soa_vector");
+  CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName(
+            "std/collections/experimental_soa_vector/SoaVector") ==
+        "soa_vector");
+  CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName(
+            "/std/collections/experimental_soa_vector/SoaVector") ==
+        "soa_vector");
+  CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName("SoaVector") ==
+        "soa_vector");
+  CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName(
+            "std/collections/experimental_soa_vector/SoaVector<Particle>") ==
+        "soa_vector");
+  CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName(
+            "/std/collections/experimental_soa_vector/SoaVector<Particle>") ==
+        "soa_vector");
+  CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName("SoaVector<Particle>") ==
+        "soa_vector");
+
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path bindingTypeHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererBindingTypeHelpers.cpp";
+  REQUIRE(std::filesystem::exists(bindingTypeHelpersPath));
+  const std::string bindingTypeHelpersSource = readText(bindingTypeHelpersPath);
+  CHECK(bindingTypeHelpersSource.find(
+            "semantics::isExperimentalSoaVectorTypePath(name)") !=
+        std::string::npos);
+  CHECK(bindingTypeHelpersSource.find(
+            "name == \"std/collections/experimental_soa_vector/SoaVector\"") ==
+        std::string::npos);
+  CHECK(bindingTypeHelpersSource.find(
+            "name == \"/std/collections/experimental_soa_vector/SoaVector\"") ==
+        std::string::npos);
+  CHECK(bindingTypeHelpersSource.find(
+            "semantics::isExperimentalSoaVectorSpecializedTypePath(name)") ==
+        std::string::npos);
 
   primec::Expr stringExpr;
   primec::Transform qualifier;
