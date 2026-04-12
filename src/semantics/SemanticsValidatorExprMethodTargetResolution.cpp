@@ -1549,6 +1549,20 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     const std::string resolvedSoaRefCanonical =
         canonicalizeLegacySoaRefHelperPath(resolvedOut);
+    auto canonicalizeSoaHelperPath = [](std::string canonicalPath) {
+      const size_t specializationSuffix = canonicalPath.find("__");
+      if (specializationSuffix != std::string::npos) {
+        canonicalPath.erase(specializationSuffix);
+      }
+      return canonicalPath;
+    };
+    auto isCanonicalSoaHelperPath = [](const std::string &candidate,
+                                       std::string_view helperName) {
+      return candidate.rfind("/std/collections/soa_vector/", 0) == 0 &&
+             isLegacyOrCanonicalSoaHelperPath(candidate, helperName);
+    };
+    const std::string resolvedSoaCountCanonical =
+        canonicalizeSoaHelperPath(resolvedOut);
     const std::string resolvedSoaGetCanonical =
         canonicalizeLegacySoaGetHelperPath(resolvedOut);
     const std::string resolvedSoaToAosCanonical =
@@ -1560,7 +1574,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         isLegacyOrCanonicalSoaHelperPath(
             resolvedSoaToAosCanonical, "to_aos_ref");
     const bool matchesBuiltinSoaCollectionHelper =
-        resolvedOut == "/std/collections/soa_vector/count" ||
+        isCanonicalSoaHelperPath(resolvedSoaCountCanonical, "count") ||
         isLegacyOrCanonicalSoaHelperPath(resolvedSoaGetCanonical, "get") ||
         isLegacyOrCanonicalSoaHelperPath(resolvedSoaGetCanonical,
                                          "get_ref") ||
@@ -1569,6 +1583,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         isCanonicalSoaRefLikeHelperPath(resolvedSoaRefCanonical);
     const bool hasImportedBuiltinSoaCollectionHelper =
         hasImportedDefinitionPath(resolvedOut) ||
+        (resolvedSoaCountCanonical != resolvedOut &&
+         hasImportedDefinitionPath(resolvedSoaCountCanonical)) ||
         (resolvedSoaGetCanonical != resolvedOut &&
          hasImportedDefinitionPath(resolvedSoaGetCanonical)) ||
         (resolvedSoaRefCanonical != resolvedOut &&
@@ -1577,6 +1593,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
          hasImportedDefinitionPath(resolvedSoaToAosCanonical));
     const bool hasLocalBuiltinSoaCollectionHelperDefinition =
         defMap_.count(resolvedOut) != 0 ||
+        (resolvedSoaCountCanonical != resolvedOut &&
+         defMap_.count(resolvedSoaCountCanonical) != 0) ||
         (resolvedSoaGetCanonical != resolvedOut &&
          defMap_.count(resolvedSoaGetCanonical) != 0) ||
         (resolvedSoaRefCanonical != resolvedOut &&

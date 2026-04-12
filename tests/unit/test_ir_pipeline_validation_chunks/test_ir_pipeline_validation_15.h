@@ -1180,7 +1180,19 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "const std::string resolvedSoaGetCanonical =") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
+            "const std::string resolvedSoaCountCanonical =") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "auto isCanonicalSoaHelperPath = [](const std::string &candidate,") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
             "canonicalizeLegacySoaGetHelperPath(resolvedOut)") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "resolvedOut == \"/std/collections/soa_vector/count\"") ==
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "isCanonicalSoaHelperPath(resolvedSoaCountCanonical, \"count\")") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "resolvedSoaGetCanonical == \"/std/collections/soa_vector/get\"") ==
@@ -1232,6 +1244,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "hasImportedDefinitionPath(resolvedSoaGetCanonical)") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "hasImportedDefinitionPath(resolvedSoaCountCanonical)") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "defMap_.count(resolvedSoaCountCanonical) != 0") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "hasImportedDefinitionPath(resolvedSoaToAosCanonical)") !=

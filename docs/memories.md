@@ -308,6 +308,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
   suffix stripping) instead of direct canonical path comparisons, and
   source-lock coverage in `test_ir_pipeline_validation_16` now asserts that
   shared helper-path wiring.
+- `soa-method-target-shared-canonical-count-helper-path`:
+  method-target builtin SoA collection-helper classification now routes
+  canonical `count` matching through shared
+  `isLegacyOrCanonicalSoaHelperPath(...)` helper-family checks behind a
+  canonical `/std/collections/soa_vector/` prefix guard (with specialization
+  suffix stripping) instead of direct canonical path comparison, while
+  imported/local helper visibility probes now include the canonicalized count
+  helper path and source-lock coverage in `test_ir_pipeline_validation_15`
+  asserts that shared helper-path wiring.
 - `soa-monomorph-template-carry-shared-helper-predicate`:
   template-monomorph expression-rewrite synthetic same-path SoA template-carry
   gating now removes duplicated inline helper-family ref/ref_ref path lists
