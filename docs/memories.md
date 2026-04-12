@@ -4,6 +4,14 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `soa-ir-lowerer-uninitialized-specialized-type-shared-helper`: ir-lowerer
+  uninitialized SoA receiver-struct specialized-type gating now routes
+  `normalizedReceiverStruct` through shared
+  `semantics::isExperimentalSoaVectorSpecializedTypePath(...)` instead of
+  direct
+  `normalizedReceiverStruct.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0)`
+  checks, and source-lock coverage in `test_ir_pipeline_validation_19` asserts
+  shared helper usage while rejecting that removed direct prefix check.
 - `soa-ir-lowerer-inline-param-specialized-type-shared-helper`: ir-lowerer
   inline-parameter SoA bridge struct-path detection now routes through shared
   `semantics::isExperimentalSoaVectorSpecializedTypePath(structPath)` instead

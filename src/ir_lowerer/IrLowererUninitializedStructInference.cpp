@@ -1,5 +1,7 @@
 #include "IrLowererUninitializedTypeHelpers.h"
 
+#include "../semantics/SemanticsHelpers.h"
+
 #include <algorithm>
 #include <cctype>
 #include <functional>
@@ -50,8 +52,7 @@ std::string inferExperimentalSoaElementStructPathFromReceiverStruct(
       normalizedReceiverStruct.front() != '/') {
     normalizedReceiverStruct.insert(normalizedReceiverStruct.begin(), '/');
   }
-  if (normalizedReceiverStruct.rfind(
-          "/std/collections/experimental_soa_vector/SoaVector__", 0) != 0) {
+  if (!semantics::isExperimentalSoaVectorSpecializedTypePath(normalizedReceiverStruct)) {
     return "";
   }
 
