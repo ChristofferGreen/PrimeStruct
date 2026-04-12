@@ -474,10 +474,28 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const std::string resolvedSoaCanonical =") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "const std::string normalizedNameSoaCanonical =") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "const bool normalizedNameUsesCanonicalSoaNamespace =") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, \"ref\")") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, \"ref_ref\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaCanonical, \"ref\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "normalizedNameSoaCanonical, \"ref_ref\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "normalizedName == \"std/collections/soa_vector/ref\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "normalizedName == \"std/collections/soa_vector/ref_ref\"") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool resolvedMatchesSoaRefHelperPath =") ==
