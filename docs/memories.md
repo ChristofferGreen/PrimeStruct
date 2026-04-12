@@ -4,6 +4,14 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `soa-semantics-validate-to-aos-shared-helper-path`: SemanticsValidate
+  canonical `to_aos` definition visibility and skip checks now canonicalize
+  helper paths with specialization-suffix stripping and route canonical
+  `/std/collections/soa_vector/to_aos` matching through shared
+  `isLegacyOrCanonicalSoaHelperPath(...)` checks behind a canonical
+  `/std/collections/soa_vector/` prefix guard instead of direct canonical
+  path comparisons, and source-lock coverage in
+  `test_ir_pipeline_validation_17` asserts that shared helper-path wiring.
 - `soa-statement-vector-mutator-shared-helper-path`: statement-vector helper
   canonical SoA mutator detection now canonicalizes resolved helper spellings
   with specialization-suffix stripping and routes canonical `push`/`reserve`

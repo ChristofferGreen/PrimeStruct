@@ -3595,6 +3595,13 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
   std::unordered_set<std::string> structPaths;
   bool hasVisibleRootToAosHelper = false;
   bool hasVisibleCanonicalToAosHelper = false;
+  auto canonicalizeSoaToAosDefinitionPath = [](std::string path) {
+    const size_t specializationSuffix = path.find("__");
+    if (specializationSuffix != std::string::npos) {
+      path.erase(specializationSuffix);
+    }
+    return path;
+  };
   for (const Definition &def : program.definitions) {
     if (auto binding = extractExperimentalSoaVectorOrBorrowedReturnBinding(def);
         binding.has_value()) {
@@ -3611,8 +3618,10 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
         def.fullPath.rfind("/to_aos__", 0) == 0) {
       hasVisibleRootToAosHelper = true;
     }
-    if (def.fullPath == "/std/collections/soa_vector/to_aos" ||
-        def.fullPath.rfind("/std/collections/soa_vector/to_aos__", 0) == 0) {
+    const std::string canonicalToAosDefPath =
+        canonicalizeSoaToAosDefinitionPath(def.fullPath);
+    if (canonicalToAosDefPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
+        semantics::isLegacyOrCanonicalSoaHelperPath(canonicalToAosDefPath, "to_aos")) {
       hasVisibleCanonicalToAosHelper = true;
     }
   }
@@ -3632,10 +3641,12 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
     }
   }
   for (Definition &def : program.definitions) {
+    const std::string canonicalToAosDefPath =
+        canonicalizeSoaToAosDefinitionPath(def.fullPath);
     if (def.fullPath == "/to_aos" ||
         def.fullPath.rfind("/to_aos__", 0) == 0 ||
-        def.fullPath == "/std/collections/soa_vector/to_aos" ||
-        def.fullPath.rfind("/std/collections/soa_vector/to_aos__", 0) == 0 ||
+        (canonicalToAosDefPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
+         semantics::isLegacyOrCanonicalSoaHelperPath(canonicalToAosDefPath, "to_aos")) ||
         def.fullPath.rfind(
             "/std/collections/experimental_soa_vector_conversions/", 0) == 0) {
       continue;

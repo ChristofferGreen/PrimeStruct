@@ -144,6 +144,18 @@ TEST_CASE("semantics validate source delegation stays stable") {
   CHECK(semanticsValidateSource.find("bool validateExprTransforms(const Expr &expr,") == std::string::npos);
   CHECK(semanticsValidateSource.find("bool rewriteEnumDefinitions(Program &program, std::string &error)") ==
         std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "canonicalToAosDefPath.rfind(\"/std/collections/soa_vector/\", 0) == 0") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(canonicalToAosDefPath, \"to_aos\")") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "def.fullPath == \"/std/collections/soa_vector/to_aos\"") ==
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "def.fullPath.rfind(\"/std/collections/soa_vector/to_aos__\", 0) == 0") ==
+        std::string::npos);
   CHECK(semanticsValidateConvertConstructorsHeaderSource.find("bool rewriteConvertConstructors(Program &program, std::string &error)") !=
         std::string::npos);
   CHECK(semanticsValidateConvertConstructorsSource.find("bool rewriteConvertConstructors(Program &program, std::string &error)") !=
