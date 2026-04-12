@@ -1188,7 +1188,10 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "path.rfind(\"/std/collections/experimental_soa_vector/\", 0) == 0 ||") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
-            "path.rfind(\"/std/collections/experimental_soa_vector_conversions/\", 0) == 0;") !=
+            "isExperimentalSoaVectorConversionFamilyPath(path);") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "path.rfind(\"/std/collections/experimental_soa_vector_conversions/\", 0) == 0;") ==
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "matchesPath(\"/std/collections/soa_vector/count\")") ==

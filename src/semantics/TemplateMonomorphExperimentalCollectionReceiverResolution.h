@@ -576,7 +576,7 @@ bool isExperimentalVectorPublicHelperPath(const std::string &path) {
 
 bool isExperimentalSoaVectorPublicHelperPath(const std::string &path) {
   return path.rfind("/std/collections/experimental_soa_vector/", 0) == 0 ||
-         path.rfind("/std/collections/experimental_soa_vector_conversions/", 0) == 0;
+         isExperimentalSoaVectorConversionFamilyPath(path);
 }
 
 bool hasVisibleStdCollectionsImportForPath(const Context &ctx, const std::string &path) {
