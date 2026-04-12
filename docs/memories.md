@@ -36,6 +36,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
   coverage in `test_ir_pipeline_validation_18` now asserts this direct-probe
   shape while rejecting the removed staged-vector scaffolding for that
   helper.
+- `statement-vector-soa-canonical-mutator-direct-receiver-probe`:
+  statement vector SoA canonical mutator fallback probing in
+  `SemanticsValidatorStatementVectorHelpers.cpp` now resolves candidates
+  directly through `tryResolveSoaCanonicalMutatorReceiverIndex(...)` in
+  stable order (named `values` receiver-first, named fallback to `0` then
+  remaining args only when no `values` label exists, positional receiver
+  index `0`) instead of staging indices in `receiverIndices` via
+  `appendReceiverIndex(...)`; source-lock coverage in
+  `test_ir_pipeline_validation_18` now asserts this direct-probe helper and
+  rejects the removed staged-vector shape in the
+  `isStdNamespacedSoaCanonicalMutatorHelperCall` fallback block.
 - `expr-collection-access-builtin-direct-receiver-probe`:
   the primary expr collection-access builtin dispatch branch now probes
   receiver candidates directly through `tryResolveReceiverIndex(...)` in

@@ -1067,6 +1067,16 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "    auto appendReceiverIndex = [&](size_t index) {") ==
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
+            "auto tryResolveSoaCanonicalMutatorReceiverIndex = [&](size_t receiverIndex) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "if (!shouldUseCanonicalBuiltinCompatibilityFallback &&\n"
+            "      isStdNamespacedSoaCanonicalMutatorHelperCall &&\n"
+            "      !stmt.args.empty()) {\n"
+            "    std::vector<size_t> receiverIndices;\n"
+            "    auto appendReceiverIndex = [&](size_t index) {") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
             "auto bareBuiltinVectorMutatorPreferredPath = [&]() -> std::string {") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
