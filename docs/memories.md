@@ -4,6 +4,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `expr-vector-helper-direct-receiver-probe`:
+  expr vector-helper call resolution now probes receiver candidates directly
+  through `tryResolveReceiverIndex(...)` in stable order (named `values`
+  receiver-first with fallback to index `0` then remaining args; positional
+  index `0` with optional positional reorder probes) inside
+  `resolveExprVectorHelperCall(...)` instead of staging indices in
+  `receiverIndices` via `appendUniqueIndex(...)`; source-lock coverage in
+  `test_ir_pipeline_validation_semantics_expr_source_delegation_01` now
+  asserts this direct-probe shape while rejecting the removed staged-vector
+  scaffolding.
 - `expr-named-argument-builtins-direct-soa-receiver-probe`:
   expr named-argument legacy SoA access builtin detection now probes
   receiver candidates directly through `tryResolveReceiverIndex(...)` in

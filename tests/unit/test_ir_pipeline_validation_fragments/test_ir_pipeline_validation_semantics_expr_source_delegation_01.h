@@ -398,6 +398,13 @@
         std::string::npos);
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find("appendUniqueReceiverIndex(") ==
         std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "auto tryResolveReceiverIndex = [&](size_t receiverIndex)") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find("std::vector<size_t> receiverIndices;") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find("appendUniqueIndex(") ==
+        std::string::npos);
   CHECK(semanticsExprSource.find("const BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters{") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers =") ==

@@ -39,18 +39,6 @@ bool isVectorHelperReceiverName(const Expr &candidate,
          typeName.rfind("std/collections/experimental_vector/Vector__", 0) == 0;
 }
 
-void appendUniqueIndex(std::vector<size_t> &indices, size_t index, size_t limit) {
-  if (index >= limit) {
-    return;
-  }
-  for (size_t existing : indices) {
-    if (existing == index) {
-      return;
-    }
-  }
-  indices.push_back(index);
-}
-
 } // namespace
 
 bool SemanticsValidator::isVectorBuiltinName(const Expr &candidate, const char *helper) const {
@@ -558,24 +546,51 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       (defMap_.find(resolved) == defMap_.end() ||
        hasVisibleStdNamespacedVectorCompatibilityHelper);
   if (shouldProbeVectorHelperReceiver && !expr.args.empty()) {
-    std::vector<size_t> receiverIndices;
+    auto tryResolveReceiverIndex = [&](size_t receiverIndex) {
+      if (receiverIndex >= expr.args.size()) {
+        return false;
+      }
+      const Expr &receiverCandidate = expr.args[receiverIndex];
+      std::string methodTarget;
+      if (resolveVectorHelperMethodTarget(params, locals, receiverCandidate, vectorHelper, methodTarget)) {
+        if (!expr.isMethodCall) {
+          methodTarget = preferVectorStdlibHelperPath(methodTarget);
+        }
+      }
+      if (!hasVisibleDefinitionPath(methodTarget)) {
+        return false;
+      }
+      resolved = methodTarget;
+      resolvedReceiverIndex = receiverIndex;
+      return true;
+    };
+
     const bool hasNamedArgs = hasNamedArguments(expr.argNames);
+    bool resolvedReceiver = false;
     if (hasNamedArgs) {
       bool hasValuesNamedReceiver = false;
       for (size_t i = 0; i < expr.args.size(); ++i) {
         if (i < expr.argNames.size() && expr.argNames[i].has_value() && *expr.argNames[i] == "values") {
-          appendUniqueIndex(receiverIndices, i, expr.args.size());
           hasValuesNamedReceiver = true;
+          if (tryResolveReceiverIndex(i)) {
+            resolvedReceiver = true;
+            break;
+          }
         }
       }
-      if (!hasValuesNamedReceiver) {
-        appendUniqueIndex(receiverIndices, 0, expr.args.size());
+      if (!hasValuesNamedReceiver && !resolvedReceiver) {
+        resolvedReceiver = tryResolveReceiverIndex(0);
+      }
+      if (!hasValuesNamedReceiver && !resolvedReceiver) {
         for (size_t i = 1; i < expr.args.size(); ++i) {
-          appendUniqueIndex(receiverIndices, i, expr.args.size());
+          if (tryResolveReceiverIndex(i)) {
+            resolvedReceiver = true;
+            break;
+          }
         }
       }
     } else {
-      appendUniqueIndex(receiverIndices, 0, expr.args.size());
+      resolvedReceiver = tryResolveReceiverIndex(0);
     }
 
     const bool probePositionalReorderedReceiver =
@@ -586,24 +601,11 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
          expr.args.front().kind == Expr::Kind::StringLiteral ||
          (expr.args.front().kind == Expr::Kind::Name &&
           !isVectorHelperReceiverName(expr.args.front(), params, locals)));
-    if (probePositionalReorderedReceiver) {
+    if (probePositionalReorderedReceiver && !resolvedReceiver) {
       for (size_t i = 1; i < expr.args.size(); ++i) {
-        appendUniqueIndex(receiverIndices, i, expr.args.size());
-      }
-    }
-
-    for (size_t receiverIndex : receiverIndices) {
-      const Expr &receiverCandidate = expr.args[receiverIndex];
-      std::string methodTarget;
-      if (resolveVectorHelperMethodTarget(params, locals, receiverCandidate, vectorHelper, methodTarget)) {
-        if (!expr.isMethodCall) {
-          methodTarget = preferVectorStdlibHelperPath(methodTarget);
+        if (tryResolveReceiverIndex(i)) {
+          break;
         }
-      }
-      if (hasVisibleDefinitionPath(methodTarget)) {
-        resolved = methodTarget;
-        resolvedReceiverIndex = receiverIndex;
-        break;
       }
     }
   }
