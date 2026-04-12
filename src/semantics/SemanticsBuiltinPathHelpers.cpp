@@ -548,6 +548,20 @@ bool isExperimentalSoaGrowthHelperPath(std::string_view path) {
          helperName == "soaVectorPush" || helperName == "soaVectorReserve";
 }
 
+bool isExperimentalSoaFieldViewHelperPath(std::string_view path) {
+  constexpr std::string_view kExperimentalSoaFieldViewPrefix =
+      "/std/collections/experimental_soa_vector/soaVectorFieldView";
+  constexpr std::string_view kExperimentalSoaColumnFieldViewUnsafePrefix =
+      "/std/collections/experimental_soa_storage/soaColumnFieldViewUnsafe";
+  std::string canonicalPath(path);
+  const size_t specializationSuffix = canonicalPath.find("__");
+  if (specializationSuffix != std::string::npos) {
+    canonicalPath.erase(specializationSuffix);
+  }
+  return canonicalPath.rfind(kExperimentalSoaFieldViewPrefix, 0) == 0 ||
+         canonicalPath.rfind(kExperimentalSoaColumnFieldViewUnsafePrefix, 0) == 0;
+}
+
 bool isExperimentalSoaRefLikeHelperPath(std::string_view path) {
   std::string canonicalPath(path);
   const size_t specializationSuffix = canonicalPath.find("__");

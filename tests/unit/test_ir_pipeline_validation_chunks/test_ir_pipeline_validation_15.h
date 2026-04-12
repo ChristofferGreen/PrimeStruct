@@ -729,6 +729,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "bool isExperimentalSoaGrowthHelperPath(std::string_view path)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
+            "bool isExperimentalSoaFieldViewHelperPath(std::string_view path)") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
             "bool isExperimentalSoaRefLikeHelperPath(std::string_view path)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
@@ -748,6 +751,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
             "helperName == \"soaVectorPush\" || helperName == \"soaVectorReserve\"") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
+            "canonicalPath.rfind(kExperimentalSoaFieldViewPrefix, 0) == 0 ||") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
+            "canonicalPath.rfind(kExperimentalSoaColumnFieldViewUnsafePrefix, 0) == 0") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
             "bool isExperimentalSoaVectorConversionFamilyPath(std::string_view path)") !=
@@ -788,6 +797,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
             "bool isExperimentalSoaGrowthHelperPath(std::string_view path);") !=
+        std::string::npos);
+  CHECK(semanticsHelpersSource.find(
+            "bool isExperimentalSoaFieldViewHelperPath(std::string_view path);") !=
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
             "bool isExperimentalSoaRefLikeHelperPath(std::string_view path);") !=
@@ -1030,10 +1042,21 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "isExperimentalSoaGrowthHelperPath(base)") !=
         std::string::npos);
   CHECK(exprSource.find(
+            "isExperimentalSoaFieldViewHelperPath(resolvedPath)") !=
+        std::string::npos);
+  CHECK(exprSource.find(
             "const bool isExperimentalSoaPath =") ==
         std::string::npos);
   CHECK(exprSource.find(
             "return hasSuffix(\"/push\") || hasSuffix(\"/reserve\") ||") ==
+        std::string::npos);
+  CHECK(exprSource.find(
+            "resolvedPath.rfind(\n"
+            "              \"/std/collections/experimental_soa_vector/soaVectorFieldView\",") ==
+        std::string::npos);
+  CHECK(exprSource.find(
+            "resolvedPath.rfind(\n"
+            "              \"/std/collections/experimental_soa_storage/soaColumnFieldViewUnsafe\",") ==
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("unknown method: /std/collections/soa_vector/field_view/") ==
         std::string::npos);

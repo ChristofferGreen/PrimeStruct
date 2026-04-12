@@ -93,12 +93,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       const std::string resolvedPath = resolveCalleePath(expr);
       const bool isFieldViewHelper =
-          resolvedPath.rfind(
-              "/std/collections/experimental_soa_vector/soaVectorFieldView",
-              0) == 0 ||
-          resolvedPath.rfind(
-              "/std/collections/experimental_soa_storage/soaColumnFieldViewUnsafe",
-              0) == 0;
+          isExperimentalSoaFieldViewHelperPath(resolvedPath);
       if (!isFieldViewHelper) {
         return std::nullopt;
       }
