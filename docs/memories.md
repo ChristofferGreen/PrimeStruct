@@ -630,6 +630,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `path.rfind("/std/collections/experimental_soa_vector/", 0)` prefix checks;
   source-lock coverage in `test_ir_pipeline_validation_16` plus helper-surface
   checks in `test_ir_pipeline_validation_15` assert this shared wiring.
+- `soa-monomorph-experimental-receiver-shared-specialized-type-path-predicate`:
+  template-monomorph experimental `SoaVector__*` specialized-type guards now
+  route through shared `isExperimentalSoaVectorSpecializedTypePath(...)`
+  instead of direct
+  `normalizedResolvedPath.rfind("std/collections/experimental_soa_vector/SoaVector__", 0)`
+  checks in `TemplateMonomorphExperimentalCollectionReceiverResolution.h` and
+  `TemplateMonomorphExpressionRewrite.h`, and helper-surface + source-lock
+  coverage in `test_ir_pipeline_validation_15`/`16` now asserts that shared
+  helper wiring.
 - `soa-monomorph-expression-shared-count-push-reserve-helper-path`:
   template-monomorph expression-rewrite canonical stdlib helper whitelisting
   now routes SoA `count`/`count_ref`/`push`/`reserve` checks through shared

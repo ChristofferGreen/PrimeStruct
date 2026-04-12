@@ -1238,11 +1238,23 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "canonicalizeLegacySoaGetHelperPath(path)") !=
         std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "isExperimentalSoaVectorSpecializedTypePath(normalizedResolvedPath)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "normalizedResolvedPath.rfind(\"std/collections/experimental_soa_vector/SoaVector__\", 0) != 0") ==
+        std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "isExperimentalSoaVectorPublicHelperPath(resolvedPath)") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "isExperimentalSoaVectorPublicHelperPath(methodPath)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "isExperimentalSoaVectorSpecializedTypePath(normalizedResolvedPath)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "normalizedResolvedPath.rfind(\"std/collections/experimental_soa_vector/SoaVector__\", 0) != 0") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "resolvedPath.rfind(\"/std/collections/experimental_soa_vector_conversions/\", 0)") ==

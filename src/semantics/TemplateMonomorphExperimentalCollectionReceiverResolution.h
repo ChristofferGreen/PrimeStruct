@@ -240,11 +240,8 @@ bool extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(const std
   if (!resolvedPath.empty() && resolvedPath.front() != '/') {
     resolvedPath.insert(resolvedPath.begin(), '/');
   }
-  std::string normalizedResolvedPath = normalizeBindingTypeName(resolvedPath);
-  if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
-    normalizedResolvedPath.erase(normalizedResolvedPath.begin());
-  }
-  if (normalizedResolvedPath.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) != 0) {
+  const std::string normalizedResolvedPath = normalizeBindingTypeName(resolvedPath);
+  if (!isExperimentalSoaVectorSpecializedTypePath(normalizedResolvedPath)) {
     return false;
   }
   for (const auto &[cacheKey, specializedPath] : ctx.specializationCache) {
