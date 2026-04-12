@@ -83,6 +83,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
   call pairs in each branch; source-lock coverage in
   `test_ir_pipeline_validation_18` now asserts the helper and rejects the
   removed inline explicit-call pair shape.
+- `statement-vector-experimental-helper-prefix-cache`:
+  statement vector helper fallback now caches
+  `isResolvedExperimentalVectorHelper` once per statement pass in
+  `SemanticsValidatorStatementVectorHelpers.cpp` and reuses that bool for
+  indexed-removal experimental-bridge detection plus experimental helper
+  template-arg inference gating, instead of repeating inline
+  `/std/collections/experimental_vector/` `rfind(...)` checks in each
+  branch; source-lock coverage in `test_ir_pipeline_validation_18` now
+  asserts the shared prefix bool and rejects the removed repeated inline
+  `helperCall.templateArgs.empty()` + `rfind(...)` condition shape.
 - `statement-vector-helper-kind-bool-hoist`:
   statement vector helper validation now hoists shared `vectorHelper` kind
   booleans (`vectorHelperIsPush`, `vectorHelperIsReserve`,

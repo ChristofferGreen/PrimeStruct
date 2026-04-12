@@ -756,12 +756,14 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
        vectorHelperResolved == "/std/collections/vector/clear" ||
        vectorHelperResolved == "/std/collections/vector/remove_at" ||
        vectorHelperResolved == "/std/collections/vector/remove_swap");
+  const bool isResolvedExperimentalVectorHelper =
+      vectorHelperResolved.rfind("/std/collections/experimental_vector/", 0) == 0;
   const bool isBareCanonicalIndexedRemovalExperimentalVectorBridgeCall =
       !stmt.isMethodCall &&
       stmt.namespacePrefix.empty() &&
       stmt.name == vectorHelper &&
       vectorHelperIsIndexedRemoval &&
-      vectorHelperResolved.rfind("/std/collections/experimental_vector/", 0) == 0;
+      isResolvedExperimentalVectorHelper;
   if (isCanonicalStdVectorMutatorMethodCall &&
       !hasDeclaredResolvedVectorHelper &&
       !hasImportedResolvedVectorHelper) {
@@ -785,8 +787,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     Expr helperCall = stmt;
     helperCall.name = vectorHelperResolved;
     helperCall.isMethodCall = false;
-    if (helperCall.templateArgs.empty() &&
-        vectorHelperResolved.rfind("/std/collections/experimental_vector/", 0) == 0) {
+    if (helperCall.templateArgs.empty() && isResolvedExperimentalVectorHelper) {
       if (receiverIndex < stmt.args.size()) {
         BindingInfo inferredBinding;
         bool hasInferredBinding = false;
