@@ -4,6 +4,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `statement-vector-builtin-operand-index-helper`:
+  statement vector helper builtin branches now share one
+  `resolveBuiltinOperandIndex(...)` helper in
+  `SemanticsValidatorStatementVectorHelpers.cpp` that routes operand index
+  fallback through `shouldUseCanonicalBuiltinCompatibilityFallback` +
+  `findCanonicalBuiltinCompatibilityOperandIndex(...)`, replacing repeated
+  inline fallback ternaries in `push`, `reserve`, and indexed-removal
+  branches; source-lock coverage in `test_ir_pipeline_validation_18` now
+  asserts the helper and rejects the removed inline `value` fallback ternary
+  block.
 - `statement-vector-builtin-receiver-index-cache`:
   statement vector helper builtin branches now cache
   `builtinReceiverIndex` once per statement pass in

@@ -926,14 +926,17 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   const size_t builtinReceiverIndex = shouldUseCanonicalBuiltinCompatibilityFallback
                                           ? canonicalBuiltinCompatibilityReceiverIndex
                                           : 0;
+  auto resolveBuiltinOperandIndex = [&](std::string_view namedArg) -> size_t {
+    return shouldUseCanonicalBuiltinCompatibilityFallback
+               ? findCanonicalBuiltinCompatibilityOperandIndex(namedArg)
+               : 1;
+  };
   if (vectorHelperIsPush) {
     if (stmt.args.size() != 2) {
       return failStatementDiagnostic("push requires exactly two arguments");
     }
     const size_t receiverIndex = builtinReceiverIndex;
-    const size_t valueIndex = shouldUseCanonicalBuiltinCompatibilityFallback
-                                  ? findCanonicalBuiltinCompatibilityOperandIndex("value")
-                                  : 1;
+    const size_t valueIndex = resolveBuiltinOperandIndex("value");
     if (receiverIndex >= stmt.args.size() || valueIndex >= stmt.args.size()) {
       return failStatementDiagnostic("push requires exactly two arguments");
     }
@@ -966,9 +969,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       return failStatementDiagnostic("reserve requires exactly two arguments");
     }
     const size_t receiverIndex = builtinReceiverIndex;
-    const size_t capacityIndex = shouldUseCanonicalBuiltinCompatibilityFallback
-                                     ? findCanonicalBuiltinCompatibilityOperandIndex("capacity")
-                                     : 1;
+    const size_t capacityIndex = resolveBuiltinOperandIndex("capacity");
     if (receiverIndex >= stmt.args.size() || capacityIndex >= stmt.args.size()) {
       return failStatementDiagnostic("reserve requires exactly two arguments");
     }
@@ -1001,9 +1002,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       return failStatementDiagnostic(vectorHelper + " requires exactly two arguments");
     }
     const size_t receiverIndex = builtinReceiverIndex;
-    const size_t indexArgIndex = shouldUseCanonicalBuiltinCompatibilityFallback
-                                     ? findCanonicalBuiltinCompatibilityOperandIndex("index")
-                                     : 1;
+    const size_t indexArgIndex = resolveBuiltinOperandIndex("index");
     if (receiverIndex >= stmt.args.size() || indexArgIndex >= stmt.args.size()) {
       return failStatementDiagnostic(vectorHelper + " requires exactly two arguments");
     }

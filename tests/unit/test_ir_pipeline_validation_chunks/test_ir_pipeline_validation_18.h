@@ -1096,6 +1096,9 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "const size_t builtinReceiverIndex = shouldUseCanonicalBuiltinCompatibilityFallback") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
+            "auto resolveBuiltinOperandIndex = [&](std::string_view namedArg) -> size_t {") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
             "const bool hasVisibleResolvedVectorHelper =") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
@@ -1115,6 +1118,11 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "const size_t receiverIndex = shouldUseCanonicalBuiltinCompatibilityFallback\n"
             "                                     ? canonicalBuiltinCompatibilityReceiverIndex\n"
             "                                     : 0;") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "const size_t valueIndex = shouldUseCanonicalBuiltinCompatibilityFallback\n"
+            "                                  ? findCanonicalBuiltinCompatibilityOperandIndex(\"value\")\n"
+            "                                  : 1;") ==
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
             "(defMap_.find(vectorHelperResolved) == defMap_.end() || isNamespacedVectorHelperCall) &&") ==
