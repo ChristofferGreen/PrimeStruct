@@ -212,6 +212,12 @@ bool inferImplicitTemplateArgs(const Definition &def,
         normalizedName.rfind("std/collections/soa_vector/", 0) == 0;
     const bool normalizedNameUsesLegacySoaNamespace =
         normalizedName.rfind("soa_vector/", 0) == 0;
+    const std::string normalizedPrefixedSoaPath =
+        normalizedPrefix.empty()
+            ? std::string{}
+            : "/" + normalizedPrefix + "/" + normalizedName;
+    const bool normalizedPrefixedUsesLegacySoaNamespace =
+        normalizedPrefixedSoaPath.rfind("/soa_vector/", 0) == 0;
     const bool isCanonicalBuiltinSoaRefCall =
         (normalizedNameUsesCanonicalSoaNamespace &&
          isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaCanonical, "ref")) ||
@@ -244,13 +250,16 @@ bool inferImplicitTemplateArgs(const Definition &def,
                          : "/std/collections/soa_vector/ref");
       }
       const bool isExplicitSoaRefCall =
-          (!candidate.isMethodCall && normalizedPrefix == "soa_vector" &&
-           normalizedName == "ref") ||
+          (!candidate.isMethodCall &&
+           normalizedPrefixedUsesLegacySoaNamespace &&
+           isLegacyOrCanonicalSoaHelperPath(normalizedPrefixedSoaPath, "ref")) ||
           (normalizedNameUsesLegacySoaNamespace &&
            isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaPath, "ref"));
       const bool isExplicitSoaRefRefCall =
-          (!candidate.isMethodCall && normalizedPrefix == "soa_vector" &&
-           normalizedName == "ref_ref") ||
+          (!candidate.isMethodCall &&
+           normalizedPrefixedUsesLegacySoaNamespace &&
+           isLegacyOrCanonicalSoaHelperPath(
+               normalizedPrefixedSoaPath, "ref_ref")) ||
           (normalizedNameUsesLegacySoaNamespace &&
            isLegacyOrCanonicalSoaHelperPath(
                normalizedNameSoaPath, "ref_ref"));
