@@ -257,6 +257,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
           candidate.args.front().kind == Expr::Kind::Call) {
         return soaUnavailableMethodDiagnostic(missingSoaRefHelperPath);
       }
+      const bool isMethodCall = candidate.isMethodCall;
       const bool isNonMethodCall = !candidate.isMethodCall;
       const bool isExplicitSoaRefCall =
           (isNonMethodCall &&
@@ -270,12 +271,12 @@ bool inferImplicitTemplateArgs(const Definition &def,
                normalizedPrefixedSoaPath, "ref_ref")) ||
           isOldSurfaceBuiltinSoaRefRefCall;
       const bool isBuiltinSoaRefMethod =
-          candidate.isMethodCall &&
+          isMethodCall &&
           (normalizedMethodNameMatchesSoaRef ||
            isLegacyOrCanonicalSoaHelperPath(
                normalizedNameSoaCanonical, "ref"));
       const bool isBuiltinSoaRefRefMethod =
-          candidate.isMethodCall &&
+          isMethodCall &&
           (normalizedMethodNameMatchesSoaRefRef ||
            isLegacyOrCanonicalSoaHelperPath(
                normalizedNameSoaCanonical, "ref_ref"));
