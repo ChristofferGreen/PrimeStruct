@@ -295,10 +295,11 @@ bool inferImplicitTemplateArgs(const Definition &def,
           isNonMethodCall && isAnyNormalizedMethodNameSoaRefCall;
       const bool isAnyExplicitSoaRefCall =
           isExplicitSoaRefCall || isExplicitSoaRefRefCall;
+      const bool isAnyExplicitOrBuiltinSoaRefCall =
+          isAnyExplicitSoaRefCall || isAnyBuiltinSoaRefMethodCall ||
+          isAnyBuiltinSoaRefNonMethodCall;
       if (isCanonicalSoaRefLikeHelperPath(resolvedSoaCanonical) ||
-          isAnyExplicitSoaRefCall ||
-          isAnyBuiltinSoaRefMethodCall ||
-          isAnyBuiltinSoaRefNonMethodCall) {
+          isAnyExplicitOrBuiltinSoaRefCall) {
         return soaUnavailableMethodDiagnostic(missingSoaRefHelperPath);
       }
       return {};
