@@ -274,14 +274,14 @@ bool inferImplicitTemplateArgs(const Definition &def,
       }
       const bool isMethodCall = candidate.isMethodCall;
       const bool isNonMethodCall = !isMethodCall;
+      const bool isExplicitLegacySoaNonMethodCall =
+          isNonMethodCall && normalizedPrefixedUsesLegacySoaNamespace;
       const bool isExplicitSoaRefCall =
-          (isNonMethodCall &&
-           normalizedPrefixedUsesLegacySoaNamespace &&
+          (isExplicitLegacySoaNonMethodCall &&
            normalizedPrefixedNameMatchesSoaRef) ||
           isOldSurfaceBuiltinSoaRefCall;
       const bool isExplicitSoaRefRefCall =
-          (isNonMethodCall &&
-           normalizedPrefixedUsesLegacySoaNamespace &&
+          (isExplicitLegacySoaNonMethodCall &&
            normalizedPrefixedNameMatchesSoaRefRef) ||
           isOldSurfaceBuiltinSoaRefRefCall;
       const bool isBuiltinSoaRefMethod =

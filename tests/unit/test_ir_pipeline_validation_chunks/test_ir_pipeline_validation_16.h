@@ -667,7 +667,19 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const bool isMethodCall = candidate.isMethodCall;") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "const bool isExplicitLegacySoaNonMethodCall =\n"
+            "          isNonMethodCall && normalizedPrefixedUsesLegacySoaNamespace;") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isNonMethodCall = !candidate.isMethodCall;") ==
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "(isExplicitLegacySoaNonMethodCall &&\n"
+            "           normalizedPrefixedNameMatchesSoaRef) ||") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "(isExplicitLegacySoaNonMethodCall &&\n"
+            "           normalizedPrefixedNameMatchesSoaRefRef) ||") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "isNonMethodCall && normalizedMethodNameMatchesSoaRef;") !=
@@ -703,13 +715,12 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "isNonMethodCall &&\n"
             "           normalizedPrefixedUsesLegacySoaNamespace &&\n"
-            "           isLegacyOrCanonicalSoaHelperPath(normalizedPrefixedSoaPath, \"ref\")") ==
+            "           normalizedPrefixedNameMatchesSoaRef)") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "isNonMethodCall &&\n"
             "           normalizedPrefixedUsesLegacySoaNamespace &&\n"
-            "           isLegacyOrCanonicalSoaHelperPath(\n"
-            "               normalizedPrefixedSoaPath, \"ref_ref\")") ==
+            "           normalizedPrefixedNameMatchesSoaRefRef)") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "(normalizedNameUsesLegacySoaNamespace &&\n"
