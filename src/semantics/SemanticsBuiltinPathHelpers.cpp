@@ -511,6 +511,22 @@ bool isCanonicalSoaRefLikeHelperPath(std::string_view path) {
          path == "/std/collections/soa_vector/ref_ref";
 }
 
+bool isExperimentalSoaVectorConversionFamilyPath(std::string_view path) {
+  constexpr std::string_view kExperimentalSoaVectorConversionsPrefix =
+      "/std/collections/experimental_soa_vector_conversions/";
+  std::string canonicalPath(path);
+  const size_t specializationSuffix = canonicalPath.find("__");
+  if (specializationSuffix != std::string::npos) {
+    canonicalPath.erase(specializationSuffix);
+  }
+  if (!canonicalPath.starts_with(kExperimentalSoaVectorConversionsPrefix)) {
+    return false;
+  }
+  const std::string_view helperName =
+      std::string_view(canonicalPath).substr(kExperimentalSoaVectorConversionsPrefix.size());
+  return helperName == "soaVectorToAos" || helperName == "soaVectorToAosRef";
+}
+
 namespace {
 
 std::string canonicalSoaPendingHelperPath(std::string_view resolvedPath) {

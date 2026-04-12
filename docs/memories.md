@@ -126,6 +126,14 @@ This file stores durable session-derived facts that are useful in later work. Ke
   canonicalToAosImportTarget)`) instead of direct canonical target-string
   checks, and source-lock coverage in `test_ir_pipeline_validation_17` asserts
   that shared helper-path wiring.
+- `soa-semantics-validate-experimental-conversion-shared-family-predicate`:
+  SemanticsValidate `rewriteExperimentalSoaToAosMethods(...)` now skips
+  experimental conversion helper definitions through shared
+  `isExperimentalSoaVectorConversionFamilyPath(def.fullPath)` (with
+  specialization-suffix stripping) instead of a direct
+  `/std/collections/experimental_soa_vector_conversions/` prefix check, and
+  source-lock coverage in `test_ir_pipeline_validation_17` plus helper-surface
+  coverage in `test_ir_pipeline_validation_15` assert that wiring.
 - `soa-semantics-validate-to-aos-shared-helper-path`: SemanticsValidate
   canonical `to_aos` definition visibility and skip checks now canonicalize
   helper paths with specialization-suffix stripping and route canonical

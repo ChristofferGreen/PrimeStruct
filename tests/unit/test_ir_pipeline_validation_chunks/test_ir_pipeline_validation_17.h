@@ -160,10 +160,16 @@ TEST_CASE("semantics validate source delegation stays stable") {
             "localImportPathCoversTarget(importPath, canonicalToAosImportTarget)") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find(
+            "semantics::isExperimentalSoaVectorConversionFamilyPath(def.fullPath)") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
             "def.fullPath == \"/std/collections/soa_vector/to_aos\"") ==
         std::string::npos);
   CHECK(semanticsValidateSource.find(
             "def.fullPath.rfind(\"/std/collections/soa_vector/to_aos__\", 0) == 0") ==
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "def.fullPath.rfind(\"/std/collections/experimental_soa_vector_conversions/\", 0) == 0") ==
         std::string::npos);
   CHECK(semanticsValidateSource.find(
             "localImportPathCoversTarget(\n"

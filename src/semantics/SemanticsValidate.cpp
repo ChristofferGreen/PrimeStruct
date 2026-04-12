@@ -3649,8 +3649,7 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
     if (def.fullPath == "/to_aos" ||
         def.fullPath.rfind("/to_aos__", 0) == 0 ||
         isCanonicalSoaToAosDefinitionPath(def.fullPath) ||
-        def.fullPath.rfind(
-            "/std/collections/experimental_soa_vector_conversions/", 0) == 0) {
+        semantics::isExperimentalSoaVectorConversionFamilyPath(def.fullPath)) {
       continue;
     }
     std::unordered_map<std::string, semantics::BindingInfo> bindings;
