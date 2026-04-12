@@ -96,6 +96,8 @@ bool rewriteExpr(Expr &expr,
     if (isCanonicalBuiltinMapHelperPath(path)) {
       return true;
     }
+    const std::string canonicalSoaGetPath =
+        canonicalizeLegacySoaGetHelperPath(path);
     const std::string canonicalSoaToAosPath =
         canonicalizeLegacySoaToAosHelperPath(path);
     return path == "/std/collections/vector/count" || path == "/std/collections/vector/capacity" ||
@@ -104,7 +106,8 @@ bool rewriteExpr(Expr &expr,
            path == "/std/collections/vector/remove_at" || path == "/std/collections/vector/remove_swap" ||
            path == "/std/collections/vector/at" || path == "/std/collections/vector/at_unsafe" ||
            path == "/std/collections/soa_vector/count" || path == "/std/collections/soa_vector/count_ref" ||
-           path == "/std/collections/soa_vector/get" || path == "/std/collections/soa_vector/get_ref" ||
+           isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get") ||
+           isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get_ref") ||
            isCanonicalSoaRefLikeHelperPath(path) ||
            path == "/std/collections/soa_vector/reserve" || path == "/std/collections/soa_vector/push" ||
            isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, "to_aos") ||

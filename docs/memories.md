@@ -259,6 +259,14 @@ This file stores durable session-derived facts that are useful in later work. Ke
   builtin SoA collection helpers, and source-lock coverage in
   `test_ir_pipeline_validation_15` now asserts that shared helper-path
   wiring.
+- `soa-monomorph-expression-shared-get-helper-path`: template-monomorph
+  expression-rewrite canonical stdlib collection-helper whitelisting now
+  canonicalizes helper paths through `canonicalizeLegacySoaGetHelperPath(...)`
+  and routes SoA `get`/`get_ref` helper-family checks through shared
+  `isLegacyOrCanonicalSoaHelperPath(...)` checks instead of direct canonical
+  `"/std/collections/soa_vector/get(_ref)"` comparisons, and source-lock
+  coverage in `test_ir_pipeline_validation_16` now asserts that shared
+  helper-path wiring.
 - `soa-monomorph-template-carry-shared-helper-predicate`:
   template-monomorph expression-rewrite synthetic same-path SoA template-carry
   gating now removes duplicated inline helper-family ref/ref_ref path lists
