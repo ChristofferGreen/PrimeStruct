@@ -218,6 +218,11 @@ bool inferImplicitTemplateArgs(const Definition &def,
             : "/" + normalizedPrefix + "/" + normalizedName;
     const bool normalizedPrefixedUsesLegacySoaNamespace =
         normalizedPrefixedSoaPath.rfind("/soa_vector/", 0) == 0;
+    const bool normalizedPrefixedNameMatchesSoaRef =
+        isLegacyOrCanonicalSoaHelperPath(normalizedPrefixedSoaPath, "ref");
+    const bool normalizedPrefixedNameMatchesSoaRefRef =
+        isLegacyOrCanonicalSoaHelperPath(
+            normalizedPrefixedSoaPath, "ref_ref");
     const bool normalizedCanonicalNameMatchesSoaRef =
         isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaCanonical, "ref");
     const bool normalizedCanonicalNameMatchesSoaRefRef =
@@ -266,13 +271,12 @@ bool inferImplicitTemplateArgs(const Definition &def,
       const bool isExplicitSoaRefCall =
           (isNonMethodCall &&
            normalizedPrefixedUsesLegacySoaNamespace &&
-           isLegacyOrCanonicalSoaHelperPath(normalizedPrefixedSoaPath, "ref")) ||
+           normalizedPrefixedNameMatchesSoaRef) ||
           isOldSurfaceBuiltinSoaRefCall;
       const bool isExplicitSoaRefRefCall =
           (isNonMethodCall &&
            normalizedPrefixedUsesLegacySoaNamespace &&
-           isLegacyOrCanonicalSoaHelperPath(
-               normalizedPrefixedSoaPath, "ref_ref")) ||
+           normalizedPrefixedNameMatchesSoaRefRef) ||
           isOldSurfaceBuiltinSoaRefRefCall;
       const bool isBuiltinSoaRefMethod =
           isMethodCall &&
