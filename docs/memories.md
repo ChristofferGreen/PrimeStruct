@@ -4,6 +4,14 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `semantic-memory-key-mode-deltas-force-scoped`: semantic-memory benchmark
+  `graph_local_auto_key_mode_deltas` rows are now grouped and reported with
+  full attribution dimensions (`semantic_product_force`, `no_fact_emission`,
+  `fact_families`, and graph-local side-channel/dependency-scratch modes) so
+  simultaneous force+key sweeps emit one key-mode delta row per force mode
+  instead of conflating runs; runtime harness coverage in
+  `test_compile_run_benchmark_harness` locks that `--semantic-product-force both`
+  plus `--graph-local-auto-key-mode both` emits distinct `on`/`off` delta rows.
 - `semantic-memory-memoization-deltas-mode-scoped`: semantic-memory benchmark
   `method_target_memoization_deltas` rows are now grouped and reported with
   full attribution dimensions (`semantic_product_force`, `no_fact_emission`,

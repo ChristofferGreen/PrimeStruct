@@ -731,16 +731,35 @@ def selected_graph_local_auto_key_modes(selection: str) -> list[str]:
 
 
 def compute_graph_local_auto_key_mode_deltas(results: list[dict]) -> list[dict]:
-    grouped: dict[tuple[str, str, str], dict[str, dict]] = {}
+    grouped: dict[tuple[str, str, str, str, bool, str, str, str], dict[str, dict]] = {}
     for row in results:
         mode = str(row.get("graph_local_auto_key_mode", "compact"))
         if mode not in ("compact", "legacy-shadow"):
             continue
         method_mode = str(row.get("method_target_memoization", "on"))
-        grouped.setdefault((row["fixture"], row["phase"], method_mode), {})[mode] = row
+        grouped.setdefault(
+            (
+                row["fixture"],
+                row["phase"],
+                method_mode,
+                str(row.get("semantic_product_force", "auto")),
+                bool(row.get("no_fact_emission", False)),
+                str(row.get("fact_families", "all")),
+                str(row.get("graph_local_auto_side_channel_mode", "flat")),
+                str(row.get("graph_local_auto_dependency_scratch_mode", "pmr")),
+            ),
+            {},
+        )[mode] = row
 
     deltas: list[dict] = []
-    for (fixture, phase, method_mode), by_mode in sorted(grouped.items()):
+    for (fixture,
+         phase,
+         method_mode,
+         semantic_product_force,
+         no_fact_emission,
+         fact_families,
+         graph_local_auto_side_channel_mode,
+         graph_local_auto_dependency_scratch_mode), by_mode in sorted(grouped.items()):
         compact_row = by_mode.get("compact")
         legacy_row = by_mode.get("legacy-shadow")
         if compact_row is None or legacy_row is None:
@@ -750,6 +769,11 @@ def compute_graph_local_auto_key_mode_deltas(results: list[dict]) -> list[dict]:
                 "fixture": fixture,
                 "phase": phase,
                 "method_target_memoization": method_mode,
+                "semantic_product_force": semantic_product_force,
+                "no_fact_emission": no_fact_emission,
+                "fact_families": fact_families,
+                "graph_local_auto_side_channel_mode": graph_local_auto_side_channel_mode,
+                "graph_local_auto_dependency_scratch_mode": graph_local_auto_dependency_scratch_mode,
                 "median_peak_rss_bytes_compact": compact_row["median_peak_rss_bytes"],
                 "median_peak_rss_bytes_legacy_shadow": legacy_row["median_peak_rss_bytes"],
                 "median_peak_rss_bytes_legacy_shadow_minus_compact":
