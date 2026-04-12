@@ -712,15 +712,26 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "          isNonMethodCall && isAnyNormalizedMethodNameSoaRefCall;") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "const bool hasAnyBuiltinSoaRefCanonicalNameMatch =\n"
+            "          normalizedCanonicalNameMatchesSoaRef ||\n"
+            "          normalizedCanonicalNameMatchesSoaRefRef;") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool hasAnyBuiltinSoaRefMethodNameMatch =\n"
             "          normalizedMethodNameMatchesSoaRef ||\n"
-            "          normalizedCanonicalNameMatchesSoaRef ||\n"
             "          normalizedMethodNameMatchesSoaRefRef ||\n"
-            "          normalizedCanonicalNameMatchesSoaRefRef;") !=
+            "          hasAnyBuiltinSoaRefCanonicalNameMatch;") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isAnyBuiltinSoaRefMethodCall =\n"
             "          isMethodCall && hasAnyBuiltinSoaRefMethodNameMatch;") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "const bool hasAnyBuiltinSoaRefMethodNameMatch =\n"
+            "          normalizedMethodNameMatchesSoaRef ||\n"
+            "          normalizedCanonicalNameMatchesSoaRef ||\n"
+            "          normalizedMethodNameMatchesSoaRefRef ||\n"
+            "          normalizedCanonicalNameMatchesSoaRefRef;") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "candidate.isMethodCall &&\n"
