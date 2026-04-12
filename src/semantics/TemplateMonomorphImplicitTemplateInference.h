@@ -258,7 +258,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
         return soaUnavailableMethodDiagnostic(missingSoaRefHelperPath);
       }
       const bool isMethodCall = candidate.isMethodCall;
-      const bool isNonMethodCall = !candidate.isMethodCall;
+      const bool isNonMethodCall = !isMethodCall;
       const bool isExplicitSoaRefCall =
           (isNonMethodCall &&
            normalizedPrefixedUsesLegacySoaNamespace &&
