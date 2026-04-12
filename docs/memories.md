@@ -4,6 +4,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `infer-collection-compat-direct-removed-map-receiver-probe`:
+  infer collection-compatibility removed-map body-argument target resolution
+  now probes receiver candidates directly via `tryResolveReceiverIndex(...)`
+  in stable order (named `values` receiver-first with fallback to full-
+  argument scan, else positional full-argument scan) inside
+  `resolveRemovedMapBodyArgumentTarget(...)` instead of staging indices in a
+  temporary `receiverIndices` vector with `appendReceiverIndex(...)`; source-
+  lock coverage in `test_ir_pipeline_validation_18` now asserts this direct-
+  probe shape while rejecting the removed staged-vector scaffolding.
 - `infer-pre-dispatch-direct-vector-receiver-probe`:
   infer pre-dispatch vector-helper return-kind resolution now probes receiver
   candidates directly via `tryResolveReceiverIndex(...)` in stable order

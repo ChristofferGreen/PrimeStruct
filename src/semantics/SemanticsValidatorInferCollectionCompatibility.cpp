@@ -788,45 +788,41 @@ bool SemanticsValidator::resolveRemovedMapBodyArgumentTarget(const Expr &candida
       return false;
     }
 
-    std::vector<size_t> receiverIndices;
-    auto appendReceiverIndex = [&](size_t index) {
+    auto tryResolveReceiverIndex = [&](size_t index) -> bool {
       if (index >= candidate.args.size()) {
-        return;
+        return false;
       }
-      for (size_t existing : receiverIndices) {
-        if (existing == index) {
-          return;
-        }
+      if (!resolveAnyMapTarget(candidate.args[index])) {
+        return false;
       }
-      receiverIndices.push_back(index);
+      targetPathOut = preferredRemovedMapHelperPath(descriptor->helperName);
+      return true;
     };
     if (hasNamedArguments(candidate.argNames)) {
       bool foundValues = false;
       for (size_t i = 0; i < candidate.args.size(); ++i) {
         if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
             *candidate.argNames[i] == "values") {
-          appendReceiverIndex(i);
           foundValues = true;
+          if (tryResolveReceiverIndex(i)) {
+            return true;
+          }
           break;
         }
       }
       if (!foundValues) {
         for (size_t i = 0; i < candidate.args.size(); ++i) {
-          appendReceiverIndex(i);
+          if (tryResolveReceiverIndex(i)) {
+            return true;
+          }
         }
       }
     } else {
       for (size_t i = 0; i < candidate.args.size(); ++i) {
-        appendReceiverIndex(i);
+        if (tryResolveReceiverIndex(i)) {
+          return true;
+        }
       }
-    }
-
-    for (size_t receiverIndex : receiverIndices) {
-      if (!resolveAnyMapTarget(candidate.args[receiverIndex])) {
-        continue;
-      }
-      targetPathOut = preferredRemovedMapHelperPath(descriptor->helperName);
-      return true;
     }
     return false;
   }

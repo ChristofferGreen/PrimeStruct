@@ -147,6 +147,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       semanticsInferCollectionBufferAndMapResolversPath,
       semanticsInferCollectionStringResolverPath,
   });
+  const std::string semanticsInferCollectionCompatibilitySource =
+      readText(semanticsInferCollectionCompatibilityPath);
   const std::string semanticsInferControlFlowSource = readText(semanticsInferControlFlowPath);
   const std::string semanticsInferDefinitionSource = readText(semanticsInferDefinitionPath);
   const std::string semanticsCollectionHelperRewritesSource = readText(semanticsCollectionHelperRewritesPath);
@@ -567,6 +569,18 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::resolveCallCollectionTypePath") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::resolveCallCollectionTemplateArgs") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionCompatibilitySource.find(
+            "auto tryResolveReceiverIndex = [&](size_t index) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionCompatibilitySource.find(
+            "std::vector<size_t> receiverIndices;") ==
+        std::string::npos);
+  CHECK(semanticsInferCollectionCompatibilitySource.find(
+            "auto appendReceiverIndex = [&](size_t index)") ==
+        std::string::npos);
+  CHECK(semanticsInferCollectionCompatibilitySource.find(
+            "for (size_t receiverIndex : receiverIndices)") ==
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("SemanticsValidator::makeBuiltinCollectionDispatchResolvers(") !=
         std::string::npos);
