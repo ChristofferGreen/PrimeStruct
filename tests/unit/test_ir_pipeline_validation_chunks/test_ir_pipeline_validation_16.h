@@ -1185,10 +1185,13 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "bool isExperimentalSoaVectorPublicHelperPath(const std::string &path)") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
-            "path.rfind(\"/std/collections/experimental_soa_vector/\", 0) == 0 ||") !=
+            "isExperimentalSoaVectorHelperFamilyPath(path);") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
-            "isExperimentalSoaVectorConversionFamilyPath(path);") !=
+            "isExperimentalSoaVectorConversionFamilyPath(path);") ==
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "path.rfind(\"/std/collections/experimental_soa_vector/\", 0) == 0 ||") ==
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "path.rfind(\"/std/collections/experimental_soa_vector_conversions/\", 0) == 0;") ==

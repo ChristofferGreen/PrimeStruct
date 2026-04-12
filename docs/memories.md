@@ -620,6 +620,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
   canonical `matchesPath(...)` checks, and source-lock coverage in
   `test_ir_pipeline_validation_16` now asserts that shared helper-path
   wiring.
+- `soa-monomorph-experimental-receiver-shared-public-helper-family-path`:
+  template-monomorph experimental SoA public-helper family matching now routes
+  through shared `isExperimentalSoaVectorHelperFamilyPath(...)` in
+  `SemanticsBuiltinPathHelpers.cpp` (with specialization-suffix stripping for
+  both experimental vector and conversion helper families), and
+  `isExperimentalSoaVectorPublicHelperPath(...)` now delegates to that shared
+  helper instead of direct
+  `path.rfind("/std/collections/experimental_soa_vector/", 0)` prefix checks;
+  source-lock coverage in `test_ir_pipeline_validation_16` plus helper-surface
+  checks in `test_ir_pipeline_validation_15` assert this shared wiring.
 - `soa-monomorph-expression-shared-count-push-reserve-helper-path`:
   template-monomorph expression-rewrite canonical stdlib helper whitelisting
   now routes SoA `count`/`count_ref`/`push`/`reserve` checks through shared
