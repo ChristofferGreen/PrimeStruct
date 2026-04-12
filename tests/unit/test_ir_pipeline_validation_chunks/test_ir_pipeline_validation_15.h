@@ -1513,6 +1513,15 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprResolvedCallArgumentsSource.find(
             "isCanonicalSoaRefLikeHelperPath(resolvedPathCanonical)") !=
         std::string::npos);
+  CHECK(exprResolvedCallArgumentsSource.find(
+            "isExperimentalSoaRefLikeHelperPath(resolvedPathCanonical)") !=
+        std::string::npos);
+  CHECK(exprResolvedCallArgumentsSource.find(
+            "/std/collections/experimental_soa_vector/soaVectorRef\"") ==
+        std::string::npos);
+  CHECK(exprResolvedCallArgumentsSource.find(
+            "/std/collections/experimental_soa_vector/soaVectorRefRef\"") ==
+        std::string::npos);
   CHECK(exprMutationBorrowsSource.find(
             "const auto canonicalizeLegacySoaRefPath =") ==
         std::string::npos);

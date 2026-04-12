@@ -238,12 +238,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     const bool matchesCanonicalSoaRefHelperPath =
         isCanonicalSoaRefLikeHelperPath(resolvedPathCanonical);
     const bool matchesExperimentalSoaRefHelperPath =
-        resolvedPathCanonical.rfind(
-            "/std/collections/experimental_soa_vector/soaVectorRef",
-            0) == 0 ||
-        resolvedPathCanonical.rfind(
-            "/std/collections/experimental_soa_vector/soaVectorRefRef",
-            0) == 0 ||
+        isExperimentalSoaRefLikeHelperPath(resolvedPathCanonical) ||
         resolvedPathCanonical.rfind(
             "/std/collections/experimental_soa_storage/soaColumnRef",
             0) == 0;
