@@ -4,6 +4,26 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `statement-vector-helper-direct-receiver-probe`:
+  statement vector-helper receiver probing in
+  `SemanticsValidatorStatementVectorHelpers.cpp` now resolves candidates
+  directly through `tryResolveVectorHelperReceiverIndex(...)` in stable
+  order (named `values` receiver-first, named fallback to `0` then remaining
+  args only when no `values` label exists, positional `0` then positional
+  reorder probes) instead of staging indices in `receiverIndices` via
+  `appendReceiverIndex(...)`; source-lock coverage in
+  `test_ir_pipeline_validation_18` now asserts this direct-probe helper and
+  rejects the removed staged-vector shape that followed
+  `isVectorHelperReceiverName(...)`.
+- `statement-vector-mutator-preferred-direct-receiver-probe`:
+  statement vector mutator preferred-target selection now probes receiver
+  candidates directly through `tryResolveReceiverIndex(...)` in stable order
+  (receiver index `0` first, then positional reorder probes when enabled)
+  inside `bareBuiltinVectorMutatorPreferredPath(...)` instead of staging
+  indices in `receiverIndices` via `appendReceiverIndex(...)`; source-lock
+  coverage in `test_ir_pipeline_validation_18` now asserts this direct-probe
+  shape while rejecting the removed staged-vector scaffolding for that
+  helper.
 - `expr-collection-access-builtin-direct-receiver-probe`:
   the primary expr collection-access builtin dispatch branch now probes
   receiver candidates directly through `tryResolveReceiverIndex(...)` in

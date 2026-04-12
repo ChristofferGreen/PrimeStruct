@@ -1048,6 +1048,31 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "isLegacyOrCanonicalSoaHelperPath(vectorHelperResolvedCanonical, \"reserve\")") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
+            "auto tryResolveVectorHelperReceiverIndex = [&](size_t receiverIndex) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "if (!tryResolveVectorHelperReceiverIndex(0) && probePositionalReorderedReceiver) {") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "    };\n"
+            "    std::vector<size_t> receiverIndices;\n"
+            "    auto appendReceiverIndex = [&](size_t index) {") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "auto bareBuiltinVectorMutatorPreferredPath = [&]() -> std::string {") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "auto tryResolveReceiverIndex = [&](size_t receiverIndex) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "if (tryResolveReceiverIndex(0)) {") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "      return binding.typeName == \"vector\";\n"
+            "    };\n"
+            "    std::vector<size_t> receiverIndices;") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
             "vectorHelperResolved.rfind(\"/std/collections/soa_vector/push\", 0) == 0") ==
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(

@@ -454,33 +454,27 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       }
       return binding.typeName == "vector";
     };
-    std::vector<size_t> receiverIndices;
-    auto appendReceiverIndex = [&](size_t index) {
-      if (index >= stmt.args.size()) {
-        return;
+    auto tryResolveReceiverIndex = [&](size_t receiverIndex) -> bool {
+      if (receiverIndex >= stmt.args.size()) {
+        return false;
       }
-      for (size_t existing : receiverIndices) {
-        if (existing == index) {
-          return;
-        }
-      }
-      receiverIndices.push_back(index);
+      return isBuiltinVectorReceiver(stmt.args[receiverIndex]);
     };
-    appendReceiverIndex(0);
+
     const bool hasNamedArgs = hasNamedArguments(stmt.argNames);
     const bool probePositionalReorderedReceiver =
         !stmt.isMethodCall && !hasNamedArgs && stmt.args.size() > 1 &&
         (stmt.args.front().kind == Expr::Kind::Literal || stmt.args.front().kind == Expr::Kind::BoolLiteral ||
          stmt.args.front().kind == Expr::Kind::FloatLiteral || stmt.args.front().kind == Expr::Kind::StringLiteral ||
          (stmt.args.front().kind == Expr::Kind::Name && !isBuiltinVectorReceiver(stmt.args.front())));
+    if (tryResolveReceiverIndex(0)) {
+      return preferredBareVectorHelperTarget(vectorHelper);
+    }
     if (probePositionalReorderedReceiver) {
       for (size_t i = 1; i < stmt.args.size(); ++i) {
-        appendReceiverIndex(i);
-      }
-    }
-    for (size_t receiverIndex : receiverIndices) {
-      if (isBuiltinVectorReceiver(stmt.args[receiverIndex])) {
-        return preferredBareVectorHelperTarget(vectorHelper);
+        if (tryResolveReceiverIndex(i)) {
+          return preferredBareVectorHelperTarget(vectorHelper);
+        }
       }
     }
     return "";
@@ -611,61 +605,58 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       return (binding.typeName == "vector" || extractExperimentalVectorElementType(binding, experimentalElemType)) &&
              binding.isMutable;
     };
-    std::vector<size_t> receiverIndices;
-    auto appendReceiverIndex = [&](size_t index) {
-      if (index >= stmt.args.size()) {
-        return;
-      }
-      for (size_t existing : receiverIndices) {
-        if (existing == index) {
-          return;
-        }
-      }
-      receiverIndices.push_back(index);
-    };
-    const bool hasNamedArgs = hasNamedArguments(stmt.argNames);
-    if (hasNamedArgs) {
-      bool hasValuesNamedReceiver = false;
-      for (size_t i = 0; i < stmt.args.size(); ++i) {
-        if (i < stmt.argNames.size() && stmt.argNames[i].has_value() && *stmt.argNames[i] == "values") {
-          appendReceiverIndex(i);
-          hasValuesNamedReceiver = true;
-        }
-      }
-      if (!hasValuesNamedReceiver) {
-        appendReceiverIndex(0);
-        for (size_t i = 1; i < stmt.args.size(); ++i) {
-          appendReceiverIndex(i);
-        }
-      }
-    } else {
-      appendReceiverIndex(0);
-    }
-    const bool probePositionalReorderedReceiver =
-        !isStdNamespacedCanonicalBuiltinHelperCall &&
-        !hasNamedArgs && stmt.args.size() > 1 &&
-        (stmt.args.front().kind == Expr::Kind::Literal || stmt.args.front().kind == Expr::Kind::BoolLiteral ||
-         stmt.args.front().kind == Expr::Kind::FloatLiteral || stmt.args.front().kind == Expr::Kind::StringLiteral ||
-         (stmt.args.front().kind == Expr::Kind::Name && !isVectorHelperReceiverName(stmt.args.front())));
-    if (probePositionalReorderedReceiver) {
-      for (size_t i = 1; i < stmt.args.size(); ++i) {
-        appendReceiverIndex(i);
-      }
-    }
-    for (size_t receiverIndex : receiverIndices) {
+    auto tryResolveVectorHelperReceiverIndex = [&](size_t receiverIndex) -> bool {
       if (receiverIndex >= stmt.args.size()) {
-        continue;
+        return false;
       }
       const Expr &receiverCandidate = stmt.args[receiverIndex];
       std::string methodTarget;
       if (resolveVectorStatementHelperTargetPath(params, locals, receiverCandidate, vectorHelper, methodTarget)) {
         methodTarget = preferVectorStdlibHelperPath(methodTarget);
       }
-      if (hasVisibleDefinitionPath(methodTarget)) {
-        vectorHelperResolved = methodTarget;
-        hasResolvedReceiverIndex = true;
-        resolvedReceiverIndex = receiverIndex;
-        break;
+      if (!hasVisibleDefinitionPath(methodTarget)) {
+        return false;
+      }
+      vectorHelperResolved = methodTarget;
+      hasResolvedReceiverIndex = true;
+      resolvedReceiverIndex = receiverIndex;
+      return true;
+    };
+    const bool hasNamedArgs = hasNamedArguments(stmt.argNames);
+    if (hasNamedArgs) {
+      bool hasValuesNamedReceiver = false;
+      for (size_t i = 0; i < stmt.args.size(); ++i) {
+        if (i < stmt.argNames.size() && stmt.argNames[i].has_value() && *stmt.argNames[i] == "values") {
+          hasValuesNamedReceiver = true;
+          if (tryResolveVectorHelperReceiverIndex(i)) {
+            break;
+          }
+        }
+      }
+      if (!hasResolvedReceiverIndex && !hasValuesNamedReceiver) {
+        if (tryResolveVectorHelperReceiverIndex(0)) {
+          // Keep probing order equivalent to the prior staged index list.
+        }
+        for (size_t i = 1; !hasResolvedReceiverIndex && i < stmt.args.size(); ++i) {
+          if (tryResolveVectorHelperReceiverIndex(i)) {
+            break;
+          }
+        }
+      }
+    } else {
+      const bool probePositionalReorderedReceiver =
+          !isStdNamespacedCanonicalBuiltinHelperCall &&
+          stmt.args.size() > 1 &&
+          (stmt.args.front().kind == Expr::Kind::Literal || stmt.args.front().kind == Expr::Kind::BoolLiteral ||
+           stmt.args.front().kind == Expr::Kind::FloatLiteral ||
+           stmt.args.front().kind == Expr::Kind::StringLiteral ||
+           (stmt.args.front().kind == Expr::Kind::Name && !isVectorHelperReceiverName(stmt.args.front())));
+      if (!tryResolveVectorHelperReceiverIndex(0) && probePositionalReorderedReceiver) {
+        for (size_t i = 1; i < stmt.args.size(); ++i) {
+          if (tryResolveVectorHelperReceiverIndex(i)) {
+            break;
+          }
+        }
       }
     }
   }
