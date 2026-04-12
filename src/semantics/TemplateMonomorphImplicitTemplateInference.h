@@ -246,15 +246,16 @@ bool inferImplicitTemplateArgs(const Definition &def,
       const bool isRefRefCall =
           normalizedMethodNameMatchesSoaRefRef || isCanonicalBuiltinSoaRefRefCall ||
           isOldSurfaceBuiltinSoaRefRefCall;
+      const char *missingSoaRefHelperPath =
+          isRefRefCall ? "/std/collections/soa_vector/ref_ref"
+                       : "/std/collections/soa_vector/ref";
       if (isRefRefCall ? hasVisibleSoaRefRefHelper : hasVisibleSoaRefHelper) {
         return {};
       }
       if ((isCanonicalBuiltinSoaRefCall || isCanonicalBuiltinSoaRefRefCall) &&
           !candidate.args.empty() &&
           candidate.args.front().kind == Expr::Kind::Call) {
-        return soaUnavailableMethodDiagnostic(
-            isRefRefCall ? "/std/collections/soa_vector/ref_ref"
-                         : "/std/collections/soa_vector/ref");
+        return soaUnavailableMethodDiagnostic(missingSoaRefHelperPath);
       }
       const bool isExplicitSoaRefCall =
           (!candidate.isMethodCall &&
@@ -291,9 +292,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
           isBuiltinSoaRefRefMethod ||
           isBuiltinSoaRefNonMethod ||
           isBuiltinSoaRefRefNonMethod) {
-        return soaUnavailableMethodDiagnostic(
-            isRefRefCall ? "/std/collections/soa_vector/ref_ref"
-                         : "/std/collections/soa_vector/ref");
+        return soaUnavailableMethodDiagnostic(missingSoaRefHelperPath);
       }
       return {};
     }
