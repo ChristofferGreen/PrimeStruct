@@ -222,9 +222,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (!isQualifiedStructSchemaCall && !isSplitStructSchemaCall) {
         return false;
       }
-      const std::string &definitionPath = currentValidationState_.context.definitionPath;
-      return definitionPath.rfind(
-                 "/std/collections/experimental_soa_storage/soaColumnField", 0) == 0;
+      return isExperimentalSoaColumnFieldSchemaHelperPath(
+          currentValidationState_.context.definitionPath);
     };
     if (isPendingSoaSchemaHelperCall()) {
       for (const Expr &arg : expr.args) {

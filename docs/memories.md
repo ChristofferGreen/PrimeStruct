@@ -157,6 +157,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `resolvedNoTemplate` path comparisons, and source-lock coverage in
   `test_ir_pipeline_validation_15` asserts that helper call while rejecting
   the removed direct-path disjunction.
+- `soa-expr-pending-schema-helper-definition-path-shared-predicate`: pending
+  `Struct/SoaSchemaFieldCount|SoaSchemaElementStride|SoaSchemaFieldOffset`
+  helper-call acceptance in `SemanticsValidatorExpr` now routes definition-path
+  checks for experimental `/std/collections/experimental_soa_storage/soaColumnField*`
+  helpers through shared
+  `isExperimentalSoaColumnFieldSchemaHelperPath(...)` (with
+  specialization-suffix stripping) instead of direct
+  `definitionPath.rfind(...)` prefix matching, and source-lock coverage in
+  `test_ir_pipeline_validation_15` asserts shared helper usage while rejecting
+  the removed direct prefix check.
 - `soa-statement-return-experimental-ref-shared-helper-predicate`:
   statement-return SoA standalone `ref`/`ref_ref` escape classification now
   routes experimental helper-path detection through shared

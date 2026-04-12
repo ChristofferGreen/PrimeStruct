@@ -741,6 +741,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "bool isExperimentalSoaColumnSlotHelperPath(std::string_view path)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
+            "bool isExperimentalSoaColumnFieldSchemaHelperPath(std::string_view path)") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
             "bool isExperimentalSoaRefLikeHelperPath(std::string_view path)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
@@ -775,6 +778,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
             "/std/collections/experimental_soa_storage/soaColumnSlotUnsafe") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
+            "/std/collections/experimental_soa_storage/soaColumnField") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
             "bool isExperimentalSoaVectorConversionFamilyPath(std::string_view path)") !=
@@ -827,6 +833,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
             "bool isExperimentalSoaColumnSlotHelperPath(std::string_view path);") !=
+        std::string::npos);
+  CHECK(semanticsHelpersSource.find(
+            "bool isExperimentalSoaColumnFieldSchemaHelperPath(std::string_view path);") !=
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
             "bool isExperimentalSoaRefLikeHelperPath(std::string_view path);") !=
@@ -1072,6 +1081,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "isExperimentalSoaFieldViewHelperPath(resolvedPath)") !=
         std::string::npos);
   CHECK(exprSource.find(
+            "isExperimentalSoaColumnFieldSchemaHelperPath(") !=
+        std::string::npos);
+  CHECK(exprSource.find(
             "const bool isExperimentalSoaPath =") ==
         std::string::npos);
   CHECK(exprSource.find(
@@ -1084,6 +1096,10 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprSource.find(
             "resolvedPath.rfind(\n"
             "              \"/std/collections/experimental_soa_storage/soaColumnFieldViewUnsafe\",") ==
+        std::string::npos);
+  CHECK(exprSource.find(
+            "definitionPath.rfind(\n"
+            "                 \"/std/collections/experimental_soa_storage/soaColumnField\", 0) == 0") ==
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("unknown method: /std/collections/soa_vector/field_view/") ==
         std::string::npos);

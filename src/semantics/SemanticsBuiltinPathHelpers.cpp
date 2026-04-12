@@ -593,6 +593,17 @@ bool isExperimentalSoaColumnSlotHelperPath(std::string_view path) {
              0) == 0;
 }
 
+bool isExperimentalSoaColumnFieldSchemaHelperPath(std::string_view path) {
+  std::string canonicalPath(path);
+  const size_t specializationSuffix = canonicalPath.find("__");
+  if (specializationSuffix != std::string::npos) {
+    canonicalPath.erase(specializationSuffix);
+  }
+  return canonicalPath.rfind(
+             "/std/collections/experimental_soa_storage/soaColumnField",
+             0) == 0;
+}
+
 bool isExperimentalSoaRefLikeHelperPath(std::string_view path) {
   std::string canonicalPath(path);
   const size_t specializationSuffix = canonicalPath.find("__");
