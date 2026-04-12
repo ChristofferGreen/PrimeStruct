@@ -530,7 +530,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     }
     const std::string resolvedCallPath = resolveCalleePath(expr);
     const bool isSoaColumnSlotUnsafe =
-        resolvedCallPath.rfind("/std/collections/experimental_soa_storage/soaColumnSlotUnsafe", 0) == 0;
+        isExperimentalSoaColumnSlotHelperPath(resolvedCallPath);
     const bool isVectorSlotUnsafe =
         resolvedCallPath.rfind("/std/collections/experimental_vector/vectorSlotUnsafe", 0) == 0;
     if ((isSoaColumnSlotUnsafe || isVectorSlotUnsafe) && !expr.args.empty()) {

@@ -165,6 +165,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
   checks, and source-lock coverage in `test_ir_pipeline_validation_15` plus
   helper-surface checks there assert that shared helper-path wiring while
   rejecting the removed direct-prefix disjunctions.
+- `soa-statement-binding-column-slot-shared-helper-predicate`:
+  statement-binding pointer-root slot helper detection now routes experimental
+  `/std/collections/experimental_soa_storage/soaColumnSlotUnsafe` checks
+  through shared `isExperimentalSoaColumnSlotHelperPath(...)` (with
+  specialization-suffix stripping) instead of direct
+  `resolvedCallPath.rfind(...)` prefix matching, and source-lock coverage in
+  `test_ir_pipeline_validation_15` plus `test_ir_pipeline_validation_18`
+  asserts shared helper usage while rejecting the removed direct prefix check
+  in `SemanticsValidatorStatementBindings.cpp`.
 - `soa-statement-binding-experimental-ref-shared-helper-predicate`:
   statement-binding SoA standalone `ref`/`ref_ref` classifier paths now route
   experimental helper-path detection through shared
