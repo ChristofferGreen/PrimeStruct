@@ -4,6 +4,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `semantic-memory-mixed-case-mode-metadata-canonicalized`: semantic-memory
+  delta grouping now lower-canonicalizes row mode metadata for
+  `semantic_product_force`, `method_target_memoization`, and graph-local
+  key/side-channel/dependency-scratch modes (including `_`→`-` normalization
+  for graph-local mode variants), and canonicalizes row `fact_families`
+  ordering by `SEMANTIC_COLLECTOR_FAMILIES` before grouping; runtime
+  benchmark-harness coverage now asserts
+  `compute_graph_local_auto_dependency_scratch_mode_deltas(...)` still emits
+  one canonical delta row when mixed-case/reordered legacy metadata rows are
+  present.
 - `semantic-memory-no-fact-mode-metadata-canonicalized`: semantic-memory
   delta grouping now canonicalizes legacy `no_fact_emission` row metadata
   through shared `benchmark_row_no_fact_emission_mode(...)` helper logic

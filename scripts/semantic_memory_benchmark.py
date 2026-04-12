@@ -527,42 +527,56 @@ def selected_semantic_product_force_modes(selection: str) -> list[str]:
 
 
 def benchmark_row_semantic_product_force_mode(row: dict) -> str:
-    normalized = str(row.get("semantic_product_force", "auto")).strip()
+    normalized = str(row.get("semantic_product_force", "auto")).strip().lower()
     if normalized in ("", "auto"):
         return "auto"
     return normalized
 
 
 def benchmark_row_fact_families_mode(row: dict) -> str:
-    normalized = str(row.get("fact_families", "auto")).strip()
+    normalized = str(row.get("fact_families", "auto")).strip().lower()
     if normalized in ("", "all", "auto"):
         return "auto"
-    return normalized
+    if normalized == "none":
+        return "none"
+    families = [token.strip() for token in normalized.split(",") if token.strip()]
+    if not families:
+        return "auto"
+    seen = set(families)
+    known = [family for family in SEMANTIC_COLLECTOR_FAMILIES if family in seen]
+    unknown = sorted(token for token in seen if token not in SEMANTIC_COLLECTOR_FAMILIES)
+    canonical = known + unknown
+    if not canonical:
+        return "auto"
+    return ",".join(canonical)
 
 
 def benchmark_row_method_target_memoization_mode(row: dict) -> str:
-    normalized = str(row.get("method_target_memoization", "on")).strip()
+    normalized = str(row.get("method_target_memoization", "on")).strip().lower()
     if normalized in ("", "on"):
         return "on"
     return normalized
 
 
 def benchmark_row_graph_local_auto_key_mode(row: dict) -> str:
-    normalized = str(row.get("graph_local_auto_key_mode", "compact")).strip()
+    normalized = str(row.get("graph_local_auto_key_mode", "compact")).strip().lower()
+    normalized = normalized.replace("_", "-")
     if normalized in ("", "compact"):
         return "compact"
     return normalized
 
 
 def benchmark_row_graph_local_auto_side_channel_mode(row: dict) -> str:
-    normalized = str(row.get("graph_local_auto_side_channel_mode", "flat")).strip()
+    normalized = str(row.get("graph_local_auto_side_channel_mode", "flat")).strip().lower()
+    normalized = normalized.replace("_", "-")
     if normalized in ("", "flat"):
         return "flat"
     return normalized
 
 
 def benchmark_row_graph_local_auto_dependency_scratch_mode(row: dict) -> str:
-    normalized = str(row.get("graph_local_auto_dependency_scratch_mode", "pmr")).strip()
+    normalized = str(row.get("graph_local_auto_dependency_scratch_mode", "pmr")).strip().lower()
+    normalized = normalized.replace("_", "-")
     if normalized in ("", "pmr"):
         return "pmr"
     return normalized
