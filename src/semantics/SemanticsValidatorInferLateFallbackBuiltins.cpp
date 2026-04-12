@@ -1,7 +1,5 @@
 #include "SemanticsValidator.h"
 
-#include <algorithm>
-
 namespace primec::semantics {
 
 ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
@@ -72,37 +70,6 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
         inferCollectionDispatchSetup.isBuiltinAccess
             ? inferCollectionDispatchSetup.builtinAccessName
             : (isBuiltinGet ? "get" : (isBuiltinGetRef ? "get_ref" : "ref"));
-    std::vector<size_t> receiverIndices;
-    auto appendReceiverIndex = [&](size_t index) {
-      if (index >= expr.args.size()) {
-        return;
-      }
-      for (size_t existing : receiverIndices) {
-        if (existing == index) {
-          return;
-        }
-      }
-      receiverIndices.push_back(index);
-    };
-    const bool hasNamedArgs = hasNamedArguments(expr.argNames);
-    if (hasNamedArgs) {
-      bool hasValuesNamedReceiver = false;
-      for (size_t i = 0; i < expr.args.size(); ++i) {
-        if (i < expr.argNames.size() && expr.argNames[i].has_value() &&
-            *expr.argNames[i] == "values") {
-          appendReceiverIndex(i);
-          hasValuesNamedReceiver = true;
-        }
-      }
-      if (!hasValuesNamedReceiver) {
-        appendReceiverIndex(0);
-        for (size_t i = 1; i < expr.args.size(); ++i) {
-          appendReceiverIndex(i);
-        }
-      }
-    } else {
-      appendReceiverIndex(0);
-    }
     auto isCollectionAccessReceiverExpr = [&](const Expr &candidate) -> bool {
       std::string elemType;
       std::string keyType;
@@ -117,47 +84,13 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
              (resolveMapTarget != nullptr &&
               resolveMapTarget(candidate, keyType, valueType));
     };
-    const bool probePositionalReorderedReceiver =
-        !hasNamedArgs && expr.args.size() > 1 &&
-        (expr.args.front().kind == Expr::Kind::Literal ||
-         expr.args.front().kind == Expr::Kind::BoolLiteral ||
-         expr.args.front().kind == Expr::Kind::FloatLiteral ||
-         expr.args.front().kind == Expr::Kind::StringLiteral ||
-         (expr.args.front().kind == Expr::Kind::Name &&
-          !isCollectionAccessReceiverExpr(expr.args.front())));
-    if (probePositionalReorderedReceiver) {
-      for (size_t i = 1; i < expr.args.size(); ++i) {
-        appendReceiverIndex(i);
+    auto tryResolveReceiverIndex = [&](size_t index,
+                                       bool skipResolvedResult,
+                                       ReturnKind &resolvedKindOut) -> bool {
+      if (index >= expr.args.size()) {
+        return false;
       }
-    }
-    const bool hasAlternativeCollectionReceiver =
-        probePositionalReorderedReceiver &&
-        std::any_of(receiverIndices.begin(),
-                    receiverIndices.end(),
-                    [&](size_t index) {
-                      if (index == 0 || index >= expr.args.size()) {
-                        return false;
-                      }
-                      const Expr &candidate = expr.args[index];
-                      std::string elemType;
-                      std::string keyType;
-                      std::string valueType;
-                      return (resolveVectorTarget != nullptr &&
-                              resolveVectorTarget(candidate, elemType)) ||
-                             (resolveArrayTarget != nullptr &&
-                              resolveArrayTarget(candidate, elemType)) ||
-                             (resolveSoaVectorTarget != nullptr &&
-                              resolveSoaVectorTarget(candidate, elemType)) ||
-                             (resolveStringTarget != nullptr &&
-                              resolveStringTarget(candidate)) ||
-                             (resolveMapTarget != nullptr &&
-                              resolveMapTarget(candidate, keyType, valueType));
-                    });
-    for (size_t receiverIndex : receiverIndices) {
-      if (receiverIndex >= expr.args.size()) {
-        continue;
-      }
-      const Expr &receiverCandidate = expr.args[receiverIndex];
+      const Expr &receiverCandidate = expr.args[index];
       std::string methodResolved;
       std::string elemType;
       std::string keyType;
@@ -183,7 +116,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
                  resolveMapTarget(receiverCandidate, keyType, valueType)) {
         methodResolved = "/map/" + helperName;
       } else {
-        continue;
+        return false;
       }
       methodResolved = preferVectorStdlibHelperPath(methodResolved);
       ReturnKind builtinMethodKind = ReturnKind::Unknown;
@@ -193,24 +126,78 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
               receiverCandidate,
               builtinCollectionDispatchResolvers,
               builtinMethodKind)) {
-        if (hasAlternativeCollectionReceiver && receiverIndex == 0) {
-          continue;
+        if (skipResolvedResult) {
+          return false;
         }
-        return finish(builtinMethodKind);
+        resolvedKindOut = builtinMethodKind;
+        return true;
       }
       auto methodIt = defMap_.find(methodResolved);
-      if (methodIt != defMap_.end()) {
-        if (hasAlternativeCollectionReceiver && receiverIndex == 0) {
-          continue;
+      if (methodIt == defMap_.end()) {
+        return false;
+      }
+      if (skipResolvedResult) {
+        return false;
+      }
+      if (!ensureDefinitionReturnKindReady(*methodIt->second)) {
+        resolvedKindOut = ReturnKind::Unknown;
+        return true;
+      }
+      auto kindIt = returnKinds_.find(methodResolved);
+      resolvedKindOut =
+          kindIt != returnKinds_.end() ? kindIt->second : ReturnKind::Unknown;
+      return true;
+    };
+    const bool hasNamedArgs = hasNamedArguments(expr.argNames);
+    const bool probePositionalReorderedReceiver =
+        !hasNamedArgs && expr.args.size() > 1 &&
+        (expr.args.front().kind == Expr::Kind::Literal ||
+         expr.args.front().kind == Expr::Kind::BoolLiteral ||
+         expr.args.front().kind == Expr::Kind::FloatLiteral ||
+         expr.args.front().kind == Expr::Kind::StringLiteral ||
+         (expr.args.front().kind == Expr::Kind::Name &&
+          !isCollectionAccessReceiverExpr(expr.args.front())));
+    ReturnKind resolvedKind = ReturnKind::Unknown;
+    if (hasNamedArgs) {
+      bool hasValuesNamedReceiver = false;
+      for (size_t i = 0; i < expr.args.size(); ++i) {
+        if (i < expr.argNames.size() && expr.argNames[i].has_value() &&
+            *expr.argNames[i] == "values") {
+          hasValuesNamedReceiver = true;
+          if (tryResolveReceiverIndex(i, false, resolvedKind)) {
+            return finish(resolvedKind);
+          }
         }
-        if (!ensureDefinitionReturnKindReady(*methodIt->second)) {
-          return finish(ReturnKind::Unknown);
+      }
+      if (!hasValuesNamedReceiver) {
+        if (tryResolveReceiverIndex(0, false, resolvedKind)) {
+          return finish(resolvedKind);
         }
-        auto kindIt = returnKinds_.find(methodResolved);
-        if (kindIt != returnKinds_.end()) {
-          return finish(kindIt->second);
+        for (size_t i = 1; i < expr.args.size(); ++i) {
+          if (tryResolveReceiverIndex(i, false, resolvedKind)) {
+            return finish(resolvedKind);
+          }
         }
-        return finish(ReturnKind::Unknown);
+      }
+    } else {
+      bool hasAlternativeCollectionReceiver = false;
+      if (probePositionalReorderedReceiver) {
+        for (size_t i = 1; i < expr.args.size(); ++i) {
+          if (isCollectionAccessReceiverExpr(expr.args[i])) {
+            hasAlternativeCollectionReceiver = true;
+            break;
+          }
+        }
+      }
+      if (tryResolveReceiverIndex(0, hasAlternativeCollectionReceiver, resolvedKind)) {
+        return finish(resolvedKind);
+      }
+      if (probePositionalReorderedReceiver) {
+        for (size_t i = 1; i < expr.args.size(); ++i) {
+          if (tryResolveReceiverIndex(i, false, resolvedKind)) {
+            return finish(resolvedKind);
+          }
+        }
       }
     }
   }

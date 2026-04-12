@@ -486,6 +486,17 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "const bool isBuiltinGetRef = isSimpleCallName(expr, \"get_ref\");") !=
         std::string::npos);
   CHECK(semanticsInferLateFallbackBuiltinsSource.find(
+            "auto tryResolveReceiverIndex = [&](size_t index,") !=
+        std::string::npos);
+  CHECK(semanticsInferLateFallbackBuiltinsSource.find("std::vector<size_t> receiverIndices;") ==
+        std::string::npos);
+  CHECK(semanticsInferLateFallbackBuiltinsSource.find(
+            "auto appendReceiverIndex = [&](size_t index)") ==
+        std::string::npos);
+  CHECK(semanticsInferLateFallbackBuiltinsSource.find(
+            "for (size_t receiverIndex : receiverIndices)") ==
+        std::string::npos);
+  CHECK(semanticsInferLateFallbackBuiltinsSource.find(
             "(helperName == \"get\" || helperName == \"get_ref\" ||") !=
             std::string::npos);
   CHECK(semanticsInferLateFallbackBuiltinsSource.find(

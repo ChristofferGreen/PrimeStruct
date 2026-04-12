@@ -4,6 +4,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `infer-late-fallback-direct-collection-receiver-probe`:
+  infer late-fallback collection helper return-kind resolution now probes
+  receiver candidates directly through `tryResolveReceiverIndex(...)` in
+  stable order (named `values` args, named fallback `0` then remaining args,
+  positional `0`, then positional reorder probes) while preserving
+  primary-receiver skip behavior when an alternative positional collection
+  receiver exists, instead of staging indices in a temporary `receiverIndices`
+  vector with `appendReceiverIndex(...)`; source-lock coverage in
+  `test_ir_pipeline_validation_18` now asserts this direct-probe shape while
+  rejecting the removed staged-vector scaffolding.
 - `effect-free-direct-bare-map-receiver-probe`:
   effect-free bare-map helper resolution now probes receiver candidates
   directly via `tryResolveReceiverIndex(...)` in stable order (named `values`
