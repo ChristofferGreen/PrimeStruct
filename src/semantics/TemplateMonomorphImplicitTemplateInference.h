@@ -218,14 +218,18 @@ bool inferImplicitTemplateArgs(const Definition &def,
             : "/" + normalizedPrefix + "/" + normalizedName;
     const bool normalizedPrefixedUsesLegacySoaNamespace =
         normalizedPrefixedSoaPath.rfind("/soa_vector/", 0) == 0;
+    const bool normalizedCanonicalNameMatchesSoaRef =
+        isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaCanonical, "ref");
+    const bool normalizedCanonicalNameMatchesSoaRefRef =
+        isLegacyOrCanonicalSoaHelperPath(
+            normalizedNameSoaCanonical, "ref_ref");
     const bool isCanonicalBuiltinSoaRefCall =
         (normalizedNameUsesCanonicalSoaNamespace &&
-         isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaCanonical, "ref")) ||
+         normalizedCanonicalNameMatchesSoaRef) ||
         isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "ref");
     const bool isCanonicalBuiltinSoaRefRefCall =
         (normalizedNameUsesCanonicalSoaNamespace &&
-         isLegacyOrCanonicalSoaHelperPath(
-             normalizedNameSoaCanonical, "ref_ref")) ||
+         normalizedCanonicalNameMatchesSoaRefRef) ||
         isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "ref_ref");
     const bool isOldSurfaceBuiltinSoaRefCall =
         normalizedNameUsesLegacySoaNamespace &&
@@ -273,13 +277,11 @@ bool inferImplicitTemplateArgs(const Definition &def,
       const bool isBuiltinSoaRefMethod =
           isMethodCall &&
           (normalizedMethodNameMatchesSoaRef ||
-           isLegacyOrCanonicalSoaHelperPath(
-               normalizedNameSoaCanonical, "ref"));
+           normalizedCanonicalNameMatchesSoaRef);
       const bool isBuiltinSoaRefRefMethod =
           isMethodCall &&
           (normalizedMethodNameMatchesSoaRefRef ||
-           isLegacyOrCanonicalSoaHelperPath(
-               normalizedNameSoaCanonical, "ref_ref"));
+           normalizedCanonicalNameMatchesSoaRefRef);
       const bool isBuiltinSoaRefNonMethod =
           isNonMethodCall && normalizedMethodNameMatchesSoaRef;
       const bool isBuiltinSoaRefRefNonMethod =
