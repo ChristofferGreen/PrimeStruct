@@ -1279,6 +1279,9 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
             "value.rfind(\"std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") ==
         std::string::npos);
+  CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
+            "value.rfind(\"SoaVector__\", 0) == 0") ==
+        std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "methodPath.rfind(\"/std/collections/experimental_soa_vector_conversions/\", 0)") ==
         std::string::npos);

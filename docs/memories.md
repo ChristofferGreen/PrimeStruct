@@ -4,6 +4,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `soa-monomorph-collection-compatibility-bare-specialized-type-shared-helper`:
+  template-monomorph collection-compatibility receiver normalization now
+  routes bare experimental `SoaVector__*` type-path checks through shared
+  `isExperimentalSoaVectorSpecializedTypePath(value)` instead of direct
+  `value.rfind("SoaVector__", 0)` matching, and source-lock coverage in
+  `test_ir_pipeline_validation_16` asserts shared helper usage while rejecting
+  the removed direct bare-prefix check.
 - `semantic-memory-boolean-like-mode-metadata-canonicalized`: semantic-memory
   delta grouping now canonicalizes boolean-like legacy mode aliases for
   `semantic_product_force` and `method_target_memoization`
