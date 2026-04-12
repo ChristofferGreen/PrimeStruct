@@ -1,6 +1,8 @@
 #include "IrLowererInlineParamHelpers.h"
 #include "IrLowererInlinePackedArgs.h"
 
+#include "../semantics/SemanticsHelpers.h"
+
 #include "IrLowererCallHelpers.h"
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererFlowHelpers.h"
@@ -25,7 +27,7 @@ bool isCanonicalBuiltinSoaBridgePath(const std::string &calleePath) {
 }
 
 bool isExperimentalSoaVectorStructPath(const std::string &structPath) {
-  return structPath.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+  return semantics::isExperimentalSoaVectorSpecializedTypePath(structPath);
 }
 
 bool isBuiltinSoaToAosStructMatch(const std::string &calleePath,
