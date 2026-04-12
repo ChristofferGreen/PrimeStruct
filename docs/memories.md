@@ -165,6 +165,14 @@ This file stores durable session-derived facts that are useful in later work. Ke
   checks, and source-lock coverage in `test_ir_pipeline_validation_15` plus
   helper-surface checks there assert that shared helper-path wiring while
   rejecting the removed direct-prefix disjunctions.
+- `soa-statement-binding-experimental-ref-shared-helper-predicate`:
+  statement-binding SoA standalone `ref`/`ref_ref` classifier paths now route
+  experimental helper-path detection through shared
+  `isExperimentalSoaRefLikeHelperPath(...)` instead of direct
+  `resolvedPathCanonical.rfind(...)` prefix checks, and source-lock coverage
+  in `test_ir_pipeline_validation_15` asserts that shared helper-path wiring
+  while rejecting direct experimental helper-path string checks in
+  statement-binding source.
 - `soa-semantics-validate-to-aos-shared-helper-path`: SemanticsValidate
   canonical `to_aos` definition visibility and skip checks now canonicalize
   helper paths with specialization-suffix stripping and route canonical

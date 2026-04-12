@@ -905,12 +905,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       const bool resolvedCanonicalRefLike =
           isCanonicalSoaRefLikeHelperPath(resolvedPathCanonical);
       const bool resolvedExperimentalRefLike =
-          resolvedPathCanonical.rfind(
-              "/std/collections/experimental_soa_vector/soaVectorRef",
-              0) == 0 ||
-          resolvedPathCanonical.rfind(
-              "/std/collections/experimental_soa_vector/soaVectorRefRef",
-              0) == 0;
+          isExperimentalSoaRefLikeHelperPath(resolvedPathCanonical);
       if (expr.isMethodCall) {
         return expr.name == "ref" ||
                resolvedCanonicalRefLike || resolvedExperimentalRefLike;
@@ -1037,12 +1032,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
             const bool resolvedCanonicalRefLike =
                 isCanonicalSoaRefLikeHelperPath(resolvedPathCanonical);
             const bool resolvedExperimentalRefLike =
-                resolvedPathCanonical.rfind(
-                    "/std/collections/experimental_soa_vector/soaVectorRef",
-                    0) == 0 ||
-                resolvedPathCanonical.rfind(
-                    "/std/collections/experimental_soa_vector/soaVectorRefRef",
-                    0) == 0;
+                isExperimentalSoaRefLikeHelperPath(resolvedPathCanonical);
             const bool isMethodRefCall =
                 expr.isMethodCall &&
                 (expr.name == "ref" ||

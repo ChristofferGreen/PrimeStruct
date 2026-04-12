@@ -1575,6 +1575,15 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(statementBindingsSource.find(
             "isCanonicalSoaRefLikeHelperPath(resolvedPathCanonical)") !=
         std::string::npos);
+  CHECK(statementBindingsSource.find(
+            "isExperimentalSoaRefLikeHelperPath(resolvedPathCanonical)") !=
+        std::string::npos);
+  CHECK(statementBindingsSource.find(
+            "/std/collections/experimental_soa_vector/soaVectorRef\"") ==
+        std::string::npos);
+  CHECK(statementBindingsSource.find(
+            "/std/collections/experimental_soa_vector/soaVectorRefRef\"") ==
+        std::string::npos);
   CHECK(statementReturnsSource.find("reportBuiltinSoaPendingExprDiagnostic(stmt.args.front(), params, locals)") ==
         std::string::npos);
   CHECK(statementReturnsSource.find("builtinSoaPendingExprDiagnostic(stmt.args.front(), params, locals)") ==
