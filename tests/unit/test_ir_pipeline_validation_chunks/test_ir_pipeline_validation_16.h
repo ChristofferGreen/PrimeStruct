@@ -640,7 +640,12 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "        normalizedMethodNameMatchesSoaRef || normalizedMethodNameMatchesSoaRefRef;") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "const bool isRefRefCall = isAnyBuiltinSoaRefRefCall;") !=
+            "isAnyBuiltinSoaRefRefCall ? \"/std/collections/soa_vector/ref_ref\"\n"
+            "                                    : \"/std/collections/soa_vector/ref\";") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "if (isAnyBuiltinSoaRefRefCall ? hasVisibleSoaRefRefHelper\n"
+            "                                    : hasVisibleSoaRefHelper)") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "if (isAnyNormalizedMethodNameSoaRefCall ||\n"
@@ -786,6 +791,9 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const bool isRefRefCall =\n"
             "          normalizedMethodNameMatchesSoaRefRef || isCanonicalBuiltinSoaRefRefCall ||\n"
             "          isOldSurfaceBuiltinSoaRefRefCall;") ==
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "const bool isRefRefCall = isAnyBuiltinSoaRefRefCall;") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "if (normalizedMethodNameMatchesSoaRef ||\n"
