@@ -47,6 +47,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `test_ir_pipeline_validation_18` now asserts this direct-probe helper and
   rejects the removed staged-vector shape in the
   `isStdNamespacedSoaCanonicalMutatorHelperCall` fallback block.
+- `statement-vector-shared-named-arg-scan-cache`:
+  statement vector helper fallback validation in
+  `SemanticsValidatorStatementVectorHelpers.cpp` now caches
+  `hasNamedStatementArgs = hasNamedArguments(stmt.argNames)` once per
+  statement pass and reuses it across vector-helper probing, canonical
+  compatibility probing, and SoA canonical mutator fallback probing, instead
+  of rescanning named-argument presence in each branch; source-lock coverage
+  in `test_ir_pipeline_validation_18` now asserts the shared named-argument
+  scan cache.
 - `expr-collection-access-builtin-direct-receiver-probe`:
   the primary expr collection-access builtin dispatch branch now probes
   receiver candidates directly through `tryResolveReceiverIndex(...)` in

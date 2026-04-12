@@ -1039,6 +1039,9 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "const std::string vectorHelperResolvedCanonical =") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
+            "const bool hasNamedStatementArgs = hasNamedArguments(stmt.argNames);") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
             "vectorHelperResolvedCanonical.rfind(\"/std/collections/soa_vector/\", 0) == 0") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(

@@ -580,6 +580,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   }
   bool hasResolvedReceiverIndex = false;
   size_t resolvedReceiverIndex = 0;
+  const bool hasNamedStatementArgs = hasNamedArguments(stmt.argNames);
   if (stmt.isMethodCall && !stmt.args.empty()) {
     hasResolvedReceiverIndex = true;
     resolvedReceiverIndex = 0;
@@ -622,8 +623,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       resolvedReceiverIndex = receiverIndex;
       return true;
     };
-    const bool hasNamedArgs = hasNamedArguments(stmt.argNames);
-    if (hasNamedArgs) {
+    if (hasNamedStatementArgs) {
       bool hasValuesNamedReceiver = false;
       for (size_t i = 0; i < stmt.args.size(); ++i) {
         if (i < stmt.argNames.size() && stmt.argNames[i].has_value() && *stmt.argNames[i] == "values") {
@@ -683,7 +683,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       canonicalBuiltinCompatibilityReceiverIndex = receiverIndex;
       return true;
     };
-    if (hasNamedArguments(stmt.argNames)) {
+    if (hasNamedStatementArgs) {
       bool hasValuesNamedReceiver = false;
       for (size_t i = 0; i < stmt.args.size(); ++i) {
         if (i < stmt.argNames.size() && stmt.argNames[i].has_value() && *stmt.argNames[i] == "values") {
@@ -725,7 +725,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       canonicalBuiltinCompatibilityReceiverIndex = receiverIndex;
       return true;
     };
-    if (hasNamedArguments(stmt.argNames)) {
+    if (hasNamedStatementArgs) {
       bool hasValuesNamedReceiver = false;
       for (size_t i = 0; i < stmt.args.size(); ++i) {
         if (i < stmt.argNames.size() && stmt.argNames[i].has_value() && *stmt.argNames[i] == "values") {

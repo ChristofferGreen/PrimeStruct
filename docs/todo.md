@@ -53,3 +53,4 @@ P2 - Traversal and allocation churn reductions
 - P2 refactor micro-slice `[P2-25]` is archived in `docs/todo_finished.md` (April 12, 2026).
 - P2 refactor micro-slice `[P2-26]` is archived in `docs/todo_finished.md` (April 12, 2026).
 - P2 refactor micro-slice `[P2-27]` is archived in `docs/todo_finished.md` (April 12, 2026).
+- P2 refactor micro-slice `[P2-28]` is archived in `docs/todo_finished.md` (April 12, 2026).
