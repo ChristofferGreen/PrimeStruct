@@ -145,16 +145,29 @@ TEST_CASE("semantics validate source delegation stays stable") {
   CHECK(semanticsValidateSource.find("bool rewriteEnumDefinitions(Program &program, std::string &error)") ==
         std::string::npos);
   CHECK(semanticsValidateSource.find(
-            "canonicalToAosDefPath.rfind(\"/std/collections/soa_vector/\", 0) == 0") !=
+            "auto isCanonicalSoaToAosDefinitionPath = [&](std::string_view path)") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find(
-            "isLegacyOrCanonicalSoaHelperPath(canonicalToAosDefPath, \"to_aos\")") !=
+            "isLegacyOrCanonicalSoaHelperPath(canonicalPath, \"to_aos\")") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "isCanonicalSoaToAosDefinitionPath(def.fullPath)") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "const std::string canonicalToAosImportTarget =") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "localImportPathCoversTarget(importPath, canonicalToAosImportTarget)") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find(
             "def.fullPath == \"/std/collections/soa_vector/to_aos\"") ==
         std::string::npos);
   CHECK(semanticsValidateSource.find(
             "def.fullPath.rfind(\"/std/collections/soa_vector/to_aos__\", 0) == 0") ==
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "localImportPathCoversTarget(\n"
+            "            importPath, \"/std/collections/soa_vector/to_aos\")") ==
         std::string::npos);
   CHECK(semanticsValidateConvertConstructorsHeaderSource.find("bool rewriteConvertConstructors(Program &program, std::string &error)") !=
         std::string::npos);

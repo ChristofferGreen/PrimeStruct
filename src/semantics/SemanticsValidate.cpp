@@ -3602,6 +3602,12 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
     }
     return path;
   };
+  auto isCanonicalSoaToAosDefinitionPath = [&](std::string_view path) {
+    const std::string canonicalPath =
+        canonicalizeSoaToAosDefinitionPath(std::string(path));
+    return canonicalPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
+           semantics::isLegacyOrCanonicalSoaHelperPath(canonicalPath, "to_aos");
+  };
   for (const Definition &def : program.definitions) {
     if (auto binding = extractExperimentalSoaVectorOrBorrowedReturnBinding(def);
         binding.has_value()) {
@@ -3618,10 +3624,7 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
         def.fullPath.rfind("/to_aos__", 0) == 0) {
       hasVisibleRootToAosHelper = true;
     }
-    const std::string canonicalToAosDefPath =
-        canonicalizeSoaToAosDefinitionPath(def.fullPath);
-    if (canonicalToAosDefPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
-        semantics::isLegacyOrCanonicalSoaHelperPath(canonicalToAosDefPath, "to_aos")) {
+    if (isCanonicalSoaToAosDefinitionPath(def.fullPath)) {
       hasVisibleCanonicalToAosHelper = true;
     }
   }
@@ -3632,8 +3635,10 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
         localImportPathCoversTarget(importPath, "/to_aos")) {
       hasVisibleRootToAosHelper = true;
     }
-    if (localImportPathCoversTarget(
-            importPath, "/std/collections/soa_vector/to_aos")) {
+    const std::string canonicalToAosImportTarget =
+        "/std/collections/soa_vector/to_aos";
+    if (isCanonicalSoaToAosDefinitionPath(canonicalToAosImportTarget) &&
+        localImportPathCoversTarget(importPath, canonicalToAosImportTarget)) {
       hasVisibleCanonicalToAosHelper = true;
     }
     if (hasVisibleRootToAosHelper && hasVisibleCanonicalToAosHelper) {
@@ -3641,12 +3646,9 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
     }
   }
   for (Definition &def : program.definitions) {
-    const std::string canonicalToAosDefPath =
-        canonicalizeSoaToAosDefinitionPath(def.fullPath);
     if (def.fullPath == "/to_aos" ||
         def.fullPath.rfind("/to_aos__", 0) == 0 ||
-        (canonicalToAosDefPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
-         semantics::isLegacyOrCanonicalSoaHelperPath(canonicalToAosDefPath, "to_aos")) ||
+        isCanonicalSoaToAosDefinitionPath(def.fullPath) ||
         def.fullPath.rfind(
             "/std/collections/experimental_soa_vector_conversions/", 0) == 0) {
       continue;

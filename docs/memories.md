@@ -4,6 +4,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `soa-semantics-validate-to-aos-import-shared-helper-path`: SemanticsValidate
+  canonical `to_aos` import visibility now routes through the shared
+  `isCanonicalSoaToAosDefinitionPath(...)` helper-family predicate plus
+  canonical import target probing (`localImportPathCoversTarget(importPath,
+  canonicalToAosImportTarget)`) instead of direct canonical target-string
+  checks, and source-lock coverage in `test_ir_pipeline_validation_17` asserts
+  that shared helper-path wiring.
 - `soa-semantics-validate-to-aos-shared-helper-path`: SemanticsValidate
   canonical `to_aos` definition visibility and skip checks now canonicalize
   helper paths with specialization-suffix stripping and route canonical
