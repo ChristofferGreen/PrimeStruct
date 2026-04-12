@@ -422,6 +422,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, \"get_ref\")") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSource.find(
+            "isExperimentalSoaBorrowedHelperPath(resolvedSoaCanonical)") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find(
             "resolvedSoaCanonical == \"/std/collections/soa_vector/get\"") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSource.find(
@@ -432,6 +435,12 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSource.find(
             "resolvedSoaCanonical == \"/std/collections/soa_vector/ref_ref\"") ==
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find(
+            "resolvedSoaCanonical == \"/std/collections/experimental_soa_vector/soaVectorGetRef\"") ==
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find(
+            "resolvedSoaCanonical == \"/std/collections/experimental_soa_vector/soaVectorRefRef\"") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find("void SemanticsValidator::prepareInferCollectionDispatchSetup") !=
         std::string::npos);

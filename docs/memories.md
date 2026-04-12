@@ -142,6 +142,14 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `/std/collections/experimental_soa_vector_conversions/` prefix disjunction,
   and source-lock coverage in `test_ir_pipeline_validation_16` asserts shared
   helper usage while rejecting that removed direct branch.
+- `soa-infer-dispatch-experimental-borrowed-shared-helper-predicate`:
+  infer-collection-dispatch SoA borrowed helper-family matching now routes
+  experimental borrowed helper paths (`soaVectorGetRef` and
+  `soaVectorRefRef`) through shared
+  `isExperimentalSoaBorrowedHelperPath(...)` (with specialization-suffix
+  stripping) instead of direct helper-path comparisons, and source-lock
+  coverage in `test_ir_pipeline_validation_18` plus helper-surface coverage in
+  `test_ir_pipeline_validation_15` assert that shared helper-path wiring.
 - `soa-semantics-validate-to-aos-shared-helper-path`: SemanticsValidate
   canonical `to_aos` definition visibility and skip checks now canonicalize
   helper paths with specialization-suffix stripping and route canonical

@@ -720,6 +720,15 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "bool isCanonicalSoaRefLikeHelperPath(std::string_view path)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
+            "bool isExperimentalSoaBorrowedHelperPath(std::string_view path)") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
+            "canonicalPath == \"/std/collections/experimental_soa_vector/soaVectorGetRef\"") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
+            "canonicalPath == \"/std/collections/experimental_soa_vector/soaVectorRefRef\"") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
             "bool isExperimentalSoaVectorConversionFamilyPath(std::string_view path)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
@@ -749,6 +758,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
             "bool SemanticsValidator::hasVisibleDefinitionPathForCurrentImports(") !=
+        std::string::npos);
+  CHECK(semanticsHelpersSource.find(
+            "bool isExperimentalSoaBorrowedHelperPath(std::string_view path);") !=
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
             "bool isExperimentalSoaVectorConversionFamilyPath(std::string_view path);") !=
