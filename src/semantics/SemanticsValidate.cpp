@@ -5233,11 +5233,9 @@ void rewriteExperimentalSoaFieldViewAssignTargetsExpr(Expr &expr) {
 
   Expr &target = expr.args.front();
   if (target.kind == Expr::Kind::Call && !target.isBinding) {
-    static constexpr std::string_view fieldReadPrefix =
-        "/std/collections/experimental_soa_storage/soaFieldViewRead";
     static constexpr std::string_view fieldRefPrefix =
         "/std/collections/experimental_soa_storage/soaFieldViewRef";
-    if (target.name.rfind(fieldReadPrefix, 0) == 0 &&
+    if (semantics::isExperimentalSoaFieldViewReadHelperPath(target.name) &&
         target.args.size() == 2 && !target.templateArgs.empty()) {
       Expr refCall;
       refCall.kind = Expr::Kind::Call;
@@ -5282,7 +5280,7 @@ void rewriteExperimentalSoaFieldViewAssignTargetsExpr(Expr &expr) {
   static constexpr std::string_view fieldRefPrefix =
       "/std/collections/experimental_soa_storage/soaFieldViewRef";
   if (!semantics::isExperimentalSoaGetLikeHelperPath(receiver.name)) {
-    if (receiver.name.rfind(fieldReadPrefix, 0) != 0) {
+    if (!semantics::isExperimentalSoaFieldViewReadHelperPath(receiver.name)) {
       return;
     }
     receiver.name.replace(0, fieldReadPrefix.size(), fieldRefPrefix);

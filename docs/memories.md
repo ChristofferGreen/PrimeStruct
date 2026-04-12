@@ -206,6 +206,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
   in `test_ir_pipeline_validation_15` asserts shared helper usage while
   rejecting direct `soaFieldViewRef` path checks in
   `SemanticsValidatorExprMutationBorrows.cpp`.
+- `soa-semantics-validate-field-view-read-shared-helper-predicate`:
+  semantics-validate assign-target rewrite paths now route experimental
+  `/std/collections/experimental_soa_storage/soaFieldViewRead` detection
+  through shared `isExperimentalSoaFieldViewReadHelperPath(...)` (with
+  specialization-suffix stripping) instead of direct
+  `target.name.rfind(fieldReadPrefix, 0)` and
+  `receiver.name.rfind(fieldReadPrefix, 0)` checks, and source-lock coverage
+  in `test_ir_pipeline_validation_15` plus
+  `test_ir_pipeline_validation_17` asserts shared helper usage while
+  rejecting those direct prefix checks in `SemanticsValidate.cpp`.
 - `soa-semantics-validate-experimental-get-shared-helper-predicate`:
   semantics-validate field-view assign-target rewrites now route experimental
   SoA `soaVectorGet`/`soaVectorGetRef` receiver detection through shared

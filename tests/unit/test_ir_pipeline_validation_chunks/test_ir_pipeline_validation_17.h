@@ -175,6 +175,12 @@ TEST_CASE("semantics validate source delegation stays stable") {
             "semantics::isExperimentalSoaFieldViewHelperPath(target.name)") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find(
+            "semantics::isExperimentalSoaFieldViewReadHelperPath(target.name)") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "semantics::isExperimentalSoaFieldViewReadHelperPath(receiver.name)") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
             "receiver.name.rfind(getPrefix, 0) != 0") ==
         std::string::npos);
   CHECK(semanticsValidateSource.find(
@@ -194,6 +200,12 @@ TEST_CASE("semantics validate source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsValidateSource.find(
             "target.name.rfind(columnFieldViewPrefix, 0) == 0") ==
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "target.name.rfind(fieldReadPrefix, 0) == 0") ==
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "receiver.name.rfind(fieldReadPrefix, 0) != 0") ==
         std::string::npos);
   CHECK(semanticsValidateSource.find(
             "def.fullPath == \"/std/collections/soa_vector/to_aos\"") ==
