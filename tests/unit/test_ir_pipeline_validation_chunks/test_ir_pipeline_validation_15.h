@@ -1538,10 +1538,22 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "isCanonicalSoaRefLikeHelperPath(canonicalResolvedPath)") !=
         std::string::npos);
   CHECK(exprMutationBorrowsSource.find(
+            "isExperimentalSoaRefLikeHelperPath(canonicalResolvedPath)") !=
+        std::string::npos);
+  CHECK(exprMutationBorrowsSource.find(
+            "isExperimentalSoaRefLikeHelperPath(refExpr.name)") !=
+        std::string::npos);
+  CHECK(exprMutationBorrowsSource.find(
             "resolvedPath.rfind(\"/soa_vector/ref\", 0) == 0") ==
         std::string::npos);
   CHECK(exprMutationBorrowsSource.find(
             "resolvedPath.rfind(\"/soa_vector/ref_ref\", 0) == 0") ==
+        std::string::npos);
+  CHECK(exprMutationBorrowsSource.find(
+            "/std/collections/experimental_soa_vector/soaVectorRef\"") ==
+        std::string::npos);
+  CHECK(exprMutationBorrowsSource.find(
+            "/std/collections/experimental_soa_vector/soaVectorRefRef\"") ==
         std::string::npos);
   CHECK(exprMutationBorrowsSource.find(
             "resolvedPath.rfind(\"/std/collections/soa_vector/ref_ref\", 0) ==") ==

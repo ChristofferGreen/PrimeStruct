@@ -182,6 +182,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `test_ir_pipeline_validation_15` asserts that shared helper-path wiring
   while rejecting direct experimental helper-path string checks in
   resolved-call-argument source.
+- `soa-expr-mutation-borrows-experimental-ref-shared-helper-predicate`:
+  expr-mutation-borrows SoA experimental `ref`/`ref_ref` helper-path
+  detection now routes through shared
+  `isExperimentalSoaRefLikeHelperPath(...)` instead of direct
+  `canonicalResolvedPath.rfind(...)` and `refExpr.name.rfind(...)` prefix
+  checks, while preserving method-form experimental family/suffix handling;
+  source-lock coverage in `test_ir_pipeline_validation_15` asserts that
+  shared helper-path wiring while rejecting direct experimental helper-path
+  string checks in expr-mutation-borrows source.
 - `soa-semantics-validate-to-aos-shared-helper-path`: SemanticsValidate
   canonical `to_aos` definition visibility and skip checks now canonicalize
   helper paths with specialization-suffix stripping and route canonical
