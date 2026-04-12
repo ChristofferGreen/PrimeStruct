@@ -4,6 +4,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `statement-vector-builtin-receiver-index-cache`:
+  statement vector helper builtin branches now cache
+  `builtinReceiverIndex` once per statement pass in
+  `SemanticsValidatorStatementVectorHelpers.cpp` from
+  `shouldUseCanonicalBuiltinCompatibilityFallback` +
+  `canonicalBuiltinCompatibilityReceiverIndex`, and reuse that cached index
+  across `push`, `reserve`, indexed-removal, and `pop/clear` paths instead
+  of repeating the same inline ternary receiver-index expression per branch;
+  source-lock coverage in `test_ir_pipeline_validation_18` now asserts the
+  shared index cache and rejects the removed repeated inline ternary block.
 - `statement-vector-canonical-compat-direct-receiver-probe`:
   statement vector canonical-compatibility fallback probing in
   `SemanticsValidatorStatementVectorHelpers.cpp` now resolves candidates

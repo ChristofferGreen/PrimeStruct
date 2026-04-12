@@ -923,13 +923,14 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
         !ignoreBorrowName.empty() ? ignoreBorrowName : borrowRoot;
     return failBorrowedBindingDiagnostic(borrowRoot, borrowSink);
   };
+  const size_t builtinReceiverIndex = shouldUseCanonicalBuiltinCompatibilityFallback
+                                          ? canonicalBuiltinCompatibilityReceiverIndex
+                                          : 0;
   if (vectorHelperIsPush) {
     if (stmt.args.size() != 2) {
       return failStatementDiagnostic("push requires exactly two arguments");
     }
-    const size_t receiverIndex = shouldUseCanonicalBuiltinCompatibilityFallback
-                                     ? canonicalBuiltinCompatibilityReceiverIndex
-                                     : 0;
+    const size_t receiverIndex = builtinReceiverIndex;
     const size_t valueIndex = shouldUseCanonicalBuiltinCompatibilityFallback
                                   ? findCanonicalBuiltinCompatibilityOperandIndex("value")
                                   : 1;
@@ -964,9 +965,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     if (stmt.args.size() != 2) {
       return failStatementDiagnostic("reserve requires exactly two arguments");
     }
-    const size_t receiverIndex = shouldUseCanonicalBuiltinCompatibilityFallback
-                                     ? canonicalBuiltinCompatibilityReceiverIndex
-                                     : 0;
+    const size_t receiverIndex = builtinReceiverIndex;
     const size_t capacityIndex = shouldUseCanonicalBuiltinCompatibilityFallback
                                      ? findCanonicalBuiltinCompatibilityOperandIndex("capacity")
                                      : 1;
@@ -1001,9 +1000,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     if (stmt.args.size() != 2) {
       return failStatementDiagnostic(vectorHelper + " requires exactly two arguments");
     }
-    const size_t receiverIndex = shouldUseCanonicalBuiltinCompatibilityFallback
-                                     ? canonicalBuiltinCompatibilityReceiverIndex
-                                     : 0;
+    const size_t receiverIndex = builtinReceiverIndex;
     const size_t indexArgIndex = shouldUseCanonicalBuiltinCompatibilityFallback
                                      ? findCanonicalBuiltinCompatibilityOperandIndex("index")
                                      : 1;
@@ -1036,9 +1033,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     if (stmt.args.size() != 1) {
       return failStatementDiagnostic(vectorHelper + " requires exactly one argument");
     }
-    const size_t receiverIndex = shouldUseCanonicalBuiltinCompatibilityFallback
-                                     ? canonicalBuiltinCompatibilityReceiverIndex
-                                     : 0;
+    const size_t receiverIndex = builtinReceiverIndex;
     if (receiverIndex >= stmt.args.size()) {
       return failStatementDiagnostic(vectorHelper + " requires exactly one argument");
     }

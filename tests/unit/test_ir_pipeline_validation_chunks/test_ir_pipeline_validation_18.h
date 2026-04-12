@@ -1093,6 +1093,9 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "auto failIfStandaloneSoaGrowthBorrowed = [&](const BindingInfo &binding, const Expr &receiverExpr) -> bool {") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
+            "const size_t builtinReceiverIndex = shouldUseCanonicalBuiltinCompatibilityFallback") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
             "const bool hasVisibleResolvedVectorHelper =") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
@@ -1107,6 +1110,11 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "        resolveStandaloneSoaGrowthRoot(stmt.args[receiverIndex], borrowRoot,\n"
             "                                       ignoreBorrowName) &&\n"
             "        hasActiveBorrowForRoot(borrowRoot, ignoreBorrowName)) {") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "const size_t receiverIndex = shouldUseCanonicalBuiltinCompatibilityFallback\n"
+            "                                     ? canonicalBuiltinCompatibilityReceiverIndex\n"
+            "                                     : 0;") ==
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
             "(defMap_.find(vectorHelperResolved) == defMap_.end() || isNamespacedVectorHelperCall) &&") ==
