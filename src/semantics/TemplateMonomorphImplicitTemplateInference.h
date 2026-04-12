@@ -236,13 +236,17 @@ bool inferImplicitTemplateArgs(const Definition &def,
         isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaPath, "ref");
     const bool normalizedNameMatchesSoaRefRef =
         isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaPath, "ref_ref");
+    const bool canonicalNamespaceNameMatchesSoaRef =
+        normalizedNameUsesCanonicalSoaNamespace &&
+        normalizedCanonicalNameMatchesSoaRef;
+    const bool canonicalNamespaceNameMatchesSoaRefRef =
+        normalizedNameUsesCanonicalSoaNamespace &&
+        normalizedCanonicalNameMatchesSoaRefRef;
     const bool isCanonicalBuiltinSoaRefCall =
-        (normalizedNameUsesCanonicalSoaNamespace &&
-         normalizedCanonicalNameMatchesSoaRef) ||
+        canonicalNamespaceNameMatchesSoaRef ||
         resolvedCanonicalNameMatchesSoaRef;
     const bool isCanonicalBuiltinSoaRefRefCall =
-        (normalizedNameUsesCanonicalSoaNamespace &&
-         normalizedCanonicalNameMatchesSoaRefRef) ||
+        canonicalNamespaceNameMatchesSoaRefRef ||
         resolvedCanonicalNameMatchesSoaRefRef;
     const bool isOldSurfaceBuiltinSoaRefCall =
         normalizedNameUsesLegacySoaNamespace &&
