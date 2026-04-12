@@ -442,6 +442,17 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferCollectionDispatchSource.find(
             "resolvedSoaCanonical == \"/std/collections/experimental_soa_vector/soaVectorRefRef\"") ==
         std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find(
+            "auto tryResolveReceiverIndex = [&](size_t index) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find("std::vector<size_t> receiverIndices;") ==
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find(
+            "auto appendReceiverIndex = [&](size_t index)") ==
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find(
+            "for (size_t receiverIndex : receiverIndices)") ==
+        std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find("void SemanticsValidator::prepareInferCollectionDispatchSetup") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find("std::string namespacedCollection;") !=

@@ -4,6 +4,14 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `infer-collection-dispatch-direct-receiver-probe`:
+  infer collection access-call return-kind resolution now probes receiver
+  candidates directly through `tryResolveReceiverIndex(...)` in stable order
+  (named `values` args, named fallback index `0`, positional index `0`, then
+  positional reorder probes) instead of staging indices in a temporary
+  `receiverIndices` vector with `appendReceiverIndex(...)`; source-lock
+  coverage in `test_ir_pipeline_validation_18` now asserts this direct-probe
+  shape while rejecting the removed staged-vector scaffolding.
 - `soa-semantics-expr-argument-base-type-shared-helper`:
   semantics expr-argument experimental SoA vector element-type extraction now
   routes base-type matching through

@@ -155,17 +155,11 @@ bool SemanticsValidator::resolveBuiltinCollectionAccessCallReturnKind(
     return false;
   };
 
-  std::vector<size_t> receiverIndices;
-  auto appendReceiverIndex = [&](size_t index) {
+  auto tryResolveReceiverIndex = [&](size_t index) -> bool {
     if (index >= callExpr.args.size()) {
-      return;
+      return false;
     }
-    for (size_t existing : receiverIndices) {
-      if (existing == index) {
-        return;
-      }
-    }
-    receiverIndices.push_back(index);
+    return resolveReceiverReturnKind(callExpr.args[index]);
   };
 
   const bool hasNamedArgs = hasNamedArguments(callExpr.argNames);
@@ -174,31 +168,32 @@ bool SemanticsValidator::resolveBuiltinCollectionAccessCallReturnKind(
     for (size_t i = 0; i < callExpr.args.size(); ++i) {
       if (i < callExpr.argNames.size() && callExpr.argNames[i].has_value() &&
           *callExpr.argNames[i] == "values") {
-        appendReceiverIndex(i);
         foundValuesReceiver = true;
+        if (tryResolveReceiverIndex(i)) {
+          return true;
+        }
       }
     }
-    if (!foundValuesReceiver) {
-      appendReceiverIndex(0);
+    if (!foundValuesReceiver && tryResolveReceiverIndex(0)) {
+      return true;
     }
-  } else {
-    appendReceiverIndex(0);
-    const bool probePositionalReorderedReceiver =
-        callExpr.args.size() > 1 &&
-        (callExpr.args.front().kind == Expr::Kind::Literal ||
-         callExpr.args.front().kind == Expr::Kind::BoolLiteral ||
-         callExpr.args.front().kind == Expr::Kind::FloatLiteral ||
-         callExpr.args.front().kind == Expr::Kind::StringLiteral);
-    if (probePositionalReorderedReceiver) {
-      for (size_t i = 1; i < callExpr.args.size(); ++i) {
-        appendReceiverIndex(i);
-      }
-    }
+    return false;
   }
 
-  for (size_t receiverIndex : receiverIndices) {
-    if (resolveReceiverReturnKind(callExpr.args[receiverIndex])) {
-      return true;
+  if (tryResolveReceiverIndex(0)) {
+    return true;
+  }
+  const bool probePositionalReorderedReceiver =
+      callExpr.args.size() > 1 &&
+      (callExpr.args.front().kind == Expr::Kind::Literal ||
+       callExpr.args.front().kind == Expr::Kind::BoolLiteral ||
+       callExpr.args.front().kind == Expr::Kind::FloatLiteral ||
+       callExpr.args.front().kind == Expr::Kind::StringLiteral);
+  if (probePositionalReorderedReceiver) {
+    for (size_t i = 1; i < callExpr.args.size(); ++i) {
+      if (tryResolveReceiverIndex(i)) {
+        return true;
+      }
     }
   }
   return false;
