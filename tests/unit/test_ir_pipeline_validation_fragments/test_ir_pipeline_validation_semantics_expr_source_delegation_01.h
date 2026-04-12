@@ -388,6 +388,16 @@
             "            params, locals, expr, resolved,\n"
             "            resolvedCallSetup.resolvedCallArgumentContext,") !=
         std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
+            "auto tryResolveReceiverIndex = [&](size_t index)") !=
+        std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
+            "return resolveMethodTarget(params, locals, expr.namespacePrefix, receiverCandidate,") !=
+        std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find("std::vector<size_t> receiverIndices;") ==
+        std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find("appendUniqueReceiverIndex(") ==
+        std::string::npos);
   CHECK(semanticsExprSource.find("const BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters{") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers =") ==

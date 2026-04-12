@@ -4,6 +4,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `expr-named-argument-builtins-direct-soa-receiver-probe`:
+  expr named-argument legacy SoA access builtin detection now probes
+  receiver candidates directly through `tryResolveReceiverIndex(...)` in
+  stable order (named `values` receiver-first with fallback to full-argument
+  scan, else positional full-argument scan) inside
+  `isLegacySoaAccessBuiltinCall(...)` instead of staging indices in
+  `receiverIndices` via `appendUniqueReceiverIndex(...)`; source-lock
+  coverage in `test_ir_pipeline_validation_semantics_expr_source_delegation_01`
+  now asserts this direct-probe shape while rejecting the removed staged-
+  vector scaffolding.
 - `infer-late-fallback-direct-collection-receiver-probe`:
   infer late-fallback collection helper return-kind resolution now probes
   receiver candidates directly through `tryResolveReceiverIndex(...)` in

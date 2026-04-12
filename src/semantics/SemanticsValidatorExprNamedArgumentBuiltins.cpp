@@ -4,21 +4,6 @@
 #include <vector>
 
 namespace primec::semantics {
-namespace {
-
-void appendUniqueReceiverIndex(std::vector<size_t> &receiverIndices, size_t index, size_t limit) {
-  if (index >= limit) {
-    return;
-  }
-  for (size_t existing : receiverIndices) {
-    if (existing == index) {
-      return;
-    }
-  }
-  receiverIndices.push_back(index);
-}
-
-} // namespace
 
 bool SemanticsValidator::validateExprNamedArguments(
     const std::vector<ParameterInfo> &params,
@@ -180,35 +165,41 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
       return false;
     }
     if (defMap_.find(resolved) == defMap_.end() && !expr.args.empty()) {
-      std::vector<size_t> receiverIndices;
+      auto tryResolveReceiverIndex = [&](size_t index) {
+        if (index >= expr.args.size()) {
+          return false;
+        }
+        const Expr &receiverCandidate = expr.args[index];
+        bool isBuiltinMethod = false;
+        std::string methodResolved;
+        return resolveMethodTarget(params, locals, expr.namespacePrefix, receiverCandidate,
+                                   expr.name, methodResolved, isBuiltinMethod) &&
+               !isBuiltinMethod && defMap_.find(methodResolved) != defMap_.end();
+      };
       const bool hasNamedArgs = hasNamedArguments(expr.argNames);
       if (hasNamedArgs) {
         bool hasValuesNamedReceiver = false;
         for (size_t i = 0; i < expr.args.size(); ++i) {
           if (i < expr.argNames.size() && expr.argNames[i].has_value() &&
               *expr.argNames[i] == "values") {
-            appendUniqueReceiverIndex(receiverIndices, i, expr.args.size());
             hasValuesNamedReceiver = true;
+            if (tryResolveReceiverIndex(i)) {
+              return false;
+            }
           }
         }
         if (!hasValuesNamedReceiver) {
           for (size_t i = 0; i < expr.args.size(); ++i) {
-            appendUniqueReceiverIndex(receiverIndices, i, expr.args.size());
+            if (tryResolveReceiverIndex(i)) {
+              return false;
+            }
           }
         }
       } else {
         for (size_t i = 0; i < expr.args.size(); ++i) {
-          appendUniqueReceiverIndex(receiverIndices, i, expr.args.size());
-        }
-      }
-      for (size_t receiverIndex : receiverIndices) {
-        const Expr &receiverCandidate = expr.args[receiverIndex];
-        bool isBuiltinMethod = false;
-        std::string methodResolved;
-        if (resolveMethodTarget(params, locals, expr.namespacePrefix, receiverCandidate,
-                                expr.name, methodResolved, isBuiltinMethod) &&
-            !isBuiltinMethod && defMap_.find(methodResolved) != defMap_.end()) {
-          return false;
+          if (tryResolveReceiverIndex(i)) {
+            return false;
+          }
         }
       }
     }
