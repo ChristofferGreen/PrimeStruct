@@ -46,10 +46,23 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       context.shouldBuiltinValidateStdNamespacedVectorCapacityCall &&
       expr.args.size() == 1 &&
       resolved.rfind("/std/collections/vector/capacity", 0) == 0;
+  auto canonicalizeSoaCountHelperPath = [](std::string canonicalPath) {
+    const size_t specializationSuffix = canonicalPath.find("__");
+    if (specializationSuffix != std::string::npos) {
+      canonicalPath.erase(specializationSuffix);
+    }
+    return canonicalPath;
+  };
+  auto isCanonicalSoaCountHelperPath = [](const std::string &candidate) {
+    return candidate.rfind("/std/collections/soa_vector/", 0) == 0 &&
+           isLegacyOrCanonicalSoaHelperPath(candidate, "count");
+  };
+  const std::string resolvedSoaCountCanonical =
+      canonicalizeSoaCountHelperPath(resolved);
   const bool isDirectStdNamespacedSoaCountBuiltinCall =
       !expr.isMethodCall && !resolvedMethod &&
       expr.args.size() == 1 &&
-      resolved.rfind("/std/collections/soa_vector/count", 0) == 0;
+      isCanonicalSoaCountHelperPath(resolvedSoaCountCanonical);
   auto inferDirectVectorElementType = [&](const Expr &target, std::string &elemTypeOut) {
     elemTypeOut.clear();
     std::string inferredTypeText;
@@ -190,6 +203,8 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       logicalResolvedMethod = canonicalExperimentalMapHelperResolved;
     }
   }
+  const std::string logicalSoaCountCanonical =
+      canonicalizeSoaCountHelperPath(logicalResolvedMethod);
   const bool isExplicitCanonicalMapCountCall =
       !expr.isMethodCall &&
       (logicalResolvedMethod == "/std/collections/map/count" ||
@@ -201,8 +216,9 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
   if (resolvedMethod && (logicalResolvedMethod == "/array/count" ||
                          logicalResolvedMethod == "/vector/count" ||
                          logicalResolvedMethod == "/std/collections/vector/count" ||
-                         logicalResolvedMethod == "/soa_vector/count" ||
-                         logicalResolvedMethod == "/std/collections/soa_vector/count" ||
+                         isLegacyOrCanonicalSoaHelperPath(
+                             logicalSoaCountCanonical,
+                             "count") ||
                          logicalResolvedMethod == "/string/count" ||
                          logicalResolvedMethod == "/map/count" ||
                          logicalResolvedMethod == "/std/collections/map/count" ||
@@ -233,16 +249,18 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
         }
         return failCountCapacityMapBuiltin(countHelperName + " requires map target");
       }
-    } else if (logicalResolvedMethod == "/soa_vector/count" ||
-               logicalResolvedMethod == "/std/collections/soa_vector/count") {
+    } else if (isLegacyOrCanonicalSoaHelperPath(
+                   logicalSoaCountCanonical,
+                   "count")) {
       std::string elemType;
       if (!(*dispatchResolvers).resolveSoaVectorTarget(expr.args.front(),
                                                        elemType)) {
         const bool oldSurfaceCallShape =
             isSimpleCallName(expr, "count") ||
             (expr.isMethodCall && expr.name == "count") ||
-            logicalResolvedMethod == "/soa_vector/count" ||
-            logicalResolvedMethod == "/std/collections/soa_vector/count";
+            isLegacyOrCanonicalSoaHelperPath(
+                logicalSoaCountCanonical,
+                "count");
         if (oldSurfaceCallShape &&
             hasVisibleSoaHelperTargetForCurrentImports("count")) {
           handledOut = false;

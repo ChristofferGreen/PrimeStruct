@@ -1093,6 +1093,35 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprCountCapacityMapBuiltinsSource.find(
             "(*dispatchResolvers).resolveSoaVectorTarget(expr.args.front(),") !=
         std::string::npos);
+  CHECK(exprCountCapacityMapBuiltinsSource.find(
+            "auto canonicalizeSoaCountHelperPath = [](std::string canonicalPath)") !=
+        std::string::npos);
+  CHECK(exprCountCapacityMapBuiltinsSource.find(
+            "auto isCanonicalSoaCountHelperPath = [](const std::string &candidate)") !=
+        std::string::npos);
+  CHECK(exprCountCapacityMapBuiltinsSource.find(
+            "const std::string resolvedSoaCountCanonical =") !=
+        std::string::npos);
+  CHECK(exprCountCapacityMapBuiltinsSource.find(
+            "const std::string logicalSoaCountCanonical =") !=
+        std::string::npos);
+  CHECK(exprCountCapacityMapBuiltinsSource.find(
+            "resolved.rfind(\"/std/collections/soa_vector/count\", 0) == 0") ==
+        std::string::npos);
+  CHECK(exprCountCapacityMapBuiltinsSource.find(
+            "logicalResolvedMethod == \"/std/collections/soa_vector/count\"") ==
+        std::string::npos);
+  CHECK(exprCountCapacityMapBuiltinsSource.find(
+            "logicalResolvedMethod == \"/soa_vector/count\"") ==
+        std::string::npos);
+  CHECK(exprCountCapacityMapBuiltinsSource.find(
+            "isCanonicalSoaCountHelperPath(resolvedSoaCountCanonical)") !=
+        std::string::npos);
+  CHECK(exprCountCapacityMapBuiltinsSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(\n"
+            "                             logicalSoaCountCanonical,\n"
+            "                             \"count\")") !=
+        std::string::npos);
   CHECK((exprCountCapacityMapBuiltinsSource.find(
             "preferredSoaHelperTargetForCurrentImports(\"count\") ==\n"
             "                \"/soa_vector/count\"") !=
