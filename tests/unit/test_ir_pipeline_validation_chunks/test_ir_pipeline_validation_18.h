@@ -507,6 +507,17 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferPreDispatchCallsSource.find("if (getVectorStatementHelperName(expr, vectorHelper) && !expr.args.empty()) {") !=
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find(
+            "auto tryResolveReceiverIndex = [&](size_t index) -> std::optional<ReturnKind> {") !=
+        std::string::npos);
+  CHECK(semanticsInferPreDispatchCallsSource.find("std::vector<size_t> receiverIndices;") ==
+        std::string::npos);
+  CHECK(semanticsInferPreDispatchCallsSource.find(
+            "auto appendReceiverIndex = [&](size_t index)") ==
+        std::string::npos);
+  CHECK(semanticsInferPreDispatchCallsSource.find(
+            "for (size_t receiverIndex : receiverIndices)") ==
+        std::string::npos);
+  CHECK(semanticsInferPreDispatchCallsSource.find(
             "soaUnavailableMethodDiagnostic(methodResolved));") !=
         std::string::npos);
   CHECK(semanticsBuiltinPathHelpersSource.find(

@@ -1,6 +1,7 @@
 #include "SemanticsValidator.h"
 
 #include <functional>
+#include <optional>
 
 namespace primec::semantics {
 
@@ -600,17 +601,25 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
           }
           return typeName == "vector" || typeName == "soa_vector";
         };
-        std::vector<size_t> receiverIndices;
-        auto appendReceiverIndex = [&](size_t index) {
+        auto tryResolveReceiverIndex = [&](size_t index) -> std::optional<ReturnKind> {
           if (index >= expr.args.size()) {
-            return;
+            return std::nullopt;
           }
-          for (size_t existing : receiverIndices) {
-            if (existing == index) {
-              return;
-            }
+          const Expr &receiverCandidate = expr.args[index];
+          std::string methodResolved;
+          if (!resolveVectorHelperMethodTarget(params,
+                                               locals,
+                                               receiverCandidate,
+                                               vectorHelper,
+                                               methodResolved)) {
+            return std::nullopt;
           }
-          receiverIndices.push_back(index);
+          methodResolved = preferVectorStdlibHelperPath(methodResolved);
+          ReturnKind helperReturnKind = ReturnKind::Unknown;
+          if (inferResolvedPathReturnKind(methodResolved, helperReturnKind)) {
+            return helperReturnKind;
+          }
+          return std::nullopt;
         };
         const bool hasNamedArgs = hasNamedArguments(expr.argNames);
         if (hasNamedArgs) {
@@ -618,18 +627,30 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
           for (size_t i = 0; i < expr.args.size(); ++i) {
             if (i < expr.argNames.size() && expr.argNames[i].has_value() &&
                 *expr.argNames[i] == "values") {
-              appendReceiverIndex(i);
               hasValuesNamedReceiver = true;
+              if (const auto receiverKind = tryResolveReceiverIndex(i);
+                  receiverKind.has_value()) {
+                return finish(*receiverKind);
+              }
             }
           }
           if (!hasValuesNamedReceiver) {
-            appendReceiverIndex(0);
+            if (const auto receiverKind = tryResolveReceiverIndex(0);
+                receiverKind.has_value()) {
+              return finish(*receiverKind);
+            }
             for (size_t i = 1; i < expr.args.size(); ++i) {
-              appendReceiverIndex(i);
+              if (const auto receiverKind = tryResolveReceiverIndex(i);
+                  receiverKind.has_value()) {
+                return finish(*receiverKind);
+              }
             }
           }
         } else {
-          appendReceiverIndex(0);
+          if (const auto receiverKind = tryResolveReceiverIndex(0);
+              receiverKind.has_value()) {
+            return finish(*receiverKind);
+          }
         }
         const bool probePositionalReorderedReceiver =
             !hasNamedArgs && expr.args.size() > 1 &&
@@ -641,26 +662,10 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
               !isVectorHelperReceiverName(expr.args.front())));
         if (probePositionalReorderedReceiver) {
           for (size_t i = 1; i < expr.args.size(); ++i) {
-            appendReceiverIndex(i);
-          }
-        }
-        for (size_t receiverIndex : receiverIndices) {
-          if (receiverIndex >= expr.args.size()) {
-            continue;
-          }
-          const Expr &receiverCandidate = expr.args[receiverIndex];
-          std::string methodResolved;
-          if (!resolveVectorHelperMethodTarget(params,
-                                               locals,
-                                               receiverCandidate,
-                                               vectorHelper,
-                                               methodResolved)) {
-            continue;
-          }
-          methodResolved = preferVectorStdlibHelperPath(methodResolved);
-          ReturnKind helperReturnKind = ReturnKind::Unknown;
-          if (inferResolvedPathReturnKind(methodResolved, helperReturnKind)) {
-            return finish(helperReturnKind);
+            if (const auto receiverKind = tryResolveReceiverIndex(i);
+                receiverKind.has_value()) {
+              return finish(*receiverKind);
+            }
           }
         }
       }

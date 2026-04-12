@@ -4,6 +4,14 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `infer-pre-dispatch-direct-vector-receiver-probe`:
+  infer pre-dispatch vector-helper return-kind resolution now probes receiver
+  candidates directly via `tryResolveReceiverIndex(...)` in stable order
+  (named `values` args, named fallback `0` then remaining args, positional
+  `0`, then positional reorder probes) instead of staging indices in a
+  temporary `receiverIndices` vector with `appendReceiverIndex(...)`; source-
+  lock coverage in `test_ir_pipeline_validation_18` now asserts this direct-
+  probe shape while rejecting the removed staged-vector scaffolding.
 - `statement-body-arguments-direct-map-receiver-probe`:
   statement body-argument bare-map helper target resolution now probes map
   receiver candidates directly in stable order inside
