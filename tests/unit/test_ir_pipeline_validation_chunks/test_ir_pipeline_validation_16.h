@@ -1254,7 +1254,13 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "isExperimentalSoaVectorSpecializedTypePath(normalizedResolvedPath)") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
+            "isExperimentalSoaVectorSpecializedTypePath(normalizedBase)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
             "normalizedResolvedPath.rfind(\"std/collections/experimental_soa_vector/SoaVector__\", 0) != 0") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "normalizedBase.rfind(\"std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "resolvedPath.rfind(\"/std/collections/experimental_soa_vector_conversions/\", 0)") ==

@@ -266,7 +266,7 @@ bool rewriteExpr(Expr &expr,
             }
             if ((normalizedBase == "SoaVector" || normalizedBase.rfind("SoaVector__", 0) == 0 ||
                  normalizedBase == "std/collections/experimental_soa_vector/SoaVector" ||
-                 normalizedBase.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0) &&
+                 isExperimentalSoaVectorSpecializedTypePath(normalizedBase)) &&
                 !argText.empty()) {
               return splitTopLevelTemplateArgs(argText, templateArgsOut) && templateArgsOut.size() == 1;
             }
