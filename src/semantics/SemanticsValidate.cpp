@@ -5288,7 +5288,7 @@ void rewriteExperimentalSoaFieldViewAssignTargetsExpr(Expr &expr) {
       "/std/collections/experimental_soa_storage/soaFieldViewRead";
   static constexpr std::string_view fieldRefPrefix =
       "/std/collections/experimental_soa_storage/soaFieldViewRef";
-  if (receiver.name.rfind(getPrefix, 0) != 0) {
+  if (!semantics::isExperimentalSoaGetLikeHelperPath(receiver.name)) {
     if (receiver.name.rfind(fieldReadPrefix, 0) != 0) {
       return;
     }

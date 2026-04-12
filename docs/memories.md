@@ -191,6 +191,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
   source-lock coverage in `test_ir_pipeline_validation_15` asserts that
   shared helper-path wiring while rejecting direct experimental helper-path
   string checks in expr-mutation-borrows source.
+- `soa-semantics-validate-experimental-get-shared-helper-predicate`:
+  semantics-validate field-view assign-target rewrites now route experimental
+  SoA `soaVectorGet`/`soaVectorGetRef` receiver detection through shared
+  `isExperimentalSoaGetLikeHelperPath(...)` (with specialization-suffix
+  stripping) instead of direct `receiver.name.rfind(getPrefix, 0)` prefix
+  checks before rewriting to `soaVectorRef`/`soaVectorRefRef`, and source-lock
+  coverage in `test_ir_pipeline_validation_15` plus
+  `test_ir_pipeline_validation_17` asserts that shared helper wiring while
+  rejecting the removed direct prefix check in `SemanticsValidate.cpp`.
 - `soa-semantics-validate-to-aos-shared-helper-path`: SemanticsValidate
   canonical `to_aos` definition visibility and skip checks now canonicalize
   helper paths with specialization-suffix stripping and route canonical

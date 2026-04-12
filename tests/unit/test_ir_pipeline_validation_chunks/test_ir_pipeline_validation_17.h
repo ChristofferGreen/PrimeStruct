@@ -163,6 +163,12 @@ TEST_CASE("semantics validate source delegation stays stable") {
             "semantics::isExperimentalSoaVectorConversionFamilyPath(def.fullPath)") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find(
+            "semantics::isExperimentalSoaGetLikeHelperPath(receiver.name)") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "receiver.name.rfind(getPrefix, 0) != 0") ==
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
             "def.fullPath == \"/std/collections/soa_vector/to_aos\"") ==
         std::string::npos);
   CHECK(semanticsValidateSource.find(
