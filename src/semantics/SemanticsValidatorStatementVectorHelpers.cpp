@@ -336,10 +336,20 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       getNamespacedCollectionHelperName(stmt, namespacedCollection, namespacedHelper);
   const bool isNamespacedVectorHelperCall =
       isNamespacedCollectionHelperCall && namespacedCollection == "vector";
+  auto canonicalizeSoaMutatorHelperPath = [](std::string canonicalPath) {
+    const size_t specializationSuffix = canonicalPath.find("__");
+    if (specializationSuffix != std::string::npos) {
+      canonicalPath.erase(specializationSuffix);
+    }
+    return canonicalPath;
+  };
+  const std::string vectorHelperResolvedCanonical =
+      canonicalizeSoaMutatorHelperPath(vectorHelperResolved);
   const bool isStdNamespacedSoaCanonicalMutatorHelperCall =
       !stmt.isMethodCall &&
-      (vectorHelperResolved.rfind("/std/collections/soa_vector/push", 0) == 0 ||
-       vectorHelperResolved.rfind("/std/collections/soa_vector/reserve", 0) == 0);
+      vectorHelperResolvedCanonical.rfind("/std/collections/soa_vector/", 0) == 0 &&
+      (isLegacyOrCanonicalSoaHelperPath(vectorHelperResolvedCanonical, "push") ||
+       isLegacyOrCanonicalSoaHelperPath(vectorHelperResolvedCanonical, "reserve"));
   const bool isStdNamespacedVectorCanonicalHelperCall =
       !stmt.isMethodCall && vectorHelperResolved.rfind("/std/collections/vector/", 0) == 0 &&
       (namespacedHelper == "count" || namespacedHelper == "capacity" || namespacedHelper == "at" ||

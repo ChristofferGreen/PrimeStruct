@@ -942,6 +942,24 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
   CHECK(semanticsStatementVectorHelpersSource.find("if (vectorHelper == \"push\") {") != std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find("validateVectorRelocationHelperElementType(binding, \"push\"") !=
         std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "const std::string vectorHelperResolvedCanonical =") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "vectorHelperResolvedCanonical.rfind(\"/std/collections/soa_vector/\", 0) == 0") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(vectorHelperResolvedCanonical, \"push\")") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(vectorHelperResolvedCanonical, \"reserve\")") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "vectorHelperResolved.rfind(\"/std/collections/soa_vector/push\", 0) == 0") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "vectorHelperResolved.rfind(\"/std/collections/soa_vector/reserve\", 0) == 0") ==
+        std::string::npos);
   CHECK(semanticsStatementVectorResolutionSource.find("bool SemanticsValidator::resolveVectorStatementBinding(") !=
         std::string::npos);
   CHECK(semanticsStatementVectorResolutionSource.find("bool SemanticsValidator::validateVectorStatementElementType(") !=

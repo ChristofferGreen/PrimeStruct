@@ -4,6 +4,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `soa-statement-vector-mutator-shared-helper-path`: statement-vector helper
+  canonical SoA mutator detection now canonicalizes resolved helper spellings
+  with specialization-suffix stripping and routes canonical `push`/`reserve`
+  matching through shared `isLegacyOrCanonicalSoaHelperPath(...)` checks
+  behind a canonical `/std/collections/soa_vector/` prefix guard instead of
+  direct canonical-path prefix checks, and source-lock coverage in
+  `test_ir_pipeline_validation_18` asserts that shared helper-path wiring.
 - `soa-inline-param-direct-experimental-reject-coverage`: native compile-run
   coverage now locks that direct
   `/std/collections/experimental_soa_vector_conversions/soaVectorToAos`
