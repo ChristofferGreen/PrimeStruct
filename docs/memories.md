@@ -4,6 +4,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `soa-ir-lowerer-binding-type-normalization-specialized-type-shared-helper`:
+  ir-lowerer binding-type normalization now routes specialized experimental SoA
+  type checks through shared
+  `semantics::isExperimentalSoaVectorSpecializedTypePath(name)` in
+  `normalizeCollectionBindingTypeName(...)` instead of direct
+  `name.rfind("std/collections/experimental_soa_vector/SoaVector__", 0)` and
+  slash-prefixed direct checks; focused binding-type helper coverage in
+  `test_ir_pipeline_validation_62` asserts normalization for slash-prefixed,
+  non-slash, and bare `SoaVector__*` names.
 - `soa-ir-lowerer-uninitialized-specialized-type-shared-helper`: ir-lowerer
   uninitialized SoA receiver-struct specialized-type gating now routes
   `normalizedReceiverStruct` through shared

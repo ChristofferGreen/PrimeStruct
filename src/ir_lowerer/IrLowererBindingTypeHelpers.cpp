@@ -1,5 +1,7 @@
 #include "IrLowererBindingTypeHelpers.h"
 
+#include "../semantics/SemanticsHelpers.h"
+
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
@@ -371,8 +373,7 @@ std::string normalizeCollectionBindingTypeName(const std::string &name) {
       name == "/std/collections/soa_vector" || name == "SoaVector" ||
       name == "std/collections/experimental_soa_vector/SoaVector" ||
       name == "/std/collections/experimental_soa_vector/SoaVector" ||
-      name.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
-      name.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0) {
+      semantics::isExperimentalSoaVectorSpecializedTypePath(name)) {
     return "soa_vector";
   }
   if (name == "Buffer" || name == "std/gfx/Buffer" || name == "/std/gfx/Buffer" ||

@@ -269,6 +269,14 @@ TEST_CASE("ir lowerer binding type helpers classify binding kind and string/file
 
   primec::Expr defaultExpr;
   CHECK(primec::ir_lowerer::bindingKindFromTransforms(defaultExpr) == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName(
+            "std/collections/experimental_soa_vector/SoaVector__Particle") ==
+        "soa_vector");
+  CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName(
+            "/std/collections/experimental_soa_vector/SoaVector__Particle") ==
+        "soa_vector");
+  CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName("SoaVector__Particle") ==
+        "soa_vector");
 
   primec::Expr stringExpr;
   primec::Transform qualifier;
