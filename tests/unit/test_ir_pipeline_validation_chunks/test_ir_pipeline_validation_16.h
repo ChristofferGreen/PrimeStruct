@@ -477,7 +477,13 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const std::string normalizedNameSoaCanonical =") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "const std::string normalizedNameSoaPath =") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool normalizedNameUsesCanonicalSoaNamespace =") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "const bool normalizedNameUsesLegacySoaNamespace =") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, \"ref\")") !=
@@ -492,10 +498,22 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "normalizedNameSoaCanonical, \"ref_ref\")") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaPath, \"ref\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "normalizedNameSoaPath, \"ref_ref\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "normalizedName == \"std/collections/soa_vector/ref\"") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "normalizedName == \"std/collections/soa_vector/ref_ref\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "normalizedName == \"soa_vector/ref\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "normalizedName == \"soa_vector/ref_ref\"") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool resolvedMatchesSoaRefHelperPath =") ==
