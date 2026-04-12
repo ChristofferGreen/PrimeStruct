@@ -284,6 +284,14 @@ This file stores durable session-derived facts that are useful in later work. Ke
   direct canonical `matchesPath(...)` checks, and source-lock coverage in
   `test_ir_pipeline_validation_16` now asserts that shared helper-path
   wiring.
+- `soa-monomorph-experimental-receiver-shared-count-helper-path`:
+  template-monomorph experimental-collection receiver-resolution helper
+  mapping now canonicalizes candidate SoA helper paths with shared
+  specialization-suffix stripping and routes `count`/`count_ref` matching
+  through shared `isLegacyOrCanonicalSoaHelperPath(...)` checks instead of
+  direct canonical `matchesPath(...)` checks, and source-lock coverage in
+  `test_ir_pipeline_validation_16` now asserts that shared helper-path
+  wiring.
 - `soa-monomorph-template-carry-shared-helper-predicate`:
   template-monomorph expression-rewrite synthetic same-path SoA template-carry
   gating now removes duplicated inline helper-family ref/ref_ref path lists
