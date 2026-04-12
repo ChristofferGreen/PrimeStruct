@@ -743,7 +743,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         auto matchesBuiltinRefPath = [](const std::string &path) {
           const std::string canonicalPath =
               semantics::canonicalizeLegacySoaRefHelperPath(path);
-          return canonicalPath.rfind("/std/collections/experimental_soa_vector/soaVectorRef", 0) == 0 ||
+          return semantics::isExperimentalSoaRefLikeHelperPath(canonicalPath) ||
                  semantics::isCanonicalSoaRefLikeHelperPath(canonicalPath);
         };
         if (candidate.kind != Expr::Kind::Call || candidate.args.size() != 2 ||

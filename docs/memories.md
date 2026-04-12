@@ -225,6 +225,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
   visibility probes and builtin-path matching) instead of direct canonical
   `/std/collections/soa_vector/ref*` prefix checks, and source-lock coverage
   in `test_ir_pipeline_validation_19` asserts that wiring.
+- `soa-ir-lowerer-ref-write-target-experimental-shared-predicate`:
+  ir-lowerer collection-mutation SoA `ref` write-target builtin-path matching
+  now routes experimental helper-path checks through shared
+  `isExperimentalSoaRefLikeHelperPath(canonicalPath)` instead of direct
+  `canonicalPath.rfind("/std/collections/experimental_soa_vector/soaVectorRef", 0)`
+  prefix checks, while retaining canonical-family matching through
+  `isCanonicalSoaRefLikeHelperPath(canonicalPath)`; source-lock coverage in
+  `test_ir_pipeline_validation_19` asserts helper usage and rejects direct
+  experimental helper-prefix checks.
 - `soa-ir-lowerer-ref-method-path-canonicalization`: ir-lowerer
   collection-mutation SoA method-call `ref` helper matching now canonicalizes
   `normalizedMethodName` spellings through shared
