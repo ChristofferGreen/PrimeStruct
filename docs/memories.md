@@ -197,6 +197,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
   source-lock coverage in `test_ir_pipeline_validation_15` asserts that
   shared helper-path wiring while rejecting direct experimental helper-path
   string checks in expr-mutation-borrows source.
+- `soa-expr-mutation-borrows-field-view-ref-shared-helper-predicate`:
+  expr-mutation-borrows pointer-target detection for experimental
+  `/std/collections/experimental_soa_storage/soaFieldViewRef` now routes
+  through shared `isExperimentalSoaFieldViewRefHelperPath(...)` (with
+  specialization-suffix stripping) instead of direct
+  `resolvedPointerPath.rfind(...)` prefix matching, and source-lock coverage
+  in `test_ir_pipeline_validation_15` asserts shared helper usage while
+  rejecting direct `soaFieldViewRef` path checks in
+  `SemanticsValidatorExprMutationBorrows.cpp`.
 - `soa-semantics-validate-experimental-get-shared-helper-predicate`:
   semantics-validate field-view assign-target rewrites now route experimental
   SoA `soaVectorGet`/`soaVectorGetRef` receiver detection through shared

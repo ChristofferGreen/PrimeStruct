@@ -562,6 +562,15 @@ bool isExperimentalSoaFieldViewHelperPath(std::string_view path) {
          canonicalPath.rfind(kExperimentalSoaColumnFieldViewUnsafePrefix, 0) == 0;
 }
 
+bool isExperimentalSoaFieldViewRefHelperPath(std::string_view path) {
+  std::string canonicalPath(path);
+  const size_t specializationSuffix = canonicalPath.find("__");
+  if (specializationSuffix != std::string::npos) {
+    canonicalPath.erase(specializationSuffix);
+  }
+  return canonicalPath == "/std/collections/experimental_soa_storage/soaFieldViewRef";
+}
+
 bool isExperimentalSoaRefLikeHelperPath(std::string_view path) {
   std::string canonicalPath(path);
   const size_t specializationSuffix = canonicalPath.find("__");

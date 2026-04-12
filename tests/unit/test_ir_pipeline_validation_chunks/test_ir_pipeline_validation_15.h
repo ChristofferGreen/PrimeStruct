@@ -732,6 +732,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "bool isExperimentalSoaFieldViewHelperPath(std::string_view path)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
+            "bool isExperimentalSoaFieldViewRefHelperPath(std::string_view path)") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
             "bool isExperimentalSoaRefLikeHelperPath(std::string_view path)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
@@ -803,6 +806,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
             "bool isExperimentalSoaFieldViewHelperPath(std::string_view path);") !=
+        std::string::npos);
+  CHECK(semanticsHelpersSource.find(
+            "bool isExperimentalSoaFieldViewRefHelperPath(std::string_view path);") !=
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
             "bool isExperimentalSoaRefLikeHelperPath(std::string_view path);") !=
@@ -1606,6 +1612,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "isExperimentalSoaFieldViewHelperPath(resolvedFieldViewPath)") !=
         std::string::npos);
   CHECK(exprMutationBorrowsSource.find(
+            "isExperimentalSoaFieldViewRefHelperPath(resolvedPointerPath)") !=
+        std::string::npos);
+  CHECK(exprMutationBorrowsSource.find(
             "isExperimentalSoaFieldViewHelperPath(resolvedPath)") !=
         std::string::npos);
   CHECK(exprMutationBorrowsSource.find(
@@ -1625,6 +1634,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprMutationBorrowsSource.find(
             "resolvedPath.rfind(\n"
             "                  \"/std/collections/experimental_soa_storage/soaColumnFieldViewUnsafe\",") ==
+        std::string::npos);
+  CHECK(exprMutationBorrowsSource.find(
+            "\"/std/collections/experimental_soa_storage/soaFieldViewRef\"") ==
         std::string::npos);
   CHECK(exprMutationBorrowsSource.find(
             "/std/collections/experimental_soa_vector/soaVectorRef\"") ==

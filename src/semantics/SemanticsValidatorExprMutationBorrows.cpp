@@ -279,9 +279,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       return true;
     }
     const std::string resolvedPointerPath = resolveCalleePath(pointerExpr);
-    if (resolvedPointerPath.rfind(
-            "/std/collections/experimental_soa_storage/soaFieldViewRef", 0) ==
-            0 &&
+    if (isExperimentalSoaFieldViewRefHelperPath(resolvedPointerPath) &&
         pointerExpr.args.size() == 2) {
       const Expr &fieldViewExpr = pointerExpr.args.front();
       if (fieldViewExpr.kind != Expr::Kind::Call || fieldViewExpr.isBinding ||
