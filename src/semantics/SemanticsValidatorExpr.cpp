@@ -566,9 +566,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     };
     auto isSoaGrowthHelperPath = [&](const std::string &path) -> bool {
       const std::string base = stripSpecializationSuffix(path);
-      if (base == "/soa_vector/push" || base == "/soa_vector/reserve" ||
-          base == "/std/collections/soa_vector/push" ||
-          base == "/std/collections/soa_vector/reserve") {
+      if (isLegacyOrCanonicalSoaHelperPath(base, "push") ||
+          isLegacyOrCanonicalSoaHelperPath(base, "reserve")) {
         return true;
       }
       const bool isExperimentalSoaPath =

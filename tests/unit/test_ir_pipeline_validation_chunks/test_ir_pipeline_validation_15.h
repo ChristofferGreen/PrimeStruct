@@ -957,6 +957,24 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprSource.find(
             "resolved.rfind(\"/std/collections/soa_vector/to_aos_ref\", 0)") ==
         std::string::npos);
+  CHECK(exprSource.find(
+            "base == \"/soa_vector/push\"") ==
+        std::string::npos);
+  CHECK(exprSource.find(
+            "base == \"/soa_vector/reserve\"") ==
+        std::string::npos);
+  CHECK(exprSource.find(
+            "base == \"/std/collections/soa_vector/push\"") ==
+        std::string::npos);
+  CHECK(exprSource.find(
+            "base == \"/std/collections/soa_vector/reserve\"") ==
+        std::string::npos);
+  CHECK(exprSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(base, \"push\")") !=
+        std::string::npos);
+  CHECK(exprSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(base, \"reserve\")") !=
+        std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("unknown method: /std/collections/soa_vector/field_view/") ==
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("soa_vector field view requires soa_vector target") ==
