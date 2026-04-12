@@ -248,6 +248,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
         isCanonicalBuiltinSoaRefCall || isCanonicalBuiltinSoaRefRefCall;
     const bool isAnyOldSurfaceBuiltinSoaRefCall =
         isOldSurfaceBuiltinSoaRefCall || isOldSurfaceBuiltinSoaRefRefCall;
+    const bool isAnyCanonicalOrOldSurfaceBuiltinSoaRefCall =
+        isAnyCanonicalBuiltinSoaRefCall || isAnyOldSurfaceBuiltinSoaRefCall;
     const std::string normalizedMethodSoaPath =
         "/soa_vector/" + normalizedName;
     const bool normalizedMethodNameMatchesSoaRef =
@@ -257,8 +259,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
     const bool isAnyNormalizedMethodNameSoaRefCall =
         normalizedMethodNameMatchesSoaRef || normalizedMethodNameMatchesSoaRefRef;
     const bool hasAnyBuiltinSoaRefNameMatch =
-        isAnyNormalizedMethodNameSoaRefCall || isAnyCanonicalBuiltinSoaRefCall ||
-        isAnyOldSurfaceBuiltinSoaRefCall;
+        isAnyNormalizedMethodNameSoaRefCall ||
+        isAnyCanonicalOrOldSurfaceBuiltinSoaRefCall;
     const bool isAnyBuiltinSoaRefCall = hasAnyBuiltinSoaRefNameMatch;
     if (isAnyBuiltinSoaRefCall) {
       const bool hasAnyBuiltinSoaRefRefNameMatch =
