@@ -4,6 +4,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `expr-collection-access-soa-direct-receiver-probe`:
+  expr collection-access legacy `get/get_ref/ref/ref_ref` helper resolution
+  now probes receiver candidates directly through
+  `tryResolveReceiverIndex(...)` in stable order (named `values` receiver-
+  first with fallback to positional receiver-first scan when no named
+  receiver exists, else positional receiver `0`) instead of staging indices
+  in `receiverIndices` via `appendUniqueReceiverIndex(...)` in that branch;
+  source-lock coverage in
+  `test_ir_pipeline_validation_semantics_expr_source_delegation_01` now
+  asserts this direct-probe shape while rejecting the removed staged-loop
+  scaffolding for that helper-resolution path.
 - `expr-vector-helper-direct-receiver-probe`:
   expr vector-helper call resolution now probes receiver candidates directly
   through `tryResolveReceiverIndex(...)` in stable order (named `values`

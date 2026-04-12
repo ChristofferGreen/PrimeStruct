@@ -488,27 +488,11 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
        isSimpleCallName(expr, "ref") || isSimpleCallName(expr, "ref_ref")) &&
       expr.args.size() == 2 && defMap_.find(resolved) == defMap_.end()) {
     handledOut = true;
-    std::vector<size_t> receiverIndices;
-    const bool hasNamedArgs = hasNamedArguments(expr.argNames);
-    if (hasNamedArgs) {
-      bool hasValuesNamedReceiver = false;
-      for (size_t i = 0; i < expr.args.size(); ++i) {
-        if (i < expr.argNames.size() && expr.argNames[i].has_value() && *expr.argNames[i] == "values") {
-          appendUniqueReceiverIndex(receiverIndices, i, expr.args.size());
-          hasValuesNamedReceiver = true;
-        }
+    bool failedReceiverProbe = false;
+    auto tryResolveReceiverIndex = [&](size_t receiverIndex) {
+      if (receiverIndex >= expr.args.size()) {
+        return false;
       }
-      if (!hasValuesNamedReceiver) {
-        appendUniqueReceiverIndex(receiverIndices, 0, expr.args.size());
-        for (size_t i = 1; i < expr.args.size(); ++i) {
-          appendUniqueReceiverIndex(receiverIndices, i, expr.args.size());
-        }
-      }
-    } else {
-      appendUniqueReceiverIndex(receiverIndices, 0, expr.args.size());
-    }
-
-    for (size_t receiverIndex : receiverIndices) {
       const Expr &receiverCandidate = expr.args[receiverIndex];
       std::string methodTarget;
       if (resolveVectorHelperMethodTarget(params, locals, receiverCandidate, expr.name, methodTarget)) {
@@ -519,12 +503,12 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
           resolvedMethod = false;
           hasMethodReceiverIndex = true;
           methodReceiverIndex = receiverIndex;
-          break;
+          return true;
         }
       }
       std::string elemType;
       if (!context.resolveSoaVectorTarget(receiverCandidate, elemType)) {
-        continue;
+        return false;
       }
       usedMethodTarget = true;
       bool isBuiltinMethod = false;
@@ -532,16 +516,50 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       if (!resolveMethodTarget(params, locals, expr.namespacePrefix, receiverCandidate, expr.name,
                                methodResolved, isBuiltinMethod)) {
         (void)validateExpr(params, locals, receiverCandidate);
-        return false;
+        failedReceiverProbe = true;
+        return true;
       }
       if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
-        return failCollectionAccessTargetDiagnostic("unknown method: " + methodResolved);
+        (void)failCollectionAccessTargetDiagnostic("unknown method: " + methodResolved);
+        failedReceiverProbe = true;
+        return true;
       }
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
       hasMethodReceiverIndex = true;
       methodReceiverIndex = receiverIndex;
-      break;
+      return true;
+    };
+
+    const bool hasNamedArgs = hasNamedArguments(expr.argNames);
+    bool resolvedReceiver = false;
+    if (hasNamedArgs) {
+      bool hasValuesNamedReceiver = false;
+      for (size_t i = 0; i < expr.args.size(); ++i) {
+        if (i < expr.argNames.size() && expr.argNames[i].has_value() && *expr.argNames[i] == "values") {
+          hasValuesNamedReceiver = true;
+          if (tryResolveReceiverIndex(i)) {
+            resolvedReceiver = true;
+            break;
+          }
+        }
+      }
+      if (!resolvedReceiver && !hasValuesNamedReceiver) {
+        resolvedReceiver = tryResolveReceiverIndex(0);
+      }
+      if (!resolvedReceiver && !hasValuesNamedReceiver) {
+        for (size_t i = 1; i < expr.args.size(); ++i) {
+          if (tryResolveReceiverIndex(i)) {
+            break;
+          }
+        }
+      }
+    } else {
+      (void)tryResolveReceiverIndex(0);
+    }
+
+    if (failedReceiverProbe) {
+      return false;
     }
     return true;
   }

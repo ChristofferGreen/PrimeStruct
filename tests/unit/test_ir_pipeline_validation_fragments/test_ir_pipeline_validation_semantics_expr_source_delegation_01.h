@@ -398,6 +398,20 @@
         std::string::npos);
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find("appendUniqueReceiverIndex(") ==
         std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find(
+            "auto tryResolveReceiverIndex = [&](size_t receiverIndex)") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find(
+            "for (size_t receiverIndex : receiverIndices) {\n"
+            "      const Expr &receiverCandidate = expr.args[receiverIndex];\n"
+            "      std::string methodTarget;\n"
+            "      if (resolveVectorHelperMethodTarget(params, locals, receiverCandidate, expr.name, methodTarget)) {") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find(
+            "if (failedReceiverProbe) {\n"
+            "      return false;\n"
+            "    }") !=
+        std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "auto tryResolveReceiverIndex = [&](size_t receiverIndex)") !=
         std::string::npos);
