@@ -625,9 +625,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "        normalizedCanonicalNameMatchesSoaRefRef;") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "const bool isCanonicalBuiltinSoaRefCall =\n"
-            "        canonicalNamespaceNameMatchesSoaRef ||\n"
-            "        resolvedCanonicalNameMatchesSoaRef;") !=
+            "const bool isCanonicalBuiltinSoaRefCall =") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isCanonicalBuiltinSoaRefRefCall =\n"
