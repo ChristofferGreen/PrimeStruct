@@ -319,6 +319,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   const bool vectorHelperIsIndexedRemoval = vectorHelperIsRemoveAt || vectorHelperIsRemoveSwap;
   const bool vectorHelperNeedsStandaloneSoaBorrowCheck =
       vectorHelperIsPush || vectorHelperIsReserve || vectorHelperIsIndexedRemoval || vectorHelperIsClear;
+  const bool hasNamedStatementArgs = hasNamedArguments(stmt.argNames);
   auto hasVisibleDefinitionPath = [&](const std::string &path) {
     if (hasImportedDefinitionPath(path)) {
       return true;
@@ -470,9 +471,8 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       return isBuiltinVectorReceiver(stmt.args[receiverIndex]);
     };
 
-    const bool hasNamedArgs = hasNamedArguments(stmt.argNames);
     const bool probePositionalReorderedReceiver =
-        !stmt.isMethodCall && !hasNamedArgs && stmt.args.size() > 1 &&
+        !stmt.isMethodCall && !hasNamedStatementArgs && stmt.args.size() > 1 &&
         (stmt.args.front().kind == Expr::Kind::Literal || stmt.args.front().kind == Expr::Kind::BoolLiteral ||
          stmt.args.front().kind == Expr::Kind::FloatLiteral || stmt.args.front().kind == Expr::Kind::StringLiteral ||
          (stmt.args.front().kind == Expr::Kind::Name && !isBuiltinVectorReceiver(stmt.args.front())));
@@ -515,7 +515,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       !oldExplicitSoaPath.empty() &&
       (hasDeclaredDefinitionPath(oldExplicitSoaPath) || hasImportedDefinitionPath(oldExplicitSoaPath));
   if (!oldExplicitSoaPath.empty() && !hasVisibleOldExplicitSoaHelper) {
-    if (hasNamedArguments(stmt.argNames)) {
+    if (hasNamedStatementArgs) {
       return failStatementDiagnostic("named arguments not supported for builtin calls");
     }
     if (!stmt.templateArgs.empty()) {
@@ -586,7 +586,6 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   }
   bool hasResolvedReceiverIndex = false;
   size_t resolvedReceiverIndex = 0;
-  const bool hasNamedStatementArgs = hasNamedArguments(stmt.argNames);
   if (stmt.isMethodCall && !stmt.args.empty()) {
     hasResolvedReceiverIndex = true;
     resolvedReceiverIndex = 0;

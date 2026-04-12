@@ -84,6 +84,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
   outside the inner candidate-receiver loop so helper-family checks are no
   longer repeated per loop iteration; source-lock coverage in
   `test_ir_pipeline_validation_18` now asserts the hoisted helper bool.
+- `statement-vector-early-named-scan-cache-reuse`:
+  statement vector helper validation now computes
+  `hasNamedStatementArgs = hasNamedArguments(stmt.argNames)` before the early
+  bare-mutator fallback and legacy SoA paths, and reuses it for bare positional
+  reorder gating plus legacy SoA named-argument rejects, removing the remaining
+  early-path local named-arg scan and direct named-arg rescan calls in
+  `SemanticsValidatorStatementVectorHelpers.cpp`; source-lock coverage in
+  `test_ir_pipeline_validation_18` now rejects the removed
+  `const bool hasNamedArgs = hasNamedArguments(stmt.argNames);` declaration.
 - `expr-collection-access-builtin-direct-receiver-probe`:
   the primary expr collection-access builtin dispatch branch now probes
   receiver candidates directly through `tryResolveReceiverIndex(...)` in

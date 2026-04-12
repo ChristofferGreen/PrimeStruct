@@ -1042,6 +1042,9 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "const bool hasNamedStatementArgs = hasNamedArguments(stmt.argNames);") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
+            "const bool hasNamedArgs = hasNamedArguments(stmt.argNames);") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
             "const bool vectorHelperNeedsStandaloneSoaBorrowCheck =") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
