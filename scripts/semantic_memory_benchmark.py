@@ -584,12 +584,14 @@ def benchmark_row_graph_local_auto_dependency_scratch_mode(row: dict) -> str:
 
 def benchmark_row_no_fact_emission_mode(row: dict) -> bool:
     value = row.get("no_fact_emission", False)
+    if value is None:
+        return False
     if isinstance(value, bool):
         return value
     if isinstance(value, (int, float)):
         return value != 0
     normalized = str(value).strip().lower()
-    return normalized not in ("", "0", "false", "off", "no")
+    return normalized not in ("", "0", "false", "off", "no", "none", "null")
 
 
 def compute_semantic_validation_without_fact_emission_deltas(results: list[dict]) -> list[dict]:
