@@ -310,6 +310,15 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     return true;
   }
   handled = true;
+  const bool vectorHelperIsPush = vectorHelper == "push";
+  const bool vectorHelperIsReserve = vectorHelper == "reserve";
+  const bool vectorHelperIsRemoveAt = vectorHelper == "remove_at";
+  const bool vectorHelperIsRemoveSwap = vectorHelper == "remove_swap";
+  const bool vectorHelperIsClear = vectorHelper == "clear";
+  const bool vectorHelperIsPop = vectorHelper == "pop";
+  const bool vectorHelperIsIndexedRemoval = vectorHelperIsRemoveAt || vectorHelperIsRemoveSwap;
+  const bool vectorHelperNeedsStandaloneSoaBorrowCheck =
+      vectorHelperIsPush || vectorHelperIsReserve || vectorHelperIsIndexedRemoval || vectorHelperIsClear;
   auto hasVisibleDefinitionPath = [&](const std::string &path) {
     if (hasImportedDefinitionPath(path)) {
       return true;
@@ -486,10 +495,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       stmt.isMethodCall && defMap_.find(vectorHelperResolved) != defMap_.end() &&
       vectorHelperResolved.rfind("/vector/", 0) != 0 && vectorHelperResolved.rfind("/soa_vector/", 0) != 0;
   if (isUserMethodTarget) {
-    if (!stmt.args.empty() &&
-        (vectorHelper == "push" || vectorHelper == "reserve" ||
-         vectorHelper == "remove_at" || vectorHelper == "remove_swap" ||
-         vectorHelper == "clear")) {
+    if (!stmt.args.empty() && vectorHelperNeedsStandaloneSoaBorrowCheck) {
       std::string borrowRoot;
       std::string ignoreBorrowName;
       if (resolveStandaloneSoaGrowthRoot(stmt.args.front(), borrowRoot,
@@ -542,7 +548,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     if (!validateExpr(params, locals, stmt.args[1])) {
       return false;
     }
-    if (vectorHelper == "push") {
+    if (vectorHelperIsPush) {
       if (!validateVectorStatementElementType(params, locals, stmt.args[1], receiverBinding.typeTemplateArg)) {
         return false;
       }
@@ -664,7 +670,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       isStdNamespacedCanonicalBuiltinHelperCall &&
       (hasDeclaredDefinitionPath(vectorHelperResolved) || hasImportedDefinitionPath(vectorHelperResolved));
   const bool canonicalCompatibilityAllowsSoaVectorTarget =
-      vectorHelper == "push" || vectorHelper == "reserve";
+      vectorHelperIsPush || vectorHelperIsReserve;
   bool shouldUseCanonicalBuiltinCompatibilityFallback = false;
   size_t canonicalBuiltinCompatibilityReceiverIndex = 0;
   if (canonicalBuiltinCompatibilityHelper && !stmt.args.empty()) {
@@ -762,7 +768,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       !stmt.isMethodCall &&
       stmt.namespacePrefix.empty() &&
       stmt.name == vectorHelper &&
-      (vectorHelper == "remove_at" || vectorHelper == "remove_swap") &&
+      vectorHelperIsIndexedRemoval &&
       vectorHelperResolved.rfind("/std/collections/experimental_vector/", 0) == 0;
   if (isCanonicalStdVectorMutatorMethodCall &&
       !hasDeclaredDefinitionPath(vectorHelperResolved) &&
@@ -773,10 +779,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       !shouldUseCanonicalBuiltinCompatibilityFallback &&
       (hasDeclaredDefinitionPath(vectorHelperResolved) || hasImportedDefinitionPath(vectorHelperResolved))) {
     const size_t receiverIndex = hasResolvedReceiverIndex ? resolvedReceiverIndex : 0;
-    if (receiverIndex < stmt.args.size() &&
-        (vectorHelper == "push" || vectorHelper == "reserve" ||
-         vectorHelper == "remove_at" || vectorHelper == "remove_swap" ||
-         vectorHelper == "clear")) {
+    if (receiverIndex < stmt.args.size() && vectorHelperNeedsStandaloneSoaBorrowCheck) {
       std::string borrowRoot;
       std::string ignoreBorrowName;
       if (resolveStandaloneSoaGrowthRoot(stmt.args[receiverIndex], borrowRoot,
@@ -920,7 +923,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
     return failStatementDiagnostic(vectorHelper + " does not accept block arguments");
   }
-  if (vectorHelper == "push") {
+  if (vectorHelperIsPush) {
     if (stmt.args.size() != 2) {
       return failStatementDiagnostic("push requires exactly two arguments");
     }
@@ -964,7 +967,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     return true;
   }
-  if (vectorHelper == "reserve") {
+  if (vectorHelperIsReserve) {
     if (stmt.args.size() != 2) {
       return failStatementDiagnostic("reserve requires exactly two arguments");
     }
@@ -1008,7 +1011,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     return true;
   }
-  if (vectorHelper == "remove_at" || vectorHelper == "remove_swap") {
+  if (vectorHelperIsIndexedRemoval) {
     if (stmt.args.size() != 2) {
       return failStatementDiagnostic(vectorHelper + " requires exactly two arguments");
     }
@@ -1050,7 +1053,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     return true;
   }
-  if (vectorHelper == "pop" || vectorHelper == "clear") {
+  if (vectorHelperIsPop || vectorHelperIsClear) {
     if (stmt.args.size() != 1) {
       return failStatementDiagnostic(vectorHelper + " requires exactly one argument");
     }
@@ -1070,7 +1073,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     std::string borrowRoot;
     std::string ignoreBorrowName;
-    if (isSoaGrowthBinding(binding) && vectorHelper == "clear" &&
+    if (isSoaGrowthBinding(binding) && vectorHelperIsClear &&
         resolveStandaloneSoaGrowthRoot(stmt.args[receiverIndex], borrowRoot,
                                        ignoreBorrowName) &&
         hasActiveBorrowForRoot(borrowRoot, ignoreBorrowName)) {

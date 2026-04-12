@@ -63,6 +63,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `vectorHelper == "push" || vectorHelper == "reserve"` is computed once per
   statement pass instead of once per receiver probe attempt; source-lock
   coverage in `test_ir_pipeline_validation_18` now asserts the hoisted bool.
+- `statement-vector-helper-kind-bool-hoist`:
+  statement vector helper validation now hoists shared `vectorHelper` kind
+  booleans (`vectorHelperIsPush`, `vectorHelperIsReserve`,
+  `vectorHelperIsIndexedRemoval`, and
+  `vectorHelperNeedsStandaloneSoaBorrowCheck`) into statement scope in
+  `SemanticsValidatorStatementVectorHelpers.cpp` and reuses them across user
+  method borrow checks, canonical fallback SoA-target gating, indexed-removal
+  bridge classification, and builtin branch dispatch, replacing repeated
+  inline `vectorHelper == ...` comparisons; source-lock coverage in
+  `test_ir_pipeline_validation_18` now asserts the hoisted standalone
+  borrow-check helper-family bool.
 - `expr-collection-access-builtin-direct-receiver-probe`:
   the primary expr collection-access builtin dispatch branch now probes
   receiver candidates directly through `tryResolveReceiverIndex(...)` in
