@@ -73,10 +73,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     return normalized == "soa_vector" || normalized.rfind("soa_vector<", 0) == 0 ||
            normalized == "std/collections/soa_vector" ||
            normalized.rfind("std/collections/soa_vector<", 0) == 0 ||
-           normalized == "SoaVector" || normalized.rfind("SoaVector<", 0) == 0 ||
-           normalized == "std/collections/experimental_soa_vector/SoaVector" ||
-           normalized.rfind("std/collections/experimental_soa_vector/SoaVector<", 0) == 0 ||
-           semantics::isExperimentalSoaVectorSpecializedTypePath(normalized);
+           semantics::isExperimentalSoaVectorTypePath(normalized);
   };
   auto isRawBuiltinSoaVectorReceiverTarget = [&](const std::string &candidate) {
     const std::string normalized = stripReceiverPrefix(candidate);

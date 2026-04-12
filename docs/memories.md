@@ -4,6 +4,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `soa-ir-lowerer-setup-method-target-shared-type-path-helper`:
+  ir-lowerer setup-type method-target SoA receiver-family matching now routes
+  experimental SoA vector type checks through shared
+  `semantics::isExperimentalSoaVectorTypePath(normalized)` in
+  `isSoaVectorReceiverTarget(...)` instead of duplicated direct
+  `SoaVector`/`std/collections/experimental_soa_vector/SoaVector`
+  equality/prefix checks; source-lock coverage in
+  `test_ir_pipeline_validation_19` now asserts shared helper usage while
+  rejecting those removed direct checks.
 - `soa-shared-experimental-type-path-helper-in-emitter`:
   semantics builtin-path helpers now export
   `isExperimentalSoaVectorTypePath(...)` for shared experimental SoA vector
