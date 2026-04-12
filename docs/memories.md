@@ -4,6 +4,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `expr-collection-access-builtin-direct-receiver-probe`:
+  the primary expr collection-access builtin dispatch branch now probes
+  receiver candidates directly through `tryResolveReceiverIndex(...)` in
+  stable order (named `values` receiver-first with fallback to index `0`
+  then remaining args; positional index `0` with optional positional reorder
+  probes and preserved alternative-receiver skip semantics) instead of
+  staging indices in `receiverIndices` via `appendUniqueReceiverIndex(...)`;
+  source-lock coverage in
+  `test_ir_pipeline_validation_semantics_expr_source_delegation_01` now
+  asserts this direct-probe shape while rejecting the removed staged-vector
+  helper/scaffolding.
 - `expr-collection-access-soa-direct-receiver-probe`:
   expr collection-access legacy `get/get_ref/ref/ref_ref` helper resolution
   now probes receiver candidates directly through

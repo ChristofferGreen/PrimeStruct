@@ -412,6 +412,16 @@
             "      return false;\n"
             "    }") !=
         std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find(
+            "std::any_of(expr.args.begin() + 1, expr.args.end(),") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find(
+            "tryResolveReceiverIndex(0, hasAlternativeCollectionReceiver)") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find("std::vector<size_t> receiverIndices;") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find("appendUniqueReceiverIndex(") ==
+        std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "auto tryResolveReceiverIndex = [&](size_t receiverIndex)") !=
         std::string::npos);
