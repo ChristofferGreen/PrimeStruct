@@ -584,6 +584,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     return failStatementDiagnostic(std::string(stmt.isMethodCall ? "unknown method: " : "unknown call target: ") +
                                    bareBuiltinVectorMutatorPreferredPath);
   }
+  const bool hasResolvedVectorHelperDefinition = defMap_.find(vectorHelperResolved) != defMap_.end();
   bool hasResolvedReceiverIndex = false;
   size_t resolvedReceiverIndex = 0;
   if (stmt.isMethodCall && !stmt.args.empty()) {
@@ -591,10 +592,10 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     resolvedReceiverIndex = 0;
   }
   const bool shouldProbeVectorHelperReceiver =
-      !(isStdNamespacedCanonicalBuiltinHelperCall && defMap_.find(vectorHelperResolved) == defMap_.end() &&
+      !(isStdNamespacedCanonicalBuiltinHelperCall && !hasResolvedVectorHelperDefinition &&
         !shouldAllowStdNamespacedVectorHelperCompatibilityFallback) &&
-      (defMap_.find(vectorHelperResolved) == defMap_.end() || isNamespacedVectorHelperCall) &&
-      !(isStdNamespacedCanonicalBuiltinHelperCall && defMap_.find(vectorHelperResolved) != defMap_.end());
+      (!hasResolvedVectorHelperDefinition || isNamespacedVectorHelperCall) &&
+      !(isStdNamespacedCanonicalBuiltinHelperCall && hasResolvedVectorHelperDefinition);
   if (shouldProbeVectorHelperReceiver && !stmt.args.empty()) {
     auto isVectorHelperReceiverName = [&](const Expr &candidate) -> bool {
       if (candidate.kind != Expr::Kind::Name) {

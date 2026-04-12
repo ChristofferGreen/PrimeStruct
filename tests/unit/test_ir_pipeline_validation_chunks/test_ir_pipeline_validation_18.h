@@ -1072,7 +1072,13 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "const bool canonicalCompatibilityAllowsSoaVectorTarget =") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
+            "const bool hasResolvedVectorHelperDefinition = defMap_.find(vectorHelperResolved) != defMap_.end();") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
             "const bool hasVisibleResolvedVectorHelper =") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "(defMap_.find(vectorHelperResolved) == defMap_.end() || isNamespacedVectorHelperCall) &&") ==
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
             "    };\n"

@@ -93,6 +93,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `SemanticsValidatorStatementVectorHelpers.cpp`; source-lock coverage in
   `test_ir_pipeline_validation_18` now rejects the removed
   `const bool hasNamedArgs = hasNamedArguments(stmt.argNames);` declaration.
+- `statement-vector-resolved-helper-definition-cache`:
+  statement vector helper receiver-probe gating now caches
+  `hasResolvedVectorHelperDefinition = defMap_.find(vectorHelperResolved) != defMap_.end()`
+  once per statement validation pass in
+  `SemanticsValidatorStatementVectorHelpers.cpp` and reuses that bool across
+  `shouldProbeVectorHelperReceiver` instead of repeating inline
+  `defMap_.find(vectorHelperResolved)` map lookups in each subcondition;
+  source-lock coverage in `test_ir_pipeline_validation_18` now asserts the
+  shared cached map-membership bool and rejects the removed inline condition.
 - `statement-vector-resolved-helper-visibility-cache`:
   statement vector helper validation now caches resolved helper visibility as
   `hasDeclaredResolvedVectorHelper`, `hasImportedResolvedVectorHelper`, and
