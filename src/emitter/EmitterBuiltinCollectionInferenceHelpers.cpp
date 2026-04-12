@@ -13,14 +13,8 @@ bool isSoaVectorTypeNameLocal(const std::string &typeName) {
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  if (normalized == "soa_vector" || normalized == "SoaVector" ||
-      normalized == "std/collections/experimental_soa_vector/SoaVector") {
-    return true;
-  }
-  if (normalized.rfind("soa_vector<", 0) == 0 ||
-      normalized.rfind("SoaVector<", 0) == 0 ||
-      normalized.rfind("std/collections/experimental_soa_vector/SoaVector<", 0) == 0 ||
-      semantics::isExperimentalSoaVectorSpecializedTypePath(normalized)) {
+  if (normalized == "soa_vector" || normalized.rfind("soa_vector<", 0) == 0 ||
+      semantics::isExperimentalSoaVectorTypePath(normalized)) {
     return true;
   }
   std::string base;

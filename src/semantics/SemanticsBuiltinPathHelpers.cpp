@@ -642,6 +642,22 @@ bool isExperimentalSoaVectorHelperFamilyPath(std::string_view path) {
          isExperimentalSoaVectorConversionFamilyPath(canonicalPath);
 }
 
+bool isExperimentalSoaVectorTypePath(std::string_view path) {
+  constexpr std::string_view kExperimentalSoaVectorTypePrefix =
+      "std/collections/experimental_soa_vector/SoaVector";
+  constexpr std::string_view kExperimentalSoaVectorTypePrefixWithSlash =
+      "/std/collections/experimental_soa_vector/SoaVector";
+  const auto matchesExperimentalSoaVectorTypePrefix =
+      [&](std::string_view prefix) {
+        return path == prefix || path.starts_with(std::string(prefix) + "<") ||
+               path.starts_with(std::string(prefix) + "__");
+      };
+  return matchesExperimentalSoaVectorTypePrefix("SoaVector") ||
+         matchesExperimentalSoaVectorTypePrefix(kExperimentalSoaVectorTypePrefix) ||
+         matchesExperimentalSoaVectorTypePrefix(kExperimentalSoaVectorTypePrefixWithSlash) ||
+         isExperimentalSoaVectorSpecializedTypePath(path);
+}
+
 bool isExperimentalSoaVectorSpecializedTypePath(std::string_view path) {
   constexpr std::string_view kExperimentalSoaVectorSpecializedPrefix =
       "/std/collections/experimental_soa_vector/SoaVector__";

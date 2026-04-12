@@ -578,7 +578,15 @@ TEST_CASE("emitter builtin collection inference source stays canonical") {
         std::string::npos);
   CHECK(source.find("std/collections/soa_vector/to_aos") == std::string::npos);
   CHECK(source.find("isSimpleCallName(target, \"to_aos\")") == std::string::npos);
-  CHECK(source.find("semantics::isExperimentalSoaVectorSpecializedTypePath(normalized)") !=
+  CHECK(source.find("semantics::isExperimentalSoaVectorTypePath(normalized)") !=
+        std::string::npos);
+  CHECK(source.find("normalized == \"SoaVector\"") ==
+        std::string::npos);
+  CHECK(source.find("normalized == \"std/collections/experimental_soa_vector/SoaVector\"") ==
+        std::string::npos);
+  CHECK(source.find("normalized.rfind(\"SoaVector<\", 0) == 0") ==
+        std::string::npos);
+  CHECK(source.find("normalized.rfind(\"std/collections/experimental_soa_vector/SoaVector<\", 0) == 0") ==
         std::string::npos);
   CHECK(source.find("normalized.rfind(\"SoaVector__\", 0) == 0") ==
         std::string::npos);
@@ -760,6 +768,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "bool isExperimentalSoaVectorHelperFamilyPath(std::string_view path)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
+            "bool isExperimentalSoaVectorTypePath(std::string_view path)") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
             "bool isExperimentalSoaVectorSpecializedTypePath(std::string_view path)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
@@ -879,6 +890,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
             "bool isExperimentalSoaVectorHelperFamilyPath(std::string_view path);") !=
+        std::string::npos);
+  CHECK(semanticsHelpersSource.find(
+            "bool isExperimentalSoaVectorTypePath(std::string_view path);") !=
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
             "bool isExperimentalSoaVectorSpecializedTypePath(std::string_view path);") !=

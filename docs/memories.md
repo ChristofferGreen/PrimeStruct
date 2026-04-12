@@ -4,6 +4,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `soa-shared-experimental-type-path-helper-in-emitter`:
+  semantics builtin-path helpers now export
+  `isExperimentalSoaVectorTypePath(...)` for shared experimental SoA vector
+  type matching (base/template/specialized), and emitter builtin-collection
+  type inference now routes SoaVector family matching through that helper
+  instead of duplicated direct `SoaVector` /
+  `std/collections/experimental_soa_vector/SoaVector` equality/prefix checks;
+  source-lock coverage in `test_ir_pipeline_validation_15` now asserts helper
+  usage plus declaration/definition presence.
 - `soa-emitter-builtin-collection-specialized-type-shared-helper`:
   emitter builtin-collection SoA type inference now routes specialized SoA
   checks through shared
