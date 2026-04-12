@@ -181,7 +181,19 @@ TEST_CASE("semantics validate source delegation stays stable") {
             "semantics::isExperimentalSoaFieldViewReadHelperPath(receiver.name)") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find(
+            "isExperimentalSoaVectorSpecializedTypePath(normalizedResolvedPath)") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "isExperimentalSoaVectorSpecializedTypePath(def.fullPath)") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
             "receiver.name.rfind(getPrefix, 0) != 0") ==
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "normalizedResolvedPath.rfind(\"std/collections/experimental_soa_vector/SoaVector__\", 0) != 0") ==
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "def.fullPath.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) != 0") ==
         std::string::npos);
   CHECK(semanticsValidateSource.find(
             "initName == \"std/collections/experimental_soa_vector/soaVectorFieldView\"") ==

@@ -1372,7 +1372,7 @@ bool extractExperimentalSoaVectorElementTypeForFieldViewRewrite(const semantics:
       if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
         normalizedResolvedPath.erase(normalizedResolvedPath.begin());
       }
-      if (normalizedResolvedPath.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) != 0) {
+      if (!semantics::isExperimentalSoaVectorSpecializedTypePath(normalizedResolvedPath)) {
         return false;
       }
       auto normalizedIt = specializedSoaVectorElementTypes.find("/" + normalizedResolvedPath);
@@ -1547,7 +1547,7 @@ bool extractExperimentalSoaVectorElementTypeFromSpecializedDefinition(
     const std::unordered_map<std::string, const Definition *> &definitionMap,
     std::string &elemTypeOut) {
   elemTypeOut.clear();
-  if (def.fullPath.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) != 0) {
+  if (!semantics::isExperimentalSoaVectorSpecializedTypePath(def.fullPath)) {
     return false;
   }
   for (const auto &fieldExpr : def.statements) {
@@ -1659,7 +1659,7 @@ bool extractExperimentalSoaVectorElementTypeForToAosRewrite(const semantics::Bin
       if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
         normalizedResolvedPath.erase(normalizedResolvedPath.begin());
       }
-      if (normalizedResolvedPath.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) != 0) {
+      if (!semantics::isExperimentalSoaVectorSpecializedTypePath(normalizedResolvedPath)) {
         return false;
       }
       elemTypeOut = resolvedPath;
