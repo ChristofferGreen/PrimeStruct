@@ -74,6 +74,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `vectorHelper == "push" || vectorHelper == "reserve"` is computed once per
   statement pass instead of once per receiver probe attempt; source-lock
   coverage in `test_ir_pipeline_validation_18` now asserts the hoisted bool.
+- `statement-vector-declared-imported-path-helper`:
+  statement vector mutator explicit-path visibility checks in
+  `SemanticsValidatorStatementVectorHelpers.cpp` now route through shared
+  `hasDeclaredOrImportedPath(...)` so canonical/alias mutator call + method
+  checks and bare builtin preferred-path checks no longer repeat inline
+  `hasDeclaredDefinitionPath(path)` + `hasImportedDefinitionPath(path)`
+  call pairs in each branch; source-lock coverage in
+  `test_ir_pipeline_validation_18` now asserts the helper and rejects the
+  removed inline explicit-call pair shape.
 - `statement-vector-helper-kind-bool-hoist`:
   statement vector helper validation now hoists shared `vectorHelper` kind
   booleans (`vectorHelperIsPush`, `vectorHelperIsReserve`,

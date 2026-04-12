@@ -570,29 +570,27 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     return validateVectorRelocationHelperElementType(
         receiverBinding, vectorHelper, namespacePrefix, definitionTemplateArgs);
   }
+  auto hasDeclaredOrImportedPath = [&](const std::string &path) {
+    return hasDeclaredDefinitionPath(path) || hasImportedDefinitionPath(path);
+  };
   if (!explicitCanonicalStdVectorMutatorCallPath.empty() &&
-      !hasDeclaredDefinitionPath(explicitCanonicalStdVectorMutatorCallPath) &&
-      !hasImportedDefinitionPath(explicitCanonicalStdVectorMutatorCallPath)) {
+      !hasDeclaredOrImportedPath(explicitCanonicalStdVectorMutatorCallPath)) {
     return failStatementDiagnostic("unknown call target: " + explicitCanonicalStdVectorMutatorCallPath);
   }
   if (!explicitAliasVectorMutatorCallPath.empty() &&
-      !hasDeclaredDefinitionPath(explicitAliasVectorMutatorCallPath) &&
-      !hasImportedDefinitionPath(explicitAliasVectorMutatorCallPath)) {
+      !hasDeclaredOrImportedPath(explicitAliasVectorMutatorCallPath)) {
     return failStatementDiagnostic("unknown call target: " + explicitAliasVectorMutatorCallPath);
   }
   if (!explicitCanonicalStdVectorMutatorMethodPath.empty() &&
-      !hasDeclaredDefinitionPath(explicitCanonicalStdVectorMutatorMethodPath) &&
-      !hasImportedDefinitionPath(explicitCanonicalStdVectorMutatorMethodPath)) {
+      !hasDeclaredOrImportedPath(explicitCanonicalStdVectorMutatorMethodPath)) {
     return failStatementDiagnostic("unknown method: " + explicitCanonicalStdVectorMutatorMethodPath);
   }
   if (!explicitAliasVectorMutatorMethodPath.empty() &&
-      !hasDeclaredDefinitionPath(explicitAliasVectorMutatorMethodPath) &&
-      !hasImportedDefinitionPath(explicitAliasVectorMutatorMethodPath)) {
+      !hasDeclaredOrImportedPath(explicitAliasVectorMutatorMethodPath)) {
     return failStatementDiagnostic("unknown method: " + explicitAliasVectorMutatorMethodPath);
   }
   if (!bareBuiltinVectorMutatorPreferredPath.empty() &&
-      !hasDeclaredDefinitionPath(bareBuiltinVectorMutatorPreferredPath) &&
-      !hasImportedDefinitionPath(bareBuiltinVectorMutatorPreferredPath)) {
+      !hasDeclaredOrImportedPath(bareBuiltinVectorMutatorPreferredPath)) {
     return failStatementDiagnostic(std::string(stmt.isMethodCall ? "unknown method: " : "unknown call target: ") +
                                    bareBuiltinVectorMutatorPreferredPath);
   }

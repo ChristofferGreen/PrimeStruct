@@ -1084,7 +1084,13 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "const bool hasResolvedVectorHelperDefinition = defMap_.find(vectorHelperResolved) != defMap_.end();") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
+            "auto hasDeclaredOrImportedPath = [&](const std::string &path) {") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
             "const bool hasVisibleResolvedVectorHelper =") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "!hasDeclaredDefinitionPath(explicitCanonicalStdVectorMutatorCallPath) &&") ==
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
             "(defMap_.find(vectorHelperResolved) == defMap_.end() || isNamespacedVectorHelperCall) &&") ==
