@@ -277,9 +277,11 @@ bool inferImplicitTemplateArgs(const Definition &def,
       if (hasVisibleMissingSoaRefHelper) {
         return {};
       }
-      const bool hasCanonicalBuiltinSoaRefCallArg =
-          isAnyCanonicalBuiltinSoaRefCall && !candidate.args.empty() &&
+      const bool hasLeadingCallArg =
+          !candidate.args.empty() &&
           candidate.args.front().kind == Expr::Kind::Call;
+      const bool hasCanonicalBuiltinSoaRefCallArg =
+          isAnyCanonicalBuiltinSoaRefCall && hasLeadingCallArg;
       if (hasCanonicalBuiltinSoaRefCallArg) {
         return soaUnavailableMethodDiagnostic(missingSoaRefHelperPath);
       }
