@@ -20,7 +20,7 @@ bool isVectorStructPath(const std::string &structPath) {
 }
 
 bool isSpecializedExperimentalSoaVectorStructPath(const std::string &structPath) {
-  return structPath.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+  return semantics::isExperimentalSoaVectorSpecializedTypePath(structPath);
 }
 
 bool isRawBuiltinSoaVectorStructPath(const std::string &structPath) {
