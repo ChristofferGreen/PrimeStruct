@@ -4,6 +4,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `semantic-memory-boolean-like-mode-metadata-canonicalized`: semantic-memory
+  delta grouping now canonicalizes boolean-like legacy mode aliases for
+  `semantic_product_force` and `method_target_memoization`
+  (`1|true|yes` -> `on`, `0|false|no` -> `off`) before grouping, so mixed
+  numeric/textual boolean row metadata still pairs into one attribution delta;
+  runtime benchmark-harness coverage now asserts both
+  `compute_semantic_product_force_deltas(...)` and
+  `compute_method_target_memoization_deltas(...)` emit one canonical delta row
+  when mixed boolean-like legacy metadata is present.
 - `semantic-memory-null-mode-metadata-canonicalized`: semantic-memory delta
   grouping now canonicalizes null legacy mode metadata across non-boolean mode
   fields by treating `None` as defaults (`semantic_product_force=auto`,

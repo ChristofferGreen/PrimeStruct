@@ -533,6 +533,10 @@ def benchmark_row_semantic_product_force_mode(row: dict) -> str:
     normalized = str(value).strip().lower()
     if normalized in ("", "auto", "null", "none"):
         return "auto"
+    if normalized in ("1", "true", "yes"):
+        return "on"
+    if normalized in ("0", "false", "no"):
+        return "off"
     return normalized
 
 
@@ -564,6 +568,10 @@ def benchmark_row_method_target_memoization_mode(row: dict) -> str:
     normalized = str(value).strip().lower()
     if normalized in ("", "on", "null", "none"):
         return "on"
+    if normalized in ("1", "true", "yes"):
+        return "on"
+    if normalized in ("0", "false", "no"):
+        return "off"
     return normalized
 
 
