@@ -320,6 +320,18 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   const bool vectorHelperNeedsStandaloneSoaBorrowCheck =
       vectorHelperIsPush || vectorHelperIsReserve || vectorHelperIsIndexedRemoval || vectorHelperIsClear;
   const bool hasNamedStatementArgs = hasNamedArguments(stmt.argNames);
+  const size_t namedValuesStatementArgIndex = [&]() -> size_t {
+    if (!hasNamedStatementArgs) {
+      return stmt.args.size();
+    }
+    for (size_t i = 0; i < stmt.args.size(); ++i) {
+      if (i < stmt.argNames.size() && stmt.argNames[i].has_value() && *stmt.argNames[i] == "values") {
+        return i;
+      }
+    }
+    return stmt.args.size();
+  }();
+  const bool hasNamedValuesStatementArg = namedValuesStatementArgIndex < stmt.args.size();
   auto hasVisibleDefinitionPath = [&](const std::string &path) {
     if (hasImportedDefinitionPath(path)) {
       return true;
@@ -630,16 +642,9 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       return true;
     };
     if (hasNamedStatementArgs) {
-      bool hasValuesNamedReceiver = false;
-      for (size_t i = 0; i < stmt.args.size(); ++i) {
-        if (i < stmt.argNames.size() && stmt.argNames[i].has_value() && *stmt.argNames[i] == "values") {
-          hasValuesNamedReceiver = true;
-          if (tryResolveVectorHelperReceiverIndex(i)) {
-            break;
-          }
-        }
-      }
-      if (!hasResolvedReceiverIndex && !hasValuesNamedReceiver) {
+      if (hasNamedValuesStatementArg) {
+        (void)tryResolveVectorHelperReceiverIndex(namedValuesStatementArgIndex);
+      } else if (!hasResolvedReceiverIndex) {
         if (tryResolveVectorHelperReceiverIndex(0)) {
           // Keep probing order equivalent to the prior staged index list.
         }
@@ -694,16 +699,9 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       return true;
     };
     if (hasNamedStatementArgs) {
-      bool hasValuesNamedReceiver = false;
-      for (size_t i = 0; i < stmt.args.size(); ++i) {
-        if (i < stmt.argNames.size() && stmt.argNames[i].has_value() && *stmt.argNames[i] == "values") {
-          hasValuesNamedReceiver = true;
-          if (tryResolveCanonicalBuiltinCompatibilityReceiverIndex(i)) {
-            break;
-          }
-        }
-      }
-      if (!shouldUseCanonicalBuiltinCompatibilityFallback && !hasValuesNamedReceiver) {
+      if (hasNamedValuesStatementArg) {
+        (void)tryResolveCanonicalBuiltinCompatibilityReceiverIndex(namedValuesStatementArgIndex);
+      } else if (!shouldUseCanonicalBuiltinCompatibilityFallback) {
         if (tryResolveCanonicalBuiltinCompatibilityReceiverIndex(0)) {
           // Keep probing order equivalent to the prior staged index list.
         }
@@ -736,16 +734,9 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       return true;
     };
     if (hasNamedStatementArgs) {
-      bool hasValuesNamedReceiver = false;
-      for (size_t i = 0; i < stmt.args.size(); ++i) {
-        if (i < stmt.argNames.size() && stmt.argNames[i].has_value() && *stmt.argNames[i] == "values") {
-          hasValuesNamedReceiver = true;
-          if (tryResolveSoaCanonicalMutatorReceiverIndex(i)) {
-            break;
-          }
-        }
-      }
-      if (!shouldUseCanonicalBuiltinCompatibilityFallback && !hasValuesNamedReceiver) {
+      if (hasNamedValuesStatementArg) {
+        (void)tryResolveSoaCanonicalMutatorReceiverIndex(namedValuesStatementArgIndex);
+      } else if (!shouldUseCanonicalBuiltinCompatibilityFallback) {
         if (tryResolveSoaCanonicalMutatorReceiverIndex(0)) {
           // Keep probing order equivalent to the prior staged index list.
         }
@@ -854,15 +845,8 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       return true;
     }
     const bool helperAllowsSoaVectorTarget = helperName == "push" || helperName == "reserve";
-    size_t receiverIndex = 0;
-    bool hasExplicitValuesReceiver = false;
-    for (size_t i = 0; i < stmt.args.size(); ++i) {
-      if (i < stmt.argNames.size() && stmt.argNames[i].has_value() && *stmt.argNames[i] == "values") {
-        receiverIndex = i;
-        hasExplicitValuesReceiver = true;
-        break;
-      }
-    }
+    size_t receiverIndex = hasNamedValuesStatementArg ? namedValuesStatementArgIndex : 0;
+    const bool hasExplicitValuesReceiver = hasNamedValuesStatementArg;
     if (!hasExplicitValuesReceiver) {
       for (size_t i = 0; i < stmt.args.size(); ++i) {
         BindingInfo candidateBinding;

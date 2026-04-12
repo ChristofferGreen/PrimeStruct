@@ -56,6 +56,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
   of rescanning named-argument presence in each branch; source-lock coverage
   in `test_ir_pipeline_validation_18` now asserts the shared named-argument
   scan cache.
+- `statement-vector-named-values-index-cache`:
+  statement vector helper fallback validation now caches
+  `namedValuesStatementArgIndex` and `hasNamedValuesStatementArg` once per
+  statement pass in `SemanticsValidatorStatementVectorHelpers.cpp` and
+  reuses that cached named `values` receiver index across vector-helper
+  receiver probing, canonical compatibility probing, SoA canonical mutator
+  probing, and late builtin named-receiver-shape validation, instead of
+  rescanning `stmt.argNames` for `values` in each branch; source-lock
+  coverage in `test_ir_pipeline_validation_18` now asserts the shared named
+  receiver-index cache and rejects the removed per-branch
+  `hasValuesNamedReceiver` scan variable.
 - `statement-vector-canonical-fallback-soa-target-hoist`:
   statement vector helper canonical compatibility fallback probing now hoists
   `canonicalCompatibilityAllowsSoaVectorTarget` into shared statement scope in
