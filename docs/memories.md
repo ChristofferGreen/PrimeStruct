@@ -4,6 +4,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `semantic-memory-blank-mode-metadata-canonicalized`: semantic-memory delta
+  grouping now canonicalizes blank/default row mode metadata through shared
+  helpers (`benchmark_row_semantic_product_force_mode(...)`,
+  `benchmark_row_method_target_memoization_mode(...)`,
+  `benchmark_row_graph_local_auto_{key,side_channel,dependency_scratch}_mode(...)`)
+  before building delta-group keys, so mixed legacy rows still pair with
+  canonical default-mode rows; runtime benchmark-harness coverage now asserts
+  `compute_method_target_memoization_deltas(...)` emits one canonical delta
+  row when blank and explicit `auto` force metadata are mixed.
 - `semantic-memory-legacy-all-fact-family-normalized`: semantic-memory delta
   grouping now canonicalizes legacy report rows with `fact_families="all"`
   (and blank) to canonical `fact_families="auto"` via

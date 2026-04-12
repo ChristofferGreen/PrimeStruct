@@ -526,10 +526,45 @@ def selected_semantic_product_force_modes(selection: str) -> list[str]:
     return [selection]
 
 
+def benchmark_row_semantic_product_force_mode(row: dict) -> str:
+    normalized = str(row.get("semantic_product_force", "auto")).strip()
+    if normalized in ("", "auto"):
+        return "auto"
+    return normalized
+
+
 def benchmark_row_fact_families_mode(row: dict) -> str:
     normalized = str(row.get("fact_families", "auto")).strip()
     if normalized in ("", "all", "auto"):
         return "auto"
+    return normalized
+
+
+def benchmark_row_method_target_memoization_mode(row: dict) -> str:
+    normalized = str(row.get("method_target_memoization", "on")).strip()
+    if normalized in ("", "on"):
+        return "on"
+    return normalized
+
+
+def benchmark_row_graph_local_auto_key_mode(row: dict) -> str:
+    normalized = str(row.get("graph_local_auto_key_mode", "compact")).strip()
+    if normalized in ("", "compact"):
+        return "compact"
+    return normalized
+
+
+def benchmark_row_graph_local_auto_side_channel_mode(row: dict) -> str:
+    normalized = str(row.get("graph_local_auto_side_channel_mode", "flat")).strip()
+    if normalized in ("", "flat"):
+        return "flat"
+    return normalized
+
+
+def benchmark_row_graph_local_auto_dependency_scratch_mode(row: dict) -> str:
+    normalized = str(row.get("graph_local_auto_dependency_scratch_mode", "pmr")).strip()
+    if normalized in ("", "pmr"):
+        return "pmr"
     return normalized
 
 
@@ -540,12 +575,12 @@ def compute_semantic_validation_without_fact_emission_deltas(results: list[dict]
         key = (
             row["fixture"],
             row["phase"],
-            str(row.get("semantic_product_force", "auto")),
+            benchmark_row_semantic_product_force_mode(row),
             benchmark_row_fact_families_mode(row),
-            str(row.get("method_target_memoization", "on")),
-            str(row.get("graph_local_auto_key_mode", "compact")),
-            str(row.get("graph_local_auto_side_channel_mode", "flat")),
-            str(row.get("graph_local_auto_dependency_scratch_mode", "pmr")),
+            benchmark_row_method_target_memoization_mode(row),
+            benchmark_row_graph_local_auto_key_mode(row),
+            benchmark_row_graph_local_auto_side_channel_mode(row),
+            benchmark_row_graph_local_auto_dependency_scratch_mode(row),
         )
         grouped.setdefault(key, {})[no_fact_emission] = row
 
@@ -601,7 +636,7 @@ def compute_semantic_validation_without_fact_emission_deltas(results: list[dict]
 def compute_semantic_product_force_deltas(results: list[dict]) -> list[dict]:
     grouped: dict[tuple[str, str, bool, str, str, str, str, str], dict[str, dict]] = {}
     for row in results:
-        mode = str(row.get("semantic_product_force", "auto"))
+        mode = benchmark_row_semantic_product_force_mode(row)
         if mode not in ("on", "off"):
             continue
         key = (
@@ -609,10 +644,10 @@ def compute_semantic_product_force_deltas(results: list[dict]) -> list[dict]:
             row["phase"],
             bool(row.get("no_fact_emission", False)),
             benchmark_row_fact_families_mode(row),
-            str(row.get("method_target_memoization", "on")),
-            str(row.get("graph_local_auto_key_mode", "compact")),
-            str(row.get("graph_local_auto_side_channel_mode", "flat")),
-            str(row.get("graph_local_auto_dependency_scratch_mode", "pmr")),
+            benchmark_row_method_target_memoization_mode(row),
+            benchmark_row_graph_local_auto_key_mode(row),
+            benchmark_row_graph_local_auto_side_channel_mode(row),
+            benchmark_row_graph_local_auto_dependency_scratch_mode(row),
         )
         grouped.setdefault(key, {})[mode] = row
 
@@ -669,19 +704,19 @@ def selected_method_target_memoization_modes(selection: str) -> list[str]:
 def compute_method_target_memoization_deltas(results: list[dict]) -> list[dict]:
     grouped: dict[tuple[str, str, str, bool, str, str, str, str], dict[str, dict]] = {}
     for row in results:
-        mode = str(row.get("method_target_memoization", "on"))
+        mode = benchmark_row_method_target_memoization_mode(row)
         if mode not in ("on", "off"):
             continue
         grouped.setdefault(
             (
                 row["fixture"],
                 row["phase"],
-                str(row.get("semantic_product_force", "auto")),
+                benchmark_row_semantic_product_force_mode(row),
                 bool(row.get("no_fact_emission", False)),
                 benchmark_row_fact_families_mode(row),
-                str(row.get("graph_local_auto_key_mode", "compact")),
-                str(row.get("graph_local_auto_side_channel_mode", "flat")),
-                str(row.get("graph_local_auto_dependency_scratch_mode", "pmr")),
+                benchmark_row_graph_local_auto_key_mode(row),
+                benchmark_row_graph_local_auto_side_channel_mode(row),
+                benchmark_row_graph_local_auto_dependency_scratch_mode(row),
             ),
             {},
         )[mode] = row
@@ -740,20 +775,20 @@ def selected_graph_local_auto_key_modes(selection: str) -> list[str]:
 def compute_graph_local_auto_key_mode_deltas(results: list[dict]) -> list[dict]:
     grouped: dict[tuple[str, str, str, str, bool, str, str, str], dict[str, dict]] = {}
     for row in results:
-        mode = str(row.get("graph_local_auto_key_mode", "compact"))
+        mode = benchmark_row_graph_local_auto_key_mode(row)
         if mode not in ("compact", "legacy-shadow"):
             continue
-        method_mode = str(row.get("method_target_memoization", "on"))
+        method_mode = benchmark_row_method_target_memoization_mode(row)
         grouped.setdefault(
             (
                 row["fixture"],
                 row["phase"],
                 method_mode,
-                str(row.get("semantic_product_force", "auto")),
+                benchmark_row_semantic_product_force_mode(row),
                 bool(row.get("no_fact_emission", False)),
                 benchmark_row_fact_families_mode(row),
-                str(row.get("graph_local_auto_side_channel_mode", "flat")),
-                str(row.get("graph_local_auto_dependency_scratch_mode", "pmr")),
+                benchmark_row_graph_local_auto_side_channel_mode(row),
+                benchmark_row_graph_local_auto_dependency_scratch_mode(row),
             ),
             {},
         )[mode] = row
@@ -811,21 +846,21 @@ def selected_graph_local_auto_side_channel_modes(selection: str) -> list[str]:
 def compute_graph_local_auto_side_channel_mode_deltas(results: list[dict]) -> list[dict]:
     grouped: dict[tuple[str, str, str, str, str, bool, str, str], dict[str, dict]] = {}
     for row in results:
-        mode = str(row.get("graph_local_auto_side_channel_mode", "flat"))
+        mode = benchmark_row_graph_local_auto_side_channel_mode(row)
         if mode not in ("flat", "legacy-shadow"):
             continue
-        method_mode = str(row.get("method_target_memoization", "on"))
-        key_mode = str(row.get("graph_local_auto_key_mode", "compact"))
+        method_mode = benchmark_row_method_target_memoization_mode(row)
+        key_mode = benchmark_row_graph_local_auto_key_mode(row)
         grouped.setdefault(
             (
                 row["fixture"],
                 row["phase"],
                 method_mode,
                 key_mode,
-                str(row.get("semantic_product_force", "auto")),
+                benchmark_row_semantic_product_force_mode(row),
                 bool(row.get("no_fact_emission", False)),
                 benchmark_row_fact_families_mode(row),
-                str(row.get("graph_local_auto_dependency_scratch_mode", "pmr")),
+                benchmark_row_graph_local_auto_dependency_scratch_mode(row),
             ),
             {},
         )[mode] = row
@@ -883,12 +918,12 @@ def selected_graph_local_auto_dependency_scratch_modes(selection: str) -> list[s
 def compute_graph_local_auto_dependency_scratch_mode_deltas(results: list[dict]) -> list[dict]:
     grouped: dict[tuple[str, str, str, str, str, str, bool, str], dict[str, dict]] = {}
     for row in results:
-        mode = str(row.get("graph_local_auto_dependency_scratch_mode", "pmr"))
+        mode = benchmark_row_graph_local_auto_dependency_scratch_mode(row)
         if mode not in ("pmr", "std"):
             continue
-        method_mode = str(row.get("method_target_memoization", "on"))
-        key_mode = str(row.get("graph_local_auto_key_mode", "compact"))
-        side_channel_mode = str(row.get("graph_local_auto_side_channel_mode", "flat"))
+        method_mode = benchmark_row_method_target_memoization_mode(row)
+        key_mode = benchmark_row_graph_local_auto_key_mode(row)
+        side_channel_mode = benchmark_row_graph_local_auto_side_channel_mode(row)
         grouped.setdefault(
             (
                 row["fixture"],
@@ -896,7 +931,7 @@ def compute_graph_local_auto_dependency_scratch_mode_deltas(results: list[dict])
                 method_mode,
                 key_mode,
                 side_channel_mode,
-                str(row.get("semantic_product_force", "auto")),
+                benchmark_row_semantic_product_force_mode(row),
                 bool(row.get("no_fact_emission", False)),
                 benchmark_row_fact_families_mode(row),
             ),

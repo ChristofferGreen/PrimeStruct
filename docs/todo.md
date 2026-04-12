@@ -29,6 +29,7 @@ P0 - Reproducible measurement and attribution
 - P0 refactor micro-slice `[P0-20]` is archived in `docs/todo_finished.md` (April 12, 2026).
 - P0 refactor micro-slice `[P0-21]` is archived in `docs/todo_finished.md` (April 12, 2026).
 - P0 refactor micro-slice `[P0-22]` is archived in `docs/todo_finished.md` (April 12, 2026).
+- P0 refactor micro-slice `[P0-23]` is archived in `docs/todo_finished.md` (April 12, 2026).
 
 P1 - Immediate peak-RSS reductions in existing pipeline
 
