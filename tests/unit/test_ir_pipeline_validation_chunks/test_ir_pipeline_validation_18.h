@@ -934,6 +934,21 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
   CHECK(semanticsStatementBodyArgumentsSource.find(
             "return failExprDiagnostic(stmt, std::move(message));") !=
         std::string::npos);
+  CHECK(semanticsStatementBodyArgumentsSource.find(
+            "std::vector<size_t> receiverIndices;") ==
+        std::string::npos);
+  CHECK(semanticsStatementBodyArgumentsSource.find(
+            "void appendUniqueReceiverIndex(std::vector<size_t> &receiverIndices, size_t index, size_t limit)") ==
+        std::string::npos);
+  CHECK(semanticsStatementBodyArgumentsSource.find(
+            "appendUniqueReceiverIndex(receiverIndices, i, candidate.args.size());") ==
+        std::string::npos);
+  CHECK(semanticsStatementBodyArgumentsSource.find(
+            "for (size_t receiverIndex : receiverIndices)") ==
+        std::string::npos);
+  CHECK(semanticsStatementBodyArgumentsSource.find(
+            "if (isMapReceiverExpr(candidate.args[i])) {") !=
+        std::string::npos);
   CHECK(semanticsStatementControlFlowSource.find("bool SemanticsValidator::validateControlFlowStatement(") !=
         std::string::npos);
   CHECK(semanticsStatementControlFlowSource.find(

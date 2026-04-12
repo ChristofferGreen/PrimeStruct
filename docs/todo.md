@@ -40,3 +40,4 @@ P1 - Immediate peak-RSS reductions in existing pipeline
 
 P2 - Traversal and allocation churn reductions
 - P2 refactor micro-slice `[P2-14]` is archived in `docs/todo_finished.md` (April 12, 2026).
+- P2 refactor micro-slice `[P2-15]` is archived in `docs/todo_finished.md` (April 12, 2026).

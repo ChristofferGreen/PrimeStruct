@@ -4,6 +4,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `statement-body-arguments-direct-map-receiver-probe`:
+  statement body-argument bare-map helper target resolution now probes map
+  receiver candidates directly in stable order inside
+  `resolveBareMapCallBodyArgumentTarget(...)` (named `values` receiver-first
+  with fallback to full-argument scan, else positional full-argument scan)
+  instead of staging indices in `receiverIndices` via
+  `appendUniqueReceiverIndex(...)`; source-lock coverage in
+  `test_ir_pipeline_validation_18` now asserts this direct-probe shape while
+  rejecting the removed staged-vector helper/scaffolding.
 - `infer-collection-dispatch-direct-receiver-probe`:
   infer collection access-call return-kind resolution now probes receiver
   candidates directly through `tryResolveReceiverIndex(...)` in stable order

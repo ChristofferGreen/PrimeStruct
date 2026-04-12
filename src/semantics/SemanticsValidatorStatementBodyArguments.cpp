@@ -23,18 +23,6 @@ bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
          helperName == "insert" || helperName == "insert_ref";
 }
 
-void appendUniqueReceiverIndex(std::vector<size_t> &receiverIndices, size_t index, size_t limit) {
-  if (index >= limit) {
-    return;
-  }
-  for (size_t existing : receiverIndices) {
-    if (existing == index) {
-      return;
-    }
-  }
-  receiverIndices.push_back(index);
-}
-
 } // namespace
 
 bool SemanticsValidator::validateStatementBodyArguments(const std::vector<ParameterInfo> &params,
@@ -181,34 +169,34 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
         return false;
       }
 
-      std::vector<size_t> receiverIndices;
       if (hasNamedArguments(candidate.argNames)) {
         bool foundValues = false;
         for (size_t i = 0; i < candidate.args.size(); ++i) {
           if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
               *candidate.argNames[i] == "values") {
-            appendUniqueReceiverIndex(receiverIndices, i, candidate.args.size());
             foundValues = true;
+            if (isMapReceiverExpr(candidate.args[i])) {
+              resolvedOut = preferredMapBodyArgumentTarget(helperName);
+              return true;
+            }
             break;
           }
         }
         if (!foundValues) {
           for (size_t i = 0; i < candidate.args.size(); ++i) {
-            appendUniqueReceiverIndex(receiverIndices, i, candidate.args.size());
+            if (isMapReceiverExpr(candidate.args[i])) {
+              resolvedOut = preferredMapBodyArgumentTarget(helperName);
+              return true;
+            }
           }
         }
       } else {
         for (size_t i = 0; i < candidate.args.size(); ++i) {
-          appendUniqueReceiverIndex(receiverIndices, i, candidate.args.size());
+          if (isMapReceiverExpr(candidate.args[i])) {
+            resolvedOut = preferredMapBodyArgumentTarget(helperName);
+            return true;
+          }
         }
-      }
-
-      for (size_t receiverIndex : receiverIndices) {
-        if (!isMapReceiverExpr(candidate.args[receiverIndex])) {
-          continue;
-        }
-        resolvedOut = preferredMapBodyArgumentTarget(helperName);
-        return true;
       }
       return false;
     };
