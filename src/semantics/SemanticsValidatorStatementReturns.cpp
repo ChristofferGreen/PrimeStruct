@@ -125,12 +125,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       const bool resolvedCanonicalRefLike =
           isCanonicalSoaRefLikeHelperPath(resolvedPathCanonical);
       const bool resolvedExperimentalRefLike =
-          resolvedPathNoTemplate.rfind(
-              "/std/collections/experimental_soa_vector/soaVectorRef",
-              0) == 0 ||
-          resolvedPathNoTemplate.rfind(
-              "/std/collections/experimental_soa_vector/soaVectorRefRef",
-              0) == 0;
+          isExperimentalSoaRefLikeHelperPath(resolvedPathNoTemplate);
       const auto soaAccessHelper = builtinSoaAccessHelperName(expr, params, locals);
       const bool oldSurfaceCallShape =
           soaAccessHelper.has_value() &&

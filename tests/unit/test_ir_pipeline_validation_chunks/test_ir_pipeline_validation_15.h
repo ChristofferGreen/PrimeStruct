@@ -723,10 +723,16 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "bool isExperimentalSoaBorrowedHelperPath(std::string_view path)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
+            "bool isExperimentalSoaRefLikeHelperPath(std::string_view path)") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
             "canonicalPath == \"/std/collections/experimental_soa_vector/soaVectorGetRef\"") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
             "canonicalPath == \"/std/collections/experimental_soa_vector/soaVectorRefRef\"") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
+            "canonicalPath == \"/std/collections/experimental_soa_vector/soaVectorRef\"") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
             "bool isExperimentalSoaVectorConversionFamilyPath(std::string_view path)") !=
@@ -761,6 +767,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
             "bool isExperimentalSoaBorrowedHelperPath(std::string_view path);") !=
+        std::string::npos);
+  CHECK(semanticsHelpersSource.find(
+            "bool isExperimentalSoaRefLikeHelperPath(std::string_view path);") !=
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
             "bool isExperimentalSoaVectorConversionFamilyPath(std::string_view path);") !=
@@ -1586,9 +1595,20 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(statementReturnsSource.find(
             "isCanonicalSoaRefLikeHelperPath(resolvedPathCanonical)") !=
         std::string::npos);
+  CHECK(statementReturnsSource.find(
+            "isExperimentalSoaRefLikeHelperPath(resolvedPathNoTemplate)") !=
+        std::string::npos);
   CHECK(statementReturnsSource.find("resolvedPath.rfind(\"/soa_vector/ref\", 0)") ==
         std::string::npos);
   CHECK(statementReturnsSource.find("resolvedPath.rfind(\"/soa_vector/ref_ref\", 0)") ==
+        std::string::npos);
+  CHECK(statementReturnsSource.find(
+            "resolvedPathNoTemplate.rfind(\n"
+            "              \"/std/collections/experimental_soa_vector/soaVectorRef\",") ==
+        std::string::npos);
+  CHECK(statementReturnsSource.find(
+            "resolvedPathNoTemplate.rfind(\n"
+            "              \"/std/collections/experimental_soa_vector/soaVectorRefRef\",") ==
         std::string::npos);
   CHECK(inferDefinitionSource.find("unknown method: /std/collections/soa_vector/ref") ==
         std::string::npos);
