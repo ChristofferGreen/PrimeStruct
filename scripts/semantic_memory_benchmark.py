@@ -874,7 +874,7 @@ def selected_graph_local_auto_dependency_scratch_modes(selection: str) -> list[s
 
 
 def compute_graph_local_auto_dependency_scratch_mode_deltas(results: list[dict]) -> list[dict]:
-    grouped: dict[tuple[str, str, str, str, str], dict[str, dict]] = {}
+    grouped: dict[tuple[str, str, str, str, str, str, bool, str], dict[str, dict]] = {}
     for row in results:
         mode = str(row.get("graph_local_auto_dependency_scratch_mode", "pmr"))
         if mode not in ("pmr", "std"):
@@ -882,10 +882,29 @@ def compute_graph_local_auto_dependency_scratch_mode_deltas(results: list[dict])
         method_mode = str(row.get("method_target_memoization", "on"))
         key_mode = str(row.get("graph_local_auto_key_mode", "compact"))
         side_channel_mode = str(row.get("graph_local_auto_side_channel_mode", "flat"))
-        grouped.setdefault((row["fixture"], row["phase"], method_mode, key_mode, side_channel_mode), {})[mode] = row
+        grouped.setdefault(
+            (
+                row["fixture"],
+                row["phase"],
+                method_mode,
+                key_mode,
+                side_channel_mode,
+                str(row.get("semantic_product_force", "auto")),
+                bool(row.get("no_fact_emission", False)),
+                str(row.get("fact_families", "all")),
+            ),
+            {},
+        )[mode] = row
 
     deltas: list[dict] = []
-    for (fixture, phase, method_mode, key_mode, side_channel_mode), by_mode in sorted(grouped.items()):
+    for (fixture,
+         phase,
+         method_mode,
+         key_mode,
+         side_channel_mode,
+         semantic_product_force,
+         no_fact_emission,
+         fact_families), by_mode in sorted(grouped.items()):
         pmr_row = by_mode.get("pmr")
         std_row = by_mode.get("std")
         if pmr_row is None or std_row is None:
@@ -897,6 +916,9 @@ def compute_graph_local_auto_dependency_scratch_mode_deltas(results: list[dict])
                 "method_target_memoization": method_mode,
                 "graph_local_auto_key_mode": key_mode,
                 "graph_local_auto_side_channel_mode": side_channel_mode,
+                "semantic_product_force": semantic_product_force,
+                "no_fact_emission": no_fact_emission,
+                "fact_families": fact_families,
                 "median_peak_rss_bytes_pmr": pmr_row["median_peak_rss_bytes"],
                 "median_peak_rss_bytes_std": std_row["median_peak_rss_bytes"],
                 "median_peak_rss_bytes_std_minus_pmr":
