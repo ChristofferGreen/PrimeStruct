@@ -647,8 +647,11 @@ bool isExperimentalSoaVectorSpecializedTypePath(std::string_view path) {
       "/std/collections/experimental_soa_vector/SoaVector__";
   constexpr std::string_view kExperimentalSoaVectorSpecializedPrefixNoSlash =
       "std/collections/experimental_soa_vector/SoaVector__";
+  constexpr std::string_view kExperimentalSoaVectorSpecializedPrefixBare =
+      "SoaVector__";
   return path.starts_with(kExperimentalSoaVectorSpecializedPrefix) ||
-         path.starts_with(kExperimentalSoaVectorSpecializedPrefixNoSlash);
+         path.starts_with(kExperimentalSoaVectorSpecializedPrefixNoSlash) ||
+         path.starts_with(kExperimentalSoaVectorSpecializedPrefixBare);
 }
 
 bool isExperimentalSoaVectorConversionFamilyPath(std::string_view path) {

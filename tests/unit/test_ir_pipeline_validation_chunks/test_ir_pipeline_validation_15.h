@@ -807,6 +807,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "kExperimentalSoaVectorSpecializedPrefixNoSlash") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
+            "kExperimentalSoaVectorSpecializedPrefixBare") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
+            "path.starts_with(kExperimentalSoaVectorSpecializedPrefixBare)") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
             "helperName == \"soaVectorToAos\" || helperName == \"soaVectorToAosRef\"") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(

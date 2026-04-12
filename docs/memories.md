@@ -685,6 +685,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `value.rfind("std/collections/experimental_soa_vector/SoaVector__", 0)`
   checks, and source-lock coverage in `test_ir_pipeline_validation_16` now
   asserts shared helper usage while rejecting that direct check.
+- `soa-specialized-type-helper-bare-prefix-and-monomorph-base-check`:
+  shared `isExperimentalSoaVectorSpecializedTypePath(...)` now also matches
+  bare `SoaVector__*` prefixes via
+  `kExperimentalSoaVectorSpecializedPrefixBare` in
+  `SemanticsBuiltinPathHelpers.cpp`, and template-monomorph expression-rewrite
+  now routes bare specialized-type base-name checks through that helper
+  instead of direct `normalizedBase.rfind("SoaVector__", 0)` matching; source
+  locks in `test_ir_pipeline_validation_15` and `16` assert the broadened
+  helper surface and reject the removed direct base-name check.
 - `soa-monomorph-expression-shared-count-push-reserve-helper-path`:
   template-monomorph expression-rewrite canonical stdlib helper whitelisting
   now routes SoA `count`/`count_ref`/`push`/`reserve` checks through shared

@@ -264,7 +264,7 @@ bool rewriteExpr(Expr &expr,
               receiverTypeText = normalizeBindingTypeName(wrappedArgs.front());
               continue;
             }
-            if ((normalizedBase == "SoaVector" || normalizedBase.rfind("SoaVector__", 0) == 0 ||
+            if ((normalizedBase == "SoaVector" ||
                  normalizedBase == "std/collections/experimental_soa_vector/SoaVector" ||
                  isExperimentalSoaVectorSpecializedTypePath(normalizedBase)) &&
                 !argText.empty()) {
