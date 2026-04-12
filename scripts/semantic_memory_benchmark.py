@@ -660,15 +660,34 @@ def selected_method_target_memoization_modes(selection: str) -> list[str]:
 
 
 def compute_method_target_memoization_deltas(results: list[dict]) -> list[dict]:
-    grouped: dict[tuple[str, str], dict[str, dict]] = {}
+    grouped: dict[tuple[str, str, str, bool, str, str, str, str], dict[str, dict]] = {}
     for row in results:
         mode = str(row.get("method_target_memoization", "on"))
         if mode not in ("on", "off"):
             continue
-        grouped.setdefault((row["fixture"], row["phase"]), {})[mode] = row
+        grouped.setdefault(
+            (
+                row["fixture"],
+                row["phase"],
+                str(row.get("semantic_product_force", "auto")),
+                bool(row.get("no_fact_emission", False)),
+                str(row.get("fact_families", "all")),
+                str(row.get("graph_local_auto_key_mode", "compact")),
+                str(row.get("graph_local_auto_side_channel_mode", "flat")),
+                str(row.get("graph_local_auto_dependency_scratch_mode", "pmr")),
+            ),
+            {},
+        )[mode] = row
 
     deltas: list[dict] = []
-    for (fixture, phase), by_mode in sorted(grouped.items()):
+    for (fixture,
+         phase,
+         semantic_product_force,
+         no_fact_emission,
+         fact_families,
+         graph_local_auto_key_mode,
+         graph_local_auto_side_channel_mode,
+         graph_local_auto_dependency_scratch_mode), by_mode in sorted(grouped.items()):
         on_row = by_mode.get("on")
         off_row = by_mode.get("off")
         if on_row is None or off_row is None:
@@ -678,6 +697,12 @@ def compute_method_target_memoization_deltas(results: list[dict]) -> list[dict]:
             {
                 "fixture": fixture,
                 "phase": phase,
+                "semantic_product_force": semantic_product_force,
+                "no_fact_emission": no_fact_emission,
+                "fact_families": fact_families,
+                "graph_local_auto_key_mode": graph_local_auto_key_mode,
+                "graph_local_auto_side_channel_mode": graph_local_auto_side_channel_mode,
+                "graph_local_auto_dependency_scratch_mode": graph_local_auto_dependency_scratch_mode,
                 "median_peak_rss_bytes_on": on_row["median_peak_rss_bytes"],
                 "median_peak_rss_bytes_off": off_row["median_peak_rss_bytes"],
                 "median_peak_rss_bytes_on_minus_off":

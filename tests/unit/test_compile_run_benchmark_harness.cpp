@@ -483,6 +483,82 @@ TEST_CASE("semantic memory benchmark helper supports semantic-product-force A/B 
   CHECK(readFile(validateErrPath).empty());
 }
 
+TEST_CASE("semantic memory benchmark helper keeps memoization deltas mode-scoped") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";
+  const std::filesystem::path primecPath = repoRoot / "build-release" / "primec";
+  if (!std::filesystem::exists(primecPath)) {
+    INFO("primec not available in build-release");
+    return;
+  }
+
+  const std::string reportPath = writeTemp("semantic_memory_memo_mode_scope_report.json", "");
+  const std::string stdoutPath = writeTemp("semantic_memory_memo_mode_scope.out", "");
+  const std::string stderrPath = writeTemp("semantic_memory_memo_mode_scope.err", "");
+  const std::string benchmarkCmd =
+      "python3 " + quoteShellArg(scriptPath.string()) +
+      " --repo-root " + quoteShellArg(repoRoot.string()) +
+      " --primec " + quoteShellArg(primecPath.string()) +
+      " --runs 1 --fixtures no_import --phases ast-semantic "
+      "--method-target-memoization both --graph-local-auto-key-mode both "
+      "--report-json " + quoteShellArg(reportPath) +
+      " > " + quoteShellArg(stdoutPath) + " 2> " + quoteShellArg(stderrPath);
+  CHECK(runCommand(benchmarkCmd) == 0);
+  CHECK(readFile(stderrPath).empty());
+
+  const std::string validateOutPath = writeTemp("semantic_memory_memo_mode_scope_validate.out", "");
+  const std::string validateErrPath = writeTemp("semantic_memory_memo_mode_scope_validate.err", "");
+  const std::string validateCmd =
+      "python3 -c " +
+      quoteShellArg(
+          "import json, sys\n"
+          "report = json.load(open(sys.argv[1], encoding='utf-8'))\n"
+          "rows = report.get('results', [])\n"
+          "deltas = report.get('method_target_memoization_deltas', [])\n"
+          "row_keys = {\n"
+          "  (str(row.get('method_target_memoization')),\n"
+          "   str(row.get('graph_local_auto_key_mode')))\n"
+          "  for row in rows\n"
+          "}\n"
+          "delta_keys = {\n"
+          "  (str(delta.get('graph_local_auto_key_mode')),\n"
+          "   str(delta.get('graph_local_auto_side_channel_mode')),\n"
+          "   str(delta.get('graph_local_auto_dependency_scratch_mode')))\n"
+          "  for delta in deltas\n"
+          "}\n"
+          "ok = len(rows) == 4\n"
+          "ok = ok and row_keys == {\n"
+          "  ('on', 'compact'), ('off', 'compact'),\n"
+          "  ('on', 'legacy-shadow'), ('off', 'legacy-shadow')\n"
+          "}\n"
+          "ok = ok and len(deltas) == 2\n"
+          "ok = ok and delta_keys == {\n"
+          "  ('compact', 'flat', 'pmr'),\n"
+          "  ('legacy-shadow', 'flat', 'pmr')\n"
+          "}\n"
+          "if ok:\n"
+          "  for delta in deltas:\n"
+          "    ok = ok and delta.get('fixture') == 'no_import'\n"
+          "    ok = ok and delta.get('phase') == 'ast-semantic'\n"
+          "    ok = ok and delta.get('semantic_product_force') == 'auto'\n"
+          "    ok = ok and delta.get('no_fact_emission') is False\n"
+          "    ok = ok and delta.get('fact_families') == 'auto'\n"
+          "    ok = ok and isinstance(delta.get('median_peak_rss_bytes_on_minus_off'), int)\n"
+          "    ok = ok and isinstance(delta.get('median_wall_seconds_on_minus_off'), (int, float))\n"
+          "if not ok:\n"
+          "  print(json.dumps(report, indent=2, sort_keys=True))\n"
+          "sys.exit(0 if ok else 1)\n") +
+      " " + quoteShellArg(reportPath) +
+      " > " + quoteShellArg(validateOutPath) + " 2> " + quoteShellArg(validateErrPath);
+  CHECK(runCommand(validateCmd) == 0);
+  CHECK(readFile(validateErrPath).empty());
+}
+
 TEST_CASE("semantic memory benchmark helper toggles fact families independently") {
   if (!hasPython3()) {
     INFO("python3 not available");

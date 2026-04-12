@@ -4,6 +4,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `semantic-memory-memoization-deltas-mode-scoped`: semantic-memory benchmark
+  `method_target_memoization_deltas` rows are now grouped and reported with
+  full attribution dimensions (`semantic_product_force`, `no_fact_emission`,
+  `fact_families`, and graph-local key/side-channel/dependency-scratch modes)
+  so simultaneous mode sweeps (for example memoization `both` + key-mode
+  `both`) emit one delta row per mode combination instead of conflating
+  distinct runs; runtime harness coverage in
+  `test_compile_run_benchmark_harness` locks that two distinct delta rows are
+  emitted for compact vs legacy-shadow key modes.
 - `soa-semantics-validate-to-aos-import-shared-helper-path`: SemanticsValidate
   canonical `to_aos` import visibility now routes through the shared
   `isCanonicalSoaToAosDefinitionPath(...)` helper-family predicate plus

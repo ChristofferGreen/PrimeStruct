@@ -23,6 +23,7 @@ Sizing note: each leaf `○` item should fit in one code-affecting commit plus f
 Order rule: execute leaves top-to-bottom. Each leaf below is scoped to one code-affecting commit.
 
 P0 - Reproducible measurement and attribution
+- P0 refactor micro-slice `[P0-17]` is archived in `docs/todo_finished.md` (April 12, 2026).
 
 P1 - Immediate peak-RSS reductions in existing pipeline
 
