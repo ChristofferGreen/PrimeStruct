@@ -166,7 +166,34 @@ TEST_CASE("semantics validate source delegation stays stable") {
             "semantics::isExperimentalSoaGetLikeHelperPath(receiver.name)") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find(
+            "semantics::isExperimentalSoaFieldViewHelperPath(initPath)") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "semantics::isExperimentalSoaFieldViewHelperPath(callPath)") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "semantics::isExperimentalSoaFieldViewHelperPath(target.name)") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
             "receiver.name.rfind(getPrefix, 0) != 0") ==
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "initName == \"std/collections/experimental_soa_vector/soaVectorFieldView\"") ==
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "initName == \"std/collections/experimental_soa_storage/soaColumnFieldViewUnsafe\"") ==
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "callName == \"std/collections/experimental_soa_vector/soaVectorFieldView\"") ==
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "callName == \"std/collections/experimental_soa_storage/soaColumnFieldViewUnsafe\"") ==
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "target.name.rfind(fieldViewPrefix, 0) == 0") ==
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "target.name.rfind(columnFieldViewPrefix, 0) == 0") ==
         std::string::npos);
   CHECK(semanticsValidateSource.find(
             "def.fullPath == \"/std/collections/soa_vector/to_aos\"") ==

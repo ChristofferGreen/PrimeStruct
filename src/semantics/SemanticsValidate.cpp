@@ -5094,12 +5094,11 @@ void rewriteExperimentalSoaFieldViewCarrierIndexStatements(
       if (stmt.args.size() == 1 && fieldViewBindings.count(stmt.name) == 0) {
         const Expr &initializer = stmt.args.front();
         if (initializer.kind == Expr::Kind::Call && !initializer.isBinding) {
-          std::string initName = initializer.name;
-          if (!initName.empty() && initName.front() == '/') {
-            initName.erase(initName.begin());
+          std::string initPath = initializer.name;
+          if (!initPath.empty() && initPath.front() != '/') {
+            initPath.insert(initPath.begin(), '/');
           }
-          if (initName == "std/collections/experimental_soa_vector/soaVectorFieldView" ||
-              initName == "std/collections/experimental_soa_storage/soaColumnFieldViewUnsafe") {
+          if (semantics::isExperimentalSoaFieldViewHelperPath(initPath)) {
             if (initializer.templateArgs.size() >= 2) {
               fieldViewBindings[stmt.name] =
                   qualifySoaFieldViewTypeText(initializer.templateArgs[1],
@@ -5143,12 +5142,11 @@ void rewriteExperimentalSoaFieldViewCarrierIndexExpr(
       elemType = bindingIt->second;
     }
   } else if (fieldViewExpr.kind == Expr::Kind::Call && !fieldViewExpr.isBinding) {
-    std::string callName = fieldViewExpr.name;
-    if (!callName.empty() && callName.front() == '/') {
-      callName.erase(callName.begin());
+    std::string callPath = fieldViewExpr.name;
+    if (!callPath.empty() && callPath.front() != '/') {
+      callPath.insert(callPath.begin(), '/');
     }
-    if (callName == "std/collections/experimental_soa_vector/soaVectorFieldView" ||
-        callName == "std/collections/experimental_soa_storage/soaColumnFieldViewUnsafe") {
+    if (semantics::isExperimentalSoaFieldViewHelperPath(callPath)) {
       if (fieldViewExpr.templateArgs.size() >= 2) {
         elemType = qualifySoaFieldViewTypeText(fieldViewExpr.templateArgs[1],
                                                definitionNamespace,
@@ -5235,10 +5233,6 @@ void rewriteExperimentalSoaFieldViewAssignTargetsExpr(Expr &expr) {
 
   Expr &target = expr.args.front();
   if (target.kind == Expr::Kind::Call && !target.isBinding) {
-    static constexpr std::string_view fieldViewPrefix =
-        "/std/collections/experimental_soa_vector/soaVectorFieldView";
-    static constexpr std::string_view columnFieldViewPrefix =
-        "/std/collections/experimental_soa_storage/soaColumnFieldViewUnsafe";
     static constexpr std::string_view fieldReadPrefix =
         "/std/collections/experimental_soa_storage/soaFieldViewRead";
     static constexpr std::string_view fieldRefPrefix =
@@ -5265,8 +5259,7 @@ void rewriteExperimentalSoaFieldViewAssignTargetsExpr(Expr &expr) {
       target = std::move(dereferenceCall);
       return;
     }
-    if (target.name.rfind(fieldViewPrefix, 0) == 0 ||
-        target.name.rfind(columnFieldViewPrefix, 0) == 0) {
+    if (semantics::isExperimentalSoaFieldViewHelperPath(target.name)) {
       return;
     }
   }

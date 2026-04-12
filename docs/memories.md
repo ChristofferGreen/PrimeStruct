@@ -237,6 +237,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `soaColumnFieldViewUnsafe`, and source-lock coverage in
   `test_ir_pipeline_validation_15` asserts helper usage while rejecting the
   removed direct field-view prefix checks in expr-mutation-borrows source.
+- `soa-semantics-validate-field-view-experimental-shared-helper-predicate`:
+  semantics-validate now routes experimental field-view helper-family checks
+  through shared `isExperimentalSoaFieldViewHelperPath(...)` across
+  binding-initializer carrier binding, carrier-index call-shape gating, and
+  assign-target rewrite early-return detection (with slash-normalized
+  `initPath`/`callPath` inputs), instead of direct
+  `initName == ...`/`callName == ...` or `target.name.rfind(...)`
+  comparisons for `soaVectorFieldView` and `soaColumnFieldViewUnsafe`; source-
+  lock coverage in `test_ir_pipeline_validation_17` now asserts helper usage
+  while rejecting those direct comparisons.
 - `soa-semantics-validate-to-aos-shared-helper-path`: SemanticsValidate
   canonical `to_aos` definition visibility and skip checks now canonicalize
   helper paths with specialization-suffix stripping and route canonical
