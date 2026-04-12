@@ -319,6 +319,8 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   const bool vectorHelperIsIndexedRemoval = vectorHelperIsRemoveAt || vectorHelperIsRemoveSwap;
   const bool vectorHelperNeedsStandaloneSoaBorrowCheck =
       vectorHelperIsPush || vectorHelperIsReserve || vectorHelperIsIndexedRemoval || vectorHelperIsClear;
+  const bool hasHeapAllocEffect =
+      currentValidationState_.context.activeEffects.count("heap_alloc") != 0;
   const bool hasNamedStatementArgs = hasNamedArguments(stmt.argNames);
   const size_t namedValuesStatementArgIndex = [&]() -> size_t {
     if (!hasNamedStatementArgs) {
@@ -554,7 +556,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
             params, locals, stmt.args.front(), vectorHelper.c_str(), receiverBinding)) {
       return false;
     }
-    if (currentValidationState_.context.activeEffects.count("heap_alloc") == 0) {
+    if (!hasHeapAllocEffect) {
       return failStatementDiagnostic(vectorHelper + " requires heap_alloc effect");
     }
     if (!validateExpr(params, locals, stmt.args[1])) {
@@ -950,7 +952,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     if (failIfStandaloneSoaGrowthBorrowed(binding, stmt.args[receiverIndex])) {
       return false;
     }
-    if (currentValidationState_.context.activeEffects.count("heap_alloc") == 0) {
+    if (!hasHeapAllocEffect) {
       return failStatementDiagnostic("push requires heap_alloc effect");
     }
     if (!validateExpr(params, locals, stmt.args[valueIndex])) {
@@ -983,7 +985,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     if (failIfStandaloneSoaGrowthBorrowed(binding, stmt.args[receiverIndex])) {
       return false;
     }
-    if (currentValidationState_.context.activeEffects.count("heap_alloc") == 0) {
+    if (!hasHeapAllocEffect) {
       return failStatementDiagnostic("reserve requires heap_alloc effect");
     }
     if (!validateExpr(params, locals, stmt.args[capacityIndex])) {

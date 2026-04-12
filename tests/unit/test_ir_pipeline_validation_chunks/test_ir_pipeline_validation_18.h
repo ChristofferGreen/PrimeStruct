@@ -1057,6 +1057,9 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "const bool vectorHelperNeedsStandaloneSoaBorrowCheck =") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
+            "const bool hasHeapAllocEffect =") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
             "const bool helperAllowsSoaVectorTarget = helperName == \"push\" || helperName == \"reserve\";") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
@@ -1123,6 +1126,9 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "const size_t valueIndex = shouldUseCanonicalBuiltinCompatibilityFallback\n"
             "                                  ? findCanonicalBuiltinCompatibilityOperandIndex(\"value\")\n"
             "                                  : 1;") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "if (currentValidationState_.context.activeEffects.count(\"heap_alloc\") == 0) {") ==
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
             "(defMap_.find(vectorHelperResolved) == defMap_.end() || isNamespacedVectorHelperCall) &&") ==

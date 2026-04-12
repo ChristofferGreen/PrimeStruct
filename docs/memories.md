@@ -124,6 +124,14 @@ This file stores durable session-derived facts that are useful in later work. Ke
   branch; source-lock coverage in `test_ir_pipeline_validation_18` now
   asserts the shared prefix bool and rejects the removed repeated inline
   `helperCall.templateArgs.empty()` + `rfind(...)` condition shape.
+- `statement-vector-heap-alloc-effect-cache`:
+  statement vector helper mutator validation now caches
+  `hasHeapAllocEffect` once per statement pass in
+  `SemanticsValidatorStatementVectorHelpers.cpp` and reuses it in the legacy
+  explicit SoA mutator path and builtin `push`/`reserve` branches, replacing
+  repeated inline `activeEffects.count("heap_alloc")` checks; source-lock
+  coverage in `test_ir_pipeline_validation_18` now asserts the shared effect
+  bool and rejects the removed inline count-check condition.
 - `statement-vector-helper-kind-bool-hoist`:
   statement vector helper validation now hoists shared `vectorHelper` kind
   booleans (`vectorHelperIsPush`, `vectorHelperIsReserve`,
