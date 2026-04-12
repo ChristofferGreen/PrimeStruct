@@ -235,7 +235,7 @@ bool SemanticsValidator::extractExperimentalSoaVectorElementTypeFromStructPath(
     const std::string &structPath,
     std::string &elemTypeOut) const {
   elemTypeOut.clear();
-  if (structPath.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) != 0) {
+  if (!isExperimentalSoaVectorSpecializedTypePath(structPath)) {
     return false;
   }
   auto defIt = defMap_.find(structPath);
@@ -375,7 +375,7 @@ bool SemanticsValidator::extractExperimentalSoaVectorElementType(const BindingIn
       if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
         normalizedResolvedPath.erase(normalizedResolvedPath.begin());
       }
-      if (normalizedResolvedPath.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) != 0) {
+      if (!isExperimentalSoaVectorSpecializedTypePath(normalizedResolvedPath)) {
         return false;
       }
       return extractExperimentalSoaVectorElementTypeFromStructPath(resolvedPath, elemTypeOut);

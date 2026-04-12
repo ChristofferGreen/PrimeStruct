@@ -1021,6 +1021,18 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprArgumentValidationCollectionsSource.find(
             "bool SemanticsValidator::resolveDirectSoaVectorOrExperimentalBorrowedReceiver(") !=
         std::string::npos);
+  CHECK(exprArgumentValidationCollectionsSource.find(
+            "isExperimentalSoaVectorSpecializedTypePath(structPath)") !=
+        std::string::npos);
+  CHECK(exprArgumentValidationCollectionsSource.find(
+            "isExperimentalSoaVectorSpecializedTypePath(normalizedResolvedPath)") !=
+        std::string::npos);
+  CHECK(exprArgumentValidationCollectionsSource.find(
+            "structPath.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) != 0") ==
+        std::string::npos);
+  CHECK(exprArgumentValidationCollectionsSource.find(
+            "normalizedResolvedPath.rfind(\"std/collections/experimental_soa_vector/SoaVector__\", 0) != 0") ==
+        std::string::npos);
   CHECK(semanticsHelpersSource.find("std::string soaFieldViewPendingDiagnostic(") ==
         std::string::npos);
   CHECK(semanticsHelpersSource.find("std::string soaBorrowedViewPendingDiagnostic()") ==
