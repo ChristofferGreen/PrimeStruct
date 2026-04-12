@@ -1152,6 +1152,21 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string &path)") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "matchesPath(\"/std/collections/soa_vector/get\")") ==
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "matchesPath(\"/std/collections/soa_vector/get_ref\")") ==
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "const std::string canonicalSoaGetPath = canonicalizeLegacySoaGetHelperPath(path);") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, \"get\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, \"get_ref\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "matchesPath(\"/std/collections/soa_vector/to_aos_ref\")") ==
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(

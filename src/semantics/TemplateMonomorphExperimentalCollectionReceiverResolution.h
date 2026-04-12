@@ -519,6 +519,7 @@ std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string 
   auto matchesPath = [&](std::string_view basePath) {
     return path == basePath || path.rfind(std::string(basePath) + "__", 0) == 0;
   };
+  const std::string canonicalSoaGetPath = canonicalizeLegacySoaGetHelperPath(path);
   if (matchesPath("/std/collections/count") ||
       matchesPath("/std/collections/soa_vector/count")) {
     return "/std/collections/experimental_soa_vector/soaVectorCount";
@@ -527,10 +528,10 @@ std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string 
     return "/std/collections/experimental_soa_vector/soaVectorCountRef";
   }
   if (matchesPath("/std/collections/get") ||
-      matchesPath("/std/collections/soa_vector/get")) {
+      isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get")) {
     return "/std/collections/experimental_soa_vector/soaVectorGet";
   }
-  if (matchesPath("/std/collections/soa_vector/get_ref")) {
+  if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get_ref")) {
     return "/std/collections/experimental_soa_vector/soaVectorGetRef";
   }
   if (matchesPath("/std/collections/ref") ||
