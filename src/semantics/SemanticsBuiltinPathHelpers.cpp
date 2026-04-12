@@ -569,7 +569,8 @@ bool isExperimentalSoaRefLikeHelperPath(std::string_view path) {
     canonicalPath.erase(specializationSuffix);
   }
   return canonicalPath == "/std/collections/experimental_soa_vector/soaVectorRef" ||
-         canonicalPath == "/std/collections/experimental_soa_vector/soaVectorRefRef";
+         canonicalPath == "/std/collections/experimental_soa_vector/soaVectorRefRef" ||
+         canonicalPath == "/std/collections/experimental_soa_storage/soaColumnRef";
 }
 
 bool isExperimentalSoaVectorConversionFamilyPath(std::string_view path) {

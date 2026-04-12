@@ -150,10 +150,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       }
       if (!isSimpleCallName(expr, "ref") &&
           !isSimpleCallName(expr, "ref_ref") &&
-          !resolvedCanonicalRefLike && !resolvedExperimentalRefLike &&
-          resolvedPathNoTemplate.rfind(
-              "/std/collections/experimental_soa_storage/soaColumnRef",
-              0) != 0) {
+          !resolvedCanonicalRefLike && !resolvedExperimentalRefLike) {
         return false;
       }
       receiverOut = &expr.args.front();

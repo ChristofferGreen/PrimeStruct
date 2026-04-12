@@ -177,11 +177,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
   resolved-call-argument SoA standalone `ref`/`ref_ref` detection now routes
   experimental helper-path checks through shared
   `isExperimentalSoaRefLikeHelperPath(...)` instead of direct
-  `resolvedPathCanonical.rfind(...)` prefix checks, while preserving
-  `soaColumnRef` handling, and source-lock coverage in
+  `resolvedPathCanonical.rfind(...)` prefix checks, and source-lock coverage in
   `test_ir_pipeline_validation_15` asserts that shared helper-path wiring
   while rejecting direct experimental helper-path string checks in
   resolved-call-argument source.
+- `soa-experimental-ref-shared-helper-includes-column-ref`:
+  `isExperimentalSoaRefLikeHelperPath(...)` now treats
+  `/std/collections/experimental_soa_storage/soaColumnRef` as part of the
+  shared experimental SoA ref-like helper family (with specialization-suffix
+  stripping), and standalone SoA ref classifiers in statement bindings,
+  statement returns, and resolved-call arguments now rely on that shared
+  helper instead of local `soaColumnRef` prefix checks.
 - `soa-expr-mutation-borrows-experimental-ref-shared-helper-predicate`:
   expr-mutation-borrows SoA experimental `ref`/`ref_ref` helper-path
   detection now routes through shared

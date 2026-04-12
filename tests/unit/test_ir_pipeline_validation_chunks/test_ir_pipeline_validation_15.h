@@ -747,6 +747,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "canonicalPath == \"/std/collections/experimental_soa_vector/soaVectorRef\"") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
+            "canonicalPath == \"/std/collections/experimental_soa_storage/soaColumnRef\"") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
             "helperName == \"push\" || helperName == \"reserve\" ||") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
@@ -1570,6 +1573,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "isExperimentalSoaRefLikeHelperPath(resolvedPathCanonical)") !=
         std::string::npos);
   CHECK(exprResolvedCallArgumentsSource.find(
+            "/std/collections/experimental_soa_storage/soaColumnRef") ==
+        std::string::npos);
+  CHECK(exprResolvedCallArgumentsSource.find(
             "/std/collections/experimental_soa_vector/soaVectorRef\"") ==
         std::string::npos);
   CHECK(exprResolvedCallArgumentsSource.find(
@@ -1671,6 +1677,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "isExperimentalSoaRefLikeHelperPath(resolvedPathCanonical)") !=
         std::string::npos);
   CHECK(statementBindingsSource.find(
+            "/std/collections/experimental_soa_storage/soaColumnRef") ==
+        std::string::npos);
+  CHECK(statementBindingsSource.find(
             "/std/collections/experimental_soa_vector/soaVectorRef\"") ==
         std::string::npos);
   CHECK(statementBindingsSource.find(
@@ -1698,6 +1707,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(statementReturnsSource.find(
             "isExperimentalSoaRefLikeHelperPath(resolvedPathNoTemplate)") !=
+        std::string::npos);
+  CHECK(statementReturnsSource.find(
+            "/std/collections/experimental_soa_storage/soaColumnRef") ==
         std::string::npos);
   CHECK(statementReturnsSource.find(
             "isExperimentalSoaFieldViewHelperPath(resolvedPath)") !=

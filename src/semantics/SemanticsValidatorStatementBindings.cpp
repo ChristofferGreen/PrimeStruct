@@ -911,10 +911,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
                resolvedCanonicalRefLike || resolvedExperimentalRefLike;
       }
       return isSimpleCallName(expr, "ref") ||
-             resolvedCanonicalRefLike || resolvedExperimentalRefLike ||
-             resolvedPathCanonical.rfind(
-                 "/std/collections/experimental_soa_storage/soaColumnRef",
-                 0) == 0;
+             resolvedCanonicalRefLike || resolvedExperimentalRefLike;
     };
     auto hasBorrowConflictForRoot =
         [&](const std::string &borrowRoot, bool requestMutable) -> bool {
@@ -1040,10 +1037,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
             const bool isHelperRefCall =
                 !expr.isMethodCall &&
                 (isSimpleCallName(expr, "ref") ||
-                 resolvedCanonicalRefLike || resolvedExperimentalRefLike ||
-                 resolvedPathCanonical.rfind(
-                     "/std/collections/experimental_soa_storage/soaColumnRef",
-                     0) == 0);
+                 resolvedCanonicalRefLike || resolvedExperimentalRefLike);
             if ((isMethodRefCall || isHelperRefCall) &&
                 resolveReceiverRootExpr(expr.args.front(),
                                        substitutions,
