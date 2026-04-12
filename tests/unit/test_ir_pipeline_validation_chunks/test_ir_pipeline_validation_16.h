@@ -544,6 +544,10 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "        isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaPath, \"ref_ref\");") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "const bool hasAnyNormalizedNameSoaRefMatch =\n"
+            "        normalizedNameMatchesSoaRef || normalizedNameMatchesSoaRefRef;") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, \"ref\")") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
@@ -657,7 +661,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isOldSurfaceBuiltinSoaRefCall =\n"
             "        normalizedNameUsesLegacySoaNamespace &&\n"
-            "        normalizedNameMatchesSoaRef;") !=
+            "        normalizedNameMatchesSoaRef;") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isOldSurfaceBuiltinSoaRefRefCall =\n"
@@ -699,6 +703,15 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isAnyOldSurfaceBuiltinSoaRefCall =") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "const bool isAnyOldSurfaceBuiltinSoaRefCall =\n"
+            "        normalizedNameUsesLegacySoaNamespace &&\n"
+            "        hasAnyNormalizedNameSoaRefMatch;") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "const bool isAnyOldSurfaceBuiltinSoaRefCall =\n"
+            "        isOldSurfaceBuiltinSoaRefCall || isOldSurfaceBuiltinSoaRefRefCall;") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isAnyExplicitSoaRefCall =") !=
