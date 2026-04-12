@@ -1,6 +1,7 @@
 #include "EmitterBuiltinCallPathHelpersInternal.h"
 #include "EmitterBuiltinCollectionInferenceInternal.h"
 #include "EmitterHelpers.h"
+#include "../semantics/SemanticsHelpers.h"
 #include "primec/AstCallPathHelpers.h"
 
 namespace primec::emitter {
@@ -18,9 +19,8 @@ bool isSoaVectorTypeNameLocal(const std::string &typeName) {
   }
   if (normalized.rfind("soa_vector<", 0) == 0 ||
       normalized.rfind("SoaVector<", 0) == 0 ||
-      normalized.rfind("SoaVector__", 0) == 0 ||
       normalized.rfind("std/collections/experimental_soa_vector/SoaVector<", 0) == 0 ||
-      normalized.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0) {
+      semantics::isExperimentalSoaVectorSpecializedTypePath(normalized)) {
     return true;
   }
   std::string base;

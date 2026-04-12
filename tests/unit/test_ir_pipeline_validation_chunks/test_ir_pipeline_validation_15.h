@@ -578,6 +578,13 @@ TEST_CASE("emitter builtin collection inference source stays canonical") {
         std::string::npos);
   CHECK(source.find("std/collections/soa_vector/to_aos") == std::string::npos);
   CHECK(source.find("isSimpleCallName(target, \"to_aos\")") == std::string::npos);
+  CHECK(source.find("semantics::isExperimentalSoaVectorSpecializedTypePath(normalized)") !=
+        std::string::npos);
+  CHECK(source.find("normalized.rfind(\"SoaVector__\", 0) == 0") ==
+        std::string::npos);
+  CHECK(source.find(
+            "normalized.rfind(\"std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") ==
+        std::string::npos);
   CHECK(source.find("std/collections/soa_vector/get") == std::string::npos);
   CHECK(source.find("std/collections/soa_vector/ref") == std::string::npos);
   CHECK(source.find("std/collections/soa_vector/count") == std::string::npos);
