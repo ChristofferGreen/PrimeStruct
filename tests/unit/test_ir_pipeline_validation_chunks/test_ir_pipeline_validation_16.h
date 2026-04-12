@@ -489,6 +489,9 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const std::string normalizedPrefixedSoaPath =") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "const std::string normalizedMethodSoaPath =") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool normalizedPrefixedUsesLegacySoaNamespace =") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
@@ -516,6 +519,14 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "normalizedPrefixedSoaPath, \"ref_ref\")") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(\n"
+            "               normalizedMethodSoaPath, \"ref\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(\n"
+            "               normalizedMethodSoaPath, \"ref_ref\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "normalizedName == \"std/collections/soa_vector/ref\"") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
@@ -529,6 +540,12 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "normalizedPrefix == \"soa_vector\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "candidate.isMethodCall && normalizedName == \"ref\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "candidate.isMethodCall && normalizedName == \"ref_ref\"") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool resolvedMatchesSoaRefHelperPath =") ==
