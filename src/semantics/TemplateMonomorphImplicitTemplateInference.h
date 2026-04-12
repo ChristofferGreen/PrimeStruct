@@ -281,11 +281,9 @@ bool inferImplicitTemplateArgs(const Definition &def,
         isAnyNormalizedMethodNameSoaRefCall ||
         isAnyCanonicalOrOldSurfaceBuiltinSoaRefCall;
     if (isAnyBuiltinSoaRefCall) {
-      const bool hasAnyBuiltinSoaRefRefNameMatch =
+      const bool isAnyBuiltinSoaRefRefCall =
           normalizedMethodNameMatchesSoaRefRef ||
           isAnyCanonicalOrOldSurfaceBuiltinSoaRefRefCall;
-      const bool isAnyBuiltinSoaRefRefCall =
-          hasAnyBuiltinSoaRefRefNameMatch;
       const char *missingSoaRefHelperPath =
           isAnyBuiltinSoaRefRefCall ? "/std/collections/soa_vector/ref_ref"
                                     : "/std/collections/soa_vector/ref";
