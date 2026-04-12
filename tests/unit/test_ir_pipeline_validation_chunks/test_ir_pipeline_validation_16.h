@@ -842,10 +842,10 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool hasAnyUnavailableSoaRefHelperCall =\n"
-            "          hasCanonicalResolvedSoaRefHelper || isAnyExplicitOrBuiltinSoaRefCall;") !=
+            "          hasCanonicalResolvedSoaRefHelper || isAnyExplicitOrBuiltinSoaRefCall;") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "if (hasAnyUnavailableSoaRefHelperCall)") !=
+            "if (hasAnyUnavailableSoaRefHelperCall)") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isMethodCall = candidate.isMethodCall;") !=
@@ -1071,7 +1071,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "if (hasCanonicalResolvedSoaRefHelper ||\n"
-            "          isAnyExplicitOrBuiltinSoaRefCall)") ==
+            "          isAnyExplicitOrBuiltinSoaRefCall)") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isAnyBuiltinSoaRefMethodCall =\n"
