@@ -663,6 +663,8 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   const bool canonicalBuiltinCompatibilityHelper =
       isStdNamespacedCanonicalBuiltinHelperCall &&
       (hasDeclaredDefinitionPath(vectorHelperResolved) || hasImportedDefinitionPath(vectorHelperResolved));
+  const bool canonicalCompatibilityAllowsSoaVectorTarget =
+      vectorHelper == "push" || vectorHelper == "reserve";
   bool shouldUseCanonicalBuiltinCompatibilityFallback = false;
   size_t canonicalBuiltinCompatibilityReceiverIndex = 0;
   if (canonicalBuiltinCompatibilityHelper && !stmt.args.empty()) {
@@ -674,9 +676,8 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       if (!resolveVectorStatementBinding(params, locals, stmt.args[receiverIndex], receiverBinding)) {
         return false;
       }
-      const bool allowSoaVectorTarget = vectorHelper == "push" || vectorHelper == "reserve";
       if (receiverBinding.typeName != "vector" &&
-          !(allowSoaVectorTarget && receiverBinding.typeName == "soa_vector")) {
+          !(canonicalCompatibilityAllowsSoaVectorTarget && receiverBinding.typeName == "soa_vector")) {
         return false;
       }
       shouldUseCanonicalBuiltinCompatibilityFallback = true;

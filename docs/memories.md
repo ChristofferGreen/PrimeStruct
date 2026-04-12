@@ -56,6 +56,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
   of rescanning named-argument presence in each branch; source-lock coverage
   in `test_ir_pipeline_validation_18` now asserts the shared named-argument
   scan cache.
+- `statement-vector-canonical-fallback-soa-target-hoist`:
+  statement vector helper canonical compatibility fallback probing now hoists
+  `canonicalCompatibilityAllowsSoaVectorTarget` into shared statement scope in
+  `SemanticsValidatorStatementVectorHelpers.cpp` so
+  `vectorHelper == "push" || vectorHelper == "reserve"` is computed once per
+  statement pass instead of once per receiver probe attempt; source-lock
+  coverage in `test_ir_pipeline_validation_18` now asserts the hoisted bool.
 - `expr-collection-access-builtin-direct-receiver-probe`:
   the primary expr collection-access builtin dispatch branch now probes
   receiver candidates directly through `tryResolveReceiverIndex(...)` in
