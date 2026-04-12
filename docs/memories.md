@@ -150,6 +150,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
   stripping) instead of direct helper-path comparisons, and source-lock
   coverage in `test_ir_pipeline_validation_18` plus helper-surface coverage in
   `test_ir_pipeline_validation_15` assert that shared helper-path wiring.
+- `soa-expr-map-experimental-borrowed-shared-helper-predicate`: expr-map SoA
+  builtin dispatch now routes experimental borrowed helper paths
+  (`soaVectorGetRef` and `soaVectorRefRef`) through shared
+  `isExperimentalSoaBorrowedHelperPath(...)` instead of direct
+  `resolvedNoTemplate` path comparisons, and source-lock coverage in
+  `test_ir_pipeline_validation_15` asserts that helper call while rejecting
+  the removed direct-path disjunction.
 - `soa-semantics-validate-to-aos-shared-helper-path`: SemanticsValidate
   canonical `to_aos` definition visibility and skip checks now canonicalize
   helper paths with specialization-suffix stripping and route canonical

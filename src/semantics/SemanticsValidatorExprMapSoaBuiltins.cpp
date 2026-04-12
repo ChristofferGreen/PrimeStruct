@@ -420,8 +420,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
        isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "get") ||
        isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "get_ref") ||
        isCanonicalSoaRefLikeHelperPath(resolvedSoaCanonical) ||
-       resolvedNoTemplate == "/std/collections/experimental_soa_vector/soaVectorGetRef" ||
-       resolvedNoTemplate == "/std/collections/experimental_soa_vector/soaVectorRefRef") &&
+       isExperimentalSoaBorrowedHelperPath(resolvedNoTemplate)) &&
       soaAccessHelperName.has_value()) {
     handledOut = true;
     if (hasNamedArguments(expr.argNames) &&
