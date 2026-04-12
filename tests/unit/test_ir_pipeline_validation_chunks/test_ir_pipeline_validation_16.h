@@ -202,6 +202,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       repoRoot / "src" / "semantics" / "TemplateMonomorphImplicitTemplateInference.h";
   const std::filesystem::path templateMonomorphExpressionRewritePath =
       repoRoot / "src" / "semantics" / "TemplateMonomorphExpressionRewrite.h";
+  const std::filesystem::path templateMonomorphCollectionCompatibilityPathsPath =
+      repoRoot / "src" / "semantics" / "TemplateMonomorphCollectionCompatibilityPaths.h";
   REQUIRE(std::filesystem::exists(templateMonomorphPath));
   REQUIRE(std::filesystem::exists(templateMonomorphFallbackPath));
   REQUIRE(std::filesystem::exists(templateMonomorphBindingCallPath));
@@ -225,6 +227,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
   REQUIRE(std::filesystem::exists(templateMonomorphTemplateSpecializationPath));
   REQUIRE(std::filesystem::exists(templateMonomorphImplicitTemplateInferencePath));
   REQUIRE(std::filesystem::exists(templateMonomorphExpressionRewritePath));
+  REQUIRE(std::filesystem::exists(templateMonomorphCollectionCompatibilityPathsPath));
   const std::string templateMonomorphSource = readText(templateMonomorphPath);
   const std::string templateMonomorphFallbackSource = readText(templateMonomorphFallbackPath);
   const std::string templateMonomorphBindingCallSource = readText(templateMonomorphBindingCallPath);
@@ -265,6 +268,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       readText(templateMonomorphImplicitTemplateInferencePath);
   const std::string templateMonomorphExpressionRewriteSource =
       readText(templateMonomorphExpressionRewritePath);
+  const std::string templateMonomorphCollectionCompatibilityPathsSource =
+      readText(templateMonomorphCollectionCompatibilityPathsPath);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphFallbackTypeInference.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphBindingCallInference.h\"") !=
@@ -1264,6 +1269,12 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "resolvedPath.rfind(\"/std/collections/experimental_soa_vector_conversions/\", 0)") ==
+        std::string::npos);
+  CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
+            "isExperimentalSoaVectorSpecializedTypePath(value)") !=
+        std::string::npos);
+  CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
+            "value.rfind(\"std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "methodPath.rfind(\"/std/collections/experimental_soa_vector_conversions/\", 0)") ==

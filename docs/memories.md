@@ -677,6 +677,14 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `normalizedBase.rfind("std/collections/experimental_soa_vector/SoaVector__", 0)`
   checks, and source-lock coverage in `test_ir_pipeline_validation_16` now
   asserts shared helper usage while rejecting that direct check.
+- `soa-monomorph-collection-compat-shared-specialized-type-receiver-check`:
+  template-monomorph collection-compatibility receiver normalization now routes
+  namespaced `SoaVector__*` specialized-type detection through shared
+  `isExperimentalSoaVectorSpecializedTypePath(value)` in
+  `normalizeCollectionReceiverTypeName(...)` instead of direct
+  `value.rfind("std/collections/experimental_soa_vector/SoaVector__", 0)`
+  checks, and source-lock coverage in `test_ir_pipeline_validation_16` now
+  asserts shared helper usage while rejecting that direct check.
 - `soa-monomorph-expression-shared-count-push-reserve-helper-path`:
   template-monomorph expression-rewrite canonical stdlib helper whitelisting
   now routes SoA `count`/`count_ref`/`push`/`reserve` checks through shared

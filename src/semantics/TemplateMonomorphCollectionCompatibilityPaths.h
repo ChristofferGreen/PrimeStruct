@@ -297,7 +297,7 @@ std::string normalizeCollectionReceiverTypeName(std::string value) {
     return "vector";
   }
   if (value == "std/collections/experimental_soa_vector/SoaVector" ||
-      value.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0) {
+      isExperimentalSoaVectorSpecializedTypePath(value)) {
     return "soa_vector";
   }
   if (value == "SoaVector" || value.rfind("SoaVector__", 0) == 0) {
