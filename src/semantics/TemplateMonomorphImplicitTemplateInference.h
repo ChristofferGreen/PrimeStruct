@@ -261,16 +261,13 @@ bool inferImplicitTemplateArgs(const Definition &def,
           (!candidate.isMethodCall &&
            normalizedPrefixedUsesLegacySoaNamespace &&
            isLegacyOrCanonicalSoaHelperPath(normalizedPrefixedSoaPath, "ref")) ||
-          (normalizedNameUsesLegacySoaNamespace &&
-           isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaPath, "ref"));
+          isOldSurfaceBuiltinSoaRefCall;
       const bool isExplicitSoaRefRefCall =
           (!candidate.isMethodCall &&
            normalizedPrefixedUsesLegacySoaNamespace &&
            isLegacyOrCanonicalSoaHelperPath(
                normalizedPrefixedSoaPath, "ref_ref")) ||
-          (normalizedNameUsesLegacySoaNamespace &&
-           isLegacyOrCanonicalSoaHelperPath(
-               normalizedNameSoaPath, "ref_ref"));
+          isOldSurfaceBuiltinSoaRefRefCall;
       const bool isBuiltinSoaRefMethod =
           candidate.isMethodCall &&
           (normalizedMethodNameMatchesSoaRef ||
