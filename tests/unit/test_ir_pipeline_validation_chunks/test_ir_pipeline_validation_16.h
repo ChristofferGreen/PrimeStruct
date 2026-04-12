@@ -1182,6 +1182,15 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string &path)") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "bool isExperimentalSoaVectorPublicHelperPath(const std::string &path)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "path.rfind(\"/std/collections/experimental_soa_vector/\", 0) == 0 ||") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "path.rfind(\"/std/collections/experimental_soa_vector_conversions/\", 0) == 0;") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "matchesPath(\"/std/collections/soa_vector/count\")") ==
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
@@ -1222,6 +1231,18 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "canonicalizeLegacySoaGetHelperPath(path)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "isExperimentalSoaVectorPublicHelperPath(resolvedPath)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "isExperimentalSoaVectorPublicHelperPath(methodPath)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "resolvedPath.rfind(\"/std/collections/experimental_soa_vector_conversions/\", 0)") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "methodPath.rfind(\"/std/collections/experimental_soa_vector_conversions/\", 0)") ==
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "const std::string canonicalSoaRefPath =") !=

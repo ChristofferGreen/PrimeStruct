@@ -755,8 +755,7 @@ bool rewriteExpr(Expr &expr,
       }
     }
     if (expr.templateArgs.empty() &&
-        (resolvedPath.rfind("/std/collections/experimental_soa_vector/", 0) == 0 ||
-         resolvedPath.rfind("/std/collections/experimental_soa_vector_conversions/", 0) == 0) &&
+        isExperimentalSoaVectorPublicHelperPath(resolvedPath) &&
         resolvesExperimentalSoaVectorReceiver(mapHelperReceiverExpr(expr))) {
       std::vector<std::string> receiverTemplateArgs;
       if (resolveExperimentalSoaVectorReceiverTemplateArgs(mapHelperReceiverExpr(expr), receiverTemplateArgs)) {
@@ -771,8 +770,7 @@ bool rewriteExpr(Expr &expr,
         resolvedPath.find("__t") != std::string::npos) {
       expr.templateArgs.clear();
     }
-    if ((resolvedPath.rfind("/std/collections/experimental_soa_vector/", 0) == 0 ||
-         resolvedPath.rfind("/std/collections/experimental_soa_vector_conversions/", 0) == 0) &&
+    if (isExperimentalSoaVectorPublicHelperPath(resolvedPath) &&
         resolvedPath.find("__t") != std::string::npos) {
       expr.templateArgs.clear();
     }
@@ -1024,8 +1022,7 @@ bool rewriteExpr(Expr &expr,
         }
       }
       if (expr.templateArgs.empty() &&
-          (methodPath.rfind("/std/collections/experimental_soa_vector/", 0) == 0 ||
-           methodPath.rfind("/std/collections/experimental_soa_vector_conversions/", 0) == 0) &&
+          isExperimentalSoaVectorPublicHelperPath(methodPath) &&
           resolvesExperimentalSoaVectorReceiver(mapHelperReceiverExpr(expr))) {
         std::vector<std::string> receiverTemplateArgs;
         if (resolveExperimentalSoaVectorReceiverTemplateArgs(mapHelperReceiverExpr(expr), receiverTemplateArgs)) {
@@ -1041,8 +1038,7 @@ bool rewriteExpr(Expr &expr,
           methodPath.find("__t") != std::string::npos) {
         expr.templateArgs.clear();
       }
-      if ((methodPath.rfind("/std/collections/experimental_soa_vector/", 0) == 0 ||
-           methodPath.rfind("/std/collections/experimental_soa_vector_conversions/", 0) == 0) &&
+      if (isExperimentalSoaVectorPublicHelperPath(methodPath) &&
           methodPath.find("__t") != std::string::npos) {
         expr.templateArgs.clear();
       }

@@ -109,6 +109,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
   distinct runs; runtime harness coverage in
   `test_compile_run_benchmark_harness` locks that two distinct delta rows are
   emitted for compact vs legacy-shadow key modes.
+- `soa-monomorph-shared-experimental-soa-helper-path`: template-monomorph
+  expression rewrite now routes experimental SoA helper-family detection
+  through shared
+  `isExperimentalSoaVectorPublicHelperPath(...)` in
+  `TemplateMonomorphExperimentalCollectionReceiverResolution.h` instead of
+  duplicating direct `/experimental_soa_vector/` and
+  `/experimental_soa_vector_conversions/` prefix disjunctions in call and
+  method template-carry/`__t` clearing branches; source-lock coverage in
+  `test_ir_pipeline_validation_16` asserts helper usage and rejects those
+  duplicated direct conversion-prefix checks.
 - `soa-semantics-validate-to-aos-import-shared-helper-path`: SemanticsValidate
   canonical `to_aos` import visibility now routes through the shared
   `isCanonicalSoaToAosDefinitionPath(...)` helper-family predicate plus
