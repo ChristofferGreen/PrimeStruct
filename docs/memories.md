@@ -4,6 +4,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `semantic-memory-null-mode-metadata-canonicalized`: semantic-memory delta
+  grouping now canonicalizes null legacy mode metadata across non-boolean mode
+  fields by treating `None` as defaults (`semantic_product_force=auto`,
+  `method_target_memoization=on`, graph-local key/side/dependency defaults,
+  `fact_families=auto`) and by treating `null`/`none` strings as default-mode
+  aliases where appropriate, so mixed null/default rows still pair into one
+  delta group; runtime benchmark-harness coverage now asserts
+  `compute_graph_local_auto_key_mode_deltas(...)` emits one canonical delta
+  row when null/default and explicit canonical metadata rows are mixed.
 - `semantic-memory-null-no-fact-mode-canonicalized`: semantic-memory delta
   grouping now treats `no_fact_emission=None` as false and also treats
   string `none`/`null` as false in

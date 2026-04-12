@@ -527,15 +527,21 @@ def selected_semantic_product_force_modes(selection: str) -> list[str]:
 
 
 def benchmark_row_semantic_product_force_mode(row: dict) -> str:
-    normalized = str(row.get("semantic_product_force", "auto")).strip().lower()
-    if normalized in ("", "auto"):
+    value = row.get("semantic_product_force", "auto")
+    if value is None:
+        return "auto"
+    normalized = str(value).strip().lower()
+    if normalized in ("", "auto", "null", "none"):
         return "auto"
     return normalized
 
 
 def benchmark_row_fact_families_mode(row: dict) -> str:
-    normalized = str(row.get("fact_families", "auto")).strip().lower()
-    if normalized in ("", "all", "auto"):
+    value = row.get("fact_families", "auto")
+    if value is None:
+        return "auto"
+    normalized = str(value).strip().lower()
+    if normalized in ("", "all", "auto", "null"):
         return "auto"
     if normalized == "none":
         return "none"
@@ -552,32 +558,44 @@ def benchmark_row_fact_families_mode(row: dict) -> str:
 
 
 def benchmark_row_method_target_memoization_mode(row: dict) -> str:
-    normalized = str(row.get("method_target_memoization", "on")).strip().lower()
-    if normalized in ("", "on"):
+    value = row.get("method_target_memoization", "on")
+    if value is None:
+        return "on"
+    normalized = str(value).strip().lower()
+    if normalized in ("", "on", "null", "none"):
         return "on"
     return normalized
 
 
 def benchmark_row_graph_local_auto_key_mode(row: dict) -> str:
-    normalized = str(row.get("graph_local_auto_key_mode", "compact")).strip().lower()
+    value = row.get("graph_local_auto_key_mode", "compact")
+    if value is None:
+        return "compact"
+    normalized = str(value).strip().lower()
     normalized = normalized.replace("_", "-")
-    if normalized in ("", "compact"):
+    if normalized in ("", "compact", "null", "none"):
         return "compact"
     return normalized
 
 
 def benchmark_row_graph_local_auto_side_channel_mode(row: dict) -> str:
-    normalized = str(row.get("graph_local_auto_side_channel_mode", "flat")).strip().lower()
+    value = row.get("graph_local_auto_side_channel_mode", "flat")
+    if value is None:
+        return "flat"
+    normalized = str(value).strip().lower()
     normalized = normalized.replace("_", "-")
-    if normalized in ("", "flat"):
+    if normalized in ("", "flat", "null", "none"):
         return "flat"
     return normalized
 
 
 def benchmark_row_graph_local_auto_dependency_scratch_mode(row: dict) -> str:
-    normalized = str(row.get("graph_local_auto_dependency_scratch_mode", "pmr")).strip().lower()
+    value = row.get("graph_local_auto_dependency_scratch_mode", "pmr")
+    if value is None:
+        return "pmr"
+    normalized = str(value).strip().lower()
     normalized = normalized.replace("_", "-")
-    if normalized in ("", "pmr"):
+    if normalized in ("", "pmr", "null", "none"):
         return "pmr"
     return normalized
 
