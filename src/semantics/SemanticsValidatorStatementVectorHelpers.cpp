@@ -665,9 +665,12 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       }
     }
   }
+  const bool hasDeclaredResolvedVectorHelper = hasDeclaredDefinitionPath(vectorHelperResolved);
+  const bool hasImportedResolvedVectorHelper = hasImportedDefinitionPath(vectorHelperResolved);
+  const bool hasVisibleResolvedVectorHelper =
+      hasDeclaredResolvedVectorHelper || hasImportedResolvedVectorHelper;
   const bool canonicalBuiltinCompatibilityHelper =
-      isStdNamespacedCanonicalBuiltinHelperCall &&
-      (hasDeclaredDefinitionPath(vectorHelperResolved) || hasImportedDefinitionPath(vectorHelperResolved));
+      isStdNamespacedCanonicalBuiltinHelperCall && hasVisibleResolvedVectorHelper;
   const bool canonicalCompatibilityAllowsSoaVectorTarget =
       vectorHelperIsPush || vectorHelperIsReserve;
   bool shouldUseCanonicalBuiltinCompatibilityFallback = false;
@@ -770,13 +773,13 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       vectorHelperIsIndexedRemoval &&
       vectorHelperResolved.rfind("/std/collections/experimental_vector/", 0) == 0;
   if (isCanonicalStdVectorMutatorMethodCall &&
-      !hasDeclaredDefinitionPath(vectorHelperResolved) &&
-      !hasImportedDefinitionPath(vectorHelperResolved)) {
+      !hasDeclaredResolvedVectorHelper &&
+      !hasImportedResolvedVectorHelper) {
     return failStatementDiagnostic("unknown method: " + vectorHelperResolved);
   }
   if (!isBareCanonicalIndexedRemovalExperimentalVectorBridgeCall &&
       !shouldUseCanonicalBuiltinCompatibilityFallback &&
-      (hasDeclaredDefinitionPath(vectorHelperResolved) || hasImportedDefinitionPath(vectorHelperResolved))) {
+      hasVisibleResolvedVectorHelper) {
     const size_t receiverIndex = hasResolvedReceiverIndex ? resolvedReceiverIndex : 0;
     if (receiverIndex < stmt.args.size() && vectorHelperNeedsStandaloneSoaBorrowCheck) {
       std::string borrowRoot;

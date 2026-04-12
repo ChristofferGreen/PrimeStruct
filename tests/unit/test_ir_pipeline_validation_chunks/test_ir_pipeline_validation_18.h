@@ -1072,6 +1072,9 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "const bool canonicalCompatibilityAllowsSoaVectorTarget =") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
+            "const bool hasVisibleResolvedVectorHelper =") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
             "    };\n"
             "    std::vector<size_t> receiverIndices;\n"
             "    auto appendReceiverIndex = [&](size_t index) {") ==

@@ -93,6 +93,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `SemanticsValidatorStatementVectorHelpers.cpp`; source-lock coverage in
   `test_ir_pipeline_validation_18` now rejects the removed
   `const bool hasNamedArgs = hasNamedArguments(stmt.argNames);` declaration.
+- `statement-vector-resolved-helper-visibility-cache`:
+  statement vector helper validation now caches resolved helper visibility as
+  `hasDeclaredResolvedVectorHelper`, `hasImportedResolvedVectorHelper`, and
+  `hasVisibleResolvedVectorHelper` immediately after receiver probing in
+  `SemanticsValidatorStatementVectorHelpers.cpp` and reuses those booleans for
+  canonical compatibility fallback gating, canonical stdlib unknown-method
+  diagnostics, and builtin helper fallback visibility checks instead of
+  repeating `hasDeclaredDefinitionPath(vectorHelperResolved)` and
+  `hasImportedDefinitionPath(vectorHelperResolved)` call pairs in each branch;
+  source-lock coverage in `test_ir_pipeline_validation_18` now asserts the
+  shared resolved-helper visibility bool.
 - `expr-collection-access-builtin-direct-receiver-probe`:
   the primary expr collection-access builtin dispatch branch now probes
   receiver candidates directly through `tryResolveReceiverIndex(...)` in
