@@ -364,12 +364,6 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
   };
   auto resolveExperimentalSoaRefReceiverTarget =
       [&](const Expr &refExpr, const Expr *&receiverTargetOut) -> bool {
-    auto hasRefLikeSuffix = [](const std::string &resolvedPath) {
-      return (resolvedPath.size() >= 4 &&
-              resolvedPath.compare(resolvedPath.size() - 4, 4, "/ref") == 0) ||
-             (resolvedPath.size() >= 8 &&
-              resolvedPath.compare(resolvedPath.size() - 8, 8, "/ref_ref") == 0);
-    };
     auto isBuiltinSoaRefPath = [&](std::string_view resolvedPath,
                                    bool methodForm) -> bool {
       if (resolvedPath.empty()) {
@@ -381,9 +375,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
         return true;
       }
       if (methodForm) {
-        return canonicalResolvedPath.rfind(
-                   "/std/collections/experimental_soa_vector/", 0) == 0 &&
-               hasRefLikeSuffix(canonicalResolvedPath);
+        return isExperimentalSoaMethodRefLikeHelperPath(canonicalResolvedPath);
       }
       return isCanonicalSoaRefLikeHelperPath(canonicalResolvedPath);
     };

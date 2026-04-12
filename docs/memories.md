@@ -207,6 +207,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
   stripping), and standalone SoA ref classifiers in statement bindings,
   statement returns, and resolved-call arguments now rely on that shared
   helper instead of local `soaColumnRef` prefix checks.
+- `soa-expr-mutation-borrows-experimental-method-ref-shared-helper-predicate`:
+  expr-mutation-borrows method-form experimental SoA `ref/ref_ref`
+  helper-path detection now routes through shared
+  `isExperimentalSoaMethodRefLikeHelperPath(...)` (with
+  specialization-suffix stripping) instead of direct
+  `canonicalResolvedPath.rfind("/std/collections/experimental_soa_vector/", 0)`
+  prefix + suffix matching, and source-lock coverage in
+  `test_ir_pipeline_validation_15` asserts shared helper usage while
+  rejecting the removed inline prefix check and dead suffix lambda.
 - `soa-expr-mutation-borrows-experimental-ref-shared-helper-predicate`:
   expr-mutation-borrows SoA experimental `ref`/`ref_ref` helper-path
   detection now routes through shared

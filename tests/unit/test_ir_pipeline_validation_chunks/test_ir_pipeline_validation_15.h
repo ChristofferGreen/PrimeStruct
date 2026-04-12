@@ -744,6 +744,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "bool isExperimentalSoaColumnFieldSchemaHelperPath(std::string_view path)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
+            "bool isExperimentalSoaMethodRefLikeHelperPath(std::string_view path)") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
             "bool isExperimentalSoaRefLikeHelperPath(std::string_view path)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
@@ -836,6 +839,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
             "bool isExperimentalSoaColumnFieldSchemaHelperPath(std::string_view path);") !=
+        std::string::npos);
+  CHECK(semanticsHelpersSource.find(
+            "bool isExperimentalSoaMethodRefLikeHelperPath(std::string_view path);") !=
         std::string::npos);
   CHECK(semanticsHelpersSource.find(
             "bool isExperimentalSoaRefLikeHelperPath(std::string_view path);") !=
@@ -1640,6 +1646,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "isExperimentalSoaRefLikeHelperPath(canonicalResolvedPath)") !=
         std::string::npos);
   CHECK(exprMutationBorrowsSource.find(
+            "isExperimentalSoaMethodRefLikeHelperPath(canonicalResolvedPath)") !=
+        std::string::npos);
+  CHECK(exprMutationBorrowsSource.find(
             "isExperimentalSoaRefLikeHelperPath(refExpr.name)") !=
         std::string::npos);
   CHECK(exprMutationBorrowsSource.find(
@@ -1650,6 +1659,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(exprMutationBorrowsSource.find(
             "isExperimentalSoaFieldViewHelperPath(resolvedPath)") !=
+        std::string::npos);
+  CHECK(exprMutationBorrowsSource.find("auto hasRefLikeSuffix =") ==
         std::string::npos);
   CHECK(exprMutationBorrowsSource.find(
             "resolvedPath.rfind(\"/soa_vector/ref\", 0) == 0") ==
@@ -1668,6 +1679,10 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprMutationBorrowsSource.find(
             "resolvedPath.rfind(\n"
             "                  \"/std/collections/experimental_soa_storage/soaColumnFieldViewUnsafe\",") ==
+        std::string::npos);
+  CHECK(exprMutationBorrowsSource.find(
+            "canonicalResolvedPath.rfind(\n"
+            "                   \"/std/collections/experimental_soa_vector/\", 0) == 0 &&") ==
         std::string::npos);
   CHECK(exprMutationBorrowsSource.find(
             "\"/std/collections/experimental_soa_storage/soaFieldViewRef\"") ==

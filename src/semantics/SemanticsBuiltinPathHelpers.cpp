@@ -604,6 +604,21 @@ bool isExperimentalSoaColumnFieldSchemaHelperPath(std::string_view path) {
              0) == 0;
 }
 
+bool isExperimentalSoaMethodRefLikeHelperPath(std::string_view path) {
+  constexpr std::string_view kExperimentalSoaVectorPrefix =
+      "/std/collections/experimental_soa_vector/";
+  std::string canonicalPath(path);
+  const size_t specializationSuffix = canonicalPath.find("__");
+  if (specializationSuffix != std::string::npos) {
+    canonicalPath.erase(specializationSuffix);
+  }
+  if (canonicalPath.rfind(kExperimentalSoaVectorPrefix, 0) != 0) {
+    return false;
+  }
+  return std::string_view(canonicalPath).ends_with("/ref") ||
+         std::string_view(canonicalPath).ends_with("/ref_ref");
+}
+
 bool isExperimentalSoaRefLikeHelperPath(std::string_view path) {
   std::string canonicalPath(path);
   const size_t specializationSuffix = canonicalPath.find("__");

@@ -147,6 +147,7 @@ bool isExperimentalSoaFieldViewReadHelperPath(std::string_view path);
 bool isExperimentalSoaFieldViewRefHelperPath(std::string_view path);
 bool isExperimentalSoaColumnSlotHelperPath(std::string_view path);
 bool isExperimentalSoaColumnFieldSchemaHelperPath(std::string_view path);
+bool isExperimentalSoaMethodRefLikeHelperPath(std::string_view path);
 bool isExperimentalSoaRefLikeHelperPath(std::string_view path);
 bool isExperimentalSoaVectorConversionFamilyPath(std::string_view path);
 std::string soaUnavailableMethodDiagnostic(std::string_view resolvedPath);
