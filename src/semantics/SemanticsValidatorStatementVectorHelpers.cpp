@@ -666,58 +666,45 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   bool shouldUseCanonicalBuiltinCompatibilityFallback = false;
   size_t canonicalBuiltinCompatibilityReceiverIndex = 0;
   if (canonicalBuiltinCompatibilityHelper && !stmt.args.empty()) {
-    std::vector<size_t> receiverIndices;
-    auto appendReceiverIndex = [&](size_t index) {
-      if (index >= stmt.args.size()) {
-        return;
+    auto tryResolveCanonicalBuiltinCompatibilityReceiverIndex = [&](size_t receiverIndex) -> bool {
+      if (receiverIndex >= stmt.args.size()) {
+        return false;
       }
-      for (size_t existing : receiverIndices) {
-        if (existing == index) {
-          return;
-        }
+      BindingInfo receiverBinding;
+      if (!resolveVectorStatementBinding(params, locals, stmt.args[receiverIndex], receiverBinding)) {
+        return false;
       }
-      receiverIndices.push_back(index);
+      const bool allowSoaVectorTarget = vectorHelper == "push" || vectorHelper == "reserve";
+      if (receiverBinding.typeName != "vector" &&
+          !(allowSoaVectorTarget && receiverBinding.typeName == "soa_vector")) {
+        return false;
+      }
+      shouldUseCanonicalBuiltinCompatibilityFallback = true;
+      canonicalBuiltinCompatibilityReceiverIndex = receiverIndex;
+      return true;
     };
     if (hasNamedArguments(stmt.argNames)) {
       bool hasValuesNamedReceiver = false;
       for (size_t i = 0; i < stmt.args.size(); ++i) {
         if (i < stmt.argNames.size() && stmt.argNames[i].has_value() && *stmt.argNames[i] == "values") {
-          appendReceiverIndex(i);
           hasValuesNamedReceiver = true;
+          if (tryResolveCanonicalBuiltinCompatibilityReceiverIndex(i)) {
+            break;
+          }
         }
       }
-      if (!hasValuesNamedReceiver) {
-        appendReceiverIndex(0);
-        for (size_t i = 1; i < stmt.args.size(); ++i) {
-          appendReceiverIndex(i);
+      if (!shouldUseCanonicalBuiltinCompatibilityFallback && !hasValuesNamedReceiver) {
+        if (tryResolveCanonicalBuiltinCompatibilityReceiverIndex(0)) {
+          // Keep probing order equivalent to the prior staged index list.
+        }
+        for (size_t i = 1; !shouldUseCanonicalBuiltinCompatibilityFallback && i < stmt.args.size(); ++i) {
+          if (tryResolveCanonicalBuiltinCompatibilityReceiverIndex(i)) {
+            break;
+          }
         }
       }
     } else {
-      appendReceiverIndex(0);
-      const bool probePositionalReorderedReceiver =
-          !isStdNamespacedCanonicalBuiltinHelperCall &&
-          stmt.args.size() > 1 &&
-          (stmt.args.front().kind == Expr::Kind::Literal || stmt.args.front().kind == Expr::Kind::BoolLiteral ||
-           stmt.args.front().kind == Expr::Kind::FloatLiteral ||
-           stmt.args.front().kind == Expr::Kind::StringLiteral);
-      if (probePositionalReorderedReceiver) {
-        for (size_t i = 1; i < stmt.args.size(); ++i) {
-          appendReceiverIndex(i);
-        }
-      }
-    }
-    for (size_t receiverIndex : receiverIndices) {
-      BindingInfo receiverBinding;
-      if (!resolveVectorStatementBinding(params, locals, stmt.args[receiverIndex], receiverBinding)) {
-        continue;
-      }
-      const bool allowSoaVectorTarget = vectorHelper == "push" || vectorHelper == "reserve";
-      if (receiverBinding.typeName == "vector" ||
-          (allowSoaVectorTarget && receiverBinding.typeName == "soa_vector")) {
-        shouldUseCanonicalBuiltinCompatibilityFallback = true;
-        canonicalBuiltinCompatibilityReceiverIndex = receiverIndex;
-        break;
-      }
+      (void)tryResolveCanonicalBuiltinCompatibilityReceiverIndex(0);
     }
   }
   if (!shouldUseCanonicalBuiltinCompatibilityFallback &&

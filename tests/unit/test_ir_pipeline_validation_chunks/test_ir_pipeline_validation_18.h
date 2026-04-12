@@ -1054,7 +1054,15 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "if (!tryResolveVectorHelperReceiverIndex(0) && probePositionalReorderedReceiver) {") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
+            "auto tryResolveCanonicalBuiltinCompatibilityReceiverIndex = [&](size_t receiverIndex) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
             "    };\n"
+            "    std::vector<size_t> receiverIndices;\n"
+            "    auto appendReceiverIndex = [&](size_t index) {") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "if (canonicalBuiltinCompatibilityHelper && !stmt.args.empty()) {\n"
             "    std::vector<size_t> receiverIndices;\n"
             "    auto appendReceiverIndex = [&](size_t index) {") ==
         std::string::npos);

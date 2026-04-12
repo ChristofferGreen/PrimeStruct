@@ -4,6 +4,18 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `statement-vector-canonical-compat-direct-receiver-probe`:
+  statement vector canonical-compatibility fallback probing in
+  `SemanticsValidatorStatementVectorHelpers.cpp` now resolves candidates
+  directly through
+  `tryResolveCanonicalBuiltinCompatibilityReceiverIndex(...)` in stable
+  order (named `values` receiver-first, named fallback to `0` then remaining
+  args only when no `values` label exists, positional receiver index `0`)
+  instead of staging indices in `receiverIndices` via
+  `appendReceiverIndex(...)`; source-lock coverage in
+  `test_ir_pipeline_validation_18` now asserts this direct-probe helper and
+  rejects the removed staged-vector shape in the
+  `canonicalBuiltinCompatibilityHelper` block.
 - `statement-vector-helper-direct-receiver-probe`:
   statement vector-helper receiver probing in
   `SemanticsValidatorStatementVectorHelpers.cpp` now resolves candidates
