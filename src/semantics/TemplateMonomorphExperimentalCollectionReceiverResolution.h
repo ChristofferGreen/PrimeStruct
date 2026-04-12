@@ -553,11 +553,11 @@ std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string 
     return "/std/collections/experimental_soa_vector/soaVectorRefRef";
   }
   if (matchesPath("/std/collections/reserve") ||
-      matchesPath("/std/collections/soa_vector/reserve")) {
+      isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, "reserve")) {
     return "/std/collections/experimental_soa_vector/soaVectorReserve";
   }
   if (matchesPath("/std/collections/push") ||
-      matchesPath("/std/collections/soa_vector/push")) {
+      isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, "push")) {
     return "/std/collections/experimental_soa_vector/soaVectorPush";
   }
   return {};
