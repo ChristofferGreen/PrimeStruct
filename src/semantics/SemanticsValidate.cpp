@@ -1137,7 +1137,7 @@ bool isBuiltinSoaVectorTypeText(const std::string &typeText) {
       rawType.rfind("SoaVector__", 0) == 0 ||
       rawType == "std/collections/experimental_soa_vector/SoaVector" ||
       rawType.rfind("std/collections/experimental_soa_vector/SoaVector<", 0) == 0 ||
-      rawType.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0) {
+      semantics::isExperimentalSoaVectorSpecializedTypePath(rawType)) {
     return false;
   }
   const std::string normalizedType = semantics::normalizeBindingTypeName(typeText);
@@ -1151,7 +1151,7 @@ bool isExperimentalSoaVectorBaseName(const std::string &typeName) {
   }
   return normalizedType == "SoaVector" || normalizedType.rfind("SoaVector__", 0) == 0 ||
          normalizedType == "std/collections/experimental_soa_vector/SoaVector" ||
-         normalizedType.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+         semantics::isExperimentalSoaVectorSpecializedTypePath(normalizedType);
 }
 
 bool isExperimentalSoaVectorBinding(const semantics::BindingInfo &binding) {
