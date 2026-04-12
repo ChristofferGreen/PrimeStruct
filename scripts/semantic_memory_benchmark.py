@@ -526,6 +526,10 @@ def selected_semantic_product_force_modes(selection: str) -> list[str]:
     return [selection]
 
 
+def benchmark_row_fact_families_mode(row: dict) -> str:
+    return str(row.get("fact_families", "auto"))
+
+
 def compute_semantic_validation_without_fact_emission_deltas(results: list[dict]) -> list[dict]:
     grouped: dict[tuple[str, str, str, str, str, str, str, str], dict[bool, dict]] = {}
     for row in results:
@@ -534,7 +538,7 @@ def compute_semantic_validation_without_fact_emission_deltas(results: list[dict]
             row["fixture"],
             row["phase"],
             str(row.get("semantic_product_force", "auto")),
-            str(row.get("fact_families", "auto")),
+            benchmark_row_fact_families_mode(row),
             str(row.get("method_target_memoization", "on")),
             str(row.get("graph_local_auto_key_mode", "compact")),
             str(row.get("graph_local_auto_side_channel_mode", "flat")),
@@ -601,7 +605,7 @@ def compute_semantic_product_force_deltas(results: list[dict]) -> list[dict]:
             row["fixture"],
             row["phase"],
             bool(row.get("no_fact_emission", False)),
-            str(row.get("fact_families", "auto")),
+            benchmark_row_fact_families_mode(row),
             str(row.get("method_target_memoization", "on")),
             str(row.get("graph_local_auto_key_mode", "compact")),
             str(row.get("graph_local_auto_side_channel_mode", "flat")),
@@ -671,7 +675,7 @@ def compute_method_target_memoization_deltas(results: list[dict]) -> list[dict]:
                 row["phase"],
                 str(row.get("semantic_product_force", "auto")),
                 bool(row.get("no_fact_emission", False)),
-                str(row.get("fact_families", "all")),
+                benchmark_row_fact_families_mode(row),
                 str(row.get("graph_local_auto_key_mode", "compact")),
                 str(row.get("graph_local_auto_side_channel_mode", "flat")),
                 str(row.get("graph_local_auto_dependency_scratch_mode", "pmr")),
@@ -744,7 +748,7 @@ def compute_graph_local_auto_key_mode_deltas(results: list[dict]) -> list[dict]:
                 method_mode,
                 str(row.get("semantic_product_force", "auto")),
                 bool(row.get("no_fact_emission", False)),
-                str(row.get("fact_families", "all")),
+                benchmark_row_fact_families_mode(row),
                 str(row.get("graph_local_auto_side_channel_mode", "flat")),
                 str(row.get("graph_local_auto_dependency_scratch_mode", "pmr")),
             ),
@@ -817,7 +821,7 @@ def compute_graph_local_auto_side_channel_mode_deltas(results: list[dict]) -> li
                 key_mode,
                 str(row.get("semantic_product_force", "auto")),
                 bool(row.get("no_fact_emission", False)),
-                str(row.get("fact_families", "all")),
+                benchmark_row_fact_families_mode(row),
                 str(row.get("graph_local_auto_dependency_scratch_mode", "pmr")),
             ),
             {},
@@ -891,7 +895,7 @@ def compute_graph_local_auto_dependency_scratch_mode_deltas(results: list[dict])
                 side_channel_mode,
                 str(row.get("semantic_product_force", "auto")),
                 bool(row.get("no_fact_emission", False)),
-                str(row.get("fact_families", "all")),
+                benchmark_row_fact_families_mode(row),
             ),
             {},
         )[mode] = row

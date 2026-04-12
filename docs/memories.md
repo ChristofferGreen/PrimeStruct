@@ -4,6 +4,14 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `semantic-memory-fact-family-fallback-canonicalized`: semantic-memory
+  benchmark delta grouping now uses shared helper
+  `benchmark_row_fact_families_mode(...)` with a canonical
+  `fact_families="auto"` fallback across semantic-validation,
+  semantic-product-force, method-target memoization, and graph-local
+  key/side-channel/dependency-scratch delta reports; source-lock coverage in
+  `test_compile_run_benchmark_harness` asserts the shared helper exists and
+  rejects the old `"fact_families", "all"` fallback string.
 - `semantic-memory-dependency-deltas-force-scoped`: semantic-memory benchmark
   `graph_local_auto_dependency_scratch_mode_deltas` rows are now grouped and
   reported with full attribution dimensions (`semantic_product_force`,

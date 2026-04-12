@@ -1410,6 +1410,9 @@ TEST_CASE("semantic memory benchmark helper defines method-target memoization de
   const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";
   const std::string script = readFile(scriptPath.string());
   REQUIRE_FALSE(script.empty());
+  CHECK(script.find("def benchmark_row_fact_families_mode(row: dict) -> str:") != std::string::npos);
+  CHECK(script.find("return str(row.get(\"fact_families\", \"auto\"))") != std::string::npos);
+  CHECK(script.find("fact_families\", \"all\"") == std::string::npos);
   CHECK(script.find("--semantic-product-force") != std::string::npos);
   CHECK(script.find("--semantic-validation-without-fact-emission") != std::string::npos);
   CHECK(script.find("--method-target-memoization") != std::string::npos);
