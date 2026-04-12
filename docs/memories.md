@@ -132,6 +132,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
   repeated inline `activeEffects.count("heap_alloc")` checks; source-lock
   coverage in `test_ir_pipeline_validation_18` now asserts the shared effect
   bool and rejects the removed inline count-check condition.
+- `statement-vector-helper-spelling-normalization-cache`:
+  statement vector helper compatibility probing now caches
+  `normalizedStatementNamespacePrefix` and `normalizedStatementName` once per
+  statement pass in `SemanticsValidatorStatementVectorHelpers.cpp` and reuses
+  them across canonical/alias mutator call+method path detection plus bare
+  builtin mutator fallback detection, replacing repeated inline
+  `trimLeadingSlash(stmt.namespacePrefix/name)` normalization declarations in
+  each helper lambda; source-lock coverage in
+  `test_ir_pipeline_validation_18` now asserts the shared normalization cache
+  and rejects the removed repeated inline normalization declarations.
 - `statement-vector-helper-kind-bool-hoist`:
   statement vector helper validation now hoists shared `vectorHelper` kind
   booleans (`vectorHelperIsPush`, `vectorHelperIsReserve`,

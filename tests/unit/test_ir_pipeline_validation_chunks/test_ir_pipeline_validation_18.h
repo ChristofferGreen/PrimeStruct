@@ -1048,6 +1048,12 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "const bool hasNamedValuesStatementArg = namedValuesStatementArgIndex < stmt.args.size();") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
+            "const std::string normalizedStatementNamespacePrefix =") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "const std::string normalizedStatementName =") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
             "const bool hasNamedArgs = hasNamedArguments(stmt.argNames);") ==
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
@@ -1058,6 +1064,12 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
             "const bool hasHeapAllocEffect =") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "const std::string normalizedPrefix = std::string(trimLeadingSlash(stmt.namespacePrefix));") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "const std::string normalizedName = std::string(trimLeadingSlash(stmt.name));") ==
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
             "const bool helperAllowsSoaVectorTarget = helperName == \"push\" || helperName == \"reserve\";") !=
