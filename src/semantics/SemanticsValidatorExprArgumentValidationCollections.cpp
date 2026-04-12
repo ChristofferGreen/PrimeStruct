@@ -355,9 +355,7 @@ bool SemanticsValidator::extractExperimentalSoaVectorElementType(const BindingIn
         if (!normalizedBase.empty() && normalizedBase.front() == '/') {
           normalizedBase.erase(normalizedBase.begin());
         }
-        if ((normalizedBase == "SoaVector" ||
-             normalizedBase == "std/collections/experimental_soa_vector/SoaVector") &&
-            !argText.empty()) {
+        if (isExperimentalSoaVectorTypePath(normalizedBase) && !argText.empty()) {
           std::vector<std::string> args;
           if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
             return false;

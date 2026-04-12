@@ -1052,6 +1052,15 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "isExperimentalSoaVectorSpecializedTypePath(structPath)") !=
         std::string::npos);
   CHECK(exprArgumentValidationCollectionsSource.find(
+            "isExperimentalSoaVectorTypePath(normalizedBase) && !argText.empty()") !=
+        std::string::npos);
+  CHECK(exprArgumentValidationCollectionsSource.find(
+            "normalizedBase == \"SoaVector\" ||") ==
+        std::string::npos);
+  CHECK(exprArgumentValidationCollectionsSource.find(
+            "normalizedBase == \"std/collections/experimental_soa_vector/SoaVector\"") ==
+        std::string::npos);
+  CHECK(exprArgumentValidationCollectionsSource.find(
             "isExperimentalSoaVectorSpecializedTypePath(normalizedResolvedPath)") !=
         std::string::npos);
   CHECK(exprArgumentValidationCollectionsSource.find(

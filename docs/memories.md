@@ -4,6 +4,14 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `soa-semantics-expr-argument-base-type-shared-helper`:
+  semantics expr-argument experimental SoA vector element-type extraction now
+  routes base-type matching through
+  `isExperimentalSoaVectorTypePath(normalizedBase)` in
+  `extractExperimentalSoaVectorElementType(...)` instead of duplicated direct
+  `SoaVector`/`std/collections/experimental_soa_vector/SoaVector` equality
+  checks; source-lock coverage in `test_ir_pipeline_validation_15` now asserts
+  shared helper usage while rejecting those removed direct comparisons.
 - `soa-template-monomorph-collection-compat-shared-type-path-helper`:
   template-monomorph collection receiver normalization now routes experimental
   SoA vector type matching through shared
