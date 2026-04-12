@@ -527,7 +527,10 @@ def selected_semantic_product_force_modes(selection: str) -> list[str]:
 
 
 def benchmark_row_fact_families_mode(row: dict) -> str:
-    return str(row.get("fact_families", "auto"))
+    normalized = str(row.get("fact_families", "auto")).strip()
+    if normalized in ("", "all", "auto"):
+        return "auto"
+    return normalized
 
 
 def compute_semantic_validation_without_fact_emission_deltas(results: list[dict]) -> list[dict]:

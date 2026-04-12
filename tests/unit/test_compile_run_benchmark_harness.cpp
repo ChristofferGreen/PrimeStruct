@@ -851,6 +851,73 @@ TEST_CASE("semantic memory benchmark helper toggles fact families independently"
   CHECK(readFile(validateErrPath).empty());
 }
 
+TEST_CASE("semantic memory benchmark helper canonicalizes legacy all fact-family rows") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";
+  const std::string validateOutPath = writeTemp("semantic_memory_legacy_fact_family_validate.out", "");
+  const std::string validateErrPath = writeTemp("semantic_memory_legacy_fact_family_validate.err", "");
+  const std::string validateCmd =
+      "python3 -c " +
+      quoteShellArg(
+          "import importlib.util, json, sys\n"
+          "spec = importlib.util.spec_from_file_location('semantic_memory_benchmark', sys.argv[1])\n"
+          "mod = importlib.util.module_from_spec(spec)\n"
+          "sys.modules[spec.name] = mod\n"
+          "spec.loader.exec_module(mod)\n"
+          "rows = [\n"
+          "  {\n"
+          "    'fixture': 'no_import',\n"
+          "    'phase': 'ast-semantic',\n"
+          "    'semantic_product_force': 'on',\n"
+          "    'no_fact_emission': False,\n"
+          "    'fact_families': 'all',\n"
+          "    'method_target_memoization': 'on',\n"
+          "    'graph_local_auto_key_mode': 'compact',\n"
+          "    'graph_local_auto_side_channel_mode': 'flat',\n"
+          "    'graph_local_auto_dependency_scratch_mode': 'pmr',\n"
+          "    'median_peak_rss_bytes': 100,\n"
+          "    'worst_peak_rss_bytes': 120,\n"
+          "    'median_wall_seconds': 1.2,\n"
+          "    'worst_wall_seconds': 1.3,\n"
+          "  },\n"
+          "  {\n"
+          "    'fixture': 'no_import',\n"
+          "    'phase': 'ast-semantic',\n"
+          "    'semantic_product_force': 'off',\n"
+          "    'no_fact_emission': False,\n"
+          "    'fact_families': 'auto',\n"
+          "    'method_target_memoization': 'on',\n"
+          "    'graph_local_auto_key_mode': 'compact',\n"
+          "    'graph_local_auto_side_channel_mode': 'flat',\n"
+          "    'graph_local_auto_dependency_scratch_mode': 'pmr',\n"
+          "    'median_peak_rss_bytes': 90,\n"
+          "    'worst_peak_rss_bytes': 115,\n"
+          "    'median_wall_seconds': 1.1,\n"
+          "    'worst_wall_seconds': 1.2,\n"
+          "  },\n"
+          "]\n"
+          "deltas = mod.compute_semantic_product_force_deltas(rows)\n"
+          "ok = len(deltas) == 1\n"
+          "if ok:\n"
+          "  delta = deltas[0]\n"
+          "  ok = ok and delta.get('fact_families') == 'auto'\n"
+          "  ok = ok and delta.get('no_fact_emission') is False\n"
+          "  ok = ok and isinstance(delta.get('median_peak_rss_bytes_on_minus_off'), int)\n"
+          "  ok = ok and isinstance(delta.get('median_wall_seconds_on_minus_off'), (int, float))\n"
+          "if not ok:\n"
+          "  print(json.dumps({'rows': rows, 'deltas': deltas}, indent=2, sort_keys=True))\n"
+          "sys.exit(0 if ok else 1)\n") +
+      " " + quoteShellArg(scriptPath.string()) +
+      " > " + quoteShellArg(validateOutPath) + " 2> " + quoteShellArg(validateErrPath);
+  CHECK(runCommand(validateCmd) == 0);
+  CHECK(readFile(validateErrPath).empty());
+}
+
 TEST_CASE("semantic memory benchmark helper emits wall-rss machine report rows") {
   if (!hasPython3()) {
     INFO("python3 not available");
@@ -1411,8 +1478,9 @@ TEST_CASE("semantic memory benchmark helper defines method-target memoization de
   const std::string script = readFile(scriptPath.string());
   REQUIRE_FALSE(script.empty());
   CHECK(script.find("def benchmark_row_fact_families_mode(row: dict) -> str:") != std::string::npos);
-  CHECK(script.find("return str(row.get(\"fact_families\", \"auto\"))") != std::string::npos);
-  CHECK(script.find("fact_families\", \"all\"") == std::string::npos);
+  CHECK(script.find("normalized = str(row.get(\"fact_families\", \"auto\")).strip()") != std::string::npos);
+  CHECK(script.find("if normalized in (\"\", \"all\", \"auto\"):") != std::string::npos);
+  CHECK(script.find("return \"auto\"") != std::string::npos);
   CHECK(script.find("--semantic-product-force") != std::string::npos);
   CHECK(script.find("--semantic-validation-without-fact-emission") != std::string::npos);
   CHECK(script.find("--method-target-memoization") != std::string::npos);

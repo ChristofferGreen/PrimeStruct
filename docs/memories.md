@@ -4,6 +4,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `semantic-memory-legacy-all-fact-family-normalized`: semantic-memory delta
+  grouping now canonicalizes legacy report rows with `fact_families="all"`
+  (and blank) to canonical `fact_families="auto"` via
+  `benchmark_row_fact_families_mode(...)`, so mixed historical + current rows
+  still pair into one delta row instead of splitting by legacy metadata;
+  runtime benchmark-harness coverage now imports
+  `semantic_memory_benchmark.py` and asserts
+  `compute_semantic_product_force_deltas(...)` emits one canonical delta for
+  synthetic mixed `all`/`auto` rows.
 - `semantic-memory-fact-family-fallback-canonicalized`: semantic-memory
   benchmark delta grouping now uses shared helper
   `benchmark_row_fact_families_mode(...)` with a canonical
