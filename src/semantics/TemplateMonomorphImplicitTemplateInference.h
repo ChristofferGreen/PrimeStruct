@@ -242,6 +242,10 @@ bool inferImplicitTemplateArgs(const Definition &def,
     const bool isOldSurfaceBuiltinSoaRefRefCall =
         normalizedNameUsesLegacySoaNamespace &&
         isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaPath, "ref_ref");
+    const bool isAnyCanonicalBuiltinSoaRefCall =
+        isCanonicalBuiltinSoaRefCall || isCanonicalBuiltinSoaRefRefCall;
+    const bool isAnyOldSurfaceBuiltinSoaRefCall =
+        isOldSurfaceBuiltinSoaRefCall || isOldSurfaceBuiltinSoaRefRefCall;
     const std::string normalizedMethodSoaPath =
         "/soa_vector/" + normalizedName;
     const bool normalizedMethodNameMatchesSoaRef =
@@ -250,8 +254,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
         isLegacyOrCanonicalSoaHelperPath(normalizedMethodSoaPath, "ref_ref");
     if (normalizedMethodNameMatchesSoaRef ||
         normalizedMethodNameMatchesSoaRefRef ||
-        isCanonicalBuiltinSoaRefCall || isCanonicalBuiltinSoaRefRefCall ||
-        isOldSurfaceBuiltinSoaRefCall || isOldSurfaceBuiltinSoaRefRefCall) {
+        isAnyCanonicalBuiltinSoaRefCall ||
+        isAnyOldSurfaceBuiltinSoaRefCall) {
       const bool isRefRefCall =
           normalizedMethodNameMatchesSoaRefRef || isCanonicalBuiltinSoaRefRefCall ||
           isOldSurfaceBuiltinSoaRefRefCall;
@@ -261,7 +265,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
       if (isRefRefCall ? hasVisibleSoaRefRefHelper : hasVisibleSoaRefHelper) {
         return {};
       }
-      if ((isCanonicalBuiltinSoaRefCall || isCanonicalBuiltinSoaRefRefCall) &&
+      if (isAnyCanonicalBuiltinSoaRefCall &&
           !candidate.args.empty() &&
           candidate.args.front().kind == Expr::Kind::Call) {
         return soaUnavailableMethodDiagnostic(missingSoaRefHelperPath);
