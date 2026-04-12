@@ -232,6 +232,10 @@ bool inferImplicitTemplateArgs(const Definition &def,
         isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "ref");
     const bool resolvedCanonicalNameMatchesSoaRefRef =
         isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "ref_ref");
+    const bool normalizedNameMatchesSoaRef =
+        isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaPath, "ref");
+    const bool normalizedNameMatchesSoaRefRef =
+        isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaPath, "ref_ref");
     const bool isCanonicalBuiltinSoaRefCall =
         (normalizedNameUsesCanonicalSoaNamespace &&
          normalizedCanonicalNameMatchesSoaRef) ||
@@ -242,10 +246,10 @@ bool inferImplicitTemplateArgs(const Definition &def,
         resolvedCanonicalNameMatchesSoaRefRef;
     const bool isOldSurfaceBuiltinSoaRefCall =
         normalizedNameUsesLegacySoaNamespace &&
-        isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaPath, "ref");
+        normalizedNameMatchesSoaRef;
     const bool isOldSurfaceBuiltinSoaRefRefCall =
         normalizedNameUsesLegacySoaNamespace &&
-        isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaPath, "ref_ref");
+        normalizedNameMatchesSoaRefRef;
     const bool isAnyCanonicalOrOldSurfaceBuiltinSoaRefRefCall =
         isCanonicalBuiltinSoaRefRefCall || isOldSurfaceBuiltinSoaRefRefCall;
     const bool isAnyCanonicalBuiltinSoaRefCall =
