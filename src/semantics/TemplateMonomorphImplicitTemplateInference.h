@@ -282,14 +282,17 @@ bool inferImplicitTemplateArgs(const Definition &def,
                normalizedMethodSoaPath, "ref_ref") ||
            isLegacyOrCanonicalSoaHelperPath(
                normalizedNameSoaCanonical, "ref_ref"));
+      const bool isBuiltinSoaRefNonMethod =
+          !candidate.isMethodCall && normalizedMethodNameMatchesSoaRef;
+      const bool isBuiltinSoaRefRefNonMethod =
+          !candidate.isMethodCall && normalizedMethodNameMatchesSoaRefRef;
       if (isCanonicalSoaRefLikeHelperPath(resolvedSoaCanonical) ||
           isExplicitSoaRefCall ||
           isExplicitSoaRefRefCall ||
           isBuiltinSoaRefMethod ||
           isBuiltinSoaRefRefMethod ||
-          (!candidate.isMethodCall &&
-           (isSimpleCallName(candidate, "ref") ||
-            isSimpleCallName(candidate, "ref_ref")))) {
+          isBuiltinSoaRefNonMethod ||
+          isBuiltinSoaRefRefNonMethod) {
         return soaUnavailableMethodDiagnostic(
             isRefRefCall ? "/std/collections/soa_vector/ref_ref"
                          : "/std/collections/soa_vector/ref");
