@@ -4,6 +4,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `soa-semantics-validate-bare-specialized-type-shared-helper`: Semantics
+  `isBuiltinSoaVectorTypeText(...)` and
+  `isExperimentalSoaVectorBaseName(...)` now route bare
+  `SoaVector__*` type-path checks through shared
+  `isExperimentalSoaVectorSpecializedTypePath(...)` instead of direct
+  `rawType.rfind("SoaVector__", 0)` and
+  `normalizedType.rfind("SoaVector__", 0)` matching, and source-lock coverage
+  in `test_ir_pipeline_validation_17` asserts shared helper usage while
+  rejecting those removed direct bare-prefix checks.
 - `soa-monomorph-collection-compatibility-bare-specialized-type-shared-helper`:
   template-monomorph collection-compatibility receiver normalization now
   routes bare experimental `SoaVector__*` type-path checks through shared

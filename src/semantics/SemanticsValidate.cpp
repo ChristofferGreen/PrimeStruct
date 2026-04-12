@@ -1134,7 +1134,6 @@ bool isBuiltinSoaVectorTypeText(const std::string &typeText) {
     rawType.erase(rawType.begin());
   }
   if (rawType == "SoaVector" || rawType.rfind("SoaVector<", 0) == 0 ||
-      rawType.rfind("SoaVector__", 0) == 0 ||
       rawType == "std/collections/experimental_soa_vector/SoaVector" ||
       rawType.rfind("std/collections/experimental_soa_vector/SoaVector<", 0) == 0 ||
       semantics::isExperimentalSoaVectorSpecializedTypePath(rawType)) {
@@ -1149,7 +1148,7 @@ bool isExperimentalSoaVectorBaseName(const std::string &typeName) {
   if (!normalizedType.empty() && normalizedType.front() == '/') {
     normalizedType.erase(normalizedType.begin());
   }
-  return normalizedType == "SoaVector" || normalizedType.rfind("SoaVector__", 0) == 0 ||
+  return normalizedType == "SoaVector" ||
          normalizedType == "std/collections/experimental_soa_vector/SoaVector" ||
          semantics::isExperimentalSoaVectorSpecializedTypePath(normalizedType);
 }
