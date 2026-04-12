@@ -570,18 +570,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           isLegacyOrCanonicalSoaHelperPath(base, "reserve")) {
         return true;
       }
-      const bool isExperimentalSoaPath =
-          base.rfind("/std/collections/experimental_soa_vector/", 0) == 0;
-      if (!isExperimentalSoaPath) {
-        return false;
-      }
-      auto hasSuffix = [&](std::string_view suffix) {
-        return base.size() >= suffix.size() &&
-               base.compare(base.size() - suffix.size(), suffix.size(),
-                            suffix.data(), suffix.size()) == 0;
-      };
-      return hasSuffix("/push") || hasSuffix("/reserve") ||
-             hasSuffix("/soaVectorPush") || hasSuffix("/soaVectorReserve");
+      return isExperimentalSoaGrowthHelperPath(base);
     };
     if (isDestroyHelperPath(resolved) || isSoaGrowthHelperPath(resolved)) {
       auto resolveNamedBinding =

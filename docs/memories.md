@@ -200,6 +200,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
   coverage in `test_ir_pipeline_validation_15` plus
   `test_ir_pipeline_validation_17` asserts that shared helper wiring while
   rejecting the removed direct prefix check in `SemanticsValidate.cpp`.
+- `soa-validator-expr-growth-experimental-shared-helper-predicate`:
+  semantics expression growth-helper matching now routes experimental SoA
+  helper-family checks through shared
+  `isExperimentalSoaGrowthHelperPath(...)` instead of direct
+  experimental-prefix + suffix disjunction logic in
+  `SemanticsValidatorExpr.cpp::isSoaGrowthHelperPath(...)`; shared helper
+  matching strips specialization suffixes and recognizes `push`, `reserve`,
+  `soaVectorPush`, and `soaVectorReserve`, and source-lock coverage in
+  `test_ir_pipeline_validation_15` asserts helper usage while rejecting the
+  removed inline experimental matching block.
 - `soa-semantics-validate-to-aos-shared-helper-path`: SemanticsValidate
   canonical `to_aos` definition visibility and skip checks now canonicalize
   helper paths with specialization-suffix stripping and route canonical

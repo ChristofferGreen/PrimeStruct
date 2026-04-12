@@ -141,6 +141,7 @@ bool isLegacyOrCanonicalSoaHelperPath(std::string_view path, std::string_view he
 bool isCanonicalSoaRefLikeHelperPath(std::string_view path);
 bool isExperimentalSoaBorrowedHelperPath(std::string_view path);
 bool isExperimentalSoaGetLikeHelperPath(std::string_view path);
+bool isExperimentalSoaGrowthHelperPath(std::string_view path);
 bool isExperimentalSoaRefLikeHelperPath(std::string_view path);
 bool isExperimentalSoaVectorConversionFamilyPath(std::string_view path);
 std::string soaUnavailableMethodDiagnostic(std::string_view resolvedPath);
