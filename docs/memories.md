@@ -4,6 +4,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `soa-template-monomorph-collection-compat-shared-type-path-helper`:
+  template-monomorph collection receiver normalization now routes experimental
+  SoA vector type matching through shared
+  `isExperimentalSoaVectorTypePath(value)` in
+  `normalizeCollectionReceiverTypeName(...)` instead of duplicated direct
+  `SoaVector`/`std/collections/experimental_soa_vector/SoaVector` equality
+  checks plus a separate specialized-only helper check; source-lock coverage
+  in `test_ir_pipeline_validation_16` now asserts shared helper usage while
+  rejecting the removed direct equality disjunction.
 - `soa-ir-lowerer-binding-type-shared-type-path-helper`:
   ir-lowerer binding-type normalization now routes experimental SoA vector type
   matching through shared

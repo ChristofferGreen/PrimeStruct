@@ -1274,13 +1274,10 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "resolvedPath.rfind(\"/std/collections/experimental_soa_vector_conversions/\", 0)") ==
         std::string::npos);
   CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
-            "isExperimentalSoaVectorSpecializedTypePath(value)") !=
+            "isExperimentalSoaVectorTypePath(value)") !=
         std::string::npos);
   CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
-            "value.rfind(\"std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") ==
-        std::string::npos);
-  CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
-            "value.rfind(\"SoaVector__\", 0) == 0") ==
+            "value == \"std/collections/experimental_soa_vector/SoaVector\" || value == \"SoaVector\"") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "methodPath.rfind(\"/std/collections/experimental_soa_vector_conversions/\", 0)") ==
