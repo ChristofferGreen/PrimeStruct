@@ -519,7 +519,17 @@ std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string 
   auto matchesPath = [&](std::string_view basePath) {
     return path == basePath || path.rfind(std::string(basePath) + "__", 0) == 0;
   };
-  const std::string canonicalSoaGetPath = canonicalizeLegacySoaGetHelperPath(path);
+  auto canonicalizeSoaHelperPath = [](std::string canonicalPath) {
+    const size_t specializationSuffix = canonicalPath.find("__");
+    if (specializationSuffix != std::string::npos) {
+      canonicalPath.erase(specializationSuffix);
+    }
+    return canonicalPath;
+  };
+  const std::string canonicalSoaGetPath =
+      canonicalizeSoaHelperPath(canonicalizeLegacySoaGetHelperPath(path));
+  const std::string canonicalSoaRefPath =
+      canonicalizeSoaHelperPath(canonicalizeLegacySoaRefHelperPath(path));
   if (matchesPath("/std/collections/count") ||
       matchesPath("/std/collections/soa_vector/count")) {
     return "/std/collections/experimental_soa_vector/soaVectorCount";
@@ -535,10 +545,10 @@ std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string 
     return "/std/collections/experimental_soa_vector/soaVectorGetRef";
   }
   if (matchesPath("/std/collections/ref") ||
-      matchesPath("/std/collections/soa_vector/ref")) {
+      isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, "ref")) {
     return "/std/collections/experimental_soa_vector/soaVectorRef";
   }
-  if (matchesPath("/std/collections/soa_vector/ref_ref")) {
+  if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, "ref_ref")) {
     return "/std/collections/experimental_soa_vector/soaVectorRefRef";
   }
   if (matchesPath("/std/collections/reserve") ||
