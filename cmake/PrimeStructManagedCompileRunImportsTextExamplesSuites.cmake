@@ -9,20 +9,20 @@ list(APPEND PrimeStructManagedCompileRunSuites
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
                                   TIMEOUT 900
                                   SHARD_PREFIX "versioned_import_resolution"
-                                  SOURCE_FILE "*test_compile_run_imports_versions.h"
+                                  SOURCE_FILE "*test_compile_run_imports_versions.cpp"
                                   TOTAL_CASES 22
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
                                   TIMEOUT 900
                                   SHARD_PREFIX "block_and_operator_rewrites"
-                                  SOURCE_FILE "*test_compile_run_imports_blocks.h"
+                                  SOURCE_FILE "*test_compile_run_imports_blocks.cpp"
                                   TOTAL_CASES 25
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
                                   TIMEOUT 900
                                   RUN_SERIAL
                                   SHARD_PREFIX "operations_and_collections"
-                                  SOURCE_FILE "*test_compile_run_imports_operations.h"
+                                  SOURCE_FILE "*test_compile_run_imports_operations.cpp"
                                   TOTAL_CASES 81
                                   CASES_PER_SHARD 2)
 

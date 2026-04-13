@@ -1,3 +1,5 @@
+#include "test_compile_run_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.compile.run.imports");
 
 TEST_CASE("compiles and runs versioned import expansion with relative import entry") {

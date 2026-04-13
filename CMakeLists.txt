@@ -564,7 +564,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_bindings_and_examples.cpp
     tests/unit/test_compile_run_emitters.cpp
     tests/unit/test_compile_run_glsl.cpp
-    tests/unit/test_compile_run_imports.cpp
+    tests/unit/test_compile_run_imports_versions.cpp
+    tests/unit/test_compile_run_imports_blocks.cpp
+    tests/unit/test_compile_run_imports_operations.cpp
     tests/unit/test_compile_run_native_backend_argv.cpp
     tests/unit/test_compile_run_native_backend_core.cpp
     tests/unit/test_compile_run_native_backend_collections.cpp
@@ -1497,12 +1499,12 @@ if(PRIMESTRUCT_BUILD_TESTS)
                                  FIRST 35 LAST 44)
     elseif(suite STREQUAL "primestruct.compile.run.imports")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "versioned_import_resolution"
-                                 SOURCE_FILE "*test_compile_run_imports_versions.h")
+                                 SOURCE_FILE "*test_compile_run_imports_versions.cpp")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "block_and_operator_rewrites"
-                                 SOURCE_FILE "*test_compile_run_imports_blocks.h")
+                                 SOURCE_FILE "*test_compile_run_imports_blocks.cpp")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
                                  SHARD_NAME "operations_and_collections"
-                                 SOURCE_FILE "*test_compile_run_imports_operations.h")
+                                 SOURCE_FILE "*test_compile_run_imports_operations.cpp")
       # This shard compiles and runs enough native helper cases that it becomes
       # resource-sensitive under the default parallel ctest load on macOS.
       set_tests_properties("PrimeStruct_primestruct_compile_run_imports_operations_and_collections"
