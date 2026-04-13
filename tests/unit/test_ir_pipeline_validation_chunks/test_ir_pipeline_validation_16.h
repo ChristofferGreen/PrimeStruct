@@ -754,7 +754,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isAnyCanonicalOrOldSurfaceBuiltinSoaRefRefCall =\n"
-            "        isCanonicalBuiltinSoaRefRefCall || isOldSurfaceBuiltinSoaRefRefCall;") !=
+            "        isCanonicalBuiltinSoaRefRefCall || isOldSurfaceBuiltinSoaRefRefCall;") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool hasAnyBuiltinSoaRefRefNameMatch =\n"
@@ -769,7 +769,13 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isAnyBuiltinSoaRefRefCall =\n"
             "          normalizedMethodNameMatchesSoaRefRef ||\n"
-            "          isAnyCanonicalOrOldSurfaceBuiltinSoaRefRefCall;") !=
+            "          isCanonicalBuiltinSoaRefRefCall ||\n"
+            "          isOldSurfaceBuiltinSoaRefRefCall;") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "const bool isAnyBuiltinSoaRefRefCall =\n"
+            "          normalizedMethodNameMatchesSoaRefRef ||\n"
+            "          isAnyCanonicalOrOldSurfaceBuiltinSoaRefRefCall;") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isAnyBuiltinSoaRefRefCall =\n"
@@ -1080,7 +1086,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isAnyBuiltinSoaRefRefCall =\n"
             "          normalizedMethodNameMatchesSoaRefRef ||\n"
-            "          isCanonicalBuiltinSoaRefRefCall || isOldSurfaceBuiltinSoaRefRefCall;") ==
+            "          isCanonicalBuiltinSoaRefRefCall ||\n"
+            "          isOldSurfaceBuiltinSoaRefRefCall;") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "if (isCanonicalSoaRefLikeHelperPath(resolvedSoaCanonical) ||\n"
