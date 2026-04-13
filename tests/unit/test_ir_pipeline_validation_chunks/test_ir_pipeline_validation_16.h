@@ -878,7 +878,9 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isAnyExplicitOrBuiltinSoaRefCall =\n"
-            "          isAnyExplicitLegacySoaNonMethodRefCall ||\n"
+            "          (isExplicitLegacySoaNonMethodCall &&\n"
+            "           (normalizedPrefixedNameMatchesSoaRef ||\n"
+            "            normalizedPrefixedNameMatchesSoaRefRef)) ||\n"
             "          isAnyOldSurfaceBuiltinSoaRefCall ||\n"
             "          (isMethodCall &&\n"
             "           (isAnyNormalizedMethodNameSoaRefCall ||\n"
@@ -890,7 +892,10 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const bool isAnyExplicitOrBuiltinSoaRefCall =\n"
             "          isAnyExplicitLegacySoaNonMethodRefCall ||\n"
             "          isAnyOldSurfaceBuiltinSoaRefCall ||\n"
-            "          isAnyBuiltinSoaRefMethodCall ||\n"
+            "          (isMethodCall &&\n"
+            "           (isAnyNormalizedMethodNameSoaRefCall ||\n"
+            "            normalizedCanonicalNameMatchesSoaRef ||\n"
+            "            normalizedCanonicalNameMatchesSoaRefRef)) ||\n"
             "          (isNonMethodCall && isAnyNormalizedMethodNameSoaRefCall);") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
@@ -932,7 +937,12 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const bool isAnyExplicitLegacySoaNonMethodRefCall =\n"
             "          isExplicitLegacySoaNonMethodCall &&\n"
             "          (normalizedPrefixedNameMatchesSoaRef ||\n"
-            "           normalizedPrefixedNameMatchesSoaRefRef);") !=
+            "           normalizedPrefixedNameMatchesSoaRefRef);") ==
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "(isExplicitLegacySoaNonMethodCall &&\n"
+            "           (normalizedPrefixedNameMatchesSoaRef ||\n"
+            "            normalizedPrefixedNameMatchesSoaRefRef)) ||") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isAnyExplicitLegacySoaNonMethodRefCall =\n"
