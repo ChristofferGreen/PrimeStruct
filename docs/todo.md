@@ -148,7 +148,7 @@ Wave D (test naming + queue hygiene):
   - phase: Test architecture cleanup
   - scope: Execute file-by-file migration from include-defined tests to `.cpp`-defined tests, keeping headers for shared helpers only.
   - file_todos:
-    - [ ] `TODO-0407-F01` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_validation.cpp`; fix: replace the `test_ir_pipeline_validation_chunks/*.h` fanout with topic-named `.cpp` files and move all `TEST_CASE` bodies out of chunk/fragment headers.
+    - [x] `TODO-0407-F01` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_validation.cpp`; fix: replace the `test_ir_pipeline_validation_chunks/*.h` fanout with topic-named `.cpp` files and move all `TEST_CASE` bodies out of chunk/fragment headers.
     - [x] `TODO-0407-F02` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_semantics_calls_and_flow_collections.cpp`; fix: remove `test_semantics_calls_and_flow_collections_chunks/*.h` includes by moving those tests into topic `.cpp` files that share `test_semantics_helpers.h`.
     - [x] `TODO-0407-F03` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_emitters.cpp`; fix: keep cache/helper utilities local, but migrate `test_compile_run_emitters_chunks/*.h` test implementations into emitter-topic `.cpp` files.
     - [x] `TODO-0407-F04` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_vm_outputs.cpp`; fix: move `test_compile_run_vm_outputs_*.h` `TEST_CASE` bodies into `.cpp` files and keep any remaining headers helper-only.
