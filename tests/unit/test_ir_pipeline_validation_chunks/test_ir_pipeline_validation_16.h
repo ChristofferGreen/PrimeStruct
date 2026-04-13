@@ -507,7 +507,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const bool isExplicitSoaRefRefCall =") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "const bool isNonMethodCall = !isMethodCall;") !=
+            "const bool isNonMethodCall = !isMethodCall;") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const char *missingSoaRefHelperPath =") !=
@@ -882,7 +882,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "           (normalizedPrefixedNameMatchesSoaRef ||\n"
             "            normalizedPrefixedNameMatchesSoaRefRef)) ||\n"
             "          isAnyOldSurfaceBuiltinSoaRefCall ||\n"
-            "          (isMethodCall &&\n"
+            "          (candidate.isMethodCall &&\n"
             "           (isAnyNormalizedMethodNameSoaRefCall ||\n"
             "            normalizedCanonicalNameMatchesSoaRef ||\n"
             "            normalizedCanonicalNameMatchesSoaRefRef)) ||\n"
@@ -934,7 +934,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "if (hasAnyUnavailableSoaRefHelperCall)") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "const bool isMethodCall = candidate.isMethodCall;") !=
+            "const bool isMethodCall = candidate.isMethodCall;") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isExplicitLegacySoaNonMethodCall =\n"
@@ -967,7 +967,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "          isAnyOldSurfaceBuiltinSoaRefCall;") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "const bool isNonMethodCall = !candidate.isMethodCall;") ==
+            "const bool isNonMethodCall = !candidate.isMethodCall;") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "(isExplicitLegacySoaNonMethodCall &&\n"

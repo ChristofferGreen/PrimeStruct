@@ -288,14 +288,13 @@ bool inferImplicitTemplateArgs(const Definition &def,
       if (isAnyCanonicalBuiltinSoaRefCall && hasLeadingCallArg) {
         return soaUnavailableMethodDiagnostic(missingSoaRefHelperPath);
       }
-      const bool isMethodCall = candidate.isMethodCall;
-      const bool isNonMethodCall = !isMethodCall;
+      const bool isNonMethodCall = !candidate.isMethodCall;
       const bool isAnyExplicitOrBuiltinSoaRefCall =
           ((isNonMethodCall && normalizedPrefixedUsesLegacySoaNamespace) &&
            (normalizedPrefixedNameMatchesSoaRef ||
             normalizedPrefixedNameMatchesSoaRefRef)) ||
           isAnyOldSurfaceBuiltinSoaRefCall ||
-          (isMethodCall &&
+          (candidate.isMethodCall &&
            (isAnyNormalizedMethodNameSoaRefCall ||
             normalizedCanonicalNameMatchesSoaRef ||
             normalizedCanonicalNameMatchesSoaRefRef)) ||
