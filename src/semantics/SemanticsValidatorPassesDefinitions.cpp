@@ -3,6 +3,7 @@
 #include "primec/SemanticsDefinitionPartitioner.h"
 
 #include <algorithm>
+#include <functional>
 #include <future>
 #include <iterator>
 #include <optional>
@@ -20,8 +21,9 @@ bool SemanticsValidator::publishPassesDefinitionsDiagnostic(const Expr *expr) {
   return publishCurrentStructuredDiagnosticNow();
 }
 
-bool SemanticsValidator::validateDefinitionsForStableIndices(
-    const std::vector<std::size_t> &stableIndices) {
+bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
+    std::size_t stableCount,
+    const std::function<std::size_t(std::size_t)> &resolveStableIndex) {
   std::vector<SemanticDiagnosticRecord> collectedRecords;
   const bool collectDiagnostics = shouldCollectStructuredDiagnostics();
   auto validateDefinition = [&](const Definition &def) -> bool {
@@ -175,7 +177,9 @@ bool SemanticsValidator::validateDefinitionsForStableIndices(
     return true;
   };
 
-  for (const std::size_t stableIndex : stableIndices) {
+  for (std::size_t stableOrdinal = 0; stableOrdinal < stableCount;
+       ++stableOrdinal) {
+    const std::size_t stableIndex = resolveStableIndex(stableOrdinal);
     const Definition &def = program_.definitions[stableIndex];
     clearStructuredDiagnosticContext();
     if (collectDiagnostics) {
@@ -205,6 +209,13 @@ bool SemanticsValidator::validateDefinitionsForStableIndices(
   return true;
 }
 
+bool SemanticsValidator::validateDefinitionsForStableIndices(
+    const std::vector<std::size_t> &stableIndices) {
+  return validateDefinitionsFromStableIndexResolver(
+      stableIndices.size(),
+      [&](std::size_t stableOrdinal) { return stableIndices[stableOrdinal]; });
+}
+
 bool SemanticsValidator::validateDefinitionsForStableRange(
     std::size_t stableOrderOffset,
     std::size_t stableOrderCount) {
@@ -216,14 +227,12 @@ bool SemanticsValidator::validateDefinitionsForStableRange(
 
   const std::size_t boundedCount =
       std::min(stableOrderCount, declarationCount - stableOrderOffset);
-  std::vector<std::size_t> stableIndices;
-  stableIndices.reserve(boundedCount);
-  for (std::size_t i = 0; i < boundedCount; ++i) {
-    stableIndices.push_back(
-        definitionPrepassSnapshot_.declarationsInStableOrder[stableOrderOffset + i]
-            .stableIndex);
-  }
-  return validateDefinitionsForStableIndices(stableIndices);
+  return validateDefinitionsFromStableIndexResolver(
+      boundedCount, [&](std::size_t stableOrdinal) {
+        return definitionPrepassSnapshot_
+            .declarationsInStableOrder[stableOrderOffset + stableOrdinal]
+            .stableIndex;
+      });
 }
 
 bool SemanticsValidator::runDefinitionValidationWorkerChunk(
@@ -264,19 +273,11 @@ bool SemanticsValidator::runDefinitionValidationWorkerChunk(
 }
 
 bool SemanticsValidator::validateDefinitions() {
-  auto buildAllStableIndices = [&]() {
-    std::vector<std::size_t> allStableIndices;
-    allStableIndices.reserve(definitionPrepassSnapshot_.declarationsInStableOrder.size());
-    for (const auto &declaration : definitionPrepassSnapshot_.declarationsInStableOrder) {
-      allStableIndices.push_back(declaration.stableIndex);
-    }
-    return allStableIndices;
-  };
   const std::size_t declarationCount =
       definitionPrepassSnapshot_.declarationsInStableOrder.size();
   if (benchmarkSemanticDefinitionValidationWorkerCount_ <= 1 ||
       declarationCount < 2) {
-    return validateDefinitionsForStableIndices(buildAllStableIndices());
+    return validateDefinitionsForStableRange(0, declarationCount);
   }
 
   const std::size_t partitionCount = static_cast<std::size_t>(
@@ -285,7 +286,7 @@ bool SemanticsValidator::validateDefinitions() {
   std::vector<DefinitionPartitionChunk> partitions =
       partitionDefinitionsDeterministic(definitionPrepassSnapshot_, partitionCount);
   if (partitions.size() <= 1) {
-    return validateDefinitionsForStableIndices(buildAllStableIndices());
+    return validateDefinitionsForStableRange(0, declarationCount);
   }
 
   struct WorkerChunkResult {
@@ -328,7 +329,7 @@ bool SemanticsValidator::validateDefinitions() {
         }));
   }
   if (workerTasks.size() <= 1) {
-    return validateDefinitionsForStableIndices(buildAllStableIndices());
+    return validateDefinitionsForStableRange(0, declarationCount);
   }
 
   std::vector<WorkerChunkResult> workerResults;

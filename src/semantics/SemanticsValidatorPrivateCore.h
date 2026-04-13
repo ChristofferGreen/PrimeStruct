@@ -29,6 +29,9 @@
   bool validateTraitConstraints();
   bool validateStructLayouts();
   bool validateDefinitions();
+  bool validateDefinitionsFromStableIndexResolver(
+      std::size_t stableCount,
+      const std::function<std::size_t(std::size_t)> &resolveStableIndex);
   bool validateDefinitionsForStableIndices(const std::vector<std::size_t> &stableIndices);
   bool validateDefinitionsForStableRange(std::size_t stableOrderOffset,
                                          std::size_t stableOrderCount);

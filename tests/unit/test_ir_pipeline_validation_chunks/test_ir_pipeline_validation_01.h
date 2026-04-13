@@ -995,6 +995,46 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("borrowed helper-return experimental wrapper bare conversion alias lowers through generic wildcard import") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<Reference<SoaVector<Particle>>>]
+pickBorrowed([Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32))
+  values.push(Particle(9i32))
+  [vector<Particle>] unpacked{
+      soaVectorToAosRef<Particle>(pickBorrowed(location(values)))}
+  return(count(unpacked))
+}
+)";
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Any, error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("root to_aos canonical routing ignores vector-only user helper") {
   const std::string source = R"(
 [struct reflect]

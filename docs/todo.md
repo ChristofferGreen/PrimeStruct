@@ -23,31 +23,9 @@ Sizing note: each active leaf must fit in one code-affecting commit plus focused
 **Group 14 - SoA bring-up and end-state cleanup**
 Goal: finish stdlib-authoritative `soa_vector` behavior and delete compatibility scaffolding.
 
-- ◐ [S4-02] Remove canonical conversion fallback dependence on experimental conversion helpers.
-  - Value: deletes duplicate substrate and fallback churn.
-  - Acceptance criteria:
-    1. Canonical conversion lowering has no dependency on `/std/collections/experimental_soa_vector_conversions/*`.
-    2. Source-lock coverage asserts removed fallback wiring.
-    3. Existing canonical conversion compile-run tests remain green.
-  - Progress: experimental SoA method `to_aos` rewrite fallback in
-    `SemanticsValidate.cpp` now rewrites to canonical
-    `/std/collections/soa_vector/to_aos` instead of
-    `/std/collections/experimental_soa_vector_conversions/soaVectorToAos`, and
-    the same rewrite pass no longer checks
-    `isExperimentalSoaVectorConversionFamilyPath(def.fullPath)` in its
-    definition-skip gate (removing the last conversion-family dependency from
-    canonical rewrite selection in that lowering stage).
-  - Stop rule: if full family removal is too broad, remove one canonical conversion path end-to-end first.
-
-- ○ [S4-03] Delete one full compiler-owned SoA compatibility island end-to-end.
-  - Value: concrete maintenance-surface reduction.
-  - Acceptance criteria:
-    1. Remove one compatibility island (code path, tests, docs references).
-    2. Add focused regression coverage proving canonical behavior is unchanged.
-    3. Archive the deleted island in `docs/todo_finished.md` with affected files.
-  - Stop rule: no valid completion if net behavior-deletion is zero.
-
-S2 micro-slices `[S2-01]` through `[S2-05]` and S3 micro-slices `[S3-01]` through `[S3-132]` are archived in `docs/todo_finished.md` (April 12-13, 2026).
+S2 micro-slices `[S2-01]` through `[S2-05]`, S3 micro-slices `[S3-01]` through
+`[S3-132]`, and S4 slices `[S4-01a1]` through `[S4-03]` are archived in
+`docs/todo_finished.md` (April 12-13, 2026).
 
 **Group 15 - Semantic memory footprint and multithread compile substrate**
 Goal: ship measurable wins with hard regression control.
@@ -65,7 +43,10 @@ Goal: ship measurable wins with hard regression control.
     (`stableOrderOffset` + `stableOrderCount`) instead of per-partition index
     vectors, and worker chunks now materialize only bounded local ranges during
     execution, eliminating persistent partition index-vector allocation across
-    all chunks in the launcher path.
+    all chunks in the launcher path; definition validation now routes both full
+    and chunked validation through a shared stable-index resolver path, removing
+    transient full-range stable-index vector materialization in serial and
+    single-partition fallback flows.
   - Stop rule: if two attempts fail to reach 2% median improvement, archive approach as low-value and switch hotspot.
 
 P0 micro-slices `[P0-17]` through `[P0-28]`, P1 slices `[P1-01]` and

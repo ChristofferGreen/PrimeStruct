@@ -810,6 +810,20 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
   CHECK(semanticsPassesDefinitionsSource.find(
             "rememberFirstCollectedDiagnosticMessage(intraDefinitionRecords.front().message);") !=
         std::string::npos);
+  CHECK(semanticsPassesDefinitionsSource.find(
+            "bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(") !=
+        std::string::npos);
+  CHECK(semanticsPassesDefinitionsSource.find(
+            "const std::size_t stableIndex = resolveStableIndex(stableOrdinal);") !=
+        std::string::npos);
+  CHECK(semanticsPassesDefinitionsSource.find(
+            "return validateDefinitionsForStableRange(0, declarationCount);") !=
+        std::string::npos);
+  CHECK(semanticsPassesDefinitionsSource.find("auto buildAllStableIndices = [&]()") ==
+        std::string::npos);
+  CHECK(semanticsPassesDefinitionsSource.find(
+            "stableIndices.reserve(boundedCount);") ==
+        std::string::npos);
   CHECK(semanticsPassesOmittedInitializersSource.find(
             "auto failPassesOmittedInitializersDiagnostic =") !=
         std::string::npos);
@@ -1383,6 +1397,21 @@ TEST_CASE("semantics validator build import publication stays stable") {
   CHECK(buildImportsSource.find("rememberFirstCollectedDiagnosticMessage(message);") !=
         std::string::npos);
   CHECK(buildImportsSource.find("if (!addImportDiagnostic(") !=
+        std::string::npos);
+  CHECK(buildImportsSource.find(
+            "registerCanonicalSoaVectorWildcardAliases(prefix)") !=
+        std::string::npos);
+  CHECK(buildImportsSource.find(
+            "registerExperimentalSoaVectorConversionWildcardAliases(") ==
+        std::string::npos);
+  CHECK(buildImportsSource.find(
+            "/std/collections/experimental_soa_vector_conversions/soaVectorToAos") ==
+        std::string::npos);
+  CHECK(buildImportsSource.find(
+            "/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef") ==
+        std::string::npos);
+  CHECK(buildImportsSource.find(
+            "const std::string scopedPrefix = prefix + \"/\";") !=
         std::string::npos);
 }
 
