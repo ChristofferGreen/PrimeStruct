@@ -1,6 +1,7 @@
 #include "IrLowererLowerEntrySetup.h"
 
 #include <array>
+#include <string_view>
 
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
@@ -24,7 +25,13 @@ using SemanticProductCompletenessCheckFn =
 
 struct SemanticProductCompletenessCheck {
   const char *factFamily = "";
+  const char *requiredField = "";
   SemanticProductCompletenessCheckFn validate = nullptr;
+};
+
+struct SemanticProductContractManifest {
+  uint32_t version = SemanticProductContractVersionCurrent;
+  const std::array<SemanticProductCompletenessCheck, 8> *checks = nullptr;
 };
 
 bool validateDirectCallFactFamily(const SemanticProductCompletenessContext &context,
@@ -85,15 +92,88 @@ bool validateOnErrorFactFamily(const SemanticProductCompletenessContext &context
 }
 
 const std::array<SemanticProductCompletenessCheck, 8> kSemanticProductCompletenessMatrix = {{
-    {"routing.direct-call", validateDirectCallFactFamily},
-    {"routing.bridge-path", validateBridgePathFactFamily},
-    {"routing.method-call", validateMethodCallFactFamily},
-    {"type-shape.binding", validateBindingFactFamily},
-    {"type-shape.local-auto", validateLocalAutoFactFamily},
-    {"result-control.entry-args", validateEntryParameterFactFamily},
-    {"result-control.on-error", validateOnErrorFactFamily},
-    {"result-control.metadata", validateResultMetadataFactFamily},
+    {"routing.direct-call", "directCallTargets[].resolvedPathId", validateDirectCallFactFamily},
+    {"routing.bridge-path", "bridgePathChoices[].helperNameId", validateBridgePathFactFamily},
+    {"routing.method-call", "methodCallTargets[].resolvedPathId", validateMethodCallFactFamily},
+    {"type-shape.binding", "bindingFacts[].resolvedPathId", validateBindingFactFamily},
+    {"type-shape.local-auto", "localAutoFacts[].bindingTypeText", validateLocalAutoFactFamily},
+    {"result-control.entry-args", "entryPath + bindingFacts[]", validateEntryParameterFactFamily},
+    {"result-control.on-error", "onErrorFacts[].handlerPathId", validateOnErrorFactFamily},
+    {"result-control.metadata", "callableSummaries[].fullPathId", validateResultMetadataFactFamily},
 }};
+
+const SemanticProductContractManifest kSemanticProductContractManifestV1 = {
+    .version = SemanticProductContractVersionV1,
+    .checks = &kSemanticProductCompletenessMatrix,
+};
+
+bool validateModuleResolvedArtifactIdentity(const SemanticProgram &semanticProgram, std::string &error) {
+  auto validateFamilyIndices = [&](std::string_view factFamily,
+                                   std::string_view moduleKey,
+                                   const std::vector<std::size_t> &indices,
+                                   std::size_t familySize) {
+    for (const std::size_t entryIndex : indices) {
+      if (entryIndex < familySize) {
+        continue;
+      }
+      const std::string moduleLabel =
+          moduleKey.empty() ? "<unknown>" : std::string(moduleKey);
+      error = "semantic-product contract module index out of range: family " +
+              std::string(factFamily) + ", module " + moduleLabel + ", index " +
+              std::to_string(entryIndex);
+      return false;
+    }
+    return true;
+  };
+
+  for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
+    const std::string_view moduleKey = module.identity.moduleKey;
+    if (!validateFamilyIndices("routing.direct-call",
+                               moduleKey,
+                               module.directCallTargetIndices,
+                               semanticProgram.directCallTargets.size()) ||
+        !validateFamilyIndices("routing.method-call",
+                               moduleKey,
+                               module.methodCallTargetIndices,
+                               semanticProgram.methodCallTargets.size()) ||
+        !validateFamilyIndices("routing.bridge-path",
+                               moduleKey,
+                               module.bridgePathChoiceIndices,
+                               semanticProgram.bridgePathChoices.size()) ||
+        !validateFamilyIndices("type-shape.callable-summary",
+                               moduleKey,
+                               module.callableSummaryIndices,
+                               semanticProgram.callableSummaries.size()) ||
+        !validateFamilyIndices("type-shape.binding",
+                               moduleKey,
+                               module.bindingFactIndices,
+                               semanticProgram.bindingFacts.size()) ||
+        !validateFamilyIndices("type-shape.return",
+                               moduleKey,
+                               module.returnFactIndices,
+                               semanticProgram.returnFacts.size()) ||
+        !validateFamilyIndices("type-shape.local-auto",
+                               moduleKey,
+                               module.localAutoFactIndices,
+                               semanticProgram.localAutoFacts.size()) ||
+        !validateFamilyIndices("result-control.query",
+                               moduleKey,
+                               module.queryFactIndices,
+                               semanticProgram.queryFacts.size()) ||
+        !validateFamilyIndices("result-control.try",
+                               moduleKey,
+                               module.tryFactIndices,
+                               semanticProgram.tryFacts.size()) ||
+        !validateFamilyIndices("result-control.on-error",
+                               moduleKey,
+                               module.onErrorFactIndices,
+                               semanticProgram.onErrorFacts.size())) {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 bool validateSemanticProductCompletenessMatrix(const Program &program,
                                                const Definition &entryDef,
@@ -102,17 +182,36 @@ bool validateSemanticProductCompletenessMatrix(const Program &program,
   if (semanticProgram == nullptr) {
     return true;
   }
+  if (semanticProgram->contractVersion !=
+      kSemanticProductContractManifestV1.version) {
+    error = "semantic-product contract version mismatch: expected " +
+            std::to_string(kSemanticProductContractManifestV1.version) + ", got " +
+            std::to_string(semanticProgram->contractVersion);
+    return false;
+  }
+  if (!validateModuleResolvedArtifactIdentity(*semanticProgram, error)) {
+    return false;
+  }
+  if (kSemanticProductContractManifestV1.checks == nullptr) {
+    error = "semantic-product contract manifest missing checks";
+    return false;
+  }
 
   const SemanticProductCompletenessContext context{
       .program = program,
       .entryDef = &entryDef,
       .semanticProgram = semanticProgram,
   };
-  for (const auto &check : kSemanticProductCompletenessMatrix) {
+  for (const auto &check : *kSemanticProductContractManifestV1.checks) {
     if (check.validate == nullptr) {
       continue;
     }
     if (!check.validate(context, error)) {
+      if (error.empty()) {
+        error = "semantic-product contract check failed: " +
+                std::string(check.factFamily) + " requires " +
+                std::string(check.requiredField);
+      }
       return false;
     }
   }

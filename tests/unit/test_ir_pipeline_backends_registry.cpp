@@ -168,6 +168,51 @@ TEST_CASE("ir lowerer requires semantic product before lowering") {
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer rejects semantic-product contract version mismatch") {
+  primec::Program program;
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.contractVersion =
+      primec::SemanticProductContractVersionV1 + 1;
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "semantic-product contract version mismatch: expected 1, got 2");
+  CHECK(diagnosticInfo.message == error);
+}
+
+TEST_CASE("ir lowerer rejects semantic-product module artifact index overflow") {
+  primec::Program program;
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  primec::SemanticProgramModuleResolvedArtifacts moduleArtifacts;
+  moduleArtifacts.identity.moduleKey = "/main";
+  moduleArtifacts.directCallTargetIndices.push_back(0);
+  semanticProgram.moduleResolvedArtifacts.push_back(std::move(moduleArtifacts));
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error ==
+        "semantic-product contract module index out of range: family routing.direct-call, module /main, index 0");
+  CHECK(diagnosticInfo.message == error);
+}
+
 TEST_CASE("ir preparation helper reports lowering-stage failure for unresolved entry") {
   primec::Program program;
   primec::SemanticProgram semanticProgram;

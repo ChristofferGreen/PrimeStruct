@@ -170,11 +170,15 @@ Wave D (queue hygiene):
     - Semantic memory benchmark reports show non-regression for the semantic-product/lowering path, with measurable allocation or runtime improvement in at least one tracked fixture.
   - stop_rule: If measurable benchmark impact is not achieved after two attempts, archive this leaf as low-value per rule 16 and replace it with a different Group 15 hotspot.
 
-- [ ] TODO-0404: Add semantic-product contract manifest and versioned verifier
+- [~] TODO-0404: Add semantic-product contract manifest and versioned verifier
   - owner: ai
   - created_at: 2026-04-13
   - phase: Group 15
   - scope: Define a declarative `SemanticProductContract v1` (required fact families, key fields, and identity rules) and enforce it before lowering/emit paths so contract violations fail with stable diagnostics.
+  - file_todos:
+    - [x] `TODO-0404-F01` files: `/Users/chrgre01/src/PrimeStruct/include/primec/SemanticProduct.h`, `/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererLowerEntrySetup.cpp`; fix: add a semantic-product contract version field (`v1`), declare a v1 manifest for lowering-facing fact families/required fields, and enforce version + module artifact identity checks during lowerer entry preflight.
+    - [x] `TODO-0404-F02` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends_registry.cpp`; fix: add deterministic negative coverage for contract version mismatch and module artifact index overflow diagnostics before backend dispatch.
+    - [ ] `TODO-0404-F03` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends_registry.cpp`; fix: add one semantic-product compile-pipeline conformance case that exercises a positive v1 contract path through an emit-facing flow.
   - acceptance:
     - One versioned contract source-of-truth exists for lowering-facing semantic-product families and required fields.
     - Compile-pipeline/lowering preflight rejects contract-version mismatch and missing required family/field data with deterministic diagnostics before backend dispatch.

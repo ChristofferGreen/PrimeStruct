@@ -12,6 +12,10 @@
 
 namespace primec {
 
+inline constexpr uint32_t SemanticProductContractVersionV1 = 1;
+inline constexpr uint32_t SemanticProductContractVersionCurrent =
+    SemanticProductContractVersionV1;
+
 struct SemanticProgramDefinition {
   std::string name;
   std::string fullPath;
@@ -308,6 +312,7 @@ struct SemanticProgramModuleResolvedArtifacts {
 };
 
 struct SemanticProgram {
+  uint32_t contractVersion = SemanticProductContractVersionCurrent;
   std::string entryPath;
   std::vector<std::string> sourceImports;
   std::vector<std::string> imports;
