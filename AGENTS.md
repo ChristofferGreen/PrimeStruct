@@ -32,9 +32,10 @@ build and layout solidify.
 - If new public syntax/IR features are added, document them with a minimal runnable
   example and expected IR snippet.
 - When specs change, add a matching TODO entry unless explicitly marked as docs-only/no TODO.
-- If a TODO item becomes too large to finish and verify in one pass, split it into
-  smaller checklist entries in `docs/todo.md` and complete them incrementally across
-  separate commits.
+- If a TODO item becomes too large for one code-affecting commit, split it into
+  smaller `TODO-XXXX` task blocks in `docs/todo.md` with explicit `scope`,
+  `acceptance`, and `stop_rule`, then complete them incrementally across separate
+  commits.
 
 ## Struct helper notes
 - Struct constructor calls (`Type(...)`) map arguments to fields (positional/labeled); they do not forward to `Create()`.
@@ -85,9 +86,16 @@ build and layout solidify.
   - one negative/diagnostic test
 
 ## TODO slicing workflow
-- If the highest-priority TODO is too large, split it into explicit sub-items in `docs/todo.md` before continuing implementation.
-- Do not ship repeated test-only slices on the same parent TODO; if tests reveal more work, add follow-up TODO sub-items and move to the next code-affecting slice.
-- For TODO items prefer to attempt to finish the TODO item, if this cannot be done, prefer splitting it up into multiple smaller items and finishing one of the smaller ones.
+- Follow `docs/todo.md` as the canonical open-work log; keep only `[ ]`/`[~]` tasks
+  in that file and move completed tasks to `docs/todo_finished.md`.
+- Use stable `TODO-XXXX` IDs and keep `Ready Now`, `Immediate Next 10`,
+  `Priority Lanes`, and `Execution Queue` synchronized with task blocks.
+- Every active leaf must include explicit `scope`, `acceptance`, and `stop_rule`,
+  and must target a value outcome (behavior change, perf/memory gain, or
+  compatibility subsystem deletion).
+- If the highest-priority TODO is too large for one code-affecting commit, split it
+  into explicit sub-items in `docs/todo.md` before continuing implementation.
+- Keep the active queue short: no more than 8 live leaves at once.
 
 ## Code guidelines
 - **Language:** C++23 for compiler/VM tooling unless otherwise documented.
