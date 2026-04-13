@@ -39,6 +39,11 @@ def parse_args() -> argparse.Namespace:
                         help="Optional shell command override for benchmark step.")
     parser.add_argument("--trend-cmd", default="",
                         help="Optional shell command override for trend step.")
+    parser.add_argument(
+        "--skip-budget-check-in-benchmark",
+        action="store_true",
+        help=("When mode=benchmark, skip the policy/trend budget check stage and run benchmark only."),
+    )
     return parser.parse_args()
 
 
@@ -142,13 +147,17 @@ def main() -> int:
     benchmark_stderr = run_dir / "benchmark_stderr.txt"
     trend_stdout = run_dir / "trend_stdout.txt"
     trend_stderr = run_dir / "trend_stderr.txt"
+    trend_requested = (
+        args.mode in ("trend", "full") or
+        (args.mode == "benchmark" and not args.skip_budget_check_in_benchmark)
+    )
 
     # Avoid stale-report carryover in modes that regenerate these files.
     if args.mode in ("benchmark", "full") and benchmark_report.exists():
         benchmark_report.unlink()
-    if args.mode in ("trend", "full") and budget_report.exists():
+    if trend_requested and budget_report.exists():
         budget_report.unlink()
-    if args.mode in ("trend", "full") and trend_report.exists():
+    if trend_requested and trend_report.exists():
         trend_report.unlink()
 
     benchmark_command = args.benchmark_cmd.strip() or default_benchmark_command(
@@ -166,8 +175,8 @@ def main() -> int:
         benchmark_stdout.write_text("", encoding="utf-8")
         benchmark_stderr.write_text("", encoding="utf-8")
 
-    can_run_trend = args.mode in ("trend", "full")
-    if args.mode == "full" and benchmark_exit_code is not None and benchmark_exit_code != 0:
+    can_run_trend = trend_requested
+    if args.mode in ("benchmark", "full") and benchmark_exit_code is not None and benchmark_exit_code != 0:
         can_run_trend = False
         trend_skipped = True
 
@@ -229,7 +238,7 @@ def main() -> int:
         "history_report": copied_history_report,
         "commands": {
             "benchmark": benchmark_command if args.mode in ("benchmark", "full") else None,
-            "trend": trend_command if args.mode in ("trend", "full") else None,
+            "trend": trend_command if trend_requested else None,
         },
     }
     manifest_path = run_dir / "manifest.json"

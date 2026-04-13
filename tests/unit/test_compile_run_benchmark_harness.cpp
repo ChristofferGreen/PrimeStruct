@@ -2833,6 +2833,150 @@ TEST_CASE("semantic memory ci artifact wrapper captures reports on success") {
   CHECK(sawHistory);
 }
 
+TEST_CASE("semantic memory ci artifact wrapper benchmark mode runs budget gate") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path wrapperPath = repoRoot / "scripts" / "semantic_memory_ci_artifacts.py";
+  const std::filesystem::path rootScratch = testScratchDir("semantic_memory_ci_artifacts_benchmark_mode");
+  const std::filesystem::path reportPath = rootScratch / "semantic_memory_report.json";
+  const std::filesystem::path budgetPath = rootScratch / "semantic_memory_budget_report.json";
+  const std::filesystem::path trendPath = rootScratch / "semantic_memory_trend_report.json";
+  const std::filesystem::path historyDir = rootScratch / "history";
+  const std::filesystem::path artifactsDir = rootScratch / "artifacts";
+
+  const std::string benchScript = writeTemp(
+      "semantic_memory_ci_artifacts_benchmark_mode_bench.py",
+      "import json, pathlib, sys\n"
+      "path = pathlib.Path(sys.argv[1])\n"
+      "path.parent.mkdir(parents=True, exist_ok=True)\n"
+      "payload = {\n"
+      "  'schema': 'primestruct_semantic_memory_report_v1',\n"
+      "  'results': [{'fixture': 'toy', 'phase': 'ast-semantic', 'worst_peak_rss_bytes': 1, 'worst_wall_seconds': 0.1}],\n"
+      "}\n"
+      "path.write_text(json.dumps(payload) + '\\n', encoding='utf-8')\n");
+  const std::string trendScript = writeTemp(
+      "semantic_memory_ci_artifacts_benchmark_mode_trend.py",
+      "import json, pathlib, sys\n"
+      "budget_path = pathlib.Path(sys.argv[1])\n"
+      "trend_path = pathlib.Path(sys.argv[2])\n"
+      "budget_path.parent.mkdir(parents=True, exist_ok=True)\n"
+      "trend_path.parent.mkdir(parents=True, exist_ok=True)\n"
+      "budget_path.write_text(json.dumps({'schema': 'primestruct_semantic_memory_budget_check_report_v1', 'entries': [], 'failure_count': 0}) + '\\n', encoding='utf-8')\n"
+      "trend_path.write_text(json.dumps({'schema': 'primestruct_semantic_memory_trend_report_v1', 'status': 'passed'}) + '\\n', encoding='utf-8')\n");
+
+  const std::string benchmarkCmdOverride =
+      "python3 " + quoteShellArg(benchScript) + " " + quoteShellArg(reportPath.string());
+  const std::string trendCmdOverride =
+      "python3 " + quoteShellArg(trendScript) + " " + quoteShellArg(budgetPath.string()) +
+      " " + quoteShellArg(trendPath.string());
+
+  const std::string stdoutPath = writeTemp("semantic_memory_ci_artifacts_benchmark_mode.out", "");
+  const std::string stderrPath = writeTemp("semantic_memory_ci_artifacts_benchmark_mode.err", "");
+  const std::string cmd =
+      "python3 " + quoteShellArg(wrapperPath.string()) +
+      " --mode benchmark --run-label test_benchmark_mode --repo-root " + quoteShellArg(repoRoot.string()) +
+      " --benchmark-report " + quoteShellArg(reportPath.string()) +
+      " --budget-report " + quoteShellArg(budgetPath.string()) +
+      " --trend-report " + quoteShellArg(trendPath.string()) +
+      " --history-dir " + quoteShellArg(historyDir.string()) +
+      " --artifacts-dir " + quoteShellArg(artifactsDir.string()) +
+      " --benchmark-cmd " + quoteShellArg(benchmarkCmdOverride) +
+      " --trend-cmd " + quoteShellArg(trendCmdOverride) +
+      " > " + quoteShellArg(stdoutPath) + " 2> " + quoteShellArg(stderrPath);
+
+  CHECK(runCommand(cmd) == 0);
+  CHECK(readFile(stderrPath).empty());
+
+  const std::filesystem::path latestManifest = artifactsDir / "test_benchmark_mode_latest_manifest.json";
+  REQUIRE(std::filesystem::exists(latestManifest));
+  const std::string manifest = readFile(latestManifest.string());
+  CHECK(manifest.find("\"mode\": \"benchmark\"") != std::string::npos);
+  CHECK(manifest.find("\"status\": \"passed\"") != std::string::npos);
+  CHECK(manifest.find("\"benchmark_exit_code\": 0") != std::string::npos);
+  CHECK(manifest.find("\"trend_exit_code\": 0") != std::string::npos);
+  CHECK(manifest.find("\"trend_skipped\": false") != std::string::npos);
+  CHECK(manifest.find("\"budget_report\": \"semantic_memory_budget_report.json\"") != std::string::npos);
+  CHECK(manifest.find("\"trend_report\": \"semantic_memory_trend_report.json\"") != std::string::npos);
+}
+
+TEST_CASE("semantic memory ci artifact wrapper benchmark mode fails on budget gate") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path wrapperPath = repoRoot / "scripts" / "semantic_memory_ci_artifacts.py";
+  const std::filesystem::path rootScratch =
+      testScratchDir("semantic_memory_ci_artifacts_benchmark_mode_budget_fail");
+  const std::filesystem::path reportPath = rootScratch / "semantic_memory_report.json";
+  const std::filesystem::path budgetPath = rootScratch / "semantic_memory_budget_report.json";
+  const std::filesystem::path trendPath = rootScratch / "semantic_memory_trend_report.json";
+  const std::filesystem::path historyDir = rootScratch / "history";
+  const std::filesystem::path artifactsDir = rootScratch / "artifacts";
+
+  const std::string benchScript = writeTemp(
+      "semantic_memory_ci_artifacts_benchmark_mode_budget_fail_bench.py",
+      "import json, pathlib, sys\n"
+      "path = pathlib.Path(sys.argv[1])\n"
+      "path.parent.mkdir(parents=True, exist_ok=True)\n"
+      "payload = {\n"
+      "  'schema': 'primestruct_semantic_memory_report_v1',\n"
+      "  'results': [{'fixture': 'toy', 'phase': 'ast-semantic', 'worst_peak_rss_bytes': 1, 'worst_wall_seconds': 0.1}],\n"
+      "}\n"
+      "path.write_text(json.dumps(payload) + '\\n', encoding='utf-8')\n");
+  const std::string trendScript = writeTemp(
+      "semantic_memory_ci_artifacts_benchmark_mode_budget_fail_trend.py",
+      "import pathlib, sys\n"
+      "budget_path = pathlib.Path(sys.argv[1])\n"
+      "trend_path = pathlib.Path(sys.argv[2])\n"
+      "budget_path.parent.mkdir(parents=True, exist_ok=True)\n"
+      "trend_path.parent.mkdir(parents=True, exist_ok=True)\n"
+      "budget_path.write_text('{\"schema\":\"primestruct_semantic_memory_budget_check_report_v1\"}\\n', encoding='utf-8')\n"
+      "trend_path.write_text('{\"schema\":\"primestruct_semantic_memory_trend_report_v1\",\"status\":\"failed\"}\\n', encoding='utf-8')\n"
+      "sys.exit(5)\n");
+
+  const std::string benchmarkCmdOverride =
+      "python3 " + quoteShellArg(benchScript) + " " + quoteShellArg(reportPath.string());
+  const std::string trendCmdOverride =
+      "python3 " + quoteShellArg(trendScript) + " " + quoteShellArg(budgetPath.string()) +
+      " " + quoteShellArg(trendPath.string());
+
+  const std::string stdoutPath = writeTemp("semantic_memory_ci_artifacts_benchmark_mode_budget_fail.out", "");
+  const std::string stderrPath = writeTemp("semantic_memory_ci_artifacts_benchmark_mode_budget_fail.err", "");
+  const std::string cmd =
+      "python3 " + quoteShellArg(wrapperPath.string()) +
+      " --mode benchmark --run-label test_benchmark_mode_budget_fail --repo-root " +
+      quoteShellArg(repoRoot.string()) +
+      " --benchmark-report " + quoteShellArg(reportPath.string()) +
+      " --budget-report " + quoteShellArg(budgetPath.string()) +
+      " --trend-report " + quoteShellArg(trendPath.string()) +
+      " --history-dir " + quoteShellArg(historyDir.string()) +
+      " --artifacts-dir " + quoteShellArg(artifactsDir.string()) +
+      " --benchmark-cmd " + quoteShellArg(benchmarkCmdOverride) +
+      " --trend-cmd " + quoteShellArg(trendCmdOverride) +
+      " > " + quoteShellArg(stdoutPath) + " 2> " + quoteShellArg(stderrPath);
+
+  CHECK(runCommand(cmd) == 5);
+  CHECK(readFile(stderrPath).empty());
+
+  const std::filesystem::path latestManifest =
+      artifactsDir / "test_benchmark_mode_budget_fail_latest_manifest.json";
+  REQUIRE(std::filesystem::exists(latestManifest));
+  const std::string manifest = readFile(latestManifest.string());
+  CHECK(manifest.find("\"mode\": \"benchmark\"") != std::string::npos);
+  CHECK(manifest.find("\"status\": \"failed\"") != std::string::npos);
+  CHECK(manifest.find("\"benchmark_exit_code\": 0") != std::string::npos);
+  CHECK(manifest.find("\"trend_exit_code\": 5") != std::string::npos);
+  CHECK(manifest.find("\"trend_skipped\": false") != std::string::npos);
+  CHECK(manifest.find("\"benchmark_report\": \"semantic_memory_report.json\"") != std::string::npos);
+  CHECK(manifest.find("\"budget_report\": null") != std::string::npos);
+}
+
 TEST_CASE("semantic memory ci artifact wrapper writes failure artifacts") {
   if (!hasPython3()) {
     INFO("python3 not available");

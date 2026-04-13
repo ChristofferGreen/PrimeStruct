@@ -138,6 +138,15 @@ For CI artifact capture across benchmark + trend runs (including failures), use:
 
 - `python3 scripts/semantic_memory_ci_artifacts.py --mode full --repo-root . --primec build-release/primec --benchmark-report build-release/benchmarks/semantic_memory_report.json --budget-report build-release/benchmarks/semantic_memory_budget_check_report.json --trend-report build-release/benchmarks/semantic_memory_trend_report.json --history-dir build-release/benchmarks/semantic_memory_history --artifacts-dir build-release/benchmarks/semantic_memory_artifacts`
 
+Benchmark-only CI runs now enforce policy checks by default:
+
+- `python3 scripts/semantic_memory_ci_artifacts.py --mode benchmark ...`
+
+This mode runs benchmark collection and then runs the trend/budget checker against
+the generated report and discovered history. Use
+`--skip-budget-check-in-benchmark` only for local exploratory runs that
+intentionally bypass policy gating.
+
 For phase-one target checks tied to the baseline-derived criteria, use:
 
 - `python3 scripts/check_semantic_memory_phase_one_success.py --criteria benchmarks/semantic_memory_phase_one_success_criteria.json --report build-release/benchmarks/semantic_memory_report.json --history-dir build-release/benchmarks/semantic_memory_history --history-limit 2`

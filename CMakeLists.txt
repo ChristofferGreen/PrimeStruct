@@ -1113,14 +1113,16 @@ if(PRIMESTRUCT_BUILD_TESTS)
             --primec $<TARGET_FILE:primec>
             --repo-root ${CMAKE_SOURCE_DIR}
             --runs 3
+            --policy ${CMAKE_SOURCE_DIR}/benchmarks/semantic_memory_budget_policy.json
             --history-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_history
             --history-limit 2
             --benchmark-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_report.json
             --budget-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_budget_check_report.json
+            --trend-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_trend_report.json
             --artifacts-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_artifacts
     DEPENDS primec
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    COMMENT "Running semantic memory benchmark fixtures with artifact capture"
+    COMMENT "Running semantic memory benchmark + budget gate with artifact capture"
     VERBATIM
   )
 
@@ -1132,10 +1134,12 @@ if(PRIMESTRUCT_BUILD_TESTS)
             --primec $<TARGET_FILE:primec>
             --repo-root ${CMAKE_SOURCE_DIR}
             --runs 3
+            --policy ${CMAKE_SOURCE_DIR}/benchmarks/semantic_memory_budget_policy.json
             --history-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_history
             --history-limit 2
             --benchmark-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_report.json
             --budget-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_budget_check_report.json
+            --trend-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_trend_report.json
             --artifacts-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_artifacts
   )
   set_tests_properties(
