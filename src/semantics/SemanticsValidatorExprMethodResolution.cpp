@@ -371,12 +371,11 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       if (!normalizedNamespace.empty() && normalizedNamespace.front() == '/') {
         normalizedNamespace.erase(normalizedNamespace.begin());
       }
-      if ((normalizedName == "vector/count" || normalizedName == "vector/capacity" ||
-           normalizedName == "std/collections/vector/count" ||
+      if ((normalizedName == "std/collections/vector/count" ||
            normalizedName == "std/collections/vector/capacity")) {
         return "/" + normalizedName;
       }
-      if ((normalizedNamespace == "vector" || normalizedNamespace == "std/collections/vector") &&
+      if (normalizedNamespace == "std/collections/vector" &&
           (normalizedName == "count" || normalizedName == "capacity")) {
         return "/" + normalizedNamespace + "/" + normalizedName;
       }
