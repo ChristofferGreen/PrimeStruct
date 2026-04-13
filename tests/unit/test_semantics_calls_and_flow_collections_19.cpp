@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("array namespaced slash method spelling block-arg diagnostics keep divide target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -644,3 +648,5 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
+TEST_SUITE_END();

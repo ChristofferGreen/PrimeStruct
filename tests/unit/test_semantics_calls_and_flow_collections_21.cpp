@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("vector unsafe method alias access field expression keeps removed alias diagnostics") {
   const std::string source = R"(
 Marker {
@@ -630,3 +634,5 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK_FALSE(error.empty());
 }
+
+TEST_SUITE_END();

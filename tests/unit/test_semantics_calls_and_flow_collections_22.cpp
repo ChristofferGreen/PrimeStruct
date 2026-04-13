@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("vector namespaced call aliases validate count and access builtins") {
   const std::string source = R"(
 [return<int>]
@@ -642,3 +646,5 @@ main() {
   CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
 }
 
+
+TEST_SUITE_END();

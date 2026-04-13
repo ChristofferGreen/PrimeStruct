@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("wrapper-returned referenced canonical map keeps if string branch compatibility") {
   const std::string source = R"(
 import /std/collections/*
@@ -694,3 +698,5 @@ main() {
   CHECK(error.find("return type mismatch") != std::string::npos);
   CHECK(error.find("expected i32") != std::string::npos);
 }
+
+TEST_SUITE_END();

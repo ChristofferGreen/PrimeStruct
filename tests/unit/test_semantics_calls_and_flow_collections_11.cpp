@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("helper-wrapped map constructors keep mismatch diagnostics on explicit experimental map parameters") {
   const std::string source = R"(
 import /std/collections/*
@@ -622,3 +626,5 @@ main() {
   INFO(error);
   CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
 }
+
+TEST_SUITE_END();

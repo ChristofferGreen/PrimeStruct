@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("wrapper temporary templated vector method arity mismatch reports canonical argument mismatch") {
   const std::string source = R"(
 [return<int>]
@@ -1079,3 +1083,5 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: /array/capacity") != std::string::npos);
 }
+
+TEST_SUITE_END();

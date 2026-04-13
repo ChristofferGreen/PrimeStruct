@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("vector helper call-form expression builtin stays statement-only with named arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -632,3 +636,5 @@ main() {
   CHECK(error.empty());
 }
 
+
+TEST_SUITE_END();

@@ -711,6 +711,37 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_semantics_bindings_struct_defaults.cpp
     tests/unit/test_semantics_calls_and_flow_access.cpp
     tests/unit/test_semantics_calls_and_flow_collections.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_01.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_02.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_03.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_04.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_05.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_06.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_07.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_08.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_09.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_10.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_11.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_12.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_13.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_14.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_15.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_16.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_17.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_18.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_19.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_20.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_21.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_22.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_23.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_24.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_25.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_26.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_27.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_28.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_29.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_30.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_31.cpp
     tests/unit/test_semantics_calls_and_flow_comparisons_literals.cpp
     tests/unit/test_semantics_calls_and_flow_control_core.cpp
     tests/unit/test_semantics_calls_and_flow_control_misc.cpp

@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("slash-method access wrapper temporary chained method reports i32 path diagnostics") {
   const std::string source = R"(
 import /std/collections/*
@@ -631,3 +635,5 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
+TEST_SUITE_END();

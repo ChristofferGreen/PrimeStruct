@@ -1,4 +1,7 @@
+#include "test_semantics_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 
 TEST_CASE("count builtin validates on array literals") {
   const std::string source = R"(
@@ -816,3 +819,5 @@ main() {
   CHECK(error.find("trait constraint not satisfied") != std::string::npos);
   CHECK(error.find("Comparable</Key> requires less_than(/Key, /Key) -> bool") != std::string::npos);
 }
+
+TEST_SUITE_END();

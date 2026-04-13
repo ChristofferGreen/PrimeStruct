@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("bare map call form statement body arguments fall back to canonical helper target") {
   const std::string source = R"(
 [return<int>]
@@ -644,3 +648,5 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown method: /i32/tag") != std::string::npos);
 }
+
+TEST_SUITE_END();

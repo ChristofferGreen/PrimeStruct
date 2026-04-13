@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("push accepts non-relocation-trivial vector element types through imported stdlib helpers") {
   const std::string source = R"(
 import /std/collections/*
@@ -698,3 +702,5 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
+TEST_SUITE_END();

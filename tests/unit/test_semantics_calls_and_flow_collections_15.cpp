@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("field-bound experimental map compatibility count calls remain accepted") {
   const std::string source = R"(
 import /std/collections/*
@@ -626,3 +630,5 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: /std/collections/map/tryAt") != std::string::npos);
 }
+
+TEST_SUITE_END();

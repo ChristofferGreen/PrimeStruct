@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("map compatibility explicit-template count call keeps non-templated alias diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -637,3 +641,5 @@ main() {
   CHECK(error.empty());
 }
 
+
+TEST_SUITE_END();

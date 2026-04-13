@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("wrapper-returned canonical map method ignores alias helper when canonical helper is absent") {
   const std::string source = R"(
 [return<int>]
@@ -844,3 +848,5 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("block arguments require a definition target") != std::string::npos);
 }
+
+TEST_SUITE_END();

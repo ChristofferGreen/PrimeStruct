@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("vector stdlib namespaced push auto inference uses canonical helper definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
@@ -642,3 +646,5 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
+TEST_SUITE_END();

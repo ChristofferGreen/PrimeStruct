@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("bare vector pop requires imported stdlib helper before block-arg validation") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -624,3 +628,5 @@ TEST_CASE("vector helper named args on array targets report vector binding") {
   checkInvalidStatement("values.remove_at([index] 0i32)");
   checkInvalidStatement("values.remove_swap([index] 0i32)");
 }
+
+TEST_SUITE_END();

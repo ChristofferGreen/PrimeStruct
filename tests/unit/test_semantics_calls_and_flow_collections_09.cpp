@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("vector namespaced helper reordered expression stays statement-only") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -634,3 +638,5 @@ main() {
   CHECK(error.find("implicit template arguments conflict on /std/collections/vectorPair") != std::string::npos);
 }
 
+
+TEST_SUITE_END();

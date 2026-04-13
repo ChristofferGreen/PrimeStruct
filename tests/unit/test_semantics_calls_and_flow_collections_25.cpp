@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("vector namespaced capacity wrapper vector target without helper reports unknown target") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
@@ -674,3 +678,5 @@ main() {
   CHECK(error.find("argument type mismatch for /std/collections/vector/push parameter values") !=
         std::string::npos);
 }
+
+TEST_SUITE_END();

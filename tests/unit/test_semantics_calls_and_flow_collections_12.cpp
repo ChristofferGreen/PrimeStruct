@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("helper-wrapped Result.ok payloads accept dereferenced experimental result storage") {
   const std::string source = R"(
 import /std/collections/*
@@ -674,3 +678,5 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
+TEST_SUITE_END();

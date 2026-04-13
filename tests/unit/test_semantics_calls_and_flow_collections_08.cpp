@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("push and reserve named args validate through imported stdlib helpers") {
   const auto checkStatement = [](const std::string &stmtText) {
     const std::string source =
@@ -789,3 +793,5 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("push is only supported as a statement") != std::string::npos);
 }
+
+TEST_SUITE_END();

@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("container error contract shape validates through Result.why") {
   const std::string source = R"(
 [struct]
@@ -5001,3 +5005,5 @@ main() {
   CHECK(error.find("argument type mismatch") != std::string::npos);
   CHECK(error.find("/simulateStep") != std::string::npos);
 }
+
+TEST_SUITE_END();

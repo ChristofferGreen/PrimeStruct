@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("to_soa and to_aos reject named arguments for builtin calls") {
   const auto checkNamedArgs = [](const std::string &callExpr) {
     const std::string source =
@@ -1453,3 +1457,5 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
+
+TEST_SUITE_END();

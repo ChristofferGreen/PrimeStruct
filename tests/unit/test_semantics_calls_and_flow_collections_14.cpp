@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("stdlib map constructors accept experimental map method-call parameters") {
   const std::string source = R"(
 import /std/collections/*
@@ -632,3 +636,5 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument count mismatch for /std/collections/experimental_map/mapAt") != std::string::npos);
 }
+
+TEST_SUITE_END();

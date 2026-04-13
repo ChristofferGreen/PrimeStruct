@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("map wrapper temporary tryAt auto inference requires canonical helper definition") {
   const std::string source = R"(
 [struct]
@@ -601,3 +605,5 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: /std/collections/vector/at_unsafe") != std::string::npos);
 }
+
+TEST_SUITE_END();

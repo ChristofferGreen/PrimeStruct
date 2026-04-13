@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("stdlib namespaced map constructor resolves through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*
@@ -693,3 +697,5 @@ main() {
   INFO(error);
   CHECK(error.empty());
 }
+
+TEST_SUITE_END();

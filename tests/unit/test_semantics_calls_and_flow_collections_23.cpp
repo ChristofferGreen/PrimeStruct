@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
+
 TEST_CASE("vector namespaced unknown expected primitive call return keeps compatibility diagnostics") {
   const std::string source = R"(
 Marker() {}
@@ -630,3 +634,5 @@ main() {
         std::string::npos);
 }
 
+
+TEST_SUITE_END();
