@@ -706,6 +706,78 @@ main() {
   CHECK(error.find("unknown method: /vector/capacity") != std::string::npos);
 }
 
+TEST_CASE("vector method bare at resolves through canonical stdlib helper") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/at<T>([vector<T>] values, [i32] index) {
+  return(plus(index, 55i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values.at(1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector method explicit at alias namespace is rejected when only canonical helper exists") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/at<T>([vector<T>] values, [i32] index) {
+  return(plus(index, 55i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values./vector/at(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/at") != std::string::npos);
+}
+
+TEST_CASE("vector method bare at_unsafe resolves through canonical stdlib helper") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/at_unsafe<T>([vector<T>] values, [i32] index) {
+  return(plus(index, 66i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values.at_unsafe(1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector method explicit at_unsafe alias namespace is rejected when only canonical helper exists") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/at_unsafe<T>([vector<T>] values, [i32] index) {
+  return(plus(index, 66i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values./vector/at_unsafe(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/at_unsafe") != std::string::npos);
+}
+
 TEST_CASE("vector method count rejects stdlib vectorCount alias-only helper") {
   const std::string source = R"(
 [return<int>]

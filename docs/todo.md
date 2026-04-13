@@ -150,6 +150,7 @@ Wave E (queue hygiene):
   - progress: Removed semantic method-resolution fallback from canonical stdlib vector helpers back to `/vector/*` alias paths in `SemanticsValidatorExprMethodResolution.cpp`, and added semantics coverage for canonical helper success plus explicit `/vector/count` method-call rejection.
   - progress: Removed method-call fallback that treated `/std/collections/vectorCount` and `/std/collections/vectorCapacity` alias helpers as valid providers for `values.count()` / `values.capacity()`, and added semantics coverage that alias-only helpers now reject with `unknown method` diagnostics.
   - progress: Extended semantics coverage to include canonical `values.capacity()` success and explicit `values./vector/capacity()` alias rejection when only canonical stdlib helpers exist.
+  - progress: Extended semantics coverage to include canonical `values.at(...)` / `values.at_unsafe(...)` success and explicit `values./vector/at(...)` / `values./vector/at_unsafe(...)` alias rejection when only canonical stdlib helpers exist.
 
 - [ ] TODO-0407: Move test implementations from include chunks into `.cpp`
   - owner: ai
