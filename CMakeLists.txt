@@ -858,37 +858,37 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_semantics_bindings_struct_defaults.cpp
     tests/unit/test_semantics_calls_and_flow_access.cpp
     tests/unit/test_semantics_calls_and_flow_collections.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_01.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_02.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_03.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_04.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_05.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_06.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_07.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_08.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_09.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_10.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_11.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_12.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_13.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_14.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_15.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_16.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_17.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_18.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_19.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_20.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_21.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_22.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_23.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_24.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_25.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_26.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_27.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_28.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_29.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_30.cpp
-    tests/unit/test_semantics_calls_and_flow_collections_31.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_count_helpers_and_bare_map_calls.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_container_error_and_result_helpers.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_soa_vector_builtins_named_args.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_wrapper_temporary_access_resolution.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_user_array_helper_precedence.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_relocation_trivial_vector_elements.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_bare_vector_pop_helper_resolution.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_vector_mutator_named_args.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_vector_helper_reordered_expression.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_stdlib_map_constructor_resolution.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_experimental_map_result_payloads.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_experimental_map_deref_and_struct_storage.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_experimental_map_auto_inference.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_stdlib_map_constructor_parameter_shapes.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_field_bound_map_compatibility_calls.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_wrapper_temporary_tryat_contains_inference.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_variadic_fileerror_and_file_handles.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_wrapper_returned_map_method_resolution.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_namespaced_collection_statement_body_args.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_bare_map_call_form_statement_args.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_vector_method_alias_struct_diagnostics.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_vector_namespaced_alias_calls.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_vector_alias_unknown_expected_forwarding.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_wrapper_temporary_templated_vector_methods.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_vector_capacity_alias_named_args.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_vector_stdlib_push_auto_inference.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_map_compatibility_explicit_template_calls.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_wrapper_returned_map_string_branch_paths.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_wrapper_returned_map_count_expression.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_vector_helper_call_form_named_receivers.cpp
+    tests/unit/test_semantics_calls_and_flow_collections_user_named_map_block_args.cpp
     tests/unit/test_semantics_calls_and_flow_comparisons_literals.cpp
     tests/unit/test_semantics_calls_and_flow_control_core.cpp
     tests/unit/test_semantics_calls_and_flow_control_misc.cpp

@@ -132,7 +132,7 @@ Wave D (test naming + queue hygiene):
     - [x] `TODO-0408-F08` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends_glsl.cpp`; fix: rename suite to GLSL-specific naming (for example `primestruct.ir.pipeline.backends.glsl`).
     - [x] `TODO-0408-F09` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends_cpp_vm.cpp`; fix: rename suite to cpp/vm-focused naming (for example `primestruct.ir.pipeline.backends.cpp_vm`).
     - [ ] `TODO-0408-F10` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_validation.cpp`; fix: after chunk retirement, rename resulting files/suites to semantic topics (no numeric suffixes like `_01`, `_45`, `_92`).
-    - [ ] `TODO-0408-F11` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_semantics_calls_and_flow_collections.cpp`; fix: after chunk retirement, split into topic files/suites (`calls`, `flow`, `collections`) without numeric suffix naming.
+    - [x] `TODO-0408-F11` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_semantics_calls_and_flow_collections.cpp`; fix: after chunk retirement, split into topic files/suites (`calls`, `flow`, `collections`) without numeric suffix naming.
     - [ ] `TODO-0408-F12` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_emitters.cpp`; fix: after chunk retirement, split into emitter-topic file/suite names (for example `vm`, `cpp-ir`, `exe-ir`, `glsl-ir`, `spirv-ir`) and remove numeric chunk naming.
     - [x] `TODO-0408-F13` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_semantics_manual.cpp`; fix: remove the duplicate `TEST_SUITE_BEGIN("primestruct.semantics.manual")` so suite nesting is well-formed and unambiguous.
   - acceptance:
