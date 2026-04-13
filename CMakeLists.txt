@@ -631,6 +631,22 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_reflection_codegen.cpp
     tests/unit/test_compile_run_reflection_codegen_runtime.cpp
     tests/unit/test_compile_run_smoke.cpp
+    tests/unit/test_compile_run_smoke_argv.cpp
+    tests/unit/test_compile_run_smoke_collective.cpp
+    tests/unit/test_compile_run_smoke_core_basic.cpp
+    tests/unit/test_compile_run_smoke_core_contracts_and_cli.cpp
+    tests/unit/test_compile_run_smoke_core_debug_and_docs.cpp
+    tests/unit/test_compile_run_smoke_core_demo_scripts.cpp
+    tests/unit/test_compile_run_smoke_core_gfx_end_to_end.cpp
+    tests/unit/test_compile_run_smoke_core_gfx_entrypoints.cpp
+    tests/unit/test_compile_run_smoke_core_gfx_imports.cpp
+    tests/unit/test_compile_run_smoke_core_wasm_core.cpp
+    tests/unit/test_compile_run_smoke_core_wasm_limits.cpp
+    tests/unit/test_compile_run_smoke_core_wasm_profiles.cpp
+    tests/unit/test_compile_run_smoke_core_wasm_wasi_core.cpp
+    tests/unit/test_compile_run_smoke_core_wasm_wasi_png_decode.cpp
+    tests/unit/test_compile_run_smoke_core_wasm_wasi_png_interlaced.cpp
+    tests/unit/test_compile_run_smoke_core_wasm_wasi_png_write.cpp
     tests/unit/test_compile_run_text_filters.cpp
     tests/unit/test_compile_run_vm_bounds.cpp
     tests/unit/test_compile_run_vm_core.cpp

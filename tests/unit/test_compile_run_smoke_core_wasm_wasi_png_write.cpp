@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_smoke_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
+
 TEST_CASE("primec wasm wasi runs ppm write for deterministic rgb outputs") {
   const std::filesystem::path tempRoot = testScratchPath("") / "primec_wasm_ppm_write_success_runtime";
   std::error_code ec;
@@ -266,3 +272,5 @@ main() {
   checkWasmWasiRuntimeInDir(tempRoot, wasmPath, outPath, 2, "1\n1\n3\n255\n0\n0\n");
 }
 
+
+TEST_SUITE_END();

@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_smoke_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
+
 TEST_CASE("primec wasm wasi stdout and stderr match vm output") {
   const std::string source = R"(
 [return<int> effects(io_out, io_err)]
@@ -374,3 +380,5 @@ main() {
   CHECK(readFile(compileErrPath).find("vector literal requires heap_alloc effect") != std::string::npos);
 }
 
+
+TEST_SUITE_END();

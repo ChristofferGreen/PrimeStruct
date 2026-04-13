@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_smoke_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
+
 TEST_CASE("primec wasm documented limit IDs have conformance coverage") {
   struct WasmSectionInfo {
     uint8_t id = 0;
@@ -284,3 +290,5 @@ main() {
   }
 }
 
+
+TEST_SUITE_END();

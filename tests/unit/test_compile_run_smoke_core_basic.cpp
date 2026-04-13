@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_smoke_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
+
 TEST_CASE("compiles and runs simple main") {
   const std::string source = R"(
 [return<int>]
@@ -100,3 +106,5 @@ main() {
   CHECK(runCommand(nativePath) == 5);
 }
 
+
+TEST_SUITE_END();

@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_smoke_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
+
 TEST_CASE("primevm debug-dap emits deterministic framed transcripts") {
   const std::string source = R"(
 [return<int>]
@@ -627,3 +633,5 @@ main() {
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath) == 0);
 }
+
+TEST_SUITE_END();

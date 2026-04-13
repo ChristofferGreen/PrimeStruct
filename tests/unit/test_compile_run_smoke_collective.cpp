@@ -1,4 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_smoke_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
+
 
 TEST_CASE("compiles and runs import after definitions") {
   const std::string source = R"(
@@ -643,5 +648,6 @@ main() {
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath) == 4);
 }
+
 
 TEST_SUITE_END();

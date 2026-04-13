@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_smoke_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
+
 TEST_CASE("graphics api contract doc-linked constraints stay locked") {
   auto resolveDocPath = [](const std::string &name) -> std::filesystem::path {
     std::filesystem::path path = std::filesystem::current_path() / "docs" / name;
@@ -601,3 +607,5 @@ main() {
   CHECK(lines.back().find("\"snapshot\":{") != std::string::npos);
   CHECK(lines.back().find("\"result\":9") != std::string::npos);
 }
+
+TEST_SUITE_END();

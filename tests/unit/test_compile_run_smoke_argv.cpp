@@ -1,4 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_smoke_helpers.h"
+
 TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
+
 
 TEST_CASE("compiles and runs binding inference from if expression feeding method call") {
   const std::string source = R"(
@@ -440,5 +445,6 @@ main([array<string>] args) {
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(errPath) == "alpha\n");
 }
+
 
 TEST_SUITE_END();

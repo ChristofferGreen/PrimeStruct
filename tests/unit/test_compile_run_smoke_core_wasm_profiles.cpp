@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_smoke_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
+
 TEST_CASE("primec wasm wasi rejects malformed png inputs deterministically") {
   const std::filesystem::path tempRoot = testScratchPath("") / "primec_wasm_png_invalid_runtime";
   std::error_code ec;
@@ -795,3 +801,5 @@ main([array<string>] args) {
     CHECK(diagnostics.find("\"notes\":[\"backend: wasm\",\"stage: ir-validate\"]") != std::string::npos);
   }
 }
+
+TEST_SUITE_END();

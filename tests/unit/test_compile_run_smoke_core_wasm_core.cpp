@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_smoke_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
+
 TEST_CASE("count forwards to type method across backends") {
   const std::string source = R"(
 namespace i32 {
@@ -584,3 +590,5 @@ main() {
   CHECK(std::filesystem::exists(wasmPath) == false);
 }
 
+
+TEST_SUITE_END();

@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_smoke_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
+
 TEST_CASE("experimental gfx type surface imports across backends") {
   const std::string source = R"(
 import /std/gfx/experimental/*
@@ -378,3 +384,5 @@ main() {
   CHECK(runCommand(nativePath) == 10);
 }
 
+
+TEST_SUITE_END();

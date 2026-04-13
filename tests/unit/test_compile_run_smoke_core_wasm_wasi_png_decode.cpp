@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_smoke_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
+
 TEST_CASE("primec wasm wasi runs stored sub-filter rgb png inputs") {
   const std::filesystem::path tempRoot = testScratchPath("") / "primec_wasm_png_sub_runtime";
   std::error_code ec;
@@ -578,3 +584,5 @@ main() {
                             "30\n");
 }
 
+
+TEST_SUITE_END();

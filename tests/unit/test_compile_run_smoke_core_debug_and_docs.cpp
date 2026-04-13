@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_smoke_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
+
 TEST_CASE("primevm debug-json snapshots include payloads across step boundaries") {
   const std::string source = R"(
 [return<int>]
@@ -540,3 +546,5 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("--debug-dap cannot be combined with --debug-json") != std::string::npos);
 }
+
+TEST_SUITE_END();
