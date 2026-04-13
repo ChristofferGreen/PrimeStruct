@@ -71,35 +71,35 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.bindings"
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
                                   TIMEOUT 900
                                   SHARD_PREFIX "examples_ir_and_spinning_cube"
-                                  SOURCE_FILE "*test_compile_run_bindings_and_examples.cpp"
+                                  SOURCE_FILE "*test_compile_run_examples_*.cpp"
                                   RANGE_FIRST 1
                                   RANGE_LAST 26
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
                                   TIMEOUT 900
                                   SHARD_PREFIX "spinning_cube_demo_script"
-                                  SOURCE_FILE "*test_compile_run_bindings_and_examples.cpp"
+                                  SOURCE_FILE "*test_compile_run_examples_*.cpp"
                                   RANGE_FIRST 27
                                   RANGE_LAST 30
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
                                   TIMEOUT 900
                                   SHARD_PREFIX "spinning_cube_argument_validation"
-                                  SOURCE_FILE "*test_compile_run_bindings_and_examples.cpp"
+                                  SOURCE_FILE "*test_compile_run_examples_*.cpp"
                                   RANGE_FIRST 31
                                   RANGE_LAST 55
                                   CASES_PER_SHARD 5)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
                                   TIMEOUT 900
                                   SHARD_PREFIX "native_window_launcher_and_preflight"
-                                  SOURCE_FILE "*test_compile_run_bindings_and_examples.cpp"
+                                  SOURCE_FILE "*test_compile_run_examples_*.cpp"
                                   RANGE_FIRST 56
                                   RANGE_LAST 71
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
                                   TIMEOUT 900
                                   SHARD_PREFIX "metal_pipeline_and_borrow_checker"
-                                  SOURCE_FILE "*test_compile_run_bindings_and_examples.cpp"
+                                  SOURCE_FILE "*test_compile_run_examples_*.cpp"
                                   RANGE_FIRST 72
                                   RANGE_LAST 93
                                   CASES_PER_SHARD 1)

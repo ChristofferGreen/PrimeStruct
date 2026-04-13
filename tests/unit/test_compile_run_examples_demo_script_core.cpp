@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_examples_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.examples");
+
 TEST_CASE("spinning cube demo script emits deterministic summary") {
   if (!spinningCubeBackendsSupportArrayReturns()) {
     INFO("Skipping spinning cube demo script summary until browser/native gfx backends are available");
@@ -491,3 +497,5 @@ TEST_CASE("spinning cube demo script reports fail when native compile fails") {
   CHECK(output.find("[spinning-cube-demo] RESULT: FAIL") != std::string::npos);
 }
 
+
+TEST_SUITE_END();

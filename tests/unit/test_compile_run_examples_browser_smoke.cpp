@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_examples_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.examples");
+
 TEST_CASE("spinning cube integration artifact matrix stays valid") {
   if (!spinningCubeBackendsSupportArrayReturns()) {
     INFO("Skipping spinning cube artifact matrix checks until array-return lowering support lands");
@@ -498,3 +504,5 @@ TEST_CASE("spinning cube browser startup smoke proves wasm bootstrap") {
   CHECK(dom.find("Wasm load skipped") == std::string::npos);
 }
 
+
+TEST_SUITE_END();

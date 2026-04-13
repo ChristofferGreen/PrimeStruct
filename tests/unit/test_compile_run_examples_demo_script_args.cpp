@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_examples_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.examples");
+
 TEST_CASE("spinning cube demo script rejects non-integer port base") {
   std::filesystem::path scriptPath =
       std::filesystem::path("..") / "scripts" / "run_spinning_cube_demo.sh";
@@ -635,3 +641,5 @@ TEST_CASE("spinning cube demo script rejects bare dashdash token") {
   CHECK(readFile(errPath.string()).find("[spinning-cube-demo] ERROR: unknown arg: --") != std::string::npos);
 }
 
+
+TEST_SUITE_END();

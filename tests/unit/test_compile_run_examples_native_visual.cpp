@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_examples_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.examples");
+
 TEST_CASE("native window launcher visual smoke skips on non-macOS runners") {
   std::filesystem::path scriptPath =
       std::filesystem::path("..") / "scripts" / "run_native_spinning_cube_window.sh";
@@ -653,3 +659,5 @@ TEST_CASE("native window preflight script rejects unknown args") {
   CHECK(readFile(errPath.string()).find("[native-window-preflight] ERROR: unknown arg: --bogus") != std::string::npos);
 }
 
+
+TEST_SUITE_END();

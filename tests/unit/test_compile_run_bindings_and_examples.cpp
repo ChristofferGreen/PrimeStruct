@@ -1,12 +1,5 @@
 #include "test_compile_run_helpers.h"
-
-TEST_SUITE_BEGIN("primestruct.compile.run.bindings");
-
-#include "test_compile_run_bindings_basic.h"
-
-TEST_SUITE_END();
-
-TEST_SUITE_BEGIN("primestruct.compile.run.examples");
+#include "test_compile_run_examples_helpers.h"
 
 static std::string spinningCubeBackendProbeCacheSignature(const std::filesystem::path &cubePath) {
   std::string signature = cubePath.lexically_normal().string();
@@ -86,7 +79,7 @@ static void writeSpinningCubeBackendProbeCache(const std::filesystem::path &cach
   }
 }
 
-static bool spinningCubeBackendsSupportArrayReturns() {
+bool spinningCubeBackendsSupportArrayReturns() {
   static int cached = -1;
   if (cached != -1) {
     return cached == 1;
@@ -144,7 +137,7 @@ static bool spinningCubeBackendsSupportArrayReturns() {
   return storeResult(1);
 }
 
-static std::vector<std::filesystem::path> collectExamplePrimeFiles(const std::filesystem::path &examplesDir) {
+std::vector<std::filesystem::path> collectExamplePrimeFiles(const std::filesystem::path &examplesDir) {
   std::vector<std::filesystem::path> exampleFiles;
   for (const auto &entry : std::filesystem::recursive_directory_iterator(examplesDir)) {
     if (!entry.is_regular_file()) {
@@ -169,11 +162,11 @@ static std::vector<std::filesystem::path> collectExamplePrimeFiles(const std::fi
   return exampleFiles;
 }
 
-static void compileExampleIrBatch(const std::filesystem::path &examplesDir,
-                                  const std::vector<std::filesystem::path> &exampleFiles,
-                                  const std::string &outDirName,
-                                  const std::vector<std::string> &prefixes,
-                                  bool supportsSpinningCube) {
+void compileExampleIrBatch(const std::filesystem::path &examplesDir,
+                           const std::vector<std::filesystem::path> &exampleFiles,
+                           const std::string &outDirName,
+                           const std::vector<std::string> &prefixes,
+                           bool supportsSpinningCube) {
   const std::filesystem::path outDir = testScratchPath("") / outDirName;
   std::error_code ec;
   std::filesystem::remove_all(outDir, ec);
@@ -211,19 +204,3 @@ static void compileExampleIrBatch(const std::filesystem::path &examplesDir,
     INFO("All matching example files were gated by the spinning cube backend capability check");
   }
 }
-
-
-#include "test_compile_run_examples_docs.h"
-#include "test_compile_run_examples_spinning_cube_native.h"
-#include "test_compile_run_examples_spinning_cube_runtime.h"
-#include "test_compile_run_examples_browser_smoke.h"
-#include "test_compile_run_examples_docs_commands.h"
-#include "test_compile_run_examples_demo_script_core.h"
-#include "test_compile_run_examples_demo_script_args.h"
-#include "test_compile_run_examples_native_launcher.h"
-#include "test_compile_run_examples_native_visual.h"
-#include "test_compile_run_examples_metal_and_browser_hosts.h"
-#include "test_compile_run_examples_docs_locks.h"
-#include "test_compile_run_examples_metal_smoke_and_borrows.h"
-
-TEST_SUITE_END();

@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_examples_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.examples");
+
 TEST_CASE("compiles concrete examples to IR") {
   const std::filesystem::path examplesDir = std::filesystem::path("..") / "examples";
   REQUIRE(std::filesystem::exists(examplesDir));
@@ -203,3 +209,5 @@ TEST_CASE("spinning cube shared source compiles across profile targets") {
   CHECK(readFile(metalErrPath).find("Usage: primec") != std::string::npos);
 }
 
+
+TEST_SUITE_END();

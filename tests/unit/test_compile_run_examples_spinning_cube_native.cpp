@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_examples_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.examples");
+
 TEST_CASE("spinning cube native flat frame entrypoints compile and run deterministically") {
   std::filesystem::path cubePath =
       std::filesystem::path("..") / "examples" / "web" / "spinning_cube" / "cube.prime";
@@ -547,3 +553,5 @@ TEST_CASE("shared native metal window helper stays source locked") {
   CHECK(source.find("@selector(renderFrame:)") != std::string::npos);
 }
 
+
+TEST_SUITE_END();

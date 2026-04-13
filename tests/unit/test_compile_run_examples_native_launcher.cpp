@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_examples_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.examples");
+
 TEST_CASE("native window launcher wrapper delegates to shared gfx helper") {
   std::filesystem::path wrapperPath =
       std::filesystem::path("..") / "scripts" / "run_native_spinning_cube_window.sh";
@@ -361,3 +367,5 @@ TEST_CASE("native window launcher defaults to ten-second bounded run") {
   CHECK(output.find("[native-window-launcher] PASS: launch completed") != std::string::npos);
 }
 
+
+TEST_SUITE_END();

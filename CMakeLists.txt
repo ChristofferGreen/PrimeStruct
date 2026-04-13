@@ -563,6 +563,19 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_ir_pipeline_wasm_wasi.cpp
     tests/unit/test_compile_run_benchmark_harness.cpp
     tests/unit/test_compile_run_bindings_and_examples.cpp
+    tests/unit/test_compile_run_bindings_basic.cpp
+    tests/unit/test_compile_run_examples_browser_smoke.cpp
+    tests/unit/test_compile_run_examples_demo_script_args.cpp
+    tests/unit/test_compile_run_examples_demo_script_core.cpp
+    tests/unit/test_compile_run_examples_docs.cpp
+    tests/unit/test_compile_run_examples_docs_commands.cpp
+    tests/unit/test_compile_run_examples_docs_locks.cpp
+    tests/unit/test_compile_run_examples_metal_and_browser_hosts.cpp
+    tests/unit/test_compile_run_examples_metal_smoke_and_borrows.cpp
+    tests/unit/test_compile_run_examples_native_launcher.cpp
+    tests/unit/test_compile_run_examples_native_visual.cpp
+    tests/unit/test_compile_run_examples_spinning_cube_native.cpp
+    tests/unit/test_compile_run_examples_spinning_cube_runtime.cpp
     tests/unit/test_compile_run_emitters.cpp
     tests/unit/test_compile_run_glsl.cpp
     tests/unit/test_compile_run_imports_versions.cpp
@@ -1564,19 +1577,19 @@ if(PRIMESTRUCT_BUILD_TESTS)
     elseif(suite STREQUAL "primestruct.compile.run.examples")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
                                  SHARD_NAME "spinning_cube_pipeline_and_scripts"
-                                 SOURCE_FILE "*test_compile_run_bindings_and_examples.cpp"
+                                 SOURCE_FILE "*test_compile_run_examples_*.cpp"
                                  FIRST 1 LAST 23)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
                                  SHARD_NAME "spinning_cube_argument_validation"
-                                 SOURCE_FILE "*test_compile_run_bindings_and_examples.cpp"
+                                 SOURCE_FILE "*test_compile_run_examples_*.cpp"
                                  FIRST 24 LAST 47)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
                                  SHARD_NAME "native_window_launcher_and_preflight"
-                                 SOURCE_FILE "*test_compile_run_bindings_and_examples.cpp"
+                                 SOURCE_FILE "*test_compile_run_examples_*.cpp"
                                  FIRST 48 LAST 62)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
                                  SHARD_NAME "metal_pipeline_and_borrow_checker"
-                                 SOURCE_FILE "*test_compile_run_bindings_and_examples.cpp"
+                                 SOURCE_FILE "*test_compile_run_examples_*.cpp"
                                  FIRST 63 LAST 68)
     else()
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900)

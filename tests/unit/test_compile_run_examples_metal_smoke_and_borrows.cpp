@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_examples_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.examples");
+
 TEST_CASE("spinning cube metal host missing metallib diagnostics stay stable") {
   std::filesystem::path metalSampleDir =
       std::filesystem::path("..") / "examples" / "metal" / "spinning_cube";
@@ -289,3 +295,5 @@ TEST_CASE("borrow checker negative examples fail with expected diagnostics") {
   }
 }
 
+
+TEST_SUITE_END();

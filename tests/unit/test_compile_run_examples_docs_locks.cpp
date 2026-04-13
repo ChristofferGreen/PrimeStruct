@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_examples_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.examples");
+
 TEST_CASE("software renderer command list docs stay source locked") {
   std::filesystem::path graphicsDocPath = std::filesystem::path("..") / "docs" / "Graphics_API_Design.md";
   std::filesystem::path specDocPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
@@ -456,3 +462,5 @@ TEST_CASE("software renderer ui event stream stays source locked to normalized h
   CHECK(viewBody.find("self.append_word(") == std::string::npos);
 }
 
+
+TEST_SUITE_END();

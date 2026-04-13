@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_examples_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.examples");
+
 TEST_CASE("spinning cube docs command snippets stay executable") {
   if (!spinningCubeBackendsSupportArrayReturns()) {
     INFO("Skipping spinning cube docs command checks until array-return lowering support lands");
@@ -273,3 +279,5 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
   }
 }
 
+
+TEST_SUITE_END();

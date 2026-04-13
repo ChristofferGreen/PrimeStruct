@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_examples_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.examples");
+
 TEST_CASE("spinning cube native window host sample compiles and validates args deterministically") {
   if (!spinningCubeBackendsSupportArrayReturns()) {
     INFO("Skipping spinning cube native host arg checks until array-return lowering support lands");
@@ -388,3 +394,5 @@ TEST_CASE("spinning cube transform rotation parity stays aligned across backends
   CHECK(hostSnapshotOutput.find("snapshot_code=" + std::to_string(ExpectedSnapshotCode)) != std::string::npos);
 }
 
+
+TEST_SUITE_END();

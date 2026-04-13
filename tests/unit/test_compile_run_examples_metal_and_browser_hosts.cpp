@@ -1,3 +1,9 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_examples_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.examples");
+
 TEST_CASE("spinning cube metal shader path compiles and enforces profile gating") {
   std::filesystem::path metalSampleDir =
       std::filesystem::path("..") / "examples" / "metal" / "spinning_cube";
@@ -418,3 +424,5 @@ TEST_CASE("spinning cube vertexcolored snippets stay source locked") {
   CHECK(cubeSource.find("colorStrideBytes{16i32}") != std::string::npos);
 }
 
+
+TEST_SUITE_END();

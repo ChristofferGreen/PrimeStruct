@@ -1,3 +1,7 @@
+#include "test_compile_run_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.bindings");
+
 TEST_CASE("compiles and runs empty void main") {
   const std::string source = R"(
 [return<void>]
@@ -136,3 +140,5 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
+
+TEST_SUITE_END();
