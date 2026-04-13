@@ -276,10 +276,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
       const char *missingSoaRefHelperPath =
           isAnyBuiltinSoaRefRefCall ? "/std/collections/soa_vector/ref_ref"
                                     : "/std/collections/soa_vector/ref";
-      const bool hasVisibleMissingSoaRefHelper =
-          isAnyBuiltinSoaRefRefCall ? hasVisibleSoaRefRefHelper
-                                    : hasVisibleSoaRefHelper;
-      if (hasVisibleMissingSoaRefHelper) {
+      if (isAnyBuiltinSoaRefRefCall ? hasVisibleSoaRefRefHelper
+                                    : hasVisibleSoaRefHelper) {
         return {};
       }
       const bool hasLeadingCallArg =
