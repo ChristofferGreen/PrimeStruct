@@ -1088,6 +1088,13 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_include_layers PROPERTIES RUN_SERIAL TRUE TIMEOUT 60)
 
+  add_test(
+    NAME PrimeStruct_test_suite_naming
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_test_suite_naming.py
+            --root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_test_suite_naming PROPERTIES RUN_SERIAL TRUE TIMEOUT 60)
+
   add_custom_target(
     primestruct_graph_budget_check
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_graph_budget.py
