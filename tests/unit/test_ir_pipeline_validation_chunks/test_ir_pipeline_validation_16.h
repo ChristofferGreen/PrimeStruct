@@ -813,7 +813,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool hasCanonicalBuiltinSoaRefCallArg =\n"
-            "          isAnyCanonicalBuiltinSoaRefCall && hasLeadingCallArg;") !=
+            "          isAnyCanonicalBuiltinSoaRefCall && hasLeadingCallArg;") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool hasCanonicalBuiltinSoaRefCallArg =\n"
@@ -821,7 +821,10 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "          candidate.args.front().kind == Expr::Kind::Call;") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "if (hasCanonicalBuiltinSoaRefCallArg)") !=
+            "if (isAnyCanonicalBuiltinSoaRefCall && hasLeadingCallArg)") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "if (hasCanonicalBuiltinSoaRefCallArg)") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isAnyBuiltinSoaRefMethodOrNonMethodCall =\n"
