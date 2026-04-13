@@ -669,33 +669,33 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_examples_spinning_cube_native.cpp
     tests/unit/test_compile_run_examples_spinning_cube_runtime.cpp
     tests/unit/test_compile_run_emitters.cpp
-    tests/unit/test_compile_run_emitters_02.cpp
-    tests/unit/test_compile_run_emitters_03.cpp
-    tests/unit/test_compile_run_emitters_04.cpp
-    tests/unit/test_compile_run_emitters_05.cpp
-    tests/unit/test_compile_run_emitters_06.cpp
-    tests/unit/test_compile_run_emitters_07.cpp
-    tests/unit/test_compile_run_emitters_08.cpp
-    tests/unit/test_compile_run_emitters_09.cpp
-    tests/unit/test_compile_run_emitters_10.cpp
-    tests/unit/test_compile_run_emitters_11.cpp
-    tests/unit/test_compile_run_emitters_12.cpp
-    tests/unit/test_compile_run_emitters_13.cpp
-    tests/unit/test_compile_run_emitters_14.cpp
-    tests/unit/test_compile_run_emitters_15.cpp
-    tests/unit/test_compile_run_emitters_16.cpp
-    tests/unit/test_compile_run_emitters_17.cpp
-    tests/unit/test_compile_run_emitters_18.cpp
-    tests/unit/test_compile_run_emitters_19.cpp
-    tests/unit/test_compile_run_emitters_20.cpp
-    tests/unit/test_compile_run_emitters_21.cpp
-    tests/unit/test_compile_run_emitters_22.cpp
-    tests/unit/test_compile_run_emitters_23.cpp
-    tests/unit/test_compile_run_emitters_24.cpp
-    tests/unit/test_compile_run_emitters_25.cpp
-    tests/unit/test_compile_run_emitters_26.cpp
-    tests/unit/test_compile_run_emitters_27.cpp
-    tests/unit/test_compile_run_emitters_28.cpp
+    tests/unit/test_compile_run_emitters_core_behaviors.cpp
+    tests/unit/test_compile_run_emitters_lambda_mutator_resolution.cpp
+    tests/unit/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp
+    tests/unit/test_compile_run_emitters_map_access_and_collection_rewrites.cpp
+    tests/unit/test_compile_run_emitters_vector_access_metadata_resolution.cpp
+    tests/unit/test_compile_run_emitters_map_metadata_resolution.cpp
+    tests/unit/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp
+    tests/unit/test_compile_run_emitters_vector_alias_template_forwarding.cpp
+    tests/unit/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp
+    tests/unit/test_compile_run_emitters_canonical_map_helper_calls.cpp
+    tests/unit/test_compile_run_emitters_wrapper_map_count_sugar.cpp
+    tests/unit/test_compile_run_emitters_map_count_and_wrapper_capacity.cpp
+    tests/unit/test_compile_run_emitters_local_vector_count_receiver_resolution.cpp
+    tests/unit/test_compile_run_emitters_string_receiver_vector_access.cpp
+    tests/unit/test_compile_run_emitters_compatibility_chain_forwarding_rejections.cpp
+    tests/unit/test_compile_run_emitters_canonical_map_method_forwarding.cpp
+    tests/unit/test_compile_run_emitters_vector_capacity_receiver_resolution.cpp
+    tests/unit/test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp
+    tests/unit/test_compile_run_emitters_vector_access_slash_alias_helpers.cpp
+    tests/unit/test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp
+    tests/unit/test_compile_run_emitters_wrapper_map_count_and_string_fallback.cpp
+    tests/unit/test_compile_run_emitters_wrapper_direct_call_receiver_fallbacks.cpp
+    tests/unit/test_compile_run_emitters_matrix_quaternion_support.cpp
+    tests/unit/test_compile_run_emitters_loop_sugar_runtime.cpp
+    tests/unit/test_compile_run_emitters_variadic_file_packs.cpp
+    tests/unit/test_compile_run_emitters_variadic_pointer_pack_access.cpp
+    tests/unit/test_compile_run_emitters_variadic_reference_pack_access.cpp
     tests/unit/test_compile_run_glsl.cpp
     tests/unit/test_compile_run_imports_versions.cpp
     tests/unit/test_compile_run_imports_blocks.cpp
