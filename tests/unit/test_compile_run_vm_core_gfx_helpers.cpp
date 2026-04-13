@@ -1,4 +1,9 @@
-#pragma once
+#include "test_compile_run_helpers.h"
+
+#include <cerrno>
+
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.core");
+
 
 #if defined(EACCES)
 TEST_CASE("vm maps FileError.why codes") {
@@ -494,3 +499,5 @@ main() {
   CHECK(readFile(outPath) == "EOF\nEOF\n");
 }
 
+
+TEST_SUITE_END();

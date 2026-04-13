@@ -8,103 +8,103 @@ list(APPEND PrimeStructManagedCompileRunSuites
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.core"
                                   TIMEOUT 900
                                   SHARD_PREFIX "core_01a_01_05"
-                                  SOURCE_FILE "*test_compile_run_vm_core.h"
+                                  SOURCE_FILE "*test_compile_run_vm_core_*.cpp"
                                   RANGE_FIRST 1
                                   RANGE_LAST 5)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.core"
                                   TIMEOUT 900
                                   SHARD_PREFIX "core_01a_06_10"
-                                  SOURCE_FILE "*test_compile_run_vm_core.h"
+                                  SOURCE_FILE "*test_compile_run_vm_core_*.cpp"
                                   RANGE_FIRST 6
                                   RANGE_LAST 10
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.core"
                                   TIMEOUT 900
                                   SHARD_PREFIX "core_01a_11_14"
-                                  SOURCE_FILE "*test_compile_run_vm_core.h"
+                                  SOURCE_FILE "*test_compile_run_vm_core_*.cpp"
                                   RANGE_FIRST 11
                                   RANGE_LAST 14
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.core"
                                   TIMEOUT 900
                                   SHARD_PREFIX "core_01b_15_19"
-                                  SOURCE_FILE "*test_compile_run_vm_core.h"
+                                  SOURCE_FILE "*test_compile_run_vm_core_*.cpp"
                                   RANGE_FIRST 15
                                   RANGE_LAST 19
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.core"
                                   TIMEOUT 900
                                   SHARD_PREFIX "core_01b_20_24"
-                                  SOURCE_FILE "*test_compile_run_vm_core.h"
+                                  SOURCE_FILE "*test_compile_run_vm_core_*.cpp"
                                   RANGE_FIRST 20
                                   RANGE_LAST 24)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.core"
                                   TIMEOUT 900
                                   SHARD_PREFIX "core_01b_25_28"
-                                  SOURCE_FILE "*test_compile_run_vm_core.h"
+                                  SOURCE_FILE "*test_compile_run_vm_core_*.cpp"
                                   RANGE_FIRST 25
                                   RANGE_LAST 28)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.core"
                                   TIMEOUT 900
                                   SHARD_PREFIX "core_02_29_36"
-                                  SOURCE_FILE "*test_compile_run_vm_core.h"
+                                  SOURCE_FILE "*test_compile_run_vm_core_*.cpp"
                                   RANGE_FIRST 29
                                   RANGE_LAST 36)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.core"
                                   TIMEOUT 900
                                   SHARD_PREFIX "core_02_37_44"
-                                  SOURCE_FILE "*test_compile_run_vm_core.h"
+                                  SOURCE_FILE "*test_compile_run_vm_core_*.cpp"
                                   RANGE_FIRST 37
                                   RANGE_LAST 44)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.core"
                                   TIMEOUT 900
                                   SHARD_PREFIX "core_02_45_52"
-                                  SOURCE_FILE "*test_compile_run_vm_core.h"
+                                  SOURCE_FILE "*test_compile_run_vm_core_*.cpp"
                                   RANGE_FIRST 45
                                   RANGE_LAST 52)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.core"
                                   TIMEOUT 900
                                   SHARD_PREFIX "core_02_53_56"
-                                  SOURCE_FILE "*test_compile_run_vm_core.h"
+                                  SOURCE_FILE "*test_compile_run_vm_core_*.cpp"
                                   RANGE_FIRST 53
                                   RANGE_LAST 56)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.core"
                                   TIMEOUT 900
                                   SHARD_PREFIX "core_03a_57_63"
-                                  SOURCE_FILE "*test_compile_run_vm_core.h"
+                                  SOURCE_FILE "*test_compile_run_vm_core_*.cpp"
                                   RANGE_FIRST 57
                                   RANGE_LAST 63
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.core"
                                   TIMEOUT 900
                                   SHARD_PREFIX "core_03a_64_66"
-                                  SOURCE_FILE "*test_compile_run_vm_core.h"
+                                  SOURCE_FILE "*test_compile_run_vm_core_*.cpp"
                                   RANGE_FIRST 64
                                   RANGE_LAST 66)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.core"
                                   TIMEOUT 900
                                   SHARD_PREFIX "core_03a_67_70"
-                                  SOURCE_FILE "*test_compile_run_vm_core.h"
+                                  SOURCE_FILE "*test_compile_run_vm_core_*.cpp"
                                   RANGE_FIRST 67
                                   RANGE_LAST 70
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.core"
                                   TIMEOUT 900
                                   SHARD_PREFIX "core_03b_71_75"
-                                  SOURCE_FILE "*test_compile_run_vm_core.h"
+                                  SOURCE_FILE "*test_compile_run_vm_core_*.cpp"
                                   RANGE_FIRST 71
                                   RANGE_LAST 75
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.core"
                                   TIMEOUT 900
                                   SHARD_PREFIX "core_03b_76_80"
-                                  SOURCE_FILE "*test_compile_run_vm_core.h"
+                                  SOURCE_FILE "*test_compile_run_vm_core_*.cpp"
                                   RANGE_FIRST 76
                                   RANGE_LAST 80)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.core"
                                   TIMEOUT 900
                                   SHARD_PREFIX "core_03b_81_83"
-                                  SOURCE_FILE "*test_compile_run_vm_core.h"
+                                  SOURCE_FILE "*test_compile_run_vm_core_*.cpp"
                                   RANGE_FIRST 81
                                   RANGE_LAST 83)
 

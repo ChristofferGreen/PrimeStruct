@@ -583,6 +583,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_text_filters.cpp
     tests/unit/test_compile_run_vm_bounds.cpp
     tests/unit/test_compile_run_vm_core.cpp
+    tests/unit/test_compile_run_vm_core_basic.cpp
+    tests/unit/test_compile_run_vm_core_ui.cpp
+    tests/unit/test_compile_run_vm_core_runtime.cpp
+    tests/unit/test_compile_run_vm_core_results_basic.cpp
+    tests/unit/test_compile_run_vm_core_results_structs.cpp
+    tests/unit/test_compile_run_vm_core_file_helpers.cpp
+    tests/unit/test_compile_run_vm_core_gfx_helpers.cpp
+    tests/unit/test_compile_run_vm_core_variadics.cpp
     tests/unit/test_compile_run_vm_collections.cpp
     tests/unit/test_compile_run_vm_gpu.cpp
     tests/unit/test_compile_run_vm_maps.cpp
@@ -1290,15 +1298,15 @@ if(PRIMESTRUCT_BUILD_TESTS)
     endif()
     if (suite STREQUAL "primestruct.compile.run.vm.core")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_01a"
-                                 SOURCE_FILE "*test_compile_run_vm_core.h" FIRST 1 LAST 14)
+                                 SOURCE_FILE "*test_compile_run_vm_core_*.cpp" FIRST 1 LAST 14)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_01b"
-                                 SOURCE_FILE "*test_compile_run_vm_core.h" FIRST 15 LAST 28)
+                                 SOURCE_FILE "*test_compile_run_vm_core_*.cpp" FIRST 15 LAST 28)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_02"
-                                 SOURCE_FILE "*test_compile_run_vm_core.h" FIRST 29 LAST 56)
+                                 SOURCE_FILE "*test_compile_run_vm_core_*.cpp" FIRST 29 LAST 56)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_03a"
-                                 SOURCE_FILE "*test_compile_run_vm_core.h" FIRST 57 LAST 70)
+                                 SOURCE_FILE "*test_compile_run_vm_core_*.cpp" FIRST 57 LAST 70)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_03b"
-                                 SOURCE_FILE "*test_compile_run_vm_core.h" FIRST 71 LAST 83)
+                                 SOURCE_FILE "*test_compile_run_vm_core_*.cpp" FIRST 71 LAST 83)
     elseif(suite STREQUAL "primestruct.compile.run.vm.collections")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "alias_and_basics"
                                  SOURCE_FILE "*test_compile_run_vm_collections.cpp" FIRST 1 LAST 60)

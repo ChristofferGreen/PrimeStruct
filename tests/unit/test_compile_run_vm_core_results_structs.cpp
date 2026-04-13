@@ -1,4 +1,9 @@
-#pragma once
+#include "test_compile_run_helpers.h"
+
+#include <cerrno>
+
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.core");
+
 
 TEST_CASE("vm supports single-slot struct Result combinator payloads on IR-backed paths") {
   const std::string source = R"(
@@ -434,3 +439,5 @@ main() {
   CHECK(readFile(errPath).find("try requires Result argument") != std::string::npos);
 }
 
+
+TEST_SUITE_END();

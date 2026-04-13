@@ -1,4 +1,9 @@
-#pragma once
+#include "test_compile_run_helpers.h"
+
+#include <cerrno>
+
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.core");
+
 
 TEST_CASE("vm supports string return types") {
   const std::string source = R"(
@@ -403,3 +408,5 @@ main() {
   CHECK(readFile(outPath) == "7\n");
 }
 
+
+TEST_SUITE_END();

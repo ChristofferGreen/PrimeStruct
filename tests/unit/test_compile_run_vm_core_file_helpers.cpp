@@ -1,4 +1,9 @@
-#pragma once
+#include "test_compile_run_helpers.h"
+
+#include <cerrno>
+
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.core");
+
 
 TEST_CASE("vm uses stdlib File helper wrappers") {
   const std::string filePath =
@@ -481,3 +486,5 @@ main() {
 }
 
 
+
+TEST_SUITE_END();

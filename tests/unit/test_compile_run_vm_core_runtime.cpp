@@ -1,4 +1,9 @@
-#pragma once
+#include "test_compile_run_helpers.h"
+
+#include <cerrno>
+
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.core");
+
 
 TEST_CASE("runs vm with heap alloc intrinsic") {
   const std::string source = R"(
@@ -325,3 +330,5 @@ main() {
   CHECK(readFile(outPath) == "line\\nnext\n");
 }
 
+
+TEST_SUITE_END();

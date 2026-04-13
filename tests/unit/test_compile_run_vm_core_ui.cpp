@@ -1,4 +1,9 @@
-#pragma once
+#include "test_compile_run_helpers.h"
+
+#include <cerrno>
+
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.core");
+
 
 TEST_CASE("runs vm composite login form deterministically") {
   const std::string source = R"(
@@ -319,3 +324,5 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+
+TEST_SUITE_END();

@@ -1,4 +1,9 @@
-#pragma once
+#include "test_compile_run_helpers.h"
+
+#include <cerrno>
+
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.core");
+
 
 TEST_CASE("vm rejects recursive calls") {
   const std::string source = R"(
@@ -497,3 +502,5 @@ main() {
   CHECK(runCommand(runCmd) == 24);
 }
 
+
+TEST_SUITE_END();

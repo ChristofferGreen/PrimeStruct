@@ -1,4 +1,9 @@
-#pragma once
+#include "test_compile_run_helpers.h"
+
+#include <cerrno>
+
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.core");
+
 
 TEST_CASE("runs vm with method call result") {
   const std::string source = R"(
@@ -522,3 +527,5 @@ main() {
 }
 
 
+
+TEST_SUITE_END();
