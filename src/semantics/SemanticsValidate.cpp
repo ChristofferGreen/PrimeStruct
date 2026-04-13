@@ -2346,11 +2346,6 @@ void rewriteBuiltinSoaToAosCallExpr(
     return;
   }
 
-  const auto receiverBinding = findBuiltinSoaValueBinding(expr.args.front());
-  const auto fallbackVectorBinding = receiverBinding.has_value()
-                                         ? std::optional<semantics::BindingInfo>{}
-                                         : findBuiltinVectorValueBinding(expr.args.front());
-
   expr.isMethodCall = false;
   expr.isFieldAccess = false;
   expr.name = "/std/collections/soa_vector/to_aos";
@@ -3581,7 +3576,7 @@ void rewriteExperimentalSoaToAosMethodExpr(
 
   expr.isMethodCall = false;
   expr.isFieldAccess = false;
-  expr.name = "/std/collections/experimental_soa_vector_conversions/soaVectorToAos";
+  expr.name = "/std/collections/soa_vector/to_aos";
   expr.namespacePrefix.clear();
   if (canonicalReceiverExpr.has_value()) {
     expr.args.front() = *canonicalReceiverExpr;
@@ -3647,8 +3642,7 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
   for (Definition &def : program.definitions) {
     if (def.fullPath == "/to_aos" ||
         def.fullPath.rfind("/to_aos__", 0) == 0 ||
-        isCanonicalSoaToAosDefinitionPath(def.fullPath) ||
-        semantics::isExperimentalSoaVectorConversionFamilyPath(def.fullPath)) {
+        isCanonicalSoaToAosDefinitionPath(def.fullPath)) {
       continue;
     }
     std::unordered_map<std::string, semantics::BindingInfo> bindings;

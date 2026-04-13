@@ -851,6 +851,63 @@ TEST_CASE("semantic memory benchmark helper toggles fact families independently"
   CHECK(readFile(validateErrPath).empty());
 }
 
+TEST_CASE("semantic memory benchmark helper reports deterministic worker-mode parity") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";
+  const std::filesystem::path primecPath = repoRoot / "build-release" / "primec";
+  if (!std::filesystem::exists(primecPath)) {
+    INFO("primec not available in build-release");
+    return;
+  }
+
+  const std::string reportPath = writeTemp("semantic_memory_definition_workers_report.json", "");
+  const std::string stdoutPath = writeTemp("semantic_memory_definition_workers.out", "");
+  const std::string stderrPath = writeTemp("semantic_memory_definition_workers.err", "");
+  const std::string benchmarkCmd =
+      "python3 " + quoteShellArg(scriptPath.string()) +
+      " --repo-root " + quoteShellArg(repoRoot.string()) +
+      " --primec " + quoteShellArg(primecPath.string()) +
+      " --runs 1 --fixtures no_import --phases ast-semantic "
+      "--definition-validation-workers both --report-json " +
+      quoteShellArg(reportPath) +
+      " > " + quoteShellArg(stdoutPath) + " 2> " + quoteShellArg(stderrPath);
+  CHECK(runCommand(benchmarkCmd) == 0);
+  CHECK(readFile(stderrPath).empty());
+
+  const std::string validateOutPath = writeTemp("semantic_memory_definition_workers_validate.out", "");
+  const std::string validateErrPath = writeTemp("semantic_memory_definition_workers_validate.err", "");
+  const std::string validateCmd =
+      "python3 -c " +
+      quoteShellArg(
+          "import json, sys\n"
+          "report = json.load(open(sys.argv[1], encoding='utf-8'))\n"
+          "rows = report.get('results', [])\n"
+          "deltas = report.get('definition_validation_worker_mode_deltas', [])\n"
+          "worker_modes = {int(row.get('definition_validation_workers', 0)) for row in rows}\n"
+          "ok = len(rows) == 2\n"
+          "ok = ok and worker_modes == {1, 2}\n"
+          "ok = ok and len(deltas) == 1\n"
+          "if ok:\n"
+          "  delta = deltas[0]\n"
+          "  ok = ok and delta.get('fixture') == 'no_import'\n"
+          "  ok = ok and delta.get('phase') == 'ast-semantic'\n"
+          "  ok = ok and bool(delta.get('dump_sha256_identical'))\n"
+          "  ok = ok and isinstance(delta.get('median_peak_rss_bytes_dual_minus_single'), int)\n"
+          "  ok = ok and isinstance(delta.get('median_wall_seconds_dual_minus_single'), (int, float))\n"
+          "if not ok:\n"
+          "  print(json.dumps(report, indent=2, sort_keys=True))\n"
+          "sys.exit(0 if ok else 1)\n") +
+      " " + quoteShellArg(reportPath) +
+      " > " + quoteShellArg(validateOutPath) + " 2> " + quoteShellArg(validateErrPath);
+  CHECK(runCommand(validateCmd) == 0);
+  CHECK(readFile(validateErrPath).empty());
+}
+
 TEST_CASE("semantic memory benchmark helper canonicalizes legacy all fact-family rows") {
   if (!hasPython3()) {
     INFO("python3 not available");
@@ -1958,18 +2015,22 @@ TEST_CASE("semantic memory benchmark helper defines method-target memoization de
   CHECK(script.find("--graph-local-auto-key-mode") != std::string::npos);
   CHECK(script.find("--graph-local-auto-side-channel-mode") != std::string::npos);
   CHECK(script.find("--graph-local-auto-dependency-scratch-mode") != std::string::npos);
+  CHECK(script.find("--definition-validation-workers") != std::string::npos);
   CHECK(script.find("selected_semantic_product_force_modes") != std::string::npos);
   CHECK(script.find("selected_semantic_validation_without_fact_emission_modes") != std::string::npos);
   CHECK(script.find("selected_method_target_memoization_modes") != std::string::npos);
   CHECK(script.find("selected_graph_local_auto_key_modes") != std::string::npos);
   CHECK(script.find("selected_graph_local_auto_side_channel_modes") != std::string::npos);
   CHECK(script.find("selected_graph_local_auto_dependency_scratch_modes") != std::string::npos);
+  CHECK(script.find("selected_definition_validation_worker_modes") != std::string::npos);
+  CHECK(script.find("benchmark_row_definition_validation_workers_mode") != std::string::npos);
   CHECK(script.find("compute_semantic_product_force_deltas") != std::string::npos);
   CHECK(script.find("compute_semantic_validation_without_fact_emission_deltas") != std::string::npos);
   CHECK(script.find("compute_method_target_memoization_deltas") != std::string::npos);
   CHECK(script.find("compute_graph_local_auto_key_mode_deltas") != std::string::npos);
   CHECK(script.find("compute_graph_local_auto_side_channel_mode_deltas") != std::string::npos);
   CHECK(script.find("compute_graph_local_auto_dependency_scratch_mode_deltas") != std::string::npos);
+  CHECK(script.find("compute_definition_validation_worker_mode_deltas") != std::string::npos);
   CHECK(script.find("\"semantic_product_force_deltas\"") != std::string::npos);
   CHECK(script.find("\"semantic_validation_without_fact_emission\"") != std::string::npos);
   CHECK(script.find("\"semantic_validation_without_fact_emission_deltas\"") != std::string::npos);
@@ -1977,16 +2038,21 @@ TEST_CASE("semantic memory benchmark helper defines method-target memoization de
   CHECK(script.find("\"graph_local_auto_key_mode_deltas\"") != std::string::npos);
   CHECK(script.find("\"graph_local_auto_side_channel_mode_deltas\"") != std::string::npos);
   CHECK(script.find("\"graph_local_auto_dependency_scratch_mode_deltas\"") != std::string::npos);
+  CHECK(script.find("\"definition_validation_worker_mode_deltas\"") != std::string::npos);
+  CHECK(script.find("\"definition_validation_workers\"") != std::string::npos);
+  CHECK(script.find("\"dump_sha256_identical\"") != std::string::npos);
   CHECK(script.find("\"median_peak_rss_bytes_on_minus_off\"") != std::string::npos);
   CHECK(script.find("\"median_peak_rss_bytes_no_fact_emission_minus_fact_emission\"") != std::string::npos);
   CHECK(script.find("\"median_peak_rss_bytes_legacy_shadow_minus_compact\"") != std::string::npos);
   CHECK(script.find("\"median_peak_rss_bytes_legacy_shadow_minus_flat\"") != std::string::npos);
   CHECK(script.find("\"median_peak_rss_bytes_std_minus_pmr\"") != std::string::npos);
+  CHECK(script.find("\"median_peak_rss_bytes_dual_minus_single\"") != std::string::npos);
   CHECK(script.find("\"median_wall_seconds_on_minus_off\"") != std::string::npos);
   CHECK(script.find("\"median_wall_seconds_no_fact_emission_minus_fact_emission\"") != std::string::npos);
   CHECK(script.find("\"median_wall_seconds_legacy_shadow_minus_compact\"") != std::string::npos);
   CHECK(script.find("\"median_wall_seconds_legacy_shadow_minus_flat\"") != std::string::npos);
   CHECK(script.find("\"median_wall_seconds_std_minus_pmr\"") != std::string::npos);
+  CHECK(script.find("\"median_wall_seconds_dual_minus_single\"") != std::string::npos);
 }
 
 TEST_CASE("benchmark regression checker passes for in-threshold report") {
@@ -2753,6 +2819,17 @@ TEST_CASE("semantic memory trend checker ignores duplicate current report in his
   CHECK(stdoutText.find("history reports:") != std::string::npos);
   CHECK(stdoutText.find("semantic_memory_report_20260101.json") != std::string::npos);
   CHECK(stdoutText.find("semantic_memory_report_20260102.json") == std::string::npos);
+}
+
+TEST_CASE("semantic memory ci artifact wrapper forwards definition worker mode") {
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path wrapperPath =
+      repoRoot / "scripts" / "semantic_memory_ci_artifacts.py";
+  const std::string script = readFile(wrapperPath.string());
+  REQUIRE_FALSE(script.empty());
+  CHECK(script.find("--benchmark-definition-validation-workers") != std::string::npos);
+  CHECK(script.find("args.benchmark_definition_validation_workers") != std::string::npos);
+  CHECK(script.find("--definition-validation-workers") != std::string::npos);
 }
 
 TEST_CASE("semantic memory ci artifact wrapper captures reports on success") {

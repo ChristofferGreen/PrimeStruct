@@ -94,6 +94,24 @@ python3 scripts/semantic_memory_benchmark.py \
   --report-json build-release/benchmarks/semantic_memory_report.json
 ```
 
+For deterministic partition-parity validation of definition validation workers,
+run the same command with:
+
+```bash
+  --definition-validation-workers both
+```
+
+This mode records worker-mode deltas and fails when one-worker and two-worker
+runs emit different dump payload hashes for the same `(fixture, phase, mode)`
+tuple.
+
+The CI artifact wrapper forwards this mode via:
+
+```bash
+python3 scripts/semantic_memory_ci_artifacts.py --mode benchmark \
+  --benchmark-definition-validation-workers both ...
+```
+
 Expected `(fixture, phase)` report rows for that canonical run:
 
 | Fixture | Phase |

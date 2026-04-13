@@ -240,24 +240,28 @@ bool SemanticsValidator::runDefinitionValidationWorkerChunk(
 }
 
 bool SemanticsValidator::validateDefinitions() {
-  std::vector<std::size_t> allStableIndices;
-  allStableIndices.reserve(definitionPrepassSnapshot_.declarationsInStableOrder.size());
-  for (const auto &declaration : definitionPrepassSnapshot_.declarationsInStableOrder) {
-    allStableIndices.push_back(declaration.stableIndex);
-  }
-
+  auto buildAllStableIndices = [&]() {
+    std::vector<std::size_t> allStableIndices;
+    allStableIndices.reserve(definitionPrepassSnapshot_.declarationsInStableOrder.size());
+    for (const auto &declaration : definitionPrepassSnapshot_.declarationsInStableOrder) {
+      allStableIndices.push_back(declaration.stableIndex);
+    }
+    return allStableIndices;
+  };
+  const std::size_t declarationCount =
+      definitionPrepassSnapshot_.declarationsInStableOrder.size();
   if (benchmarkSemanticDefinitionValidationWorkerCount_ <= 1 ||
-      allStableIndices.size() < 2) {
-    return validateDefinitionsForStableIndices(allStableIndices);
+      declarationCount < 2) {
+    return validateDefinitionsForStableIndices(buildAllStableIndices());
   }
 
   const std::size_t partitionCount = static_cast<std::size_t>(
       benchmarkSemanticDefinitionValidationWorkerCount_);
   const bool collectDiagnostics = shouldCollectStructuredDiagnostics();
-  const std::vector<DefinitionPartitionChunk> partitions =
+  std::vector<DefinitionPartitionChunk> partitions =
       partitionDefinitionsDeterministic(definitionPrepassSnapshot_, partitionCount);
   if (partitions.size() <= 1) {
-    return validateDefinitionsForStableIndices(allStableIndices);
+    return validateDefinitionsForStableIndices(buildAllStableIndices());
   }
 
   struct WorkerChunkResult {
@@ -270,13 +274,16 @@ bool SemanticsValidator::validateDefinitions() {
 
   std::vector<std::future<WorkerChunkResult>> workerTasks;
   workerTasks.reserve(partitions.size());
-  for (const DefinitionPartitionChunk &chunk : partitions) {
+  for (DefinitionPartitionChunk &chunk : partitions) {
     if (chunk.declarationStableIndices.empty()) {
       continue;
     }
     workerTasks.push_back(std::async(
         std::launch::async,
-        [this, collectDiagnostics, partitionKey = chunk.partitionKey, stableIndices = chunk.declarationStableIndices]() {
+        [this,
+         collectDiagnostics,
+         partitionKey = chunk.partitionKey,
+         stableIndices = std::move(chunk.declarationStableIndices)]() mutable {
           WorkerChunkResult result;
           result.partitionKey = partitionKey;
           SemanticsValidator worker(program_,
@@ -294,7 +301,7 @@ bool SemanticsValidator::validateDefinitions() {
         }));
   }
   if (workerTasks.size() <= 1) {
-    return validateDefinitionsForStableIndices(allStableIndices);
+    return validateDefinitionsForStableIndices(buildAllStableIndices());
   }
 
   std::vector<WorkerChunkResult> workerResults;

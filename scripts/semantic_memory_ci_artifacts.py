@@ -20,6 +20,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--policy", default="benchmarks/semantic_memory_budget_policy.json",
                         help="Budget policy JSON path.")
     parser.add_argument("--runs", type=int, default=3, help="Benchmark runs per fixture/phase.")
+    parser.add_argument(
+        "--benchmark-definition-validation-workers",
+        choices=("1", "2", "both"),
+        default="1",
+        help="Worker mode forwarded to semantic_memory_benchmark.py definition validation.",
+    )
     parser.add_argument("--history-dir", default="build-release/benchmarks/semantic_memory_history",
                         help="Directory with prior semantic-memory reports.")
     parser.add_argument("--history-limit", type=int, default=2,
@@ -77,13 +83,18 @@ def copy_if_exists(path: Path, target_dir: Path) -> Optional[str]:
     return destination.name
 
 
-def default_benchmark_command(repo_root: Path, primec: Path, runs: int, report: Path) -> str:
+def default_benchmark_command(repo_root: Path,
+                              primec: Path,
+                              runs: int,
+                              report: Path,
+                              definition_validation_workers: str) -> str:
     script = repo_root / "scripts" / "semantic_memory_benchmark.py"
     return (
         f"{quote_shell_arg(sys.executable)} {quote_shell_arg(str(script))} "
         f"--repo-root {quote_shell_arg(str(repo_root))} "
         f"--primec {quote_shell_arg(str(primec))} "
         f"--runs {runs} "
+        f"--definition-validation-workers {quote_shell_arg(definition_validation_workers)} "
         f"--report-json {quote_shell_arg(str(report))}"
     )
 
@@ -161,7 +172,11 @@ def main() -> int:
         trend_report.unlink()
 
     benchmark_command = args.benchmark_cmd.strip() or default_benchmark_command(
-        repo_root, primec, args.runs, benchmark_report)
+        repo_root,
+        primec,
+        args.runs,
+        benchmark_report,
+        args.benchmark_definition_validation_workers)
     trend_command = args.trend_cmd.strip() or default_trend_command(
         repo_root, policy, benchmark_report, history_dir, args.history_limit, budget_report, trend_report)
 

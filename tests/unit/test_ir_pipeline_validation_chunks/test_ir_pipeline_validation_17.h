@@ -160,7 +160,7 @@ TEST_CASE("semantics validate source delegation stays stable") {
             "localImportPathCoversTarget(importPath, canonicalToAosImportTarget)") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find(
-            "semantics::isExperimentalSoaVectorConversionFamilyPath(def.fullPath)") !=
+            "semantics::isExperimentalSoaVectorConversionFamilyPath(def.fullPath)") ==
         std::string::npos);
   CHECK(semanticsValidateSource.find(
             "semantics::isExperimentalSoaGetLikeHelperPath(receiver.name)") !=
@@ -247,8 +247,22 @@ TEST_CASE("semantics validate source delegation stays stable") {
             "def.fullPath.rfind(\"/std/collections/experimental_soa_vector_conversions/\", 0) == 0") ==
         std::string::npos);
   CHECK(semanticsValidateSource.find(
+            "isExperimentalSoaVectorConversionFamilyPath(def.fullPath)") ==
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
             "localImportPathCoversTarget(\n"
             "            importPath, \"/std/collections/soa_vector/to_aos\")") ==
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "expr.name = \"/std/collections/experimental_soa_vector_conversions/soaVectorToAos\";") ==
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "expr.name = \"/std/collections/soa_vector/to_aos\";\n"
+            "  expr.namespacePrefix.clear();\n"
+            "  if (canonicalReceiverExpr.has_value()) {\n"
+            "    expr.args.front() = *canonicalReceiverExpr;\n"
+            "  }\n"
+            "}") !=
         std::string::npos);
   CHECK(semanticsValidateConvertConstructorsHeaderSource.find("bool rewriteConvertConstructors(Program &program, std::string &error)") !=
         std::string::npos);

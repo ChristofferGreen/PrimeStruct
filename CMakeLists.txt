@@ -1147,6 +1147,49 @@ if(PRIMESTRUCT_BUILD_TESTS)
     PROPERTIES RUN_SERIAL TRUE TIMEOUT 1800 LABELS "expensive")
 
   add_custom_target(
+    primestruct_semantic_memory_definition_worker_parity
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/semantic_memory_ci_artifacts.py
+            --mode benchmark
+            --run-label semantic_memory_definition_worker_parity
+            --primec $<TARGET_FILE:primec>
+            --repo-root ${CMAKE_SOURCE_DIR}
+            --runs 3
+            --policy ${CMAKE_SOURCE_DIR}/benchmarks/semantic_memory_budget_policy.json
+            --benchmark-definition-validation-workers both
+            --history-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_definition_worker_parity_history
+            --history-limit 2
+            --benchmark-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_definition_worker_parity_report.json
+            --budget-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_definition_worker_parity_budget_check_report.json
+            --trend-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_definition_worker_parity_trend_report.json
+            --artifacts-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_definition_worker_parity_artifacts
+    DEPENDS primec
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    COMMENT "Running semantic memory benchmark definition-worker parity gate"
+    VERBATIM
+  )
+
+  add_test(
+    NAME PrimeStruct_semantic_memory_definition_worker_parity
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/semantic_memory_ci_artifacts.py
+            --mode benchmark
+            --run-label semantic_memory_definition_worker_parity
+            --primec $<TARGET_FILE:primec>
+            --repo-root ${CMAKE_SOURCE_DIR}
+            --runs 3
+            --policy ${CMAKE_SOURCE_DIR}/benchmarks/semantic_memory_budget_policy.json
+            --benchmark-definition-validation-workers both
+            --history-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_definition_worker_parity_history
+            --history-limit 2
+            --benchmark-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_definition_worker_parity_report.json
+            --budget-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_definition_worker_parity_budget_check_report.json
+            --trend-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_definition_worker_parity_trend_report.json
+            --artifacts-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_definition_worker_parity_artifacts
+  )
+  set_tests_properties(
+    PrimeStruct_semantic_memory_definition_worker_parity
+    PROPERTIES RUN_SERIAL TRUE TIMEOUT 1800 LABELS "expensive")
+
+  add_custom_target(
     primestruct_semantic_memory_trend_check
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/semantic_memory_ci_artifacts.py
             --mode trend

@@ -47,12 +47,20 @@ Goal: finish stdlib-authoritative `soa_vector` behavior and delete compatibility
     3. Tests cover borrowed and non-borrowed receiver forms.
   - Stop rule: split into `{to_aos}` then `{to_aos_ref}` if needed.
 
-- ○ [S4-02] Remove canonical conversion fallback dependence on experimental conversion helpers.
+- ◐ [S4-02] Remove canonical conversion fallback dependence on experimental conversion helpers.
   - Value: deletes duplicate substrate and fallback churn.
   - Acceptance criteria:
     1. Canonical conversion lowering has no dependency on `/std/collections/experimental_soa_vector_conversions/*`.
     2. Source-lock coverage asserts removed fallback wiring.
     3. Existing canonical conversion compile-run tests remain green.
+  - Progress: experimental SoA method `to_aos` rewrite fallback in
+    `SemanticsValidate.cpp` now rewrites to canonical
+    `/std/collections/soa_vector/to_aos` instead of
+    `/std/collections/experimental_soa_vector_conversions/soaVectorToAos`, and
+    the same rewrite pass no longer checks
+    `isExperimentalSoaVectorConversionFamilyPath(def.fullPath)` in its
+    definition-skip gate (removing the last conversion-family dependency from
+    canonical rewrite selection in that lowering stage).
   - Stop rule: if full family removal is too broad, remove one canonical conversion path end-to-end first.
 
 - ○ [S4-03] Delete one full compiler-owned SoA compatibility island end-to-end.
@@ -81,20 +89,34 @@ Goal: ship measurable wins with hard regression control.
     cases that lock budget-gate execution and failure propagation.
   - Stop rule: if CI plumbing is too broad for one slice, land local checker + tests first.
 
-- ○ [P1-02] Deliver one measured peak-RSS reduction on a representative semantic fixture.
+- ◐ [P1-02] Deliver one measured peak-RSS reduction on a representative semantic fixture.
   - Value: tangible memory reduction, not stylistic refactor.
   - Acceptance criteria:
     1. Before/after benchmark report captured in commit notes.
     2. Median peak RSS improves by at least 5% on at least one representative fixture.
     3. Release compile/test gate remains green.
+  - Progress: definition-validation worker scheduling now avoids eager
+    full-index materialization outside fallback paths and moves partition index
+    vectors directly into worker tasks instead of copying per worker launch;
+    parallel validation now also iterates non-const partition chunks and moves
+    owned index vectors into async workers, eliminating one extra
+    `DefinitionPartitionChunk` vector copy layer in the launch loop.
   - Stop rule: if two attempts fail to reach 2% median improvement, archive approach as low-value and switch hotspot.
 
-- ○ [P1-03] Deliver one deterministic parallel-ready semantic partition behind a flag.
+- ◐ [P1-03] Deliver one deterministic parallel-ready semantic partition behind a flag.
   - Value: validates multithread direction without destabilizing default path.
   - Acceptance criteria:
     1. One isolated semantic phase can run in partitioned mode under flag.
     2. Diagnostics/output order is byte-for-byte identical to single-thread mode.
     3. Focused parity tests lock deterministic behavior.
+  - Progress: semantic-memory benchmark harness now supports
+    `--definition-validation-workers 1|2|both`, emits worker-mode delta rows,
+    records dump payload hashes per mode, and fails `both` mode when one-worker
+    and two-worker dump hashes diverge for the same fixture/phase tuple; CMake
+    now also exposes an expensive parity gate target/test
+    (`primestruct_semantic_memory_definition_worker_parity`,
+    `PrimeStruct_semantic_memory_definition_worker_parity`) that runs the same
+    worker-mode parity contract through CI artifact capture.
   - Stop rule: if parity fails, land planner/scaffolding only and keep execution single-threaded.
 
 P0 micro-slices `[P0-17]` through `[P0-28]` and P2 micro-slices `[P2-14]` through `[P2-42]` are archived in `docs/todo_finished.md` (April 12, 2026).

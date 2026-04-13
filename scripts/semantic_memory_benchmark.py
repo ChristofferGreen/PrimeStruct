@@ -8,6 +8,7 @@ and emits a machine-readable JSON report.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import platform
@@ -160,6 +161,13 @@ def parse_args() -> argparse.Namespace:
         default="pmr",
         help="Graph-local-auto dependency scratch mode: pmr, std, or both for RSS deltas.",
     )
+    parser.add_argument(
+        "--definition-validation-workers",
+        choices=("1", "2", "both"),
+        default="1",
+        help=("Definition-validation worker mode: 1 or 2 workers, "
+              "or both for deterministic parity + delta reporting."),
+    )
     parser.add_argument("--report-json", default="", help="Optional report output path.")
     return parser.parse_args()
 
@@ -278,7 +286,8 @@ def measure_fixture_phase(primec: Path,
                          method_target_memoization: str,
                          graph_local_auto_key_mode: str,
                          graph_local_auto_side_channel_mode: str,
-                         graph_local_auto_dependency_scratch_mode: str) -> dict:
+                         graph_local_auto_dependency_scratch_mode: str,
+                         definition_validation_workers: int) -> dict:
     fixture_path = (repo_root / fixture.source).resolve()
     if not fixture_path.is_file():
         raise FileNotFoundError(f"fixture not found: {fixture_path}")
@@ -308,6 +317,8 @@ def measure_fixture_phase(primec: Path,
         command.append("--benchmark-semantic-graph-local-auto-legacy-side-channel-shadow")
     if graph_local_auto_dependency_scratch_mode == "std":
         command.append("--benchmark-semantic-disable-graph-local-auto-dependency-scratch-pmr")
+    command.append(
+        f"--benchmark-semantic-definition-validation-workers={definition_validation_workers}")
 
     semantic_phase_counter_runs: list[dict] = []
 
@@ -367,6 +378,8 @@ def measure_fixture_phase(primec: Path,
         "graph_local_auto_key_mode": graph_local_auto_key_mode,
         "graph_local_auto_side_channel_mode": graph_local_auto_side_channel_mode,
         "graph_local_auto_dependency_scratch_mode": graph_local_auto_dependency_scratch_mode,
+        "definition_validation_workers": definition_validation_workers,
+        "dump_sha256": hashlib.sha256(captured_dump.encode("utf-8")).hexdigest(),
     }
     if semantic_phase_counters or semantic_allocation_counters or semantic_rss_checkpoints:
         result["semantic_phase_counters_runs"] = semantic_phase_counter_runs
@@ -967,6 +980,96 @@ def selected_graph_local_auto_dependency_scratch_modes(selection: str) -> list[s
     return [selection]
 
 
+def selected_definition_validation_worker_modes(selection: str) -> list[int]:
+    if selection == "both":
+        return [1, 2]
+    return [int(selection)]
+
+
+def benchmark_row_definition_validation_workers_mode(row: dict) -> int:
+    value = row.get("definition_validation_workers", 1)
+    try:
+        parsed = int(value)
+    except Exception:
+        return 1
+    return parsed if parsed > 0 else 1
+
+
+def compute_definition_validation_worker_mode_deltas(results: list[dict]) -> list[dict]:
+    grouped: dict[tuple[str, str, str, bool, str, str, str, str], dict[int, dict]] = {}
+    for row in results:
+        worker_mode = benchmark_row_definition_validation_workers_mode(row)
+        if worker_mode not in (1, 2):
+            continue
+        grouped.setdefault(
+            (
+                row["fixture"],
+                row["phase"],
+                benchmark_row_semantic_product_force_mode(row),
+                benchmark_row_no_fact_emission_mode(row),
+                benchmark_row_fact_families_mode(row),
+                benchmark_row_method_target_memoization_mode(row),
+                benchmark_row_graph_local_auto_key_mode(row),
+                benchmark_row_graph_local_auto_side_channel_mode(row),
+            ),
+            {},
+        )[worker_mode] = row
+
+    deltas: list[dict] = []
+    for (fixture,
+         phase,
+         semantic_product_force,
+         no_fact_emission,
+         fact_families,
+         method_target_memoization,
+         graph_local_auto_key_mode,
+         graph_local_auto_side_channel_mode), by_mode in sorted(grouped.items()):
+        single_worker_row = by_mode.get(1)
+        dual_worker_row = by_mode.get(2)
+        if single_worker_row is None or dual_worker_row is None:
+            continue
+        single_worker_dump_sha = str(single_worker_row.get("dump_sha256", ""))
+        dual_worker_dump_sha = str(dual_worker_row.get("dump_sha256", ""))
+        deltas.append(
+            {
+                "fixture": fixture,
+                "phase": phase,
+                "semantic_product_force": semantic_product_force,
+                "no_fact_emission": no_fact_emission,
+                "fact_families": fact_families,
+                "method_target_memoization": method_target_memoization,
+                "graph_local_auto_key_mode": graph_local_auto_key_mode,
+                "graph_local_auto_side_channel_mode": graph_local_auto_side_channel_mode,
+                "graph_local_auto_dependency_scratch_mode":
+                    benchmark_row_graph_local_auto_dependency_scratch_mode(single_worker_row),
+                "single_worker_dump_sha256": single_worker_dump_sha,
+                "dual_worker_dump_sha256": dual_worker_dump_sha,
+                "dump_sha256_identical": single_worker_dump_sha == dual_worker_dump_sha,
+                "median_peak_rss_bytes_single_worker": single_worker_row["median_peak_rss_bytes"],
+                "median_peak_rss_bytes_dual_worker": dual_worker_row["median_peak_rss_bytes"],
+                "median_peak_rss_bytes_dual_minus_single":
+                    int(dual_worker_row["median_peak_rss_bytes"]) -
+                    int(single_worker_row["median_peak_rss_bytes"]),
+                "worst_peak_rss_bytes_single_worker": single_worker_row["worst_peak_rss_bytes"],
+                "worst_peak_rss_bytes_dual_worker": dual_worker_row["worst_peak_rss_bytes"],
+                "worst_peak_rss_bytes_dual_minus_single":
+                    int(dual_worker_row["worst_peak_rss_bytes"]) -
+                    int(single_worker_row["worst_peak_rss_bytes"]),
+                "median_wall_seconds_single_worker": single_worker_row["median_wall_seconds"],
+                "median_wall_seconds_dual_worker": dual_worker_row["median_wall_seconds"],
+                "median_wall_seconds_dual_minus_single":
+                    float(dual_worker_row["median_wall_seconds"]) -
+                    float(single_worker_row["median_wall_seconds"]),
+                "worst_wall_seconds_single_worker": single_worker_row["worst_wall_seconds"],
+                "worst_wall_seconds_dual_worker": dual_worker_row["worst_wall_seconds"],
+                "worst_wall_seconds_dual_minus_single":
+                    float(dual_worker_row["worst_wall_seconds"]) -
+                    float(single_worker_row["worst_wall_seconds"]),
+            }
+        )
+    return deltas
+
+
 def compute_graph_local_auto_dependency_scratch_mode_deltas(results: list[dict]) -> list[dict]:
     grouped: dict[tuple[str, str, str, str, str, str, bool, str], dict[str, dict]] = {}
     for row in results:
@@ -1085,6 +1188,7 @@ def main() -> int:
         f"graph_local_auto_key_mode={args.graph_local_auto_key_mode} "
         f"graph_local_auto_side_channel_mode={args.graph_local_auto_side_channel_mode} "
         f"graph_local_auto_dependency_scratch_mode={args.graph_local_auto_dependency_scratch_mode} "
+        f"definition_validation_workers={args.definition_validation_workers} "
         f"repeat_compile_leak_check_runs={args.repeat_compile_leak_check_runs}"
     )
 
@@ -1106,6 +1210,9 @@ def main() -> int:
     graph_local_auto_dependency_scratch_modes = selected_graph_local_auto_dependency_scratch_modes(
         args.graph_local_auto_dependency_scratch_mode
     )
+    definition_validation_worker_modes = selected_definition_validation_worker_modes(
+        args.definition_validation_workers
+    )
 
     for fixture in fixtures:
         for phase in phases:
@@ -1115,40 +1222,43 @@ def main() -> int:
                         for graph_local_auto_key_mode in graph_local_auto_key_modes:
                             for graph_local_auto_side_channel_mode in graph_local_auto_side_channel_modes:
                                 for graph_local_auto_dependency_scratch_mode in graph_local_auto_dependency_scratch_modes:
-                                    row = measure_fixture_phase(
-                                        primec,
-                                        repo_root,
-                                        fixture,
-                                        phase,
-                                        args.runs,
-                                        args.entry,
-                                        semantic_product_force,
-                                        no_fact_emission,
-                                        fact_families,
-                                        args.semantic_phase_counters,
-                                        args.semantic_allocation_counters,
-                                        args.semantic_rss_checkpoints,
-                                        args.repeat_compile_leak_check_runs,
-                                        method_target_memoization,
-                                        graph_local_auto_key_mode,
-                                        graph_local_auto_side_channel_mode,
-                                        graph_local_auto_dependency_scratch_mode,
-                                    )
-                                    results.append(row)
-                                    print(
-                                        "[semantic_memory_benchmark] "
-                                        f"fixture={row['fixture']} phase={row['phase']} "
-                                        f"semantic_product_force={row['semantic_product_force']} "
-                                        f"no_fact_emission={row['no_fact_emission']} "
-                                        f"method_target_memoization={row['method_target_memoization']} "
-                                        f"graph_local_auto_key_mode={row['graph_local_auto_key_mode']} "
-                                        f"graph_local_auto_side_channel_mode={row['graph_local_auto_side_channel_mode']} "
-                                        f"graph_local_auto_dependency_scratch_mode={row['graph_local_auto_dependency_scratch_mode']} "
-                                        f"median_wall={row['median_wall_seconds']:.6f}s "
-                                        f"worst_wall={row['worst_wall_seconds']:.6f}s "
-                                        f"median_rss={row['median_peak_rss_bytes']} "
-                                        f"worst_rss={row['worst_peak_rss_bytes']}"
-                                    )
+                                    for definition_validation_workers in definition_validation_worker_modes:
+                                        row = measure_fixture_phase(
+                                            primec,
+                                            repo_root,
+                                            fixture,
+                                            phase,
+                                            args.runs,
+                                            args.entry,
+                                            semantic_product_force,
+                                            no_fact_emission,
+                                            fact_families,
+                                            args.semantic_phase_counters,
+                                            args.semantic_allocation_counters,
+                                            args.semantic_rss_checkpoints,
+                                            args.repeat_compile_leak_check_runs,
+                                            method_target_memoization,
+                                            graph_local_auto_key_mode,
+                                            graph_local_auto_side_channel_mode,
+                                            graph_local_auto_dependency_scratch_mode,
+                                            definition_validation_workers,
+                                        )
+                                        results.append(row)
+                                        print(
+                                            "[semantic_memory_benchmark] "
+                                            f"fixture={row['fixture']} phase={row['phase']} "
+                                            f"semantic_product_force={row['semantic_product_force']} "
+                                            f"no_fact_emission={row['no_fact_emission']} "
+                                            f"method_target_memoization={row['method_target_memoization']} "
+                                            f"graph_local_auto_key_mode={row['graph_local_auto_key_mode']} "
+                                            f"graph_local_auto_side_channel_mode={row['graph_local_auto_side_channel_mode']} "
+                                            f"graph_local_auto_dependency_scratch_mode={row['graph_local_auto_dependency_scratch_mode']} "
+                                            f"definition_validation_workers={row['definition_validation_workers']} "
+                                            f"median_wall={row['median_wall_seconds']:.6f}s "
+                                            f"worst_wall={row['worst_wall_seconds']:.6f}s "
+                                            f"median_rss={row['median_peak_rss_bytes']} "
+                                            f"worst_rss={row['worst_peak_rss_bytes']}"
+                                        )
 
     report = {
         "schema": REPORT_SCHEMA,
@@ -1174,6 +1284,7 @@ def main() -> int:
             "graph_local_auto_key_mode": args.graph_local_auto_key_mode,
             "graph_local_auto_side_channel_mode": args.graph_local_auto_side_channel_mode,
             "graph_local_auto_dependency_scratch_mode": args.graph_local_auto_dependency_scratch_mode,
+            "definition_validation_workers": args.definition_validation_workers,
             "repeat_compile_leak_check_runs": args.repeat_compile_leak_check_runs,
         },
         "expensive_thresholds": {
@@ -1198,9 +1309,41 @@ def main() -> int:
         "graph_local_auto_side_channel_mode_deltas": compute_graph_local_auto_side_channel_mode_deltas(results),
         "graph_local_auto_dependency_scratch_mode_deltas":
             compute_graph_local_auto_dependency_scratch_mode_deltas(results),
+        "definition_validation_worker_mode_deltas":
+            compute_definition_validation_worker_mode_deltas(results),
         "expensive_offenders": collect_expensive_offenders(results),
         "scale_slopes": compute_scale_slopes(results),
     }
+
+    if args.definition_validation_workers == "both":
+        parity_failures = [
+            row for row in report["definition_validation_worker_mode_deltas"]
+            if not bool(row.get("dump_sha256_identical", False))
+        ]
+        if parity_failures:
+            print(
+                "[semantic_memory_benchmark] deterministic parity failure for "
+                "definition-validation worker modes:",
+                file=sys.stderr,
+            )
+            for row in parity_failures:
+                print(
+                    "  - fixture="
+                    f"{row.get('fixture')} phase={row.get('phase')} "
+                    f"single_sha={row.get('single_worker_dump_sha256')} "
+                    f"dual_sha={row.get('dual_worker_dump_sha256')}",
+                    file=sys.stderr,
+                )
+            if args.report_json:
+                report_path = Path(args.report_json)
+                if not report_path.is_absolute():
+                    report_path = (repo_root / report_path).resolve()
+                report_path.parent.mkdir(parents=True, exist_ok=True)
+                report_path.write_text(
+                    json.dumps(report, indent=2, sort_keys=True) + "\n",
+                    encoding="utf-8")
+                print(f"[semantic_memory_benchmark] wrote report: {report_path}", file=sys.stderr)
+            return 1
 
     if args.report_json:
         report_path = Path(args.report_json)
