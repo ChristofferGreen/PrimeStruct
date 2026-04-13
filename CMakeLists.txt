@@ -558,6 +558,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_ir_pipeline_external_tooling.cpp
     tests/unit/test_ir_pipeline_to_cpp.cpp
     tests/unit/test_ir_pipeline_to_glsl.cpp
+    tests/unit/test_ir_pipeline_to_glsl_runtime.cpp
     tests/unit/test_ir_pipeline_wasm.cpp
     tests/unit/test_ir_pipeline_wasm_wasi.cpp
     tests/unit/test_compile_run_benchmark_harness.cpp

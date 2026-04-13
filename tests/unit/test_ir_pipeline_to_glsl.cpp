@@ -10,10 +10,6 @@ TEST_SUITE_BEGIN("primestruct.ir.pipeline.to_glsl");
 
 namespace {
 
-constexpr uint64_t encodeSignedI32Imm(int32_t value) {
-  return static_cast<uint64_t>(static_cast<int64_t>(value));
-}
-
 primec::IrModule makeSimpleI32AddModule() {
   primec::IrModule module;
   module.entryIndex = 0;
@@ -533,7 +529,5 @@ TEST_CASE("ir to glsl emitter writes f32 return opcode") {
   CHECK(error.empty());
   CHECK(glsl.find("return stack[--sp];") != std::string::npos);
 }
-
-#include "test_ir_pipeline_to_glsl_runtime.h"
 
 TEST_SUITE_END();

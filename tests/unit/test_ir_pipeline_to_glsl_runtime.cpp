@@ -1,3 +1,21 @@
+#include <cstdint>
+#include <string>
+
+#include "third_party/doctest.h"
+
+#include "primec/Ir.h"
+#include "primec/IrToGlslEmitter.h"
+
+TEST_SUITE_BEGIN("primestruct.ir.pipeline.to_glsl");
+
+namespace {
+
+constexpr uint64_t encodeSignedI32Imm(int32_t value) {
+  return static_cast<uint64_t>(static_cast<int64_t>(value));
+}
+
+} // namespace
+
 TEST_CASE("ir to glsl emitter writes narrowed f64 literal and return opcodes") {
   primec::IrToGlslEmitter emitter;
   primec::IrModule module;
@@ -676,3 +694,5 @@ TEST_CASE("ir to glsl emitter rejects out-of-range call targets") {
   CHECK_FALSE(emitter.emitSource(module, glsl, error));
   CHECK(error.find("call target out of range") != std::string::npos);
 }
+
+TEST_SUITE_END();
