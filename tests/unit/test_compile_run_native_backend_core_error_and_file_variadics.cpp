@@ -1,3 +1,10 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_native_backend_core_helpers.h"
+
+#if PRIMESTRUCT_NATIVE_CORE_ENABLED
+TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
+
 TEST_CASE("native backend supports graphics-style int return propagation with on_error") {
   const std::string source = R"(
 [struct]
@@ -805,4 +812,7 @@ TEST_CASE("native materializes variadic pointer File handle packs with indexed d
   CHECK(readFile(pathC1) == "omega\n");
 }
 
+#endif
+
+TEST_SUITE_END();
 #endif

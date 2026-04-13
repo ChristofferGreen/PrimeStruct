@@ -1,3 +1,10 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_native_backend_core_helpers.h"
+
+#if PRIMESTRUCT_NATIVE_CORE_ENABLED
+TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
+
 TEST_CASE("compiles and runs native file io") {
   const std::string outPath = (testScratchPath("") / "primec_native_file_io.txt").string();
   auto escape = [](const std::string &text) {
@@ -620,3 +627,6 @@ main() {
   CHECK(runCommand(exePath) == 17);
 }
 
+
+TEST_SUITE_END();
+#endif

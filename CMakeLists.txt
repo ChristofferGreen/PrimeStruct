@@ -583,6 +583,22 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_imports_operations.cpp
     tests/unit/test_compile_run_native_backend_argv.cpp
     tests/unit/test_compile_run_native_backend_core.cpp
+    tests/unit/test_compile_run_native_backend_core_array_and_pointer_variadics.cpp
+    tests/unit/test_compile_run_native_backend_core_buffer_and_collection_wrappers.cpp
+    tests/unit/test_compile_run_native_backend_core_error_and_file_variadics.cpp
+    tests/unit/test_compile_run_native_backend_core_file_and_struct_variadics.cpp
+    tests/unit/test_compile_run_native_backend_core_image_io_a.cpp
+    tests/unit/test_compile_run_native_backend_core_image_io_b.cpp
+    tests/unit/test_compile_run_native_backend_core_image_io_c.cpp
+    tests/unit/test_compile_run_native_backend_core_image_io_d.cpp
+    tests/unit/test_compile_run_native_backend_core_map_and_vector_variadics.cpp
+    tests/unit/test_compile_run_native_backend_core_reference_and_uninitialized_variadics.cpp
+    tests/unit/test_compile_run_native_backend_core_result_and_vector_variadics.cpp
+    tests/unit/test_compile_run_native_backend_core_result_payloads_and_strings.cpp
+    tests/unit/test_compile_run_native_backend_core_runtime_and_ir_paths.cpp
+    tests/unit/test_compile_run_native_backend_core_ui_layout_a.cpp
+    tests/unit/test_compile_run_native_backend_core_ui_layout_b.cpp
+    tests/unit/test_compile_run_native_backend_core_vector_and_experimental_map_variadics.cpp
     tests/unit/test_compile_run_native_backend_collections.cpp
     tests/unit/test_compile_run_native_backend_collections_alias_diagnostics_a.cpp
     tests/unit/test_compile_run_native_backend_collections_alias_diagnostics_b.cpp
@@ -1391,39 +1407,39 @@ if(PRIMESTRUCT_BUILD_TESTS)
                                  SOURCE_FILE "*test_compile_run_vm_outputs.cpp" FIRST 67 LAST 88)
     elseif(suite STREQUAL "primestruct.compile.run.native_backend.core")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "01a"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.cpp" FIRST 1 LAST 10)
+                                 SOURCE_FILE "*test_compile_run_native_backend_core_*.cpp" FIRST 1 LAST 10)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "01b"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.cpp" FIRST 11 LAST 20)
+                                 SOURCE_FILE "*test_compile_run_native_backend_core_*.cpp" FIRST 11 LAST 20)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "02a"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.cpp" FIRST 21 LAST 30)
+                                 SOURCE_FILE "*test_compile_run_native_backend_core_*.cpp" FIRST 21 LAST 30)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "02b"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.cpp" FIRST 31 LAST 40)
+                                 SOURCE_FILE "*test_compile_run_native_backend_core_*.cpp" FIRST 31 LAST 40)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "03a"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.cpp" FIRST 41 LAST 50)
+                                 SOURCE_FILE "*test_compile_run_native_backend_core_*.cpp" FIRST 41 LAST 50)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "03b"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.cpp" FIRST 51 LAST 60)
+                                 SOURCE_FILE "*test_compile_run_native_backend_core_*.cpp" FIRST 51 LAST 60)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "04a"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.cpp" FIRST 61 LAST 70)
+                                 SOURCE_FILE "*test_compile_run_native_backend_core_*.cpp" FIRST 61 LAST 70)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "04b"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.cpp" FIRST 71 LAST 80)
+                                 SOURCE_FILE "*test_compile_run_native_backend_core_*.cpp" FIRST 71 LAST 80)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "05a"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.cpp" FIRST 81 LAST 90)
+                                 SOURCE_FILE "*test_compile_run_native_backend_core_*.cpp" FIRST 81 LAST 90)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "05b"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.cpp" FIRST 91 LAST 100)
+                                 SOURCE_FILE "*test_compile_run_native_backend_core_*.cpp" FIRST 91 LAST 100)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "06a"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.cpp" FIRST 101 LAST 110)
+                                 SOURCE_FILE "*test_compile_run_native_backend_core_*.cpp" FIRST 101 LAST 110)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "06b"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.cpp" FIRST 111 LAST 120)
+                                 SOURCE_FILE "*test_compile_run_native_backend_core_*.cpp" FIRST 111 LAST 120)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "07a"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.cpp" FIRST 121 LAST 130)
+                                 SOURCE_FILE "*test_compile_run_native_backend_core_*.cpp" FIRST 121 LAST 130)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "07b"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.cpp" FIRST 131 LAST 140)
+                                 SOURCE_FILE "*test_compile_run_native_backend_core_*.cpp" FIRST 131 LAST 140)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "08a"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.cpp" FIRST 141 LAST 147)
+                                 SOURCE_FILE "*test_compile_run_native_backend_core_*.cpp" FIRST 141 LAST 147)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "08b1"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.cpp" FIRST 148 LAST 151)
+                                 SOURCE_FILE "*test_compile_run_native_backend_core_*.cpp" FIRST 148 LAST 151)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "08b2"
-                                 SOURCE_FILE "*test_compile_run_native_backend_core.cpp" FIRST 152 LAST 154)
+                                 SOURCE_FILE "*test_compile_run_native_backend_core_*.cpp" FIRST 152 LAST 154)
     elseif(suite STREQUAL "primestruct.compile.run.emitters.cpp")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "lambda_and_mutator_resolution"
                                  SOURCE_FILE "*test_compile_run_emitters.cpp" FIRST 1 LAST 45)

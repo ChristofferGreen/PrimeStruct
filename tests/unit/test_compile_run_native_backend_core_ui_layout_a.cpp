@@ -1,3 +1,10 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_native_backend_core_helpers.h"
+
+#if PRIMESTRUCT_NATIVE_CORE_ENABLED
+TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
+
 TEST_CASE("compiles and runs native void call with string param") {
   const std::string source = R"(
 [return<void> effects(io_out)]
@@ -440,3 +447,6 @@ main() {
   CHECK(runCommand(exePath + " > " + outPath) == 5);
   CHECK(readFile(outPath) == "1,3,2,9,2,3,20,10,5,9,8,7,255,3,4,5,6,14,4,4,0\n");
 }
+
+TEST_SUITE_END();
+#endif

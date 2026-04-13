@@ -1,3 +1,10 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_native_backend_core_helpers.h"
+
+#if PRIMESTRUCT_NATIVE_CORE_ENABLED
+TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
+
 TEST_CASE("compiles and rejects native png inputs with critical chunk crc mismatches") {
   const std::string inPath =
       (testScratchPath("") / "primec_native_image_read_invalid_crc.png").string();
@@ -616,3 +623,6 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
+
+TEST_SUITE_END();
+#endif

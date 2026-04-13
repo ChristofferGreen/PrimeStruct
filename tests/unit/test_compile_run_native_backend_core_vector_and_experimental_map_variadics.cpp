@@ -1,3 +1,10 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_native_backend_core_helpers.h"
+
+#if PRIMESTRUCT_NATIVE_CORE_ENABLED
+TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
+
 TEST_CASE("native materializes variadic pointer vector packs with indexed dereference access helpers") {
   const std::string source = R"(
 import /std/collections/*
@@ -650,3 +657,6 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 11);
 }
+
+TEST_SUITE_END();
+#endif

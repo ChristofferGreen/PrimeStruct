@@ -1,3 +1,10 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_native_backend_core_helpers.h"
+
+#if PRIMESTRUCT_NATIVE_CORE_ENABLED
+TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
+
 TEST_CASE("compiles and runs native png read for 16-bit rgb inputs") {
   const std::string inPath =
       (testScratchPath("") / "primec_native_image_read_rgb16_sub.png").string();
@@ -606,3 +613,6 @@ main() {
         "0\n");
 }
 
+
+TEST_SUITE_END();
+#endif

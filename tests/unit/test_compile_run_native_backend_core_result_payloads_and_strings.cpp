@@ -1,3 +1,10 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_native_backend_core_helpers.h"
+
+#if PRIMESTRUCT_NATIVE_CORE_ENABLED
+TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
+
 TEST_CASE("native backend compiles packed error struct Result combinator payloads on IR-backed paths") {
   const std::string source = R"(
 import /std/file/*
@@ -594,3 +601,6 @@ main() {
   CHECK(readFile(outPath) == "queue_submit_failed\n");
 }
 
+
+TEST_SUITE_END();
+#endif

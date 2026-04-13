@@ -42,7 +42,7 @@ list(APPEND PrimeStructManagedCompileRunSuites
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.core"
                                   TIMEOUT 1800
                                   SHARD_PREFIX "core"
-                                  SOURCE_FILE "*test_compile_run_native_backend_core.cpp"
+                                  SOURCE_FILE "*test_compile_run_native_backend_core_*.cpp"
                                   RANGE_FIRST 1
                                   RANGE_LAST 154
                                   CASES_PER_SHARD 1)
