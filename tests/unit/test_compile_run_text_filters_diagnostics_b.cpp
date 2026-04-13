@@ -1,3 +1,7 @@
+#include "test_compile_run_text_filters_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
+
 TEST_CASE("primevm collect-diagnostics emits intra-definition multi-semantic payload") {
   const std::string source = R"(
 [return<int>]
@@ -621,3 +625,5 @@ main() {
   CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
 }
 
+
+TEST_SUITE_END();

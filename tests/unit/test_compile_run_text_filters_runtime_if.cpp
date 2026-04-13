@@ -1,3 +1,7 @@
+#include "test_compile_run_text_filters_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
+
 TEST_CASE("compiles and runs implicit utf8 suffix by default") {
   const std::string source = R"(
 [return<int> effects(io_out)]
@@ -387,3 +391,5 @@ main() {
   CHECK(runCommand(runNativeCmd) == 4);
   CHECK(readFile(errPath).empty());
 }
+
+TEST_SUITE_END();

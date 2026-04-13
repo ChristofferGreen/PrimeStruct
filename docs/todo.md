@@ -165,7 +165,7 @@ Wave D (test naming + queue hygiene):
     - [x] `TODO-0407-F15` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_smoke.cpp`; fix: move tests from `test_compile_run_smoke_*.h` into `.cpp` units and keep headers helper-only.
     - [x] `TODO-0407-F16` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_math_conformance.cpp`; fix: move tests from `test_compile_run_math_conformance_*.h` into `.cpp` units grouped by topic and keep headers helper-only.
     - [x] `TODO-0407-F17` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_glsl.cpp`; fix: move tests from `test_compile_run_glsl_*.h` into `.cpp` units and keep headers helper-only.
-    - [ ] `TODO-0407-F18` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_text_filters.cpp`; fix: move tests from `test_compile_run_text_filters_*.h` into `.cpp` units and keep headers helper-only.
+    - [x] `TODO-0407-F18` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_text_filters.cpp`; fix: move tests from `test_compile_run_text_filters_*.h` into `.cpp` units and keep headers helper-only.
     - [x] `TODO-0407-F19` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_to_glsl.cpp`; fix: move tests from `test_ir_pipeline_to_glsl_*.h` into `.cpp` units and keep headers helper-only.
     - [x] `TODO-0407-F20` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_semantics_imports.cpp`; fix: move tests from `test_semantics_imports.h` into `.cpp` and keep header content helper-only.
     - [x] `TODO-0407-F21` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_semantics_bindings_pointers.cpp`; fix: move tests from `test_semantics_bindings_pointer_types.h` into `.cpp` and keep header content helper-only.

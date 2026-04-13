@@ -1,3 +1,7 @@
+#include "test_compile_run_text_filters_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
+
 TEST_CASE("primec collect-diagnostics emits stable multi-semantic payload for execution pass errors") {
   const std::string source = R"(
 [return<int>]
@@ -578,3 +582,5 @@ execute_repeat(wrapMap().at_unsafe(1i32, 2i32), at_unsafe(wrapVector()))
   CHECK(semanticCount == 1);
 }
 
+
+TEST_SUITE_END();

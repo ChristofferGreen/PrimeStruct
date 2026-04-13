@@ -1,4 +1,8 @@
-TEST_CASE("primevm collect-diagnostics keeps user wrapper count pair extra-arg diagnostics in definition scope") {
+#include "test_compile_run_text_filters_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
+
+TEST_CASE("primevm collect-diagnostics keeps execution wrapper method count pair extra-arg diagnostics") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -21,23 +25,23 @@ wrapVector() {
 }
 
 [return<i32>]
-bad() {
-  count(wrapMap(), 1i32, 2i32)
-  wrapVector().count(1i32, 2i32)
-  return(0i32)
-}
-
-[return<i32>]
 main() {
   return(0i32)
 }
+
+[return<void>]
+execute_repeat([i32] a, [i32] b) {
+  return()
+}
+
+execute_repeat(wrapMap().count(1i32, 2i32), wrapVector().count(1i32, 2i32))
 )";
-  const std::string srcPath =
-      writeTemp("primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_extra_arg_shape_shadow.prime",
-                source);
+  const std::string srcPath = writeTemp(
+      "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_extra_arg_shape_shadow.prime",
+      source);
   const std::string errPath =
       (testScratchPath("") /
-       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_extra_arg_shape_shadow_err.json")
+       "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_extra_arg_shape_shadow_err.json")
           .string();
 
   const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
@@ -47,10 +51,10 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
-TEST_CASE("primec collect-diagnostics keeps user wrapper count pair extra-arg reverse diagnostics in definition scope") {
+TEST_CASE("primec collect-diagnostics keeps execution wrapper method count pair extra-arg reverse diagnostics") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -73,24 +77,24 @@ wrapVector() {
 }
 
 [return<i32>]
-bad() {
-  wrapVector().count(1i32, 2i32)
-  count(wrapMap(), 1i32, 2i32)
-  return(0i32)
-}
-
-[return<i32>]
 main() {
   return(0i32)
 }
+
+[return<void>]
+execute_repeat([i32] a, [i32] b) {
+  return()
+}
+
+execute_repeat(wrapVector().count(1i32, 2i32), wrapMap().count(1i32, 2i32))
 )";
-  const std::string srcPath =
-      writeTemp("primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_extra_arg_"
-                "reverse_shadow.prime",
-                source);
+  const std::string srcPath = writeTemp(
+      "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_extra_arg_shape_"
+      "reverse_shadow.prime",
+      source);
   const std::string errPath =
       (testScratchPath("") /
-       "primec_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_extra_arg_"
+       "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_extra_arg_shape_"
        "reverse_shadow_err.json")
           .string();
 
@@ -101,10 +105,10 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
-TEST_CASE("primevm collect-diagnostics keeps user wrapper count pair extra-arg reverse diagnostics in definition scope") {
+TEST_CASE("primevm collect-diagnostics keeps execution wrapper method count pair extra-arg reverse diagnostics") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -127,24 +131,24 @@ wrapVector() {
 }
 
 [return<i32>]
-bad() {
-  wrapVector().count(1i32, 2i32)
-  count(wrapMap(), 1i32, 2i32)
-  return(0i32)
-}
-
-[return<i32>]
 main() {
   return(0i32)
 }
+
+[return<void>]
+execute_repeat([i32] a, [i32] b) {
+  return()
+}
+
+execute_repeat(wrapVector().count(1i32, 2i32), wrapMap().count(1i32, 2i32))
 )";
-  const std::string srcPath =
-      writeTemp("primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_extra_arg_"
-                "reverse_shadow.prime",
-                source);
+  const std::string srcPath = writeTemp(
+      "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_extra_arg_shape_"
+      "reverse_shadow.prime",
+      source);
   const std::string errPath =
       (testScratchPath("") /
-       "primevm_collect_diagnostics_semantic_intra_definition_wrapper_temp_count_pair_extra_arg_"
+       "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_method_count_pair_extra_arg_shape_"
        "reverse_shadow_err.json")
           .string();
 
@@ -155,15 +159,29 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
-TEST_CASE("primec collect-diagnostics reports builtin map literal template-arity failure before execution") {
+TEST_CASE("primec collect-diagnostics keeps execution wrapper count pair extra-arg diagnostics") {
   const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(3i32, 4i32))
+}
+
 [return<i32>]
-bad() {
-  map(key=1i32, value=2i32)
-  return(0i32)
+/map/count([map<i32, i32>] values, [i32] marker) {
+  return(marker)
+}
+
+[effects(heap_alloc), return<i32>]
+/vector/count([vector<i32>] values, [i32] marker) {
+  return(marker)
 }
 
 [return<i32>]
@@ -176,12 +194,14 @@ execute_repeat([i32] a, [i32] b) {
   return()
 }
 
-execute_repeat(map(key=3i32, value=4i32), 0i32)
+execute_repeat(count(wrapMap(), 1i32, 2i32), wrapVector().count(1i32, 2i32))
 )";
   const std::string srcPath =
-      writeTemp("primec_collect_diagnostics_builtin_map_named_args_scopes.prime", source);
+      writeTemp("primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_extra_arg_shape_shadow.prime",
+                source);
   const std::string errPath =
-      (testScratchPath("") / "primec_collect_diagnostics_builtin_map_named_args_scopes_err.json")
+      (testScratchPath("") /
+       "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_extra_arg_shape_shadow_err.json")
           .string();
 
   const std::string cmd = "./primec " + quoteShellArg(srcPath) +
@@ -189,17 +209,31 @@ execute_repeat(map(key=3i32, value=4i32), 0i32)
   CHECK(runCommand(cmd) == 2);
 
   const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"message\":\"map literal requires exactly two template arguments\"") !=
-        std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
-TEST_CASE("primevm collect-diagnostics reports builtin map literal template-arity failure before execution") {
+TEST_CASE("primevm collect-diagnostics keeps execution wrapper count pair extra-arg diagnostics") {
   const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(3i32, 4i32))
+}
+
 [return<i32>]
-bad() {
-  map(key=1i32, value=2i32)
-  return(0i32)
+/map/count([map<i32, i32>] values, [i32] marker) {
+  return(marker)
+}
+
+[effects(heap_alloc), return<i32>]
+/vector/count([vector<i32>] values, [i32] marker) {
+  return(marker)
 }
 
 [return<i32>]
@@ -212,12 +246,14 @@ execute_repeat([i32] a, [i32] b) {
   return()
 }
 
-execute_repeat(map(key=3i32, value=4i32), 0i32)
+execute_repeat(count(wrapMap(), 1i32, 2i32), wrapVector().count(1i32, 2i32))
 )";
   const std::string srcPath =
-      writeTemp("primevm_collect_diagnostics_builtin_map_named_args_scopes.prime", source);
+      writeTemp("primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_extra_arg_shape_shadow.prime",
+                source);
   const std::string errPath =
-      (testScratchPath("") / "primevm_collect_diagnostics_builtin_map_named_args_scopes_err.json")
+      (testScratchPath("") /
+       "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_extra_arg_shape_shadow_err.json")
           .string();
 
   const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
@@ -225,17 +261,31 @@ execute_repeat(map(key=3i32, value=4i32), 0i32)
   CHECK(runCommand(cmd) == 2);
 
   const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"message\":\"map literal requires exactly two template arguments\"") !=
-        std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /map/count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
-TEST_CASE("primec collect-diagnostics reports builtin vector literal heap-alloc failure before execution") {
+TEST_CASE("primec collect-diagnostics keeps execution wrapper count pair extra-arg reverse diagnostics") {
   const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(3i32, 4i32))
+}
+
 [return<i32>]
-bad() {
-  vector(value=1i32)
-  return(0i32)
+/map/count([map<i32, i32>] values, [i32] marker) {
+  return(marker)
+}
+
+[effects(heap_alloc), return<i32>]
+/vector/count([vector<i32>] values, [i32] marker) {
+  return(marker)
 }
 
 [return<i32>]
@@ -248,13 +298,16 @@ execute_repeat([i32] a, [i32] b) {
   return()
 }
 
-execute_repeat(vector(value=3i32), 0i32)
+execute_repeat(wrapVector().count(1i32, 2i32), count(wrapMap(), 1i32, 2i32))
 )";
   const std::string srcPath =
-      writeTemp("primec_collect_diagnostics_builtin_vector_named_args_scopes.prime", source);
+      writeTemp("primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_extra_arg_"
+                "reverse_shadow.prime",
+                source);
   const std::string errPath =
       (testScratchPath("") /
-       "primec_collect_diagnostics_builtin_vector_named_args_scopes_err.json")
+       "primec_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_extra_arg_"
+       "reverse_shadow_err.json")
           .string();
 
   const std::string cmd = "./primec " + quoteShellArg(srcPath) +
@@ -262,16 +315,31 @@ execute_repeat(vector(value=3i32), 0i32)
   CHECK(runCommand(cmd) == 2);
 
   const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"message\":\"vector literal requires heap_alloc effect\"") != std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
-TEST_CASE("primevm collect-diagnostics reports builtin vector literal heap-alloc failure before execution") {
+TEST_CASE("primevm collect-diagnostics keeps execution wrapper count pair extra-arg reverse diagnostics") {
   const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(3i32, 4i32))
+}
+
 [return<i32>]
-bad() {
-  vector(value=1i32)
-  return(0i32)
+/map/count([map<i32, i32>] values, [i32] marker) {
+  return(marker)
+}
+
+[effects(heap_alloc), return<i32>]
+/vector/count([vector<i32>] values, [i32] marker) {
+  return(marker)
 }
 
 [return<i32>]
@@ -284,13 +352,16 @@ execute_repeat([i32] a, [i32] b) {
   return()
 }
 
-execute_repeat(vector(value=3i32), 0i32)
+execute_repeat(wrapVector().count(1i32, 2i32), count(wrapMap(), 1i32, 2i32))
 )";
   const std::string srcPath =
-      writeTemp("primevm_collect_diagnostics_builtin_vector_named_args_scopes.prime", source);
+      writeTemp("primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_extra_arg_"
+                "reverse_shadow.prime",
+                source);
   const std::string errPath =
       (testScratchPath("") /
-       "primevm_collect_diagnostics_builtin_vector_named_args_scopes_err.json")
+       "primevm_collect_diagnostics_semantic_intra_execution_wrapper_temp_count_pair_extra_arg_"
+       "reverse_shadow_err.json")
           .string();
 
   const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
@@ -298,105 +369,34 @@ execute_repeat(vector(value=3i32), 0i32)
   CHECK(runCommand(cmd) == 2);
 
   const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"message\":\"vector literal requires heap_alloc effect\"") != std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /vector/count\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
-TEST_CASE("primec collect-diagnostics reports builtin array literal template-arity failure before execution") {
+TEST_CASE("primec collect-diagnostics emits intra-execution argument-type payload") {
   const std::string source = R"(
-[return<i32>]
-bad() {
-  array(value=1i32)
-  return(0i32)
-}
-
 [return<i32>]
 main() {
   return(0i32)
 }
 
-[return<void>]
-execute_repeat([i32] a, [i32] b) {
-  return()
-}
-
-execute_repeat(array(value=3i32), 0i32)
-)";
-  const std::string srcPath =
-      writeTemp("primec_collect_diagnostics_builtin_array_named_args_scopes.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_collect_diagnostics_builtin_array_named_args_scopes_err.json")
-          .string();
-
-  const std::string cmd = "./primec " + quoteShellArg(srcPath) +
-                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(cmd) == 2);
-
-  const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"message\":\"array literal requires exactly one template argument\"") !=
-        std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-}
-
-TEST_CASE("primevm collect-diagnostics reports builtin array literal template-arity failure before execution") {
-  const std::string source = R"(
-[return<i32>]
-bad() {
-  array(value=1i32)
-  return(0i32)
-}
-
-[return<i32>]
-main() {
-  return(0i32)
-}
-
-[return<void>]
-execute_repeat([i32] a, [i32] b) {
-  return()
-}
-
-execute_repeat(array(value=3i32), 0i32)
-)";
-  const std::string srcPath =
-      writeTemp("primevm_collect_diagnostics_builtin_array_named_args_scopes.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primevm_collect_diagnostics_builtin_array_named_args_scopes_err.json")
-          .string();
-
-  const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
-                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(cmd) == 2);
-
-  const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("\"message\":\"array literal requires exactly one template argument\"") !=
-        std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
-}
-
-TEST_CASE("primec collect-diagnostics emits intra-definition argument-type payload") {
-  const std::string source = R"(
 [return<i32>]
 expects_bool([bool] cond, [i32] value) {
   return(value)
 }
-[return<i32>]
-bad() {
-  expects_bool(1i32, 7i32)
-  expects_bool(true, false)
-  return(0i32)
+
+[return<void>]
+execute_repeat([i32] a, [i32] b) {
+  return()
 }
-[return<i32>]
-main() {
-  return(0i32)
-}
+
+execute_repeat(expects_bool(1i32, 7i32), expects_bool(true, false))
 )";
-  const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_intra_definition_argtype.prime", source);
+  const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_intra_execution_argtype.prime", source);
   const std::string errPath =
       (testScratchPath("") /
-       "primec_collect_diagnostics_semantic_intra_definition_argtype_err.json")
+       "primec_collect_diagnostics_semantic_intra_execution_argtype_err.json")
           .string();
 
   const std::string cmd = "./primec " + quoteShellArg(srcPath) +
@@ -409,7 +409,7 @@ main() {
         std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /expects_bool parameter value: expected i32 got bool\"") !=
         std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 
   size_t semanticCount = 0;
   size_t scan = 0;
@@ -428,28 +428,30 @@ main() {
   CHECK(firstMessage < secondMessage);
 }
 
-TEST_CASE("primevm collect-diagnostics emits intra-definition argument-type payload") {
+TEST_CASE("primevm collect-diagnostics emits intra-execution argument-type payload") {
   const std::string source = R"(
-[return<i32>]
-expects_bool([bool] cond, [i32] value) {
-  return(value)
-}
-[return<i32>]
-bad() {
-  expects_bool(1i32, 7i32)
-  expects_bool(true, false)
-  return(0i32)
-}
 [return<i32>]
 main() {
   return(0i32)
 }
+
+[return<i32>]
+expects_bool([bool] cond, [i32] value) {
+  return(value)
+}
+
+[return<void>]
+execute_repeat([i32] a, [i32] b) {
+  return()
+}
+
+execute_repeat(expects_bool(1i32, 7i32), expects_bool(true, false))
 )";
   const std::string srcPath =
-      writeTemp("primevm_collect_diagnostics_semantic_intra_definition_argtype.prime", source);
+      writeTemp("primevm_collect_diagnostics_semantic_intra_execution_argtype.prime", source);
   const std::string errPath =
       (testScratchPath("") /
-       "primevm_collect_diagnostics_semantic_intra_definition_argtype_err.json")
+       "primevm_collect_diagnostics_semantic_intra_execution_argtype_err.json")
           .string();
 
   const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
@@ -462,7 +464,7 @@ main() {
         std::string::npos);
   CHECK(diagnostics.find("\"message\":\"argument type mismatch for /expects_bool parameter value: expected i32 got bool\"") !=
         std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 
   size_t semanticCount = 0;
   size_t scan = 0;
@@ -481,27 +483,29 @@ main() {
   CHECK(firstMessage < secondMessage);
 }
 
-TEST_CASE("primec collect-diagnostics emits intra-definition flow-effect payload") {
+TEST_CASE("primec collect-diagnostics emits intra-execution flow-effect payload") {
   const std::string source = R"(
-[effects(io_out) return<i32>]
-apply_effects([i32] value) {
-  return(value)
-}
-[effects(io_out) return<i32>]
-bad() {
-  [effects(io_in)] apply_effects(1i32)
-  [capabilities(io_in)] apply_effects(2i32)
-  return(0i32)
-}
 [return<i32>]
 main() {
   return(0i32)
 }
+
+[effects(io_out) return<i32>]
+apply_effects([i32] value) {
+  return(value)
+}
+
+[return<void>]
+execute_repeat([i32] a, [i32] b) {
+  return()
+}
+
+[effects(io_out)] execute_repeat([effects(io_in)] apply_effects(1i32), [capabilities(io_in)] apply_effects(2i32))
 )";
-  const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_intra_definition_flow_effect.prime", source);
+  const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_intra_execution_flow_effect.prime", source);
   const std::string errPath =
       (testScratchPath("") /
-       "primec_collect_diagnostics_semantic_intra_definition_flow_effect_err.json")
+       "primec_collect_diagnostics_semantic_intra_execution_flow_effect_err.json")
           .string();
 
   const std::string cmd = "./primec " + quoteShellArg(srcPath) +
@@ -512,9 +516,8 @@ main() {
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"execution effects must be a subset of enclosing effects on /apply_effects: io_in\"") !=
         std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"capability requires matching effect on /apply_effects: io_in\"") !=
-        std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown call target: capabilities\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 
   size_t semanticCount = 0;
   size_t scan = 0;
@@ -526,35 +529,36 @@ main() {
 
   const size_t firstMessage = diagnostics.find(
       "\"message\":\"execution effects must be a subset of enclosing effects on /apply_effects: io_in\"");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"capability requires matching effect on /apply_effects: io_in\"");
+  const size_t secondMessage = diagnostics.find("\"message\":\"unknown call target: capabilities\"");
   REQUIRE(firstMessage != std::string::npos);
   REQUIRE(secondMessage != std::string::npos);
   CHECK(firstMessage < secondMessage);
 }
 
-TEST_CASE("primevm collect-diagnostics emits intra-definition flow-effect payload") {
+TEST_CASE("primevm collect-diagnostics emits intra-execution flow-effect payload") {
   const std::string source = R"(
-[effects(io_out) return<i32>]
-apply_effects([i32] value) {
-  return(value)
-}
-[effects(io_out) return<i32>]
-bad() {
-  [effects(io_in)] apply_effects(1i32)
-  [capabilities(io_in)] apply_effects(2i32)
-  return(0i32)
-}
 [return<i32>]
 main() {
   return(0i32)
 }
+
+[effects(io_out) return<i32>]
+apply_effects([i32] value) {
+  return(value)
+}
+
+[return<void>]
+execute_repeat([i32] a, [i32] b) {
+  return()
+}
+
+[effects(io_out)] execute_repeat([effects(io_in)] apply_effects(1i32), [capabilities(io_in)] apply_effects(2i32))
 )";
   const std::string srcPath =
-      writeTemp("primevm_collect_diagnostics_semantic_intra_definition_flow_effect.prime", source);
+      writeTemp("primevm_collect_diagnostics_semantic_intra_execution_flow_effect.prime", source);
   const std::string errPath =
       (testScratchPath("") /
-       "primevm_collect_diagnostics_semantic_intra_definition_flow_effect_err.json")
+       "primevm_collect_diagnostics_semantic_intra_execution_flow_effect_err.json")
           .string();
 
   const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
@@ -565,9 +569,8 @@ main() {
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"execution effects must be a subset of enclosing effects on /apply_effects: io_in\"") !=
         std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"capability requires matching effect on /apply_effects: io_in\"") !=
-        std::string::npos);
-  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown call target: capabilities\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 
   size_t semanticCount = 0;
   size_t scan = 0;
@@ -579,10 +582,11 @@ main() {
 
   const size_t firstMessage = diagnostics.find(
       "\"message\":\"execution effects must be a subset of enclosing effects on /apply_effects: io_in\"");
-  const size_t secondMessage =
-      diagnostics.find("\"message\":\"capability requires matching effect on /apply_effects: io_in\"");
+  const size_t secondMessage = diagnostics.find("\"message\":\"unknown call target: capabilities\"");
   REQUIRE(firstMessage != std::string::npos);
   REQUIRE(secondMessage != std::string::npos);
   CHECK(firstMessage < secondMessage);
 }
 
+
+TEST_SUITE_END();

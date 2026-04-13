@@ -1,3 +1,7 @@
+#include "test_compile_run_text_filters_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
+
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper at_unsafe arg-shape diagnostics") {
   const std::string source = R"(
 [return<map<i32, i32>>]
@@ -620,3 +624,5 @@ execute_repeat(wrapVector().capacity(1i32), count(wrapMap(), 1i32))
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
+
+TEST_SUITE_END();

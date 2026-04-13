@@ -1,3 +1,7 @@
+#include "test_compile_run_text_filters_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
+
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper count pair arg-type reverse diagnostics") {
   const std::string source = R"(
 [return<map<i32, i32>>]
@@ -626,3 +630,5 @@ execute_repeat(count(wrapMap()), count(wrapVector()))
   CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
 }
 
+
+TEST_SUITE_END();

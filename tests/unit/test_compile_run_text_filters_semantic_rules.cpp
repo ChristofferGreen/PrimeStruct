@@ -1,4 +1,7 @@
-#pragma once
+#include "test_compile_run_text_filters_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
+
 
 TEST_CASE("text transforms accept whitespace separators") {
   const std::string source = R"(
@@ -545,3 +548,5 @@ main() {
   CHECK(readFile(errPath).find("missing return statement") != std::string::npos);
 }
 
+
+TEST_SUITE_END();

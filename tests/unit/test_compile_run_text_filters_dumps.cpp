@@ -1,3 +1,7 @@
+#include "test_compile_run_text_filters_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
+
 #include "primec/testing/CompilePipelineDumpHelpers.h"
 
 TEST_CASE("dump pre_ast shows imports and text filters") {
@@ -2577,3 +2581,5 @@ main() {
   CHECK(diagnostics.find("\"column\":0") == std::string::npos);
   CHECK(diagnostics.find("\"related_spans\":[]") != std::string::npos);
 }
+
+TEST_SUITE_END();

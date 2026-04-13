@@ -1,4 +1,7 @@
-#pragma once
+#include "test_compile_run_text_filters_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
+
 
 TEST_CASE("compiles and runs implicit i32 suffix") {
   const std::string source = R"(
@@ -569,3 +572,5 @@ main() {
   CHECK(runCommand(runVmCmd) == 10);
 }
 
+
+TEST_SUITE_END();

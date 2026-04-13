@@ -1,4 +1,7 @@
-#pragma once
+#include "test_compile_run_text_filters_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
+
 
 TEST_CASE("no transforms disables single_type_to_return") {
   const std::string source = R"(
@@ -679,3 +682,5 @@ main() {
   CHECK(runCommand(recurseCmd) == 0);
   CHECK(runCommand(exePath) == 3);
 }
+
+TEST_SUITE_END();

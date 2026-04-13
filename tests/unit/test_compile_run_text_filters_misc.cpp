@@ -1,3 +1,7 @@
+#include "test_compile_run_text_filters_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
+
 TEST_CASE("compiles and runs with comments") {
   const std::string source = R"(
 // comment at top
@@ -601,5 +605,6 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 5);
 }
+
 
 TEST_SUITE_END();

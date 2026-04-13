@@ -767,6 +767,34 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_smoke_core_wasm_wasi_png_interlaced.cpp
     tests/unit/test_compile_run_smoke_core_wasm_wasi_png_write.cpp
     tests/unit/test_compile_run_text_filters.cpp
+    tests/unit/test_compile_run_text_filters_core_lists.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_a.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_b.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_c.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_d.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_e.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_f.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_g.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_h.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_i.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_j.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_k.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_l.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_m.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_n.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_o.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_p.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_q.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_r.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_s.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_t.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_u.cpp
+    tests/unit/test_compile_run_text_filters_diagnostics_v.cpp
+    tests/unit/test_compile_run_text_filters_dumps.cpp
+    tests/unit/test_compile_run_text_filters_misc.cpp
+    tests/unit/test_compile_run_text_filters_runtime_if.cpp
+    tests/unit/test_compile_run_text_filters_semantic_rules.cpp
+    tests/unit/test_compile_run_text_filters_text_rules.cpp
     tests/unit/test_compile_run_vm_bounds.cpp
     tests/unit/test_compile_run_vm_core.cpp
     tests/unit/test_compile_run_vm_core_basic.cpp
@@ -1767,17 +1795,17 @@ if(PRIMESTRUCT_BUILD_TESTS)
                            PROPERTIES RUN_SERIAL TRUE)
     elseif(suite STREQUAL "primestruct.compile.run.text_filters")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "flag_and_transform_basics"
-                                 SOURCE_FILE "*test_compile_run_text_filters_core.h" FIRST 1 LAST 28)
+                                 SOURCE_FILE "*test_compile_run_text_filters_core_lists.cpp" FIRST 1 LAST 28)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "semantic_transform_rules"
-                                 SOURCE_FILE "*test_compile_run_text_filters_core.h" FIRST 29 LAST 53)
+                                 SOURCE_FILE "*test_compile_run_text_filters_semantic_rules.cpp")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "text_transform_rules"
-                                 SOURCE_FILE "*test_compile_run_text_filters_core.h" FIRST 54 LAST 84)
+                                 SOURCE_FILE "*test_compile_run_text_filters_text_rules.cpp")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
                                  SHARD_NAME "misc_language_and_diagnostics_basics"
-                                 SOURCE_FILE "*test_compile_run_text_filters_misc.h" FIRST 1 LAST 18)
+                                 SOURCE_FILE "*test_compile_run_text_filters_misc.cpp" FIRST 1 LAST 18)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
                                  SHARD_NAME "misc_language_and_diagnostics_extended"
-                                 SOURCE_FILE "*test_compile_run_text_filters_misc.h" FIRST 19 LAST 35)
+                                 SOURCE_FILE "*test_compile_run_text_filters_misc.cpp" FIRST 19 LAST 35)
     elseif(suite STREQUAL "primestruct.compile.run.examples")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
                                  SHARD_NAME "spinning_cube_pipeline_and_scripts"

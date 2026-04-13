@@ -1,3 +1,7 @@
+#include "test_compile_run_text_filters_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
+
 TEST_CASE("primec collect-diagnostics emits stable multi-parse payload") {
   const std::string source = R"(
 import bad
@@ -583,3 +587,5 @@ main() {
   CHECK(firstMessage < secondMessage);
 }
 
+
+TEST_SUITE_END();
