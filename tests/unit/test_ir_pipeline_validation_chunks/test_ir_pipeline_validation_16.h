@@ -851,7 +851,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool hasLeadingCallArg =\n"
             "          !candidate.args.empty() &&\n"
-            "          candidate.args.front().kind == Expr::Kind::Call;") !=
+            "          candidate.args.front().kind == Expr::Kind::Call;") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool hasCanonicalBuiltinSoaRefCallArg =\n"
@@ -863,7 +863,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "          candidate.args.front().kind == Expr::Kind::Call;") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "if (isAnyCanonicalBuiltinSoaRefCall && hasLeadingCallArg)") !=
+            "if (isAnyCanonicalBuiltinSoaRefCall && hasLeadingCallArg)") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "if (hasCanonicalBuiltinSoaRefCallArg)") ==
@@ -1154,7 +1154,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "if (isAnyCanonicalBuiltinSoaRefCall &&\n"
             "          !candidate.args.empty() &&\n"
-            "          candidate.args.front().kind == Expr::Kind::Call)") ==
+            "          candidate.args.front().kind == Expr::Kind::Call)") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "if (isAnyBuiltinSoaRefRefCall ? hasVisibleSoaRefRefHelper\n"
