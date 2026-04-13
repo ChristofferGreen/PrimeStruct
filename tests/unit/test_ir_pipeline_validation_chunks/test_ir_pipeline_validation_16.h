@@ -760,7 +760,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "        isOldSurfaceBuiltinSoaRefCall || isOldSurfaceBuiltinSoaRefRefCall;") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "const bool isAnyExplicitSoaRefCall =") !=
+            "const bool isAnyExplicitSoaRefCall =") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isAnyBuiltinSoaRefMethodCall =") !=
@@ -872,8 +872,15 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isAnyExplicitOrBuiltinSoaRefCall =\n"
-            "          isAnyExplicitSoaRefCall || isAnyBuiltinSoaRefMethodCall ||\n"
+            "          isAnyExplicitLegacySoaNonMethodRefCall ||\n"
+            "          isAnyOldSurfaceBuiltinSoaRefCall ||\n"
+            "          isAnyBuiltinSoaRefMethodCall ||\n"
             "          isAnyBuiltinSoaRefNonMethodCall;") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "const bool isAnyExplicitOrBuiltinSoaRefCall =\n"
+            "          isAnyExplicitSoaRefCall || isAnyBuiltinSoaRefMethodCall ||\n"
+            "          isAnyBuiltinSoaRefNonMethodCall;") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool hasCanonicalResolvedSoaRefHelper =\n"
@@ -912,7 +919,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isAnyExplicitSoaRefCall =\n"
             "          isAnyExplicitLegacySoaNonMethodRefCall ||\n"
-            "          isAnyOldSurfaceBuiltinSoaRefCall;") !=
+            "          isAnyOldSurfaceBuiltinSoaRefCall;") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isNonMethodCall = !candidate.isMethodCall;") ==
