@@ -11,9 +11,25 @@
 
 namespace primec::ir_lowerer {
 
+struct SemanticProductIndex {
+  std::unordered_map<uint64_t, std::string> directCallTargetsByExpr;
+  std::unordered_map<uint64_t, SymbolId> methodCallTargetIdsByExpr;
+  std::unordered_map<uint64_t, std::string> bridgePathChoicesByExpr;
+  std::unordered_map<uint64_t, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionId;
+  std::unordered_map<SymbolId, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionPathId;
+  std::unordered_map<uint64_t, const SemanticProgramLocalAutoFact *> localAutoFactsByExpr;
+  std::unordered_map<uint64_t, const SemanticProgramLocalAutoFact *> localAutoFactsByInitPathAndBindingNameId;
+  std::unordered_map<uint64_t, const SemanticProgramQueryFact *> queryFactsByExpr;
+  std::unordered_map<uint64_t, const SemanticProgramQueryFact *> queryFactsByResolvedPathAndCallNameId;
+  std::unordered_map<uint64_t, const SemanticProgramTryFact *> tryFactsByExpr;
+  std::unordered_map<uint64_t, const SemanticProgramTryFact *> tryFactsByOperandPathAndSource;
+  std::unordered_map<uint64_t, const SemanticProgramBindingFact *> bindingFactsByExpr;
+};
+
 struct SemanticProductTargetAdapter {
   bool hasSemanticProduct = false;
   const SemanticProgram *semanticProgram = nullptr;
+  SemanticProductIndex semanticIndex;
   std::unordered_map<uint64_t, std::string> directCallTargetsByExpr;
   std::unordered_map<uint64_t, SymbolId> methodCallTargetIdsByExpr;
   std::unordered_map<uint64_t, std::string> bridgePathChoicesByExpr;

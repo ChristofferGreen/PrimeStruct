@@ -156,12 +156,16 @@ Wave D (queue hygiene):
     - At least one snapshot-only compatibility path in production semantics code is deleted rather than relocated.
   - stop_rule: If removal breaks unrelated runtime/backend callsites, split into two leaves (facade introduction first, production API pruning second) before continuing.
 
-- [ ] TODO-0405: Introduce unified semantic-product index builder
+- [~] TODO-0405: Introduce unified semantic-product index builder
   - owner: ai
   - created_at: 2026-04-13
   - phase: Group 15
   - depends_on: TODO-0404
   - scope: Replace ad-hoc lowerer semantic-product lookup-map construction with one typed `SemanticProductIndex` builder and shared lookup API for direct/method/bridge/binding/local-auto/query/try/on_error families.
+  - file_todos:
+    - [x] `TODO-0405-F01` files: `/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererSemanticProductTargetAdapters.{h,cpp}`, `/Users/chrgre01/src/PrimeStruct/include/primec/testing/ir_lowerer_helpers/IrLowererSemanticProductTargetAdapters.h`; fix: introduce a typed `SemanticProductIndex` plus `SemanticProductIndexBuilder`, wire adapter construction through that builder for direct/method/bridge/binding/local-auto/query/try/on_error family indices, and route semantic lookup helpers through shared index-backed lookup paths.
+    - [ ] `TODO-0405-F02` file: `/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererSemanticProductTargetAdapters.cpp`; fix: remove transitional duplicated legacy adapter-map population once downstream callsites consume `SemanticProductIndex` directly.
+    - [ ] `TODO-0405-F03` files: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends_registry.cpp`, `/Users/chrgre01/src/PrimeStruct/tests/unit/test_semantics_definition_partitioner.cpp`; fix: add/refresh deterministic parity coverage across worker counts (`1`, `2`, `4`) for the unified index path.
   - acceptance:
     - Lowerer semantic-product adapter paths consume one shared index builder instead of duplicating per-family map assembly logic.
     - Determinism parity coverage keeps semantic-product output and diagnostics stable across worker counts (`1`, `2`, `4`) on existing stress fixtures.
