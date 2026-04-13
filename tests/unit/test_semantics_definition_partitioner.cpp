@@ -7,7 +7,11 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <cstdint>
+#include <filesystem>
+#include <fstream>
 #include <string>
+#include <system_error>
 #include <vector>
 
 #include "test_semantics_helpers.h"
@@ -620,6 +624,129 @@ main() {
 
   CHECK(formattedByWorkerCount[0] == formattedByWorkerCount[1]);
   CHECK(formattedByWorkerCount[1] == formattedByWorkerCount[2]);
+}
+
+TEST_CASE("semantic product index families are equivalent across worker counts 1,2,4") {
+  const std::filesystem::path tempPath = makeTempSemanticSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << R"(
+[return<Result<int, i32>>]
+id([i32] value) {
+  return(Result.ok(value))
+}
+
+[return<i32>]
+/vector/count([vector<i32>] self) {
+  return(17i32)
+}
+
+[return<i32>]
+unexpected_error([i32] err) {
+  return(err)
+}
+
+[return<i32> effects(heap_alloc) on_error<i32, /unexpected_error>]
+main() {
+  [auto] direct{id(1i32)}
+  [auto] values{vector<i32>(1i32)}
+  [i32] method{values.count()}
+  [i32] bridge{count(values)}
+  [i32] tried{try(direct)}
+  return(plus(plus(method, bridge), tried))
+}
+)";
+  }
+
+  struct IndexFamilySnapshot {
+    std::string formattedSemanticProduct;
+    std::size_t directCallTargetCount = 0;
+    std::size_t methodCallTargetCount = 0;
+    std::size_t bridgePathChoiceCount = 0;
+    std::size_t bindingFactCount = 0;
+    std::size_t localAutoFactCount = 0;
+    std::size_t queryFactCount = 0;
+    std::size_t tryFactCount = 0;
+    std::size_t onErrorFactCount = 0;
+    std::size_t returnFactCount = 0;
+  };
+
+  const auto runWithWorkerCount = [&](uint32_t workerCount) {
+    primec::Options options;
+    options.inputPath = tempPath.string();
+    options.entryPath = "/main";
+    options.emitKind = "native";
+    options.collectDiagnostics = true;
+    options.benchmarkSemanticDefinitionValidationWorkerCount = workerCount;
+    primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+    primec::CompilePipelineOutput output;
+    primec::CompilePipelineDiagnosticInfo diagnosticInfo;
+    primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+    std::string error;
+    const bool ok = primec::runCompilePipeline(options, output, errorStage, error, &diagnosticInfo);
+
+    CHECK(ok);
+    CHECK(error.empty());
+    CHECK(errorStage == primec::CompilePipelineErrorStage::None);
+    CHECK_FALSE(output.hasFailure);
+    REQUIRE(output.hasSemanticProgram);
+    CHECK(diagnosticMessages(diagnosticInfo).empty());
+
+    IndexFamilySnapshot snapshot;
+    snapshot.formattedSemanticProduct = primec::formatSemanticProgram(output.semanticProgram);
+    snapshot.directCallTargetCount = output.semanticProgram.directCallTargets.size();
+    snapshot.methodCallTargetCount = output.semanticProgram.methodCallTargets.size();
+    snapshot.bridgePathChoiceCount = output.semanticProgram.bridgePathChoices.size();
+    snapshot.bindingFactCount = output.semanticProgram.bindingFacts.size();
+    snapshot.localAutoFactCount = output.semanticProgram.localAutoFacts.size();
+    snapshot.queryFactCount = output.semanticProgram.queryFacts.size();
+    snapshot.tryFactCount = output.semanticProgram.tryFacts.size();
+    snapshot.onErrorFactCount = output.semanticProgram.onErrorFacts.size();
+    snapshot.returnFactCount = output.semanticProgram.returnFacts.size();
+    return snapshot;
+  };
+
+  const IndexFamilySnapshot singleWorker = runWithWorkerCount(1u);
+  const IndexFamilySnapshot twoWorkers = runWithWorkerCount(2u);
+  const IndexFamilySnapshot fourWorkers = runWithWorkerCount(4u);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  CHECK(singleWorker.formattedSemanticProduct == twoWorkers.formattedSemanticProduct);
+  CHECK(singleWorker.formattedSemanticProduct == fourWorkers.formattedSemanticProduct);
+  CHECK(twoWorkers.formattedSemanticProduct == fourWorkers.formattedSemanticProduct);
+
+  CHECK(singleWorker.directCallTargetCount == twoWorkers.directCallTargetCount);
+  CHECK(singleWorker.directCallTargetCount == fourWorkers.directCallTargetCount);
+  CHECK(singleWorker.methodCallTargetCount == twoWorkers.methodCallTargetCount);
+  CHECK(singleWorker.methodCallTargetCount == fourWorkers.methodCallTargetCount);
+  CHECK(singleWorker.bridgePathChoiceCount == twoWorkers.bridgePathChoiceCount);
+  CHECK(singleWorker.bridgePathChoiceCount == fourWorkers.bridgePathChoiceCount);
+  CHECK(singleWorker.bindingFactCount == twoWorkers.bindingFactCount);
+  CHECK(singleWorker.bindingFactCount == fourWorkers.bindingFactCount);
+  CHECK(singleWorker.localAutoFactCount == twoWorkers.localAutoFactCount);
+  CHECK(singleWorker.localAutoFactCount == fourWorkers.localAutoFactCount);
+  CHECK(singleWorker.queryFactCount == twoWorkers.queryFactCount);
+  CHECK(singleWorker.queryFactCount == fourWorkers.queryFactCount);
+  CHECK(singleWorker.tryFactCount == twoWorkers.tryFactCount);
+  CHECK(singleWorker.tryFactCount == fourWorkers.tryFactCount);
+  CHECK(singleWorker.onErrorFactCount == twoWorkers.onErrorFactCount);
+  CHECK(singleWorker.onErrorFactCount == fourWorkers.onErrorFactCount);
+  CHECK(singleWorker.returnFactCount == twoWorkers.returnFactCount);
+  CHECK(singleWorker.returnFactCount == fourWorkers.returnFactCount);
+
+  CHECK(singleWorker.directCallTargetCount > 0);
+  CHECK(singleWorker.methodCallTargetCount > 0);
+  CHECK(singleWorker.bridgePathChoiceCount > 0);
+  CHECK(singleWorker.bindingFactCount > 0);
+  CHECK(singleWorker.localAutoFactCount > 0);
+  CHECK(singleWorker.queryFactCount > 0);
+  CHECK(singleWorker.tryFactCount > 0);
+  CHECK(singleWorker.onErrorFactCount > 0);
+  CHECK(singleWorker.returnFactCount > 0);
 }
 
 TEST_SUITE_END();
