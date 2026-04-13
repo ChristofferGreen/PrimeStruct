@@ -670,5 +670,41 @@ main() {
   CHECK(error.find("unknown method: /vector/count") != std::string::npos);
 }
 
+TEST_CASE("vector method count rejects stdlib vectorCount alias-only helper") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vectorCount<T>([vector<T>] values) {
+  return(33i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values.count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+}
+
+TEST_CASE("vector method capacity rejects stdlib vectorCapacity alias-only helper") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vectorCapacity<T>([vector<T>] values) {
+  return(33i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values.capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/capacity") != std::string::npos);
+}
+
 
 TEST_SUITE_END();

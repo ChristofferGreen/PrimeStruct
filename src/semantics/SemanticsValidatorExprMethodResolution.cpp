@@ -430,8 +430,6 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       !hasImportedDefinitionPath(resolved) &&
       !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
       !hasImportedDefinitionPath("/std/collections/vector/count") &&
-      !hasDeclaredDefinitionPath("/std/collections/vectorCount") &&
-      !hasImportedDefinitionPath("/std/collections/vectorCount") &&
       !hasNamedArguments(expr.argNames) &&
       (expr.args.front().kind == Expr::Kind::Name ||
        (expr.args.front().kind == Expr::Kind::Call &&
@@ -447,8 +445,6 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       !hasImportedDefinitionPath(resolved) &&
       !hasDeclaredDefinitionPath("/std/collections/vector/capacity") &&
       !hasImportedDefinitionPath("/std/collections/vector/capacity") &&
-      !hasDeclaredDefinitionPath("/std/collections/vectorCapacity") &&
-      !hasImportedDefinitionPath("/std/collections/vectorCapacity") &&
       !hasNamedArguments(expr.argNames) &&
       (expr.args.front().kind == Expr::Kind::Name ||
        (expr.args.front().kind == Expr::Kind::Call &&
