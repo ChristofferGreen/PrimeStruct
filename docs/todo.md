@@ -62,16 +62,15 @@ Task template:
 
 ### Immediate Next 10 (After Ready Now)
 
-1. TODO-0408
-2. TODO-0405
-3. TODO-0406
-4. TODO-0403
+1. TODO-0405
+2. TODO-0406
+3. TODO-0403
 
 ### Priority Lanes (Current)
 
 - P0 Test implementation locality cleanup (no `TEST_CASE` in include chunks): TODO-0407
 - P1 SoA canonicalization + semantic memory/perf + multithread substrate + semantic-product boundary hardening: TODO-0401, TODO-0402, TODO-0404, TODO-0405, TODO-0406
-- P2 Test naming alignment + queue/snapshot governance: TODO-0408, TODO-0403
+- P2 Queue/snapshot governance: TODO-0403
 
 ### Execution Queue (Recommended)
 
@@ -87,16 +86,14 @@ Wave C (semantic memory/perf):
 3. TODO-0405
 4. TODO-0406
 
-Wave D (test naming + queue hygiene):
-1. TODO-0408
-2. TODO-0403
+Wave D (queue hygiene):
+1. TODO-0403
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Test implementation locality and include-chunk retirement | TODO-0407 |
-| Test file/suite naming alignment and numeric-chunk removal | TODO-0408 |
 | SoA bring-up and stdlib-authoritative `soa_vector` end-state cleanup | TODO-0401 |
 | Semantic memory footprint and multithread compile substrate | TODO-0402 |
 | Semantic-product contract/index boundary hardening | TODO-0404, TODO-0405, TODO-0406 |
@@ -106,41 +103,13 @@ Wave D (test naming + queue hygiene):
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0401, TODO-0402, TODO-0404, TODO-0405, TODO-0406, TODO-0407, TODO-0408 |
+| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0401, TODO-0402, TODO-0404, TODO-0405, TODO-0406, TODO-0407 |
 | Test source locality and include-layer guardrail verification | TODO-0407 |
-| Test suite/file naming consistency audit + focused doctest reruns | TODO-0408 |
 | Benchmark/runtime regression checks (`./scripts/benchmark.sh`) | TODO-0402 |
 | Semantic-product contract/index and deterministic conformance checks | TODO-0404, TODO-0405, TODO-0406 |
 | TODO/open-vs-finished hygiene (`docs/todo.md` vs `docs/todo_finished.md`) | TODO-0403 |
 
 ### Task Blocks
-
-- [ ] TODO-0408: Align test file and suite names with test intent
-  - owner: ai
-  - created_at: 2026-04-13
-  - phase: Test architecture cleanup
-  - depends_on: TODO-0407
-  - scope: Apply file-by-file naming cleanup so each migrated test file and `TEST_SUITE` label matches the behavior under test and avoids numeric shard naming.
-  - file_todos:
-    - [x] `TODO-0408-F01` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_vm_math.cpp`; fix: rename suite from `primestruct.compile.run.vm.collections` to `primestruct.compile.run.vm.math` and keep test names math-focused.
-    - [x] `TODO-0408-F02` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_vm_maps.cpp`; fix: rename suite from `primestruct.compile.run.vm.collections` to `primestruct.compile.run.vm.maps` and keep map-only coverage in this file.
-    - [x] `TODO-0408-F03` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_vm_outputs.cpp`; fix: rename suite from `primestruct.compile.run.vm.collections` to `primestruct.compile.run.vm.outputs` after moving include-defined tests into `.cpp` units.
-    - [x] `TODO-0408-F04` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_vm_collections.cpp`; fix: keep suite `primestruct.compile.run.vm.collections` but ensure only collection tests remain after split-out.
-    - [x] `TODO-0408-F05` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_vm_bounds.cpp`; fix: move suite from `primestruct.compile.run.vm.collections` to a bounds-focused suite name such as `primestruct.compile.run.vm.bounds`.
-    - [x] `TODO-0408-F06` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends_registry.cpp`; fix: narrow suite name from generic `primestruct.ir.pipeline.backends` to registry-specific naming (for example `primestruct.ir.pipeline.backends.registry`) when tests are moved out of the header.
-    - [x] `TODO-0408-F07` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends.cpp`; fix: rename generic suite to backend-core-focused naming so it no longer collides with backend-specialized files.
-    - [x] `TODO-0408-F08` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends_glsl.cpp`; fix: rename suite to GLSL-specific naming (for example `primestruct.ir.pipeline.backends.glsl`).
-    - [x] `TODO-0408-F09` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends_cpp_vm.cpp`; fix: rename suite to cpp/vm-focused naming (for example `primestruct.ir.pipeline.backends.cpp_vm`).
-    - [x] `TODO-0408-F10` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_validation.cpp`; fix: after chunk retirement, rename resulting files/suites to semantic topics (no numeric suffixes like `_01`, `_45`, `_92`).
-    - [x] `TODO-0408-F11` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_semantics_calls_and_flow_collections.cpp`; fix: after chunk retirement, split into topic files/suites (`calls`, `flow`, `collections`) without numeric suffix naming.
-    - [x] `TODO-0408-F12` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_emitters.cpp`; fix: after chunk retirement, split into emitter-topic file/suite names (for example `vm`, `cpp-ir`, `exe-ir`, `glsl-ir`, `spirv-ir`) and remove numeric chunk naming.
-    - [x] `TODO-0408-F13` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_semantics_manual.cpp`; fix: remove the duplicate `TEST_SUITE_BEGIN("primestruct.semantics.manual")` so suite nesting is well-formed and unambiguous.
-  - acceptance:
-    - Every entry in `file_todos` is completed for renamed files/suites in scope.
-    - Migrated test filenames use semantic topic names instead of numeric-only suffix chunks such as `001`, `003`, or `0045`.
-    - Migrated `.cpp` files use `TEST_SUITE` labels that match their file purpose and no longer reuse unrelated generic suite names.
-    - Add/update one lightweight guardrail (scripted check or documented grep gate) that detects new numeric-suffix test files and obvious suite/file naming mismatches.
-  - stop_rule: If full-repo rename fallout is too large for one safe slice, land one subsystem at a time with follow-up TODO leaves.
 
 - [ ] TODO-0407: Move test implementations from include chunks into `.cpp`
   - owner: ai

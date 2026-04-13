@@ -2940,3 +2940,34 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - ✓ Route non-empty literal lowering through deterministic builtin `soa_vector` literal materialization (struct-element storage + copy path) instead of the direct unsupported diagnostic path.
   - ✓ Add runtime coverage for successful non-empty literal materialization on supported backends (`tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.h`: `native materializes non-empty root soa_vector struct literals`; `tests/unit/test_compile_run_vm_collections_wrapper_temporaries_a.h`: `vm materializes non-empty root soa_vector struct literals`).
   - ✓ Add deterministic diagnostic coverage for unsupported element envelopes and allocation-failure boundaries (`tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.h`: `native rejects non-empty root soa_vector literals with unsupported element envelopes`, `native rejects non-empty root soa_vector literals above local capacity limit`; `tests/unit/test_compile_run_vm_collections_wrapper_temporaries_a.h`: `vm rejects non-empty root soa_vector literals with unsupported element envelopes`, `vm rejects non-empty root soa_vector literals above local capacity limit`).
+
+**Todo Cleanup (April 13, 2026) - Continued**
+
+- [x] TODO-0408: Align test file and suite names with test intent
+  - owner: ai
+  - created_at: 2026-04-13
+  - phase: Test architecture cleanup
+  - depends_on: TODO-0407
+  - scope: Apply file-by-file naming cleanup so each migrated test file and `TEST_SUITE` label matches the behavior under test and avoids numeric shard naming.
+  - file_todos:
+    - [x] `TODO-0408-F01` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_vm_math.cpp`; fix: rename suite from `primestruct.compile.run.vm.collections` to `primestruct.compile.run.vm.math` and keep test names math-focused.
+    - [x] `TODO-0408-F02` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_vm_maps.cpp`; fix: rename suite from `primestruct.compile.run.vm.collections` to `primestruct.compile.run.vm.maps` and keep map-only coverage in this file.
+    - [x] `TODO-0408-F03` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_vm_outputs.cpp`; fix: rename suite from `primestruct.compile.run.vm.collections` to `primestruct.compile.run.vm.outputs` after moving include-defined tests into `.cpp` units.
+    - [x] `TODO-0408-F04` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_vm_collections.cpp`; fix: keep suite `primestruct.compile.run.vm.collections` but ensure only collection tests remain after split-out.
+    - [x] `TODO-0408-F05` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_vm_bounds.cpp`; fix: move suite from `primestruct.compile.run.vm.collections` to a bounds-focused suite name such as `primestruct.compile.run.vm.bounds`.
+    - [x] `TODO-0408-F06` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends_registry.cpp`; fix: narrow suite name from generic `primestruct.ir.pipeline.backends` to registry-specific naming (for example `primestruct.ir.pipeline.backends.registry`) when tests are moved out of the header.
+    - [x] `TODO-0408-F07` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends.cpp`; fix: rename generic suite to backend-core-focused naming so it no longer collides with backend-specialized files.
+    - [x] `TODO-0408-F08` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends_glsl.cpp`; fix: rename suite to GLSL-specific naming (for example `primestruct.ir.pipeline.backends.glsl`).
+    - [x] `TODO-0408-F09` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends_cpp_vm.cpp`; fix: rename suite to cpp/vm-focused naming (for example `primestruct.ir.pipeline.backends.cpp_vm`).
+    - [x] `TODO-0408-F10` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_validation.cpp`; fix: after chunk retirement, rename resulting files/suites to semantic topics (no numeric suffixes like `_01`, `_45`, `_92`).
+    - [x] `TODO-0408-F11` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_semantics_calls_and_flow_collections.cpp`; fix: after chunk retirement, split into topic files/suites (`calls`, `flow`, `collections`) without numeric suffix naming.
+    - [x] `TODO-0408-F12` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_emitters.cpp`; fix: after chunk retirement, split into emitter-topic file/suite names (for example `vm`, `cpp-ir`, `exe-ir`, `glsl-ir`, `spirv-ir`) and remove numeric chunk naming.
+    - [x] `TODO-0408-F13` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_semantics_manual.cpp`; fix: remove the duplicate `TEST_SUITE_BEGIN("primestruct.semantics.manual")` so suite nesting is well-formed and unambiguous.
+  - acceptance:
+    - Every entry in `file_todos` is completed for renamed files/suites in scope.
+    - Migrated test filenames use semantic topic names instead of numeric-only suffix chunks such as `001`, `003`, or `0045`.
+    - Migrated `.cpp` files use `TEST_SUITE` labels that match their file purpose and no longer reuse unrelated generic suite names.
+    - Add/update one lightweight guardrail (scripted check or documented grep gate) that detects new numeric-suffix test files and obvious suite/file naming mismatches.
+  - stop_rule: If full-repo rename fallout is too large for one safe slice, land one subsystem at a time with follow-up TODO leaves.
+  - finished_at: 2026-04-13
+  - evidence: Completed F01-F13 naming-alignment leaves, migrated numeric shard filenames to semantic topic names for vm collections/emitter/semantics/ir-validation areas, and enforced naming guardrails via scripts/check_test_suite_naming.py.
