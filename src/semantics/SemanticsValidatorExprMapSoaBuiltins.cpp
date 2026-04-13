@@ -23,6 +23,34 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
   }
   const std::string resolvedSoaCanonical =
       canonicalizeLegacySoaGetHelperPath(resolvedNoTemplate);
+  const auto isExplicitOldSurfaceSoaAccessCall =
+      [&](std::string_view helperName) {
+        const std::string helper(helperName);
+        const std::string samePath = "/soa_vector/" + helper;
+        if (!expr.isMethodCall) {
+          if (expr.name == samePath || expr.name == "soa_vector/" + helper) {
+            return true;
+          }
+          return (expr.namespacePrefix == "/soa_vector" ||
+                  expr.namespacePrefix == "soa_vector") &&
+                 expr.name == helper;
+        }
+        return (expr.namespacePrefix == "/soa_vector" ||
+                expr.namespacePrefix == "soa_vector") &&
+               expr.name == helper;
+      };
+  const auto isExplicitOldSurfaceSoaConversionCall =
+      [&](std::string_view helperName) {
+        const std::string helper(helperName);
+        const std::string samePath = "/" + helper;
+        if (!expr.isMethodCall) {
+          if (expr.name == samePath) {
+            return true;
+          }
+          return expr.namespacePrefix == "/" && expr.name == helper;
+        }
+        return expr.namespacePrefix == "/" && expr.name == helper;
+      };
   auto failMapSoaBuiltinDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(expr, std::move(message));
   };
@@ -355,8 +383,14 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       return failMapSoaBuiltinDiagnostic(
           "named arguments not supported for builtin calls");
     }
+    const bool isBorrowedToAosHelper =
+        isSimpleCallName(expr, "to_aos_ref") ||
+        resolved == "/to_aos_ref" ||
+        matchesBorrowedSoaToAosResolved;
     const std::string helperName =
-        (isSimpleCallName(expr, "to_soa") || resolved == "/to_soa") ? "to_soa" : "to_aos";
+        (isSimpleCallName(expr, "to_soa") || resolved == "/to_soa")
+            ? "to_soa"
+            : (isBorrowedToAosHelper ? "to_aos_ref" : "to_aos");
     if (!expr.templateArgs.empty()) {
       return failMapSoaBuiltinDiagnostic(helperName +
                                         " does not accept template arguments");
@@ -384,6 +418,10 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       if (helperName == "to_aos" && matchesSoaToAosResolved) {
         return failMapSoaBuiltinDiagnostic(
             "argument type mismatch for /std/collections/soa_vector/to_aos parameter values");
+      } else if (helperName == "to_aos_ref" &&
+                 matchesBorrowedSoaToAosResolved) {
+        return failMapSoaBuiltinDiagnostic(
+            "argument type mismatch for /std/collections/soa_vector/to_aos_ref parameter values");
       } else {
         return failMapSoaBuiltinDiagnostic(
             helperName == "to_soa" ? "to_soa requires vector target"
@@ -400,6 +438,12 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
             !ignoreBorrowName.empty() ? ignoreBorrowName : borrowRoot;
         return failBorrowedBindingDiagnostic(borrowRoot, borrowSink);
       }
+    }
+    if ((helperName == "to_aos" || helperName == "to_aos_ref") &&
+        isExplicitOldSurfaceSoaConversionCall(helperName) &&
+        !hasVisibleDefinitionPathForCurrentImports("/" + helperName)) {
+      return failMapSoaBuiltinDiagnostic(
+          soaUnavailableMethodDiagnostic("/" + helperName));
     }
     if (!validateExpr(params, locals, expr.args.front())) {
       return false;
@@ -483,6 +527,11 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     if (!isIntegerExpr(expr.args[1])) {
       return failMapSoaBuiltinDiagnostic(helperName +
                                         " requires integer index");
+    }
+    if (isExplicitOldSurfaceSoaAccessCall(helperName) &&
+        !hasVisibleDefinitionPathForCurrentImports("/soa_vector/" + helperName)) {
+      return failMapSoaBuiltinDiagnostic(
+          soaUnavailableMethodDiagnostic("/soa_vector/" + helperName));
     }
     for (const auto &arg : expr.args) {
       if (!validateExpr(params, locals, arg)) {

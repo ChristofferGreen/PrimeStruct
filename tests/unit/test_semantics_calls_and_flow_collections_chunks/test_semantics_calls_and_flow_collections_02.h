@@ -323,7 +323,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("explicit soa_vector count validates on soa_vector binding") {
+TEST_CASE("explicit old-surface soa_vector count rejects without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -336,11 +336,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/count") != std::string::npos);
 }
 
-TEST_CASE("explicit soa_vector count slash-method validates on soa_vector binding") {
+TEST_CASE("explicit old-surface soa_vector count slash-method rejects without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -353,8 +353,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/count") != std::string::npos);
 }
 
 TEST_CASE("explicit soa_vector count forms reject non-soa target") {
@@ -369,7 +369,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("count requires soa_vector target") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/count") != std::string::npos);
 }
 
 TEST_CASE("canonical soa_vector count helper validates through struct helper return receivers") {
@@ -3401,7 +3401,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("explicit soa_vector get validates on soa_vector binding") {
+TEST_CASE("explicit old-surface soa_vector get rejects without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3415,8 +3415,66 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/get") !=
+        std::string::npos);
+}
+
+TEST_CASE("explicit old-surface soa_vector get slash-method rejects without same-path helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  values./soa_vector/get(0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/get") !=
+        std::string::npos);
+}
+
+TEST_CASE("explicit old-surface soa_vector get_ref rejects without same-path helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  /soa_vector/get_ref(location(values), 0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/get_ref") !=
+        std::string::npos);
+}
+
+TEST_CASE("explicit old-surface soa_vector get_ref slash-method rejects without same-path helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  location(values)./soa_vector/get_ref(0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/get_ref") !=
+        std::string::npos);
 }
 
 TEST_CASE("get root forms reject vector target") {
@@ -3619,7 +3677,7 @@ main() {
   }
 }
 
-TEST_CASE("explicit soa_vector ref validates on soa_vector binding") {
+TEST_CASE("explicit old-surface soa_vector ref rejects without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3633,8 +3691,66 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/ref") !=
+        std::string::npos);
+}
+
+TEST_CASE("explicit old-surface soa_vector ref slash-method rejects without same-path helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  values./soa_vector/ref(0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/ref") !=
+        std::string::npos);
+}
+
+TEST_CASE("explicit old-surface soa_vector ref_ref rejects without same-path helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  /soa_vector/ref_ref(values, 0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/ref_ref") !=
+        std::string::npos);
+}
+
+TEST_CASE("explicit old-surface soa_vector ref_ref slash-method rejects without same-path helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  values./soa_vector/ref_ref(0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/ref_ref") !=
+        std::string::npos);
 }
 
 TEST_CASE("ref root forms reject vector target") {
@@ -4481,6 +4597,82 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("/std/collections/soa_vector/to_aos") != std::string::npos);
+}
+
+TEST_CASE("explicit old-surface to_aos rejects without same-path helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  /to_aos(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos") !=
+        std::string::npos);
+}
+
+TEST_CASE("explicit old-surface to_aos slash-method rejects without same-path helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  values./to_aos()
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos") !=
+        std::string::npos);
+}
+
+TEST_CASE("explicit old-surface to_aos_ref rejects without same-path helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  /to_aos_ref(location(values))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos_ref") !=
+        std::string::npos);
+}
+
+TEST_CASE("explicit old-surface to_aos_ref slash-method rejects without same-path helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  location(values)./to_aos_ref()
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos_ref") !=
+        std::string::npos);
 }
 
 TEST_CASE("to_aos method fallback validates through struct helper return receivers") {

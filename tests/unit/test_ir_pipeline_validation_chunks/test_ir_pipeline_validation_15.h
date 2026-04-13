@@ -729,7 +729,16 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "const std::string canonicalSoaRefPath =") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
+            "const std::string canonicalSoaGetPath =") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
             "canonicalizeLegacySoaRefHelperPath(normalizedResolvedPath)") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
+            "canonicalizeLegacySoaGetHelperPath(normalizedResolvedPath)") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
+            "if (normalizedResolvedPath == \"/soa_vector/count\")") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
             "bool isCanonicalSoaRefLikeHelperPath(std::string_view path)") !=
@@ -1207,6 +1216,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "builtinSoaAccessHelperName(expr, params, locals)") !=
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
+            "const auto isExplicitOldSurfaceSoaAccessCall =") !=
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "const auto isExplicitOldSurfaceSoaConversionCall =") !=
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
             "const auto canonicalizeLegacySoaHelperPath = [](std::string_view path) -> std::string {") ==
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
@@ -1223,6 +1238,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
             "const std::string resolvedSoaToAosCanonical =") !=
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "const bool isBorrowedToAosHelper =") !=
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
             "canonicalizeLegacySoaToAosHelperPath(resolved)") !=
@@ -1263,6 +1281,15 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "resolved == \"/to_aos_ref\"") ==
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
+            "argument type mismatch for /std/collections/soa_vector/to_aos_ref parameter values") !=
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "!hasVisibleDefinitionPathForCurrentImports(\"/\" + helperName)") !=
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "soaUnavailableMethodDiagnostic(\"/\" + helperName)") !=
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
             "isCanonicalSoaRefLikeHelperPath(resolvedSoaCanonical)") !=
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
@@ -1289,6 +1316,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprMapSoaBuiltinsSource.find(
             "isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical,\n"
             "                                             \"get_ref\")") !=
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "!hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/\" + helperName)") !=
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "soaUnavailableMethodDiagnostic(\"/soa_vector/\" + helperName)") !=
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
             "resolvedNoTemplate == "
@@ -1339,6 +1372,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "const std::string logicalSoaCountCanonical =") !=
         std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find(
+            "const auto isExplicitOldSurfaceSoaCountCall = [&]()") !=
+        std::string::npos);
+  CHECK(exprCountCapacityMapBuiltinsSource.find(
             "resolved.rfind(\"/std/collections/soa_vector/count\", 0) == 0") ==
         std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find(
@@ -1352,8 +1388,14 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find(
             "isLegacyOrCanonicalSoaHelperPath(\n"
-            "                             logicalSoaCountCanonical,\n"
-            "                             \"count\")") !=
+             "                             logicalSoaCountCanonical,\n"
+             "                             \"count\")") !=
+        std::string::npos);
+  CHECK(exprCountCapacityMapBuiltinsSource.find(
+            "!hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/count\")") !=
+        std::string::npos);
+  CHECK(exprCountCapacityMapBuiltinsSource.find(
+            "soaUnavailableMethodDiagnostic(\"/soa_vector/count\")") !=
         std::string::npos);
   CHECK((exprCountCapacityMapBuiltinsSource.find(
             "preferredSoaHelperTargetForCurrentImports(\"count\") ==\n"

@@ -705,6 +705,24 @@ std::string canonicalSoaPendingHelperPath(std::string_view resolvedPath) {
   if (isCanonicalSoaRefLikeHelperPath(canonicalSoaRefPath)) {
     return canonicalSoaRefPath;
   }
+  const std::string canonicalSoaGetPath =
+      canonicalizeLegacySoaGetHelperPath(normalizedResolvedPath);
+  if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get") ||
+      isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get_ref")) {
+    return canonicalSoaGetPath;
+  }
+  if (normalizedResolvedPath == "/soa_vector/count") {
+    return "/std/collections/soa_vector/count";
+  }
+  if (normalizedResolvedPath == "/soa_vector/count_ref") {
+    return "/std/collections/soa_vector/count_ref";
+  }
+  const std::string canonicalSoaToAosPath =
+      canonicalizeLegacySoaToAosHelperPath(normalizedResolvedPath);
+  if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, "to_aos") ||
+      isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, "to_aos_ref")) {
+    return canonicalSoaToAosPath;
+  }
   return std::string(resolvedPath);
 }
 

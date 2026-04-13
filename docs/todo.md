@@ -23,30 +23,6 @@ Sizing note: each active leaf must fit in one code-affecting commit plus focused
 **Group 14 - SoA bring-up and end-state cleanup**
 Goal: finish stdlib-authoritative `soa_vector` behavior and delete compatibility scaffolding.
 
-- ○ [S4-01a] Enforce canonical helper authority for read helpers (`count`, `get`, `get_ref`).
-  - Value: deterministic helper routing for the most-used read paths.
-  - Acceptance criteria:
-    1. Canonical `/std/collections/soa_vector/count|get|get_ref` paths pass semantics/IR/compile-run coverage.
-    2. Old-surface `/soa_vector/count|get|get_ref` calls without compatibility import fail through one deterministic diagnostic family.
-    3. Tests cover canonical success + old-surface reject for all three helpers.
-  - Stop rule: if one commit cannot cover all three helpers, split into `{count}` then `{get,get_ref}`.
-
-- ○ [S4-01b] Enforce canonical helper authority for borrowed helpers (`ref`, `ref_ref`).
-  - Value: removes borrowed-helper ambiguity in fallback and diagnostics.
-  - Acceptance criteria:
-    1. Canonical `/std/collections/soa_vector/ref|ref_ref` paths pass semantics/IR/compile-run coverage.
-    2. Old-surface `/soa_vector/ref|ref_ref` calls without compatibility import fail deterministically.
-    3. Tests cover call-form and method-form receiver paths.
-  - Stop rule: split into `{ref}` then `{ref_ref}` if needed.
-
-- ○ [S4-01c] Enforce canonical helper authority for conversion helpers (`to_aos`, `to_aos_ref`).
-  - Value: conversion behavior is canonical-only and predictable.
-  - Acceptance criteria:
-    1. Canonical `/std/collections/soa_vector/to_aos|to_aos_ref` paths pass semantics/IR/compile-run coverage.
-    2. Old-surface conversion calls without compatibility import fail deterministically.
-    3. Tests cover borrowed and non-borrowed receiver forms.
-  - Stop rule: split into `{to_aos}` then `{to_aos_ref}` if needed.
-
 - ◐ [S4-02] Remove canonical conversion fallback dependence on experimental conversion helpers.
   - Value: deletes duplicate substrate and fallback churn.
   - Acceptance criteria:
