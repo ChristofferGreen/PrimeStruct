@@ -724,7 +724,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.ir.pipeline.pointers
     primestruct.ir.pipeline.conversions
     primestruct.ir.pipeline.entry_args
-    primestruct.ir.pipeline.backends
     primestruct.ir.pipeline.backends.core
     primestruct.ir.pipeline.backends.registry
     primestruct.ir.pipeline.backends.glsl

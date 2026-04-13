@@ -5,7 +5,7 @@
 
 #include "test_ir_pipeline_backends_helpers.h"
 
-TEST_SUITE_BEGIN("primestruct.ir.pipeline.backends");
+TEST_SUITE_BEGIN("primestruct.ir.pipeline.backends.core");
 
 #include "test_ir_pipeline_backends_graph_pilot_a.h"
 #include "test_ir_pipeline_backends_graph_pilot_b.h"
