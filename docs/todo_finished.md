@@ -2971,3 +2971,20 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - stop_rule: If full-repo rename fallout is too large for one safe slice, land one subsystem at a time with follow-up TODO leaves.
   - finished_at: 2026-04-13
   - evidence: Completed F01-F13 naming-alignment leaves, migrated numeric shard filenames to semantic topic names for vm collections/emitter/semantics/ir-validation areas, and enforced naming guardrails via scripts/check_test_suite_naming.py.
+
+- [x] TODO-0404: Add semantic-product contract manifest and versioned verifier
+  - owner: ai
+  - created_at: 2026-04-13
+  - phase: Group 15
+  - scope: Define a declarative `SemanticProductContract v1` (required fact families, key fields, and identity rules) and enforce it before lowering/emit paths so contract violations fail with stable diagnostics.
+  - file_todos:
+    - [x] `TODO-0404-F01` files: `/Users/chrgre01/src/PrimeStruct/include/primec/SemanticProduct.h`, `/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererLowerEntrySetup.cpp`; fix: add a semantic-product contract version field (`v1`), declare a v1 manifest for lowering-facing fact families/required fields, and enforce version + module artifact identity checks during lowerer entry preflight.
+    - [x] `TODO-0404-F02` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends_registry.cpp`; fix: add deterministic negative coverage for contract version mismatch and module artifact index overflow diagnostics before backend dispatch.
+    - [x] `TODO-0404-F03` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends_registry.cpp`; fix: add one semantic-product compile-pipeline conformance case that exercises a positive v1 contract path through an emit-facing flow.
+  - acceptance:
+    - One versioned contract source-of-truth exists for lowering-facing semantic-product families and required fields.
+    - Compile-pipeline/lowering preflight rejects contract-version mismatch and missing required family/field data with deterministic diagnostics before backend dispatch.
+    - Conformance tests cover at least one positive case and one missing-family or missing-key negative case through consuming emit paths.
+  - stop_rule: If contract wiring requires broad cross-module generator work, land a minimal verifier over existing data first and split generator work into follow-up leaves.
+  - finished_at: 2026-04-13
+  - evidence: Added `SemanticProgram.contractVersion` + v1 manifest wiring in lowerer preflight, added deterministic mismatch/index-overflow negatives, and added vm emit-path backend conformance coverage asserting contract version `v1`.

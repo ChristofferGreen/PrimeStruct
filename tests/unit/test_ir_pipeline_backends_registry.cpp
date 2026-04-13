@@ -1869,6 +1869,24 @@ TEST_CASE("vm backend executes semantic-product prepared IR from compile pipelin
   CHECK(conformance.emitResult.exitCode == 18);
 }
 
+TEST_CASE("vm backend conformance keeps semantic-product contract v1") {
+  const std::string source =
+      "[return<i32>]\n"
+      "main() {\n"
+      "  return(0i32)\n"
+      "}\n";
+
+  primec::testing::CompilePipelineBackendConformance conformance;
+  std::string error;
+  REQUIRE(primec::testing::runCompilePipelineBackendConformanceForTesting(
+      source, "/main", "vm", conformance, error));
+  CHECK(error.empty());
+  REQUIRE(conformance.output.hasSemanticProgram);
+  CHECK(conformance.output.semanticProgram.contractVersion ==
+        primec::SemanticProductContractVersionV1);
+  CHECK(conformance.emitResult.exitCode == 0);
+}
+
 TEST_CASE("native backend emits semantic-product prepared IR from compile pipeline helper") {
   const std::string source =
       "[return<T>]\n"

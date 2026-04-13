@@ -58,18 +58,17 @@ Task template:
 1. TODO-0407
 2. TODO-0401
 3. TODO-0402
-4. TODO-0404
+4. TODO-0405
 
 ### Immediate Next 10 (After Ready Now)
 
-1. TODO-0405
-2. TODO-0406
-3. TODO-0403
+1. TODO-0406
+2. TODO-0403
 
 ### Priority Lanes (Current)
 
 - P0 Test implementation locality cleanup (no `TEST_CASE` in include chunks): TODO-0407
-- P1 SoA canonicalization + semantic memory/perf + multithread substrate + semantic-product boundary hardening: TODO-0401, TODO-0402, TODO-0404, TODO-0405, TODO-0406
+- P1 SoA canonicalization + semantic memory/perf + multithread substrate + semantic-product boundary hardening: TODO-0401, TODO-0402, TODO-0405, TODO-0406
 - P2 Queue/snapshot governance: TODO-0403
 
 ### Execution Queue (Recommended)
@@ -82,9 +81,8 @@ Wave B (SoA completion):
 
 Wave C (semantic memory/perf):
 1. TODO-0402
-2. TODO-0404
-3. TODO-0405
-4. TODO-0406
+2. TODO-0405
+3. TODO-0406
 
 Wave D (queue hygiene):
 1. TODO-0403
@@ -96,17 +94,17 @@ Wave D (queue hygiene):
 | Test implementation locality and include-chunk retirement | TODO-0407 |
 | SoA bring-up and stdlib-authoritative `soa_vector` end-state cleanup | TODO-0401 |
 | Semantic memory footprint and multithread compile substrate | TODO-0402 |
-| Semantic-product contract/index boundary hardening | TODO-0404, TODO-0405, TODO-0406 |
+| Semantic-product contract/index boundary hardening | TODO-0405, TODO-0406 |
 | TODO queue quality gates and dependency/coverage synchronization | TODO-0403 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0401, TODO-0402, TODO-0404, TODO-0405, TODO-0406, TODO-0407 |
+| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0401, TODO-0402, TODO-0405, TODO-0406, TODO-0407 |
 | Test source locality and include-layer guardrail verification | TODO-0407 |
 | Benchmark/runtime regression checks (`./scripts/benchmark.sh`) | TODO-0402 |
-| Semantic-product contract/index and deterministic conformance checks | TODO-0404, TODO-0405, TODO-0406 |
+| Semantic-product contract/index and deterministic conformance checks | TODO-0405, TODO-0406 |
 | TODO/open-vs-finished hygiene (`docs/todo.md` vs `docs/todo_finished.md`) | TODO-0403 |
 
 ### Task Blocks
@@ -169,21 +167,6 @@ Wave D (queue hygiene):
     - Determinism parity coverage keeps semantic-product output and diagnostics stable across worker counts (`1`, `2`, `4`) on existing stress fixtures.
     - Semantic memory benchmark reports show non-regression for the semantic-product/lowering path, with measurable allocation or runtime improvement in at least one tracked fixture.
   - stop_rule: If measurable benchmark impact is not achieved after two attempts, archive this leaf as low-value per rule 16 and replace it with a different Group 15 hotspot.
-
-- [~] TODO-0404: Add semantic-product contract manifest and versioned verifier
-  - owner: ai
-  - created_at: 2026-04-13
-  - phase: Group 15
-  - scope: Define a declarative `SemanticProductContract v1` (required fact families, key fields, and identity rules) and enforce it before lowering/emit paths so contract violations fail with stable diagnostics.
-  - file_todos:
-    - [x] `TODO-0404-F01` files: `/Users/chrgre01/src/PrimeStruct/include/primec/SemanticProduct.h`, `/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererLowerEntrySetup.cpp`; fix: add a semantic-product contract version field (`v1`), declare a v1 manifest for lowering-facing fact families/required fields, and enforce version + module artifact identity checks during lowerer entry preflight.
-    - [x] `TODO-0404-F02` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends_registry.cpp`; fix: add deterministic negative coverage for contract version mismatch and module artifact index overflow diagnostics before backend dispatch.
-    - [ ] `TODO-0404-F03` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends_registry.cpp`; fix: add one semantic-product compile-pipeline conformance case that exercises a positive v1 contract path through an emit-facing flow.
-  - acceptance:
-    - One versioned contract source-of-truth exists for lowering-facing semantic-product families and required fields.
-    - Compile-pipeline/lowering preflight rejects contract-version mismatch and missing required family/field data with deterministic diagnostics before backend dispatch.
-    - Conformance tests cover at least one positive case and one missing-family or missing-key negative case through consuming emit paths.
-  - stop_rule: If contract wiring requires broad cross-module generator work, land a minimal verifier over existing data first and split generator work into follow-up leaves.
 
 - [ ] TODO-0403: Keep queue, lanes, and snapshots synchronized
   - owner: ai
