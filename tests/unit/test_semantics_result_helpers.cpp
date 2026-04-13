@@ -106,8 +106,6 @@ main() {
   CHECK(error.empty());
 }
 
-#include "test_semantics_result_helpers_file.h"
-
 TEST_CASE("templated helper overload families resolve by exact arity") {
   const std::string source = R"(
 [struct]
@@ -169,9 +167,6 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("duplicate definition: /helper/value") != std::string::npos);
 }
-
-#include "test_semantics_result_helpers_errors.h"
-#include "test_semantics_result_helpers_gfx.h"
 
 TEST_CASE("Result.map infers auto Result binding from lambda body") {
   const std::string source = R"(

@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.result_helpers");
+
 TEST_CASE("stdlib file error result helpers construct status and value results") {
   const std::string source = R"(
 import /std/file/*
@@ -446,3 +450,5 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
+TEST_SUITE_END();

@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.result_helpers");
+
 TEST_CASE("stdlib gfx error result helpers construct status and value results") {
   const std::string source = R"(
 import /std/gfx/experimental/*
@@ -665,3 +669,5 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("upload requires numeric/bool element type") != std::string::npos);
 }
+
+TEST_SUITE_END();

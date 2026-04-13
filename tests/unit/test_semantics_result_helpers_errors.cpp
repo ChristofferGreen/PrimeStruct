@@ -1,3 +1,7 @@
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.result_helpers");
+
 TEST_CASE("stdlib image error result helpers construct status and value results") {
   const std::string source = R"(
 import /std/image/*
@@ -274,3 +278,5 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument type mismatch for /ContainerError/why parameter err") != std::string::npos);
 }
+
+TEST_SUITE_END();
