@@ -110,11 +110,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
        expr.name == "at" || expr.name == "at_unsafe")) {
     std::string elemType;
     const bool isVectorReceiver = resolveVectorTarget(expr.args.front(), elemType);
-    const bool hasImplicitSamePathHelper =
-        hasDeclaredDefinitionPath("/vector/" + expr.name) ||
-        hasImportedDefinitionPath("/vector/" + expr.name);
     const bool hasCanonicalOnlyVectorHelper =
-        !hasImplicitSamePathHelper &&
         hasDeclaredDefinitionPath("/std/collections/vector/" + expr.name) &&
         !hasImportedDefinitionPath("/std/collections/vector/" + expr.name);
     if (isVectorReceiver && hasCanonicalOnlyVectorHelper) {

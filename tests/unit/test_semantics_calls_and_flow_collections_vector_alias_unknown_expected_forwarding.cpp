@@ -778,6 +778,52 @@ main() {
   CHECK(error.find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
+TEST_CASE("vector method at enforces canonical integer index when alias helper has string index") {
+  const std::string source = R"(
+[return<int>]
+/vector/at([vector<i32>] values, [string] index) {
+  return(77i32)
+}
+
+[return<int>]
+/std/collections/vector/at<T>([vector<T>] values, [i32] index) {
+  return(plus(index, 55i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values.at("oops"utf8))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at requires integer index") != std::string::npos);
+}
+
+TEST_CASE("vector method at_unsafe enforces canonical integer index when alias helper has bool index") {
+  const std::string source = R"(
+[return<int>]
+/vector/at_unsafe([vector<i32>] values, [bool] index) {
+  return(88i32)
+}
+
+[return<int>]
+/std/collections/vector/at_unsafe<T>([vector<T>] values, [i32] index) {
+  return(plus(index, 66i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values.at_unsafe(true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at_unsafe requires integer index") != std::string::npos);
+}
+
 TEST_CASE("vector method count rejects stdlib vectorCount alias-only helper") {
   const std::string source = R"(
 [return<int>]
