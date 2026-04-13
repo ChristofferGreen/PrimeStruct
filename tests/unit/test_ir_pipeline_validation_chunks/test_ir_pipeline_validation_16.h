@@ -896,18 +896,18 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool hasAnyNormalizedPrefixedNameSoaRefMatch =\n"
             "          normalizedPrefixedNameMatchesSoaRef ||\n"
-            "          normalizedPrefixedNameMatchesSoaRefRef;") !=
-        std::string::npos);
-  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "const bool isAnyExplicitLegacySoaNonMethodRefCall =\n"
-            "          isExplicitLegacySoaNonMethodCall &&\n"
-            "          hasAnyNormalizedPrefixedNameSoaRefMatch;") !=
+            "          normalizedPrefixedNameMatchesSoaRefRef;") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isAnyExplicitLegacySoaNonMethodRefCall =\n"
             "          isExplicitLegacySoaNonMethodCall &&\n"
             "          (normalizedPrefixedNameMatchesSoaRef ||\n"
-            "           normalizedPrefixedNameMatchesSoaRefRef);") ==
+            "           normalizedPrefixedNameMatchesSoaRefRef);") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "const bool isAnyExplicitLegacySoaNonMethodRefCall =\n"
+            "          isExplicitLegacySoaNonMethodCall &&\n"
+            "          hasAnyNormalizedPrefixedNameSoaRefMatch;") ==
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "const bool isAnyExplicitSoaRefCall =\n"
