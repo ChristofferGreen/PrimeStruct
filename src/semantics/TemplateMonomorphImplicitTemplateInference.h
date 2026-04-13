@@ -239,8 +239,6 @@ bool inferImplicitTemplateArgs(const Definition &def,
     const bool hasAnyNormalizedCanonicalNameSoaRefMatch =
         normalizedCanonicalNameMatchesSoaRef ||
         normalizedCanonicalNameMatchesSoaRefRef;
-    const bool hasAnyNormalizedNameSoaRefMatch =
-        normalizedNameMatchesSoaRef || normalizedNameMatchesSoaRefRef;
     const bool canonicalNamespaceNameMatchesSoaRef =
         normalizedNameUsesCanonicalSoaNamespace &&
         normalizedCanonicalNameMatchesSoaRef;
@@ -260,7 +258,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
         resolvedCanonicalNameMatchesSoaRefRef;
     const bool isAnyOldSurfaceBuiltinSoaRefCall =
         normalizedNameUsesLegacySoaNamespace &&
-        hasAnyNormalizedNameSoaRefMatch;
+        (normalizedNameMatchesSoaRef || normalizedNameMatchesSoaRefRef);
     const std::string normalizedMethodSoaPath =
         "/soa_vector/" + normalizedName;
     const bool normalizedMethodNameMatchesSoaRef =
