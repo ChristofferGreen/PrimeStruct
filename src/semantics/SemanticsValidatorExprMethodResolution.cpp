@@ -234,12 +234,6 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       if (hasImportedDefinitionPath(canonicalVectorMethodTarget) ||
           defMap_.count(canonicalVectorMethodTarget) > 0) {
         vectorMethodTarget = canonicalVectorMethodTarget;
-      } else {
-        const std::string aliasVectorMethodTarget = "/vector/" + expr.name;
-        if (hasImportedDefinitionPath(aliasVectorMethodTarget) ||
-            defMap_.count(aliasVectorMethodTarget) > 0) {
-          vectorMethodTarget = aliasVectorMethodTarget;
-        }
       }
     }
     if (hasImportedDefinitionPath(vectorMethodTarget) ||
@@ -315,12 +309,6 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     if (hasImportedDefinitionPath(canonicalVectorMethodTarget) ||
         defMap_.count(canonicalVectorMethodTarget) > 0) {
       resolved = canonicalVectorMethodTarget;
-    } else {
-      const std::string aliasVectorMethodTarget = "/vector/" + expr.name;
-      if (hasImportedDefinitionPath(aliasVectorMethodTarget) ||
-          defMap_.count(aliasVectorMethodTarget) > 0) {
-        resolved = aliasVectorMethodTarget;
-      }
     }
     resolved = preferVectorStdlibHelperPath(resolved);
   }

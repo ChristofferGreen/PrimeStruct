@@ -634,5 +634,41 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("vector method bare count resolves through canonical stdlib helper") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values) {
+  return(33i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values.count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector method explicit alias namespace is rejected when only canonical helper exists") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values) {
+  return(33i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values./vector/count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+}
+
 
 TEST_SUITE_END();

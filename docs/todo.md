@@ -133,7 +133,7 @@ Wave E (queue hygiene):
     - Final release gate passes with `./scripts/compile.sh --release`.
   - stop_rule: If landing both collections together is too risky for one commit, split into TODO-0410 (`map`) and TODO-0411 (`soa_vector`) with independent acceptance before continuing.
 
-- [ ] TODO-0408: Make `vector` stdlib-authoritative and delete vector-specific C++ classifiers
+- [~] TODO-0408: Make `vector` stdlib-authoritative and delete vector-specific C++ classifiers
   - owner: ai
   - created_at: 2026-04-13
   - phase: Group 14
@@ -147,6 +147,7 @@ Wave E (queue hygiene):
     - Final release gate passes with `./scripts/compile.sh --release`.
   - stop_rule: If shared classifier rewrites destabilize `map`/`soa_vector`, isolate the generic mechanism in this leaf and defer remaining shared deletions to TODO-0409.
   - notes: This leaf should leave a reusable generic path that TODO-0409 can apply to `map` and `soa_vector`.
+  - progress: Removed semantic method-resolution fallback from canonical stdlib vector helpers back to `/vector/*` alias paths in `SemanticsValidatorExprMethodResolution.cpp`, and added semantics coverage for canonical helper success plus explicit `/vector/count` method-call rejection.
 
 - [ ] TODO-0407: Move test implementations from include chunks into `.cpp`
   - owner: ai
