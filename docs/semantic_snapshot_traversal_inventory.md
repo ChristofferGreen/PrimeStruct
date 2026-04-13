@@ -64,7 +64,7 @@ output-order parity checks in `P2-03`.
   - fallback to `validator.bridgePathChoiceSnapshotForSemanticProduct()` is
     preserved when direct-call collection is not enabled.
 - `P2-03` parity coverage added:
-  - `tests/unit/test_ir_pipeline_backends_registry.h`:
+  - `tests/unit/test_ir_pipeline_backends_registry.cpp`:
     `compile pipeline direct and bridge collector merge keeps output-order parity`
     compares combined collector output order against direct-only and
     bridge-only runs.

@@ -23,7 +23,7 @@ EXPECTED_FILE_SUITES = {
     'tests/unit/test_ir_pipeline_backends_graph_pilot.cpp': 'primestruct.ir.pipeline.backends.core',
     'tests/unit/test_ir_pipeline_backends_glsl.cpp': 'primestruct.ir.pipeline.backends.glsl',
     'tests/unit/test_ir_pipeline_backends_cpp_vm.cpp': 'primestruct.ir.pipeline.backends.cpp_vm',
-    'tests/unit/test_ir_pipeline_backends_registry.h': 'primestruct.ir.pipeline.backends.registry',
+    'tests/unit/test_ir_pipeline_backends_registry.cpp': 'primestruct.ir.pipeline.backends.registry',
 }
 
 

@@ -562,9 +562,9 @@ TEST_CASE("graph snapshot suite uses semantic-product-aware lowering only") {
 
 TEST_CASE("backend registry keeps semantic-product negative fixture families covered") {
   const std::filesystem::path cwd = std::filesystem::current_path();
-  std::filesystem::path registryPath = cwd / "tests" / "unit" / "test_ir_pipeline_backends_registry.h";
+  std::filesystem::path registryPath = cwd / "tests" / "unit" / "test_ir_pipeline_backends_registry.cpp";
   if (!std::filesystem::exists(registryPath)) {
-    registryPath = cwd.parent_path() / "tests" / "unit" / "test_ir_pipeline_backends_registry.h";
+    registryPath = cwd.parent_path() / "tests" / "unit" / "test_ir_pipeline_backends_registry.cpp";
   }
   REQUIRE(std::filesystem::exists(registryPath));
 
