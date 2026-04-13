@@ -1,3 +1,13 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_container_error_conformance_helpers.h"
+#include "test_compile_run_checked_pointer_conformance_helpers.h"
+#include "test_compile_run_unchecked_pointer_conformance_helpers.h"
+#include "test_compile_run_vm_collections_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
+
 TEST_CASE("vm keeps non-string diagnostics on wrapper-returned canonical map access count shadow") {
   const std::string source = R"(
 [return<int>]
@@ -691,3 +701,5 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 2);
 }
+
+TEST_SUITE_END();

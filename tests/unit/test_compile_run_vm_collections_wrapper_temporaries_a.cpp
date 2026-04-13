@@ -1,3 +1,13 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_container_error_conformance_helpers.h"
+#include "test_compile_run_checked_pointer_conformance_helpers.h"
+#include "test_compile_run_unchecked_pointer_conformance_helpers.h"
+#include "test_compile_run_vm_collections_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
+
 TEST_CASE("rejects vm wrapper temporary vector count method without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
@@ -3219,3 +3229,5 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > /dev/null";
   CHECK(runCommand(runCmd) == 6);
 }
+
+TEST_SUITE_END();

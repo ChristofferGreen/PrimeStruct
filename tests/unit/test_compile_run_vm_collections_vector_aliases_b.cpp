@@ -1,3 +1,13 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_container_error_conformance_helpers.h"
+#include "test_compile_run_checked_pointer_conformance_helpers.h"
+#include "test_compile_run_unchecked_pointer_conformance_helpers.h"
+#include "test_compile_run_vm_collections_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
+
 TEST_CASE("rejects vm vector alias compatibility template forwarding on primitive mismatch from call return") {
   const std::string source = R"(
 [return<i32>]
@@ -892,3 +902,5 @@ main() {
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("unknown method: /vector/capacity") != std::string::npos);
 }
+
+TEST_SUITE_END();

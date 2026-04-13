@@ -1,3 +1,13 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_container_error_conformance_helpers.h"
+#include "test_compile_run_checked_pointer_conformance_helpers.h"
+#include "test_compile_run_unchecked_pointer_conformance_helpers.h"
+#include "test_compile_run_vm_collections_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
+
 TEST_CASE("rejects vm stdlib collection shim map triple standalone key type mismatch") {
   const std::string source = R"(
 import /std/collections/*
@@ -633,3 +643,5 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+
+TEST_SUITE_END();

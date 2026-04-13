@@ -592,6 +592,23 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_vm_core_gfx_helpers.cpp
     tests/unit/test_compile_run_vm_core_variadics.cpp
     tests/unit/test_compile_run_vm_collections.cpp
+    tests/unit/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp
+    tests/unit/test_compile_run_vm_collections_core_aliases.cpp
+    tests/unit/test_compile_run_vm_collections_map_vector_shadows.cpp
+    tests/unit/test_compile_run_vm_collections_map_wrapper_shadows.cpp
+    tests/unit/test_compile_run_vm_collections_method_aliases_a.cpp
+    tests/unit/test_compile_run_vm_collections_method_aliases_b.cpp
+    tests/unit/test_compile_run_vm_collections_shim_maps_a.cpp
+    tests/unit/test_compile_run_vm_collections_shim_maps_b.cpp
+    tests/unit/test_compile_run_vm_collections_shim_maps_c.cpp
+    tests/unit/test_compile_run_vm_collections_vector_aliases_a.cpp
+    tests/unit/test_compile_run_vm_collections_vector_aliases_b.cpp
+    tests/unit/test_compile_run_vm_collections_vector_limits_a.cpp
+    tests/unit/test_compile_run_vm_collections_vector_limits_b.cpp
+    tests/unit/test_compile_run_vm_collections_vector_shadow_access.cpp
+    tests/unit/test_compile_run_vm_collections_wrapper_temporaries_a.cpp
+    tests/unit/test_compile_run_vm_collections_wrapper_temporaries_b.cpp
+    tests/unit/test_compile_run_vm_collections_wrapper_temporaries_c.cpp
     tests/unit/test_compile_run_vm_gpu.cpp
     tests/unit/test_compile_run_vm_maps.cpp
     tests/unit/test_compile_run_vm_math.cpp
@@ -1309,16 +1326,16 @@ if(PRIMESTRUCT_BUILD_TESTS)
                                  SOURCE_FILE "*test_compile_run_vm_core_*.cpp" FIRST 71 LAST 83)
     elseif(suite STREQUAL "primestruct.compile.run.vm.collections")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "alias_and_basics"
-                                 SOURCE_FILE "*test_compile_run_vm_collections.cpp" FIRST 1 LAST 60)
+                                 SOURCE_FILE "*test_compile_run_vm_collections_*.cpp" FIRST 1 LAST 60)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "templated_wrapper_parity"
-                                 SOURCE_FILE "*test_compile_run_vm_collections.cpp" FIRST 61 LAST 138)
+                                 SOURCE_FILE "*test_compile_run_vm_collections_*.cpp" FIRST 61 LAST 138)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "stdlib_collection_shims"
-                                 SOURCE_FILE "*test_compile_run_vm_collections.cpp" FIRST 139 LAST 254)
+                                 SOURCE_FILE "*test_compile_run_vm_collections_*.cpp" FIRST 139 LAST 254)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
                                  SHARD_NAME "user_shadow_and_receiver_precedence"
-                                 SOURCE_FILE "*test_compile_run_vm_collections.cpp" FIRST 255 LAST 331)
+                                 SOURCE_FILE "*test_compile_run_vm_collections_*.cpp" FIRST 255 LAST 331)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "growth_limits_and_syntax"
-                                 SOURCE_FILE "*test_compile_run_vm_collections.cpp" FIRST 332 LAST 352)
+                                 SOURCE_FILE "*test_compile_run_vm_collections_*.cpp" FIRST 332 LAST 352)
     elseif(suite STREQUAL "primestruct.compile.run.vm.bounds")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "bounds_and_safety"
                                  SOURCE_FILE "*test_compile_run_vm_bounds.cpp")

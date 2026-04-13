@@ -1,3 +1,13 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_container_error_conformance_helpers.h"
+#include "test_compile_run_checked_pointer_conformance_helpers.h"
+#include "test_compile_run_unchecked_pointer_conformance_helpers.h"
+#include "test_compile_run_vm_collections_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
+
 TEST_CASE("runs vm with user array count call shadow") {
   const std::string source = R"(
 [return<int>]
@@ -771,3 +781,5 @@ main() {
   CHECK(readFile(errPath).find("Semantic error: argument type mismatch for /std/collections/map/at parameter key") !=
         std::string::npos);
 }
+
+TEST_SUITE_END();

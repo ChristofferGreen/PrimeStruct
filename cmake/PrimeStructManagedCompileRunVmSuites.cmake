@@ -203,72 +203,72 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.outputs"
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.collections"
                                   TIMEOUT 900
                                   SHARD_PREFIX "alias_and_basics"
-                                  SOURCE_FILE "*test_compile_run_vm_collections.cpp"
+                                  SOURCE_FILE "*test_compile_run_vm_collections_*.cpp"
                                   RANGE_FIRST 1
                                   RANGE_LAST 60)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.collections"
                                   TIMEOUT 900
                                   SHARD_PREFIX "templated_wrapper_parity_61_70"
-                                  SOURCE_FILE "*test_compile_run_vm_collections.cpp"
+                                  SOURCE_FILE "*test_compile_run_vm_collections_*.cpp"
                                   RANGE_FIRST 61
                                   RANGE_LAST 70)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.collections"
                                   TIMEOUT 900
                                   SHARD_PREFIX "templated_wrapper_parity_71_80"
-                                  SOURCE_FILE "*test_compile_run_vm_collections.cpp"
+                                  SOURCE_FILE "*test_compile_run_vm_collections_*.cpp"
                                   RANGE_FIRST 71
                                   RANGE_LAST 80)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.collections"
                                   TIMEOUT 900
                                   SHARD_PREFIX "templated_wrapper_parity_81_90"
-                                  SOURCE_FILE "*test_compile_run_vm_collections.cpp"
+                                  SOURCE_FILE "*test_compile_run_vm_collections_*.cpp"
                                   RANGE_FIRST 81
                                   RANGE_LAST 90)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.collections"
                                   TIMEOUT 900
                                   SHARD_PREFIX "templated_wrapper_parity_91_100"
-                                  SOURCE_FILE "*test_compile_run_vm_collections.cpp"
+                                  SOURCE_FILE "*test_compile_run_vm_collections_*.cpp"
                                   RANGE_FIRST 91
                                   RANGE_LAST 100)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.collections"
                                   TIMEOUT 900
                                   SHARD_PREFIX "templated_wrapper_parity_101_110"
-                                  SOURCE_FILE "*test_compile_run_vm_collections.cpp"
+                                  SOURCE_FILE "*test_compile_run_vm_collections_*.cpp"
                                   RANGE_FIRST 101
                                   RANGE_LAST 110)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.collections"
                                   TIMEOUT 900
                                   SHARD_PREFIX "templated_wrapper_parity_111_120"
-                                  SOURCE_FILE "*test_compile_run_vm_collections.cpp"
+                                  SOURCE_FILE "*test_compile_run_vm_collections_*.cpp"
                                   RANGE_FIRST 111
                                   RANGE_LAST 120)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.collections"
                                   TIMEOUT 900
                                   SHARD_PREFIX "templated_wrapper_parity_121_130"
-                                  SOURCE_FILE "*test_compile_run_vm_collections.cpp"
+                                  SOURCE_FILE "*test_compile_run_vm_collections_*.cpp"
                                   RANGE_FIRST 121
                                   RANGE_LAST 130)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.collections"
                                   TIMEOUT 900
                                   SHARD_PREFIX "templated_wrapper_parity_131_138"
-                                  SOURCE_FILE "*test_compile_run_vm_collections.cpp"
+                                  SOURCE_FILE "*test_compile_run_vm_collections_*.cpp"
                                   RANGE_FIRST 131
                                   RANGE_LAST 138)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.collections"
                                   TIMEOUT 900
                                   SHARD_PREFIX "stdlib_collection_shims"
-                                  SOURCE_FILE "*test_compile_run_vm_collections.cpp"
+                                  SOURCE_FILE "*test_compile_run_vm_collections_*.cpp"
                                   RANGE_FIRST 139
                                   RANGE_LAST 254)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.collections"
                                   TIMEOUT 900
                                   SHARD_PREFIX "user_shadow_and_receiver_precedence"
-                                  SOURCE_FILE "*test_compile_run_vm_collections.cpp"
+                                  SOURCE_FILE "*test_compile_run_vm_collections_*.cpp"
                                   RANGE_FIRST 255
                                   RANGE_LAST 331)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.collections"
                                   TIMEOUT 900
                                   SHARD_PREFIX "growth_limits_and_syntax"
-                                  SOURCE_FILE "*test_compile_run_vm_collections.cpp"
+                                  SOURCE_FILE "*test_compile_run_vm_collections_*.cpp"
                                   RANGE_FIRST 332
                                   RANGE_LAST 352)
