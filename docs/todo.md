@@ -152,6 +152,7 @@ Wave E (queue hygiene):
   - progress: Extended semantics coverage to include canonical `values.capacity()` success and explicit `values./vector/capacity()` alias rejection when only canonical stdlib helpers exist.
   - progress: Extended semantics coverage to include canonical `values.at(...)` / `values.at_unsafe(...)` success and explicit `values./vector/at(...)` / `values./vector/at_unsafe(...)` alias rejection when only canonical stdlib helpers exist.
   - progress: Removed alias-dependent gating from vector method prevalidation so canonical `/std/collections/vector/at` and `/std/collections/vector/at_unsafe` integer-index diagnostics stay enforced even when `/vector/*` aliases exist, with coverage for alias-shadow scenarios.
+  - progress: Removed explicit `values./vector/...` method-namespace compatibility for vector `count`/`capacity`/`at`/`at_unsafe` receivers and added coverage that those method forms now reject with `unknown method` even when `/vector/*` helpers are declared.
 
 - [ ] TODO-0407: Move test implementations from include chunks into `.cpp`
   - owner: ai

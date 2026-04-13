@@ -188,6 +188,15 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     }
     return normalized;
   }();
+  if (normalizedMethodNamespace == "vector" &&
+      (expr.name == "count" || expr.name == "capacity" ||
+       expr.name == "at" || expr.name == "at_unsafe") &&
+      !expr.args.empty()) {
+    std::string elemType;
+    if (resolveVectorTarget(expr.args.front(), elemType)) {
+      return failMethodResolutionDiagnostic("unknown method: /vector/" + expr.name);
+    }
+  }
   const bool hasExplicitVectorCompatibilityNamespace =
       normalizedMethodNamespace == "vector" ||
       normalizedMethodNamespace == "std/collections/vector";

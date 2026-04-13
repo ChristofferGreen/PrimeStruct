@@ -670,6 +670,29 @@ main() {
   CHECK(error.find("unknown method: /vector/count") != std::string::npos);
 }
 
+TEST_CASE("vector method explicit count alias namespace is rejected even when alias helper exists") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([vector<i32>] values) {
+  return(90i32)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values) {
+  return(33i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values./vector/count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+}
+
 TEST_CASE("vector method bare capacity resolves through canonical stdlib helper") {
   const std::string source = R"(
 [return<int>]
@@ -690,6 +713,29 @@ main() {
 
 TEST_CASE("vector method explicit capacity alias namespace is rejected when only canonical helper exists") {
   const std::string source = R"(
+[return<int>]
+/std/collections/vector/capacity<T>([vector<T>] values) {
+  return(44i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values./vector/capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("vector method explicit capacity alias namespace is rejected even when alias helper exists") {
+  const std::string source = R"(
+[return<int>]
+/vector/capacity([vector<i32>] values) {
+  return(90i32)
+}
+
 [return<int>]
 /std/collections/vector/capacity<T>([vector<T>] values) {
   return(44i32)
