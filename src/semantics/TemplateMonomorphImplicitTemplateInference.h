@@ -255,14 +255,12 @@ bool inferImplicitTemplateArgs(const Definition &def,
         normalizedNameMatchesSoaRefRef;
     const bool isAnyCanonicalOrOldSurfaceBuiltinSoaRefRefCall =
         isCanonicalBuiltinSoaRefRefCall || isOldSurfaceBuiltinSoaRefRefCall;
-    const bool hasAnyCanonicalNamespaceNameSoaRefMatch =
-        canonicalNamespaceNameMatchesSoaRef ||
-        canonicalNamespaceNameMatchesSoaRefRef;
     const bool hasAnyResolvedCanonicalNameSoaRefMatch =
         resolvedCanonicalNameMatchesSoaRef ||
         resolvedCanonicalNameMatchesSoaRefRef;
     const bool isAnyCanonicalBuiltinSoaRefCall =
-        hasAnyCanonicalNamespaceNameSoaRefMatch ||
+        canonicalNamespaceNameMatchesSoaRef ||
+        canonicalNamespaceNameMatchesSoaRefRef ||
         hasAnyResolvedCanonicalNameSoaRefMatch;
     const bool isAnyOldSurfaceBuiltinSoaRefCall =
         normalizedNameUsesLegacySoaNamespace &&
