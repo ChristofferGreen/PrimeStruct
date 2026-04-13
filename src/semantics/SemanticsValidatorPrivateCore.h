@@ -30,7 +30,10 @@
   bool validateStructLayouts();
   bool validateDefinitions();
   bool validateDefinitionsForStableIndices(const std::vector<std::size_t> &stableIndices);
-  bool runDefinitionValidationWorkerChunk(const std::vector<std::size_t> &stableIndices);
+  bool validateDefinitionsForStableRange(std::size_t stableOrderOffset,
+                                         std::size_t stableOrderCount);
+  bool runDefinitionValidationWorkerChunk(std::size_t stableOrderOffset,
+                                          std::size_t stableOrderCount);
   bool validateExecutions();
   void collectDefinitionIntraBodyCallDiagnostics(const Definition &def,
                                                  std::vector<SemanticDiagnosticRecord> &out);

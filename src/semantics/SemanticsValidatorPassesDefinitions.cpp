@@ -205,8 +205,30 @@ bool SemanticsValidator::validateDefinitionsForStableIndices(
   return true;
 }
 
+bool SemanticsValidator::validateDefinitionsForStableRange(
+    std::size_t stableOrderOffset,
+    std::size_t stableOrderCount) {
+  const std::size_t declarationCount =
+      definitionPrepassSnapshot_.declarationsInStableOrder.size();
+  if (stableOrderCount == 0 || stableOrderOffset >= declarationCount) {
+    return true;
+  }
+
+  const std::size_t boundedCount =
+      std::min(stableOrderCount, declarationCount - stableOrderOffset);
+  std::vector<std::size_t> stableIndices;
+  stableIndices.reserve(boundedCount);
+  for (std::size_t i = 0; i < boundedCount; ++i) {
+    stableIndices.push_back(
+        definitionPrepassSnapshot_.declarationsInStableOrder[stableOrderOffset + i]
+            .stableIndex);
+  }
+  return validateDefinitionsForStableIndices(stableIndices);
+}
+
 bool SemanticsValidator::runDefinitionValidationWorkerChunk(
-    const std::vector<std::size_t> &stableIndices) {
+    std::size_t stableOrderOffset,
+    std::size_t stableOrderCount) {
   auto runStage = [&](const char *stageName, auto &&fn) {
     try {
       const bool ok = fn();
@@ -235,8 +257,10 @@ bool SemanticsValidator::runDefinitionValidationWorkerChunk(
                 [&] { return validateStructLayouts(); })) {
     return false;
   }
-  return runStage("validateDefinitionsChunk",
-                  [&] { return validateDefinitionsForStableIndices(stableIndices); });
+  return runStage("validateDefinitionsChunk", [&] {
+    return validateDefinitionsForStableRange(stableOrderOffset,
+                                             stableOrderCount);
+  });
 }
 
 bool SemanticsValidator::validateDefinitions() {
@@ -275,7 +299,7 @@ bool SemanticsValidator::validateDefinitions() {
   std::vector<std::future<WorkerChunkResult>> workerTasks;
   workerTasks.reserve(partitions.size());
   for (DefinitionPartitionChunk &chunk : partitions) {
-    if (chunk.declarationStableIndices.empty()) {
+    if (chunk.stableOrderCount == 0) {
       continue;
     }
     workerTasks.push_back(std::async(
@@ -283,7 +307,8 @@ bool SemanticsValidator::validateDefinitions() {
         [this,
          collectDiagnostics,
          partitionKey = chunk.partitionKey,
-         stableIndices = std::move(chunk.declarationStableIndices)]() mutable {
+         stableOrderOffset = chunk.stableOrderOffset,
+         stableOrderCount = chunk.stableOrderCount]() {
           WorkerChunkResult result;
           result.partitionKey = partitionKey;
           SemanticsValidator worker(program_,
@@ -295,7 +320,9 @@ bool SemanticsValidator::validateDefinitions() {
                                     collectDiagnostics,
                                     1,
                                     benchmarkSemanticPhaseCountersEnabled_);
-          result.ok = worker.runDefinitionValidationWorkerChunk(stableIndices);
+          result.ok = worker.runDefinitionValidationWorkerChunk(
+              stableOrderOffset,
+              stableOrderCount);
           result.counters = worker.validationCounters();
           return result;
         }));

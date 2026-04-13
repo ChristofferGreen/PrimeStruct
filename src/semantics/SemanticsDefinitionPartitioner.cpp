@@ -21,12 +21,9 @@ partitionDefinitionsDeterministic(const DefinitionPrepassSnapshot &snapshot,
     DefinitionPartitionChunk chunk;
     chunk.partitionKey = static_cast<uint32_t>(partitionIndex);
     const std::size_t chunkSize = baseSize + (partitionIndex < extra ? 1 : 0);
-    chunk.declarationStableIndices.reserve(chunkSize);
-    for (std::size_t i = 0; i < chunkSize; ++i) {
-      chunk.declarationStableIndices.push_back(
-          snapshot.declarationsInStableOrder[nextStableIndex].stableIndex);
-      ++nextStableIndex;
-    }
+    chunk.stableOrderOffset = nextStableIndex;
+    chunk.stableOrderCount = chunkSize;
+    nextStableIndex += chunkSize;
     partitions.push_back(std::move(chunk));
   }
 

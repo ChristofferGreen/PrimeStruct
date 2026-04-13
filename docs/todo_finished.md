@@ -5,6 +5,12 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Cleanup (April 13, 2026)**
+
+**Group 15 - Semantic memory footprint and multithread compile substrate**
+- ✓ [P1-01] Enforced benchmark regression gates against checked-in budget policy. Completed: `scripts/semantic_memory_ci_artifacts.py --mode benchmark` now runs budget/trend checks by default (with explicit opt-out), benchmark CMake target/test wiring now passes policy and trend report paths into that gate, policy docs now define benchmark-mode pass/fail flow, and benchmark-harness wrapper coverage now locks benchmark-mode pass/fail propagation.
+- ✓ [P1-03] Delivered deterministic parallel-ready semantic partition validation behind worker-mode flagging. Completed: semantic-memory benchmark tooling now supports `--definition-validation-workers 1|2|both`, emits worker-mode delta rows plus per-mode dump hashes, fails `both` mode on dump hash mismatches, and CMake now exposes dedicated expensive parity target/test wiring (`primestruct_semantic_memory_definition_worker_parity`, `PrimeStruct_semantic_memory_definition_worker_parity`) that runs the same parity contract via CI artifact capture.
+
 **Todo Cleanup (April 11, 2026)**
 
 **Group 14 - SoA bring-up and end-state cleanup**

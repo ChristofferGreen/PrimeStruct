@@ -10,7 +10,8 @@ namespace primec::semantics {
 
 struct DefinitionPartitionChunk {
   uint32_t partitionKey = 0;
-  std::vector<std::size_t> declarationStableIndices;
+  std::size_t stableOrderOffset = 0;
+  std::size_t stableOrderCount = 0;
 };
 
 // Deterministically partitions definition declarations into N chunks.

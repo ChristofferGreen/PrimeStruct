@@ -76,19 +76,6 @@ S2 micro-slices `[S2-01]` through `[S2-05]` and S3 micro-slices `[S3-01]` throug
 **Group 15 - Semantic memory footprint and multithread compile substrate**
 Goal: ship measurable wins with hard regression control.
 
-- ◐ [P1-01] Enforce benchmark regression gates against checked-in budget policy.
-  - Value: prevents silent memory/runtime regressions.
-  - Acceptance criteria:
-    1. Checker fails on budget breach and reports offending fixture/phase.
-    2. Policy doc defines pass/fail and exception flow.
-    3. Tests lock checker pass/fail behavior.
-  - Progress: `semantic_memory_ci_artifacts.py --mode benchmark` now runs the
-    trend/budget checker by default (with explicit opt-out), CMake benchmark
-    target/test now pass policy + trend report paths for that gate, and
-    benchmark-harness wrapper coverage now includes benchmark-mode pass/fail
-    cases that lock budget-gate execution and failure propagation.
-  - Stop rule: if CI plumbing is too broad for one slice, land local checker + tests first.
-
 - ◐ [P1-02] Deliver one measured peak-RSS reduction on a representative semantic fixture.
   - Value: tangible memory reduction, not stylistic refactor.
   - Acceptance criteria:
@@ -98,25 +85,13 @@ Goal: ship measurable wins with hard regression control.
   - Progress: definition-validation worker scheduling now avoids eager
     full-index materialization outside fallback paths and moves partition index
     vectors directly into worker tasks instead of copying per worker launch;
-    parallel validation now also iterates non-const partition chunks and moves
-    owned index vectors into async workers, eliminating one extra
-    `DefinitionPartitionChunk` vector copy layer in the launch loop.
+    partition planning now stores stable-order range metadata
+    (`stableOrderOffset` + `stableOrderCount`) instead of per-partition index
+    vectors, and worker chunks now materialize only bounded local ranges during
+    execution, eliminating persistent partition index-vector allocation across
+    all chunks in the launcher path.
   - Stop rule: if two attempts fail to reach 2% median improvement, archive approach as low-value and switch hotspot.
 
-- ◐ [P1-03] Deliver one deterministic parallel-ready semantic partition behind a flag.
-  - Value: validates multithread direction without destabilizing default path.
-  - Acceptance criteria:
-    1. One isolated semantic phase can run in partitioned mode under flag.
-    2. Diagnostics/output order is byte-for-byte identical to single-thread mode.
-    3. Focused parity tests lock deterministic behavior.
-  - Progress: semantic-memory benchmark harness now supports
-    `--definition-validation-workers 1|2|both`, emits worker-mode delta rows,
-    records dump payload hashes per mode, and fails `both` mode when one-worker
-    and two-worker dump hashes diverge for the same fixture/phase tuple; CMake
-    now also exposes an expensive parity gate target/test
-    (`primestruct_semantic_memory_definition_worker_parity`,
-    `PrimeStruct_semantic_memory_definition_worker_parity`) that runs the same
-    worker-mode parity contract through CI artifact capture.
-  - Stop rule: if parity fails, land planner/scaffolding only and keep execution single-threaded.
-
-P0 micro-slices `[P0-17]` through `[P0-28]` and P2 micro-slices `[P2-14]` through `[P2-42]` are archived in `docs/todo_finished.md` (April 12, 2026).
+P0 micro-slices `[P0-17]` through `[P0-28]`, P1 slices `[P1-01]` and
+`[P1-03]`, and P2 micro-slices `[P2-14]` through `[P2-42]` are archived in
+`docs/todo_finished.md` (April 12-13, 2026).

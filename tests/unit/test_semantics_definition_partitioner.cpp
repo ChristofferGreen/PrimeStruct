@@ -17,12 +17,15 @@ TEST_SUITE_BEGIN("primestruct.semantics.definition_partitioner");
 namespace {
 
 std::vector<std::size_t> flattenStableIndices(
+    const primec::semantics::DefinitionPrepassSnapshot &snapshot,
     const std::vector<primec::semantics::DefinitionPartitionChunk> &partitions) {
   std::vector<std::size_t> indices;
   for (const auto &partition : partitions) {
-    indices.insert(indices.end(),
-                   partition.declarationStableIndices.begin(),
-                   partition.declarationStableIndices.end());
+    const std::size_t end =
+        partition.stableOrderOffset + partition.stableOrderCount;
+    for (std::size_t i = partition.stableOrderOffset; i < end; ++i) {
+      indices.push_back(snapshot.declarationsInStableOrder[i].stableIndex);
+    }
   }
   return indices;
 }
@@ -73,12 +76,12 @@ g() {}
   CHECK(partitions[0].partitionKey == 0);
   CHECK(partitions[1].partitionKey == 1);
   CHECK(partitions[2].partitionKey == 2);
-  CHECK(partitions[0].declarationStableIndices ==
-        std::vector<std::size_t>{0, 1, 2});
-  CHECK(partitions[1].declarationStableIndices ==
-        std::vector<std::size_t>{3, 4});
-  CHECK(partitions[2].declarationStableIndices ==
-        std::vector<std::size_t>{5, 6});
+  CHECK(partitions[0].stableOrderOffset == 0);
+  CHECK(partitions[0].stableOrderCount == 3);
+  CHECK(partitions[1].stableOrderOffset == 3);
+  CHECK(partitions[1].stableOrderCount == 2);
+  CHECK(partitions[2].stableOrderOffset == 5);
+  CHECK(partitions[2].stableOrderCount == 2);
 }
 
 TEST_CASE("definition partitioner handles zero and oversized partition counts deterministically") {
@@ -101,12 +104,14 @@ right() {}
   const std::vector<primec::semantics::DefinitionPartitionChunk> oversizedPartitions =
       primec::semantics::partitionDefinitionsDeterministic(snapshot, 4);
   REQUIRE(oversizedPartitions.size() == 4);
-  CHECK(oversizedPartitions[0].declarationStableIndices ==
-        std::vector<std::size_t>{0});
-  CHECK(oversizedPartitions[1].declarationStableIndices ==
-        std::vector<std::size_t>{1});
-  CHECK(oversizedPartitions[2].declarationStableIndices.empty());
-  CHECK(oversizedPartitions[3].declarationStableIndices.empty());
+  CHECK(oversizedPartitions[0].stableOrderOffset == 0);
+  CHECK(oversizedPartitions[0].stableOrderCount == 1);
+  CHECK(oversizedPartitions[1].stableOrderOffset == 1);
+  CHECK(oversizedPartitions[1].stableOrderCount == 1);
+  CHECK(oversizedPartitions[2].stableOrderOffset == 2);
+  CHECK(oversizedPartitions[2].stableOrderCount == 0);
+  CHECK(oversizedPartitions[3].stableOrderOffset == 2);
+  CHECK(oversizedPartitions[3].stableOrderCount == 0);
 }
 
 TEST_CASE("definition partitioner repeat runs are stable and cover each declaration once") {
@@ -138,11 +143,14 @@ delta() {}
   REQUIRE(firstPartitions.size() == secondPartitions.size());
   for (std::size_t i = 0; i < firstPartitions.size(); ++i) {
     CHECK(firstPartitions[i].partitionKey == secondPartitions[i].partitionKey);
-    CHECK(firstPartitions[i].declarationStableIndices ==
-          secondPartitions[i].declarationStableIndices);
+    CHECK(firstPartitions[i].stableOrderOffset ==
+          secondPartitions[i].stableOrderOffset);
+    CHECK(firstPartitions[i].stableOrderCount ==
+          secondPartitions[i].stableOrderCount);
   }
 
-  std::vector<std::size_t> flattened = flattenStableIndices(firstPartitions);
+  std::vector<std::size_t> flattened =
+      flattenStableIndices(snapshot, firstPartitions);
   std::sort(flattened.begin(), flattened.end());
   CHECK(flattened == std::vector<std::size_t>{0, 1, 2, 3, 4});
 }
