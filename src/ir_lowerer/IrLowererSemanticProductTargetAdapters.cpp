@@ -303,24 +303,6 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
   adapter.semanticProgram = semanticProgram;
   adapter.semanticIndex = SemanticProductIndexBuilder{semanticProgram}.build();
 
-  const auto &directCallTargets = adapter.semanticIndex.directCallTargetsByExpr;
-  adapter.directCallTargetsByExpr.reserve(directCallTargets.size());
-  for (const auto &[semanticNodeId, resolvedPath] : directCallTargets) {
-    adapter.directCallTargetsByExpr.insert_or_assign(semanticNodeId, resolvedPath);
-  }
-
-  const auto &methodCallTargets = adapter.semanticIndex.methodCallTargetIdsByExpr;
-  adapter.methodCallTargetIdsByExpr.reserve(methodCallTargets.size());
-  for (const auto &[semanticNodeId, resolvedPathId] : methodCallTargets) {
-    adapter.methodCallTargetIdsByExpr.insert_or_assign(semanticNodeId, resolvedPathId);
-  }
-
-  const auto &bridgePathChoices = adapter.semanticIndex.bridgePathChoicesByExpr;
-  adapter.bridgePathChoicesByExpr.reserve(bridgePathChoices.size());
-  for (const auto &[semanticNodeId, chosenPath] : bridgePathChoices) {
-    adapter.bridgePathChoicesByExpr.insert_or_assign(semanticNodeId, chosenPath);
-  }
-
   const auto callableSummaries = semanticProgramCallableSummaryView(*semanticProgram);
   adapter.callableSummariesByPathId.reserve(callableSummaries.size());
   for (const auto *entry : callableSummaries) {
@@ -332,16 +314,6 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
     if (!fullPath.empty()) {
       adapter.callableSummariesByPathId.insert_or_assign(entry->fullPathId, entry);
     }
-  }
-
-  const auto &onErrorFacts = adapter.semanticIndex.onErrorFactsByDefinitionId;
-  adapter.onErrorFactsByDefinitionId.reserve(onErrorFacts.size());
-  adapter.onErrorFactsByDefinitionPathId.reserve(onErrorFacts.size());
-  for (const auto &[definitionSemanticId, fact] : onErrorFacts) {
-    adapter.onErrorFactsByDefinitionId.insert_or_assign(definitionSemanticId, fact);
-  }
-  for (const auto &[definitionPathId, fact] : adapter.semanticIndex.onErrorFactsByDefinitionPathId) {
-    adapter.onErrorFactsByDefinitionPathId.insert_or_assign(definitionPathId, fact);
   }
 
   adapter.typeMetadataByPath.reserve(semanticProgram->typeMetadata.size());
@@ -387,42 +359,6 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
     if (entry->definitionPathId != InvalidSymbolId && !definitionPath.empty()) {
       adapter.returnFactsByDefinitionPathId.insert_or_assign(entry->definitionPathId, entry);
     }
-  }
-
-  const auto &localAutoFacts = adapter.semanticIndex.localAutoFactsByExpr;
-  adapter.localAutoFactsByExpr.reserve(localAutoFacts.size());
-  adapter.localAutoFactsByInitPathAndBindingNameId.reserve(localAutoFacts.size());
-  for (const auto &[semanticNodeId, fact] : localAutoFacts) {
-    adapter.localAutoFactsByExpr.insert_or_assign(semanticNodeId, fact);
-  }
-  for (const auto &[factKey, fact] : adapter.semanticIndex.localAutoFactsByInitPathAndBindingNameId) {
-    adapter.localAutoFactsByInitPathAndBindingNameId.insert_or_assign(factKey, fact);
-  }
-
-  const auto &queryFacts = adapter.semanticIndex.queryFactsByExpr;
-  adapter.queryFactsByExpr.reserve(queryFacts.size());
-  adapter.queryFactsByResolvedPathAndCallNameId.reserve(queryFacts.size());
-  for (const auto &[semanticNodeId, fact] : queryFacts) {
-    adapter.queryFactsByExpr.insert_or_assign(semanticNodeId, fact);
-  }
-  for (const auto &[factKey, fact] : adapter.semanticIndex.queryFactsByResolvedPathAndCallNameId) {
-    adapter.queryFactsByResolvedPathAndCallNameId.insert_or_assign(factKey, fact);
-  }
-
-  const auto &tryFacts = adapter.semanticIndex.tryFactsByExpr;
-  adapter.tryFactsByExpr.reserve(tryFacts.size());
-  adapter.tryFactsByOperandPathAndSource.reserve(tryFacts.size());
-  for (const auto &[semanticNodeId, fact] : tryFacts) {
-    adapter.tryFactsByExpr.insert_or_assign(semanticNodeId, fact);
-  }
-  for (const auto &[factKey, fact] : adapter.semanticIndex.tryFactsByOperandPathAndSource) {
-    adapter.tryFactsByOperandPathAndSource.insert_or_assign(factKey, fact);
-  }
-
-  const auto &bindingFacts = adapter.semanticIndex.bindingFactsByExpr;
-  adapter.bindingFactsByExpr.reserve(bindingFacts.size());
-  for (const auto &[semanticNodeId, fact] : bindingFacts) {
-    adapter.bindingFactsByExpr.insert_or_assign(semanticNodeId, fact);
   }
 
   return adapter;
@@ -499,10 +435,6 @@ const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(const SemanticP
       it != adapter.semanticIndex.onErrorFactsByDefinitionPathId.end()) {
     return it->second;
   }
-  if (const auto it = adapter.onErrorFactsByDefinitionPathId.find(*definitionPathId);
-      it != adapter.onErrorFactsByDefinitionPathId.end()) {
-    return it->second;
-  }
   return nullptr;
 }
 
@@ -575,11 +507,6 @@ const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(const Seman
       it != adapter.semanticIndex.localAutoFactsByInitPathAndBindingNameId.end()) {
     return it->second;
   }
-  if (const auto it = adapter.localAutoFactsByInitPathAndBindingNameId.find(
-          makeLocalAutoInitPathBindingNameKey(*initializerPathId, *bindingNameId));
-      it != adapter.localAutoFactsByInitPathAndBindingNameId.end()) {
-    return it->second;
-  }
   return nullptr;
 }
 
@@ -606,11 +533,6 @@ const SemanticProgramQueryFact *findSemanticProductQueryFact(const SemanticProdu
       it != adapter.semanticIndex.queryFactsByResolvedPathAndCallNameId.end()) {
     return it->second;
   }
-  if (const auto it = adapter.queryFactsByResolvedPathAndCallNameId.find(
-          makeQueryFactResolvedPathCallNameKey(*resolvedPathId, *callNameId));
-      it != adapter.queryFactsByResolvedPathAndCallNameId.end()) {
-    return it->second;
-  }
   return nullptr;
 }
 
@@ -633,11 +555,6 @@ const SemanticProgramTryFact *findSemanticProductTryFact(const SemanticProductTa
       it != adapter.semanticIndex.tryFactsByOperandPathAndSource.end()) {
     return it->second;
   }
-  if (const auto it = adapter.tryFactsByOperandPathAndSource.find(
-          makeTryFactOperandPathSourceKey(*operandPathId, expr.sourceLine, expr.sourceColumn));
-      it != adapter.tryFactsByOperandPathAndSource.end()) {
-    return it->second;
-  }
   return nullptr;
 }
 
@@ -647,7 +564,7 @@ const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticP
       fact != nullptr) {
     return fact;
   }
-  return findExpressionScopedSemanticFact(adapter.bindingFactsByExpr, expr);
+  return nullptr;
 }
 
 } // namespace primec::ir_lowerer

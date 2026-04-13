@@ -939,10 +939,12 @@ TEST_CASE("ir lowerer semantic-product adapter reuses method-call path ids") {
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   REQUIRE(adapter.semanticProgram == &semanticProgram);
-  REQUIRE(adapter.methodCallTargetIdsByExpr.count(44) == 1);
-  REQUIRE(adapter.methodCallTargetIdsByExpr.count(45) == 1);
-  CHECK(adapter.methodCallTargetIdsByExpr.at(44) == adapter.methodCallTargetIdsByExpr.at(45));
-  CHECK(adapter.methodCallTargetIdsByExpr.at(44) == semanticProgram.methodCallTargets[0].resolvedPathId);
+  REQUIRE(adapter.semanticIndex.methodCallTargetIdsByExpr.count(44) == 1);
+  REQUIRE(adapter.semanticIndex.methodCallTargetIdsByExpr.count(45) == 1);
+  CHECK(adapter.semanticIndex.methodCallTargetIdsByExpr.at(44) ==
+        adapter.semanticIndex.methodCallTargetIdsByExpr.at(45));
+  CHECK(adapter.semanticIndex.methodCallTargetIdsByExpr.at(44) ==
+        semanticProgram.methodCallTargets[0].resolvedPathId);
 
   primec::Expr firstExpr;
   firstExpr.kind = primec::Expr::Kind::Call;
@@ -987,8 +989,8 @@ TEST_CASE("ir lowerer semantic-product adapter ignores method-call targets missi
   });
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
-  CHECK(adapter.methodCallTargetIdsByExpr.count(144) == 0);
-  CHECK(adapter.methodCallTargetIdsByExpr.count(145) == 1);
+  CHECK(adapter.semanticIndex.methodCallTargetIdsByExpr.count(144) == 0);
+  CHECK(adapter.semanticIndex.methodCallTargetIdsByExpr.count(145) == 1);
 
   primec::Expr missingPathExpr;
   missingPathExpr.kind = primec::Expr::Kind::Call;
@@ -1162,9 +1164,9 @@ TEST_CASE("ir lowerer semantic-product adapter ignores bridge-path choices with 
   });
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
-  CHECK(adapter.bridgePathChoicesByExpr.count(118) == 0);
-  CHECK(adapter.bridgePathChoicesByExpr.count(119) == 1);
-  CHECK(adapter.bridgePathChoicesByExpr.count(120) == 0);
+  CHECK(adapter.semanticIndex.bridgePathChoicesByExpr.count(118) == 0);
+  CHECK(adapter.semanticIndex.bridgePathChoicesByExpr.count(119) == 1);
+  CHECK(adapter.semanticIndex.bridgePathChoicesByExpr.count(120) == 0);
 
   primec::Expr missingHelperExpr;
   missingHelperExpr.kind = primec::Expr::Kind::Call;

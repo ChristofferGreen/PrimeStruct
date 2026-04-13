@@ -1033,13 +1033,17 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterSource.find("semanticProgramCallableSummaryView(*semanticProgram)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.callableSummariesByPathId.reserve(") != std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.semanticIndex = SemanticProductIndexBuilder{semanticProgram}.build();") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramLookupCallTargetStringId(*adapter.semanticProgram, fullPath)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramOnErrorFactView(*semanticProgram)") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.onErrorFactsByDefinitionId.reserve(onErrorFacts.size())") !=
+  CHECK(semanticTargetAdapterSource.find("findDefinitionScopedSemanticFact(adapter.semanticIndex.onErrorFactsByDefinitionId, definition)") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.onErrorFactsByDefinitionPathId.reserve(onErrorFacts.size())") !=
+  CHECK(semanticTargetAdapterSource.find("adapter.onErrorFactsByDefinitionId.reserve(onErrorFacts.size())") ==
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.onErrorFactsByDefinitionPathId.reserve(onErrorFacts.size())") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.onErrorFactsByDefinitionPath.reserve(semanticProgram->onErrorFacts.size())") ==
         std::string::npos);
@@ -1065,31 +1069,39 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramLocalAutoFactView(*semanticProgram)") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.localAutoFactsByExpr.reserve(localAutoFacts.size())") !=
+  CHECK(semanticTargetAdapterSource.find("adapter.semanticIndex.localAutoFactsByInitPathAndBindingNameId.find(") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.localAutoFactsByInitPathAndBindingNameId.reserve(localAutoFacts.size())") !=
+  CHECK(semanticTargetAdapterSource.find("adapter.localAutoFactsByExpr.reserve(localAutoFacts.size())") ==
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.localAutoFactsByInitPathAndBindingNameId.reserve(localAutoFacts.size())") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("resolveLocalAutoInitializerPathId(adapter, expr)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramQueryFactView(*semanticProgram)") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.queryFactsByExpr.reserve(queryFacts.size())") !=
+  CHECK(semanticTargetAdapterSource.find("adapter.semanticIndex.queryFactsByResolvedPathAndCallNameId.find(") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.queryFactsByResolvedPathAndCallNameId.reserve(queryFacts.size())") !=
+  CHECK(semanticTargetAdapterSource.find("adapter.queryFactsByExpr.reserve(queryFacts.size())") ==
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.queryFactsByResolvedPathAndCallNameId.reserve(queryFacts.size())") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("resolveSemanticExprPathId(adapter, expr)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramTryFactView(*semanticProgram)") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.tryFactsByExpr.reserve(tryFacts.size())") !=
+  CHECK(semanticTargetAdapterSource.find("adapter.semanticIndex.tryFactsByOperandPathAndSource.find(") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.tryFactsByOperandPathAndSource.reserve(tryFacts.size())") !=
+  CHECK(semanticTargetAdapterSource.find("adapter.tryFactsByExpr.reserve(tryFacts.size())") ==
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.tryFactsByOperandPathAndSource.reserve(tryFacts.size())") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("makeTryFactOperandPathSourceKey(*operandPathId, expr.sourceLine, expr.sourceColumn)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramBindingFactView(*semanticProgram)") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.bindingFactsByExpr.reserve(bindingFacts.size())") !=
+  CHECK(semanticTargetAdapterSource.find("findExpressionScopedSemanticFact(adapter.semanticIndex.bindingFactsByExpr, expr)") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.bindingFactsByExpr.reserve(bindingFacts.size())") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("definition.fullPath.empty()") == std::string::npos);
   CHECK(semanticTargetAdapterSource.find("expr.semanticNodeId") != std::string::npos);
