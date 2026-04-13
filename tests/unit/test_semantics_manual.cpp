@@ -100,8 +100,6 @@ bool validateSourceProgram(const std::string &source, const std::string &entry, 
 
 TEST_SUITE_BEGIN("primestruct.semantics.manual");
 
-TEST_SUITE_BEGIN("primestruct.semantics.manual");
-
 #include "test_semantics_manual_core.h"
 #include "test_semantics_manual_templates.h"
 #include "test_semantics_manual_uninitialized.h"

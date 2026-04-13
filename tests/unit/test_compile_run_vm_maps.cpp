@@ -1,6 +1,6 @@
 #include "test_compile_run_helpers.h"
 
-TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.maps");
 
 TEST_CASE("runs vm with map literal") {
   const std::string source = R"(

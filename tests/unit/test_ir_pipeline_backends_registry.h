@@ -16,7 +16,7 @@
 #include "test_ir_pipeline_backends_helpers.h"
 #include "test_ir_pipeline_helpers.h"
 
-TEST_SUITE_BEGIN("primestruct.ir.pipeline.backends");
+TEST_SUITE_BEGIN("primestruct.ir.pipeline.backends.registry");
 
 namespace {
 

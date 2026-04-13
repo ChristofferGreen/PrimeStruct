@@ -2,7 +2,7 @@
 
 #include "primec/IrSerializer.h"
 
-TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.outputs");
 
 #include "test_compile_run_vm_outputs_core.h"
 #include "test_compile_run_vm_outputs_images.h"

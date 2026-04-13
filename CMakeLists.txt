@@ -725,6 +725,10 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.ir.pipeline.conversions
     primestruct.ir.pipeline.entry_args
     primestruct.ir.pipeline.backends
+    primestruct.ir.pipeline.backends.core
+    primestruct.ir.pipeline.backends.registry
+    primestruct.ir.pipeline.backends.glsl
+    primestruct.ir.pipeline.backends.cpp_vm
     primestruct.ir.pipeline.type_resolution_parity
     primestruct.ir.pipeline.to_cpp
     primestruct.ir.pipeline.to_glsl
@@ -1232,6 +1236,10 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.compile.run.smoke
     primestruct.compile.run.vm.core
     primestruct.compile.run.vm.collections
+    primestruct.compile.run.vm.bounds
+    primestruct.compile.run.vm.maps
+    primestruct.compile.run.vm.math
+    primestruct.compile.run.vm.outputs
     primestruct.compile.run.vm.uninitialized
     primestruct.compile.run.vm.maybe
     primestruct.compile.run.vm.gpu
@@ -1270,20 +1278,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "core_03b"
                                  SOURCE_FILE "*test_compile_run_vm_core.h" FIRST 71 LAST 83)
     elseif(suite STREQUAL "primestruct.compile.run.vm.collections")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "bounds_and_safety"
-                                 SOURCE_FILE "*test_compile_run_vm_bounds.cpp")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "map_helpers"
-                                 SOURCE_FILE "*test_compile_run_vm_maps.cpp")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "math_helpers"
-                                 SOURCE_FILE "*test_compile_run_vm_math.cpp")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "ir_and_output_modes_basics"
-                                 SOURCE_FILE "*test_compile_run_vm_outputs.cpp" FIRST 1 LAST 22)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "ir_and_output_modes_emitters"
-                                 SOURCE_FILE "*test_compile_run_vm_outputs.cpp" FIRST 23 LAST 44)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "ir_and_output_modes_exe_backend"
-                                 SOURCE_FILE "*test_compile_run_vm_outputs.cpp" FIRST 45 LAST 66)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "ir_and_output_modes_argv_arrays"
-                                 SOURCE_FILE "*test_compile_run_vm_outputs.cpp" FIRST 67 LAST 88)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "alias_and_basics"
                                  SOURCE_FILE "*test_compile_run_vm_collections.cpp" FIRST 1 LAST 60)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "templated_wrapper_parity"
@@ -1295,6 +1289,24 @@ if(PRIMESTRUCT_BUILD_TESTS)
                                  SOURCE_FILE "*test_compile_run_vm_collections.cpp" FIRST 255 LAST 331)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "growth_limits_and_syntax"
                                  SOURCE_FILE "*test_compile_run_vm_collections.cpp" FIRST 332 LAST 352)
+    elseif(suite STREQUAL "primestruct.compile.run.vm.bounds")
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "bounds_and_safety"
+                                 SOURCE_FILE "*test_compile_run_vm_bounds.cpp")
+    elseif(suite STREQUAL "primestruct.compile.run.vm.maps")
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "map_helpers"
+                                 SOURCE_FILE "*test_compile_run_vm_maps.cpp")
+    elseif(suite STREQUAL "primestruct.compile.run.vm.math")
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "math_helpers"
+                                 SOURCE_FILE "*test_compile_run_vm_math.cpp")
+    elseif(suite STREQUAL "primestruct.compile.run.vm.outputs")
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "ir_and_output_modes_basics"
+                                 SOURCE_FILE "*test_compile_run_vm_outputs.cpp" FIRST 1 LAST 22)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "ir_and_output_modes_emitters"
+                                 SOURCE_FILE "*test_compile_run_vm_outputs.cpp" FIRST 23 LAST 44)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "ir_and_output_modes_exe_backend"
+                                 SOURCE_FILE "*test_compile_run_vm_outputs.cpp" FIRST 45 LAST 66)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "ir_and_output_modes_argv_arrays"
+                                 SOURCE_FILE "*test_compile_run_vm_outputs.cpp" FIRST 67 LAST 88)
     elseif(suite STREQUAL "primestruct.compile.run.native_backend.core")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 1800 SHARD_NAME "01a"
                                  SOURCE_FILE "*test_compile_run_native_backend_core.cpp" FIRST 1 LAST 10)

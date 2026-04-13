@@ -1,6 +1,6 @@
 #include "test_compile_run_helpers.h"
 
-TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.math");
 
 static bool runVmCommandOrExpectUnsupported(const std::string &runCmd,
                                             const std::string &errPath,

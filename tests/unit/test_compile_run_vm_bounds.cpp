@@ -1,6 +1,6 @@
 #include "test_compile_run_helpers.h"
 
-TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.bounds");
 
 TEST_CASE("vm array access checks bounds") {
   const std::string source = R"(

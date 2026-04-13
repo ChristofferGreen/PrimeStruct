@@ -24,7 +24,7 @@
 
 #include "test_ir_pipeline_backends_helpers.h"
 
-TEST_SUITE_BEGIN("primestruct.ir.pipeline.backends");
+TEST_SUITE_BEGIN("primestruct.ir.pipeline.backends.cpp_vm");
 
 #include "test_ir_pipeline_backends_cpp_vm_a.h"
 #include "test_ir_pipeline_backends_cpp_vm_b.h"

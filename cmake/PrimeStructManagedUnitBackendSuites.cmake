@@ -2,7 +2,6 @@ list(APPEND PrimeStructManagedBackendSuites
   primestruct.ir.pipeline.serialization
   primestruct.ir.pipeline.pointers
   primestruct.ir.pipeline.conversions
-  primestruct.ir.pipeline.backends
   primestruct.ir.pipeline.to_cpp
   primestruct.ir.pipeline.to_glsl
   primestruct.ir.pipeline.validation
@@ -143,14 +142,6 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
   SHARD_PREFIX "variadic_pointer_vectors"
   TOTAL_CASES 7
   CASES_PER_SHARD 7
-)
-
-addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.backends"
-  TARGET PrimeStruct_backend_tests
-  LABEL "parallel-safe"
-  TIMEOUT 300
-  TOTAL_CASES 102
-  CASES_PER_SHARD 10
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.to_cpp"
