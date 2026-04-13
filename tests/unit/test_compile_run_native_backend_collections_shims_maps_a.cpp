@@ -1,3 +1,14 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_container_error_conformance_helpers.h"
+#include "test_compile_run_checked_pointer_conformance_helpers.h"
+#include "test_compile_run_unchecked_pointer_conformance_helpers.h"
+#include "test_compile_run_native_backend_collections_helpers.h"
+
+#if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
+TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
+
 TEST_CASE("rejects native std-namespaced vector method alias access struct method chain with helper receiver diagnostics") {
   const std::string source = R"(
 Marker {
@@ -631,3 +642,6 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
+
+TEST_SUITE_END();
+#endif

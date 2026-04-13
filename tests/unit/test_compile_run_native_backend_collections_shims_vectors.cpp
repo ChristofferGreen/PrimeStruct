@@ -1,3 +1,14 @@
+#include "test_compile_run_helpers.h"
+
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_container_error_conformance_helpers.h"
+#include "test_compile_run_checked_pointer_conformance_helpers.h"
+#include "test_compile_run_unchecked_pointer_conformance_helpers.h"
+#include "test_compile_run_native_backend_collections_helpers.h"
+
+#if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
+TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
+
 TEST_CASE("compiles and runs native stdlib collection shim access helpers") {
   const std::string source = R"(
 import /std/collections/*
@@ -539,3 +550,6 @@ TEST_CASE("native bare vector mutators compile without imported helpers") {
   expectBareVectorMutatorImportRequirement("native", "remove_at", "values, 1i32");
   expectBareVectorMutatorImportRequirement("native", "remove_swap", "values, 1i32");
 }
+
+TEST_SUITE_END();
+#endif
