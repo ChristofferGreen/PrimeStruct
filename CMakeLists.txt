@@ -600,6 +600,16 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_main.cpp
     tests/unit/test_semantics.cpp
     tests/unit/test_semantics_capabilities.cpp
+    tests/unit/test_semantics_capabilities_builtins.cpp
+    tests/unit/test_semantics_capabilities_lifecycle.cpp
+    tests/unit/test_semantics_capabilities_structs_core.cpp
+    tests/unit/test_semantics_capabilities_structs_metadata.cpp
+    tests/unit/test_semantics_capabilities_structs_reflect_clear.cpp
+    tests/unit/test_semantics_capabilities_structs_reflect_compare.cpp
+    tests/unit/test_semantics_capabilities_structs_reflect_default.cpp
+    tests/unit/test_semantics_capabilities_structs_reflect_equal.cpp
+    tests/unit/test_semantics_capabilities_structs_reflect_serde.cpp
+    tests/unit/test_semantics_capabilities_structs_reflect_validate.cpp
     tests/unit/test_semantics_bindings_assignments.cpp
     tests/unit/test_semantics_bindings_core.cpp
     tests/unit/test_semantics_bindings_core_transforms.cpp

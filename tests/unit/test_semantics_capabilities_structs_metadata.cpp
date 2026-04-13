@@ -1,4 +1,9 @@
-#pragma once
+#include "third_party/doctest.h"
+
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.effects");
+
 
 TEST_CASE("reflection core type primitives validate") {
   const std::string source = R"(
@@ -866,3 +871,5 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("recursive struct layout not supported") != std::string::npos);
 }
+
+TEST_SUITE_END();

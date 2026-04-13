@@ -1,4 +1,9 @@
-#pragma once
+#include "third_party/doctest.h"
+
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.effects");
+
 
 TEST_CASE("reflection transforms validate on struct definitions") {
   const std::string source = R"(
@@ -468,3 +473,5 @@ main() {
   CHECK(error.find("generated reflection helper already exists: /Pair/NotEqual") != std::string::npos);
 }
 
+
+TEST_SUITE_END();

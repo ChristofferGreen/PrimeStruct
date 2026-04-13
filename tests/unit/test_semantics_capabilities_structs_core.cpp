@@ -1,4 +1,9 @@
-#pragma once
+#include "third_party/doctest.h"
+
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.effects");
+
 
 TEST_CASE("execution effects transform validates") {
   const std::string source = R"(
@@ -612,3 +617,5 @@ main() {
   CHECK(error.find("struct transform does not accept arguments") != std::string::npos);
 }
 
+
+TEST_SUITE_END();

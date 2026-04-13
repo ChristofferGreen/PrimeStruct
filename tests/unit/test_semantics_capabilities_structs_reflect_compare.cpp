@@ -1,4 +1,9 @@
-#pragma once
+#include "third_party/doctest.h"
+
+#include "test_semantics_helpers.h"
+
+TEST_SUITE_BEGIN("primestruct.semantics.effects");
+
 
 TEST_CASE("generate Compare emits reflection helper definition") {
   const std::string source = R"(
@@ -415,3 +420,5 @@ main() {
         std::string::npos);
 }
 
+
+TEST_SUITE_END();
