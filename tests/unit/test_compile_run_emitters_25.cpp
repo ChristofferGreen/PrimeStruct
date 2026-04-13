@@ -1,3 +1,11 @@
+#include "test_compile_run_helpers.h"
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_emitters_helpers.h"
+
+#include "primec/testing/EmitterHelpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
+
 TEST_CASE("compiles and runs repeat loop") {
   const std::string source = R"(
 [return<int>]
@@ -622,3 +630,5 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 36);
 }
+
+TEST_SUITE_END();

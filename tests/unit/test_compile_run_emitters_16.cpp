@@ -1,3 +1,11 @@
+#include "test_compile_run_helpers.h"
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_emitters_helpers.h"
+
+#include "primec/testing/EmitterHelpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
+
 TEST_CASE("rejects map access compatibility call struct method chain canonical diagnostics forwarding in C++ emitter") {
   const std::string source = R"(
 Marker {
@@ -622,3 +630,5 @@ main() {
   CHECK(runCommand(quoteShellArg(exePath)) == 2);
 }
 
+
+TEST_SUITE_END();

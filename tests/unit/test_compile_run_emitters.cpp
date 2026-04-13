@@ -1,15 +1,10 @@
 #include "test_compile_run_helpers.h"
-#include "test_compile_run_collection_conformance_helpers.h"
-
-#include "primec/testing/EmitterHelpers.h"
+#include "test_compile_run_emitters_helpers.h"
 
 #include <chrono>
 #include <iomanip>
+#include <sstream>
 #include <thread>
-
-static bool buildEmittedCppExecutableAtO0(const std::string &srcPath,
-                                          const std::string &cppPath,
-                                          const std::string &exePath);
 
 namespace {
 void writeTextFile(const std::filesystem::path &path, const std::string &contents) {
@@ -78,6 +73,28 @@ std::filesystem::path emittedCppFixtureCacheDir() {
   std::filesystem::create_directories(cacheDir);
   return cacheDir;
 }
+} // namespace
+
+bool buildEmittedCppExecutableAtO0(const std::string &srcPath,
+                                   const std::string &cppPath,
+                                   const std::string &exePath) {
+  std::string cxx = "clang++";
+  if (runCommand("c++ --version > /dev/null 2>&1") == 0) {
+    cxx = "c++";
+  } else if (runCommand("clang++ --version > /dev/null 2>&1") != 0) {
+    return false;
+  }
+
+  const std::string emitCppCmd =
+      "./primec --emit=cpp " + quoteShellArg(srcPath) + " -o " + quoteShellArg(cppPath) + " --entry /main";
+  if (runCommand(emitCppCmd) != 0) {
+    return false;
+  }
+
+  const std::string compileCmd =
+      cxx + " -std=c++23 -O0 " + quoteShellArg(cppPath) + " -o " + quoteShellArg(exePath);
+  return runCommand(compileCmd) == 0;
+}
 
 bool buildCachedEmittedCppExecutableAtO0(const std::string &fixtureName,
                                          const std::string &source,
@@ -106,33 +123,3 @@ bool buildCachedEmittedCppExecutableAtO0(const std::string &fixtureName,
   writeTextFile(srcPath, source);
   return buildEmittedCppExecutableAtO0(srcPath.string(), cppPath.string(), exePath.string());
 }
-} // namespace
-
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_01.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_02.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_03.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_04.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_05.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_06.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_07.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_08.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_09.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_10.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_11.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_12.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_13.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_14.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_15.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_16.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_17.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_18.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_19.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_20.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_21.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_22.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_23.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_24.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_25.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_26.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_27.h"
-#include "test_compile_run_emitters_chunks/test_compile_run_emitters_28.h"

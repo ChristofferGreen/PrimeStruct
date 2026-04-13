@@ -1,3 +1,11 @@
+#include "test_compile_run_helpers.h"
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_emitters_helpers.h"
+
+#include "primec/testing/EmitterHelpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
+
 TEST_CASE("compiles and runs vector namespaced access slash methods through explicit alias helpers in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -728,3 +736,5 @@ main() {
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/push") != std::string::npos);
 }
+
+TEST_SUITE_END();

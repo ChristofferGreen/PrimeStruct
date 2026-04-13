@@ -1,3 +1,11 @@
+#include "test_compile_run_helpers.h"
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_emitters_helpers.h"
+
+#include "primec/testing/EmitterHelpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
+
 TEST_CASE("compiles and runs chained method calls in C++ emitter") {
   const std::string source = R"(
 namespace i32 {
@@ -608,3 +616,5 @@ main() {
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
+
+TEST_SUITE_END();

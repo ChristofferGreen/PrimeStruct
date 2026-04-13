@@ -1,3 +1,11 @@
+#include "test_compile_run_helpers.h"
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_emitters_helpers.h"
+
+#include "primec/testing/EmitterHelpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
+
 TEST_CASE("C++ emitter materializes variadic struct reference packs from borrowed pack reference fields") {
   const std::string source = R"(
 [struct]
@@ -344,5 +352,6 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 30);
 }
+
 
 TEST_SUITE_END();

@@ -1,3 +1,11 @@
+#include "test_compile_run_helpers.h"
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_emitters_helpers.h"
+
+#include "primec/testing/EmitterHelpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
+
 TEST_CASE("C++ emitter keeps canonical direct-call map count string receivers") {
   const std::string source = R"(
 [return<int>]
@@ -643,3 +651,5 @@ main() {
   CHECK(readFile(outPath).find("unknown method: /std/collections/vector/count") !=
         std::string::npos);
 }
+
+TEST_SUITE_END();

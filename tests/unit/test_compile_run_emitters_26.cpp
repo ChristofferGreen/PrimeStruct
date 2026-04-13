@@ -1,3 +1,11 @@
+#include "test_compile_run_helpers.h"
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_emitters_helpers.h"
+
+#include "primec/testing/EmitterHelpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
+
 TEST_CASE("C++ emitter materializes variadic pointer FileError packs with indexed dereference why methods") {
   const std::string source = R"(
 [return<int>]
@@ -622,3 +630,5 @@ main() {
   CHECK(runCommand(exePath) == 65);
 }
 
+
+TEST_SUITE_END();

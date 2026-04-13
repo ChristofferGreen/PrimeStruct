@@ -1,4 +1,8 @@
-TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
+#pragma once
+
+bool buildCachedEmittedCppExecutableAtO0(const std::string &fixtureName,
+                                         const std::string &source,
+                                         std::string &exePathOut);
 
 static void expectCppVectorCountCompatibilityTypeMismatchReject(const std::string &compileCmd) {
   const std::string errPath =
@@ -6,27 +10,6 @@ static void expectCppVectorCountCompatibilityTypeMismatchReject(const std::strin
   const std::string captureCmd = compileCmd + " > /dev/null 2> " + errPath;
   CHECK(runCommand(captureCmd) != 0);
   CHECK_FALSE(readFile(errPath).empty());
-}
-
-static bool buildEmittedCppExecutableAtO0(const std::string &srcPath,
-                                          const std::string &cppPath,
-                                          const std::string &exePath) {
-  std::string cxx = "clang++";
-  if (runCommand("c++ --version > /dev/null 2>&1") == 0) {
-    cxx = "c++";
-  } else if (runCommand("clang++ --version > /dev/null 2>&1") != 0) {
-    return false;
-  }
-
-  const std::string emitCppCmd =
-      "./primec --emit=cpp " + quoteShellArg(srcPath) + " -o " + quoteShellArg(cppPath) + " --entry /main";
-  if (runCommand(emitCppCmd) != 0) {
-    return false;
-  }
-
-  const std::string compileCmd =
-      cxx + " -std=c++23 -O0 " + quoteShellArg(cppPath) + " -o " + quoteShellArg(exePath);
-  return runCommand(compileCmd) == 0;
 }
 
 static std::string sharedCppEmitterFixtureArgs(int selector) {
@@ -635,4 +618,3 @@ main([array<string>] args) {
 )";
   return source;
 }
-

@@ -1,3 +1,11 @@
+#include "test_compile_run_helpers.h"
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_emitters_helpers.h"
+
+#include "primec/testing/EmitterHelpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
+
 TEST_CASE("rejects reordered namespaced vector push call expression compatibility alias in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -648,3 +656,5 @@ main() {
   CHECK_FALSE(readFile(errPath).empty());
 }
 
+
+TEST_SUITE_END();

@@ -1,3 +1,11 @@
+#include "test_compile_run_helpers.h"
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_emitters_helpers.h"
+
+#include "primec/testing/EmitterHelpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
+
 TEST_CASE("C++ emitter lambda mutators honor user vector helpers") {
   const std::string source = R"(
 /vector/push([vector<i32> mut] values, [i32] value) { }
@@ -646,3 +654,5 @@ main() {
   const std::string errors = readFile(errPath);
   CHECK(errors.find("push requires vector binding") != std::string::npos);
 }
+
+TEST_SUITE_END();

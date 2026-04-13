@@ -1,3 +1,11 @@
+#include "test_compile_run_helpers.h"
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_emitters_helpers.h"
+
+#include "primec/testing/EmitterHelpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
+
 TEST_CASE("compiles and runs C++ matrix arithmetic helpers with tolerance") {
   const std::string source = R"(
 import /std/math/*
@@ -646,3 +654,5 @@ main() {
 TEST_CASE("supports indexed vector removals with ownership semantics in C++ emitter") {
   expectVectorIndexedRemovalOwnershipConformance("exe");
 }
+
+TEST_SUITE_END();

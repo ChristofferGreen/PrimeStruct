@@ -577,6 +577,33 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_examples_spinning_cube_native.cpp
     tests/unit/test_compile_run_examples_spinning_cube_runtime.cpp
     tests/unit/test_compile_run_emitters.cpp
+    tests/unit/test_compile_run_emitters_02.cpp
+    tests/unit/test_compile_run_emitters_03.cpp
+    tests/unit/test_compile_run_emitters_04.cpp
+    tests/unit/test_compile_run_emitters_05.cpp
+    tests/unit/test_compile_run_emitters_06.cpp
+    tests/unit/test_compile_run_emitters_07.cpp
+    tests/unit/test_compile_run_emitters_08.cpp
+    tests/unit/test_compile_run_emitters_09.cpp
+    tests/unit/test_compile_run_emitters_10.cpp
+    tests/unit/test_compile_run_emitters_11.cpp
+    tests/unit/test_compile_run_emitters_12.cpp
+    tests/unit/test_compile_run_emitters_13.cpp
+    tests/unit/test_compile_run_emitters_14.cpp
+    tests/unit/test_compile_run_emitters_15.cpp
+    tests/unit/test_compile_run_emitters_16.cpp
+    tests/unit/test_compile_run_emitters_17.cpp
+    tests/unit/test_compile_run_emitters_18.cpp
+    tests/unit/test_compile_run_emitters_19.cpp
+    tests/unit/test_compile_run_emitters_20.cpp
+    tests/unit/test_compile_run_emitters_21.cpp
+    tests/unit/test_compile_run_emitters_22.cpp
+    tests/unit/test_compile_run_emitters_23.cpp
+    tests/unit/test_compile_run_emitters_24.cpp
+    tests/unit/test_compile_run_emitters_25.cpp
+    tests/unit/test_compile_run_emitters_26.cpp
+    tests/unit/test_compile_run_emitters_27.cpp
+    tests/unit/test_compile_run_emitters_28.cpp
     tests/unit/test_compile_run_glsl.cpp
     tests/unit/test_compile_run_imports_versions.cpp
     tests/unit/test_compile_run_imports_blocks.cpp
@@ -1489,17 +1516,17 @@ if(PRIMESTRUCT_BUILD_TESTS)
                                  SOURCE_FILE "*test_compile_run_native_backend_core_*.cpp" FIRST 152 LAST 154)
     elseif(suite STREQUAL "primestruct.compile.run.emitters.cpp")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "lambda_and_mutator_resolution"
-                                 SOURCE_FILE "*test_compile_run_emitters.cpp" FIRST 1 LAST 45)
+                                 SOURCE_FILE "*test_compile_run_emitters_*.cpp" FIRST 1 LAST 45)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
                                  SHARD_NAME "collection_access_and_alias_forwarding"
-                                 SOURCE_FILE "*test_compile_run_emitters.cpp" FIRST 46 LAST 100)
+                                 SOURCE_FILE "*test_compile_run_emitters_*.cpp" FIRST 46 LAST 100)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
                                  SHARD_NAME "map_wrapper_and_fallback_inference"
-                                 SOURCE_FILE "*test_compile_run_emitters.cpp" FIRST 101 LAST 160)
+                                 SOURCE_FILE "*test_compile_run_emitters_*.cpp" FIRST 101 LAST 160)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "numeric_math_and_control_flow_core"
-                                 SOURCE_FILE "*test_compile_run_emitters.cpp" FIRST 161 LAST 176)
+                                 SOURCE_FILE "*test_compile_run_emitters_*.cpp" FIRST 161 LAST 176)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "numeric_math_and_control_flow_loops"
-                                 SOURCE_FILE "*test_compile_run_emitters.cpp" FIRST 177 LAST 192)
+                                 SOURCE_FILE "*test_compile_run_emitters_*.cpp" FIRST 177 LAST 192)
     elseif(suite STREQUAL "primestruct.compile.run.math_conformance")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 600 LABEL "math-conformance"
                                  SHARD_NAME "harness_and_docs"

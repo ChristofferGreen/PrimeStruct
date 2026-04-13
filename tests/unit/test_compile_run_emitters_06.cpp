@@ -1,3 +1,11 @@
+#include "test_compile_run_helpers.h"
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_emitters_helpers.h"
+
+#include "primec/testing/EmitterHelpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
+
 TEST_CASE("C++ emitter helper rejects bare vector access methods without helper metadata") {
   auto expectRejected = [&](const char *receiverMethodName) {
     primec::Expr receiverCall;
@@ -646,3 +654,5 @@ TEST_CASE("C++ emitter helper resolves direct slashless canonical map receiver m
       methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
   CHECK(resolved == "/std/collections/map/at/tag");
 }
+
+TEST_SUITE_END();

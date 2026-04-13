@@ -1,3 +1,11 @@
+#include "test_compile_run_helpers.h"
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_emitters_helpers.h"
+
+#include "primec/testing/EmitterHelpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
+
 TEST_CASE("C++ emitter materializes variadic scalar pointer packs from borrowed pack access") {
   const std::string source = R"(
 [return<int>]
@@ -646,3 +654,5 @@ main() {
   CHECK(runCommand(exePath) == 23);
 }
 
+
+TEST_SUITE_END();

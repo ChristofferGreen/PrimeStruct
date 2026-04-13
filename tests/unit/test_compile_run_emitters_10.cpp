@@ -1,3 +1,11 @@
+#include "test_compile_run_helpers.h"
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_emitters_helpers.h"
+
+#include "primec/testing/EmitterHelpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
+
 TEST_CASE("rejects vector alias templated forwarding past non-templated compatibility helper in C++ emitter") {
   const std::string source = R"(
 [return<int>]
@@ -627,3 +635,5 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
 }
+
+TEST_SUITE_END();

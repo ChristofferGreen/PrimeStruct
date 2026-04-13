@@ -1,3 +1,11 @@
+#include "test_compile_run_helpers.h"
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_emitters_helpers.h"
+
+#include "primec/testing/EmitterHelpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
+
 TEST_CASE("C++ emitter helper rejects cross-path vector access return-kind metadata") {
   primec::Expr receiverCall;
   receiverCall.kind = primec::Expr::Kind::Call;
@@ -624,3 +632,5 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
+
+TEST_SUITE_END();

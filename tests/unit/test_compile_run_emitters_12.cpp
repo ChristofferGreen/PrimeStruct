@@ -1,3 +1,11 @@
+#include "test_compile_run_helpers.h"
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_emitters_helpers.h"
+
+#include "primec/testing/EmitterHelpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
+
 TEST_CASE("C++ emitter resolves canonical map count helper on wrapper slash return method sugar") {
   const std::string source = R"(
 [return<int>]
@@ -642,3 +650,5 @@ main() {
   CHECK_FALSE(readFile(errPath).empty());
 }
 
+
+TEST_SUITE_END();

@@ -1,3 +1,11 @@
+#include "test_compile_run_helpers.h"
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_emitters_helpers.h"
+
+#include "primec/testing/EmitterHelpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
+
 TEST_CASE("C++ emitter rejects direct-call string vector access helpers before lowering") {
   const std::string source = R"(
 [return<string>]
@@ -631,3 +639,5 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /map/at") != std::string::npos);
 }
+
+TEST_SUITE_END();

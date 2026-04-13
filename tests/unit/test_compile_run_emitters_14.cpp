@@ -1,3 +1,11 @@
+#include "test_compile_run_helpers.h"
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_emitters_helpers.h"
+
+#include "primec/testing/EmitterHelpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
+
 TEST_CASE("rejects local canonical slash-method vector count on string receiver in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -791,3 +799,5 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
 }
+
+TEST_SUITE_END();

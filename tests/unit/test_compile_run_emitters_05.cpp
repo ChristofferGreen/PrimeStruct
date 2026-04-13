@@ -1,3 +1,11 @@
+#include "test_compile_run_helpers.h"
+#include "test_compile_run_collection_conformance_helpers.h"
+#include "test_compile_run_emitters_helpers.h"
+
+#include "primec/testing/EmitterHelpers.h"
+
+TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
+
 TEST_CASE("rejects user map access unsafe string positional call shadow in C++ emitter") {
   const std::string source = R"(
 [return<int>]
@@ -708,3 +716,5 @@ TEST_CASE("C++ emitter helper prefers stdlib File multi-value helpers when prese
       writeLineCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
   CHECK(resolved == "/File/write_line");
 }
+
+TEST_SUITE_END();
