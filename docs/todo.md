@@ -56,35 +56,42 @@ Task template:
 ### Ready Now (No Unmet TODO Dependencies)
 
 1. TODO-0407
-2. TODO-0401
-3. TODO-0402
-4. TODO-0405
+2. TODO-0408
+3. TODO-0401
+4. TODO-0402
+5. TODO-0405
 
 ### Immediate Next 10 (After Ready Now)
 
-1. TODO-0406
-2. TODO-0403
+1. TODO-0409
+2. TODO-0406
+3. TODO-0403
 
 ### Priority Lanes (Current)
 
 - P0 Test implementation locality cleanup (no `TEST_CASE` in include chunks): TODO-0407
-- P1 SoA canonicalization + semantic memory/perf + multithread substrate + semantic-product boundary hardening: TODO-0401, TODO-0402, TODO-0405, TODO-0406
-- P2 Queue/snapshot governance: TODO-0403
+- P1 Collection stdlib ownership cutover (`vector`, `map`, `soa_vector`): TODO-0408, TODO-0409
+- P2 SoA canonicalization + semantic memory/perf + multithread substrate + semantic-product boundary hardening: TODO-0401, TODO-0402, TODO-0405, TODO-0406
+- P3 Queue/snapshot governance: TODO-0403
 
 ### Execution Queue (Recommended)
 
 Wave A (test implementation locality cleanup):
 1. TODO-0407
 
-Wave B (SoA completion):
+Wave B (collection stdlib ownership cutover):
+1. TODO-0408
+2. TODO-0409
+
+Wave C (SoA completion):
 1. TODO-0401
 
-Wave C (semantic memory/perf):
+Wave D (semantic memory/perf):
 1. TODO-0402
 2. TODO-0405
 3. TODO-0406
 
-Wave D (queue hygiene):
+Wave E (queue hygiene):
 1. TODO-0403
 
 ### PrimeStruct Coverage Snapshot
@@ -92,6 +99,7 @@ Wave D (queue hygiene):
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Test implementation locality and include-chunk retirement | TODO-0407 |
+| Collection stdlib ownership cutover (`vector`, `map`, `soa_vector`) | TODO-0408, TODO-0409 |
 | SoA bring-up and stdlib-authoritative `soa_vector` end-state cleanup | TODO-0401 |
 | Semantic memory footprint and multithread compile substrate | TODO-0402 |
 | Semantic-product contract/index boundary hardening | TODO-0405, TODO-0406 |
@@ -101,13 +109,44 @@ Wave D (queue hygiene):
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0401, TODO-0402, TODO-0405, TODO-0406, TODO-0407 |
+| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0401, TODO-0402, TODO-0405, TODO-0406, TODO-0407, TODO-0408, TODO-0409 |
 | Test source locality and include-layer guardrail verification | TODO-0407 |
+| Collection conformance and alias-deletion checks (`vector`/`map`/`soa_vector`) | TODO-0408, TODO-0409 |
 | Benchmark/runtime regression checks (`./scripts/benchmark.sh`) | TODO-0402 |
 | Semantic-product contract/index and deterministic conformance checks | TODO-0405, TODO-0406 |
 | TODO/open-vs-finished hygiene (`docs/todo.md` vs `docs/todo_finished.md`) | TODO-0403 |
 
 ### Task Blocks
+
+- [ ] TODO-0409: Remove C++ name routing for `map` + `soa_vector`
+  - owner: ai
+  - created_at: 2026-04-13
+  - phase: Group 14
+  - depends_on: TODO-0408
+  - scope: Complete stdlib-authoritative collection migration by routing `map` and `soa_vector` behavior through `.prime` definitions, then delete remaining production compiler/runtime C++ name/path alias logic for these collections in semantics/lowering (`src/` + `include/primec`, excluding tests/testing-only facades).
+  - acceptance:
+    - Production `src/` + `include/` collection routing no longer hardcodes `map`/`soa_vector` symbol/path aliases for normal call/access classification; dispatch is generic or intrinsic-driven.
+    - Release-mode collection conformance/tests for `map` and `soa_vector` pass, and any changed diagnostics are updated via deterministic snapshots.
+    - At least one real compatibility subsystem (legacy alias/canonicalization branch family) is deleted rather than renamed.
+    - Focused release-mode suites pass for the migration surface: `./build-release/PrimeStruct_semantics_tests --test-suite=primestruct.semantics.calls_flow.collections`, `./build-release/PrimeStruct_backend_tests --test-suite=primestruct.ir.pipeline.validation`, `./build-release/PrimeStruct_backend_tests --test-suite=primestruct.compile.run.vm.maps`, `./build-release/PrimeStruct_backend_tests --test-suite=primestruct.compile.run.vm.collections`, `./build-release/PrimeStruct_backend_tests --test-suite=primestruct.compile.run.native_backend.collections`, and `./build-release/PrimeStruct_backend_tests --test-suite=primestruct.compile.run.emitters.cpp`.
+    - Production guardrail check confirms no hardcoded collection compatibility routing remains in semantics/lowerer/emitter code paths (for example via `rg` over `src/semantics`, `src/ir_lowerer`, and emitter sources), with any remaining mentions justified as canonical stdlib or test-only references.
+    - Final release gate passes with `./scripts/compile.sh --release`.
+  - stop_rule: If landing both collections together is too risky for one commit, split into TODO-0410 (`map`) and TODO-0411 (`soa_vector`) with independent acceptance before continuing.
+
+- [ ] TODO-0408: Make `vector` stdlib-authoritative and delete vector-specific C++ classifiers
+  - owner: ai
+  - created_at: 2026-04-13
+  - phase: Group 14
+  - scope: Move `vector` constructor/method/member behavior to stdlib `.prime` definitions and remove vector-specific production compiler/runtime C++ path/name checks in semantics plus IR lowerer classification/mutation helpers (`src/` + `include/primec`, excluding tests/testing-only facades).
+  - acceptance:
+    - `vector` semantics/IR behavior is resolved through standard symbol/type flow without dedicated vector-name branches for normal production call/access classification.
+    - Release-mode vector semantics + compile-run suites pass after deleting vector-specific compatibility branches.
+    - Removed code includes at least one explicit vector alias/canonical-path branch from lowerer/semantics helpers.
+    - Focused release-mode suites pass for vector behavior and routing: `./build-release/PrimeStruct_semantics_tests --test-suite=primestruct.semantics.calls_flow.collections`, `./build-release/PrimeStruct_backend_tests --test-suite=primestruct.ir.pipeline.validation`, `./build-release/PrimeStruct_backend_tests --test-suite=primestruct.compile.run.vm.collections`, `./build-release/PrimeStruct_backend_tests --test-suite=primestruct.compile.run.native_backend.collections`, and `./build-release/PrimeStruct_backend_tests --test-suite=primestruct.compile.run.emitters.cpp`.
+    - Tests cover both canonical helper success paths and removed-alias rejection paths (unknown-target/unknown-method diagnostics) so deleted compatibility routing cannot silently regress.
+    - Final release gate passes with `./scripts/compile.sh --release`.
+  - stop_rule: If shared classifier rewrites destabilize `map`/`soa_vector`, isolate the generic mechanism in this leaf and defer remaining shared deletions to TODO-0409.
+  - notes: This leaf should leave a reusable generic path that TODO-0409 can apply to `map` and `soa_vector`.
 
 - [ ] TODO-0407: Move test implementations from include chunks into `.cpp`
   - owner: ai
@@ -165,7 +204,7 @@ Wave D (queue hygiene):
   - file_todos:
     - [x] `TODO-0405-F01` files: `/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererSemanticProductTargetAdapters.{h,cpp}`, `/Users/chrgre01/src/PrimeStruct/include/primec/testing/ir_lowerer_helpers/IrLowererSemanticProductTargetAdapters.h`; fix: introduce a typed `SemanticProductIndex` plus `SemanticProductIndexBuilder`, wire adapter construction through that builder for direct/method/bridge/binding/local-auto/query/try/on_error family indices, and route semantic lookup helpers through shared index-backed lookup paths.
     - [x] `TODO-0405-F02` files: `/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererSemanticProductTargetAdapters.cpp`, `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp`, `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends_graph_contexts.h`; fix: remove transitional duplicated legacy adapter-map population/fallback paths and migrate downstream checks to consume `SemanticProductIndex` directly.
-    - [ ] `TODO-0405-F03` files: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends_registry.cpp`, `/Users/chrgre01/src/PrimeStruct/tests/unit/test_semantics_definition_partitioner.cpp`; fix: add/refresh deterministic parity coverage across worker counts (`1`, `2`, `4`) for the unified index path.
+    - [x] `TODO-0405-F03` files: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends_registry.cpp`, `/Users/chrgre01/src/PrimeStruct/tests/unit/test_semantics_definition_partitioner.cpp`; fix: add/refresh deterministic parity coverage across worker counts (`1`, `2`, `4`) for the unified index path.
   - acceptance:
     - Lowerer semantic-product adapter paths consume one shared index builder instead of duplicating per-family map assembly logic.
     - Determinism parity coverage keeps semantic-product output and diagnostics stable across worker counts (`1`, `2`, `4`) on existing stress fixtures.
@@ -200,10 +239,10 @@ Wave D (queue hygiene):
   - owner: ai
   - created_at: 2026-04-13
   - phase: Group 14
-  - scope: Define and execute remaining code-affecting leaves required to finish stdlib-authoritative `soa_vector` behavior and remove compatibility scaffolding.
+  - scope: Track and close Group 14 child leaves required to finish stdlib-authoritative collection behavior and remove compatibility scaffolding; implementation work lives in child TODOs.
   - acceptance:
-    - Remaining Group 14 leaves are broken into explicit IDs with bounded scope and verification steps.
+    - Active Group 14 implementation leaves (currently TODO-0408 and TODO-0409) stay explicit with bounded scope, dependencies, and verification steps.
+    - This tracker is only completed after all Group 14 child leaves are archived in `docs/todo_finished.md` with evidence notes.
     - At least one leaf is always `Ready Now` with no unmet TODO dependencies.
-    - Completed Group 14 leaves are archived to `docs/todo_finished.md` with concise evidence notes.
   - stop_rule: If a leaf is too large for one commit plus focused conformance updates, split it before implementation.
-  - notes: Prior Group 14 slices `[S2-01]` through `[S2-05]`, `[S3-01]` through `[S3-132]`, and `[S4-01a1]` through `[S4-03]` are already archived in `docs/todo_finished.md` (April 12-13, 2026).
+  - notes: Current active Group 14 child leaves are TODO-0408 and TODO-0409. Prior Group 14 slices `[S2-01]` through `[S2-05]`, `[S3-01]` through `[S3-132]`, and `[S4-01a1]` through `[S4-03]` are already archived in `docs/todo_finished.md` (April 12-13, 2026).
