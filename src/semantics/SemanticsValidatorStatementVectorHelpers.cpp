@@ -57,8 +57,7 @@ std::string explicitOldSoaMutatorPath(const Expr &candidate) {
 
 std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &path) const {
   auto hasVisibleDefinitionPath = [&](const std::string &candidate) {
-    if ((candidate.rfind("/vector/", 0) == 0 ||
-         candidate.rfind("/map/", 0) == 0) &&
+    if (candidate.rfind("/map/", 0) == 0 &&
         defMap_.count(candidate) == 0 &&
         !hasDeclaredDefinitionPath(candidate)) {
       return false;
@@ -372,25 +371,6 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     return "/std/collections/vector/" + std::string(helperName);
   }();
-  auto explicitAliasVectorMutatorCallPath = [&]() -> std::string {
-    if (stmt.isMethodCall) {
-      return "";
-    }
-    if (normalizedStatementNamespacePrefix == "vector" &&
-        isVectorMutatorName(normalizedStatementName)) {
-      return "/vector/" + normalizedStatementName;
-    }
-    constexpr std::string_view kAliasPrefix = "vector/";
-    if (normalizedStatementName.rfind(kAliasPrefix, 0) != 0) {
-      return "";
-    }
-    const std::string_view helperName =
-        std::string_view(normalizedStatementName).substr(kAliasPrefix.size());
-    if (!isVectorMutatorName(helperName)) {
-      return "";
-    }
-    return "/vector/" + std::string(helperName);
-  }();
   auto explicitCanonicalStdVectorMutatorMethodPath = [&]() -> std::string {
     if (!stmt.isMethodCall) {
       return "";
@@ -409,25 +389,6 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       return "";
     }
     return "/std/collections/vector/" + std::string(helperName);
-  }();
-  auto explicitAliasVectorMutatorMethodPath = [&]() -> std::string {
-    if (!stmt.isMethodCall) {
-      return "";
-    }
-    if (normalizedStatementNamespacePrefix == "vector" &&
-        isVectorMutatorName(normalizedStatementName)) {
-      return "/vector/" + normalizedStatementName;
-    }
-    constexpr std::string_view kAliasPrefix = "vector/";
-    if (normalizedStatementName.rfind(kAliasPrefix, 0) != 0) {
-      return "";
-    }
-    const std::string_view helperName =
-        std::string_view(normalizedStatementName).substr(kAliasPrefix.size());
-    if (!isVectorMutatorName(helperName)) {
-      return "";
-    }
-    return "/vector/" + std::string(helperName);
   }();
   auto bareBuiltinVectorMutatorPreferredPath = [&]() -> std::string {
     const bool isBareMutatorCall =
@@ -470,9 +431,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     return "";
   }();
-  const bool shouldAllowStdNamespacedVectorHelperCompatibilityFallback =
-      isStdNamespacedVectorCanonicalHelperCall && !namespacedHelper.empty() &&
-      hasVisibleDefinitionPath("/vector/" + namespacedHelper);
+  const bool shouldAllowStdNamespacedVectorHelperCompatibilityFallback = false;
   const bool isUserMethodTarget =
       stmt.isMethodCall && defMap_.find(vectorHelperResolved) != defMap_.end() &&
       vectorHelperResolved.rfind("/vector/", 0) != 0 && vectorHelperResolved.rfind("/soa_vector/", 0) != 0;
@@ -547,17 +506,9 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       !hasDeclaredOrImportedPath(explicitCanonicalStdVectorMutatorCallPath)) {
     return failStatementDiagnostic("unknown call target: " + explicitCanonicalStdVectorMutatorCallPath);
   }
-  if (!explicitAliasVectorMutatorCallPath.empty() &&
-      !hasDeclaredOrImportedPath(explicitAliasVectorMutatorCallPath)) {
-    return failStatementDiagnostic("unknown call target: " + explicitAliasVectorMutatorCallPath);
-  }
   if (!explicitCanonicalStdVectorMutatorMethodPath.empty() &&
       !hasDeclaredOrImportedPath(explicitCanonicalStdVectorMutatorMethodPath)) {
     return failStatementDiagnostic("unknown method: " + explicitCanonicalStdVectorMutatorMethodPath);
-  }
-  if (!explicitAliasVectorMutatorMethodPath.empty() &&
-      !hasDeclaredOrImportedPath(explicitAliasVectorMutatorMethodPath)) {
-    return failStatementDiagnostic("unknown method: " + explicitAliasVectorMutatorMethodPath);
   }
   if (!bareBuiltinVectorMutatorPreferredPath.empty() &&
       !hasDeclaredOrImportedPath(bareBuiltinVectorMutatorPreferredPath)) {

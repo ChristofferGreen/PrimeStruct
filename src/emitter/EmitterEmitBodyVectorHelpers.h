@@ -2,8 +2,7 @@
         if (getVectorMutatorName(stmt, nameMap, vectorHelper)) {
           const std::string explicitRequestedVectorHelperPath =
               (!stmt.isMethodCall &&
-               (resolveExprPath(stmt).rfind("/vector/", 0) == 0 ||
-                resolveExprPath(stmt).rfind("/std/collections/vector/", 0) == 0))
+               (resolveExprPath(stmt).rfind("/std/collections/vector/", 0) == 0))
                   ? resolveExprPath(stmt)
                   : std::string{};
           std::string helperPath;

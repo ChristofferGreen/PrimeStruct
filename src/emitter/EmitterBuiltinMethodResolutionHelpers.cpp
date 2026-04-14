@@ -98,6 +98,9 @@ bool resolveMethodCallPath(const Expr &call,
   const bool isExplicitMapAliasMethod = normalizedMethodName.rfind("map/", 0) == 0;
   const bool isExplicitStdlibMapMethod =
       normalizedMethodName.rfind("std/collections/map/", 0) == 0;
+  if (isExplicitVectorAliasMethod) {
+    return false;
+  }
   if (normalizedMethodName.rfind("vector/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("vector/").size());
   } else if (normalizedMethodName.rfind("array/", 0) == 0) {
@@ -111,10 +114,10 @@ bool resolveMethodCallPath(const Expr &call,
     normalizedMethodName =
         normalizedMethodName.substr(std::string("std/collections/map/").size());
   }
-  if (isExplicitVectorAliasMethod || isExplicitStdlibVectorMethod) {
+  if (isExplicitStdlibVectorMethod) {
     const std::string explicitPath =
         std::string("/") +
-        (isExplicitStdlibVectorMethod ? "std/collections/vector/" : "vector/") +
+        "std/collections/vector/" +
         normalizedMethodName;
     if (hasDefinitionOrMetadata(metadataView, explicitPath)) {
       resolvedOut = explicitPath;
@@ -423,17 +426,12 @@ bool resolveMethodCallPath(const Expr &call,
     const bool isCountLikeMethod = normalizedMethodName == "count";
     const bool isCapacityLikeMethod = normalizedMethodName == "capacity";
     if (isCountLikeMethod || isCapacityLikeMethod) {
-      const std::string aliasPath = "/vector/" + normalizedMethodName;
       const std::string canonicalPath = "/std/collections/vector/" + normalizedMethodName;
-      if (isExplicitVectorAliasMethod && !hasDefinitionOrMetadata(metadataView, aliasPath)) {
-        return false;
-      }
       if (isExplicitStdlibVectorMethod &&
           !hasDefinitionOrMetadata(metadataView, canonicalPath)) {
         return false;
       }
-      if (!hasDefinitionOrMetadata(metadataView, aliasPath) &&
-          !hasDefinitionOrMetadata(metadataView, canonicalPath)) {
+      if (!hasDefinitionOrMetadata(metadataView, canonicalPath)) {
         return false;
       }
     }

@@ -199,7 +199,6 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
     std::string normalizedPath = path;
     if (!normalizedPath.empty() && normalizedPath.front() != '/') {
       if (normalizedPath.rfind("array/", 0) == 0 ||
-          normalizedPath.rfind("vector/", 0) == 0 ||
           normalizedPath.rfind("std/collections/vector/", 0) == 0 ||
           normalizedPath.rfind("map/", 0) == 0 ||
           normalizedPath.rfind("std/collections/map/", 0) == 0) {
@@ -218,9 +217,6 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
           suffix != "remove_at" && suffix != "remove_swap") {
         appendUnique("/std/collections/vector/" + suffix);
       }
-    } else if (normalizedPath.rfind("/vector/", 0) == 0) {
-      // Keep explicit /vector/* calls isolated so alias paths no longer
-      // participate in canonical stdlib fallback lookup.
     } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
       // Keep explicit /std/collections/vector/* calls isolated so canonical
       // paths no longer fall back through /array/* aliases.
