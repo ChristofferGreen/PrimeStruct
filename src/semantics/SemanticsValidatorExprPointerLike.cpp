@@ -53,10 +53,7 @@ std::vector<std::string> pointerLikeCallPathCandidates(const std::string &path) 
   } else if (canonicalPath.rfind("/vector/", 0) == 0) {
     // Keep explicit /vector/* lookup isolated to avoid alias fallback.
   } else if (canonicalPath.rfind("/std/collections/vector/", 0) == 0) {
-    const std::string suffix = canonicalPath.substr(std::string("/std/collections/vector/").size());
-    if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      appendUnique("/array/" + suffix);
-    }
+    // Keep explicit /std/collections/vector/* lookup isolated to avoid alias fallback.
   } else if (canonicalPath.rfind("/map/", 0) == 0) {
     const std::string suffix = canonicalPath.substr(std::string("/map/").size());
     if (!isRemovedMapCompatibilityHelper(suffix)) {

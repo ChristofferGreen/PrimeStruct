@@ -243,12 +243,7 @@ std::vector<std::string> SemanticsValidator::inferStructReturnCollectionHelperPa
   } else if (normalizedPath.rfind("/vector/", 0) == 0) {
     // Keep explicit /vector/* lookup isolated to avoid alias fallback.
   } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
-    const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
-    if (suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
-        suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
-        suffix != "remove_at" && suffix != "remove_swap") {
-      appendUnique("/array/" + suffix);
-    }
+    // Keep explicit /std/collections/vector/* lookup isolated to avoid alias fallback.
   } else if (normalizedPath.rfind("/map/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/map/").size());
     if (!isRemovedMapCompatibilitySuffix(suffix)) {

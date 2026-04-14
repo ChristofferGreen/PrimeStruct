@@ -117,11 +117,7 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
   } else if (normalizedPath.rfind("/vector/", 0) == 0) {
     // Keep explicit /vector/* lookup isolated to avoid alias fallback.
   } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
-    const std::string suffix =
-        normalizedPath.substr(std::string("/std/collections/vector/").size());
-    if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      appendUniqueCandidate(candidates, "/array/" + suffix);
-    }
+    // Keep explicit /std/collections/vector/* lookup isolated to avoid alias fallback.
   } else if (normalizedPath.rfind("/map/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/map/").size());
     if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&

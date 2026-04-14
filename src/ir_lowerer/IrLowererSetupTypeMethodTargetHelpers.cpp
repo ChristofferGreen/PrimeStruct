@@ -134,14 +134,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       // Keep explicit /vector/* lookup isolated to avoid alias fallback.
     }
     if (path.rfind("/std/collections/vector/", 0) == 0) {
-      const std::string suffix = path.substr(std::string("/std/collections/vector/").size());
-      if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-        const std::string arrayAlias = "/array/" + suffix;
-        defIt = defMap.find(arrayAlias);
-        if (defIt != defMap.end()) {
-          return defIt->second;
-        }
-      }
+      // Keep explicit /std/collections/vector/* lookup isolated to avoid alias fallback.
     }
     if (path.rfind("/map/", 0) == 0) {
       const std::string suffix = path.substr(std::string("/map/").size());

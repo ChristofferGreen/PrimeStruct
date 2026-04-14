@@ -222,14 +222,8 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
       // Keep explicit /vector/* calls isolated so alias paths no longer
       // participate in canonical stdlib fallback lookup.
     } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
-      const std::string suffix = normalizedPath.substr(
-          std::string("/std/collections/vector/").size());
-      if (suffix != "count" && suffix != "capacity" && suffix != "at" &&
-          suffix != "at_unsafe" && suffix != "push" && suffix != "pop" &&
-          suffix != "reserve" && suffix != "clear" &&
-          suffix != "remove_at" && suffix != "remove_swap") {
-        appendUnique("/array/" + suffix);
-      }
+      // Keep explicit /std/collections/vector/* calls isolated so canonical
+      // paths no longer fall back through /array/* aliases.
     } else if (normalizedPath.rfind("/map/", 0) == 0) {
       const std::string suffix =
           normalizedPath.substr(std::string("/map/").size());
