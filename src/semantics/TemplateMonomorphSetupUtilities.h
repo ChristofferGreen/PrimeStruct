@@ -190,20 +190,8 @@ bool replaceBindingTypeTransform(Expr &binding, const std::string &typeName, std
 }
 
 bool applyImplicitAutoTemplates(Program &program, Context &ctx, std::string &error) {
-  auto isStdlibCollectionWrapperImplicitAutoSurface = [](std::string_view path) {
-    return path == "/std/collections/vectorPush" ||
-           path == "/std/collections/vectorPop" ||
-           path == "/std/collections/vectorReserve" ||
-           path == "/std/collections/vectorClear" ||
-           path == "/std/collections/vectorRemoveAt" ||
-           path == "/std/collections/vectorRemoveSwap" ||
-           path == "/std/collections/vectorAt" ||
-           path == "/std/collections/vectorAtUnsafe";
-  };
   for (auto &def : program.definitions) {
     std::vector<std::string> implicitParams;
-    const bool allowTemplatedImplicitAutoParams =
-        isStdlibCollectionWrapperImplicitAutoSurface(def.fullPath);
     if (!def.templateArgs.empty()) {
       for (const auto &param : def.parameters) {
         if (!param.isBinding) {
@@ -215,15 +203,12 @@ bool applyImplicitAutoTemplates(Program &program, Context &ctx, std::string &err
           return false;
         }
         if (extractExplicitBindingType(param, info) &&
-            info.typeName == "auto" &&
-            !allowTemplatedImplicitAutoParams) {
+            info.typeName == "auto") {
           error = "implicit auto parameters are only supported on non-templated definitions: " + def.fullPath;
           return false;
         }
       }
-      if (!allowTemplatedImplicitAutoParams) {
-        continue;
-      }
+      continue;
     }
     size_t autoIndex = 0;
     for (auto &param : def.parameters) {

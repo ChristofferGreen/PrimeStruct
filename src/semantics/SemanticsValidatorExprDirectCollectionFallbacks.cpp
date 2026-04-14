@@ -42,13 +42,14 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
       expr.args.size() >= 1 &&
       ((expr.namespacePrefix.empty() &&
         (expr.name == "at" || expr.name == "at_unsafe")) ||
-       resolved == "/std/collections/vectorAt" ||
-       resolved == "/std/collections/vectorAtUnsafe")) {
+       resolved == "/std/collections/vector/at" ||
+       resolved == "/vector/at" ||
+       resolved == "/std/collections/vector/at_unsafe" ||
+       resolved == "/vector/at_unsafe")) {
     const bool isUnsafeHelper =
         expr.name == "at_unsafe" ||
         resolved == "/std/collections/vector/at_unsafe" ||
-        resolved == "/vector/at_unsafe" ||
-        resolved == "/std/collections/vectorAtUnsafe";
+        resolved == "/vector/at_unsafe";
     const std::string helperName = isUnsafeHelper ? "at_unsafe" : "at";
     auto resolvesExperimentalVectorValueReceiverForBareAccess =
         [&](const Expr &receiverExpr, std::string &elemTypeOut) -> bool {
