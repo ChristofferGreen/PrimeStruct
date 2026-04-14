@@ -541,13 +541,30 @@ bool inferImplicitTemplateArgs(const Definition &def,
         argsToInfer.push_back(argExpr);
       }
     }
+    auto allInferredParamNamesKnown = [&](const std::vector<std::string> &paramNames) {
+      if (paramNames.empty()) {
+        return false;
+      }
+      for (const auto &name : paramNames) {
+        if (inferred.find(name) == inferred.end()) {
+          return false;
+        }
+      }
+      return true;
+    };
     if (argsToInfer.empty()) {
+      if (isStdlibCollectionHelper && allInferredParamNamesKnown(inferredParamNames)) {
+        continue;
+      }
       error = "implicit template arguments require values on " + def.fullPath;
       return false;
     }
     for (const Expr *argExpr : argsToInfer) {
       BindingInfo argInfo;
       if (!argExpr) {
+        if (isStdlibCollectionHelper && allInferredParamNamesKnown(inferredParamNames)) {
+          continue;
+        }
         if (isStdlibCollectionHelper) {
           return false;
         }
@@ -609,6 +626,9 @@ bool inferImplicitTemplateArgs(const Definition &def,
               !diagnostic.empty()) {
             error = diagnostic;
             return false;
+          }
+          if (isStdlibCollectionHelper && allInferredParamNamesKnown(inferredParamNames)) {
+            continue;
           }
           if (isStdlibCollectionHelper) {
             return false;
@@ -689,6 +709,9 @@ bool inferImplicitTemplateArgs(const Definition &def,
       }
       std::string argType = bindingTypeToString(argInfo);
       if (argType.empty() || inferredParamNames.empty()) {
+        if (isStdlibCollectionHelper && allInferredParamNamesKnown(inferredParamNames)) {
+          continue;
+        }
         if (isStdlibCollectionHelper) {
           return false;
         }
@@ -700,6 +723,9 @@ bool inferImplicitTemplateArgs(const Definition &def,
         return false;
       }
       if (!resolvedArg.concrete) {
+        if (isStdlibCollectionHelper && allInferredParamNamesKnown(inferredParamNames)) {
+          continue;
+        }
         error = "implicit template arguments must be concrete on " + def.fullPath;
         return false;
       }

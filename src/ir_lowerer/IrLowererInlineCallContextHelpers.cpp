@@ -18,7 +18,15 @@ bool prepareInlineDefinitionCallContext(
   }
 
   out.structDefinition = isStructDefinition(callee);
-  if (out.returnInfo.returnsVoid && requireValue && !out.structDefinition) {
+  const bool isGeneratedMapInsertHelper =
+      callee.fullPath == "/std/collections/mapInsert" ||
+      callee.fullPath.rfind("/std/collections/mapInsert__", 0) == 0 ||
+      callee.fullPath == "/std/collections/experimental_map/mapInsert" ||
+      callee.fullPath.rfind("/std/collections/experimental_map/mapInsert__", 0) == 0 ||
+      callee.fullPath == "/std/collections/experimental_map/mapInsertRef" ||
+      callee.fullPath.rfind("/std/collections/experimental_map/mapInsertRef__", 0) == 0;
+  if (out.returnInfo.returnsVoid && requireValue && !out.structDefinition &&
+      !isGeneratedMapInsertHelper) {
     error = "void call not allowed in expression context: " + callee.fullPath;
     return false;
   }

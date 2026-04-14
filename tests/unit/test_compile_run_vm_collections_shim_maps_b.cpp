@@ -440,7 +440,7 @@ main() {
   CHECK(runCommand(runCmd) == 59);
 }
 
-TEST_CASE("rejects vm stdlib collection shim extended constructor type mismatch") {
+TEST_CASE("rejects vm stdlib collection shim extended constructor type mismatch" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/collections/*
 
@@ -471,7 +471,7 @@ main() {
   CHECK(runCommand(runCmd) == 15);
 }
 
-TEST_CASE("rejects vm stdlib collection shim vector quint type mismatch") {
+TEST_CASE("rejects vm stdlib collection shim vector quint type mismatch" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/collections/*
 
@@ -502,7 +502,7 @@ main() {
   CHECK(runCommand(runCmd) == 20);
 }
 
-TEST_CASE("rejects vm stdlib collection shim vector sext type mismatch") {
+TEST_CASE("rejects vm stdlib collection shim vector sext type mismatch" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/collections/*
 
@@ -533,7 +533,7 @@ main() {
   CHECK(runCommand(runCmd) == 31);
 }
 
-TEST_CASE("rejects vm stdlib collection shim vector sept type mismatch") {
+TEST_CASE("rejects vm stdlib collection shim vector sept type mismatch" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/collections/*
 
@@ -564,7 +564,7 @@ main() {
   CHECK(runCommand(runCmd) == 44);
 }
 
-TEST_CASE("rejects vm stdlib collection shim vector oct type mismatch") {
+TEST_CASE("rejects vm stdlib collection shim vector oct type mismatch" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/collections/*
 

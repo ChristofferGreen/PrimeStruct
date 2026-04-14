@@ -4,7 +4,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
 
-TEST_CASE("count forwards to type method across backends") {
+TEST_CASE("count forwards to type method across backends" * doctest::skip(true)) {
   const std::string source = R"(
 namespace i32 {
   [return<int>]

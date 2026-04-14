@@ -355,10 +355,17 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   };
   if (!expr.isMethodCall) {
     std::string mapHelperName;
+    const bool isCanonicalStdMapHelperCall =
+        expr.name.rfind("/std/collections/map/", 0) == 0 ||
+        expr.name.rfind("std/collections/map/", 0) == 0 ||
+        (!expr.name.empty() &&
+         (expr.namespacePrefix == "/std/collections/map" ||
+          expr.namespacePrefix == "std/collections/map"));
     if (!expr.args.empty() &&
         (resolveMapHelperAliasName(expr, mapHelperName) ||
          (getBuiltinArrayAccessName(expr, mapHelperName) && expr.args.size() == 2)) &&
-        resolveMapAccessTargetInfo(expr.args.front(), localsIn).isMapTarget) {
+        resolveMapAccessTargetInfo(expr.args.front(), localsIn).isMapTarget &&
+        !isCanonicalStdMapHelperCall) {
       return InlineCallDispatchResult::NotHandled;
     }
     std::string accessName;
@@ -461,7 +468,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   if (vectorMutatorCallFormResult != InlineCallDispatchResult::NotHandled) {
     return vectorMutatorCallFormResult;
   }
-  return tryEmitInlineCallWithCountFallbacks(
+  const auto inlineResult = tryEmitInlineCallWithCountFallbacks(
       expr,
       [&](const Expr &callExpr) { return isArrayCountCallFn(callExpr, localsIn); },
       [&](const Expr &callExpr) { return isStringCountCallFn(callExpr, localsIn); },
@@ -494,6 +501,13 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding) {
           return false;
         }
+        std::string mapHelperName;
+        if (resolveMapHelperAliasName(receiverExpr, mapHelperName) &&
+            (mapHelperName == "at" || mapHelperName == "at_unsafe" ||
+             mapHelperName == "tryAt" || mapHelperName == "contains") &&
+            receiverExpr.args.size() == 2) {
+          return false;
+        }
         const auto arrayVectorTargetInfo = resolveArrayVectorAccessTargetInfo(receiverExpr, localsIn);
         if (resolveMapAccessTargetInfo(receiverExpr, localsIn).isMapTarget) {
           return true;
@@ -523,6 +537,17 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         return emitCanonicalInlineDefinitionCall(callExpr, callee);
       },
       error);
+  const bool debugDirectMapAtCountCall =
+      !expr.isMethodCall &&
+      (isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) &&
+      expr.args.size() == 1 &&
+      expr.args.front().kind == Expr::Kind::Call &&
+      expr.args.front().name == "/std/collections/map/at";
+  if (debugDirectMapAtCountCall && inlineResult == InlineCallDispatchResult::Emitted) {
+    error = "debug: inline dispatch emitted direct map-at count";
+    return InlineCallDispatchResult::Error;
+  }
+  return inlineResult;
 }
 
 } // namespace primec::ir_lowerer

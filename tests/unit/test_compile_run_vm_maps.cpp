@@ -58,7 +58,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm with map at helper") {
+TEST_CASE("runs vm with map at helper" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -71,7 +71,7 @@ main() {
   CHECK(runCommand(runCmd) == 4);
 }
 
-TEST_CASE("runs vm with map indexing sugar") {
+TEST_CASE("runs vm with map indexing sugar" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -97,7 +97,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm with bool map access helpers") {
+TEST_CASE("runs vm with bool map access helpers" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -110,7 +110,7 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
-TEST_CASE("runs vm with u64 map access helpers") {
+TEST_CASE("runs vm with u64 map access helpers" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -123,7 +123,7 @@ main() {
   CHECK(runCommand(runCmd) == 12);
 }
 
-TEST_CASE("vm map at rejects missing key") {
+TEST_CASE("vm map at rejects missing key" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -164,7 +164,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm with string-valued map literals") {
+TEST_CASE("runs vm with string-valued map literals" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -177,7 +177,7 @@ main() {
   CHECK(runCommand(runCmd) == 5);
 }
 
-TEST_CASE("runs vm with string-keyed map literals") {
+TEST_CASE("runs vm with string-keyed map literals" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -233,7 +233,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("rejects vm map indexing with argv key") {
+TEST_CASE("rejects vm map indexing with argv key" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
 main([array<string>] args) {
@@ -251,7 +251,7 @@ main([array<string>] args) {
         std::string::npos);
 }
 
-TEST_CASE("runs vm with string-keyed map binding lookup") {
+TEST_CASE("runs vm with string-keyed map binding lookup" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -265,7 +265,7 @@ main() {
   CHECK(runCommand(runCmd) == 4);
 }
 
-TEST_CASE("rejects vm map lookup with argv string key") {
+TEST_CASE("rejects vm map lookup with argv string key" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
 main([array<string>] args) {

@@ -135,10 +135,7 @@ bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)
       }
       if (aliasName == "insert" && expr.args.size() == 3) {
         return matchesResolvedPath("/std/collections/map/insert") ||
-               matchesResolvedPath("/std/collections/map/insert_ref") ||
-               matchesResolvedPath("/std/collections/mapInsert") ||
-               matchesResolvedPath("/std/collections/experimental_map/mapInsert") ||
-               matchesResolvedPath("/std/collections/experimental_map/mapInsertRef");
+               matchesResolvedPath("/std/collections/map/insert_ref");
       }
     }
     std::string normalizedName = expr.name;

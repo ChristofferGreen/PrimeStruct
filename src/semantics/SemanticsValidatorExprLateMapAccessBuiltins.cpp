@@ -128,15 +128,53 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     const std::string path = "/std/collections/map/" + helperName;
     return hasImportedDefinitionPath(path) || hasDeclaredDefinitionPath(path);
   };
+  auto isLocalRootMapAliasCall = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
+        !hasDeclaredDefinitionPath("/map")) {
+      return false;
+    }
+    const std::string resolvedCandidate = resolveCalleePath(candidate);
+    return resolvedCandidate == "/map" ||
+           resolvedCandidate.rfind("/map__", 0) == 0;
+  };
+  auto isMapLikeReceiver = [&](const Expr &candidate) {
+    return !isLocalRootMapAliasCall(candidate) &&
+           this->isMapLikeBareAccessReceiver(candidate, params, locals,
+                                             *context.dispatchResolvers);
+  };
+  auto explicitCallPath = [&]() -> std::string {
+    if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.name.empty()) {
+      return {};
+    }
+    if (!expr.name.empty() && expr.name.front() == '/') {
+      return expr.name;
+    }
+    std::string prefix = expr.namespacePrefix;
+    if (!prefix.empty() && prefix.front() != '/') {
+      prefix.insert(prefix.begin(), '/');
+    }
+    if (prefix.empty()) {
+      return "/" + expr.name;
+    }
+    return prefix + "/" + expr.name;
+  };
+  const std::string explicitPath = explicitCallPath();
+  auto hasExplicitDeclaredCallPath = [&](const std::string &path) {
+    return hasDeclaredDefinitionPath(path) || hasImportedDefinitionPath(path);
+  };
+
+  if (!expr.isMethodCall &&
+      (explicitPath == "/map/tryAt" || explicitPath == "/map/tryAt_ref") &&
+      !hasExplicitDeclaredCallPath(explicitPath)) {
+    return failLateMapAccessBuiltinDiagnostic("unknown call target: " + explicitPath);
+  }
 
   std::string builtinName;
   if (!expr.isMethodCall &&
       getCanonicalMapAccessBuiltinName(expr, builtinName) &&
       expr.args.size() == 2 && !hasNamedArguments(expr.argNames)) {
-    if (!this->isMapLikeBareAccessReceiver(expr.args.front(), params, locals,
-                                           *context.dispatchResolvers) &&
-        this->isMapLikeBareAccessReceiver(expr.args[1], params, locals,
-                                          *context.dispatchResolvers)) {
+    if (!isMapLikeReceiver(expr.args.front()) &&
+        isMapLikeReceiver(expr.args[1])) {
       Expr rewrittenMapAccessCall = expr;
       std::swap(rewrittenMapAccessCall.args[0], rewrittenMapAccessCall.args[1]);
       handledOut = true;
@@ -202,9 +240,8 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
   if (!expr.isMethodCall && isSimpleCallName(expr, "contains") &&
       expr.args.size() == 2 &&
       (context.shouldBuiltinValidateBareMapContainsCall ||
-       this->isMapLikeBareAccessReceiver(
-           expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)],
-           params, locals, *context.dispatchResolvers) ||
+       isMapLikeReceiver(
+           expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)]) ||
        this->isIndexedArgsPackMapReceiverTarget(
            expr.args.front(), *context.dispatchResolvers))) {
     if (!hasBareMapContainsBuiltinDefinition()) {
@@ -266,10 +303,10 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         (isSimpleCallName(expr, "tryAt") ||
          resolved == "/std/collections/map/tryAt"))) &&
       expr.args.size() == 2 &&
+      (expr.isMethodCall || !hasDeclaredDefinitionPath(resolved)) &&
       (context.shouldBuiltinValidateBareMapTryAtCall ||
-       this->isMapLikeBareAccessReceiver(
-           expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)],
-           params, locals, *context.dispatchResolvers) ||
+       isMapLikeReceiver(
+           expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)]) ||
        this->isIndexedArgsPackMapReceiverTarget(
            expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)],
            *context.dispatchResolvers))) {
@@ -340,10 +377,10 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
   if (!expr.isMethodCall &&
       getCanonicalMapAccessBuiltinName(expr, builtinName) &&
       expr.args.size() == 2 &&
+      !hasDeclaredDefinitionPath(resolved) &&
       (context.shouldBuiltinValidateBareMapAccessCall ||
-       this->isMapLikeBareAccessReceiver(
-           expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)],
-           params, locals, *context.dispatchResolvers) ||
+       isMapLikeReceiver(
+           expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)]) ||
        this->isIndexedArgsPackMapReceiverTarget(
            expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)],
            *context.dispatchResolvers))) {

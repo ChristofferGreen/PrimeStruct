@@ -399,6 +399,18 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     }
     std::string experimentalMapKeyType;
     std::string experimentalMapValueType;
+    auto isRootMapAliasPath = [](const std::string &path) {
+      return path == "/map" || path.rfind("/map__", 0) == 0;
+    };
+    auto explicitCallPath = [](const Expr &candidate) {
+      if (candidate.name.empty() || candidate.name.front() == '/') {
+        return candidate.name;
+      }
+      if (candidate.namespacePrefix.empty()) {
+        return "/" + candidate.name;
+      }
+      return candidate.namespacePrefix + "/" + candidate.name;
+    };
     if (!expr.isMethodCall &&
         context.resolveExperimentalMapTarget != nullptr &&
         ((context.resolveExperimentalMapTarget(
@@ -412,6 +424,11 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
           "unknown call target: /std/collections/map/" + builtinName);
     }
     auto isExperimentalMapTypeReceiver = [&](const Expr &candidate) {
+      if (candidate.kind == Expr::Kind::Call &&
+          (isRootMapAliasPath(resolveCalleePath(candidate)) ||
+           isRootMapAliasPath(explicitCallPath(candidate)))) {
+        return false;
+      }
       std::string receiverTypeText;
       return inferQueryExprTypeText(candidate, params, locals, receiverTypeText) &&
              isExperimentalMapTypeText(receiverTypeText);
@@ -531,7 +548,10 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     }
     if (!isMap && !isExperimentalMap) {
       std::string receiverTypeText;
-      if (inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
+      if (!(receiverExpr.kind == Expr::Kind::Call &&
+            (isRootMapAliasPath(resolveCalleePath(receiverExpr)) ||
+             isRootMapAliasPath(explicitCallPath(receiverExpr)))) &&
+          inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
           extractMapKeyValueTypesFromTypeText(receiverTypeText, mapKeyType, mapValueType)) {
         if (isExperimentalMapTypeText(receiverTypeText)) {
           isExperimentalMap = true;

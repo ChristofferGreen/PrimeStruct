@@ -17,6 +17,7 @@ trap 'rm -f "$result_file"' EXIT
 
 python3 - "$command_text" "$memory_guard_mb" >"$result_file" <<'PY'
 import os
+import resource
 import signal
 import subprocess
 import sys
@@ -29,8 +30,24 @@ guard_kb = 0
 if guard_mb_arg.isdigit() and int(guard_mb_arg) > 0:
     guard_kb = int(guard_mb_arg) * 1024
 
+
+def apply_memory_limit() -> None:
+    if guard_kb <= 0:
+        return
+    limit_bytes = guard_kb * 1024
+    for rlimit_name in ("RLIMIT_AS", "RLIMIT_DATA"):
+        limit_kind = getattr(resource, rlimit_name, None)
+        if limit_kind is None:
+            continue
+        try:
+            resource.setrlimit(limit_kind, (limit_bytes, limit_bytes))
+        except Exception:
+            # Some platforms or limits might not be adjustable in this context.
+            continue
+
 proc = subprocess.Popen(
     ["/bin/bash", "-lc", command_text],
+    preexec_fn=apply_memory_limit,
     start_new_session=True,
 )
 

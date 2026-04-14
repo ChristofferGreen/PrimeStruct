@@ -79,6 +79,55 @@ std::string selectHelperOverloadPath(const Expr &expr, const std::string &resolv
   if (familyIt == ctx.helperOverloads.end()) {
     return resolvedPath;
   }
+  auto explicitCallPath = [](const Expr &callExpr) -> std::string {
+    if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall || callExpr.name.empty()) {
+      return {};
+    }
+    if (callExpr.name.front() == '/') {
+      return callExpr.name;
+    }
+    std::string prefix = callExpr.namespacePrefix;
+    if (!prefix.empty() && prefix.front() != '/') {
+      prefix.insert(prefix.begin(), '/');
+    }
+    if (prefix.empty()) {
+      return "/" + callExpr.name;
+    }
+    return prefix + "/" + callExpr.name;
+  };
+  auto isMapEntryConstructorPath = [](const std::string &path) {
+    return path == "/std/collections/map/entry" ||
+           path.rfind("/std/collections/map/entry__", 0) == 0 ||
+           path == "/map/entry" ||
+           path.rfind("/map/entry__", 0) == 0 ||
+           path == "/std/collections/experimental_map/entry" ||
+           path.rfind("/std/collections/experimental_map/entry__", 0) == 0;
+  };
+  auto isMapEntryConstructorExpr = [&](const Expr &argExpr) {
+    if (argExpr.kind != Expr::Kind::Call || argExpr.isMethodCall) {
+      return false;
+    }
+    return isMapEntryConstructorPath(explicitCallPath(argExpr));
+  };
+  const bool preferMapEntryArgsPackOverload =
+      !expr.isMethodCall &&
+      (resolvedPath == "/std/collections/map/map" || resolvedPath == "/map") &&
+      !expr.args.empty() &&
+      ([&]() {
+        for (const Expr &argExpr : expr.args) {
+          if (!isMapEntryConstructorExpr(argExpr)) {
+            return false;
+          }
+        }
+        return true;
+      })();
+  if (preferMapEntryArgsPackOverload) {
+    for (const auto &entry : familyIt->second) {
+      if (entry.parameterCount == 1) {
+        return entry.internalPath;
+      }
+    }
+  }
   std::vector<size_t> candidateCounts;
   if (expr.isMethodCall) {
     // Most method-call paths still carry the receiver explicitly in expr.args,

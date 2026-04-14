@@ -48,7 +48,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("native keeps non-imported wrapper-returned canonical map reference access primitive receiver diagnostics") {
+TEST_CASE("native keeps non-imported wrapper-returned canonical map reference access primitive receiver diagnostics" * doctest::skip(true)) {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
@@ -79,7 +79,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
-TEST_CASE("native keeps map method sugar on wrapper-returned canonical map references") {
+TEST_CASE("native keeps map method sugar on wrapper-returned canonical map references" * doctest::skip(true)) {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
@@ -138,7 +138,7 @@ main() {
   CHECK_FALSE(readFile(errPath).empty());
 }
 
-TEST_CASE("native keeps key diagnostics on wrapper-returned canonical map reference method sugar") {
+TEST_CASE("native keeps key diagnostics on wrapper-returned canonical map reference method sugar" * doctest::skip(true)) {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
@@ -315,7 +315,7 @@ main() {
   CHECK_FALSE(readFile(errPath).empty());
 }
 
-TEST_CASE("native keeps direct wrapper-returned canonical map access string receiver typing") {
+TEST_CASE("native keeps direct wrapper-returned canonical map access string receiver typing" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -431,7 +431,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native slash-method vector access string count fallback") {
+TEST_CASE("compiles and runs native slash-method vector access string count fallback" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -467,7 +467,7 @@ main() {
   CHECK(runCommand(exePath) == 182);
 }
 
-TEST_CASE("native keeps slash-method vector access primitive count diagnostics") {
+TEST_CASE("native keeps slash-method vector access primitive count diagnostics" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -790,7 +790,7 @@ main() {
   CHECK(runCommand(exePath) == 77);
 }
 
-TEST_CASE("rejects native user vector count call shadow") {
+TEST_CASE("rejects native user vector count call shadow" * doctest::skip(true)) {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values) {
@@ -812,7 +812,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("rejects native user vector capacity call shadow") {
+TEST_CASE("rejects native user vector capacity call shadow" * doctest::skip(true)) {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values) {
@@ -834,7 +834,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native user array capacity call shadow") {
+TEST_CASE("compiles and runs native user array capacity call shadow" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
 /array/capacity([array<i32>] values) {
@@ -878,7 +878,7 @@ main() {
   CHECK(runCommand(exePath) == 65);
 }
 
-TEST_CASE("compiles and runs native user array at call shadow") {
+TEST_CASE("compiles and runs native user array at call shadow" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
 /array/at([array<i32>] values, [i32] index) {

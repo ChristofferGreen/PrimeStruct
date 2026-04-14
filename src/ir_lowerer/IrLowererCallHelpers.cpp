@@ -233,6 +233,12 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
       });
 
   const std::string priorError = error;
+  const bool debugDirectMapAtCountCall =
+      !expr.isMethodCall &&
+      (isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) &&
+      expr.args.size() == 1 &&
+      expr.args.front().kind == Expr::Kind::Call &&
+      expr.args.front().name == "/std/collections/map/at";
   for (size_t receiverIndex : receiverIndices) {
     Expr methodExpr = buildMethodExprForReceiverIndex(receiverIndex);
     const Definition *callee = resolveMethodCallDefinition(methodExpr);
@@ -246,6 +252,10 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const auto emitResult = emitResolvedInlineDefinitionCall(
         methodExpr, callee, emitInlineDefinitionCall, error);
     if (emitResult == ResolvedInlineCallResult::Emitted) {
+      if (debugDirectMapAtCountCall && callee != nullptr) {
+        error = "debug: non-method count fallback emitted via " + callee->fullPath;
+        return CountMethodFallbackResult::Error;
+      }
       return CountMethodFallbackResult::Emitted;
     }
     if (emitResult == ResolvedInlineCallResult::Error) {

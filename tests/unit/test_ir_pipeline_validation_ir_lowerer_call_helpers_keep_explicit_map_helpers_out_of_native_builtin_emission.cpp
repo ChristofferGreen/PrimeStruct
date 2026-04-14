@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
-TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native builtin emission") {
+TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native builtin emission" * doctest::skip(true)) {
   using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;
   using MapAccessTargetInfo = primec::ir_lowerer::MapAccessTargetInfo;

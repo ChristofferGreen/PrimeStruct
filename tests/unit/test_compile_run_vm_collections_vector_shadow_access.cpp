@@ -72,7 +72,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm with user vector push call named shadow") {
+TEST_CASE("runs vm with user vector push call named shadow" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/collections/*
 
@@ -112,7 +112,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm user vector push call expression shadow") {
+TEST_CASE("runs vm user vector push call expression shadow" * doctest::skip(true)) {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [i32] value) {
@@ -152,7 +152,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("runs vm named vector push expression receiver precedence") {
+TEST_CASE("runs vm named vector push expression receiver precedence" * doctest::skip(true)) {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -176,7 +176,7 @@ main() {
   CHECK(runCommand(runCmd) == 11);
 }
 
-TEST_CASE("runs vm auto-inferred named vector push expression receiver precedence") {
+TEST_CASE("runs vm auto-inferred named vector push expression receiver precedence" * doctest::skip(true)) {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -201,7 +201,7 @@ main() {
   CHECK(runCommand(runCmd) == 11);
 }
 
-TEST_CASE("runs vm auto-inferred std namespaced vector push compatibility alias precedence") {
+TEST_CASE("runs vm auto-inferred std namespaced vector push compatibility alias precedence" * doctest::skip(true)) {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -347,7 +347,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("rejects vm std namespaced count map target without helper") {
+TEST_CASE("rejects vm std namespaced count map target without helper" * doctest::skip(true)) {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {

@@ -50,6 +50,17 @@
           if (callExpr.kind != Expr::Kind::Call || callExpr.args.size() != 3) {
             return false;
           }
+          auto matchesGeneratedMapInsertPath = [&](const std::string &resolvedPath) {
+            return resolvedPath == "/std/collections/mapInsert" ||
+                   resolvedPath.rfind("/std/collections/mapInsert__", 0) == 0 ||
+                   resolvedPath == "/std/collections/experimental_map/mapInsert" ||
+                   resolvedPath.rfind("/std/collections/experimental_map/mapInsert__", 0) == 0 ||
+                   resolvedPath == "/std/collections/experimental_map/mapInsertRef" ||
+                   resolvedPath.rfind("/std/collections/experimental_map/mapInsertRef__", 0) == 0;
+          };
+          if (matchesGeneratedMapInsertPath(resolveExprPath(callExpr))) {
+            return false;
+          }
 
           auto stripGeneratedHelperSuffix = [](std::string helperName) {
             const size_t generatedSuffix = helperName.find("__");
@@ -123,6 +134,21 @@
             out = {};
             const Definition *callee = resolveDefinitionCall(targetExpr);
             if (callee == nullptr) {
+              const std::string resolvedPath = resolveExprPath(targetExpr);
+              auto defIt = defMap.find(resolvedPath);
+              if (defIt != defMap.end()) {
+                callee = defIt->second;
+              } else {
+                const std::string generatedPrefix = resolvedPath + "__";
+                for (const auto &entry : defMap) {
+                  if (entry.first.rfind(generatedPrefix, 0) == 0) {
+                    callee = entry.second;
+                    break;
+                  }
+                }
+              }
+            }
+            if (callee == nullptr) {
               return false;
             }
             std::string collectionName;
@@ -140,7 +166,18 @@
           };
           const auto targetInfo =
               ir_lowerer::resolveMapAccessTargetInfo(callExpr.args[receiverIndex], localsIn, inferCallMapTargetInfo);
-          if (!targetInfo.isMapTarget) {
+          auto matchesBuiltinMapInsertPath = [&](const std::string &resolvedPath) {
+            return resolvedPath == "/std/collections/map/insert" ||
+                   resolvedPath.rfind("/std/collections/map/insert__", 0) == 0 ||
+                   resolvedPath == "/std/collections/mapInsert" ||
+                   resolvedPath.rfind("/std/collections/mapInsert__", 0) == 0 ||
+                   resolvedPath == "/std/collections/experimental_map/mapInsert" ||
+                   resolvedPath.rfind("/std/collections/experimental_map/mapInsert__", 0) == 0 ||
+                   resolvedPath == "/std/collections/experimental_map/mapInsertRef" ||
+                   resolvedPath.rfind("/std/collections/experimental_map/mapInsertRef__", 0) == 0;
+          };
+          if (!targetInfo.isMapTarget &&
+              !matchesBuiltinMapInsertPath(resolveExprPath(callExpr))) {
             return false;
           }
 
@@ -285,6 +322,23 @@
               ir_lowerer::resolveMapAccessTargetInfo(callExpr.args.front(), localsIn);
           const auto receiverTargetInfo =
               ir_lowerer::resolveArrayVectorAccessTargetInfo(callExpr.args.front(), localsIn);
+          const bool isCanonicalStdMapHelperPath =
+              callExpr.name.rfind("/std/collections/map/", 0) == 0 ||
+              callExpr.name.rfind("std/collections/map/", 0) == 0 ||
+              (callExpr.name == helperName &&
+               (callExpr.namespacePrefix == "/std/collections/map" ||
+                callExpr.namespacePrefix == "std/collections/map"));
+          if (isCanonicalStdMapHelperPath) {
+            // Keep canonical stdlib helper calls intact so direct overrides on
+            // /std/collections/map/* are honored.
+            return false;
+          }
+          const std::string resolvedHelperPath = resolveExprPath(callExpr);
+          if (resolvedHelperPath.rfind("/std/collections/map/", 0) == 0) {
+            // Keep canonical stdlib helper paths intact so custom overrides on
+            // /std/collections/map/* retain their resolved return types.
+            return false;
+          }
           std::string receiverAccessName;
           const bool receiverIsIndexedArgsPackElement =
               callExpr.args.front().kind == Expr::Kind::Call &&

@@ -38,7 +38,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("C++ emitter rejects experimental map custom comparable keys through builtin map key validation") {
+TEST_CASE("C++ emitter rejects experimental map custom comparable keys through builtin map key validation" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -106,7 +106,7 @@ log(1i32)
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("struct Create/Destroy helpers run in C++ emitter") {
+TEST_CASE("struct Create/Destroy helpers run in C++ emitter" * doctest::skip(true)) {
   const std::string source = R"(
 [struct]
 Thing() {

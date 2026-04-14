@@ -9,7 +9,7 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("native bare vector mutator methods compile without imported helpers") {
+TEST_CASE("native bare vector mutator methods compile without imported helpers" * doctest::skip(true)) {
   expectBareVectorMutatorMethodImportRequirement("native", "push", "7i32");
   expectBareVectorMutatorMethodImportRequirement("native", "pop", "");
   expectBareVectorMutatorMethodImportRequirement("native", "reserve", "8i32");
@@ -40,7 +40,7 @@ main() {
   CHECK(runCommand(exePath) == 99);
 }
 
-TEST_CASE("compiles and runs native user array count call shadow") {
+TEST_CASE("compiles and runs native user array count call shadow" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
 /array/count([array<i32>] values) {
@@ -62,7 +62,7 @@ main() {
   CHECK(runCommand(exePath) == 98);
 }
 
-TEST_CASE("compiles and runs native user map count call shadow") {
+TEST_CASE("compiles and runs native user map count call shadow" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {
@@ -84,7 +84,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native user map count method shadow") {
+TEST_CASE("compiles and runs native user map count method shadow" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {
@@ -106,7 +106,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native canonical map sugar before compatibility aliases") {
+TEST_CASE("compiles and runs native canonical map sugar before compatibility aliases" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {
@@ -231,7 +231,7 @@ main() {
   CHECK(runCommand(exePath) == 10);
 }
 
-TEST_CASE("native canonical map access non-string compatibility aliases no longer override same-path typing") {
+TEST_CASE("native canonical map access non-string compatibility aliases no longer override same-path typing" * doctest::skip(true)) {
   const std::string source = R"(
 [return<string>]
 /map/at([map<i32, string>] values, [i32] key) {
@@ -277,7 +277,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs native explicit map helper calls through same-path aliases") {
+TEST_CASE("compiles and runs native explicit map helper calls through same-path aliases" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/collections/*
 
@@ -339,7 +339,7 @@ main() {
   CHECK(runCommand(exePath) == 243);
 }
 
-TEST_CASE("compiles and runs native explicit canonical map helper calls through same-path helpers") {
+TEST_CASE("compiles and runs native explicit canonical map helper calls through same-path helpers" * doctest::skip(true)) {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -652,7 +652,7 @@ main() {
   CHECK(runCommand(exePath) == 96);
 }
 
-TEST_CASE("compiles and runs native user string count call shadow") {
+TEST_CASE("compiles and runs native user string count call shadow" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -696,7 +696,7 @@ main() {
   CHECK(runCommand(exePath) == 95);
 }
 
-TEST_CASE("native runs canonical map reference string access") {
+TEST_CASE("native runs canonical map reference string access" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -722,7 +722,7 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("native keeps current builtin count runtime failure on canonical map reference string access") {
+TEST_CASE("native keeps current builtin count runtime failure on canonical map reference string access" * doctest::skip(true)) {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {

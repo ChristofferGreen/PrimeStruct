@@ -4,7 +4,7 @@ bool buildCachedEmittedCppExecutableAtO0(const std::string &fixtureName,
                                          const std::string &source,
                                          std::string &exePathOut);
 
-static void expectCppVectorCountCompatibilityTypeMismatchReject(const std::string &compileCmd) {
+[[maybe_unused]] static void expectCppVectorCountCompatibilityTypeMismatchReject(const std::string &compileCmd) {
   const std::string errPath =
       testScratchPath("primec_cpp_vector_count_compatibility_type_mismatch_reject_err.txt").string();
   const std::string captureCmd = compileCmd + " > /dev/null 2> " + errPath;
@@ -12,7 +12,7 @@ static void expectCppVectorCountCompatibilityTypeMismatchReject(const std::strin
   CHECK_FALSE(readFile(errPath).empty());
 }
 
-static std::string sharedCppEmitterFixtureArgs(int selector) {
+[[maybe_unused]] static std::string sharedCppEmitterFixtureArgs(int selector) {
   std::string args;
   for (int index = 1; index < selector; ++index) {
     args += " ";
@@ -21,29 +21,29 @@ static std::string sharedCppEmitterFixtureArgs(int selector) {
   return args;
 }
 
-static std::string requireSharedCppEmitterFixtureExecutable(const std::string &fixtureName,
-                                                            const std::string &source) {
+[[maybe_unused]] static std::string requireSharedCppEmitterFixtureExecutable(const std::string &fixtureName,
+                                                                             const std::string &source) {
   std::string exePath;
   REQUIRE(buildCachedEmittedCppExecutableAtO0(fixtureName, source, exePath));
   return exePath;
 }
 
-static int runSharedCppEmitterFixture(const std::string &fixtureName,
-                                      const std::string &source,
-                                      int selector) {
+[[maybe_unused]] static int runSharedCppEmitterFixture(const std::string &fixtureName,
+                                                       const std::string &source,
+                                                       int selector) {
   const std::string exePath = requireSharedCppEmitterFixtureExecutable(fixtureName, source);
   return runCommand(quoteShellArg(exePath) + sharedCppEmitterFixtureArgs(selector));
 }
 
-static int runSharedCppEmitterFixtureToFile(const std::string &fixtureName,
-                                            const std::string &source,
-                                            int selector,
-                                            const std::string &outPath) {
+[[maybe_unused]] static int runSharedCppEmitterFixtureToFile(const std::string &fixtureName,
+                                                             const std::string &source,
+                                                             int selector,
+                                                             const std::string &outPath) {
   const std::string exePath = requireSharedCppEmitterFixtureExecutable(fixtureName, source);
   return runCommand(quoteShellArg(exePath) + sharedCppEmitterFixtureArgs(selector) + " > " + quoteShellArg(outPath));
 }
 
-static const std::string &sharedCppEmitterResultFixtureSource() {
+[[maybe_unused]] static const std::string &sharedCppEmitterResultFixtureSource() {
   static const std::string source = R"(
 [return<Result<i32, FileError>>]
 lift([i32] value) {
@@ -93,7 +93,7 @@ main([array<string>] args) {
   return source;
 }
 
-static const std::string &sharedCppEmitterImageFixtureSource() {
+[[maybe_unused]] static const std::string &sharedCppEmitterImageFixtureSource() {
   static const std::string source = R"(
 import /std/image/*
 
@@ -112,7 +112,7 @@ main([array<string>] args) {
   return source;
 }
 
-static const std::string &sharedCppEmitterUiCommandFixtureSource() {
+[[maybe_unused]] static const std::string &sharedCppEmitterUiCommandFixtureSource() {
   static const std::string source = R"(
 import /std/collections/*
 import /std/math/*
@@ -194,7 +194,7 @@ main([array<string>] args) {
   return source;
 }
 
-static const std::string &sharedCppEmitterUiLayoutFixtureSource() {
+[[maybe_unused]] static const std::string &sharedCppEmitterUiLayoutFixtureSource() {
   static const std::string source = R"(
 import /std/collections/*
 import /std/math/*
@@ -252,7 +252,7 @@ main([array<string>] args) {
   return source;
 }
 
-static const std::string &sharedCppEmitterUiWidgetFixtureSource() {
+[[maybe_unused]] static const std::string &sharedCppEmitterUiWidgetFixtureSource() {
   static const std::string source = R"(
 import /std/collections/*
 import /std/math/*
@@ -380,7 +380,7 @@ main([array<string>] args) {
   return source;
 }
 
-static const std::string &sharedCppEmitterUiLoginFixtureSource() {
+[[maybe_unused]] static const std::string &sharedCppEmitterUiLoginFixtureSource() {
   static const std::string source = R"(
 import /std/collections/*
 import /std/math/*
@@ -504,7 +504,7 @@ main([array<string>] args) {
   return source;
 }
 
-static const std::string &sharedCppEmitterUiEventFixtureSource() {
+[[maybe_unused]] static const std::string &sharedCppEmitterUiEventFixtureSource() {
   static const std::string source = R"(
 import /std/collections/*
 import /std/math/*

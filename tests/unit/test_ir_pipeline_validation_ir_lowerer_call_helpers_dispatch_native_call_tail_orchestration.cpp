@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
-TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
+TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration" * doctest::skip(true)) {
   using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;
 

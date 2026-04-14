@@ -48,7 +48,10 @@
           return false;
         }
         error =
-            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions";
+            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions (call=" +
+            resolveExprPath(expr) + ", name=" + expr.name +
+            ", args=" + std::to_string(expr.args.size()) +
+            ", method=" + std::string(expr.isMethodCall ? "true" : "false") + ")";
         return false;
       }
       default:

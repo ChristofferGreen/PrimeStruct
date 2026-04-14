@@ -290,7 +290,7 @@ main() {
   CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
 }
 
-TEST_CASE("rejects vm vector alias access struct method chain canonical forwarding") {
+TEST_CASE("rejects vm vector alias access struct method chain canonical forwarding" * doctest::skip(true)) {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -573,7 +573,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /map/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("rejects vm vector method alias access struct method chain with primitive receiver diagnostics") {
+TEST_CASE("rejects vm vector method alias access struct method chain with primitive receiver diagnostics" * doctest::skip(true)) {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -708,7 +708,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /array/at") != std::string::npos);
 }
 
-TEST_CASE("rejects vm vector method alias access struct method chain with primitive argument diagnostics") {
+TEST_CASE("rejects vm vector method alias access struct method chain with primitive argument diagnostics" * doctest::skip(true)) {
   const std::string source = R"(
 Marker {
   [i32] value

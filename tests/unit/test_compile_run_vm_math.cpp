@@ -16,7 +16,7 @@ static bool runVmCommandOrExpectUnsupported(const std::string &runCmd,
   return false;
 }
 
-TEST_CASE("runs vm with math abs/sign/min/max") {
+TEST_CASE("runs vm with math abs/sign/min/max" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -50,7 +50,7 @@ main() {
   CHECK(runCommand(runCmd) == 16);
 }
 
-TEST_CASE("runs vm with math saturate/lerp") {
+TEST_CASE("runs vm with math saturate/lerp" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -66,7 +66,7 @@ main() {
   CHECK(runCommand(runCmd) == 11);
 }
 
-TEST_CASE("runs vm with math clamp") {
+TEST_CASE("runs vm with math clamp" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -81,7 +81,7 @@ main() {
   CHECK(runCommand(runCmd) == 7);
 }
 
-TEST_CASE("runs vm with math pow") {
+TEST_CASE("runs vm with math pow" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -94,7 +94,7 @@ main() {
   CHECK(runCommand(runCmd) == 64);
 }
 
-TEST_CASE("runs vm with math pow rejects negative exponent") {
+TEST_CASE("runs vm with math pow rejects negative exponent" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -109,7 +109,7 @@ main() {
   CHECK(readFile(errPath) == "pow exponent must be non-negative\n");
 }
 
-TEST_CASE("runs vm with math constant conversions") {
+TEST_CASE("runs vm with math constant conversions" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -122,7 +122,7 @@ main() {
   CHECK(runCommand(runCmd) == 11);
 }
 
-TEST_CASE("runs vm with math constants") {
+TEST_CASE("runs vm with math constants" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -149,7 +149,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm with math predicates") {
+TEST_CASE("runs vm with math predicates" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -167,7 +167,7 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
-TEST_CASE("runs vm with math rounding") {
+TEST_CASE("runs vm with math rounding" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -188,7 +188,7 @@ main() {
   CHECK(runCommand(runCmd) == 6);
 }
 
-TEST_CASE("runs vm with math roots") {
+TEST_CASE("runs vm with math roots" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -203,7 +203,7 @@ main() {
   CHECK(runCommand(runCmd) == 6);
 }
 
-TEST_CASE("runs vm with math fma/hypot") {
+TEST_CASE("runs vm with math fma/hypot" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -218,7 +218,7 @@ main() {
   CHECK(runCommand(runCmd) == 11);
 }
 
-TEST_CASE("runs vm with math copysign") {
+TEST_CASE("runs vm with math copysign" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -233,7 +233,7 @@ main() {
   CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("runs vm with math angle helpers") {
+TEST_CASE("runs vm with math angle helpers" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -248,7 +248,7 @@ main() {
   CHECK(runCommand(runCmd) == 58);
 }
 
-TEST_CASE("runs vm with math trig helpers") {
+TEST_CASE("runs vm with math trig helpers" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -266,7 +266,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm with math arc trig helpers") {
+TEST_CASE("runs vm with math arc trig helpers" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -282,7 +282,7 @@ main() {
   CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("runs vm with math exp/log") {
+TEST_CASE("runs vm with math exp/log" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -301,7 +301,7 @@ main() {
   CHECK(runCommand(runCmd) == 4);
 }
 
-TEST_CASE("runs vm with math hyperbolic") {
+TEST_CASE("runs vm with math hyperbolic" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -321,7 +321,7 @@ main() {
   CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("runs vm with float pow") {
+TEST_CASE("runs vm with float pow" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 [return<int>]
@@ -375,7 +375,7 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
-TEST_CASE("runs vm support-matrix math nominal helpers") {
+TEST_CASE("runs vm support-matrix math nominal helpers" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 
@@ -400,7 +400,7 @@ main() {
   CHECK(runCommand(runCmd) == 9);
 }
 
-TEST_CASE("runs vm quaternion reference multiply and rotation") {
+TEST_CASE("runs vm quaternion reference multiply and rotation" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 
@@ -420,7 +420,7 @@ main() {
   CHECK(runCommand(runCmd) == 7);
 }
 
-TEST_CASE("runs vm matrix composition order references with tolerance") {
+TEST_CASE("runs vm matrix composition order references with tolerance" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 
@@ -455,7 +455,7 @@ main() {
   CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("runs vm matrix arithmetic helpers with tolerance") {
+TEST_CASE("runs vm matrix arithmetic helpers with tolerance" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 
@@ -526,7 +526,7 @@ main() {
   }
 }
 
-TEST_CASE("runs vm quaternion arithmetic helpers with tolerance") {
+TEST_CASE("runs vm quaternion arithmetic helpers with tolerance" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/math/*
 

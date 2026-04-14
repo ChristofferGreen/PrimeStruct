@@ -139,6 +139,46 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
   state->resolveMapTarget = [=, this](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
     keyTypeOut.clear();
     valueTypeOut.clear();
+    auto isRootMapAliasPath = [](const std::string &path) {
+      return path == "/map" ||
+             path.rfind("/map__", 0) == 0;
+    };
+    auto explicitCallPath = [](const Expr &candidate) -> std::string {
+      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
+        return {};
+      }
+      if (candidate.name.front() == '/') {
+        return candidate.name;
+      }
+      std::string prefix = candidate.namespacePrefix;
+      if (!prefix.empty() && prefix.front() != '/') {
+        prefix.insert(prefix.begin(), '/');
+      }
+      if (prefix.empty()) {
+        return "/" + candidate.name;
+      }
+      return prefix + "/" + candidate.name;
+    };
+    auto hasRootMapDefinitionFamily = [&]() {
+      if (defMap_.find("/map") != defMap_.end()) {
+        return true;
+      }
+      for (const auto &[path, defPtr] : defMap_) {
+        (void)defPtr;
+        if (path.rfind("/map__", 0) == 0) {
+          return true;
+        }
+      }
+      return false;
+    };
+    if (target.kind == Expr::Kind::Call) {
+      const std::string resolvedTarget = resolveCalleePath(target);
+      const std::string explicitTarget = explicitCallPath(target);
+      if (isRootMapAliasPath(resolvedTarget) ||
+          isRootMapAliasPath(explicitTarget)) {
+        return false;
+      }
+    }
     BindingInfo binding;
     if (resolveBindingTarget(target, binding) &&
         resolveMapBinding(binding, keyTypeOut, valueTypeOut)) {
@@ -146,6 +186,13 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
     }
     std::string inferredTypeText;
     if (inferQueryExprTypeText(target, params, locals, inferredTypeText)) {
+      const bool skipRootMapAliasInference =
+          target.kind == Expr::Kind::Call &&
+          ([&]() {
+            const std::string resolvedPath = resolveCalleePath(target);
+            return resolvedPath == "/map" ||
+                   resolvedPath.rfind("/map__", 0) == 0;
+          })();
       std::string base;
       std::string argText;
       const std::string normalizedType = normalizeBindingTypeName(inferredTypeText);
@@ -156,13 +203,20 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
         binding.typeName = normalizedType;
         binding.typeTemplateArg.clear();
       }
-      if (resolveMapBinding(binding, keyTypeOut, valueTypeOut)) {
+      if (!skipRootMapAliasInference &&
+          resolveMapBinding(binding, keyTypeOut, valueTypeOut)) {
         return true;
       }
     }
     if (target.kind == Expr::Kind::Call) {
+      const bool hasVisibleCanonicalMapConstructor =
+          hasVisibleDefinitionPathForCurrentImports("/std/collections/map/map");
+      const bool allowRootMapConstructorAlias =
+          hasVisibleCanonicalMapConstructor && !hasRootMapDefinitionFamily();
       const std::string resolvedTarget = resolveCalleePath(target);
-      if (isDirectMapConstructorPath(resolvedTarget) && target.templateArgs.size() == 2) {
+      if (isDirectMapConstructorPath(resolvedTarget) &&
+          target.templateArgs.size() == 2 &&
+          (!isRootMapAliasPath(resolvedTarget) || allowRootMapConstructorAlias)) {
         keyTypeOut = target.templateArgs[0];
         valueTypeOut = target.templateArgs[1];
         return true;
@@ -170,7 +224,8 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
       std::string builtinCollectionName;
       if (getBuiltinCollectionName(target, builtinCollectionName) &&
           builtinCollectionName == "map" &&
-          target.templateArgs.size() == 2) {
+          target.templateArgs.size() == 2 &&
+          (!isRootMapAliasPath(resolvedTarget) || allowRootMapConstructorAlias)) {
         keyTypeOut = target.templateArgs[0];
         valueTypeOut = target.templateArgs[1];
         return true;

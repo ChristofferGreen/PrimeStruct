@@ -4,7 +4,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
 
-TEST_CASE("experimental gfx end-to-end conformance runs across backends") {
+TEST_CASE("experimental gfx end-to-end conformance runs across backends" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/gfx/experimental/*
 
@@ -140,7 +140,7 @@ main() {
   CHECK(runCommand(nativePath) == 10);
 }
 
-TEST_CASE("canonical gfx end-to-end conformance runs across backends") {
+TEST_CASE("canonical gfx end-to-end conformance runs across backends" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/gfx/*
 

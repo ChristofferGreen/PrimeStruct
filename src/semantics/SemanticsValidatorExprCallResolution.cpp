@@ -207,6 +207,41 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
       paths.push_back(path);
     }
   };
+  auto isMapEntryConstructorPath = [](const std::string &path) {
+    return path == "/std/collections/map/entry" ||
+           path.rfind("/std/collections/map/entry__", 0) == 0 ||
+           path == "/map/entry" ||
+           path.rfind("/map/entry__", 0) == 0 ||
+           path == "/std/collections/experimental_map/entry" ||
+           path.rfind("/std/collections/experimental_map/entry__", 0) == 0;
+  };
+  auto explicitCallPath = [](const Expr &callExpr) -> std::string {
+    if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall ||
+        callExpr.name.empty()) {
+      return {};
+    }
+    if (callExpr.name.front() == '/') {
+      return callExpr.name;
+    }
+    std::string prefix = callExpr.namespacePrefix;
+    if (!prefix.empty() && prefix.front() != '/') {
+      prefix.insert(prefix.begin(), '/');
+    }
+    if (prefix.empty()) {
+      return "/" + callExpr.name;
+    }
+    return prefix + "/" + callExpr.name;
+  };
+  auto isMapEntryConstructorExpr = [&](const Expr &argExpr) {
+    if (argExpr.kind != Expr::Kind::Call || argExpr.isMethodCall) {
+      return false;
+    }
+    const std::string resolvedArgPath = resolveCalleePath(argExpr);
+    if (isMapEntryConstructorPath(resolvedArgPath)) {
+      return true;
+    }
+    return isMapEntryConstructorPath(explicitCallPath(argExpr));
+  };
   auto fnv1a64 = [](const std::string &text) {
     uint64_t hash = 1469598103934665603ULL;
     for (unsigned char c : text) {
@@ -278,8 +313,29 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
       expr.args.front().kind == Expr::Kind::Name &&
       (findParamBinding(params, expr.args.front().name) != nullptr ||
        locals.count(expr.args.front().name) > 0);
+  const std::string mapConstructorBasePath = [&]() -> std::string {
+    if (candidatePath == "/std/collections/map/map" ||
+        candidatePath.rfind("/std/collections/map/map__ov", 0) == 0) {
+      return "/std/collections/map/map";
+    }
+    if (candidatePath == "/map" || candidatePath.rfind("/map__ov", 0) == 0) {
+      return "/map";
+    }
+    return {};
+  }();
+  const bool preferDirectMapConstructorCandidate =
+      !mapConstructorBasePath.empty() &&
+      !expr.isMethodCall &&
+      !expr.args.empty() &&
+      std::all_of(expr.args.begin(), expr.args.end(), [&](const Expr &arg) {
+        return isMapEntryConstructorExpr(arg);
+      });
   auto buildBaseCandidates = [&](auto &baseCandidates) {
     baseCandidates.clear();
+    if (preferDirectMapConstructorCandidate) {
+      appendIfMissing(baseCandidates, overloadCandidatePath(mapConstructorBasePath, 1));
+      appendIfMissing(baseCandidates, mapConstructorBasePath);
+    }
     if (hasTemplateOverloads) {
       if (isTypeNamespaceCall && !expr.args.empty()) {
         appendIfMissing(baseCandidates, overloadCandidatePath(candidatePath, expr.args.size() - 1));

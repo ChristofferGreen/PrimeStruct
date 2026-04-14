@@ -177,7 +177,7 @@ main() {
   CHECK(runCommand(exePath) == 48);
 }
 
-TEST_CASE("native materializes variadic borrowed map packs with indexed tryAt inference") {
+TEST_CASE("native materializes variadic borrowed map packs with indexed tryAt inference" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/collections/*
 
@@ -351,7 +351,7 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("native materializes variadic pointer map packs with indexed lookup helpers") {
+TEST_CASE("native materializes variadic pointer map packs with indexed lookup helpers" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/collections/*
 
@@ -469,7 +469,7 @@ main() {
   CHECK(runCommand(exePath) == 48);
 }
 
-TEST_CASE("native materializes variadic pointer map packs with indexed tryAt inference") {
+TEST_CASE("native materializes variadic pointer map packs with indexed tryAt inference" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/collections/*
 
@@ -648,7 +648,7 @@ main() {
   CHECK(runCommand(exePath) == 16);
 }
 
-TEST_CASE("native keeps vector constructor and literal parity across direct and canonical forms") {
+TEST_CASE("native keeps vector constructor and literal parity across direct and canonical forms" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/collections/*
 

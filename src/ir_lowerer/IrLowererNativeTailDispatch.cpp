@@ -59,7 +59,15 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
     return UnsupportedNativeCallResult::NotHandled;
   }
   if (!expr.isMethodCall && (isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count"))) {
-    error = "count requires array, vector, map, or string target";
+    std::string targetName = "<none>";
+    if (!expr.args.empty()) {
+      if (!expr.args.front().name.empty()) {
+        targetName = expr.args.front().name;
+      } else {
+        targetName = "<expr>";
+      }
+    }
+    error = "count requires array, vector, map, or string target (target=" + targetName + ")";
     return UnsupportedNativeCallResult::Error;
   }
   if (!expr.isMethodCall && isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
@@ -284,6 +292,18 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
          expr.name == "/std/collections/vector/at" ||
          expr.name == "/std/collections/vector/at_unsafe");
     if (isExplicitVectorAccessCall && arrayVectorTargetInfo.isVectorTarget) {
+      return NativeCallTailDispatchResult::NotHandled;
+    }
+    const bool isExplicitMapAccessCall =
+        !expr.isMethodCall &&
+        (expr.name == "/map/at" || expr.name == "/map/at_ref" ||
+         expr.name == "/map/at_unsafe" || expr.name == "/map/at_unsafe_ref" ||
+         expr.name == "/std/collections/map/at" ||
+         expr.name == "/std/collections/map/at_ref" ||
+         expr.name == "/std/collections/map/at_unsafe" ||
+         expr.name == "/std/collections/map/at_unsafe_ref");
+    if (isExplicitMapAccessCall && !expr.args.empty() &&
+        resolveMapAccessTargetInfo(expr.args.front(), localsIn, resolveCallMapAccessTargetInfo).isMapTarget) {
       return NativeCallTailDispatchResult::NotHandled;
     }
     if (expr.args.size() != 2) {

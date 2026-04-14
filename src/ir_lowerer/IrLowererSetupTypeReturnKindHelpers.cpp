@@ -52,6 +52,51 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
   }
 
   const Definition *callee = resolveMethodCallDefinition(methodCallExpr, localsIn);
+  if (callee != nullptr &&
+      methodCallExpr.isMethodCall &&
+      !requireArrayReturn &&
+      methodCallExpr.args.size() == 2 &&
+      (isSimpleCallName(methodCallExpr, "at") ||
+       isSimpleCallName(methodCallExpr, "at_unsafe"))) {
+    const Expr &receiverExpr = methodCallExpr.args.front();
+    if (receiverExpr.kind == Expr::Kind::Name) {
+      auto localIt = localsIn.find(receiverExpr.name);
+      if (localIt != localsIn.end()) {
+        const LocalInfo &receiverInfo = localIt->second;
+        const bool isVectorLikeReceiver =
+            receiverInfo.kind == LocalInfo::Kind::Vector ||
+            receiverInfo.kind == LocalInfo::Kind::Array ||
+            (receiverInfo.kind == LocalInfo::Kind::Reference &&
+             (receiverInfo.referenceToVector || receiverInfo.referenceToArray)) ||
+            (receiverInfo.kind == LocalInfo::Kind::Pointer &&
+             (receiverInfo.pointerToVector || receiverInfo.pointerToArray));
+        if (isVectorLikeReceiver &&
+            receiverInfo.valueKind != LocalInfo::ValueKind::Unknown) {
+          kindOut = receiverInfo.valueKind;
+          if (methodResolvedOut != nullptr) {
+            *methodResolvedOut = true;
+          }
+          return true;
+        }
+      }
+    }
+    if (receiverExpr.kind == Expr::Kind::Call) {
+      std::string collectionName;
+      if (getBuiltinCollectionName(receiverExpr, collectionName) &&
+          (collectionName == "vector" || collectionName == "array") &&
+          receiverExpr.templateArgs.size() == 1) {
+        const LocalInfo::ValueKind elemKind =
+            valueKindFromTypeName(receiverExpr.templateArgs.front());
+        if (elemKind != LocalInfo::ValueKind::Unknown) {
+          kindOut = elemKind;
+          if (methodResolvedOut != nullptr) {
+            *methodResolvedOut = true;
+          }
+          return true;
+        }
+      }
+    }
+  }
   if (callee == nullptr) {
     auto normalizeMethodName = [](std::string name) {
       if (!name.empty() && name.front() == '/') {
@@ -357,15 +402,55 @@ bool resolveDefinitionCallReturnKind(const Expr &callExpr,
     return false;
   }
 
-  auto candidates = collectionHelperPathCandidates(resolveExprPath(callExpr));
+  std::vector<std::string> candidates;
+  auto appendCandidate = [&](const std::string &candidate) {
+    if (candidate.empty()) {
+      return;
+    }
+    for (const auto &existing : candidates) {
+      if (existing == candidate) {
+        return;
+      }
+    }
+    candidates.push_back(candidate);
+  };
+  auto appendCandidates = [&](const std::vector<std::string> &extraCandidates) {
+    for (const auto &candidate : extraCandidates) {
+      appendCandidate(candidate);
+    }
+  };
+  appendCandidates(collectionHelperPathCandidates(resolveExprPath(callExpr)));
+  appendCandidates(collectionHelperPathCandidates(callExpr.name));
+  if (!callExpr.name.empty() && callExpr.name.front() != '/' &&
+      !callExpr.namespacePrefix.empty()) {
+    appendCandidates(collectionHelperPathCandidates(callExpr.namespacePrefix + "/" +
+                                                   callExpr.name));
+  }
+  auto resolveCandidatePath = [&](const std::string &candidate,
+                                  std::string &resolvedPathOut) {
+    resolvedPathOut.clear();
+    auto defIt = defMap.find(candidate);
+    if (defIt != defMap.end()) {
+      resolvedPathOut = candidate;
+      return true;
+    }
+    const std::string generatedPrefix = candidate + "__";
+    for (const auto &entry : defMap) {
+      if (entry.first.rfind(generatedPrefix, 0) == 0) {
+        resolvedPathOut = entry.first;
+        return true;
+      }
+    }
+    return false;
+  };
   bool matchedDefinition = false;
   for (const auto &candidate : candidates) {
-    auto defIt = defMap.find(candidate);
-    if (defIt == defMap.end()) {
+    std::string resolvedCandidatePath;
+    if (!resolveCandidatePath(candidate, resolvedCandidatePath)) {
       continue;
     }
     matchedDefinition = true;
-    if (resolveReturnInfoKindForPath(candidate, getReturnInfo, requireArrayReturn, kindOut)) {
+    if (resolveReturnInfoKindForPath(resolvedCandidatePath, getReturnInfo, requireArrayReturn, kindOut)) {
       if (definitionMatchedOut != nullptr) {
         *definitionMatchedOut = true;
       }
@@ -401,7 +486,13 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     return false;
   }
   if (isExplicitMapHelperFallbackPath(callExpr)) {
-    return false;
+    std::string explicitAccessName;
+    if (!getBuiltinArrayAccessName(callExpr, explicitAccessName) ||
+        (explicitAccessName != "at" && explicitAccessName != "at_ref" &&
+         explicitAccessName != "at_unsafe" &&
+         explicitAccessName != "at_unsafe_ref")) {
+      return false;
+    }
   }
   const bool isCountCall = (isVectorBuiltinName(callExpr, "count") || isMapBuiltinName(callExpr, "count")) &&
                            callExpr.args.size() == 1;
@@ -572,13 +663,25 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
         return index > 0 && index < callExpr.args.size() &&
                isKnownCollectionAccessReceiverExpr(callExpr.args[index]);
       });
+  const bool preferDeclaredAccessReturnKind =
+      isAccessCall && isExplicitMapHelperFallbackPath(callExpr);
+  if (preferDeclaredAccessReturnKind) {
+    for (const auto &candidatePath : collectionHelperPathCandidates(callExpr.name)) {
+      if (resolveReturnInfoKindForPath(candidatePath, getReturnInfo, requireArrayReturn, kindOut)) {
+        if (methodResolvedOut != nullptr) {
+          *methodResolvedOut = true;
+        }
+        return true;
+      }
+    }
+  }
 
   for (size_t receiverIndex : receiverIndices) {
     if (hasAlternativeCollectionReceiver && receiverIndex == 0) {
       continue;
     }
     Expr methodExpr = buildMethodExprForReceiverIndex(receiverIndex);
-    if (isAccessCall) {
+    if (isAccessCall && !preferDeclaredAccessReturnKind) {
       const auto arrayVectorTargetInfo =
           resolveArrayVectorAccessTargetInfo(methodExpr.args.front(), localsIn);
       if (arrayVectorTargetInfo.isArrayOrVectorTarget &&

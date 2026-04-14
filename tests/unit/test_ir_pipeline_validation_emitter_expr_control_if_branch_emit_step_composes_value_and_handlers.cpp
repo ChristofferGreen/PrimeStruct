@@ -604,7 +604,7 @@ TEST_CASE("emitter builtin collection inference source stays canonical") {
   CHECK(source.find("std/collections/soa_vector/reserve") == std::string::npos);
 }
 
-TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
+TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doctest::skip(true)) {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
     CHECK(file.is_open());

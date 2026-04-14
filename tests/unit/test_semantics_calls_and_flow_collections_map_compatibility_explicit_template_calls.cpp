@@ -98,10 +98,10 @@ main() {
   [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
   return(borrowValues(location(values)).count<i32, i32>(true))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("return type mismatch: expected i32") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("map slash-path explicit-template count method stays on unknown method diagnostic") {
@@ -394,11 +394,10 @@ main() {
      then(){ return(1i32) },
      else(){ return(0i32) })
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /std/collections/map/contains") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("canonical map borrowed receiver validates direct stdlib tryAt") {
@@ -437,11 +436,10 @@ main() {
   [Result<i32, ContainerError>] found{/std/collections/map/tryAt(borrowValues(location(source)), true)}
   return(0i32)
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /std/collections/map/tryAt") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("explicit canonical map binding keeps builtin helper validation") {

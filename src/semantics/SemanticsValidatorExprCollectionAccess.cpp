@@ -61,6 +61,36 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
   auto failCollectionAccessTargetDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(expr, std::move(message));
   };
+  auto explicitCallPath = [](const Expr &candidate) -> std::string {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
+        candidate.name.empty()) {
+      return {};
+    }
+    if (candidate.name.front() == '/') {
+      return candidate.name;
+    }
+    std::string prefix = candidate.namespacePrefix;
+    if (!prefix.empty() && prefix.front() != '/') {
+      prefix.insert(prefix.begin(), '/');
+    }
+    if (prefix.empty()) {
+      return "/" + candidate.name;
+    }
+    return prefix + "/" + candidate.name;
+  };
+  auto isLocalRootMapAliasReceiverCall = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall) {
+      return false;
+    }
+    const std::string resolvedCandidate = resolveCalleePath(candidate);
+    if (resolvedCandidate == "/map" ||
+        resolvedCandidate.rfind("/map__", 0) == 0) {
+      return true;
+    }
+    const std::string explicitCandidate = explicitCallPath(candidate);
+    return explicitCandidate == "/map" ||
+           explicitCandidate.rfind("/map__", 0) == 0;
+  };
 
   std::string accessHelperName;
   auto getCanonicalMapAccessHelperNameForDispatch =
@@ -192,6 +222,13 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
        isNamespacedMapAccessCall)) {
     handledOut = true;
     const bool hasNamedArgs = hasNamedArguments(expr.argNames);
+    const bool explicitCanonicalMapAccessCall =
+        expr.name.rfind("/std/collections/map/", 0) == 0 ||
+        expr.namespacePrefix == "/std/collections/map" ||
+        expr.namespacePrefix == "std/collections/map";
+    const bool usesBuiltinVectorSurfaceMethodSemantics =
+        accessHelperName == "count" || accessHelperName == "capacity" ||
+        accessHelperName == "at" || accessHelperName == "at_unsafe";
     auto isCollectionAccessReceiverExpr = [&](const Expr &candidate) -> bool {
       std::string elemType;
       return context.resolveVectorTarget(candidate, elemType) ||
@@ -234,8 +271,14 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       bool isBuiltinMethod = false;
       std::string methodResolved;
       bool resolvedVectorAccessMethod = false;
+      std::string ignoredVectorElemType;
+      const bool receiverSupportsBuiltinVectorSurfaceSemantics =
+          usesBuiltinVectorSurfaceMethodSemantics &&
+          (context.resolveVectorTarget(receiverCandidate, ignoredVectorElemType) ||
+           context.resolveSoaVectorTarget(receiverCandidate, ignoredVectorElemType));
       if (!preservesExplicitRemovedArrayAccessMethod &&
           isValueSurfaceAccessHelperName(accessHelperName) &&
+          !receiverSupportsBuiltinVectorSurfaceSemantics &&
           resolveVectorHelperMethodTarget(params, locals, receiverCandidate,
                                           accessHelperName, methodResolved)) {
         if (methodResolved.rfind("/std/collections/experimental_vector/", 0) == 0 &&
@@ -288,6 +331,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       }
       if (isCanonicalMapAccessHelperName(accessHelperName) &&
           context.resolveMapTarget(receiverCandidate) &&
+          !isLocalRootMapAliasReceiverCall(receiverCandidate) &&
+          !explicitCanonicalMapAccessCall &&
           defMap_.find("/map/" + accessHelperName) != defMap_.end()) {
         methodResolved = "/map/" + accessHelperName;
         isBuiltinMethod = false;
@@ -350,8 +395,14 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       bool isBuiltinMethod = false;
       std::string methodResolved;
       bool resolvedVectorAccessMethod = false;
+      std::string ignoredVectorElemType;
+      const bool receiverSupportsBuiltinVectorSurfaceSemantics =
+          usesBuiltinVectorSurfaceMethodSemantics &&
+          (context.resolveVectorTarget(expr.args.front(), ignoredVectorElemType) ||
+           context.resolveSoaVectorTarget(expr.args.front(), ignoredVectorElemType));
       if (!preservesExplicitRemovedArrayAccessMethod &&
           isValueSurfaceAccessHelperName(accessHelperName) &&
+          !receiverSupportsBuiltinVectorSurfaceSemantics &&
           resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
                                           accessHelperName, methodResolved)) {
         if (methodResolved.rfind("/std/collections/experimental_vector/", 0) == 0 &&
@@ -400,6 +451,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         }
         if (isCanonicalMapAccessHelperName(accessHelperName) &&
             context.resolveMapTarget(expr.args.front()) &&
+            !isLocalRootMapAliasReceiverCall(expr.args.front()) &&
+            !explicitCanonicalMapAccessCall &&
             defMap_.find("/map/" + accessHelperName) != defMap_.end()) {
           methodResolved = "/map/" + accessHelperName;
           isBuiltinMethod = false;
@@ -609,7 +662,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
        getCanonicalMapAccessHelperNameForDispatch(expr, accessHelperName))) {
     handledOut = true;
     const Expr &receiverCandidate = expr.args.front();
-    if (context.resolveMapTarget(receiverCandidate)) {
+    if (context.resolveMapTarget(receiverCandidate) &&
+        !isLocalRootMapAliasReceiverCall(receiverCandidate)) {
       usedMethodTarget = true;
       bool isBuiltinMethod = false;
       std::string methodResolved;

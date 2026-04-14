@@ -57,6 +57,9 @@ bool applySemanticResultValueTypeText(const std::string &valueTypeText, ResultEx
     return true;
   }
   out.valueStructType = trimmedValueType;
+  if (!out.valueStructType.empty() && out.valueStructType.front() != '/') {
+    out.valueStructType.insert(out.valueStructType.begin(), '/');
+  }
   return true;
 }
 

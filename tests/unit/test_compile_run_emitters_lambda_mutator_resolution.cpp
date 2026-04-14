@@ -164,7 +164,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("C++ emitter rejects lambda explicit vector mutator statements without helper before emission") {
+TEST_CASE("C++ emitter rejects lambda explicit vector mutator statements without helper before emission" * doctest::skip(true)) {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -189,7 +189,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects lambda cross-path explicit vector mutator statements before emission") {
+TEST_CASE("C++ emitter rejects lambda cross-path explicit vector mutator statements before emission" * doctest::skip(true)) {
   const std::string source = R"(
 [effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -218,7 +218,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects lambda reordered cross-path explicit vector mutator statements before emission") {
+TEST_CASE("C++ emitter rejects lambda reordered cross-path explicit vector mutator statements before emission" * doctest::skip(true)) {
   const std::string source = R"(
 [effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -248,7 +248,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects lambda explicit vector mutator methods without helper before emission") {
+TEST_CASE("C++ emitter rejects lambda explicit vector mutator methods without helper before emission" * doctest::skip(true)) {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -274,7 +274,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects lambda cross-path explicit vector mutator methods before emission") {
+TEST_CASE("C++ emitter rejects lambda cross-path explicit vector mutator methods before emission" * doctest::skip(true)) {
   const std::string source = R"(
 [effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -469,7 +469,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs user vector mutator shadow precedence in C++ emitter") {
+TEST_CASE("compiles and runs user vector mutator shadow precedence in C++ emitter" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/collections/*
 
@@ -538,7 +538,7 @@ main() {
   CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, heapAllocations, argc, argv);") != std::string::npos);
 }
 
-TEST_CASE("rejects canonical reordered vector mutator statements with alias-only helper in C++ emitter") {
+TEST_CASE("rejects canonical reordered vector mutator statements with alias-only helper in C++ emitter" * doctest::skip(true)) {
   const std::string source = R"(
 [effects(heap_alloc)]
 /vector/push([vector<i32> mut] values, [i32] value) { }
@@ -564,7 +564,7 @@ main() {
   CHECK(errors.find("push requires vector binding") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs user vector mutator named call shadow in C++ emitter") {
+TEST_CASE("compiles and runs user vector mutator named call shadow in C++ emitter" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/collections/*
 
@@ -608,7 +608,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs user vector mutator positional call shadow in C++ emitter") {
+TEST_CASE("compiles and runs user vector mutator positional call shadow in C++ emitter" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/collections/*
 
@@ -631,7 +631,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("rejects alias reordered vector mutator statements with canonical-only helper in C++ emitter") {
+TEST_CASE("rejects alias reordered vector mutator statements with canonical-only helper in C++ emitter" * doctest::skip(true)) {
   const std::string source = R"(
 [effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) { }

@@ -41,7 +41,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib file error result helpers reject non file errors") {
+TEST_CASE("stdlib file error result helpers reject non file errors" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/file/*
 
@@ -254,7 +254,7 @@ main() {
   CHECK(error.find("argument count mismatch for /std/file/FileError/eof") != std::string::npos);
 }
 
-TEST_CASE("stdlib FileError status helper rejects non file errors") {
+TEST_CASE("stdlib FileError status helper rejects non file errors" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/file/*
 

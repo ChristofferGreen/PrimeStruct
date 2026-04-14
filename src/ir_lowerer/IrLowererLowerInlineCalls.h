@@ -316,6 +316,16 @@
       inlineStack.erase(callee.fullPath);
       return false;
     }
+    const bool isGeneratedMapInsertHelper =
+        callee.fullPath == "/std/collections/mapInsert" ||
+        callee.fullPath.rfind("/std/collections/mapInsert__", 0) == 0 ||
+        callee.fullPath == "/std/collections/experimental_map/mapInsert" ||
+        callee.fullPath.rfind("/std/collections/experimental_map/mapInsert__", 0) == 0 ||
+        callee.fullPath == "/std/collections/experimental_map/mapInsertRef" ||
+        callee.fullPath.rfind("/std/collections/experimental_map/mapInsertRef__", 0) == 0;
+    if (requireValue && context.returnsVoid && !structDef && isGeneratedMapInsertHelper) {
+      function.instructions.push_back({IrOpcode::PushI32, 0});
+    }
 
     inlineStack.erase(callee.fullPath);
     return true;

@@ -43,7 +43,15 @@
             if (resultInfoOut.valueKind != LocalInfo::ValueKind::Unknown) {
               return true;
             }
+            std::string resolvedStructPath;
+            if (resolveStructTypeName(trimmedValueType, expr.namespacePrefix, resolvedStructPath)) {
+              resultInfoOut.valueStructType = std::move(resolvedStructPath);
+              return true;
+            }
             resultInfoOut.valueStructType = trimmedValueType;
+            if (!resultInfoOut.valueStructType.empty() && resultInfoOut.valueStructType.front() != '/') {
+              resultInfoOut.valueStructType.insert(resultInfoOut.valueStructType.begin(), '/');
+            }
             return true;
           };
           if (callResolutionAdapters.semanticProductTargets.hasSemanticProduct && expr.semanticNodeId != 0) {

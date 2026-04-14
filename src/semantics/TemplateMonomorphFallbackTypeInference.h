@@ -1,18 +1,26 @@
 #pragma once
 
 bool isSoftwareNumericParamCompatible(ReturnKind expectedKind, ReturnKind actualKind) {
+  auto isSoftwareIntegerKind = [](ReturnKind kind) {
+    return kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+           kind == ReturnKind::Bool || kind == ReturnKind::Integer;
+  };
+  auto isSoftwareDecimalKind = [&](ReturnKind kind) {
+    return isSoftwareIntegerKind(kind) || kind == ReturnKind::Float32 || kind == ReturnKind::Float64 ||
+           kind == ReturnKind::Decimal;
+  };
   switch (expectedKind) {
+    case ReturnKind::Int:
+    case ReturnKind::Int64:
+    case ReturnKind::UInt64:
     case ReturnKind::Integer:
-      return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 || actualKind == ReturnKind::UInt64 ||
-             actualKind == ReturnKind::Bool || actualKind == ReturnKind::Integer;
+      return isSoftwareIntegerKind(actualKind);
+    case ReturnKind::Float32:
+    case ReturnKind::Float64:
     case ReturnKind::Decimal:
-      return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 || actualKind == ReturnKind::UInt64 ||
-             actualKind == ReturnKind::Bool || actualKind == ReturnKind::Float32 || actualKind == ReturnKind::Float64 ||
-             actualKind == ReturnKind::Integer || actualKind == ReturnKind::Decimal;
+      return isSoftwareDecimalKind(actualKind);
     case ReturnKind::Complex:
-      return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 || actualKind == ReturnKind::UInt64 ||
-             actualKind == ReturnKind::Bool || actualKind == ReturnKind::Float32 || actualKind == ReturnKind::Float64 ||
-             actualKind == ReturnKind::Integer || actualKind == ReturnKind::Decimal ||
+      return isSoftwareDecimalKind(actualKind) ||
              actualKind == ReturnKind::Complex;
     default:
       return false;

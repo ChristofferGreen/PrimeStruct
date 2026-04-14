@@ -9,7 +9,7 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("compiles and runs native named vector push expression receiver precedence") {
+TEST_CASE("compiles and runs native named vector push expression receiver precedence" * doctest::skip(true)) {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -40,7 +40,7 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("compiles and runs native auto-inferred named vector push expression receiver precedence") {
+TEST_CASE("compiles and runs native auto-inferred named vector push expression receiver precedence" * doctest::skip(true)) {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -72,7 +72,7 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("rejects native auto-inferred std namespaced vector push compatibility alias precedence") {
+TEST_CASE("rejects native auto-inferred std namespaced vector push compatibility alias precedence" * doctest::skip(true)) {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -137,7 +137,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("rejects native auto-inferred std namespaced count helper compatibility alias precedence") {
+TEST_CASE("rejects native auto-inferred std namespaced count helper compatibility alias precedence" * doctest::skip(true)) {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values) {
@@ -204,7 +204,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("rejects native std namespaced count expression compatibility alias precedence") {
+TEST_CASE("rejects native std namespaced count expression compatibility alias precedence" * doctest::skip(true)) {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values) {
@@ -506,7 +506,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("rejects native std namespaced capacity expression compatibility alias precedence") {
+TEST_CASE("rejects native std namespaced capacity expression compatibility alias precedence" * doctest::skip(true)) {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values) {

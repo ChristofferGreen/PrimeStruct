@@ -183,13 +183,35 @@ void SemanticsValidator::prepareExprDispatchBootstrap(
            inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
            isPointerLikeBinding(inferredReturn);
   };
-  bootstrapOut.resolveMapTarget = [this, paramsPtr, localsPtr, &bootstrapOut](const Expr &target) -> bool {
+  auto isRootMapAliasPath = [](const std::string &path) {
+    return path == "/map" || path.rfind("/map__", 0) == 0;
+  };
+  auto explicitCallPath = [&](const Expr &candidate) {
+    if (candidate.name.empty() || candidate.name.front() == '/') {
+      return candidate.name;
+    }
+    if (candidate.namespacePrefix.empty()) {
+      return "/" + candidate.name;
+    }
+    return candidate.namespacePrefix + "/" + candidate.name;
+  };
+  bootstrapOut.resolveMapTarget = [this,
+                                   paramsPtr,
+                                   localsPtr,
+                                   &bootstrapOut,
+                                   &isRootMapAliasPath,
+                                   &explicitCallPath](const Expr &target) -> bool {
     std::string keyType;
     std::string valueType;
     if (bootstrapOut.dispatchResolvers.resolveMapTarget(target, keyType, valueType) ||
         bootstrapOut.dispatchResolvers.resolveExperimentalMapTarget(target, keyType,
                                                                     valueType)) {
       return true;
+    }
+    if (target.kind == Expr::Kind::Call &&
+        (isRootMapAliasPath(resolveCalleePath(target)) ||
+         isRootMapAliasPath(explicitCallPath(target)))) {
+      return false;
     }
     std::string inferredTypeText;
     return inferQueryExprTypeText(target, *paramsPtr, *localsPtr, inferredTypeText) &&

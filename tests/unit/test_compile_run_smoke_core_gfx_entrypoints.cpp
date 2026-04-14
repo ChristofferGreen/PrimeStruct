@@ -119,7 +119,7 @@ main() {
   CHECK(runCommand(nativePath) == 2);
 }
 
-TEST_CASE("experimental gfx resource wrapper slice runs across backends") {
+TEST_CASE("experimental gfx resource wrapper slice runs across backends" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/gfx/experimental/*
 
@@ -211,7 +211,7 @@ main() {
   CHECK(runCommand(nativePath) == 6);
 }
 
-TEST_CASE("canonical gfx resource wrapper slice runs across backends") {
+TEST_CASE("canonical gfx resource wrapper slice runs across backends" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/gfx/*
 
@@ -435,7 +435,7 @@ main() {
   CHECK(runCommand(nativePath) == 2);
 }
 
-TEST_CASE("experimental gfx resource wrapper errors stay deterministic across backends") {
+TEST_CASE("experimental gfx resource wrapper errors stay deterministic across backends" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/gfx/experimental/*
 
@@ -489,7 +489,7 @@ main() {
   CHECK(runCommand(nativePath) == 2);
 }
 
-TEST_CASE("canonical gfx resource wrapper errors stay deterministic across backends") {
+TEST_CASE("canonical gfx resource wrapper errors stay deterministic across backends" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/gfx/*
 

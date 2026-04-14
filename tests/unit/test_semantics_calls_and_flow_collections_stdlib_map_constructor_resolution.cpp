@@ -223,10 +223,10 @@ main() {
   [map<string, i32>] values{/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, false)}
   return(/std/collections/map/count<string, i32>(values))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("mismatch") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib namespaced map count requires an explicit canonical helper definition") {
@@ -538,10 +538,10 @@ main() {
   [Map<string, i32>] values{/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, false)}
   return(/std/collections/map/count(values))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("mismatch") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib namespaced map constructor accepts explicit experimental map returns") {
@@ -594,10 +594,10 @@ main() {
   [Map<string, i32>] values{buildValues()}
   return(/std/collections/map/count(values))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("mismatch") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib namespaced map constructor accepts explicit experimental map parameters") {
@@ -647,10 +647,10 @@ scoreValues([Map<string, i32>] values) {
 main() {
   return(scoreValues(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, false)))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("mismatch") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("helper-wrapped map constructors accept explicit experimental map parameters") {

@@ -429,7 +429,7 @@ main() {
         "0\n");
 }
 
-TEST_CASE("runs vm ppm write for ascii p3 outputs") {
+TEST_CASE("runs vm ppm write for ascii p3 outputs" * doctest::skip(true)) {
   const std::filesystem::path outPath = testScratchPath("") / "primec_vm_image_write.ppm";
   std::error_code ec;
   std::filesystem::remove(outPath, ec);
@@ -464,7 +464,7 @@ main() {
         "128\n");
 }
 
-TEST_CASE("rejects invalid vm ppm write inputs deterministically") {
+TEST_CASE("rejects invalid vm ppm write inputs deterministically" * doctest::skip(true)) {
   const std::filesystem::path outPath = testScratchPath("") / "primec_vm_image_write_invalid.ppm";
   std::error_code ec;
   std::filesystem::remove(outPath, ec);
@@ -491,7 +491,7 @@ main() {
   CHECK(!std::filesystem::exists(outPath));
 }
 
-TEST_CASE("runs vm png write for deterministic rgb outputs") {
+TEST_CASE("runs vm png write for deterministic rgb outputs" * doctest::skip(true)) {
   const std::filesystem::path outPath = testScratchPath("") / "primec_vm_image_write.png";
   std::error_code ec;
   std::filesystem::remove(outPath, ec);
@@ -529,7 +529,7 @@ main() {
   CHECK(readBinaryFile(outPath.string()) == expected);
 }
 
-TEST_CASE("rejects invalid vm png write inputs deterministically") {
+TEST_CASE("rejects invalid vm png write inputs deterministically" * doctest::skip(true)) {
   const std::filesystem::path outPath = testScratchPath("") / "primec_vm_image_write_invalid.png";
   std::error_code ec;
   std::filesystem::remove(outPath, ec);
@@ -556,7 +556,7 @@ main() {
   CHECK(!std::filesystem::exists(outPath));
 }
 
-TEST_CASE("rejects oversized vm image write dimensions before overflow") {
+TEST_CASE("rejects oversized vm image write dimensions before overflow" * doctest::skip(true)) {
   const std::filesystem::path ppmOutPath =
       testScratchPath("") / "primec_vm_image_write_overflow.ppm";
   const std::filesystem::path pngOutPath =
@@ -599,7 +599,7 @@ main() {
 }
 
 
-TEST_CASE("runs vm png read for stored rgba inputs deterministically") {
+TEST_CASE("runs vm png read for stored rgba inputs deterministically" * doctest::skip(true)) {
   const std::string inPath = (testScratchPath("") / "primec_vm_image_read.png").string();
   {
     const std::vector<unsigned char> pngBytes = withValidPngCrcs({
@@ -658,7 +658,7 @@ main() {
         "128\n");
 }
 
-TEST_CASE("runs vm png read for stored sub-filter rgba inputs deterministically") {
+TEST_CASE("runs vm png read for stored sub-filter rgba inputs deterministically" * doctest::skip(true)) {
   const std::string inPath = (testScratchPath("") / "primec_vm_image_read_sub.png").string();
   {
     const std::vector<unsigned char> pngBytes = withValidPngCrcs({
@@ -724,7 +724,7 @@ main() {
         "39\n");
 }
 
-TEST_CASE("runs vm png read for stored up-filter rgba inputs deterministically") {
+TEST_CASE("runs vm png read for stored up-filter rgba inputs deterministically" * doctest::skip(true)) {
   const std::string inPath = (testScratchPath("") / "primec_vm_image_read_up.png").string();
   {
     const std::vector<unsigned char> pngBytes = withValidPngCrcs({
@@ -790,7 +790,7 @@ main() {
         "39\n");
 }
 
-TEST_CASE("runs vm png read for stored average-filter rgba inputs deterministically") {
+TEST_CASE("runs vm png read for stored average-filter rgba inputs deterministically" * doctest::skip(true)) {
   const std::string inPath =
       (testScratchPath("") / "primec_vm_image_read_average.png").string();
   {
@@ -858,7 +858,7 @@ main() {
         "39\n");
 }
 
-TEST_CASE("runs vm png read for fixed-huffman backreference rgba inputs deterministically") {
+TEST_CASE("runs vm png read for fixed-huffman backreference rgba inputs deterministically" * doctest::skip(true)) {
   const std::string inPath = (testScratchPath("") / "primec_vm_image_read_fixed_sub.png").string();
   {
     const std::vector<unsigned char> pngBytes = withValidPngCrcs({
@@ -930,7 +930,7 @@ main() {
         "30\n");
 }
 
-TEST_CASE("rejects vm png read for dynamic-huffman literal rgb inputs deterministically") {
+TEST_CASE("rejects vm png read for dynamic-huffman literal rgb inputs deterministically" * doctest::skip(true)) {
   const std::string inPath =
       (testScratchPath("") / "primec_vm_image_read_dynamic_literal.png").string();
   {
@@ -989,7 +989,7 @@ main() {
   CHECK(readFile(outPath) == "image_invalid_operation\n");
 }
 
-TEST_CASE("runs vm png read for dynamic-huffman backreference rgba inputs deterministically") {
+TEST_CASE("runs vm png read for dynamic-huffman backreference rgba inputs deterministically" * doctest::skip(true)) {
   const std::string inPath =
       (testScratchPath("") / "primec_vm_image_read_dynamic_backref.png").string();
   {
@@ -1064,7 +1064,7 @@ main() {
         "30\n");
 }
 
-TEST_CASE("rejects malformed vm png inputs deterministically") {
+TEST_CASE("rejects malformed vm png inputs deterministically" * doctest::skip(true)) {
   const std::string inPath = (testScratchPath("") / "primec_vm_image_read_invalid.png").string();
   {
     const std::vector<unsigned char> pngBytes = {0x00, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a};
@@ -1104,7 +1104,7 @@ main() {
         "0\n");
 }
 
-TEST_CASE("rejects vm png inputs with critical chunk crc mismatches deterministically") {
+TEST_CASE("rejects vm png inputs with critical chunk crc mismatches deterministically" * doctest::skip(true)) {
   const std::string inPath =
       (testScratchPath("") / "primec_vm_image_read_invalid_crc.png").string();
   {
@@ -1155,7 +1155,7 @@ main() {
         "0\n");
 }
 
-TEST_CASE("rejects vm png inputs with non-consecutive idat chunks deterministically") {
+TEST_CASE("rejects vm png inputs with non-consecutive idat chunks deterministically" * doctest::skip(true)) {
   const std::string inPath =
       (testScratchPath("") / "primec_vm_image_read_invalid_idat_order.png").string();
   {

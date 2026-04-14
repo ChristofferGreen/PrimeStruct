@@ -137,7 +137,13 @@ bool SemanticsValidator::isMapLikeBareAccessReceiver(
   if (candidate.kind != Expr::Kind::Call) {
     return false;
   }
-  auto defIt = defMap_.find(resolveCalleePath(candidate));
+  const std::string resolvedCandidatePath = resolveCalleePath(candidate);
+  if ((resolvedCandidatePath == "/map" ||
+       resolvedCandidatePath.rfind("/map__", 0) == 0) &&
+      hasDeclaredDefinitionPath("/map")) {
+    return false;
+  }
+  auto defIt = defMap_.find(resolvedCandidatePath);
   if ((defIt == defMap_.end() || defIt->second == nullptr) &&
       !candidate.name.empty() && candidate.name.find('/') == std::string::npos) {
     defIt = defMap_.find("/" + candidate.name);
@@ -153,6 +159,9 @@ bool SemanticsValidator::isMapLikeBareAccessReceiver(
       if (isCanonicalMapTypeText(inferredTypeText)) {
         return true;
       }
+      // When a concrete return binding is available and is not map-like,
+      // trust it over broad query fallback inference.
+      return false;
     }
     for (const auto &transform : defIt->second->transforms) {
       if (transform.name == "return" && transform.templateArgs.size() == 1 &&

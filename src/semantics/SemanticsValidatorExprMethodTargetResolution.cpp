@@ -1532,6 +1532,17 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return true;
     }
     resolvedOut = preferVectorStdlibHelperPath(path);
+    if (resolvedOut == "/std/collections/vector/count" ||
+        resolvedOut == "/std/collections/vector/capacity" ||
+        resolvedOut == "/std/collections/vector/at" ||
+        resolvedOut == "/std/collections/vector/at_unsafe") {
+      std::string ignoredElemType;
+      if (resolveVectorTarget(receiver, ignoredElemType) ||
+          resolveSoaVectorTarget(receiver, ignoredElemType)) {
+        isBuiltinOut = true;
+        return true;
+      }
+    }
     if ((resolvedOut == "/std/collections/vector/count" ||
          resolvedOut == "/std/collections/vector/capacity" ||
          resolvedOut == "/std/collections/vector/at" ||
@@ -2130,7 +2141,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     isBuiltinOut = false;
     return true;
   }
-  if (preferExplicitCanonicalVectorHelperForReceiver(receiver)) {
+  const bool usesBuiltinVectorMethodSemantics =
+      normalizedMethodName == "count" || normalizedMethodName == "capacity" ||
+      normalizedMethodName == "at" || normalizedMethodName == "at_unsafe";
+  if (!usesBuiltinVectorMethodSemantics &&
+      preferExplicitCanonicalVectorHelperForReceiver(receiver)) {
     resolvedOut = explicitVectorHelperPath;
     isBuiltinOut = false;
     return true;

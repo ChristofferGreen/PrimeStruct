@@ -201,19 +201,56 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       return true;
     }
     if (builtin == "map") {
-      if (expr.templateArgs.size() != 2) {
-        error = "map literal requires exactly two template arguments";
-        return false;
-      }
       if (expr.args.size() % 2 != 0) {
         error = "map literal requires an even number of arguments";
         return false;
       }
 
-      LocalInfo::ValueKind keyKind = valueKindFromTypeName(expr.templateArgs[0]);
-      LocalInfo::ValueKind valueKind = valueKindFromTypeName(expr.templateArgs[1]);
-      if (keyKind == LocalInfo::ValueKind::Unknown || valueKind == LocalInfo::ValueKind::Unknown) {
-        error = "native backend only supports numeric/bool map values";
+      const bool hasExplicitTemplateArgs = expr.templateArgs.size() == 2;
+      LocalInfo::ValueKind keyKind = LocalInfo::ValueKind::Unknown;
+      LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+      if (hasExplicitTemplateArgs) {
+        keyKind = valueKindFromTypeName(expr.templateArgs[0]);
+        valueKind = valueKindFromTypeName(expr.templateArgs[1]);
+      } else if (expr.templateArgs.empty()) {
+        for (size_t i = 0; i + 1 < expr.args.size(); i += 2) {
+          const LocalInfo::ValueKind inferredKeyKind =
+              inferExprKind(expr.args[i], localsIn);
+          const LocalInfo::ValueKind inferredValueKind =
+              inferExprKind(expr.args[i + 1], localsIn);
+          if (inferredKeyKind == LocalInfo::ValueKind::Unknown ||
+              inferredValueKind == LocalInfo::ValueKind::Unknown) {
+            keyKind = LocalInfo::ValueKind::Unknown;
+            valueKind = LocalInfo::ValueKind::Unknown;
+            break;
+          }
+          if (keyKind == LocalInfo::ValueKind::Unknown) {
+            keyKind = inferredKeyKind;
+          } else if (keyKind != inferredKeyKind) {
+            keyKind = LocalInfo::ValueKind::Unknown;
+            valueKind = LocalInfo::ValueKind::Unknown;
+            break;
+          }
+          if (valueKind == LocalInfo::ValueKind::Unknown) {
+            valueKind = inferredValueKind;
+          } else if (valueKind != inferredValueKind) {
+            keyKind = LocalInfo::ValueKind::Unknown;
+            valueKind = LocalInfo::ValueKind::Unknown;
+            break;
+          }
+        }
+      } else {
+        error = "map literal requires exactly two template arguments";
+        return false;
+      }
+      if (keyKind == LocalInfo::ValueKind::Unknown ||
+          valueKind == LocalInfo::ValueKind::Unknown) {
+        error = hasExplicitTemplateArgs
+                    ? "native backend only supports numeric/bool map values"
+                    : ("map literal requires exactly two template arguments"
+                       " (name=" + expr.name +
+                       ", template_args=" + std::to_string(expr.templateArgs.size()) +
+                       ", args=" + std::to_string(expr.args.size()) + ")");
         return false;
       }
 

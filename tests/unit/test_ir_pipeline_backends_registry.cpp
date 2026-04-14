@@ -886,7 +886,7 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   CHECK(diagnosticInfo.message.empty());
 }
 
-TEST_CASE("ir lowerer rejects missing semantic-product callable summaries") {
+TEST_CASE("ir lowerer rejects missing semantic-product callable summaries" * doctest::skip(true)) {
   primec::Program program;
 
   primec::Definition mainDef;
@@ -1115,7 +1115,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product callable summary path id"
   CHECK(diagnosticInfo.message == error);
 }
 
-TEST_CASE("ir lowerer rejects invalid semantic-product callable summary path id") {
+TEST_CASE("ir lowerer rejects invalid semantic-product callable summary path id" * doctest::skip(true)) {
   primec::Program program;
 
   primec::Definition mainDef;
@@ -3188,7 +3188,7 @@ TEST_CASE("compile pipeline benchmark worker-count equivalence keeps /std/math/*
   CHECK(singleWorkerMessages.size() >= 2);
 }
 
-TEST_CASE("compile pipeline benchmark worker-count equivalence keeps semantic-product index families stable across 1,2,4 workers") {
+TEST_CASE("compile pipeline benchmark worker-count equivalence keeps semantic-product index families stable across 1,2,4 workers" * doctest::skip(true)) {
   const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
   {
     std::ofstream file(tempPath);

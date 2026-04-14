@@ -380,6 +380,29 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
+  auto isMapEntryCallExpr = [](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
+      return false;
+    }
+    std::string normalizedName = candidate.name;
+    if (!normalizedName.empty() && normalizedName.front() == '/') {
+      normalizedName.erase(normalizedName.begin());
+    }
+    const auto generatedSuffix = normalizedName.find("__");
+    if (generatedSuffix != std::string::npos) {
+      normalizedName.erase(generatedSuffix);
+    }
+    return normalizedName == "map/entry" ||
+           normalizedName == "std/collections/map/entry";
+  };
+  const bool hasEntryCtorArgs = [&]() {
+    for (const auto &arg : expr.args) {
+      if (isMapEntryCallExpr(arg)) {
+        return true;
+      }
+    }
+    return false;
+  }();
   std::string name = expr.name;
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
@@ -403,6 +426,9 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (name.rfind("map/", 0) == 0) {
     std::string alias = name.substr(std::string("map/").size());
     if (alias == "map") {
+      if (hasEntryCtorArgs) {
+        return false;
+      }
       out = "map";
       return true;
     }
@@ -411,6 +437,9 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (name.rfind("std/collections/map/", 0) == 0) {
     std::string alias = name.substr(std::string("std/collections/map/").size());
     if (alias == "map") {
+      if (hasEntryCtorArgs) {
+        return false;
+      }
       out = "map";
       return true;
     }

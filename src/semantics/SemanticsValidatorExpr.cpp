@@ -493,6 +493,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         methodCompatibilitySetup.promoteCapacityToBuiltinValidation;
     methodResolutionContext.unavailableMethodDiagnostic =
         methodCompatibilitySetup.unavailableMethodDiagnostic;
+    if (expr.isMethodCall && !expr.args.empty() &&
+        expr.args.front().kind == Expr::Kind::Call) {
+      if (!validateExpr(params, locals, expr.args.front())) {
+        return false;
+      }
+    }
     if (!validateExprMethodCallTarget(
             params,
             locals,

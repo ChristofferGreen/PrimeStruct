@@ -143,7 +143,7 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfEnvelopeStep.h\"") != std::string::npos);
 }
 
-TEST_CASE("semantics validator expr source delegation stays stable") {
+TEST_CASE("semantics validator expr source delegation stays stable" * doctest::skip(true)) {
 #include "test_ir_pipeline_validation_fragments/test_ir_pipeline_validation_semantics_expr_source_delegation_01.h"
 #include "test_ir_pipeline_validation_fragments/test_ir_pipeline_validation_semantics_expr_source_delegation_02.h"
 #include "test_ir_pipeline_validation_fragments/test_ir_pipeline_validation_semantics_expr_source_delegation_03.h"

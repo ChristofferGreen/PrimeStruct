@@ -11,7 +11,16 @@ import tempfile
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence, Set
 
-NON_EXPENSIVE_PARALLELISM = 8
+def _default_non_expensive_parallelism() -> int:
+    raw = os.environ.get("PRIMESTRUCT_NON_EXPENSIVE_PARALLELISM", "8")
+    try:
+        value = int(raw)
+    except ValueError:
+        return 1
+    return value if value > 0 else 1
+
+
+NON_EXPENSIVE_PARALLELISM = _default_non_expensive_parallelism()
 
 
 def run_ctest_json(build_dir: Path) -> Dict:

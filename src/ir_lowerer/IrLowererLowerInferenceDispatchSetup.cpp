@@ -70,6 +70,9 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
            canonicalMapHelperName == "tryAt" || canonicalMapHelperName == "at" ||
            canonicalMapHelperName == "at_unsafe" ||
            canonicalMapHelperName == "insert") &&
+          !(isExplicitMapHelperFallbackPath(expr) &&
+            (canonicalMapHelperName == "at" || canonicalMapHelperName == "at_unsafe" ||
+             canonicalMapHelperName == "tryAt")) &&
           ((expr.name.find('/') != std::string::npos) || !expr.namespacePrefix.empty() ||
            !expr.templateArgs.empty())) {
         Expr rewrittenExpr = expr;

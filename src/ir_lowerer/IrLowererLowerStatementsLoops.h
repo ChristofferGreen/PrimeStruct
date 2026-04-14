@@ -370,6 +370,7 @@
           [&]() { emitVectorCapacityExceeded(); },
           [&]() { emitVectorPopOnEmpty(); },
           [&]() { emitVectorIndexOutOfBounds(); },
+          [&]() { emitArrayIndexOutOfBounds(); },
           [&]() { emitVectorReserveNegative(); },
           [&]() { emitVectorReserveExceeded(); },
           error);

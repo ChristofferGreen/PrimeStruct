@@ -14,8 +14,7 @@
           std::string helperName;
           if (!resolveMapHelperAliasName(exprIn, helperName) ||
               (helperName != "count" && helperName != "contains" &&
-               helperName != "tryAt" && helperName != "at" &&
-               helperName != "at_unsafe")) {
+               helperName != "tryAt")) {
             return;
           }
           if (exprIn.name.find('/') == std::string::npos &&
@@ -25,7 +24,6 @@
           }
           exprIn.name = helperName;
           exprIn.namespacePrefix.clear();
-          exprIn.semanticNodeId = 0;
           exprIn.templateArgs.clear();
         };
     canonicalizeExplicitBuiltinMapHelpers(normalizedStmt);

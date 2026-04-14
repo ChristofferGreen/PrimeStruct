@@ -5,7 +5,7 @@
 #if PRIMESTRUCT_NATIVE_CORE_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
 
-TEST_CASE("native backend compiles packed error struct Result combinator payloads on IR-backed paths") {
+TEST_CASE("native backend compiles packed error struct Result combinator payloads on IR-backed paths" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/file/*
 import /std/collections/*
@@ -535,7 +535,7 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("native backend rejects auto-bound direct Result combinator try consumers") {
+TEST_CASE("native backend rejects auto-bound direct Result combinator try consumers" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/file/*
 

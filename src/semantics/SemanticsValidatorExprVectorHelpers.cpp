@@ -100,6 +100,34 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     const std::string &helperName,
     std::string &resolvedOut) {
   resolvedOut.clear();
+  auto explicitCallPath = [](const Expr &callExpr) -> std::string {
+    if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall ||
+        callExpr.name.empty()) {
+      return {};
+    }
+    if (callExpr.name.front() == '/') {
+      return callExpr.name;
+    }
+    std::string prefix = callExpr.namespacePrefix;
+    if (!prefix.empty() && prefix.front() != '/') {
+      prefix.insert(prefix.begin(), '/');
+    }
+    if (prefix.empty()) {
+      return "/" + callExpr.name;
+    }
+    return prefix + "/" + callExpr.name;
+  };
+  auto isRootMapAliasPath = [](const std::string &path) {
+    return path == "/map" ||
+           path.rfind("/map__", 0) == 0;
+  };
+  auto isLocalRootMapAliasCall = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall) {
+      return false;
+    }
+    return isRootMapAliasPath(resolveCalleePath(candidate)) ||
+           isRootMapAliasPath(explicitCallPath(candidate));
+  };
   auto resolveExperimentalVectorReceiver = [&](const Expr &candidate,
                                                std::string &elemTypeOut) -> bool {
     BindingInfo inferredBinding;
@@ -252,6 +280,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
         return true;
       }
       if (collectionTypePath == "/map" &&
+          !isLocalRootMapAliasCall(receiver) &&
           (helperName == "count" || helperName == "count_ref" ||
            helperName == "contains" || helperName == "contains_ref" ||
            helperName == "tryAt" || helperName == "tryAt_ref" ||

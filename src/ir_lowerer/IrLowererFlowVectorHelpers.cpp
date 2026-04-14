@@ -105,6 +105,39 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     const std::function<void()> &emitVectorReserveNegative,
     const std::function<void()> &emitVectorReserveExceeded,
     std::string &error) {
+  return tryEmitVectorStatementHelper(stmt,
+                                      localsIn,
+                                      instructions,
+                                      allocTempLocal,
+                                      inferExprKind,
+                                      inferStructExprPath,
+                                      emitExpr,
+                                      isUserDefinedVectorHelperCall,
+                                      emitVectorCapacityExceeded,
+                                      emitVectorPopOnEmpty,
+                                      emitVectorIndexOutOfBounds,
+                                      emitVectorIndexOutOfBounds,
+                                      emitVectorReserveNegative,
+                                      emitVectorReserveExceeded,
+                                      error);
+}
+
+VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    std::vector<IrInstruction> &instructions,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &)> &isUserDefinedVectorHelperCall,
+    const std::function<void()> &emitVectorCapacityExceeded,
+    const std::function<void()> &emitVectorPopOnEmpty,
+    const std::function<void()> &emitVectorIndexOutOfBounds,
+    const std::function<void()> &emitArrayIndexOutOfBounds,
+    const std::function<void()> &emitVectorReserveNegative,
+    const std::function<void()> &emitVectorReserveExceeded,
+    std::string &error) {
   return tryEmitVectorStatementHelper(
       stmt,
       localsIn,
@@ -120,6 +153,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
       emitVectorCapacityExceeded,
       emitVectorPopOnEmpty,
       emitVectorIndexOutOfBounds,
+      emitArrayIndexOutOfBounds,
       emitVectorReserveNegative,
       emitVectorReserveExceeded,
       error);
@@ -140,6 +174,45 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     const std::function<void()> &emitVectorCapacityExceeded,
     const std::function<void()> &emitVectorPopOnEmpty,
     const std::function<void()> &emitVectorIndexOutOfBounds,
+    const std::function<void()> &emitVectorReserveNegative,
+    const std::function<void()> &emitVectorReserveExceeded,
+    std::string &error) {
+  return tryEmitVectorStatementHelper(stmt,
+                                      localsIn,
+                                      instructions,
+                                      allocTempLocal,
+                                      inferExprKind,
+                                      inferStructExprPath,
+                                      emitExpr,
+                                      resolveDestroyHelperForStruct,
+                                      resolveMoveHelperForStruct,
+                                      emitInlineDefinitionCall,
+                                      isUserDefinedVectorHelperCall,
+                                      emitVectorCapacityExceeded,
+                                      emitVectorPopOnEmpty,
+                                      emitVectorIndexOutOfBounds,
+                                      emitVectorIndexOutOfBounds,
+                                      emitVectorReserveNegative,
+                                      emitVectorReserveExceeded,
+                                      error);
+}
+
+VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    std::vector<IrInstruction> &instructions,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<const Definition *(const std::string &)> &resolveDestroyHelperForStruct,
+    const std::function<const Definition *(const std::string &)> &resolveMoveHelperForStruct,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    const std::function<bool(const Expr &)> &isUserDefinedVectorHelperCall,
+    const std::function<void()> &emitVectorCapacityExceeded,
+    const std::function<void()> &emitVectorPopOnEmpty,
+    const std::function<void()> &emitVectorIndexOutOfBounds,
+    const std::function<void()> &emitArrayIndexOutOfBounds,
     const std::function<void()> &emitVectorReserveNegative,
     const std::function<void()> &emitVectorReserveExceeded,
     std::string &error) {
@@ -377,7 +450,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     instructions.push_back({cmpGtOp, 0});
     const size_t jumpWithinLimit = instructions.size();
     instructions.push_back({IrOpcode::JumpIfZero, 0});
-    emitVectorReserveExceeded();
+    emitArrayIndexOutOfBounds();
     const size_t withinLimitIndex = instructions.size();
     instructions[jumpWithinLimit].imm = static_cast<int32_t>(withinLimitIndex);
 
@@ -683,6 +756,37 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     const std::function<void()> &emitVectorReserveNegative,
     const std::function<void()> &emitVectorReserveExceeded,
     std::string &error) {
+  return tryEmitVectorStatementHelper(stmt,
+                                      localsIn,
+                                      instructions,
+                                      allocTempLocal,
+                                      inferExprKind,
+                                      emitExpr,
+                                      isUserDefinedVectorHelperCall,
+                                      emitVectorCapacityExceeded,
+                                      emitVectorPopOnEmpty,
+                                      emitVectorIndexOutOfBounds,
+                                      emitVectorIndexOutOfBounds,
+                                      emitVectorReserveNegative,
+                                      emitVectorReserveExceeded,
+                                      error);
+}
+
+VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    std::vector<IrInstruction> &instructions,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &)> &isUserDefinedVectorHelperCall,
+    const std::function<void()> &emitVectorCapacityExceeded,
+    const std::function<void()> &emitVectorPopOnEmpty,
+    const std::function<void()> &emitVectorIndexOutOfBounds,
+    const std::function<void()> &emitArrayIndexOutOfBounds,
+    const std::function<void()> &emitVectorReserveNegative,
+    const std::function<void()> &emitVectorReserveExceeded,
+    std::string &error) {
   return tryEmitVectorStatementHelper(
       stmt,
       localsIn,
@@ -698,6 +802,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
       emitVectorCapacityExceeded,
       emitVectorPopOnEmpty,
       emitVectorIndexOutOfBounds,
+      emitArrayIndexOutOfBounds,
       emitVectorReserveNegative,
       emitVectorReserveExceeded,
       error);

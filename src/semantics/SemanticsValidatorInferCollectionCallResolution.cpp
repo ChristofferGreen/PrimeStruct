@@ -273,6 +273,11 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
            explicitTarget == basePath ||
            explicitTarget.rfind(specializedPrefix, 0) == 0;
   };
+  auto isRootMapAliasPath = [](const std::string &path) {
+    return path == "/map" ||
+           path.rfind("/map__t", 0) == 0 ||
+           path.rfind("/map__ov", 0) == 0;
+  };
 
   std::string targetTypeText;
   if (inferQueryExprTypeText(target, params, locals, targetTypeText) &&
@@ -280,10 +285,19 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
     return true;
   }
 
+  const bool hasVisibleCanonicalMapConstructor =
+      hasVisibleDefinitionPathForCurrentImports("/std/collections/map/map");
+  const bool allowRootMapConstructorAlias =
+      hasVisibleCanonicalMapConstructor && !hasDeclaredDefinitionPath("/map");
+  const std::string resolvedTarget = resolvedCallPath(target);
+  const std::string explicitTarget = explicitCallPath(target);
   std::string collectionName;
   if (getBuiltinCollectionName(target, collectionName) && collectionName == expectedBase) {
     const size_t expectedArgCount = expectedBase == "map" ? 2u : 1u;
-    if (target.templateArgs.size() == expectedArgCount) {
+    if (target.templateArgs.size() == expectedArgCount &&
+        (expectedBase != "map" ||
+         ((!isRootMapAliasPath(resolvedTarget) && !isRootMapAliasPath(explicitTarget)) ||
+          allowRootMapConstructorAlias))) {
       argsOut = target.templateArgs;
       return true;
     }
@@ -315,12 +329,11 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
     return true;
   }
 
-  const std::string resolvedTarget = resolvedCallPath(target);
-  const std::string explicitTarget = explicitCallPath(target);
-
   if (expectedBase == "map" &&
-      (isDirectMapConstructorPath(resolvedTarget) ||
-       isDirectMapConstructorPath(explicitTarget)) &&
+      ((isDirectMapConstructorPath(resolvedTarget) &&
+        (!isRootMapAliasPath(resolvedTarget) || allowRootMapConstructorAlias)) ||
+       (isDirectMapConstructorPath(explicitTarget) &&
+        (!isRootMapAliasPath(explicitTarget) || allowRootMapConstructorAlias))) &&
       target.templateArgs.size() == 2) {
     argsOut = target.templateArgs;
     return true;

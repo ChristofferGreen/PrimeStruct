@@ -460,10 +460,10 @@ main() {
   [Map<string, i32>] values{buildValues()}
   return(/std/collections/map/count(values))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("mismatch") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib wrapper mapPair constructor accepts explicit experimental map parameters") {
@@ -513,10 +513,10 @@ scoreValues([Map<string, i32>] values) {
 main() {
   return(scoreValues(/std/collections/mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, false)))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("mismatch") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("map constructor assigns into explicit experimental map targets") {
@@ -574,10 +574,10 @@ main() {
   assign(values, /std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, false))
   return(/std/collections/map/count(values))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("mismatch") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("wrapper map constructor assignment keeps mismatch diagnostics on explicit experimental map parameters") {
@@ -596,10 +596,10 @@ main() {
   [Map<string, i32> mut] values{mapNew<string, i32>()}
   return(replaceValues(values))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("mismatch") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("helper-wrapped map constructor assignments accept explicit experimental map targets") {

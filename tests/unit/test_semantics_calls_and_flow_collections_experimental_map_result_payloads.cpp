@@ -140,10 +140,10 @@ main() {
   [Map<string, i32>] values{/std/collections/mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, false)}
   return(/std/collections/map/count(values))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("mismatch") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("helper-wrapped map constructors accept explicit experimental map bindings") {

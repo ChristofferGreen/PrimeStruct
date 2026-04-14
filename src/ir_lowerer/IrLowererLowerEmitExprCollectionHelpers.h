@@ -40,7 +40,169 @@
           rewrittenExpr.namespacePrefix.clear();
           rewrittenExpr.isMethodCall = false;
           rewrittenExpr.semanticNodeId = 0;
+          auto isEntryConstructorArg = [&](const Expr &candidateExpr) {
+            if (candidateExpr.kind != Expr::Kind::Call || candidateExpr.isMethodCall ||
+                candidateExpr.args.size() != 2) {
+              return false;
+            }
+            auto matchesEntryPath = [&](const std::string &path) {
+              return path == "/std/collections/map/entry" ||
+                     path.rfind("/std/collections/map/entry__", 0) == 0 ||
+                     path == "/std/collections/experimental_map/entry" ||
+                     path.rfind("/std/collections/experimental_map/entry__", 0) == 0;
+            };
+            const Definition *entryDef = resolveDefinitionCall(candidateExpr);
+            if (entryDef != nullptr && matchesEntryPath(entryDef->fullPath)) {
+              return true;
+            }
+            const std::string resolvedEntryPath = resolveExprPath(candidateExpr);
+            return matchesEntryPath(resolvedEntryPath);
+          };
+          if (!rewrittenExpr.args.empty()) {
+            bool allEntryArgs = true;
+            std::vector<Expr> flattenedArgs;
+            flattenedArgs.reserve(rewrittenExpr.args.size() * 2);
+            for (const auto &argExpr : rewrittenExpr.args) {
+              if (!isEntryConstructorArg(argExpr)) {
+                allEntryArgs = false;
+                break;
+              }
+              flattenedArgs.push_back(argExpr.args[0]);
+              flattenedArgs.push_back(argExpr.args[1]);
+            }
+            if (allEntryArgs) {
+              rewrittenExpr.args = std::move(flattenedArgs);
+            }
+          }
           if (rewrittenExpr.templateArgs.empty()) {
+            auto extractParameterTypeName = [&](const Expr &paramExpr) {
+              for (const auto &transform : paramExpr.transforms) {
+                if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
+                    transform.name == "static" || transform.name == "shared" || transform.name == "placement" ||
+                    transform.name == "align" || transform.name == "packed" || transform.name == "reflection" ||
+                    transform.name == "effects" || transform.name == "capabilities") {
+                  continue;
+                }
+                if (!transform.arguments.empty()) {
+                  continue;
+                }
+                std::string typeName = transform.name;
+                if (!transform.templateArgs.empty()) {
+                  typeName += "<";
+                  for (size_t index = 0; index < transform.templateArgs.size(); ++index) {
+                    if (index != 0) {
+                      typeName += ", ";
+                    }
+                    typeName += trimTemplateTypeText(transform.templateArgs[index]);
+                  }
+                  typeName += ">";
+                }
+                return typeName;
+              }
+              return std::string{};
+            };
+            auto assignMapArgs = [&](const std::string &keyTypeName,
+                                     const std::string &valueTypeName) {
+              if (keyTypeName.empty() || valueTypeName.empty()) {
+                return false;
+              }
+              rewrittenExpr.templateArgs = {
+                  trimTemplateTypeText(keyTypeName),
+                  trimTemplateTypeText(valueTypeName),
+              };
+              return true;
+            };
+            auto inferFromEntryArgsParameter = [&](const Expr &paramExpr) {
+              std::string argsBase;
+              std::string argsTemplateArgText;
+              const std::string paramTypeName = extractParameterTypeName(paramExpr);
+              if (!splitTemplateTypeName(paramTypeName, argsBase, argsTemplateArgText) ||
+                  trimTemplateTypeText(argsBase) != "args") {
+                return false;
+              }
+              std::vector<std::string> argsTemplateArgs;
+              if (!splitTemplateArgs(argsTemplateArgText, argsTemplateArgs) ||
+                  argsTemplateArgs.size() != 1) {
+                return false;
+              }
+              std::string entryBase;
+              std::string entryTemplateArgText;
+              const std::string entryTypeName = trimTemplateTypeText(argsTemplateArgs.front());
+              if (!splitTemplateTypeName(entryTypeName, entryBase, entryTemplateArgText)) {
+                return false;
+              }
+              std::string normalizedEntryBase = trimTemplateTypeText(entryBase);
+              if (!normalizedEntryBase.empty() && normalizedEntryBase.front() == '/') {
+                normalizedEntryBase.erase(normalizedEntryBase.begin());
+              }
+              const bool isEntryType =
+                  normalizedEntryBase == "Entry" ||
+                  normalizedEntryBase == "std/collections/experimental_map/Entry" ||
+                  normalizedEntryBase.rfind("std/collections/experimental_map/Entry__", 0) == 0;
+              if (!isEntryType) {
+                return false;
+              }
+              std::vector<std::string> entryTemplateArgs;
+              if (!splitTemplateArgs(entryTemplateArgText, entryTemplateArgs) ||
+                  entryTemplateArgs.size() != 2) {
+                return false;
+              }
+              return assignMapArgs(entryTemplateArgs[0], entryTemplateArgs[1]);
+            };
+            auto inferFromEntryCallArguments = [&]() {
+              auto inferLiteralTypeName = [&](const Expr &valueExpr,
+                                             std::string &typeNameOut) {
+                typeNameOut.clear();
+                if (valueExpr.kind == Expr::Kind::Literal) {
+                  typeNameOut = valueExpr.isUnsigned ? "u64"
+                                                     : (valueExpr.intWidth == 64 ? "i64" : "i32");
+                  return true;
+                }
+                if (valueExpr.kind == Expr::Kind::BoolLiteral) {
+                  typeNameOut = "bool";
+                  return true;
+                }
+                if (valueExpr.kind == Expr::Kind::FloatLiteral) {
+                  typeNameOut = valueExpr.floatWidth == 64 ? "f64" : "f32";
+                  return true;
+                }
+                if (valueExpr.kind == Expr::Kind::StringLiteral) {
+                  typeNameOut = "string";
+                  return true;
+                }
+                return false;
+              };
+              if (rewrittenExpr.args.empty()) {
+                return false;
+              }
+              for (const auto &argExpr : rewrittenExpr.args) {
+                if (argExpr.kind != Expr::Kind::Call) {
+                  continue;
+                }
+                if (argExpr.args.size() == 2) {
+                  std::string keyTypeName;
+                  std::string valueTypeName;
+                  if (inferLiteralTypeName(argExpr.args[0], keyTypeName) &&
+                      inferLiteralTypeName(argExpr.args[1], valueTypeName) &&
+                      assignMapArgs(keyTypeName, valueTypeName)) {
+                    return true;
+                  }
+                }
+                if (argExpr.templateArgs.size() == 2 &&
+                    assignMapArgs(argExpr.templateArgs[0], argExpr.templateArgs[1])) {
+                  return true;
+                }
+                const Definition *entryDef = resolveDefinitionCall(argExpr);
+                if (entryDef == nullptr || entryDef->parameters.size() < 2) {
+                  continue;
+                }
+                if (assignMapArgs(extractParameterTypeName(entryDef->parameters[0]),
+                                  extractParameterTypeName(entryDef->parameters[1]))) {
+                  return true;
+                }
+              }
+              return false;
+            };
             std::string collectionName;
             std::vector<std::string> collectionArgs;
             if (ir_lowerer::inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) &&
@@ -49,37 +211,16 @@
               collectionArgs[1] = trimTemplateTypeText(collectionArgs[1]);
               rewrittenExpr.templateArgs = std::move(collectionArgs);
             } else if (callee->parameters.size() >= 2) {
-              auto extractParameterTypeName = [&](const Expr &paramExpr) {
-                for (const auto &transform : paramExpr.transforms) {
-                  if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
-                      transform.name == "static" || transform.name == "shared" || transform.name == "placement" ||
-                      transform.name == "align" || transform.name == "packed" || transform.name == "reflection" ||
-                      transform.name == "effects" || transform.name == "capabilities") {
-                    continue;
-                  }
-                  if (!transform.arguments.empty()) {
-                    continue;
-                  }
-                  std::string typeName = transform.name;
-                  if (!transform.templateArgs.empty()) {
-                    typeName += "<";
-                    for (size_t index = 0; index < transform.templateArgs.size(); ++index) {
-                      if (index != 0) {
-                        typeName += ", ";
-                      }
-                      typeName += trimTemplateTypeText(transform.templateArgs[index]);
-                    }
-                    typeName += ">";
-                  }
-                  return typeName;
-                }
-                return std::string{};
-              };
-              const std::string keyTypeName = extractParameterTypeName(callee->parameters[0]);
-              const std::string valueTypeName = extractParameterTypeName(callee->parameters[1]);
-              if (!keyTypeName.empty() && !valueTypeName.empty()) {
-                rewrittenExpr.templateArgs = {keyTypeName, valueTypeName};
-              }
+              assignMapArgs(extractParameterTypeName(callee->parameters[0]),
+                            extractParameterTypeName(callee->parameters[1]));
+            } else if (callee->parameters.size() == 1 &&
+                       inferFromEntryArgsParameter(callee->parameters.front())) {
+              // Entry args-pack constructor carries K/V through args<Entry<K,V>>.
+            } else {
+              inferFromEntryCallArguments();
+            }
+            if (rewrittenExpr.templateArgs.empty()) {
+              return false;
             }
           }
           return true;
@@ -95,14 +236,12 @@
           std::string helperName;
           if (!resolveMapHelperAliasName(callExpr, helperName) ||
               (helperName != "count" && helperName != "contains" &&
-               helperName != "tryAt" && helperName != "at" &&
-               helperName != "at_unsafe" && helperName != "insert")) {
+               helperName != "tryAt" && helperName != "insert")) {
             return false;
           }
           rewrittenExpr = callExpr;
           rewrittenExpr.name = helperName;
           rewrittenExpr.namespacePrefix.clear();
-          rewrittenExpr.semanticNodeId = 0;
           rewrittenExpr.templateArgs.clear();
           return true;
         };
@@ -150,6 +289,18 @@
           if (helperName != "count" && helperName != "capacity" &&
               helperName != "at" && helperName != "at_unsafe") {
             return false;
+          }
+          if (!callExpr.isMethodCall) {
+            std::string normalizedCallName = callExpr.name;
+            if (!normalizedCallName.empty() && normalizedCallName.front() == '/') {
+              normalizedCallName.erase(normalizedCallName.begin());
+            }
+            const bool explicitVectorHelperPath =
+                normalizedCallName.rfind("vector/", 0) == 0 ||
+                normalizedCallName.rfind("std/collections/vector/", 0) == 0;
+            if (!explicitVectorHelperPath) {
+              return false;
+            }
           }
 
           const Definition *receiverDef = resolveDefinitionCall(*receiverExpr);
@@ -338,6 +489,20 @@
             }
           }
           if (!resolvedCollectionFromDef) {
+            auto isMapAccessValueCall = [&](const Expr &candidateExpr) {
+              if (candidateExpr.kind != Expr::Kind::Call || candidateExpr.isMethodCall) {
+                return false;
+              }
+              std::string helperAlias;
+              if (!resolveMapHelperAliasName(candidateExpr, helperAlias)) {
+                return false;
+              }
+              return helperAlias == "at" || helperAlias == "at_unsafe" ||
+                     helperAlias == "tryAt" || helperAlias == "contains";
+            };
+            if (isMapAccessValueCall(*receiverExpr)) {
+              return std::nullopt;
+            }
             const auto mapTargetInfo = ir_lowerer::resolveMapAccessTargetInfo(*receiverExpr, localsIn);
             const auto arrayVectorTargetInfo =
                 ir_lowerer::resolveArrayVectorAccessTargetInfo(*receiverExpr, localsIn);

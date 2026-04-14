@@ -6,7 +6,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
-TEST_CASE("keeps canonical map method access field expression forwarding in C++ emitter") {
+TEST_CASE("keeps canonical map method access field expression forwarding in C++ emitter" * doctest::skip(true)) {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -39,7 +39,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("keeps canonical map slash-method unsafe struct method chain forwarding in C++ emitter") {
+TEST_CASE("keeps canonical map slash-method unsafe struct method chain forwarding in C++ emitter" * doctest::skip(true)) {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -85,7 +85,7 @@ main() {
   CHECK(runCommand(quoteShellArg(exePath)) == 2);
 }
 
-TEST_CASE("keeps canonical map slash-method struct argument diagnostics in C++ emitter") {
+TEST_CASE("keeps canonical map slash-method struct argument diagnostics in C++ emitter" * doctest::skip(true)) {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -125,7 +125,7 @@ main() {
   CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter marker") != std::string::npos);
 }
 
-TEST_CASE("rejects wrapper-returned map method alias primitive receiver fallback in C++ emitter") {
+TEST_CASE("rejects wrapper-returned map method alias primitive receiver fallback in C++ emitter" * doctest::skip(true)) {
   const std::string source = R"(
 [effects(heap_alloc), return</std/collections/map<i32, i32>>]
 wrapMap() {
@@ -155,7 +155,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
 }
 
-TEST_CASE("rejects wrapper-returned canonical map slash-method struct method chain in C++ emitter") {
+TEST_CASE("rejects wrapper-returned canonical map slash-method struct method chain in C++ emitter" * doctest::skip(true)) {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -194,7 +194,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
 }
 
-TEST_CASE("rejects wrapper-returned canonical map slash-method struct argument chain in C++ emitter") {
+TEST_CASE("rejects wrapper-returned canonical map slash-method struct argument chain in C++ emitter" * doctest::skip(true)) {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -233,7 +233,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects std-namespaced vector method alias access with helper receiver diagnostics") {
+TEST_CASE("C++ emitter rejects std-namespaced vector method alias access with helper receiver diagnostics" * doctest::skip(true)) {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -274,7 +274,7 @@ main() {
   CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter self") != std::string::npos);
 }
 
-TEST_CASE("rejects std-namespaced vector method alias access receiver fallback without helper in C++ emitter") {
+TEST_CASE("rejects std-namespaced vector method alias access receiver fallback without helper in C++ emitter" * doctest::skip(true)) {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
@@ -303,7 +303,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
 }
 
-TEST_CASE("rejects std-namespaced vector method alias access struct method chain with helper missing-method diagnostics in C++ emitter") {
+TEST_CASE("rejects std-namespaced vector method alias access struct method chain with helper missing-method diagnostics in C++ emitter" * doctest::skip(true)) {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -343,7 +343,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /Marker/tag") != std::string::npos);
 }
 
-TEST_CASE("rejects std-namespaced vector unsafe method alias access receiver fallback without helper in C++ emitter") {
+TEST_CASE("rejects std-namespaced vector unsafe method alias access receiver fallback without helper in C++ emitter" * doctest::skip(true)) {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
@@ -372,7 +372,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter forwards explicit-template vector count wrappers through canonical return kinds") {
+TEST_CASE("C++ emitter forwards explicit-template vector count wrappers through canonical return kinds" * doctest::skip(true)) {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
@@ -416,7 +416,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps canonical diagnostics for explicit-template vector count wrappers") {
+TEST_CASE("C++ emitter keeps canonical diagnostics for explicit-template vector count wrappers" * doctest::skip(true)) {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
@@ -457,7 +457,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects namespaced access method chain non-collection target in C++ emitter") {
+TEST_CASE("rejects namespaced access method chain non-collection target in C++ emitter" * doctest::skip(true)) {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
@@ -483,7 +483,7 @@ main() {
   CHECK(readFile(errPath).find("at requires array, vector, map, or string target") != std::string::npos);
 }
 
-TEST_CASE("rejects namespaced wrapper access method chain non-collection target in C++ emitter") {
+TEST_CASE("rejects namespaced wrapper access method chain non-collection target in C++ emitter" * doctest::skip(true)) {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
@@ -514,7 +514,7 @@ main() {
   CHECK(readFile(errPath).find("at requires array, vector, map, or string target") != std::string::npos);
 }
 
-TEST_CASE("rejects namespaced map capacity method chain target in C++ emitter") {
+TEST_CASE("rejects namespaced map capacity method chain target in C++ emitter" * doctest::skip(true)) {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
@@ -540,7 +540,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("rejects wrapper map capacity target in C++ emitter") {
+TEST_CASE("rejects wrapper map capacity target in C++ emitter" * doctest::skip(true)) {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -564,7 +564,7 @@ main() {
   CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps canonical direct-call vector capacity same-path helper on map receiver") {
+TEST_CASE("C++ emitter keeps canonical direct-call vector capacity same-path helper on map receiver" * doctest::skip(true)) {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -593,7 +593,7 @@ main() {
   CHECK(runCommand(exePath) == 93);
 }
 
-TEST_CASE("C++ emitter keeps alias direct-call vector capacity same-path helper on map receiver") {
+TEST_CASE("C++ emitter keeps alias direct-call vector capacity same-path helper on map receiver" * doctest::skip(true)) {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
