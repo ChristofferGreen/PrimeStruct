@@ -54,15 +54,15 @@ std::vector<std::string> SemanticsValidator::effectFreeMethodPathCandidatesForRe
     const std::string &methodName) const {
   if (receiverPath == "/vector") {
     if (methodName == "count") {
-      return {"/vector/" + methodName, "/std/collections/vector/" + methodName};
+      return {"/std/collections/vector/" + methodName};
     }
-    return {"/vector/" + methodName, "/std/collections/vector/" + methodName, "/array/" + methodName};
+    return {"/std/collections/vector/" + methodName, "/array/" + methodName};
   }
   if (receiverPath == "/array") {
     if (methodName == "count") {
       return {"/array/" + methodName};
     }
-    return {"/array/" + methodName, "/vector/" + methodName, "/std/collections/vector/" + methodName};
+    return {"/array/" + methodName, "/std/collections/vector/" + methodName};
   }
   if (receiverPath == "/map") {
     if (isRemovedMapCompatibilityHelper(methodName)) {
@@ -79,19 +79,10 @@ std::string SemanticsValidator::preferEffectFreeCollectionHelperPath(const std::
            suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
            suffix != "remove_at" && suffix != "remove_swap";
   };
-  auto allowsVectorStdlibCompatibilitySuffix = [](const std::string &suffix) {
-    return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
-           suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
-           suffix != "remove_at" && suffix != "remove_swap";
-  };
   std::string preferred = path;
   if (preferred.rfind("/array/", 0) == 0 && defMap_.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      const std::string vectorAlias = "/vector/" + suffix;
-      if (defMap_.count(vectorAlias) > 0) {
-        return vectorAlias;
-      }
       const std::string stdlibAlias = "/std/collections/vector/" + suffix;
       if (defMap_.count(stdlibAlias) > 0) {
         return stdlibAlias;
@@ -99,30 +90,14 @@ std::string SemanticsValidator::preferEffectFreeCollectionHelperPath(const std::
     }
   }
   if (preferred.rfind("/vector/", 0) == 0 && defMap_.count(preferred) == 0) {
-    const std::string suffix = preferred.substr(std::string("/vector/").size());
-    if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
-      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
-      if (defMap_.count(stdlibAlias) > 0) {
-        preferred = stdlibAlias;
-      } else if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-        const std::string arrayAlias = "/array/" + suffix;
-        if (defMap_.count(arrayAlias) > 0) {
-          preferred = arrayAlias;
-        }
-      }
-    }
+    // Keep explicit /vector/* lookup isolated to avoid alias fallback.
   }
   if (preferred.rfind("/std/collections/vector/", 0) == 0 && defMap_.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/std/collections/vector/").size());
-    if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
-      const std::string vectorAlias = "/vector/" + suffix;
-      if (defMap_.count(vectorAlias) > 0) {
-        preferred = vectorAlias;
-      } else if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-        const std::string arrayAlias = "/array/" + suffix;
-        if (defMap_.count(arrayAlias) > 0) {
-          preferred = arrayAlias;
-        }
+    if (allowsArrayVectorCompatibilitySuffix(suffix)) {
+      const std::string arrayAlias = "/array/" + suffix;
+      if (defMap_.count(arrayAlias) > 0) {
+        preferred = arrayAlias;
       }
     }
   }
@@ -149,11 +124,6 @@ std::string SemanticsValidator::preferEffectFreeCollectionHelperPath(const std::
 
 std::vector<std::string> SemanticsValidator::effectFreeCollectionHelperPathCandidates(const std::string &path) const {
   auto allowsArrayVectorCompatibilitySuffix = [](const std::string &suffix) {
-    return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
-           suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
-           suffix != "remove_at" && suffix != "remove_swap";
-  };
-  auto allowsVectorStdlibCompatibilitySuffix = [](const std::string &suffix) {
     return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
            suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
            suffix != "remove_at" && suffix != "remove_swap";
@@ -185,22 +155,12 @@ std::vector<std::string> SemanticsValidator::effectFreeCollectionHelperPathCandi
   if (normalizedPath.rfind("/array/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      appendUnique("/vector/" + suffix);
       appendUnique("/std/collections/vector/" + suffix);
     }
   } else if (normalizedPath.rfind("/vector/", 0) == 0) {
-    const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
-    if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
-      appendUnique("/std/collections/vector/" + suffix);
-    }
-    if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      appendUnique("/array/" + suffix);
-    }
+    // Keep explicit /vector/* lookup isolated to avoid alias fallback.
   } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
-    if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
-      appendUnique("/vector/" + suffix);
-    }
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       appendUnique("/array/" + suffix);
     }
