@@ -10,7 +10,6 @@
 namespace primec::ir_lowerer {
 
 bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix);
-bool allowsVectorStdlibCompatibilitySuffix(const std::string &suffix);
 
 std::string preferredFileErrorHelperTarget(
     std::string_view helperName,

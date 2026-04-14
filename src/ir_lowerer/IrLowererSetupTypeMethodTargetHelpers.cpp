@@ -123,11 +123,6 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     if (path.rfind("/array/", 0) == 0) {
       const std::string suffix = path.substr(std::string("/array/").size());
       if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-        const std::string vectorAlias = "/vector/" + suffix;
-        defIt = defMap.find(vectorAlias);
-        if (defIt != defMap.end()) {
-          return defIt->second;
-        }
         const std::string stdlibAlias = "/std/collections/vector/" + suffix;
         defIt = defMap.find(stdlibAlias);
         if (defIt != defMap.end()) {
@@ -136,31 +131,10 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       }
     }
     if (path.rfind("/vector/", 0) == 0) {
-      const std::string suffix = path.substr(std::string("/vector/").size());
-      if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
-        const std::string stdlibAlias = "/std/collections/vector/" + suffix;
-        defIt = defMap.find(stdlibAlias);
-        if (defIt != defMap.end()) {
-          return defIt->second;
-        }
-      }
-      if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-        const std::string arrayAlias = "/array/" + suffix;
-        defIt = defMap.find(arrayAlias);
-        if (defIt != defMap.end()) {
-          return defIt->second;
-        }
-      }
+      // Keep explicit /vector/* lookup isolated to avoid alias fallback.
     }
     if (path.rfind("/std/collections/vector/", 0) == 0) {
       const std::string suffix = path.substr(std::string("/std/collections/vector/").size());
-      if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
-        const std::string vectorAlias = "/vector/" + suffix;
-        defIt = defMap.find(vectorAlias);
-        if (defIt != defMap.end()) {
-          return defIt->second;
-        }
-      }
       if (allowsArrayVectorCompatibilitySuffix(suffix)) {
         const std::string arrayAlias = "/array/" + suffix;
         defIt = defMap.find(arrayAlias);

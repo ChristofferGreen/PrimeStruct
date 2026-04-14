@@ -164,12 +164,6 @@ bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
          suffix != "remove_at" && suffix != "remove_swap";
 }
 
-bool allowsVectorStdlibCompatibilitySuffix(const std::string &suffix) {
-  return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
-         suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
-         suffix != "remove_at" && suffix != "remove_swap";
-}
-
 std::string preferredFileErrorHelperTarget(
     std::string_view helperName,
     const std::unordered_map<std::string, const Definition *> &defMap) {
@@ -658,22 +652,12 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
   if (normalizedPath.rfind("/array/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      appendUnique("/vector/" + suffix);
       appendUnique("/std/collections/vector/" + suffix);
     }
   } else if (normalizedPath.rfind("/vector/", 0) == 0) {
-    const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
-    if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
-      appendUnique("/std/collections/vector/" + suffix);
-    }
-    if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      appendUnique("/array/" + suffix);
-    }
+    // Keep explicit /vector/* lookup isolated to avoid alias fallback.
   } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
-    if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
-      appendUnique("/vector/" + suffix);
-    }
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       appendUnique("/array/" + suffix);
     }

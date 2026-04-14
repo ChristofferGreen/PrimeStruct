@@ -20,12 +20,6 @@ bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
          suffix != "remove_at" && suffix != "remove_swap";
 }
 
-bool allowsVectorStdlibCompatibilitySuffix(const std::string &suffix) {
-  return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
-         suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
-         suffix != "remove_at" && suffix != "remove_swap";
-}
-
 bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
   return helperName == "count" || helperName == "count_ref" ||
          helperName == "contains" || helperName == "contains_ref" ||
@@ -75,10 +69,6 @@ std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &
   if (preferred.rfind("/array/", 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
     const std::string suffix = preferred.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      const std::string vectorAlias = "/vector/" + suffix;
-      if (hasVisibleDefinitionPath(vectorAlias)) {
-        return vectorAlias;
-      }
       const std::string stdlibAlias = "/std/collections/vector/" + suffix;
       if (hasVisibleDefinitionPath(stdlibAlias)) {
         return stdlibAlias;
@@ -86,30 +76,14 @@ std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &
     }
   }
   if (preferred.rfind("/vector/", 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
-    const std::string suffix = preferred.substr(std::string("/vector/").size());
-    if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
-      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
-      if (hasVisibleDefinitionPath(stdlibAlias)) {
-        preferred = stdlibAlias;
-      } else if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-        const std::string arrayAlias = "/array/" + suffix;
-        if (hasVisibleDefinitionPath(arrayAlias)) {
-          preferred = arrayAlias;
-        }
-      }
-    }
+    // Keep explicit /vector/* lookup isolated to avoid alias fallback.
   }
   if (preferred.rfind("/std/collections/vector/", 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
     const std::string suffix = preferred.substr(std::string("/std/collections/vector/").size());
-    if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
-      const std::string vectorAlias = "/vector/" + suffix;
-      if (hasVisibleDefinitionPath(vectorAlias)) {
-        preferred = vectorAlias;
-      } else if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-        const std::string arrayAlias = "/array/" + suffix;
-        if (hasVisibleDefinitionPath(arrayAlias)) {
-          preferred = arrayAlias;
-        }
+    if (allowsArrayVectorCompatibilitySuffix(suffix)) {
+      const std::string arrayAlias = "/array/" + suffix;
+      if (hasVisibleDefinitionPath(arrayAlias)) {
+        preferred = arrayAlias;
       }
     }
   }

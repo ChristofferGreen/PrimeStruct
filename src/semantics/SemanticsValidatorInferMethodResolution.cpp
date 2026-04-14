@@ -150,16 +150,6 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   };
   auto canonicalReceiverAliasPath = [&](const std::string &resolvedReceiverPath) -> std::string {
     auto buildAliasPath = [&]() -> std::string {
-      if (resolvedReceiverPath.rfind("/vector/", 0) == 0) {
-        const std::string_view helperSuffix =
-            std::string_view(resolvedReceiverPath).substr(std::string_view("/vector/").size());
-        return joinMethodTarget("/std/collections/vector", helperSuffix);
-      }
-      if (resolvedReceiverPath.rfind("/std/collections/vector/", 0) == 0) {
-        const std::string_view helperSuffix = std::string_view(resolvedReceiverPath).substr(
-            std::string_view("/std/collections/vector/").size());
-        return joinMethodTarget("/vector", helperSuffix);
-      }
       if (resolvedReceiverPath.rfind("/map/", 0) == 0) {
         const std::string_view helperSuffix =
             std::string_view(resolvedReceiverPath).substr(std::string_view("/map/").size());
@@ -355,7 +345,8 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         return true;
       }
       if (collectionTypePath == "/vector") {
-        resolvedOut = preferVectorStdlibHelperPath("/vector/" + normalizedMethodName);
+        resolvedOut =
+            preferVectorStdlibHelperPath("/std/collections/vector/" + normalizedMethodName);
         return true;
       }
       if (collectionTypePath == "/string") {
@@ -816,7 +807,8 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         return true;
       }
       if (resolveVectorTarget(receiver, elemType)) {
-        resolvedOut = preferVectorStdlibHelperPath("/vector/" + normalizedMethodName);
+        resolvedOut =
+            preferVectorStdlibHelperPath("/std/collections/vector/" + normalizedMethodName);
         return true;
       }
       if (resolveArrayTarget(receiver, elemType)) {

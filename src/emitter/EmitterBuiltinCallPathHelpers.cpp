@@ -557,10 +557,6 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
   if (preferred.rfind("/array/", 0) == 0 && nameMap.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      const std::string vectorAlias = "/vector/" + suffix;
-      if (nameMap.count(vectorAlias) > 0) {
-        return vectorAlias;
-      }
       const std::string stdlibAlias = "/std/collections/vector/" + suffix;
       if (nameMap.count(stdlibAlias) > 0) {
         return stdlibAlias;
@@ -568,30 +564,14 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
     }
   }
   if (preferred.rfind("/vector/", 0) == 0 && nameMap.count(preferred) == 0) {
-    const std::string suffix = preferred.substr(std::string("/vector/").size());
-    if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
-      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
-      if (nameMap.count(stdlibAlias) > 0) {
-        preferred = stdlibAlias;
-      } else if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-        const std::string arrayAlias = "/array/" + suffix;
-        if (nameMap.count(arrayAlias) > 0) {
-          preferred = arrayAlias;
-        }
-      }
-    }
+    // Keep explicit /vector/* lookup isolated to avoid alias fallback.
   }
   if (preferred.rfind("/std/collections/vector/", 0) == 0 && nameMap.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/std/collections/vector/").size());
-    if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
-      const std::string vectorAlias = "/vector/" + suffix;
-      if (nameMap.count(vectorAlias) > 0) {
-        preferred = vectorAlias;
-      } else if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-        const std::string arrayAlias = "/array/" + suffix;
-        if (nameMap.count(arrayAlias) > 0) {
-          preferred = arrayAlias;
-        }
+    if (allowsArrayVectorCompatibilitySuffix(suffix)) {
+      const std::string arrayAlias = "/array/" + suffix;
+      if (nameMap.count(arrayAlias) > 0) {
+        preferred = arrayAlias;
       }
     }
   }
