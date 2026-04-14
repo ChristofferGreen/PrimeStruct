@@ -170,6 +170,7 @@ Wave E (queue hygiene):
   - progress: Removed `/vector/*` alias fallback from effect-free collection method candidate selection and helper-path preference/candidate expansion, so this effect-free semantics path now prefers canonical `/std/collections/vector/*` without back-routing through compatibility aliases.
   - progress: Removed initializer-time fallback that rewrote unresolved canonical `/std/collections/vector/count|capacity` calls back to `/vector/*` during binding validation and local-auto call inference, and updated preferred initializer helper resolution to no longer prefer `/vector/*` aliases over canonical stdlib vector helpers.
   - progress: Removed remaining template-monomorph `/vector/*` helper-path auto-bridge in `preferVectorStdlibHelperPath`/`preferVectorStdlibTemplatePath` and aligned pointer-like call candidate expansion to keep explicit `/vector/*` isolated while canonical `/std/collections/vector/*` paths no longer back-expand to `/vector/*`.
+  - progress: Removed another cross-stage canonical-backfallback compatibility family by deleting `/std/collections/vector/* -> /array/*` fallback from semantics, template monomorph, emitter, and lowerer helper-path preference/candidate builders, so explicit canonical vector helper lookup now stays isolated instead of downshifting to `/array/*`.
 
 - [ ] TODO-0407: Move test implementations from include chunks into `.cpp`
   - owner: ai

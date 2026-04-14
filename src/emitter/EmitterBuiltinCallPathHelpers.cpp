@@ -567,13 +567,7 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
     // Keep explicit /vector/* lookup isolated to avoid alias fallback.
   }
   if (preferred.rfind("/std/collections/vector/", 0) == 0 && nameMap.count(preferred) == 0) {
-    const std::string suffix = preferred.substr(std::string("/std/collections/vector/").size());
-    if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      const std::string arrayAlias = "/array/" + suffix;
-      if (nameMap.count(arrayAlias) > 0) {
-        preferred = arrayAlias;
-      }
-    }
+    // Keep explicit /std/collections/vector/* lookup isolated to avoid alias fallback.
   }
   if (preferred.rfind("/map/", 0) == 0 && nameMap.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/map/").size());

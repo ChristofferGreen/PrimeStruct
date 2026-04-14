@@ -64,16 +64,7 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
     // Keep explicit /vector/* lookup isolated to avoid alias fallback.
   }
   if (preferred.rfind("/std/collections/vector/", 0) == 0 && defs.count(preferred) == 0) {
-    const std::string suffix = preferred.substr(std::string("/std/collections/vector/").size());
-    if (isRemovedVectorCompatibilityHelper(suffix)) {
-      return preferred;
-    }
-    if (!isRemovedVectorCompatibilityHelper(suffix)) {
-      const std::string arrayAlias = "/array/" + suffix;
-      if (defs.count(arrayAlias) > 0) {
-        preferred = arrayAlias;
-      }
-    }
+    // Keep explicit /std/collections/vector/* lookup isolated to avoid alias fallback.
   }
   if (preferred.rfind("/map/", 0) == 0 && defs.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/map/").size());
@@ -108,16 +99,7 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
     return path;
   }
   if (path.rfind("/std/collections/vector/", 0) == 0) {
-    const std::string suffix = path.substr(std::string("/std/collections/vector/").size());
-    if (isRemovedVectorCompatibilityHelper(suffix)) {
-      return path;
-    }
-    if (!isRemovedVectorCompatibilityHelper(suffix)) {
-      const std::string arrayPath = "/array/" + suffix;
-      if (ctx.sourceDefs.count(arrayPath) > 0 && ctx.templateDefs.count(arrayPath) > 0) {
-        return arrayPath;
-      }
-    }
+    // Keep explicit /std/collections/vector/* lookup isolated to avoid alias fallback.
     return path;
   }
   if (path.rfind("/vector/", 0) != 0) {

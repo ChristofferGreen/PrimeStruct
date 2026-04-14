@@ -181,10 +181,7 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
   } else if (normalizedPath.rfind("/vector/", 0) == 0) {
     // Keep explicit /vector/* lookup isolated to avoid alias fallback.
   } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
-    const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
-    if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      appendUnique("/array/" + suffix);
-    }
+    // Keep explicit /std/collections/vector/* lookup isolated to avoid alias fallback.
   } else if (normalizedPath.rfind("/map/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/map/").size());
     if (!isRemovedMapCompatibilityHelper(suffix)) {
@@ -215,13 +212,7 @@ std::string preferCollectionHelperPath(const std::string &path,
     // Keep explicit /vector/* lookup isolated to avoid alias fallback.
   }
   if (preferred.rfind("/std/collections/vector/", 0) == 0 && defMap.count(preferred) == 0) {
-    const std::string suffix = preferred.substr(std::string("/std/collections/vector/").size());
-    if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      const std::string arrayAlias = "/array/" + suffix;
-      if (defMap.count(arrayAlias) > 0) {
-        preferred = arrayAlias;
-      }
-    }
+    // Keep explicit /std/collections/vector/* lookup isolated to avoid alias fallback.
   }
   if (preferred.rfind("/map/", 0) == 0 && defMap.count(preferred) == 0) {
     const std::string stdlibAlias = "/std/collections/map/" + preferred.substr(std::string("/map/").size());
