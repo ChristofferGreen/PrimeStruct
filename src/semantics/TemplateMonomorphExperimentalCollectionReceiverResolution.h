@@ -469,10 +469,10 @@ std::string experimentalMapHelperPathForCanonicalHelper(const std::string &path)
 }
 
 std::string experimentalVectorHelperPathForCanonicalHelper(const std::string &path) {
-  if (path == "/std/collections/vector/count" || path == "/vector/count") {
+  if (path == "/std/collections/vector/count") {
     return "/std/collections/experimental_vector/vectorCount";
   }
-  if (path == "/std/collections/vector/capacity" || path == "/vector/capacity") {
+  if (path == "/std/collections/vector/capacity") {
     return "/std/collections/experimental_vector/vectorCapacity";
   }
   if (path == "/std/collections/vector/push" || path == "/vector/push") {

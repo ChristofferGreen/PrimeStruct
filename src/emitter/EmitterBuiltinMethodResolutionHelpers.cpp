@@ -54,8 +54,6 @@ bool removedCollectionAliasNeedsDefinition(std::string_view rawMethodName) {
          rawMethodName == "/std/collections/map/count" ||
          rawMethodName == "/array/count" ||
          rawMethodName == "/array/capacity" ||
-         rawMethodName == "/vector/count" ||
-         rawMethodName == "/vector/capacity" ||
          rawMethodName == "/std/collections/vector/count" ||
          rawMethodName == "/std/collections/vector/capacity";
 }

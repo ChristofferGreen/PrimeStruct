@@ -238,8 +238,8 @@ bool hasNamedCallArguments(const Expr &expr) {
 }
 
 bool isCollectionCompatibilityTemplateFallbackPath(const std::string &path) {
-  return path == "/vector/count" || path == "/vector/capacity" || path == "/vector/at" ||
-         path == "/vector/at_unsafe" || path == "/map/map" || path == "/map/count" || path == "/map/at" ||
+  return path == "/vector/at" || path == "/vector/at_unsafe" ||
+         path == "/map/map" || path == "/map/count" || path == "/map/at" ||
          path == "/map/at_unsafe";
 }
 

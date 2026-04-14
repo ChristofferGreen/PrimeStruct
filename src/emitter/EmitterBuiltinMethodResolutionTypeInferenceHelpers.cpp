@@ -194,8 +194,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    return normalized == "vector/count" || normalized == "vector/capacity" ||
-           normalized == "std/collections/vector/count" ||
+    return normalized == "std/collections/vector/count" ||
            normalized == "std/collections/vector/capacity";
   };
   auto inferExplicitVectorAccessCompatibilityTypeName = [&](const Expr &candidate) -> std::string {
@@ -277,12 +276,8 @@ std::string inferMethodResolutionPrimitiveTypeName(
       return "";
     }
     const std::string resolvedExprPath = resolveExprPath(candidate);
-    std::vector<std::string> resolvedCandidates;
-    if (resolvedExprPath == "/vector/count" || resolvedExprPath == "/vector/capacity") {
-      resolvedCandidates.push_back(resolvedExprPath);
-    } else {
-      resolvedCandidates = collectionHelperPathCandidates(resolvedExprPath);
-    }
+    std::vector<std::string> resolvedCandidates =
+        collectionHelperPathCandidates(resolvedExprPath);
     return typeNameFromResolvedCandidates(view, resolvedCandidates);
   };
   auto isExplicitVectorAccessDirectCall = [&](const Expr &candidate) {

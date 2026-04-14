@@ -73,9 +73,9 @@ struct ExperimentalVectorHelperDescriptor {
 };
 
 constexpr ExperimentalVectorHelperDescriptor kExperimentalVectorHelperDescriptors[] = {
-    {"count", "/std/collections/vector/count", "/vector/count", "",
+    {"count", "/std/collections/vector/count", "", "",
      "/std/collections/experimental_vector/vectorCount"},
-    {"capacity", "/std/collections/vector/capacity", "/vector/capacity", "",
+    {"capacity", "/std/collections/vector/capacity", "", "",
      "/std/collections/experimental_vector/vectorCapacity"},
     {"push", "/std/collections/vector/push", "/vector/push", "",
      "/std/collections/experimental_vector/vectorPush"},
@@ -109,8 +109,6 @@ struct RemovedCollectionHelperDescriptor {
 };
 
 constexpr RemovedCollectionHelperDescriptor kRemovedCollectionHelperDescriptors[] = {
-    {RemovedCollectionHelperFamily::VectorLike, "count", "/vector/count", false, false},
-    {RemovedCollectionHelperFamily::VectorLike, "capacity", "/vector/capacity", false, false},
     {RemovedCollectionHelperFamily::VectorLike, "at", "/vector/at", false, false},
     {RemovedCollectionHelperFamily::VectorLike, "at_unsafe", "/vector/at_unsafe", false, false},
     {RemovedCollectionHelperFamily::VectorLike, "push", "/vector/push", true, false},

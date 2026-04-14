@@ -2323,9 +2323,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         !removedVectorMethodCompatibilityPath.empty() &&
         (hasDefinitionPath(removedVectorMethodCompatibilityPath) ||
          hasImportedDefinitionPath(removedVectorMethodCompatibilityPath));
-    if ((removedVectorMethodCompatibilityPath == "/vector/count" ||
-         removedVectorMethodCompatibilityPath == "/vector/capacity" ||
-         removedVectorMethodCompatibilityPath == "/std/collections/vector/count" ||
+    if ((removedVectorMethodCompatibilityPath == "/std/collections/vector/count" ||
          removedVectorMethodCompatibilityPath == "/std/collections/vector/capacity") &&
         !hasSamePathRemovedVectorMethodHelper &&
         !receiver.args.empty()) {
