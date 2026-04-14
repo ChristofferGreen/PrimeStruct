@@ -52,9 +52,6 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
     return std::pair<std::string, std::string>(std::string(collectionFamily), std::move(helperName));
   };
 
-  if (auto parsed = parsePrefixedHelper("/vector/", "vector")) {
-    return parsed;
-  }
   if (auto parsed = parsePrefixedHelper("/std/collections/vector/", "vector")) {
     return parsed;
   }

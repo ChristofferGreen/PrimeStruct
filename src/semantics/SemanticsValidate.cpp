@@ -287,9 +287,6 @@ bridgePathChoiceFromDirectCallSnapshotForSemanticProductBuild(
     };
   };
 
-  if (auto parsed = parsePrefixedHelper("/vector/", "vector")) {
-    return parsed;
-  }
   if (auto parsed = parsePrefixedHelper("/std/collections/vector/", "vector")) {
     return parsed;
   }

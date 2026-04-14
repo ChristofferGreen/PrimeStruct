@@ -765,8 +765,7 @@
             return true;
           };
 
-          return tryRewritePath("/std/collections/vector/" + helperName) ||
-                 tryRewritePath("/vector/" + helperName);
+          return tryRewritePath("/std/collections/vector/" + helperName);
         };
         Expr rewrittenBareVectorHelperExpr;
         if (rewriteBareVectorHelperExpr(expr, rewrittenBareVectorHelperExpr)) {
@@ -793,8 +792,7 @@
             const Expr &receiverCallExpr = callExpr.args.front();
             knownVectorCallReceiver =
                 receiverCallExpr.name.rfind("/std/collections/vector/vector", 0) == 0 ||
-                receiverCallExpr.name.rfind("/std/collections/experimental_vector/vector", 0) == 0 ||
-                receiverCallExpr.name.rfind("/vector/vector", 0) == 0;
+                receiverCallExpr.name.rfind("/std/collections/experimental_vector/vector", 0) == 0;
             std::string receiverCollectionName;
             if (getBuiltinCollectionName(receiverCallExpr, receiverCollectionName) &&
                 receiverCollectionName == "vector" &&
@@ -848,8 +846,7 @@
               rewrittenExpr = std::move(candidate);
               return true;
             };
-            return tryRewriteNamespace("/std/collections/vector") ||
-                   tryRewriteNamespace("/vector");
+            return tryRewriteNamespace("/std/collections/vector");
           }
           rewrittenExpr = callExpr;
           rewrittenExpr.isMethodCall = false;
