@@ -574,7 +574,6 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     if (!expr.isMethodCall &&
         (isDirectVectorReceiver || isDirectExperimentalVectorReceiver) &&
         !isStdlibVectorAccessWrapperDefinition &&
-        !hasDeclaredDefinitionPath("/vector/" + builtinName) &&
         !hasDeclaredDefinitionPath("/std/collections/vector/" + builtinName) &&
         !hasImportedDefinitionPath("/std/collections/vector/" + builtinName)) {
       return failCollectionAccessDiagnostic(

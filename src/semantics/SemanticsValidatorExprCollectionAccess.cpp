@@ -289,13 +289,6 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
           if (hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
               hasImportedDefinitionPath(canonicalVectorMethodTarget)) {
             methodResolved = canonicalVectorMethodTarget;
-          } else {
-            const std::string aliasVectorMethodTarget =
-                "/vector/" + accessHelperName;
-            if (hasDeclaredDefinitionPath(aliasVectorMethodTarget) ||
-                hasImportedDefinitionPath(aliasVectorMethodTarget)) {
-              methodResolved = aliasVectorMethodTarget;
-            }
           }
         }
         methodResolved = preferVectorStdlibHelperPath(methodResolved);
@@ -321,12 +314,6 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         if (hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
             hasImportedDefinitionPath(canonicalVectorMethodTarget)) {
           methodResolved = canonicalVectorMethodTarget;
-        } else {
-          const std::string aliasVectorMethodTarget = "/vector/" + accessHelperName;
-          if (hasDeclaredDefinitionPath(aliasVectorMethodTarget) ||
-              hasImportedDefinitionPath(aliasVectorMethodTarget)) {
-            methodResolved = aliasVectorMethodTarget;
-          }
         }
       }
       if (isCanonicalMapAccessHelperName(accessHelperName) &&
@@ -413,13 +400,6 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
           if (hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
               hasImportedDefinitionPath(canonicalVectorMethodTarget)) {
             methodResolved = canonicalVectorMethodTarget;
-          } else {
-            const std::string aliasVectorMethodTarget =
-                "/vector/" + accessHelperName;
-            if (hasDeclaredDefinitionPath(aliasVectorMethodTarget) ||
-                hasImportedDefinitionPath(aliasVectorMethodTarget)) {
-              methodResolved = aliasVectorMethodTarget;
-            }
           }
         }
         methodResolved = preferVectorStdlibHelperPath(methodResolved);
@@ -441,12 +421,6 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
           if (hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
               hasImportedDefinitionPath(canonicalVectorMethodTarget)) {
             methodResolved = canonicalVectorMethodTarget;
-          } else {
-            const std::string aliasVectorMethodTarget = "/vector/" + accessHelperName;
-            if (hasDeclaredDefinitionPath(aliasVectorMethodTarget) ||
-                hasImportedDefinitionPath(aliasVectorMethodTarget)) {
-              methodResolved = aliasVectorMethodTarget;
-            }
           }
         }
         if (isCanonicalMapAccessHelperName(accessHelperName) &&
@@ -513,23 +487,12 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
           if (receiverStructPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
             const std::string canonicalVectorMethodTarget =
                 "/std/collections/vector/" + accessHelperName;
-            const std::string aliasVectorMethodTarget =
-                "/vector/" + accessHelperName;
             if (hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
                 hasImportedDefinitionPath(canonicalVectorMethodTarget)) {
               usedMethodTarget = true;
               hasMethodReceiverIndex = true;
               methodReceiverIndex = 0;
               resolved = canonicalVectorMethodTarget;
-              resolvedMethod = false;
-              return true;
-            }
-            if (hasDeclaredDefinitionPath(aliasVectorMethodTarget) ||
-                hasImportedDefinitionPath(aliasVectorMethodTarget)) {
-              usedMethodTarget = true;
-              hasMethodReceiverIndex = true;
-              methodReceiverIndex = 0;
-              resolved = aliasVectorMethodTarget;
               resolvedMethod = false;
               return true;
             }
