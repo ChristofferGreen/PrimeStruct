@@ -177,49 +177,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     entryArgScope.emplace(*this, true);
   }
 
-  Expr initializerForValidation = initializer;
-  const Expr *initializerExprForValidation = &initializer;
-  if (!hasExplicitType || explicitAutoType) {
-    std::string namespacedCollection;
-    std::string namespacedHelper;
-    const std::string resolvedInitializer = resolveCalleePath(initializer);
-    auto hasImportedInitializerDefinitionPath = [&](const std::string &path) {
-      std::string canonicalPath = path;
-      const size_t suffix = canonicalPath.find("__t");
-      if (suffix != std::string::npos) {
-        canonicalPath.erase(suffix);
-      }
-      const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
-      for (const auto &importPath : importPaths) {
-        if (importPath == canonicalPath) {
-          return true;
-        }
-        if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
-          const std::string prefix = importPath.substr(0, importPath.size() - 2);
-          if (canonicalPath == prefix || canonicalPath.rfind(prefix + "/", 0) == 0) {
-            return true;
-          }
-        }
-      }
-      return false;
-    };
-    const bool isUnresolvedStdNamespacedVectorCountCapacityCall =
-        initializer.kind == Expr::Kind::Call &&
-        !initializer.isMethodCall &&
-        getNamespacedCollectionHelperName(initializer, namespacedCollection, namespacedHelper) &&
-        namespacedCollection == "vector" &&
-        (namespacedHelper == "count" || namespacedHelper == "capacity") &&
-        resolvedInitializer == "/std/collections/vector/" + namespacedHelper &&
-        defMap_.find(resolvedInitializer) == defMap_.end() &&
-        !hasImportedInitializerDefinitionPath(resolvedInitializer);
-    if (isUnresolvedStdNamespacedVectorCountCapacityCall) {
-      initializerForValidation.name = "/vector/" + namespacedHelper;
-      initializerForValidation.namespacePrefix.clear();
-      initializerExprForValidation = &initializerForValidation;
-    }
-  }
-
-  if (!validateExpr(params, locals, *initializerExprForValidation)) {
+  if (!validateExpr(params, locals, initializer)) {
     if (const auto pendingPath =
             builtinSoaDirectPendingHelperPath(initializer, params, locals)) {
       return failBindingDiagnostic(

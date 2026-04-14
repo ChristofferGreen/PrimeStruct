@@ -349,11 +349,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
                                                      BindingInfo &bindingOut,
                                                      const Expr *bindingExpr) {
   if (initializer.kind != Expr::Kind::Call) return false;
-  Expr initializerForInference = initializer;
   const Expr *initializerExprForInference = &initializer;
-  std::string namespacedCollection;
-  std::string namespacedHelper;
-  const std::string resolvedInitializer = resolveCalleePath(initializer);
   auto isResolvedMapConstructorPath = [](std::string resolvedPath) {
     resolvedPath = stripMapConstructorSuffixes(std::move(resolvedPath));
     return resolvedPath == "/std/collections/map/map" ||
@@ -416,39 +412,6 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
     }
     return false;
   };
-  auto hasImportedInitializerDefinitionPath = [&](const std::string &path) {
-    std::string canonicalPath = path;
-    const size_t suffix = canonicalPath.find("__t");
-    if (suffix != std::string::npos) {
-      canonicalPath.erase(suffix);
-    }
-    for (const auto &importPath : program_.imports) {
-      if (importPath == canonicalPath) {
-        return true;
-      }
-      if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
-        const std::string prefix = importPath.substr(0, importPath.size() - 2);
-        if (canonicalPath == prefix || canonicalPath.rfind(prefix + "/", 0) == 0) {
-          return true;
-        }
-      }
-    }
-    return false;
-  };
-  const bool isUnresolvedStdNamespacedVectorCountCapacityCall =
-      initializer.kind == Expr::Kind::Call &&
-      !initializer.isMethodCall &&
-      getNamespacedCollectionHelperName(initializer, namespacedCollection, namespacedHelper) &&
-      namespacedCollection == "vector" &&
-      (namespacedHelper == "count" || namespacedHelper == "capacity") &&
-      resolvedInitializer == "/std/collections/vector/" + namespacedHelper &&
-      defMap_.find(resolvedInitializer) == defMap_.end() &&
-      !hasImportedInitializerDefinitionPath(resolvedInitializer);
-  if (isUnresolvedStdNamespacedVectorCountCapacityCall) {
-    initializerForInference.name = "/vector/" + namespacedHelper;
-    initializerForInference.namespacePrefix.clear();
-    initializerExprForInference = &initializerForInference;
-  }
   auto isUnresolvedActiveInferenceCall = [&](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call) {
       return false;

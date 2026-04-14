@@ -161,10 +161,6 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
 
   if (const std::string helperName = explicitStdVectorHelperName();
       !helperName.empty()) {
-    const std::string alias = "/vector/" + helperName;
-    if (defMap_.count(alias) > 0) {
-      return alias;
-    }
     const std::string canonical = "/std/collections/vector/" + helperName;
     if (defMap_.count(canonical) > 0) {
       return canonical;
