@@ -229,7 +229,6 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
        expr.namespacePrefix == "std/collections/map");
 
   if (resolvedMethod && (logicalResolvedMethod == "/array/count" ||
-                         logicalResolvedMethod == "/vector/count" ||
                          logicalResolvedMethod == "/std/collections/vector/count" ||
                          isLegacyOrCanonicalSoaHelperPath(
                              logicalSoaCountCanonical,
@@ -505,8 +504,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
   }
 
   if (resolvedMethod &&
-      (resolved == "/vector/capacity" ||
-       resolved == "/std/collections/vector/capacity")) {
+      resolved == "/std/collections/vector/capacity") {
     handledOut = true;
     if (!expr.templateArgs.empty()) {
       return failCountCapacityMapBuiltin(

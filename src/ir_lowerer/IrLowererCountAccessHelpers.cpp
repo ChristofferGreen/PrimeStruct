@@ -292,7 +292,7 @@ bool isVectorCapacityCall(const Expr &expr, const LocalMap &localsIn) {
       expr.namespacePrefix.empty();
   const bool isExplicitVectorCapacityCall =
       expr.kind == Expr::Kind::Call && !expr.isMethodCall &&
-      ((expr.name == "/vector/capacity" || expr.name == "/std/collections/vector/capacity") ||
+      (expr.name == "/std/collections/vector/capacity" ||
        (expr.name == "capacity" &&
         (expr.namespacePrefix == "/std/collections/vector" ||
          expr.namespacePrefix == "std/collections/vector")));

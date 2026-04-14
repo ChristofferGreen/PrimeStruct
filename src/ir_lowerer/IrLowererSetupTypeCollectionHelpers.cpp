@@ -357,9 +357,6 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   const std::string experimentalVectorPrefix = "std/collections/experimental_vector/";
   if (normalized.rfind(vectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(normalized.substr(vectorPrefix.size()));
-    if (helperNameOut == "count" || helperNameOut == "capacity") {
-      return true;
-    }
     if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
       return false;
     }
@@ -604,8 +601,7 @@ bool isExplicitVectorReceiverProbeHelperExpr(const Expr &expr) {
     return true;
   }
   const std::string normalizedPath = normalizeCollectionHelperPath(expr.name);
-  return normalizedPath == "/vector/count" || normalizedPath == "/vector/capacity" ||
-         normalizedPath == "/std/collections/vector/count" ||
+  return normalizedPath == "/std/collections/vector/count" ||
          normalizedPath == "/std/collections/vector/capacity";
 }
 

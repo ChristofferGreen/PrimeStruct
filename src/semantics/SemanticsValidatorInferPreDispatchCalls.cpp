@@ -349,13 +349,6 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
                          ? preferVectorStdlibHelperPath(resolvedCallee)
                          : resolvedCandidates.front();
   bool hasResolvedPath = !expr.isMethodCall;
-  const bool prefersCanonicalVectorCountAliasDefinition =
-      !expr.isMethodCall && context.resolved == "/vector/count" &&
-      !hasDefinitionPath(context.resolved) &&
-      hasDefinitionPath("/std/collections/vector/count");
-  if (prefersCanonicalVectorCountAliasDefinition) {
-    context.resolved = "/std/collections/vector/count";
-  }
   if (!expr.isMethodCall && !resolvedCandidates.empty()) {
     std::string firstTemplateCompatibleCandidate;
     for (const auto &candidate : resolvedCandidates) {
