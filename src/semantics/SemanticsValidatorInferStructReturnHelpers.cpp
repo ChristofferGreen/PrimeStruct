@@ -238,20 +238,12 @@ std::vector<std::string> SemanticsValidator::inferStructReturnCollectionHelperPa
     if (suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
         suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
         suffix != "remove_at" && suffix != "remove_swap") {
-      appendUnique("/vector/" + suffix);
       appendUnique("/std/collections/vector/" + suffix);
     }
   } else if (normalizedPath.rfind("/vector/", 0) == 0) {
-    const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
-    if (suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
-        suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
-        suffix != "remove_at" && suffix != "remove_swap") {
-      appendUnique("/std/collections/vector/" + suffix);
-      appendUnique("/array/" + suffix);
-    }
+    // Keep explicit /vector/* lookup isolated to avoid alias fallback.
   } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
-    appendUnique("/vector/" + suffix);
     if (suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
         suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
         suffix != "remove_at" && suffix != "remove_swap") {

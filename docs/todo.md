@@ -165,6 +165,7 @@ Wave E (queue hygiene):
   - progress: Removed remaining `/vector/*` mutator alias mapping (`push`/`pop`/`reserve`/`clear`/`remove_at`/`remove_swap`) from experimental-vector helper canonicalization and vector compatibility descriptor aliases, and pruned emitter/lowerer direct-call alias filters so production mutator routing stays on canonical `/std/collections/vector/*` helper paths.
   - progress: Removed another cross-stage `/vector/*` compatibility subsystem by deleting alias candidate expansion/fallback from template-monomorph, pre-dispatch return-kind inference, struct-return path helpers, and emitter metadata candidate lookup; direct `/vector/*` paths now stay isolated instead of auto-bridging to canonical `/std/collections/vector/*`.
   - progress: Pruned additional `/vector/*` compatibility fallback from semantics method-target alias candidate expansion plus lowerer/emitter setup helper path preference (`preferVectorStdlibHelperPath`, setup collection candidate builders, and receiver-target method lookup), so canonical `/std/collections/vector/*` is preferred without back-routing to `/vector/*`.
+  - progress: Removed another struct-return/type-inference compatibility family that cross-expanded `/vector/*` and `/std/collections/vector/*` in semantics + emitter collection helper candidate builders and return-inference method-path selection, keeping direct `/vector/*` lookup isolated while canonical stdlib vector paths remain authoritative.
 
 - [ ] TODO-0407: Move test implementations from include chunks into `.cpp`
   - owner: ai

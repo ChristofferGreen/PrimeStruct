@@ -19,11 +19,6 @@
              suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
              suffix != "remove_at" && suffix != "remove_swap";
     };
-    auto allowsVectorStdlibCompatibilitySuffix = [](const std::string &suffix) {
-      return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
-             suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
-             suffix != "remove_at" && suffix != "remove_swap";
-    };
     std::vector<std::string> candidates;
     auto appendUnique = [&](const std::string &candidate) {
       if (candidate.empty()) {
@@ -51,22 +46,12 @@
     if (normalizedPath.rfind("/array/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/array/").size());
       if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-        appendUnique("/vector/" + suffix);
         appendUnique("/std/collections/vector/" + suffix);
       }
     } else if (normalizedPath.rfind("/vector/", 0) == 0) {
-      const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
-      if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
-        appendUnique("/std/collections/vector/" + suffix);
-      }
-      if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-        appendUnique("/array/" + suffix);
-      }
+      // Keep explicit /vector/* lookup isolated to avoid alias fallback.
     } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
-      if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
-        appendUnique("/vector/" + suffix);
-      }
       if (allowsArrayVectorCompatibilitySuffix(suffix)) {
         appendUnique("/array/" + suffix);
       }
