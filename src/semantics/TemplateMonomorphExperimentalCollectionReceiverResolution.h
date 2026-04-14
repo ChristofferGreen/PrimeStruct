@@ -475,36 +475,28 @@ std::string experimentalVectorHelperPathForCanonicalHelper(const std::string &pa
   if (path == "/std/collections/vector/capacity" || path == "/vector/capacity") {
     return "/std/collections/experimental_vector/vectorCapacity";
   }
-  if (path == "/std/collections/vector/push" || path == "/vector/push" ||
-      path == "/std/collections/vectorPush") {
+  if (path == "/std/collections/vector/push" || path == "/vector/push") {
     return "/std/collections/experimental_vector/vectorPush";
   }
-  if (path == "/std/collections/vector/pop" || path == "/vector/pop" ||
-      path == "/std/collections/vectorPop") {
+  if (path == "/std/collections/vector/pop" || path == "/vector/pop") {
     return "/std/collections/experimental_vector/vectorPop";
   }
-  if (path == "/std/collections/vector/reserve" || path == "/vector/reserve" ||
-      path == "/std/collections/vectorReserve") {
+  if (path == "/std/collections/vector/reserve" || path == "/vector/reserve") {
     return "/std/collections/experimental_vector/vectorReserve";
   }
-  if (path == "/std/collections/vector/clear" || path == "/vector/clear" ||
-      path == "/std/collections/vectorClear") {
+  if (path == "/std/collections/vector/clear" || path == "/vector/clear") {
     return "/std/collections/experimental_vector/vectorClear";
   }
-  if (path == "/std/collections/vector/remove_at" || path == "/vector/remove_at" ||
-      path == "/std/collections/vectorRemoveAt") {
+  if (path == "/std/collections/vector/remove_at" || path == "/vector/remove_at") {
     return "/std/collections/experimental_vector/vectorRemoveAt";
   }
-  if (path == "/std/collections/vector/remove_swap" || path == "/vector/remove_swap" ||
-      path == "/std/collections/vectorRemoveSwap") {
+  if (path == "/std/collections/vector/remove_swap" || path == "/vector/remove_swap") {
     return "/std/collections/experimental_vector/vectorRemoveSwap";
   }
-  if (path == "/std/collections/vector/at" || path == "/vector/at" ||
-      path == "/std/collections/vectorAt") {
+  if (path == "/std/collections/vector/at" || path == "/vector/at") {
     return "/std/collections/experimental_vector/vectorAt";
   }
-  if (path == "/std/collections/vector/at_unsafe" || path == "/vector/at_unsafe" ||
-      path == "/std/collections/vectorAtUnsafe") {
+  if (path == "/std/collections/vector/at_unsafe" || path == "/vector/at_unsafe") {
     return "/std/collections/experimental_vector/vectorAtUnsafe";
   }
   return {};

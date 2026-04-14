@@ -33,17 +33,7 @@ bool isRemovedVectorHelperDefinitionPath(const std::string &path) {
          matchesPath("/std/collections/vector/reserve") ||
          matchesPath("/std/collections/vector/clear") ||
          matchesPath("/std/collections/vector/remove_at") ||
-         matchesPath("/std/collections/vector/remove_swap") ||
-         matchesPath("/std/collections/vectorCount") ||
-         matchesPath("/std/collections/vectorCapacity") ||
-         matchesPath("/std/collections/vectorAt") ||
-         matchesPath("/std/collections/vectorAtUnsafe") ||
-         matchesPath("/std/collections/vectorPush") ||
-         matchesPath("/std/collections/vectorPop") ||
-         matchesPath("/std/collections/vectorReserve") ||
-         matchesPath("/std/collections/vectorClear") ||
-         matchesPath("/std/collections/vectorRemoveAt") ||
-         matchesPath("/std/collections/vectorRemoveSwap");
+         matchesPath("/std/collections/vector/remove_swap");
 }
 
 bool isArgsPackParam(const Expr &param) {
