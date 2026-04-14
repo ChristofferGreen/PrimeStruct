@@ -2563,12 +2563,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         if (hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
             hasImportedDefinitionPath(canonicalVectorMethodTarget)) {
           vectorMethodTarget = canonicalVectorMethodTarget;
-        } else {
-          const std::string aliasVectorMethodTarget = "/vector/" + normalizedMethodName;
-          if (hasDeclaredDefinitionPath(aliasVectorMethodTarget) ||
-              hasImportedDefinitionPath(aliasVectorMethodTarget)) {
-            vectorMethodTarget = aliasVectorMethodTarget;
-          }
         }
       }
       return setCollectionMethodTarget(vectorMethodTarget);

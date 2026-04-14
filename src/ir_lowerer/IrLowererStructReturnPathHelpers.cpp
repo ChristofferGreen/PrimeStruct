@@ -116,14 +116,8 @@ std::vector<std::string> collectionMethodPathCandidates(const std::string &recei
                                                         const std::string &methodName,
                                                         const std::string &rawMethodName) {
   if (receiverStruct == "/vector") {
-    std::vector<std::string> candidates = {"/vector/" + methodName};
-    const bool blocksRemovedVectorAliasStructReturnForwarding =
-        methodName == "at" || methodName == "at_unsafe";
-    if (!blocksRemovedVectorAliasStructReturnForwarding) {
-      candidates.push_back("/std/collections/vector/" + methodName);
-    }
-    if (allowsArrayVectorCompatibilitySuffix(methodName) &&
-        !blocksRemovedVectorAliasStructReturnForwarding) {
+    std::vector<std::string> candidates = {"/std/collections/vector/" + methodName};
+    if (allowsArrayVectorCompatibilitySuffix(methodName)) {
       candidates.push_back("/array/" + methodName);
     }
     return candidates;
@@ -133,7 +127,6 @@ std::vector<std::string> collectionMethodPathCandidates(const std::string &recei
         "/array/" + methodName,
     };
     if (allowsArrayVectorCompatibilitySuffix(methodName)) {
-      candidates.push_back("/vector/" + methodName);
       candidates.push_back("/std/collections/vector/" + methodName);
     }
     return candidates;
@@ -189,22 +182,12 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
   if (normalizedPath.rfind("/array/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      appendUnique("/vector/" + suffix);
       appendUnique("/std/collections/vector/" + suffix);
     }
   } else if (normalizedPath.rfind("/vector/", 0) == 0) {
-    const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
-    if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
-      appendUnique("/std/collections/vector/" + suffix);
-    }
-    if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      appendUnique("/array/" + suffix);
-    }
+    // Keep explicit /vector/* lookup isolated to avoid alias fallback.
   } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
-    if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
-      appendUnique("/vector/" + suffix);
-    }
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       appendUnique("/array/" + suffix);
     }
@@ -228,10 +211,6 @@ std::string preferCollectionHelperPath(const std::string &path,
   if (preferred.rfind("/array/", 0) == 0 && defMap.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      const std::string vectorAlias = "/vector/" + suffix;
-      if (defMap.count(vectorAlias) > 0) {
-        return vectorAlias;
-      }
       const std::string stdlibAlias = "/std/collections/vector/" + suffix;
       if (defMap.count(stdlibAlias) > 0) {
         return stdlibAlias;
@@ -256,17 +235,10 @@ std::string preferCollectionHelperPath(const std::string &path,
   }
   if (preferred.rfind("/std/collections/vector/", 0) == 0 && defMap.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/std/collections/vector/").size());
-    if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
-      const std::string vectorAlias = "/vector/" + suffix;
-      if (defMap.count(vectorAlias) > 0) {
-        preferred = vectorAlias;
-      } else {
-        if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-          const std::string arrayAlias = "/array/" + suffix;
-          if (defMap.count(arrayAlias) > 0) {
-            preferred = arrayAlias;
-          }
-        }
+    if (allowsArrayVectorCompatibilitySuffix(suffix)) {
+      const std::string arrayAlias = "/array/" + suffix;
+      if (defMap.count(arrayAlias) > 0) {
+        preferred = arrayAlias;
       }
     }
   }

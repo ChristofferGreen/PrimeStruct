@@ -54,10 +54,6 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
   if (preferred.rfind("/array/", 0) == 0 && defs.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/array/").size());
     if (!isRemovedVectorCompatibilityHelper(suffix)) {
-      const std::string vectorAlias = "/vector/" + suffix;
-      if (defs.count(vectorAlias) > 0) {
-        return vectorAlias;
-      }
       const std::string stdlibAlias = "/std/collections/vector/" + suffix;
       if (defs.count(stdlibAlias) > 0) {
         return stdlibAlias;
@@ -86,15 +82,10 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
     if (isRemovedVectorCompatibilityHelper(suffix)) {
       return preferred;
     }
-    const std::string vectorAlias = "/vector/" + suffix;
-    if (defs.count(vectorAlias) > 0) {
-      preferred = vectorAlias;
-    } else {
-      if (!isRemovedVectorCompatibilityHelper(suffix)) {
-        const std::string arrayAlias = "/array/" + suffix;
-        if (defs.count(arrayAlias) > 0) {
-          preferred = arrayAlias;
-        }
+    if (!isRemovedVectorCompatibilityHelper(suffix)) {
+      const std::string arrayAlias = "/array/" + suffix;
+      if (defs.count(arrayAlias) > 0) {
+        preferred = arrayAlias;
       }
     }
   }
@@ -127,10 +118,6 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
       if (ctx.sourceDefs.count(stdlibPath) > 0 && ctx.templateDefs.count(stdlibPath) > 0) {
         return stdlibPath;
       }
-      const std::string vectorPath = "/vector/" + suffix;
-      if (ctx.sourceDefs.count(vectorPath) > 0 && ctx.templateDefs.count(vectorPath) > 0) {
-        return vectorPath;
-      }
     }
     return path;
   }
@@ -138,10 +125,6 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
     const std::string suffix = path.substr(std::string("/std/collections/vector/").size());
     if (isRemovedVectorCompatibilityHelper(suffix)) {
       return path;
-    }
-    const std::string vectorPath = "/vector/" + suffix;
-    if (ctx.sourceDefs.count(vectorPath) > 0 && ctx.templateDefs.count(vectorPath) > 0) {
-      return vectorPath;
     }
     if (!isRemovedVectorCompatibilityHelper(suffix)) {
       const std::string arrayPath = "/array/" + suffix;
