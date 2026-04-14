@@ -38,8 +38,7 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     }
     return false;
   }
-  if (resolvedPath == "/vector/at" || resolvedPath == "/vector/at_unsafe" ||
-      resolvedPath == "/std/collections/vector/at" ||
+  if (resolvedPath == "/std/collections/vector/at" ||
       resolvedPath == "/std/collections/vector/at_unsafe") {
     std::string elemType;
     if (resolvers.resolveVectorTarget(receiverExpr, elemType)) {

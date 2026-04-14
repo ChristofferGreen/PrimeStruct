@@ -493,10 +493,10 @@ std::string experimentalVectorHelperPathForCanonicalHelper(const std::string &pa
   if (path == "/std/collections/vector/remove_swap" || path == "/vector/remove_swap") {
     return "/std/collections/experimental_vector/vectorRemoveSwap";
   }
-  if (path == "/std/collections/vector/at" || path == "/vector/at") {
+  if (path == "/std/collections/vector/at") {
     return "/std/collections/experimental_vector/vectorAt";
   }
-  if (path == "/std/collections/vector/at_unsafe" || path == "/vector/at_unsafe") {
+  if (path == "/std/collections/vector/at_unsafe") {
     return "/std/collections/experimental_vector/vectorAtUnsafe";
   }
   return {};

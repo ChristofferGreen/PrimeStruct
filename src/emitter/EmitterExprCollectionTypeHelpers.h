@@ -122,8 +122,7 @@
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    return normalized == "vector/at" || normalized == "vector/at_unsafe" ||
-           normalized == "std/collections/vector/at" ||
+    return normalized == "std/collections/vector/at" ||
            normalized == "std/collections/vector/at_unsafe";
   };
   auto explicitVectorAccessResolvedTypePath = [&](const Expr &candidate) -> std::string {
@@ -134,21 +133,17 @@
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    if (normalized != "vector/at" && normalized != "vector/at_unsafe" &&
-        normalized != "std/collections/vector/at" &&
+    if (normalized != "std/collections/vector/at" &&
         normalized != "std/collections/vector/at_unsafe") {
       return "";
     }
     const std::string resolvedExprPath = resolveExprPath(candidate);
-    std::vector<std::string> resolvedCandidates;
-    if (resolvedExprPath == "/vector/at" || resolvedExprPath == "/vector/at_unsafe") {
-      resolvedCandidates.push_back(resolvedExprPath);
-    } else if (resolvedExprPath == "/std/collections/vector/at" ||
-               resolvedExprPath == "/std/collections/vector/at_unsafe") {
-      resolvedCandidates = collectionHelperPathCandidates(resolvedExprPath);
-    } else {
+    if (resolvedExprPath != "/std/collections/vector/at" &&
+        resolvedExprPath != "/std/collections/vector/at_unsafe") {
       return "";
     }
+    std::vector<std::string> resolvedCandidates =
+        collectionHelperPathCandidates(resolvedExprPath);
     for (const auto &resolvedCandidate : resolvedCandidates) {
       auto structIt = returnStructs.find(resolvedCandidate);
       if (structIt != returnStructs.end()) {
@@ -326,8 +321,8 @@
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    if (normalized != "at" && normalized != "at_unsafe" && normalized != "vector/at" &&
-        normalized != "vector/at_unsafe" && normalized != "std/collections/vector/at" &&
+    if (normalized != "at" && normalized != "at_unsafe" &&
+        normalized != "std/collections/vector/at" &&
         normalized != "std/collections/vector/at_unsafe") {
       return "";
     }

@@ -583,8 +583,7 @@ bool isExplicitMapReceiverProbeHelperExpr(const Expr &expr) {
 
 bool isExplicitVectorAccessHelperPath(const std::string &path) {
   const std::string normalizedPath = normalizeCollectionHelperPath(path);
-  return normalizedPath == "/vector/at" || normalizedPath == "/vector/at_unsafe" ||
-         normalizedPath == "/std/collections/vector/at" ||
+  return normalizedPath == "/std/collections/vector/at" ||
          normalizedPath == "/std/collections/vector/at_unsafe";
 }
 

@@ -288,8 +288,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
                                            : ArrayVectorAccessTargetInfo{};
     const bool isExplicitVectorAccessCall =
         !expr.isMethodCall &&
-        (expr.name == "/vector/at" || expr.name == "/vector/at_unsafe" ||
-         expr.name == "/std/collections/vector/at" ||
+        (expr.name == "/std/collections/vector/at" ||
          expr.name == "/std/collections/vector/at_unsafe");
     if (isExplicitVectorAccessCall && arrayVectorTargetInfo.isVectorTarget) {
       return NativeCallTailDispatchResult::NotHandled;

@@ -89,9 +89,9 @@ constexpr ExperimentalVectorHelperDescriptor kExperimentalVectorHelperDescriptor
      "/std/collections/experimental_vector/vectorRemoveAt"},
     {"remove_swap", "/std/collections/vector/remove_swap", "/vector/remove_swap", "",
      "/std/collections/experimental_vector/vectorRemoveSwap"},
-    {"at", "/std/collections/vector/at", "/vector/at", "",
+    {"at", "/std/collections/vector/at", "", "",
      "/std/collections/experimental_vector/vectorAt"},
-    {"at_unsafe", "/std/collections/vector/at_unsafe", "/vector/at_unsafe", "",
+    {"at_unsafe", "/std/collections/vector/at_unsafe", "", "",
      "/std/collections/experimental_vector/vectorAtUnsafe"},
 };
 
@@ -109,8 +109,6 @@ struct RemovedCollectionHelperDescriptor {
 };
 
 constexpr RemovedCollectionHelperDescriptor kRemovedCollectionHelperDescriptors[] = {
-    {RemovedCollectionHelperFamily::VectorLike, "at", "/vector/at", false, false},
-    {RemovedCollectionHelperFamily::VectorLike, "at_unsafe", "/vector/at_unsafe", false, false},
     {RemovedCollectionHelperFamily::VectorLike, "push", "/vector/push", true, false},
     {RemovedCollectionHelperFamily::VectorLike, "pop", "/vector/pop", true, false},
     {RemovedCollectionHelperFamily::VectorLike, "reserve", "/vector/reserve", true, false},

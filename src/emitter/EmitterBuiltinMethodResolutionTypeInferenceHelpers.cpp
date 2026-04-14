@@ -76,8 +76,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    if (normalized != "vector/at" && normalized != "vector/at_unsafe" &&
-        normalized != "std/collections/vector/at" &&
+    if (normalized != "std/collections/vector/at" &&
         normalized != "std/collections/vector/at_unsafe") {
       return false;
     }
@@ -95,10 +94,6 @@ std::string inferMethodResolutionPrimitiveTypeName(
   auto resolveBareVectorAccessMethodHelperPath = [&](const Expr &candidate) -> std::string {
     if (!isBareVectorAccessMethod(candidate)) {
       return "";
-    }
-    const std::string aliasPath = "/vector/" + candidate.name;
-    if (hasDefinitionOrMetadata(view, aliasPath)) {
-      return aliasPath;
     }
     const std::string canonicalPath = "/std/collections/vector/" + candidate.name;
     if (hasDefinitionOrMetadata(view, canonicalPath)) {
@@ -172,7 +167,8 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    if (normalized != "vector/at" && normalized != "vector/at_unsafe") {
+    if (normalized != "std/collections/vector/at" &&
+        normalized != "std/collections/vector/at_unsafe") {
       return false;
     }
     if (view.defMap.find("/" + normalized) != view.defMap.end()) {
@@ -234,16 +230,12 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    if (normalized != "vector/at" && normalized != "vector/at_unsafe" &&
-        normalized != "std/collections/vector/at" &&
+    if (normalized != "std/collections/vector/at" &&
         normalized != "std/collections/vector/at_unsafe") {
       return "";
     }
 
     const std::string resolvedExprPath = resolveExprPath(candidate);
-    if (resolvedExprPath == "/vector/at" || resolvedExprPath == "/vector/at_unsafe") {
-      return typeNameFromResolvedCandidates(view, {resolvedExprPath});
-    }
     if (resolvedExprPath == "/std/collections/vector/at" ||
         resolvedExprPath == "/std/collections/vector/at_unsafe") {
       return typeNameFromResolvedCandidates(view, collectionHelperPathCandidates(resolvedExprPath));
@@ -285,8 +277,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
       return false;
     }
     const std::string resolvedExprPath = resolveExprPath(candidate);
-    return resolvedExprPath == "/vector/at" || resolvedExprPath == "/vector/at_unsafe" ||
-           resolvedExprPath == "/std/collections/vector/at" ||
+    return resolvedExprPath == "/std/collections/vector/at" ||
            resolvedExprPath == "/std/collections/vector/at_unsafe";
   };
   auto inferCanonicalMapAccessTypeName = [&](const Expr &candidate) -> std::string {
