@@ -76,22 +76,23 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     if (expr.templateArgs.empty() || expr.args.empty()) {
       return false;
     }
-    if (expr.name != "/vector/count" &&
-        expr.name != "/std/collections/vector/count") {
+    if (expr.name != "/std/collections/vector/count") {
       return false;
     }
     std::string elemType;
     return resolveVectorTarget(expr.args.front(), elemType);
   };
   if (isExplicitVectorCompatibilityMethodWithTemplateArgs()) {
-    return failMethodResolutionDiagnostic("unknown method: /vector/count");
+    return failMethodResolutionDiagnostic(
+        "unknown method: /std/collections/vector/count");
   }
   if (resolved == "/std/collections/vector/count" &&
       !expr.templateArgs.empty() &&
       !expr.args.empty()) {
     std::string elemType;
     if (resolveVectorTarget(expr.args.front(), elemType)) {
-      return failMethodResolutionDiagnostic("unknown method: /vector/count");
+      return failMethodResolutionDiagnostic(
+          "unknown method: /std/collections/vector/count");
     }
   }
   if (resolved == "/std/collections/vector/count" &&
@@ -427,37 +428,6 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       expr.args.size() > 10) {
     return failMethodResolutionDiagnostic(
         "stdlib File write/write_line currently support up to nine values; broader arities await [args<T>] runtime support");
-  }
-  std::string builtinVectorReceiverCollection;
-  if (isBuiltinMethod && resolved == "/vector/count" &&
-      defMap_.find(resolved) == defMap_.end() &&
-      !hasImportedDefinitionPath(resolved) &&
-      !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
-      !hasImportedDefinitionPath("/std/collections/vector/count") &&
-      !hasNamedArguments(expr.argNames) &&
-      (expr.args.front().kind == Expr::Kind::Name ||
-       (expr.args.front().kind == Expr::Kind::Call &&
-        getBuiltinCollectionName(expr.args.front(), builtinVectorReceiverCollection) &&
-        builtinVectorReceiverCollection == "vector"))) {
-    std::string elemType;
-    if (resolveVectorTarget(expr.args.front(), elemType)) {
-      return failMethodResolutionDiagnostic("unknown method: /vector/count");
-    }
-  }
-  if (isBuiltinMethod && resolved == "/vector/capacity" &&
-      defMap_.find(resolved) == defMap_.end() &&
-      !hasImportedDefinitionPath(resolved) &&
-      !hasDeclaredDefinitionPath("/std/collections/vector/capacity") &&
-      !hasImportedDefinitionPath("/std/collections/vector/capacity") &&
-      !hasNamedArguments(expr.argNames) &&
-      (expr.args.front().kind == Expr::Kind::Name ||
-       (expr.args.front().kind == Expr::Kind::Call &&
-        getBuiltinCollectionName(expr.args.front(), builtinVectorReceiverCollection) &&
-        builtinVectorReceiverCollection == "vector"))) {
-    std::string elemType;
-    if (resolveVectorTarget(expr.args.front(), elemType)) {
-      return failMethodResolutionDiagnostic("unknown method: /vector/capacity");
-    }
   }
   if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() &&
       isVectorBuiltinName(expr, "capacity")) {

@@ -167,9 +167,6 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
   setupOut.hasStdNamespacedVectorCountAliasDefinition =
       hasDefinitionPath("/std/collections/vector/count") ||
       hasImportedDefinitionPath("/std/collections/vector/count");
-  setupOut.prefersCanonicalVectorCountAliasDefinition =
-      !expr.isMethodCall && resolved == "/vector/count" && !hasDefinitionPath(resolved) &&
-      hasDefinitionPath("/std/collections/vector/count");
 
   const bool allowStdNamespacedVectorUserReceiverProbe =
       !expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&
@@ -186,9 +183,6 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       !allowStdNamespacedVectorUserReceiverProbe) {
     return failCollectionDispatchDiagnostic(
         "unknown call target: /std/collections/vector/capacity");
-  }
-  if (setupOut.prefersCanonicalVectorCountAliasDefinition) {
-    resolved = "/std/collections/vector/count";
   }
   if (!expr.isMethodCall && expr.args.size() > 1 && !hasNamedArguments(expr.argNames) &&
       (isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_ref") ||

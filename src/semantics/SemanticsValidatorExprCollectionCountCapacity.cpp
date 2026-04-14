@@ -81,8 +81,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   if ((context.isStdNamespacedVectorCountCall && expr.args.size() == 1 &&
        context.resolveMapTarget != nullptr && context.resolveMapTarget(expr.args.front())) &&
       (defMap_.find("/std/collections/vector/count") == defMap_.end() ||
-       hasImportedDefinitionPath("/std/collections/vector/count")) &&
-      context.hasStdNamespacedVectorCountAliasDefinition) {
+       hasImportedDefinitionPath("/std/collections/vector/count"))) {
     handledOut = true;
     return failCollectionCountCapacityDiagnostic("count requires vector target");
   }
@@ -100,8 +99,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     if (!requireSingleArg && expr.args.size() == 1) {
       return false;
     }
-    if (context.prefersCanonicalVectorCountAliasDefinition ||
-        (context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
+    if ((context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
          context.isArrayNamespacedVectorCountCompatibilityCall(expr))) {
       return false;
     }

@@ -216,10 +216,7 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       !isArrayNamespacedVectorCountCompatibilityCall(
           expr, builtinCollectionDispatchResolvers) &&
       (!isStdNamespacedVectorCountCall ||
-       shouldBuiltinValidateStdNamespacedVectorCountCall) &&
-      !(!expr.isMethodCall && resolved == "/vector/count" &&
-        !hasDefinitionPath(resolved) &&
-        hasDefinitionPath("/std/collections/vector/count"));
+       shouldBuiltinValidateStdNamespacedVectorCountCall);
   setupOut.builtinCollectionCountCapacityDispatchContext.isCapacityLike =
       isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
       (!isStdNamespacedVectorCapacityCall ||
@@ -255,9 +252,6 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
   setupOut.shouldDeferNamespacedMapAccessCall =
       isNamespacedMapAccessCall &&
       (!hasResolvedDefinition || isStdNamespacedMapAccessPath);
-  const bool shouldUseResolvedStdNamespacedVectorCountDefinition =
-      isStdNamespacedVectorCountCall && !hasDefinitionPath("/vector/count") &&
-      hasDefinitionPath("/std/collections/vector/count");
   setupOut.hasPreferredBuiltinAccessKind =
       setupOut.hasBuiltinAccessSpelling &&
       resolveBuiltinCollectionAccessCallReturnKind(
@@ -268,14 +262,6 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       isResolvedMapCountCall || isNamespacedVectorCapacityCall ||
       setupOut.shouldDeferNamespacedVectorAccessCall ||
       setupOut.shouldDeferNamespacedMapAccessCall;
-  if (!expr.isMethodCall && resolved == "/vector/count" &&
-      !hasDefinitionPath(resolved) &&
-      hasDefinitionPath("/std/collections/vector/count")) {
-    setupOut.shouldDeferResolvedNamespacedCollectionHelperReturn = false;
-  }
-  if (shouldUseResolvedStdNamespacedVectorCountDefinition) {
-    setupOut.shouldDeferResolvedNamespacedCollectionHelperReturn = false;
-  }
 
   const bool isDirectBuiltinCountCapacityCountCall =
       !expr.isMethodCall &&
@@ -287,9 +273,6 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
           expr, builtinCollectionDispatchResolvers) &&
       (!isStdNamespacedVectorCountCall ||
        shouldBuiltinValidateStdNamespacedVectorCountCall) &&
-      !(!expr.isMethodCall && resolved == "/vector/count" &&
-        !hasDefinitionPath(resolved) &&
-        hasDefinitionPath("/std/collections/vector/count")) &&
       ((defMap_.find(resolved) == defMap_.end() && !isStdNamespacedMapCountCall) ||
        isNamespacedVectorCountCall || isStdNamespacedMapCountCall ||
        isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall ||

@@ -114,7 +114,7 @@ bool SemanticsValidator::prepareExprMethodCompatibilitySetup(
         }
         // Route unresolved capacity() calls through builtin validation so
         // non-vector targets emit deterministic vector-target diagnostics.
-        resolvedOut = "/vector/capacity";
+        resolvedOut = "/std/collections/vector/capacity";
         isBuiltinMethodOut = true;
       };
   setupOut.isNonCollectionStructCapacityTarget =

@@ -68,8 +68,7 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
   }
 
   if (!expr.isMethodCall &&
-      (resolved == "/std/collections/vector/count" ||
-       resolved == "/vector/count") &&
+      resolved == "/std/collections/vector/count" &&
       expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
     std::string elemType;
     std::string arrayElemType;
@@ -104,8 +103,7 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
       return failLateCallCompatibilityDiagnostic(
           "count requires vector target");
     }
-    if (!hasDeclaredDefinitionPath("/vector/count") &&
-        !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
+    if (!hasDeclaredDefinitionPath("/std/collections/vector/count") &&
         !hasImportedDefinitionPath("/std/collections/vector/count") &&
         (resolvesVector || resolvesExperimentalVector)) {
       return failLateCallCompatibilityDiagnostic(
@@ -120,8 +118,7 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
   }
 
   if (!expr.isMethodCall &&
-      (resolved == "/std/collections/vector/capacity" ||
-       resolved == "/vector/capacity") &&
+      resolved == "/std/collections/vector/capacity" &&
       expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
     std::string elemType;
     const bool resolvesVector =
@@ -151,8 +148,7 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
       return failLateCallCompatibilityDiagnostic(
           "capacity requires vector target");
     }
-    if (!hasDeclaredDefinitionPath("/vector/capacity") &&
-        !hasDeclaredDefinitionPath("/std/collections/vector/capacity") &&
+    if (!hasDeclaredDefinitionPath("/std/collections/vector/capacity") &&
         !hasImportedDefinitionPath("/std/collections/vector/capacity") &&
         (resolvesVector || resolvesExperimentalVector)) {
       return failLateCallCompatibilityDiagnostic(

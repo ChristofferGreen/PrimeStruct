@@ -158,6 +158,7 @@ Wave E (queue hygiene):
   - progress: Removed the remaining `/std/collections/vectorXxx` wrapper-name routing for vector access/mutator helpers in production lowerer helper classification plus semantics compatibility/monomorph bridge tables, so canonical `/std/collections/vector/*` and experimental-vector helper paths are the only direct vector helper routes.
   - progress: Deleted the last semantics-only wrapper compatibility surface that accepted `/std/collections/vectorAt`/`/std/collections/vectorAtUnsafe`, and removed the monomorph exception that allowed templated `auto` parameters for `/std/collections/vectorXxx` wrapper definitions.
   - progress: Removed production `/vector/count` and `/vector/capacity` alias routing from lowerer vector helper alias resolution/receiver-probe classification and from semantics builtin count-capacity dispatch return-kind + method-call handling, including pre-dispatch canonical rewrite from `/vector/count` to `/std/collections/vector/count`.
+  - progress: Removed remaining semantics dispatch/setup compatibility scaffolding that depended on `/vector/count` alias canonicalization, restricted late-call vector count/capacity compatibility checks to canonical `/std/collections/vector/*` paths, and switched unresolved `capacity()` builtin promotion to canonical `/std/collections/vector/capacity`.
 
 - [ ] TODO-0407: Move test implementations from include chunks into `.cpp`
   - owner: ai
