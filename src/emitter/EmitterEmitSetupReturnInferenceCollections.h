@@ -231,10 +231,11 @@
             normalizedPath.insert(normalizedPath.begin(), '/');
           }
         }
-        if (normalizedPath.rfind("/vector/", 0) != 0) {
+        if (normalizedPath.rfind("/std/collections/vector/", 0) != 0) {
           return;
         }
-        const std::string suffix = normalizedPath.substr(std::string("/vector/").size());
+        const std::string suffix =
+            normalizedPath.substr(std::string("/std/collections/vector/").size());
         if (suffix != "at" && suffix != "at_unsafe") {
           return;
         }

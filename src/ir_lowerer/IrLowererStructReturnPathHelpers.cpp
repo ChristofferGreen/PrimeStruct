@@ -13,12 +13,6 @@ bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
          suffix != "remove_at" && suffix != "remove_swap";
 }
 
-bool allowsVectorStdlibCompatibilitySuffix(const std::string &suffix) {
-  return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
-         suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
-         suffix != "remove_at" && suffix != "remove_swap";
-}
-
 bool isRemovedMapCompatibilityHelper(const std::string &suffix) {
   return suffix == "count" || suffix == "contains" || suffix == "tryAt" ||
          suffix == "at" || suffix == "at_unsafe" || suffix == "insert";
@@ -218,20 +212,7 @@ std::string preferCollectionHelperPath(const std::string &path,
     }
   }
   if (preferred.rfind("/vector/", 0) == 0 && defMap.count(preferred) == 0) {
-    const std::string suffix = preferred.substr(std::string("/vector/").size());
-    if (allowsVectorStdlibCompatibilitySuffix(suffix)) {
-      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
-      if (defMap.count(stdlibAlias) > 0) {
-        preferred = stdlibAlias;
-      } else {
-        if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-          const std::string arrayAlias = "/array/" + suffix;
-          if (defMap.count(arrayAlias) > 0) {
-            preferred = arrayAlias;
-          }
-        }
-      }
-    }
+    // Keep explicit /vector/* lookup isolated to avoid alias fallback.
   }
   if (preferred.rfind("/std/collections/vector/", 0) == 0 && defMap.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/std/collections/vector/").size());

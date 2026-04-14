@@ -166,6 +166,7 @@ Wave E (queue hygiene):
   - progress: Removed another cross-stage `/vector/*` compatibility subsystem by deleting alias candidate expansion/fallback from template-monomorph, pre-dispatch return-kind inference, struct-return path helpers, and emitter metadata candidate lookup; direct `/vector/*` paths now stay isolated instead of auto-bridging to canonical `/std/collections/vector/*`.
   - progress: Pruned additional `/vector/*` compatibility fallback from semantics method-target alias candidate expansion plus lowerer/emitter setup helper path preference (`preferVectorStdlibHelperPath`, setup collection candidate builders, and receiver-target method lookup), so canonical `/std/collections/vector/*` is preferred without back-routing to `/vector/*`.
   - progress: Removed another struct-return/type-inference compatibility family that cross-expanded `/vector/*` and `/std/collections/vector/*` in semantics + emitter collection helper candidate builders and return-inference method-path selection, keeping direct `/vector/*` lookup isolated while canonical stdlib vector paths remain authoritative.
+  - progress: Canonicalized struct-return method candidate routing in semantics + lowerer and aligned emitter vector-access candidate pruning to `/std/collections/vector/*`, removing remaining fallback branches that still treated `/vector/*` as an automatic bridge in this struct-return inference path family.
 
 - [ ] TODO-0407: Move test implementations from include chunks into `.cpp`
   - owner: ai

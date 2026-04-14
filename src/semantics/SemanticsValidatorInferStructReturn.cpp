@@ -269,17 +269,13 @@ std::string SemanticsValidator::inferStructReturnPath(
         appendMethodCandidate(explicitRemovedMethodPath);
       }
       if (receiverStruct == "/vector") {
-        appendMethodCandidate("/vector/" + methodName);
-        if (!blocksBuiltinVectorAccessStructReturnForwarding) {
-          appendMethodCandidate("/std/collections/vector/" + methodName);
-        }
+        appendMethodCandidate("/std/collections/vector/" + methodName);
         if (methodName != "count" && !blocksBuiltinVectorAccessStructReturnForwarding) {
           appendMethodCandidate("/array/" + methodName);
         }
       } else if (receiverStruct == "/array") {
         appendMethodCandidate("/array/" + methodName);
         if (methodName != "count") {
-          appendMethodCandidate("/vector/" + methodName);
           if (!blocksBuiltinVectorAccessStructReturnForwarding) {
             appendMethodCandidate("/std/collections/vector/" + methodName);
           }
