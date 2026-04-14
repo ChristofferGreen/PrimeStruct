@@ -207,10 +207,6 @@ std::string SemanticsValidator::preferredBareVectorHelperTarget(std::string_view
   if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
     return canonical;
   }
-  const std::string alias = "/vector/" + std::string(helperName);
-  if (hasDeclaredDefinitionPath(alias) || hasImportedDefinitionPath(alias)) {
-    return alias;
-  }
   return canonical;
 }
 
@@ -287,10 +283,6 @@ bool SemanticsValidator::tryRewriteBareVectorHelperCall(
     return false;
   }
   auto preferredBareVectorDirectHelperTarget = [&](std::string_view helper) {
-    const std::string alias = "/vector/" + std::string(helper);
-    if (hasDeclaredDefinitionPath(alias)) {
-      return alias;
-    }
     const std::string canonical = "/std/collections/vector/" + std::string(helper);
     if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
       return canonical;

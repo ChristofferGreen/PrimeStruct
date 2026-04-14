@@ -43,11 +43,6 @@ bool isVectorHelperReceiverName(const Expr &candidate,
 
 bool SemanticsValidator::isVectorBuiltinName(const Expr &candidate, const char *helper) const {
   auto hasVisibleDefinitionPath = [&](const std::string &path) {
-    if (path.rfind("/vector/", 0) == 0 &&
-        defMap_.count(path) == 0 &&
-        !hasDeclaredDefinitionPath(path)) {
-      return false;
-    }
     if (hasImportedDefinitionPath(path)) {
       return true;
     }
@@ -415,11 +410,6 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     return true;
   }
   auto hasVisibleDefinitionPath = [&](const std::string &path) {
-    if (path.rfind("/vector/", 0) == 0 &&
-        defMap_.count(path) == 0 &&
-        !hasDeclaredDefinitionPath(path)) {
-      return false;
-    }
     if (hasImportedDefinitionPath(path)) {
       return true;
     }

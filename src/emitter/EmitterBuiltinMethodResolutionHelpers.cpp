@@ -30,10 +30,6 @@ bool isRemovedCollectionMethodAlias(const std::string &rawMethodName) {
     return isRemovedVectorCompatibilityHelper(
         std::string_view(candidate).substr(std::string_view("array/").size()));
   }
-  if (candidate.rfind("vector/", 0) == 0) {
-    return isRemovedVectorCompatibilityHelper(
-        std::string_view(candidate).substr(std::string_view("vector/").size()));
-  }
   if (candidate.rfind("std/collections/vector/", 0) == 0) {
     return isRemovedVectorCompatibilityHelper(
         std::string_view(candidate).substr(std::string_view("std/collections/vector/").size()));
@@ -92,18 +88,12 @@ bool resolveMethodCallPath(const Expr &call,
   if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
     normalizedMethodName.erase(normalizedMethodName.begin());
   }
-  const bool isExplicitVectorAliasMethod = normalizedMethodName.rfind("vector/", 0) == 0;
   const bool isExplicitStdlibVectorMethod =
       normalizedMethodName.rfind("std/collections/vector/", 0) == 0;
   const bool isExplicitMapAliasMethod = normalizedMethodName.rfind("map/", 0) == 0;
   const bool isExplicitStdlibMapMethod =
       normalizedMethodName.rfind("std/collections/map/", 0) == 0;
-  if (isExplicitVectorAliasMethod) {
-    return false;
-  }
-  if (normalizedMethodName.rfind("vector/", 0) == 0) {
-    normalizedMethodName = normalizedMethodName.substr(std::string("vector/").size());
-  } else if (normalizedMethodName.rfind("array/", 0) == 0) {
+  if (normalizedMethodName.rfind("array/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
   } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
     normalizedMethodName =
