@@ -636,7 +636,9 @@ bool SemanticsValidator::getVectorStatementHelperName(const Expr &candidate,
   if (removedPath.empty()) {
     removedPath = explicitRemovedCollectionMethodPath(resolveCalleePath(candidate), "");
   }
-  if (removedPath.rfind("/vector/", 0) != 0 && removedPath.rfind("/array/", 0) != 0) {
+  constexpr std::string_view kCanonicalVectorPrefix = "/std/collections/vector/";
+  if (removedPath.rfind(kCanonicalVectorPrefix, 0) != 0 &&
+      removedPath.rfind("/array/", 0) != 0) {
     return false;
   }
 
@@ -665,8 +667,9 @@ std::string SemanticsValidator::getDirectVectorHelperCompatibilityPath(const Exp
   const std::string normalizedPrefix = std::string(trimLeadingSlash(candidate.namespacePrefix));
   const std::string resolvedPath = resolveCalleePath(candidate);
   const bool spellsVectorCompatibility =
-      normalizedName.rfind("vector/", 0) == 0 || normalizedPrefix == "vector" ||
-      resolvedPath.rfind("/vector/", 0) == 0;
+      normalizedName.rfind("std/collections/vector/", 0) == 0 ||
+      normalizedPrefix == "std/collections/vector" ||
+      resolvedPath.rfind("/std/collections/vector/", 0) == 0;
   if (!spellsVectorCompatibility) {
     return "";
   }
@@ -675,7 +678,7 @@ std::string SemanticsValidator::getDirectVectorHelperCompatibilityPath(const Exp
   if (removedPath.empty()) {
     removedPath = explicitRemovedCollectionMethodPath(resolvedPath, "");
   }
-  if (removedPath.rfind("/vector/", 0) != 0) {
+  if (removedPath.rfind("/std/collections/vector/", 0) != 0) {
     return "";
   }
   return hasDefinitionPath(removedPath) ? "" : removedPath;

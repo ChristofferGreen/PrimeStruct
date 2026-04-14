@@ -109,12 +109,12 @@ struct RemovedCollectionHelperDescriptor {
 };
 
 constexpr RemovedCollectionHelperDescriptor kRemovedCollectionHelperDescriptors[] = {
-    {RemovedCollectionHelperFamily::VectorLike, "push", "/vector/push", true, false},
-    {RemovedCollectionHelperFamily::VectorLike, "pop", "/vector/pop", true, false},
-    {RemovedCollectionHelperFamily::VectorLike, "reserve", "/vector/reserve", true, false},
-    {RemovedCollectionHelperFamily::VectorLike, "clear", "/vector/clear", true, false},
-    {RemovedCollectionHelperFamily::VectorLike, "remove_at", "/vector/remove_at", true, false},
-    {RemovedCollectionHelperFamily::VectorLike, "remove_swap", "/vector/remove_swap", true, false},
+    {RemovedCollectionHelperFamily::VectorLike, "push", "/std/collections/vector/push", true, false},
+    {RemovedCollectionHelperFamily::VectorLike, "pop", "/std/collections/vector/pop", true, false},
+    {RemovedCollectionHelperFamily::VectorLike, "reserve", "/std/collections/vector/reserve", true, false},
+    {RemovedCollectionHelperFamily::VectorLike, "clear", "/std/collections/vector/clear", true, false},
+    {RemovedCollectionHelperFamily::VectorLike, "remove_at", "/std/collections/vector/remove_at", true, false},
+    {RemovedCollectionHelperFamily::VectorLike, "remove_swap", "/std/collections/vector/remove_swap", true, false},
     {RemovedCollectionHelperFamily::Map, "count", "/map/count", false, true},
     {RemovedCollectionHelperFamily::Map, "contains", "/map/contains", false, false},
     {RemovedCollectionHelperFamily::Map, "tryAt", "/map/tryAt", false, false},
@@ -316,7 +316,7 @@ bool resolveRemovedCollectionHelperReference(std::string_view rawMethodName,
   if (namespacePrefix == "array") {
     return setVectorLike(rawMethodName, true);
   }
-  if (namespacePrefix == "vector" || namespacePrefix == "std/collections/vector") {
+  if (namespacePrefix == "std/collections/vector") {
     return setVectorLike(rawMethodName, false);
   }
   if (namespacePrefix == "map" || namespacePrefix == "std/collections/map") {
@@ -324,9 +324,6 @@ bool resolveRemovedCollectionHelperReference(std::string_view rawMethodName,
   }
   if (rawMethodName.rfind("array/", 0) == 0) {
     return setVectorLike(rawMethodName.substr(std::string_view("array/").size()), true);
-  }
-  if (rawMethodName.rfind("vector/", 0) == 0) {
-    return setVectorLike(rawMethodName.substr(std::string_view("vector/").size()), false);
   }
   if (rawMethodName.rfind("std/collections/vector/", 0) == 0) {
     return setVectorLike(rawMethodName.substr(std::string_view("std/collections/vector/").size()), false);

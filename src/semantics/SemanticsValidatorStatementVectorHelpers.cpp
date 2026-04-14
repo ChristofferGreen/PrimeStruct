@@ -434,7 +434,8 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   const bool shouldAllowStdNamespacedVectorHelperCompatibilityFallback = false;
   const bool isUserMethodTarget =
       stmt.isMethodCall && defMap_.find(vectorHelperResolved) != defMap_.end() &&
-      vectorHelperResolved.rfind("/vector/", 0) != 0 && vectorHelperResolved.rfind("/soa_vector/", 0) != 0;
+      vectorHelperResolved.rfind("/std/collections/vector/", 0) != 0 &&
+      vectorHelperResolved.rfind("/soa_vector/", 0) != 0;
   if (isUserMethodTarget) {
     if (!stmt.args.empty() && vectorHelperNeedsStandaloneSoaBorrowCheck) {
       std::string borrowRoot;

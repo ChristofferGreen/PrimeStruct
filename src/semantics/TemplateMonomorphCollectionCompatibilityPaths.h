@@ -27,8 +27,6 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverTypeName,
   if (isVectorFamilyReceiver) {
     if (rawMethodName.rfind("array/", 0) == 0) {
       helperName = std::string_view(rawMethodName).substr(std::string_view("array/").size());
-    } else if (rawMethodName.rfind("vector/", 0) == 0) {
-      helperName = std::string_view(rawMethodName).substr(std::string_view("vector/").size());
     } else if (rawMethodName.rfind("std/collections/vector/", 0) == 0) {
       helperName =
           std::string_view(rawMethodName).substr(std::string_view("std/collections/vector/").size());
@@ -92,28 +90,24 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
     }
     return path;
   }
-  if (path.rfind("/vector/", 0) != 0) {
-    if (path.rfind("/map/", 0) == 0) {
-      const std::string suffix = path.substr(std::string("/map/").size());
-      if (!isRemovedMapCompatibilityHelper(suffix)) {
-        const std::string stdlibPath = "/std/collections/map/" + suffix;
-        if (ctx.sourceDefs.count(stdlibPath) > 0 && ctx.templateDefs.count(stdlibPath) > 0) {
-          return stdlibPath;
-        }
+  if (path.rfind("/map/", 0) == 0) {
+    const std::string suffix = path.substr(std::string("/map/").size());
+    if (!isRemovedMapCompatibilityHelper(suffix)) {
+      const std::string stdlibPath = "/std/collections/map/" + suffix;
+      if (ctx.sourceDefs.count(stdlibPath) > 0 && ctx.templateDefs.count(stdlibPath) > 0) {
+        return stdlibPath;
       }
     }
-    if (path.rfind("/std/collections/map/", 0) == 0) {
-      const std::string suffix = path.substr(std::string("/std/collections/map/").size());
-      if (suffix != "map" && !isRemovedMapCompatibilityHelper(suffix)) {
-        const std::string mapPath = "/map/" + suffix;
-        if (ctx.sourceDefs.count(mapPath) > 0 && ctx.templateDefs.count(mapPath) > 0) {
-          return mapPath;
-        }
-      }
-    }
-    return path;
   }
-  // Keep explicit /vector/* lookup isolated to avoid alias fallback.
+  if (path.rfind("/std/collections/map/", 0) == 0) {
+    const std::string suffix = path.substr(std::string("/std/collections/map/").size());
+    if (suffix != "map" && !isRemovedMapCompatibilityHelper(suffix)) {
+      const std::string mapPath = "/map/" + suffix;
+      if (ctx.sourceDefs.count(mapPath) > 0 && ctx.templateDefs.count(mapPath) > 0) {
+        return mapPath;
+      }
+    }
+  }
   return path;
 }
 
@@ -173,7 +167,7 @@ bool isExplicitCollectionCompatibilityAliasPath(std::string path) {
     return false;
   }
   if (path.front() != '/' &&
-      (path.rfind("array/", 0) == 0 || path.rfind("vector/", 0) == 0 || path.rfind("map/", 0) == 0)) {
+      (path.rfind("array/", 0) == 0 || path.rfind("map/", 0) == 0)) {
     path.insert(path.begin(), '/');
   }
   return isCollectionCompatibilityTemplateFallbackPath(path) || path == "/array/count" ||
