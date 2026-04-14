@@ -130,12 +130,6 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
         }
       }
     }
-    if (path.rfind("/vector/", 0) == 0) {
-      // Keep explicit /vector/* lookup isolated to avoid alias fallback.
-    }
-    if (path.rfind("/std/collections/vector/", 0) == 0) {
-      // Keep explicit /std/collections/vector/* lookup isolated to avoid alias fallback.
-    }
     if (path.rfind("/map/", 0) == 0) {
       const std::string suffix = path.substr(std::string("/map/").size());
       if (isExplicitMapContainsOrTryAtCompatibilityMethodAlias &&

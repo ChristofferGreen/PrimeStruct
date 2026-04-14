@@ -48,10 +48,6 @@
       if (allowsArrayVectorCompatibilitySuffix(suffix)) {
         appendUnique("/std/collections/vector/" + suffix);
       }
-    } else if (normalizedPath.rfind("/vector/", 0) == 0) {
-      // Keep explicit /vector/* lookup isolated to avoid alias fallback.
-    } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
-      // Keep explicit /std/collections/vector/* lookup isolated to avoid alias fallback.
     } else if (normalizedPath.rfind("/map/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/map/").size());
       if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&

@@ -60,12 +60,6 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
       }
     }
   }
-  if (preferred.rfind("/vector/", 0) == 0 && defs.count(preferred) == 0) {
-    // Keep explicit /vector/* lookup isolated to avoid alias fallback.
-  }
-  if (preferred.rfind("/std/collections/vector/", 0) == 0 && defs.count(preferred) == 0) {
-    // Keep explicit /std/collections/vector/* lookup isolated to avoid alias fallback.
-  }
   if (preferred.rfind("/map/", 0) == 0 && defs.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/map/").size());
     if (!isRemovedMapCompatibilityHelper(suffix)) {
@@ -96,10 +90,6 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
         return stdlibPath;
       }
     }
-    return path;
-  }
-  if (path.rfind("/std/collections/vector/", 0) == 0) {
-    // Keep explicit /std/collections/vector/* lookup isolated to avoid alias fallback.
     return path;
   }
   if (path.rfind("/vector/", 0) != 0) {
