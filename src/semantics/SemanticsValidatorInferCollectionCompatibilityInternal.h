@@ -73,9 +73,9 @@ struct ExperimentalVectorHelperDescriptor {
 };
 
 constexpr ExperimentalVectorHelperDescriptor kExperimentalVectorHelperDescriptors[] = {
-    {"count", "/std/collections/vector/count", "/vector/count", "/std/collections/vectorCount",
+    {"count", "/std/collections/vector/count", "/vector/count", "",
      "/std/collections/experimental_vector/vectorCount"},
-    {"capacity", "/std/collections/vector/capacity", "/vector/capacity", "/std/collections/vectorCapacity",
+    {"capacity", "/std/collections/vector/capacity", "/vector/capacity", "",
      "/std/collections/experimental_vector/vectorCapacity"},
     {"push", "/std/collections/vector/push", "/vector/push", "/std/collections/vectorPush",
      "/std/collections/experimental_vector/vectorPush"},

@@ -191,9 +191,7 @@ bool replaceBindingTypeTransform(Expr &binding, const std::string &typeName, std
 
 bool applyImplicitAutoTemplates(Program &program, Context &ctx, std::string &error) {
   auto isStdlibCollectionWrapperImplicitAutoSurface = [](std::string_view path) {
-    return path == "/std/collections/vectorCount" ||
-           path == "/std/collections/vectorCapacity" ||
-           path == "/std/collections/vectorPush" ||
+    return path == "/std/collections/vectorPush" ||
            path == "/std/collections/vectorPop" ||
            path == "/std/collections/vectorReserve" ||
            path == "/std/collections/vectorClear" ||

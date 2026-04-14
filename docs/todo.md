@@ -154,6 +154,7 @@ Wave E (queue hygiene):
   - progress: Removed alias-dependent gating from vector method prevalidation so canonical `/std/collections/vector/at` and `/std/collections/vector/at_unsafe` integer-index diagnostics stay enforced even when `/vector/*` aliases exist, with coverage for alias-shadow scenarios.
   - progress: Removed explicit `values./vector/...` method-namespace compatibility for vector `count`/`capacity`/`at`/`at_unsafe` receivers and added coverage that those method forms now reject with `unknown method` even when `/vector/*` helpers are declared.
   - progress: Pruned `/vector/count` and `/vector/capacity` alias-path checks from explicit vector count/capacity method-path validation and added alias-declared rejection coverage for `values./vector/at(...)` and `values./vector/at_unsafe(...)`.
+  - progress: Removed production wrapper-routing classifiers that treated `/std/collections/vectorCount` and `/std/collections/vectorCapacity` as direct vector builtins in semantics + lowerer helper-resolution/monomorph compatibility paths; direct canonical handling now stays on `/std/collections/vector/count` and `/std/collections/vector/capacity` (with experimental-vector canonical rewrites preserved).
 
 - [ ] TODO-0407: Move test implementations from include chunks into `.cpp`
   - owner: ai

@@ -62,14 +62,6 @@ bool resolveExperimentalVectorHelperAliasName(std::string helperName, std::strin
 
 bool resolveStdCollectionsVectorWrapperAliasName(std::string helperName, std::string &helperNameOut) {
   helperName = stripGeneratedHelperSuffix(std::move(helperName));
-  if (helperName == "vectorCount") {
-    helperNameOut = "count";
-    return true;
-  }
-  if (helperName == "vectorCapacity") {
-    helperNameOut = "capacity";
-    return true;
-  }
   if (helperName == "vectorAt") {
     helperNameOut = "at";
     return true;

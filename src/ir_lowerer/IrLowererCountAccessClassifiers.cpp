@@ -200,7 +200,19 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   const std::string stdSoaVectorPrefix = "std/collections/soa_vector/";
   const std::string collectionsVectorWrapperPrefix = "std/collections/vector";
   const std::string experimentalVectorPrefix = "std/collections/experimental_vector/";
-  auto resolveCollectionsVectorAlias = [&](std::string helperName) {
+  auto resolveCollectionsVectorWrapperAlias = [&](std::string helperName) {
+    helperName = stripGeneratedHelperSuffix(std::move(helperName));
+    if (helperName == "vectorAt") {
+      helperNameOut = "at";
+      return true;
+    }
+    if (helperName == "vectorAtUnsafe") {
+      helperNameOut = "at_unsafe";
+      return true;
+    }
+    return false;
+  };
+  auto resolveExperimentalVectorAlias = [&](std::string helperName) {
     helperName = stripGeneratedHelperSuffix(std::move(helperName));
     if (helperName == "vectorCount") {
       helperNameOut = "count";
@@ -239,7 +251,8 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   }
   if (normalized.rfind(collectionsVectorWrapperPrefix, 0) == 0 &&
       normalized.rfind(stdVectorPrefix, 0) != 0) {
-    return resolveCollectionsVectorAlias(normalized.substr(collectionsVectorWrapperPrefix.size()));
+    return resolveCollectionsVectorWrapperAlias(
+        normalized.substr(collectionsVectorWrapperPrefix.size()));
   }
   if (normalized.rfind(stdVectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size()));
@@ -250,7 +263,7 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
     return helperNameOut == "count";
   }
   if (normalized.rfind(experimentalVectorPrefix, 0) == 0) {
-    return resolveCollectionsVectorAlias(normalized.substr(experimentalVectorPrefix.size()));
+    return resolveExperimentalVectorAlias(normalized.substr(experimentalVectorPrefix.size()));
   }
   return false;
 }

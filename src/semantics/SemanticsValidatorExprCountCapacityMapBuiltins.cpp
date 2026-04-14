@@ -28,14 +28,12 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     return failExprDiagnostic(expr, std::move(message));
   };
 
-  const bool isDirectVectorCountWrapperCall =
+  const bool isDirectExperimentalVectorCountCall =
       !expr.isMethodCall && !resolvedMethod &&
-      (resolved.rfind("/std/collections/vectorCount", 0) == 0 ||
-       resolved.rfind("/std/collections/experimental_vector/vectorCount", 0) == 0);
-  const bool isDirectVectorCapacityWrapperCall =
+      resolved.rfind("/std/collections/experimental_vector/vectorCount", 0) == 0;
+  const bool isDirectExperimentalVectorCapacityCall =
       !expr.isMethodCall && !resolvedMethod &&
-      (resolved.rfind("/std/collections/vectorCapacity", 0) == 0 ||
-       resolved.rfind("/std/collections/experimental_vector/vectorCapacity", 0) == 0);
+      resolved.rfind("/std/collections/experimental_vector/vectorCapacity", 0) == 0;
   const bool isDirectStdNamespacedVectorCountBuiltinCall =
       !expr.isMethodCall && !resolvedMethod &&
       context.shouldBuiltinValidateStdNamespacedVectorCountCall &&
@@ -158,11 +156,13 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
         }
         return validateExpr(params, locals, expr.args.front());
       };
-  if (isDirectVectorCountWrapperCall) {
-    return validateDirectVectorCountCapacityCall("count", "/std/collections/vectorCount");
+  if (isDirectExperimentalVectorCountCall) {
+    return validateDirectVectorCountCapacityCall(
+        "count", "/std/collections/experimental_vector/vectorCount");
   }
-  if (isDirectVectorCapacityWrapperCall) {
-    return validateDirectVectorCountCapacityCall("capacity", "/std/collections/vectorCapacity");
+  if (isDirectExperimentalVectorCapacityCall) {
+    return validateDirectVectorCountCapacityCall(
+        "capacity", "/std/collections/experimental_vector/vectorCapacity");
   }
   if (isDirectStdNamespacedVectorCountBuiltinCall) {
     return validateDirectVectorCountCapacityCall("count", "/std/collections/vector/count");
