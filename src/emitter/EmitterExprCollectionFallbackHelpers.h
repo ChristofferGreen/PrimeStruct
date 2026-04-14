@@ -6,8 +6,8 @@
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    return normalized == "vector/count" || normalized == "std/collections/vector/count" ||
-           normalized == "vector/capacity" || normalized == "std/collections/vector/capacity";
+    return normalized == "std/collections/vector/count" ||
+           normalized == "std/collections/vector/capacity";
   };
   auto isExplicitVectorAccessAliasDirectCall = [&](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
@@ -17,7 +17,8 @@
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    return normalized == "vector/at" || normalized == "vector/at_unsafe";
+    return normalized == "std/collections/vector/at" ||
+           normalized == "std/collections/vector/at_unsafe";
   };
   auto pickAccessReceiverIndex = [&]() -> size_t {
     if (expr.args.size() != 2) {

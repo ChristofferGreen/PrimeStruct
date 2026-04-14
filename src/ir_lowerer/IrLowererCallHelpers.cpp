@@ -20,9 +20,6 @@ bool isRemovedVectorHelperDefinitionPath(const std::string &path) {
     return path == basePath || path.rfind(std::string(basePath) + "__t", 0) == 0;
   };
   return matchesPath("/vector/at") || matchesPath("/vector/at_unsafe") ||
-         matchesPath("/vector/push") || matchesPath("/vector/pop") ||
-         matchesPath("/vector/reserve") || matchesPath("/vector/clear") ||
-         matchesPath("/vector/remove_at") || matchesPath("/vector/remove_swap") ||
          matchesPath("/std/collections/vector/count") ||
          matchesPath("/std/collections/vector/capacity") ||
          matchesPath("/std/collections/vector/at") ||

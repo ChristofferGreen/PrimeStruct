@@ -162,6 +162,7 @@ Wave E (queue hygiene):
   - progress: Removed remaining emitter + lowerer count/capacity alias hardcoding for `/vector/*` in direct-call type inference and removed-helper inline filtering; canonical `/std/collections/vector/count` and `/std/collections/vector/capacity` are now the only explicit vector count/capacity helper paths in those production classifiers.
   - progress: Pruned vector count/capacity `/vector/*` alias entries from template-monomorph compatibility mapping and semantic compatibility descriptor tables (including removed-helper descriptor list), and removed method-target compatibility guards that still treated `/vector/count` and `/vector/capacity` as distinct paths.
   - progress: Removed remaining `/vector/at` and `/vector/at_unsafe` alias routing from semantics direct-fallback/return-kind dispatch, emitter vector-access type inference/classification, lowerer explicit-vector-access classifiers, and template-compatibility alias tables so vector access helper routing is canonicalized on `/std/collections/vector/at` and `/std/collections/vector/at_unsafe`.
+  - progress: Removed remaining `/vector/*` mutator alias mapping (`push`/`pop`/`reserve`/`clear`/`remove_at`/`remove_swap`) from experimental-vector helper canonicalization and vector compatibility descriptor aliases, and pruned emitter/lowerer direct-call alias filters so production mutator routing stays on canonical `/std/collections/vector/*` helper paths.
 
 - [ ] TODO-0407: Move test implementations from include chunks into `.cpp`
   - owner: ai

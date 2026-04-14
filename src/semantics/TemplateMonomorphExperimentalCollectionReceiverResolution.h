@@ -475,22 +475,22 @@ std::string experimentalVectorHelperPathForCanonicalHelper(const std::string &pa
   if (path == "/std/collections/vector/capacity") {
     return "/std/collections/experimental_vector/vectorCapacity";
   }
-  if (path == "/std/collections/vector/push" || path == "/vector/push") {
+  if (path == "/std/collections/vector/push") {
     return "/std/collections/experimental_vector/vectorPush";
   }
-  if (path == "/std/collections/vector/pop" || path == "/vector/pop") {
+  if (path == "/std/collections/vector/pop") {
     return "/std/collections/experimental_vector/vectorPop";
   }
-  if (path == "/std/collections/vector/reserve" || path == "/vector/reserve") {
+  if (path == "/std/collections/vector/reserve") {
     return "/std/collections/experimental_vector/vectorReserve";
   }
-  if (path == "/std/collections/vector/clear" || path == "/vector/clear") {
+  if (path == "/std/collections/vector/clear") {
     return "/std/collections/experimental_vector/vectorClear";
   }
-  if (path == "/std/collections/vector/remove_at" || path == "/vector/remove_at") {
+  if (path == "/std/collections/vector/remove_at") {
     return "/std/collections/experimental_vector/vectorRemoveAt";
   }
-  if (path == "/std/collections/vector/remove_swap" || path == "/vector/remove_swap") {
+  if (path == "/std/collections/vector/remove_swap") {
     return "/std/collections/experimental_vector/vectorRemoveSwap";
   }
   if (path == "/std/collections/vector/at") {

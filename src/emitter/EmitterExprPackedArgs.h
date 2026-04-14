@@ -106,7 +106,6 @@
               normalizedName.erase(normalizedName.begin());
             }
             if (normalizedName != "at" && normalizedName != "at_unsafe" &&
-                normalizedName != "vector/at" && normalizedName != "vector/at_unsafe" &&
                 normalizedName != "std/collections/vector/at" &&
                 normalizedName != "std/collections/vector/at_unsafe" &&
                 normalizedName != "map/at" && normalizedName != "map/at_unsafe" &&
