@@ -22,8 +22,7 @@ bool isCanonicalVectorAccessMethodHelper(std::string_view helperName) {
 }
 
 bool isVectorFamilyHelperPath(const std::string &path) {
-  return path.rfind("/vector/", 0) == 0 ||
-         path.rfind("/soa_vector/", 0) == 0 ||
+  return path.rfind("/soa_vector/", 0) == 0 ||
          path.rfind("/std/collections/soa_vector/", 0) == 0 ||
          path.rfind("/std/collections/vector/", 0) == 0 ||
          path.rfind("/std/collections/experimental_vector/", 0) == 0;

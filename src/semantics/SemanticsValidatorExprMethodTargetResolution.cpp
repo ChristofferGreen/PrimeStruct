@@ -2127,20 +2127,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     isBuiltinOut = false;
     return true;
   }
-  if (!explicitVectorHelperPath.empty() &&
-      explicitVectorHelperPath.rfind("/vector/", 0) == 0 &&
-      (((normalizedMethodName == "count" || normalizedMethodName == "capacity") &&
-        (explicitVectorReceiverFamily == "string" ||
-         explicitVectorReceiverFamily == "array")) ||
-       ((normalizedMethodName == "count" || normalizedMethodName == "capacity") &&
-        explicitVectorReceiverFamily == "map"))) {
-    if (!hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {
-      return failMethodTargetResolutionDiagnostic("unknown method: " + explicitVectorHelperPath);
-    }
-    resolvedOut = explicitVectorHelperPath;
-    isBuiltinOut = false;
-    return true;
-  }
   const bool usesBuiltinVectorMethodSemantics =
       normalizedMethodName == "count" || normalizedMethodName == "capacity" ||
       normalizedMethodName == "at" || normalizedMethodName == "at_unsafe";
@@ -2546,7 +2532,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (resolveVectorHelperMethodTarget(params, locals, receiver, normalizedMethodName,
                                         vectorMethodTarget)) {
       const bool isVectorFamilyTarget =
-          vectorMethodTarget.rfind("/vector/", 0) == 0 ||
           vectorMethodTarget.rfind("/soa_vector/", 0) == 0 ||
           vectorMethodTarget.rfind("/std/collections/vector/", 0) == 0 ||
           vectorMethodTarget.rfind("/std/collections/experimental_vector/", 0) == 0;
@@ -2720,18 +2705,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
        isMapCollectionTypeName(normalizedTypeName))) {
     if (!hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {
       stampFileErrorResultFailure("std-vector-helper-incompatible", typeName);
-      return failMethodTargetResolutionDiagnostic("unknown method: " + explicitVectorHelperPath);
-    }
-    resolvedOut = explicitVectorHelperPath;
-    isBuiltinOut = false;
-    return true;
-  }
-  if (!explicitVectorHelperPath.empty() &&
-      explicitVectorHelperPath.rfind("/vector/", 0) == 0 &&
-      (normalizedMethodName == "count" || normalizedMethodName == "capacity") &&
-      isMapCollectionTypeName(normalizedTypeName)) {
-    if (!hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {
-      stampFileErrorResultFailure("vector-helper-incompatible", typeName);
       return failMethodTargetResolutionDiagnostic("unknown method: " + explicitVectorHelperPath);
     }
     resolvedOut = explicitVectorHelperPath;

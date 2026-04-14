@@ -56,10 +56,7 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
       return std::string_view(candidate).substr(prefixLen);
     };
 
-    std::string_view helper = helperSuffix(path, "/vector/");
-    if (helper.empty()) {
-      helper = helperSuffix(path, "/array/");
-    }
+    std::string_view helper = helperSuffix(path, "/array/");
     if (helper.empty()) {
       helper = helperSuffix(path, "/std/collections/vector/");
     }

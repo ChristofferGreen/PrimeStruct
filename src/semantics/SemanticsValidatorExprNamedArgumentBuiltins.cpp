@@ -262,13 +262,6 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
     if (!resolveLegacyVectorHelperName(helperName)) {
       return false;
     }
-    const bool isStdNamespacedVectorCanonicalHelperCall =
-        !expr.isMethodCall &&
-        resolveCalleePath(expr).rfind("/std/collections/vector/", 0) == 0;
-    if (isStdNamespacedVectorCanonicalHelperCall &&
-        defMap_.find("/vector/" + helperName) == defMap_.end()) {
-      return false;
-    }
     if (defMap_.find(resolved) == defMap_.end() && !expr.args.empty()) {
       for (const auto &receiverCandidate : expr.args) {
         bool isBuiltinMethod = false;

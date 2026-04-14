@@ -612,8 +612,7 @@ bool isAllowedResolvedMapDirectCallPath(const std::string &callPath, const std::
 
 bool isAllowedResolvedVectorDirectCallPath(const std::string &callPath, const std::string &resolvedPath) {
   const std::string normalizedCallPath = normalizeCollectionHelperPath(callPath);
-  if (normalizedCallPath.rfind("/vector/", 0) != 0 &&
-      normalizedCallPath.rfind("/std/collections/vector/", 0) != 0) {
+  if (normalizedCallPath.rfind("/std/collections/vector/", 0) != 0) {
     return true;
   }
   auto allowedCandidates = collectionHelperPathCandidates(callPath);
