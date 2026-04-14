@@ -97,7 +97,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       std::string valueType;
       if (resolveVectorTarget != nullptr &&
           resolveVectorTarget(receiverCandidate, elemType)) {
-        methodResolved = "/vector/" + helperName;
+        methodResolved = "/std/collections/vector/" + helperName;
       } else if (resolveArrayTarget != nullptr &&
                  resolveArrayTarget(receiverCandidate, elemType)) {
         methodResolved = "/array/" + helperName;

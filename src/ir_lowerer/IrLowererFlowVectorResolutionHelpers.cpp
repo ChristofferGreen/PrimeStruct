@@ -119,15 +119,10 @@ bool resolveVectorMutatorAliasName(const Expr &expr, std::string &helperNameOut)
     return false;
   }
   std::string normalized = normalizeQualifiedHelperName(expr);
-  const std::string vectorPrefix = "vector/";
   const std::string stdVectorPrefix = "std/collections/vector/";
   const std::string soaVectorPrefix = "soa_vector/";
   const std::string stdSoaVectorPrefix = "std/collections/soa_vector/";
   const std::string experimentalVectorPrefix = "std/collections/experimental_vector/";
-  if (normalized.rfind(vectorPrefix, 0) == 0) {
-    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(vectorPrefix.size()));
-    return true;
-  }
   if (normalized.rfind(stdVectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size()));
     return true;
@@ -480,7 +475,7 @@ VectorStatementHelperPrepareResult prepareVectorStatementHelperCall(
   }
   const bool explicitVectorHelperPath =
       !stmt.isMethodCall &&
-      (stmt.name.rfind("/std/collections/vector/", 0) == 0 || stmt.name.rfind("/vector/", 0) == 0);
+      (stmt.name.rfind("/std/collections/vector/", 0) == 0);
   Expr normalizedStmt = stmt;
   const Expr *activeStmt = &stmt;
   bool useBuiltinCompatibilityStmt = false;

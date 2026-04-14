@@ -46,7 +46,6 @@ bool SemanticsValidator::inferQuerySnapshotData(const std::vector<ParameterInfo>
       (expr.isMethodCall ||
        out.resolvedPath.rfind("/std/collections/", 0) == 0 ||
        out.resolvedPath.rfind("/array/", 0) == 0 ||
-       out.resolvedPath.rfind("/vector/", 0) == 0 ||
        out.resolvedPath.rfind("/map/", 0) == 0);
   if (receiverQueryCandidate &&
       !(withPreservedError([&]() {

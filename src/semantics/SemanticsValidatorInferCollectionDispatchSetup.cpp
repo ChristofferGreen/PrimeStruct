@@ -162,14 +162,10 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       !expr.isMethodCall &&
       isMapAccessCompatibilityPath(resolved) &&
       !isMapNamespacedAccessCompatibilityCall;
-  setupOut.shouldAllowStdAccessCompatibilityFallback =
-      setupOut.isStdNamespacedVectorAccessSpelling &&
-      !setupOut.builtinAccessName.empty() &&
-      hasDefinitionPath("/vector/" + setupOut.builtinAccessName);
+  setupOut.shouldAllowStdAccessCompatibilityFallback = false;
   setupOut.isBuiltinAccess =
       setupOut.hasBuiltinAccessSpelling &&
       (!setupOut.isStdNamespacedVectorAccessSpelling ||
-       setupOut.shouldAllowStdAccessCompatibilityFallback ||
        hasStdNamespacedVectorAccessDefinition) &&
       !setupOut.isStdNamespacedMapAccessSpelling && !isResolvedMapAccessCall;
   const bool isNamespacedVectorAccessCall =

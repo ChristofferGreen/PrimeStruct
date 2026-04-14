@@ -81,13 +81,8 @@ static bool resolveStatementVectorHelperAliasName(const Expr &expr, std::string 
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  const std::string vectorPrefix = "vector/";
   const std::string stdVectorPrefix = "std/collections/vector/";
   const std::string experimentalVectorPrefix = "std/collections/experimental_vector/";
-  if (normalized.rfind(vectorPrefix, 0) == 0) {
-    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(vectorPrefix.size()));
-    return true;
-  }
   if (normalized.rfind(stdVectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size()));
     return true;
@@ -112,7 +107,7 @@ static bool isExplicitVectorMutatorHelperCall(const Expr &expr) {
     return false;
   }
   const bool isExplicitHelperPath =
-      expr.name.rfind("/vector/", 0) == 0 || expr.name.rfind("/std/collections/vector/", 0) == 0 ||
+      expr.name.rfind("/std/collections/vector/", 0) == 0 ||
       expr.name.rfind("/std/collections/vector", 0) == 0 ||
       expr.name.rfind("/std/collections/experimental_vector/", 0) == 0;
   if (!isExplicitHelperPath) {
