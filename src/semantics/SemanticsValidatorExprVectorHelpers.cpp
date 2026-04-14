@@ -89,8 +89,7 @@ bool SemanticsValidator::isVectorBuiltinName(const Expr &candidate, const char *
       resolveCalleePath(candidate) != "/std/collections/vector/" + namespacedHelper) {
     return true;
   }
-  return hasVisibleDefinitionPath("/std/collections/vector/" + namespacedHelper) ||
-         hasVisibleDefinitionPath("/vector/" + namespacedHelper);
+  return hasVisibleDefinitionPath("/std/collections/vector/" + namespacedHelper);
 }
 
 bool SemanticsValidator::resolveVectorHelperMethodTarget(
@@ -239,9 +238,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
   if (resolveExperimentalVectorReceiver(receiver, experimentalElemType)) {
     if ((helperName == "at" || helperName == "at_unsafe") &&
         (hasDeclaredDefinitionPath("/std/collections/vector/" + helperName) ||
-         hasImportedDefinitionPath("/std/collections/vector/" + helperName) ||
-         hasDeclaredDefinitionPath("/vector/" + helperName) ||
-         hasImportedDefinitionPath("/vector/" + helperName))) {
+         hasImportedDefinitionPath("/std/collections/vector/" + helperName))) {
       resolvedOut = preferredBareVectorHelperTarget(helperName);
       return true;
     }
@@ -374,9 +371,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
         if (extractExperimentalVectorElementType(receiverBinding, experimentalElemType)) {
           if ((helperName == "at" || helperName == "at_unsafe") &&
               (hasDeclaredDefinitionPath("/std/collections/vector/" + helperName) ||
-               hasImportedDefinitionPath("/std/collections/vector/" + helperName) ||
-               hasDeclaredDefinitionPath("/vector/" + helperName) ||
-               hasImportedDefinitionPath("/vector/" + helperName))) {
+               hasImportedDefinitionPath("/std/collections/vector/" + helperName))) {
             resolvedOut = preferredBareVectorHelperTarget(helperName);
             return true;
           }
@@ -529,9 +524,6 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
        resolved == "/std/collections/vector/at_unsafe");
   const bool hasVisibleStdNamespacedVectorCanonicalHelper =
       isStdNamespacedVectorCanonicalHelperCall && hasVisibleDefinitionPath(resolved);
-  const bool hasVisibleStdNamespacedVectorCompatibilityHelper =
-      isStdNamespacedVectorCanonicalHelperCall && !namespacedHelper.empty() &&
-      hasVisibleDefinitionPath("/vector/" + namespacedHelper);
   const bool allowStdNamespacedUserReceiverProbe =
       isStdNamespacedVectorCanonicalHelperCall &&
       (namespacedHelper == "count" || namespacedHelper == "capacity") &&
@@ -542,7 +534,6 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   }
   if (isStdNamespacedVectorCanonicalHelperCall && !hasVisibleStdNamespacedVectorCanonicalHelper &&
       !hasVisibleDefinitionPath(resolved) &&
-      !hasVisibleStdNamespacedVectorCompatibilityHelper &&
       !allowStdNamespacedUserReceiverProbe) {
     return failVectorHelperDiagnostic("unknown call target: " + resolved);
   }
@@ -569,11 +560,8 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
 
   size_t resolvedReceiverIndex = 0;
   const bool shouldProbeVectorHelperReceiver =
-      (!isStdNamespacedVectorCanonicalHelperCall ||
-       allowStdNamespacedUserReceiverProbe ||
-       hasVisibleStdNamespacedVectorCompatibilityHelper) &&
-      (defMap_.find(resolved) == defMap_.end() ||
-       hasVisibleStdNamespacedVectorCompatibilityHelper);
+      (!isStdNamespacedVectorCanonicalHelperCall || allowStdNamespacedUserReceiverProbe) &&
+      defMap_.find(resolved) == defMap_.end();
   if (shouldProbeVectorHelperReceiver && !expr.args.empty()) {
     auto tryResolveReceiverIndex = [&](size_t receiverIndex) {
       if (receiverIndex >= expr.args.size()) {
@@ -635,17 +623,6 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
         if (tryResolveReceiverIndex(i)) {
           break;
         }
-      }
-    }
-  }
-
-  if (defMap_.find(resolved) == defMap_.end()) {
-    if (resolved.rfind("/vector/", 0) == 0) {
-      const std::string helperSuffix = resolved.substr(std::string("/vector/").size());
-      const std::string canonicalResolved = "/std/collections/vector/" + helperSuffix;
-      if (defMap_.find(canonicalResolved) != defMap_.end() ||
-          hasImportedDefinitionPath(canonicalResolved)) {
-        resolved = canonicalResolved;
       }
     }
   }

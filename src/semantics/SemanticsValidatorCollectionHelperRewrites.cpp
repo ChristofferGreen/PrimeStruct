@@ -203,15 +203,15 @@ std::string SemanticsValidator::specializedExperimentalMapHelperTarget(
 }
 
 std::string SemanticsValidator::preferredBareVectorHelperTarget(std::string_view helperName) const {
-  const std::string alias = "/vector/" + std::string(helperName);
-  if (hasDeclaredDefinitionPath(alias)) {
-    return alias;
-  }
   const std::string canonical = "/std/collections/vector/" + std::string(helperName);
   if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
     return canonical;
   }
-  return alias;
+  const std::string alias = "/vector/" + std::string(helperName);
+  if (hasDeclaredDefinitionPath(alias) || hasImportedDefinitionPath(alias)) {
+    return alias;
+  }
+  return canonical;
 }
 
 bool SemanticsValidator::tryRewriteBareMapHelperCall(
