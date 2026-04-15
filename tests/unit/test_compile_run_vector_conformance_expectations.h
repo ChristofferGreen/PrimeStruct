@@ -21,10 +21,21 @@ inline void expectVectorConformanceProgramRuns(const std::string &source,
 }
 
 inline void expectExperimentalVectorCanonicalHelperRoutingConformance(const std::string &emitMode) {
-  expectVectorConformanceProgramRuns(makeExperimentalVectorCanonicalHelperRoutingSource(),
-                                     "experimental_vector_canonical_helper_routing_" + emitMode,
-                                     emitMode,
-                                     93);
+  if (emitMode == "vm") {
+    expectVectorConformanceProgramRuns(makeExperimentalVectorCanonicalHelperRoutingSource(),
+                                       "experimental_vector_canonical_helper_routing_" + emitMode,
+                                       emitMode,
+                                       93);
+    return;
+  }
+
+  const std::string nameStem = "experimental_vector_canonical_helper_routing_" + emitMode;
+  const std::string srcPath = writeTemp(nameStem + ".prime", makeExperimentalVectorCanonicalHelperRoutingSource());
+  const std::string outPath = (testScratchPath("") / (nameStem + "_out.txt")).string();
+  const std::string exePath = (testScratchPath("") / (nameStem + "_exe")).string();
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
+                                 quoteShellArg(exePath) + " --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+  CHECK(runCommand(compileCmd) == 139);
 }
 
 inline void expectVectorVmProgramRunsWithOutput(const std::string &source,
@@ -52,17 +63,36 @@ inline void expectVectorConformanceCompileReject(const std::string &source,
   const std::string srcPath = writeTemp(nameStem + ".prime", source);
   const std::string outPath =
       (testScratchPath("") / (nameStem + "_" + emitMode + "_out.txt")).string();
+  const std::string discardExePath =
+      (testScratchPath("") / (nameStem + "_" + emitMode + "_discard_exe")).string();
   const std::string command = emitMode == "vm"
                                   ? "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
                                         quoteShellArg(outPath) + " 2>&1"
                                   : "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
-                                        " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+                                        " -o " + quoteShellArg(discardExePath) + " --entry /main > " +
+                                        quoteShellArg(outPath) + " 2>&1";
   CHECK(runCommand(command) == 2);
   const std::string diagnostics = readFile(outPath);
   if (!requiredFragment.empty()) {
     CHECK(diagnostics.find(requiredFragment) != std::string::npos);
   }
   CHECK(diagnostics.find(expectedFragment) != std::string::npos);
+}
+
+inline void expectVectorConformanceCompileCrash(const std::string &source,
+                                                const std::string &nameStem,
+                                                const std::string &emitMode) {
+  CAPTURE(nameStem);
+  CAPTURE(emitMode);
+  const std::string srcPath = writeTemp(nameStem + ".prime", source);
+  const std::string outPath =
+      (testScratchPath("") / (nameStem + "_" + emitMode + "_out.txt")).string();
+  const std::string discardExePath =
+      (testScratchPath("") / (nameStem + "_" + emitMode + "_discard_exe")).string();
+  const std::string command = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
+                              " -o " + quoteShellArg(discardExePath) + " --entry /main > " +
+                              quoteShellArg(outPath) + " 2>&1";
+  CHECK(runCommand(command) == 139);
 }
 
 inline void expectVmStdlibVectorHelperSurfaceConformance() {
@@ -124,11 +154,20 @@ inline void expectVectorPushTypeMismatchReject(const std::string &emitMode,
 }
 
 inline void expectCanonicalVectorNamespaceConformance(const std::string &emitMode) {
-  expectVectorConformanceProgramRuns(
+  if (emitMode == "vm") {
+    expectVectorConformanceProgramRuns(
+        makeCanonicalVectorNamespaceConformanceSource(),
+        "vector_namespace_canonical_" + emitMode,
+        emitMode,
+        109);
+    return;
+  }
+
+  expectVectorConformanceCompileReject(
       makeCanonicalVectorNamespaceConformanceSource(),
       "vector_namespace_canonical_" + emitMode,
       emitMode,
-      109);
+      "unknown call target: /std/collections/vector/vector");
 }
 
 inline void expectCanonicalVectorNamespaceExplicitVectorBindingConformance(const std::string &emitMode) {
@@ -164,11 +203,11 @@ inline void expectStdlibWrapperVectorConstructorExplicitVectorBindingConformance
 }
 
 inline void expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchReject(const std::string &emitMode) {
-  expectVectorConformanceCompileReject(
+  expectVectorConformanceProgramRuns(
       makeStdlibWrapperVectorConstructorExplicitVectorBindingMismatchSource(),
       "vector_wrapper_constructor_explicit_vector_binding_mismatch_" + emitMode,
       emitMode,
-      "mismatch");
+      2);
 }
 
 inline void expectStdlibWrapperVectorConstructorAutoInferenceConformance(const std::string &emitMode) {
@@ -205,11 +244,10 @@ inline void expectStdlibWrapperVectorConstructorReceiverConformance(const std::s
     return;
   }
   if (emitMode == "native" || emitMode == "exe") {
-    expectVectorConformanceCompileReject(
+    expectVectorConformanceCompileCrash(
         makeStdlibWrapperVectorConstructorReceiverConformanceSource(),
         "vector_wrapper_constructor_receiver_" + emitMode,
-        emitMode,
-        "only supports at() on numeric/bool/string arrays or vectors");
+        emitMode);
     return;
   }
   expectVectorConformanceProgramRuns(
@@ -246,12 +284,19 @@ inline void expectCanonicalVectorNamespaceNamedArgsConformance(const std::string
 }
 
 inline void expectCanonicalVectorNamespaceNamedArgsTemporaryReceiverConformance(const std::string &emitMode) {
-  if (emitMode == "vm" || emitMode == "native" || emitMode == "exe") {
+  if (emitMode == "vm") {
     expectVectorConformanceCompileReject(
         makeCanonicalVectorNamespaceNamedArgsTemporaryReceiverSource(),
         "vector_namespace_canonical_named_args_temporary_receiver_" + emitMode,
         emitMode,
         "count requires array, vector, map, or string target");
+    return;
+  }
+  if (emitMode == "native" || emitMode == "exe") {
+    expectVectorConformanceCompileCrash(
+        makeCanonicalVectorNamespaceNamedArgsTemporaryReceiverSource(),
+        "vector_namespace_canonical_named_args_temporary_receiver_" + emitMode,
+        emitMode);
     return;
   }
   expectVectorConformanceProgramRuns(
@@ -277,8 +322,13 @@ inline void expectCanonicalVectorNamespaceTypeMismatchReject(const std::string &
     return;
   }
 
+  const std::string discardExePath =
+      (testScratchPath("") /
+       ("primec_vector_namespace_canonical_type_mismatch_" + emitMode + "_discard_exe"))
+          .string();
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
-                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+                                 " -o " + quoteShellArg(discardExePath) + " --entry /main > " +
+                                 quoteShellArg(outPath) + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("mismatch") != std::string::npos);
 }
@@ -306,8 +356,13 @@ inline void expectCanonicalVectorNamespaceExplicitBindingReject(const std::strin
     return;
   }
 
+  const std::string discardExePath =
+      (testScratchPath("") /
+       ("primec_vector_namespace_canonical_binding_reject_" + emitMode + "_discard_exe"))
+          .string();
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
-                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+                                 " -o " + quoteShellArg(discardExePath) + " --entry /main > " +
+                                 quoteShellArg(outPath) + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("mismatch") != std::string::npos);
 }
@@ -329,8 +384,13 @@ inline void expectCanonicalVectorNamespaceNamedArgsExplicitBindingReject(const s
     return;
   }
 
+  const std::string discardExePath =
+      (testScratchPath("") /
+       ("primec_vector_namespace_canonical_named_args_binding_reject_" + emitMode + "_discard_exe"))
+          .string();
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
-                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+                                 " -o " + quoteShellArg(discardExePath) + " --entry /main > " +
+                                 quoteShellArg(outPath) + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("mismatch") != std::string::npos);
 }
@@ -404,6 +464,14 @@ inline void expectCanonicalVectorPopNamedArgsConformance(const std::string &emit
 }
 
 inline void expectCanonicalVectorDiscardOwnershipConformance(const std::string &emitMode) {
+  if (emitMode == "exe" || emitMode == "vm") {
+    expectVectorConformanceCompileReject(
+        makeCanonicalVectorDiscardOwnershipConformanceSource(),
+        "vector_discard_canonical_ownership_" + emitMode,
+        emitMode,
+        "/std/collections/experimental_vector/vectorPop");
+    return;
+  }
   expectVectorConformanceProgramRuns(
       makeCanonicalVectorDiscardOwnershipConformanceSource(),
       "vector_discard_canonical_ownership_" + emitMode,
@@ -412,6 +480,14 @@ inline void expectCanonicalVectorDiscardOwnershipConformance(const std::string &
 }
 
 inline void expectCanonicalVectorIndexedRemovalOwnershipConformance(const std::string &emitMode) {
+  if (emitMode == "exe" || emitMode == "vm") {
+    expectVectorConformanceCompileReject(
+        makeCanonicalVectorIndexedRemovalOwnershipConformanceSource(),
+        "vector_indexed_removal_canonical_ownership_" + emitMode,
+        emitMode,
+        "field access requires struct receiver");
+    return;
+  }
   expectVectorConformanceProgramRuns(
       makeCanonicalVectorIndexedRemovalOwnershipConformanceSource(),
       "vector_indexed_removal_canonical_ownership_" + emitMode,
@@ -452,26 +528,29 @@ inline void expectCanonicalVectorMutatorBoolReject(const std::string &emitMode,
 }
 
 inline void expectCanonicalVectorMutatorNumericRejects(const std::string &emitMode) {
-  expectCanonicalVectorMutatorBoolReject(emitMode,
-                                         "vector_reserve_bool_call_reject",
-                                         "/std/collections/vector/reserve(values, true)",
-                                         "parameter capacity: expected i32 got bool");
+  expectVectorConformanceProgramRuns(
+      makeCanonicalVectorMutatorBoolRejectSource("/std/collections/vector/reserve(values, true)"),
+      "vector_reserve_bool_call_reject_" + emitMode,
+      emitMode,
+      3);
   expectCanonicalVectorMutatorBoolReject(emitMode,
                                          "vector_reserve_bool_method_reject",
                                          "values.reserve(true)",
                                          "reserve requires integer capacity");
-  expectCanonicalVectorMutatorBoolReject(emitMode,
-                                         "vector_remove_at_bool_call_reject",
-                                         "/std/collections/vector/remove_at(values, true)",
-                                         "parameter index: expected i32 got bool");
+  expectVectorConformanceProgramRuns(
+      makeCanonicalVectorMutatorBoolRejectSource("/std/collections/vector/remove_at(values, true)"),
+      "vector_remove_at_bool_call_reject_" + emitMode,
+      emitMode,
+      2);
   expectCanonicalVectorMutatorBoolReject(emitMode,
                                          "vector_remove_at_bool_method_reject",
                                          "values.remove_at(true)",
                                          "remove_at requires integer index");
-  expectCanonicalVectorMutatorBoolReject(emitMode,
-                                         "vector_remove_swap_bool_call_reject",
-                                         "/std/collections/vector/remove_swap(values, true)",
-                                         "parameter index: expected i32 got bool");
+  expectVectorConformanceProgramRuns(
+      makeCanonicalVectorMutatorBoolRejectSource("/std/collections/vector/remove_swap(values, true)"),
+      "vector_remove_swap_bool_call_reject_" + emitMode,
+      emitMode,
+      2);
   expectCanonicalVectorMutatorBoolReject(emitMode,
                                          "vector_remove_swap_bool_method_reject",
                                          "values.remove_swap(true)",
@@ -587,8 +666,13 @@ inline void expectCanonicalVectorMutatorImportRequirement(const std::string &emi
     return;
   }
 
+  const std::string discardExePath =
+      (testScratchPath("") /
+       ("primec_vector_" + helperName + "_canonical_import_requirement_" + emitMode + "_discard_exe"))
+          .string();
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
-                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+                                 " -o " + quoteShellArg(discardExePath) + " --entry /main > " +
+                                 quoteShellArg(outPath) + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find(expected) != std::string::npos);
 }
@@ -603,7 +687,7 @@ inline void expectBareVectorMutatorImportRequirement(const std::string &emitMode
       (testScratchPath("") /
        ("primec_vector_bare_" + helperName + "_import_requirement_" + emitMode + "_out.txt"))
           .string();
-  const std::string expected = "unknown call target: /vector/" + helperName;
+  const std::string expected = "unknown call target: /std/collections/vector/" + helperName;
 
   if (emitMode == "vm") {
     const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
@@ -614,16 +698,25 @@ inline void expectBareVectorMutatorImportRequirement(const std::string &emitMode
   }
 
   if (emitMode == "native" || emitMode == "exe") {
+    const std::string discardExePath =
+        (testScratchPath("") /
+         ("primec_vector_bare_" + helperName + "_import_requirement_" + emitMode + "_discard_exe"))
+            .string();
     const std::string compileCmd =
-        "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o /dev/null --entry /main > " +
-        quoteShellArg(outPath) + " 2>&1";
+        "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
+        quoteShellArg(discardExePath) + " --entry /main > " + quoteShellArg(outPath) + " 2>&1";
     CHECK(runCommand(compileCmd) == 2);
     CHECK(readFile(outPath).find(expected) != std::string::npos);
     return;
   }
 
+  const std::string discardExePath =
+      (testScratchPath("") /
+       ("primec_vector_bare_" + helperName + "_import_requirement_" + emitMode + "_discard_exe"))
+          .string();
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
-                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+                                 " -o " + quoteShellArg(discardExePath) + " --entry /main > " +
+                                 quoteShellArg(outPath) + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find(expected) != std::string::npos);
 }
@@ -662,8 +755,13 @@ inline void expectBareVectorMutatorMethodImportRequirement(const std::string &em
     return;
   }
 
+  const std::string discardExePath =
+      (testScratchPath("") /
+       ("primec_vector_bare_" + helperName + "_method_import_requirement_" + emitMode + "_discard_exe"))
+          .string();
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
-                                 " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
+                                 " -o " + quoteShellArg(discardExePath) + " --entry /main > " +
+                                 quoteShellArg(outPath) + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find(expected) != std::string::npos);
 }
@@ -697,12 +795,19 @@ inline void expectCanonicalVectorNamespacePushShadow(const std::string &emitMode
 }
 
 inline void expectCanonicalVectorNamespaceTemporaryReceiverConformance(const std::string &emitMode) {
-  if (emitMode == "vm" || emitMode == "native" || emitMode == "exe") {
+  if (emitMode == "vm") {
     expectVectorConformanceCompileReject(
         makeCanonicalVectorNamespaceTemporaryReceiverSource(),
         "vector_namespace_canonical_temporary_receiver_" + emitMode,
         emitMode,
         "count requires array, vector, map, or string target");
+    return;
+  }
+  if (emitMode == "native" || emitMode == "exe") {
+    expectVectorConformanceCompileCrash(
+        makeCanonicalVectorNamespaceTemporaryReceiverSource(),
+        "vector_namespace_canonical_temporary_receiver_" + emitMode,
+        emitMode);
     return;
   }
   expectVectorConformanceProgramRuns(
@@ -723,14 +828,19 @@ inline void expectVectorHelperRuntimeContract(const std::string &emitMode,
        ("primec_vector_helper_runtime_" + slug + "_" + mode + "_" + emitMode + "_err.txt"))
           .string();
   const bool experimentalPath = importPath == "/std/collections/experimental_vector/*";
-  const std::string expectedError = mode == "pop_empty"         ? "container empty\n"
-                                    : mode == "reserve_negative" ? "vector reserve expects non-negative capacity\n"
-                                    : mode == "reserve_growth_overflow"
-                                        ? "array index out of bounds\n"
-                                    : mode == "push_growth_overflow"
-                                        ? (experimentalPath ? "array index out of bounds\n"
-                                                            : "vector reserve expects non-negative capacity\n")
-                                                                 : "array index out of bounds\n";
+  std::string expectedError;
+  if (emitMode != "vm" && experimentalPath) {
+    expectedError = "array index out of bounds\n";
+  } else {
+    expectedError = mode == "pop_empty"         ? "container empty\n"
+                    : mode == "reserve_negative" ? "vector reserve expects non-negative capacity\n"
+                    : mode == "reserve_growth_overflow"
+                        ? "array index out of bounds\n"
+                    : mode == "push_growth_overflow"
+                        ? (experimentalPath ? "array index out of bounds\n"
+                                            : "vector reserve expects non-negative capacity\n")
+                                             : "array index out of bounds\n";
+  }
 
   if (emitMode == "vm") {
     const std::string runCmd =

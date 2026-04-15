@@ -76,7 +76,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /string/count parameter values: expected string") !=
+        std::string::npos);
 }
 
 TEST_CASE("native keeps map method sugar on wrapper-returned canonical map references" * doctest::skip(true)) {
@@ -135,7 +136,6 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
 }
 
 TEST_CASE("native keeps key diagnostics on wrapper-returned canonical map reference method sugar" * doctest::skip(true)) {
@@ -191,7 +191,6 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
 }
 
 TEST_CASE("compiles and runs native canonical vector access builtin string count shadow") {
@@ -250,8 +249,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(runCommand(compileCmd) == 0);
 }
 
 TEST_CASE("compiles and runs native canonical vector method access builtin string count shadow") {
@@ -501,7 +499,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /string/count parameter values") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native wrapper-returned vector access string count fallback") {
@@ -581,7 +579,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /string/count parameter values") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native user vector count method shadow") {

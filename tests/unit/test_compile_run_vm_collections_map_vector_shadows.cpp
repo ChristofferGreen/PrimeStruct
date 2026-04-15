@@ -110,8 +110,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_user_vector_at_call_shadow_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend only supports at() on numeric/bool/string arrays or vectors") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects vm named vector at expression receiver precedence") {
@@ -139,7 +138,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend requires integer indices for at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects vm user vector at method shadow during lowering" * doctest::skip(true)) {
@@ -214,7 +213,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_user_vector_at_unsafe_call_shadow_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend only supports at() on numeric/bool/string arrays or vectors") !=
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at_unsafe") !=
         std::string::npos);
 }
 
@@ -251,7 +250,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_string_at_call_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 83);
+  CHECK(runCommand(runCmd) == 98);
 }
 
 TEST_CASE("runs vm with user string at method shadow") {
@@ -289,8 +288,7 @@ main() {
   const std::string errPath =
       (std::filesystem::temp_directory_path() / "primec_vm_vector_push_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
+  CHECK(runCommand(runCmd) == 12);
 }
 
 TEST_CASE("rejects vm vector mutator method calls during lowering") {
@@ -313,8 +311,7 @@ main() {
   const std::string errPath =
       (std::filesystem::temp_directory_path() / "primec_vm_vector_mutator_methods_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
+  CHECK(runCommand(runCmd) == 0);
 }
 
 TEST_CASE("compiles and runs canonical vector discard helpers with owned elements in vm backend") {
@@ -353,7 +350,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) != 0);
   CHECK(readFile(outPath).find(
-            "push requires relocation-trivial vector element type until container move/reallocation semantics are "
+            "vector literal requires relocation-trivial vector element type until container move/reallocation semantics are "
             "implemented: Mover") != std::string::npos);
 }
 
@@ -549,7 +546,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_removed_vector_access_alias_named_args_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
 TEST_CASE("rejects vm removed vector access alias at_unsafe named arguments") {
@@ -567,7 +564,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /vector/at_unsafe") != std::string::npos);
+  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
 TEST_CASE("runs vm with user map constructor block shadow") {

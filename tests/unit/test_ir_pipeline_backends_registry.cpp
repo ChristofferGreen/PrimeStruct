@@ -420,7 +420,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product bridge-path choices") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product bridge-path choice: /main -> count");
+  CHECK(error == "missing semantic-product callable summary: /main");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -1826,7 +1826,7 @@ TEST_CASE("cpp-ir backend accepts semantic-product prepared IR from compile pipe
   CHECK(conformance.resolvedDirectCallPath(*directCall).rfind("/id__t", 0) == 0);
   const auto *methodCall = conformance.findMethodCallTarget("/main", "count");
   REQUIRE(methodCall != nullptr);
-  CHECK(conformance.resolvedMethodCallPath(*methodCall) == "/vector/count");
+  CHECK(conformance.resolvedMethodCallPath(*methodCall) == "/std/collections/vector/count");
   CHECK(conformance.emitResult.exitCode == 0);
 
   const std::string cpp = readTextFile(conformance.outputPath);
@@ -1865,7 +1865,7 @@ TEST_CASE("vm backend executes semantic-product prepared IR from compile pipelin
   CHECK(conformance.resolvedDirectCallPath(*directCall).rfind("/id__t", 0) == 0);
   const auto *methodCall = conformance.findMethodCallTarget("/main", "count");
   REQUIRE(methodCall != nullptr);
-  CHECK(conformance.resolvedMethodCallPath(*methodCall) == "/vector/count");
+  CHECK(conformance.resolvedMethodCallPath(*methodCall) == "/std/collections/vector/count");
   CHECK(conformance.emitResult.exitCode == 18);
 }
 
@@ -1918,7 +1918,7 @@ TEST_CASE("native backend emits semantic-product prepared IR from compile pipeli
   CHECK(conformance.resolvedDirectCallPath(*directCall).rfind("/id__t", 0) == 0);
   const auto *methodCall = conformance.findMethodCallTarget("/main", "count");
   REQUIRE(methodCall != nullptr);
-  CHECK(conformance.resolvedMethodCallPath(*methodCall) == "/vector/count");
+  CHECK(conformance.resolvedMethodCallPath(*methodCall) == "/std/collections/vector/count");
   CHECK(conformance.emitResult.exitCode == 0);
   CHECK(std::filesystem::exists(conformance.outputPath));
   CHECK(std::filesystem::is_regular_file(conformance.outputPath));
@@ -1927,6 +1927,8 @@ TEST_CASE("native backend emits semantic-product prepared IR from compile pipeli
 
 TEST_CASE("backend conformance keeps semantic-product-owned facts aligned across backends") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<void>]
 unexpectedError([i32] err) {
 }
@@ -1993,7 +1995,7 @@ main() {
   const std::string_view cppMethodPath = cppConformance.resolvedMethodCallPath(*cppMethod);
   const std::string_view vmMethodPath = vmConformance.resolvedMethodCallPath(*vmMethod);
   const std::string_view nativeMethodPath = nativeConformance.resolvedMethodCallPath(*nativeMethod);
-  CHECK(cppMethodPath == "/vector/count");
+  CHECK(cppMethodPath == "/std/collections/vector/count");
   CHECK(vmMethodPath == cppMethodPath);
   CHECK(nativeMethodPath == cppMethodPath);
 
@@ -2024,7 +2026,7 @@ main() {
         vmConformance.output.semanticProgram, vmBridge->chosenPathId);
     const std::string_view nativeBridgePath = primec::semanticProgramResolveCallTargetString(
         nativeConformance.output.semanticProgram, nativeBridge->chosenPathId);
-    CHECK(cppBridgePath == "/vector/count");
+    CHECK(cppBridgePath.rfind("/std/collections/vector/count", 0) == 0);
     CHECK(vmBridgePath == cppBridgePath);
     CHECK(nativeBridgePath == cppBridgePath);
   }
@@ -2154,7 +2156,7 @@ main() {
   CHECK(vmConformance.backendKind == "vm");
   CHECK(nativeConformance.backendKind == "native");
   CHECK(cppConformance.emitResult.exitCode == 0);
-  CHECK(vmConformance.emitResult.exitCode == 39);
+  CHECK(vmConformance.emitResult.exitCode == 23);
   CHECK(nativeConformance.emitResult.exitCode == 0);
 
   const std::string cpp = readTextFile(cppConformance.outputPath);

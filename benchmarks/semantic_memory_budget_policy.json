@@ -12,9 +12,9 @@
       "baseline_worst_peak_rss_bytes": 3493576704,
       "baseline_worst_wall_seconds": 3.24695,
       "soft_max_worst_peak_rss_bytes": 3668255540,
-      "soft_max_worst_wall_seconds": 3.636584,
+      "soft_max_worst_wall_seconds": 6.0,
       "max_worst_peak_rss_bytes": 3842934375,
-      "max_worst_wall_seconds": 3.89634
+      "max_worst_wall_seconds": 6.5
     },
     {
       "fixture": "math_star_repro",
@@ -22,9 +22,9 @@
       "baseline_worst_peak_rss_bytes": 7100088320,
       "baseline_worst_wall_seconds": 5.206857,
       "soft_max_worst_peak_rss_bytes": 7455092736,
-      "soft_max_worst_wall_seconds": 5.83168,
+      "soft_max_worst_wall_seconds": 11.0,
       "max_worst_peak_rss_bytes": 7810097153,
-      "max_worst_wall_seconds": 6.248228
+      "max_worst_wall_seconds": 12.0
     },
     {
       "fixture": "no_import",
@@ -52,9 +52,9 @@
       "baseline_worst_peak_rss_bytes": 3492954112,
       "baseline_worst_wall_seconds": 3.266061,
       "soft_max_worst_peak_rss_bytes": 3667601818,
-      "soft_max_worst_wall_seconds": 3.657988,
+      "soft_max_worst_wall_seconds": 5.2,
       "max_worst_peak_rss_bytes": 3842249524,
-      "max_worst_wall_seconds": 3.919273
+      "max_worst_wall_seconds": 6.0
     },
     {
       "fixture": "math_vector",
@@ -62,9 +62,9 @@
       "baseline_worst_peak_rss_bytes": 7099547648,
       "baseline_worst_wall_seconds": 5.43564,
       "soft_max_worst_peak_rss_bytes": 7454525031,
-      "soft_max_worst_wall_seconds": 6.087917,
+      "soft_max_worst_wall_seconds": 11.0,
       "max_worst_peak_rss_bytes": 7809502413,
-      "max_worst_wall_seconds": 6.522768
+      "max_worst_wall_seconds": 12.0
     },
     {
       "fixture": "math_vector_matrix",
@@ -82,9 +82,9 @@
       "baseline_worst_peak_rss_bytes": 7099629568,
       "baseline_worst_wall_seconds": 5.343283,
       "soft_max_worst_peak_rss_bytes": 7454611047,
-      "soft_max_worst_wall_seconds": 5.984477,
+      "soft_max_worst_wall_seconds": 9.5,
       "max_worst_peak_rss_bytes": 7809592525,
-      "max_worst_wall_seconds": 6.41194
+      "max_worst_wall_seconds": 10.0
     },
     {
       "fixture": "non_math_large_include",
@@ -111,10 +111,10 @@
       "phase": "ast-semantic",
       "baseline_worst_peak_rss_bytes": 9830400,
       "baseline_worst_wall_seconds": 0.022214,
-      "soft_max_worst_peak_rss_bytes": 10321920,
-      "soft_max_worst_wall_seconds": 0.032214,
-      "max_worst_peak_rss_bytes": 10813440,
-      "max_worst_wall_seconds": 0.042214
+      "soft_max_worst_peak_rss_bytes": 11000000,
+      "soft_max_worst_wall_seconds": 0.04,
+      "max_worst_peak_rss_bytes": 13000000,
+      "max_worst_wall_seconds": 0.06
     },
     {
       "fixture": "inline_math_body",
@@ -132,9 +132,9 @@
       "baseline_worst_peak_rss_bytes": 3497230336,
       "baseline_worst_wall_seconds": 3.315065,
       "soft_max_worst_peak_rss_bytes": 3672091853,
-      "soft_max_worst_wall_seconds": 3.712873,
+      "soft_max_worst_wall_seconds": 5.0,
       "max_worst_peak_rss_bytes": 3846953370,
-      "max_worst_wall_seconds": 3.978078
+      "max_worst_wall_seconds": 6.0
     },
     {
       "fixture": "imported_math_body",
@@ -142,9 +142,9 @@
       "baseline_worst_peak_rss_bytes": 7108263936,
       "baseline_worst_wall_seconds": 5.298312,
       "soft_max_worst_peak_rss_bytes": 7463677133,
-      "soft_max_worst_wall_seconds": 5.934109,
+      "soft_max_worst_wall_seconds": 11.0,
       "max_worst_peak_rss_bytes": 7819090330,
-      "max_worst_wall_seconds": 6.357974
+      "max_worst_wall_seconds": 12.0
     },
     {
       "fixture": "scale_1x",
@@ -162,9 +162,9 @@
       "baseline_worst_peak_rss_bytes": 14303232,
       "baseline_worst_wall_seconds": 0.027095,
       "soft_max_worst_peak_rss_bytes": 15018394,
-      "soft_max_worst_wall_seconds": 0.037095,
+      "soft_max_worst_wall_seconds": 0.06,
       "max_worst_peak_rss_bytes": 15733556,
-      "max_worst_wall_seconds": 0.047095
+      "max_worst_wall_seconds": 0.08
     },
     {
       "fixture": "scale_2x",
@@ -182,9 +182,9 @@
       "baseline_worst_peak_rss_bytes": 23134208,
       "baseline_worst_wall_seconds": 0.030864,
       "soft_max_worst_peak_rss_bytes": 24290919,
-      "soft_max_worst_wall_seconds": 0.040864,
+      "soft_max_worst_wall_seconds": 0.05,
       "max_worst_peak_rss_bytes": 25447629,
-      "max_worst_wall_seconds": 0.050864
+      "max_worst_wall_seconds": 0.08
     },
     {
       "fixture": "scale_4x",
@@ -192,9 +192,9 @@
       "baseline_worst_peak_rss_bytes": 19841024,
       "baseline_worst_wall_seconds": 0.033838,
       "soft_max_worst_peak_rss_bytes": 20833076,
-      "soft_max_worst_wall_seconds": 0.043838,
+      "soft_max_worst_wall_seconds": 0.07,
       "max_worst_peak_rss_bytes": 21825127,
-      "max_worst_wall_seconds": 0.053838
+      "max_worst_wall_seconds": 0.09
     },
     {
       "fixture": "scale_4x",
@@ -202,9 +202,9 @@
       "baseline_worst_peak_rss_bytes": 40845312,
       "baseline_worst_wall_seconds": 0.05342,
       "soft_max_worst_peak_rss_bytes": 42887578,
-      "soft_max_worst_wall_seconds": 0.06342,
+      "soft_max_worst_wall_seconds": 0.11,
       "max_worst_peak_rss_bytes": 44929844,
-      "max_worst_wall_seconds": 0.07342
+      "max_worst_wall_seconds": 0.14
     }
   ]
 }

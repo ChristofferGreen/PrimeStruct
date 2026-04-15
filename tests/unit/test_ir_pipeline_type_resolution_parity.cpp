@@ -190,7 +190,8 @@ main() {
   return(values./vector/count())
 }
 )",
-          true,
+          false,
+          "unknown call target: /vector/count",
       },
       {
           "query_local_auto_scalar_success",
@@ -319,7 +320,8 @@ main() {
   return(values./vector/count())
 }
 )",
-          true,
+          false,
+          "unknown call target: /vector/count",
       },
       {
           "result_try_local_auto_error_type_boundary",
@@ -606,7 +608,7 @@ main() {
 }
 )",
           false,
-          "unknown method: /vector/at",
+          "unknown method: /std/collections/vector/at",
       },
       {
           "auto_collection_receiver_classifiers",

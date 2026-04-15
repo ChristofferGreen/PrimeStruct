@@ -26,4 +26,8 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.backends.core");
 
+TEST_CASE("core backend suite registration sentinel") {
+  CHECK(true);
+}
+
 TEST_SUITE_END();

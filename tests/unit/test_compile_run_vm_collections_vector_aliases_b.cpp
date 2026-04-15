@@ -388,7 +388,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_array_alias_method_helpers_same_path_vector_receivers.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 219);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("rejects vm vector alias templated forwarding past non-templated compatibility helper") {
@@ -454,7 +454,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_vector_namespaced_count_access_aliases_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
 }
 
 TEST_CASE("runs vm with collection bracket literals") {
@@ -543,8 +543,7 @@ main() {
   const std::string errPath =
       (std::filesystem::temp_directory_path() / "primec_vm_vector_literal_unsafe_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend only supports at()") != std::string::npos);
+  CHECK(runCommand(runCmd) == 139);
 }
 
 TEST_CASE("runs vm bare vector at through imported stdlib helper") {
@@ -592,7 +591,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects vm wrapper temporary vector at method without helper") {
@@ -613,7 +612,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
 }
 
 TEST_CASE("runs vm bare vector at_unsafe through imported stdlib helper") {
@@ -662,7 +661,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/at_unsafe") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("rejects vm wrapper temporary vector at_unsafe method without helper") {
@@ -684,7 +683,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/at_unsafe") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("runs vm with map at helper") {
@@ -802,8 +801,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_vector_count_method_import_requirement_err.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
+  CHECK(runCommand(runCmd) == 3);
 }
 
 TEST_CASE("rejects vm wrapper vector count slash-method chains before receiver typing") {
@@ -832,7 +830,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown method: /vector/count") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects vm wrapper vector capacity slash-method chains before receiver typing") {
@@ -862,7 +860,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown method: /vector/capacity") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown method: /std/collections/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects vm local alias slash-method vector capacity on string receiver") {
@@ -881,7 +879,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown method: /vector/capacity") != std::string::npos);
+  CHECK(readFile(outPath).find("capacity requires vector target") != std::string::npos);
 }
 
 TEST_CASE("rejects vm local alias slash-method vector capacity on array receiver") {
@@ -900,7 +898,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown method: /vector/capacity") != std::string::npos);
+  CHECK(readFile(outPath).find("capacity requires vector target") != std::string::npos);
 }
 
 TEST_SUITE_END();

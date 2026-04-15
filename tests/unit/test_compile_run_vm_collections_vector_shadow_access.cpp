@@ -387,7 +387,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("rejects vm std namespaced capacity map target without helper") {
@@ -429,7 +429,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("unknown call target: /vector/capacity") != std::string::npos);
+  CHECK(readFile(outPath).find("capacity requires vector target") != std::string::npos);
 }
 
 TEST_CASE("vm alias capacity array target accepts same-path helper") {
