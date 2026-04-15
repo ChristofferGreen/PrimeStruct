@@ -347,7 +347,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("unknown method: /vector/count") != std::string::npos);
+  CHECK(readFile(outPath).find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector namespaced call aliases without alias definitions") {
@@ -374,7 +374,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
+  CHECK(readFile(outPath).find("call=/vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector namespaced templated canonical helper alias call without alias definition") {
@@ -396,7 +396,7 @@ main() {
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
+  CHECK(readFile(outPath).find("count does not accept template arguments") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector alias arity-mismatch compatibility template forwarding") {
@@ -700,7 +700,7 @@ main() {
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("unknown method: /vector/count") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown method: /string/count") != std::string::npos);
 }
 
 TEST_CASE("rejects vm local alias slash-method vector count on array receiver") {
@@ -718,7 +718,7 @@ main() {
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("unknown method: /vector/count") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown method: /array/count") != std::string::npos);
 }
 
 TEST_SUITE_END();

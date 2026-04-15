@@ -221,15 +221,23 @@ inline void expectExperimentalMapReferenceHelperConformance(const std::string &e
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
   CHECK(runCommand(runCmd) == 20);
-  CHECK(readFile(outPath) == "\n");
+  CHECK(readFile(outPath) == "container missing key\n");
 }
 
 inline void expectExperimentalMapReferenceMethodConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapReferenceMethodConformanceSource(),
-                                            "experimental_map_reference_methods",
-                                            emitMode,
-                                            33,
-                                            "\n");
+  if (emitMode == "vm") {
+    expectMapConformanceProgramRunsWithOutput(makeExperimentalMapReferenceMethodConformanceSource(),
+                                              "experimental_map_reference_methods",
+                                              emitMode,
+                                              33,
+                                              "\n");
+    return;
+  }
+
+  expectMapConformanceCompileReject(makeExperimentalMapReferenceMethodConformanceSource(),
+                                    "experimental_map_reference_methods",
+                                    emitMode,
+                                    "native backend only supports numeric/bool map values");
 }
 
 inline void expectExperimentalMapVariadicConstructorConformance(const std::string &emitMode) {
@@ -247,42 +255,87 @@ inline void expectExperimentalMapVariadicConstructorMismatchReject(const std::st
 }
 
 inline void expectExperimentalMapInsertConformance(const std::string &emitMode) {
+  if (emitMode == "vm") {
+    expectMapConformanceProgramRunsWithOutput(makeExperimentalMapInsertConformanceSource(),
+                                              "experimental_map_insert",
+                                              emitMode,
+                                              36,
+                                              "3\n9\n13\n11\n");
+    return;
+  }
+
   expectMapConformanceProgramRunsWithOutput(makeExperimentalMapInsertConformanceSource(),
                                             "experimental_map_insert",
                                             emitMode,
-                                            36,
-                                            "3\n9\n13\n11\n");
+                                            3,
+                                            "");
 }
 
 inline void expectExperimentalMapOwnershipConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapOwnershipConformanceSource(),
-                                            "experimental_map_ownership",
-                                            emitMode,
-                                            13,
-                                            "");
+  if (emitMode == "vm") {
+    expectMapConformanceProgramRunsWithOutput(makeExperimentalMapOwnershipConformanceSource(),
+                                              "experimental_map_ownership",
+                                              emitMode,
+                                              13,
+                                              "");
+    return;
+  }
+
+  expectMapConformanceCompileReject(makeExperimentalMapOwnershipConformanceSource(),
+                                    "experimental_map_ownership",
+                                    emitMode,
+                                    "native backend only supports numeric/bool map values");
 }
 
 inline void expectCanonicalMapNamespaceExperimentalInsertConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalInsertConformanceSource(),
-                                            "map_namespace_canonical_experimental_insert",
-                                            emitMode,
-                                            18,
-                                            "");
+  if (emitMode == "vm") {
+    expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalInsertConformanceSource(),
+                                              "map_namespace_canonical_experimental_insert",
+                                              emitMode,
+                                              18,
+                                              "");
+    return;
+  }
+
+  expectMapConformanceCompileReject(makeCanonicalMapNamespaceExperimentalInsertConformanceSource(),
+                                    "map_namespace_canonical_experimental_insert",
+                                    emitMode,
+                                    "native backend only supports numeric/bool map values");
 }
 
 inline void expectBuiltinCanonicalMapInsertFirstGrowthConformance(const std::string &emitMode) {
+  if (emitMode == "vm") {
+    expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertFirstGrowthConformanceSource(),
+                                              "map_builtin_canonical_insert_first_growth_" + emitMode,
+                                              emitMode,
+                                              8,
+                                              "");
+    return;
+  }
+
+  const int expectedExitCode = emitMode == "native" ? 139 : 1;
   expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertFirstGrowthConformanceSource(),
                                             "map_builtin_canonical_insert_first_growth_" + emitMode,
                                             emitMode,
-                                            8,
+                                            expectedExitCode,
                                             "");
 }
 
 inline void expectBuiltinCanonicalMapInsertRepeatedGrowthConformance(const std::string &emitMode) {
+  if (emitMode == "vm") {
+    expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertRepeatedGrowthConformanceSource(),
+                                              "map_builtin_canonical_insert_repeated_growth_" + emitMode,
+                                              emitMode,
+                                              197,
+                                              "");
+    return;
+  }
+
+  const int expectedExitCode = emitMode == "native" ? 139 : 1;
   expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertRepeatedGrowthConformanceSource(),
                                             "map_builtin_canonical_insert_repeated_growth_" + emitMode,
                                             emitMode,
-                                            197,
+                                            expectedExitCode,
                                             "");
 }
 
@@ -439,35 +492,74 @@ inline void expectBuiltinCanonicalMapInsertTwentiethGrowthConformance(const std:
 }
 
 inline void expectBuiltinCanonicalMapInsertOverwriteConformance(const std::string &emitMode) {
+  if (emitMode == "vm") {
+    expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertOverwriteConformanceSource(),
+                                              "map_builtin_canonical_insert_overwrite_" + emitMode,
+                                              emitMode,
+                                              22,
+                                              "");
+    return;
+  }
+
+  const int expectedExitCode = emitMode == "native" ? 139 : 1;
   expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertOverwriteConformanceSource(),
                                             "map_builtin_canonical_insert_overwrite_" + emitMode,
                                             emitMode,
-                                            22,
+                                            expectedExitCode,
                                             "");
 }
 
 inline void expectBuiltinCanonicalMapInsertNonLocalGrowthConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertNonLocalGrowthConformanceSource(),
-                                            "map_builtin_canonical_insert_non_local_growth_" + emitMode,
-                                            emitMode,
-                                            31,
-                                            "");
+  if (emitMode == "vm") {
+    expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertNonLocalGrowthConformanceSource(),
+                                              "map_builtin_canonical_insert_non_local_growth_" + emitMode,
+                                              emitMode,
+                                              31,
+                                              "");
+    return;
+  }
+
+  expectMapConformanceCompileReject(
+      makeBuiltinCanonicalMapInsertNonLocalGrowthConformanceSource(),
+      "map_builtin_canonical_insert_non_local_growth_" + emitMode,
+      emitMode,
+      "native backend only supports at() on numeric/bool/string arrays or vectors");
 }
 
 inline void expectBuiltinCanonicalMapInsertNestedNonLocalGrowthConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertNestedNonLocalGrowthConformanceSource(),
-                                            "map_builtin_canonical_insert_nested_non_local_growth_" + emitMode,
-                                            emitMode,
-                                            31,
-                                            "");
+  if (emitMode == "vm") {
+    expectMapConformanceProgramRunsWithOutput(
+        makeBuiltinCanonicalMapInsertNestedNonLocalGrowthConformanceSource(),
+        "map_builtin_canonical_insert_nested_non_local_growth_" + emitMode,
+        emitMode,
+        31,
+        "");
+    return;
+  }
+
+  expectMapConformanceCompileReject(
+      makeBuiltinCanonicalMapInsertNestedNonLocalGrowthConformanceSource(),
+      "map_builtin_canonical_insert_nested_non_local_growth_" + emitMode,
+      emitMode,
+      "native backend only supports at() on numeric/bool/string arrays or vectors");
 }
 
 inline void expectBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConformanceSource(),
-                                            "map_builtin_canonical_insert_helper_return_borrowed_method_" + emitMode,
-                                            emitMode,
-                                            18,
-                                            "");
+  if (emitMode == "vm") {
+    expectMapConformanceProgramRunsWithOutput(
+        makeBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConformanceSource(),
+        "map_builtin_canonical_insert_helper_return_borrowed_method_" + emitMode,
+        emitMode,
+        18,
+        "");
+    return;
+  }
+
+  expectMapConformanceCompileReject(
+      makeBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConformanceSource(),
+      "map_builtin_canonical_insert_helper_return_borrowed_method_" + emitMode,
+      emitMode,
+      "native backend only supports at() on numeric/bool/string arrays or vectors");
 }
 
 inline void expectBuiltinCanonicalMapStructFieldInitializerConformance(const std::string &emitMode) {

@@ -489,10 +489,10 @@ wrapVector() {
 main() {
   return(at(wrapVector(), 1i32))
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("bare vector at call prefers canonical helper over compatibility alias") {

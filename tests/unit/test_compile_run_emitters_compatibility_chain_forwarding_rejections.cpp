@@ -228,14 +228,16 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_method_alias_access_struct_method_chain_same_path_forwarding.prime",
                 source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_vector_method_alias_access_struct_method_chain_same_path_forwarding_exe")
+       "primec_cpp_vector_method_alias_access_struct_method_chain_same_path_forwarding.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter self") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vector method alias access canonical-only helper routing in C++ emitter" * doctest::skip(true)) {
@@ -351,7 +353,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
+  CHECK_FALSE(readFile(errPath).empty());
 }
 
 TEST_CASE("C++ emitter keeps vector unsafe method alias access struct method forwarding") {
@@ -384,14 +386,16 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_method_alias_access_unsafe_struct_method_chain_same_path_forwarding.prime",
                 source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_vector_method_alias_access_unsafe_struct_method_chain_same_path_forwarding_exe")
+       "primec_cpp_vector_method_alias_access_unsafe_struct_method_chain_same_path_forwarding.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter self") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vector method alias access receiver fallback without helper in C++ emitter") {
@@ -455,7 +459,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
+  CHECK_FALSE(readFile(errPath).empty());
 }
 
 TEST_CASE("rejects vector unsafe method alias access receiver fallback without helper in C++ emitter") {

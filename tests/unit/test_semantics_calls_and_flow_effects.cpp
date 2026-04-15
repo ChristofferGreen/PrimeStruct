@@ -1167,7 +1167,8 @@ import /std/collections/*
 
 [effects(io_out), effects(heap_alloc), return<int>]
 main() {
-  print_line(at(vector<string>("hi"utf8), 0i32))
+  [vector<string>] values{vector<string>("hi"utf8)}
+  print_line(/std/collections/vector/at(values, 0i32))
   return(0i32)
 }
 )";

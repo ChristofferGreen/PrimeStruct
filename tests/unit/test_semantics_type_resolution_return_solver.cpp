@@ -140,10 +140,10 @@ main() {
   [auto] values{makeValues()}
   return(at_unsafe(values, 2i32))
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("graph type resolver infers direct-call auto binding from collection-return helper") {
@@ -429,10 +429,10 @@ main() {
   [auto] values{try(wrapStatus())}
   return(Result.ok(count(values)))
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("graph type resolver answers map receiver queries through shared type-text helper") {
@@ -508,10 +508,10 @@ main() {
   return(plus(packScore("ab"raw_utf8, "cde"raw_utf8),
               plus(vectorScore(), mapScore())))
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("graph type resolver infers auto return kinds through shared collection receiver classifiers") {
@@ -538,10 +538,10 @@ main() {
   return(plus(packScore("ab"raw_utf8, "cde"raw_utf8),
               plus(vectorScore(), mapScore())))
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("graph type resolver shares borrowed indexed collection plumbing for soa_vector auto returns") {

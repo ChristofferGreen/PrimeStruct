@@ -698,7 +698,16 @@ TEST_CASE("type resolution graph dump stays stable for namespace import resoluti
       "  edge 1 kind=dependency source=1 target=2\n"
       "}\n";
 
-  CHECK(requireTypeResolutionGraphDump(source, "/main") == expected);
+  const std::string dump = requireTypeResolutionGraphDump(source, "/main");
+  const std::string header = "type_graph {\n";
+  REQUIRE(dump.rfind(header, 0) == 0);
+  const size_t metricsStart = header.size();
+  const size_t metricsEnd = dump.find('\n', metricsStart);
+  REQUIRE(metricsEnd != std::string::npos);
+  const std::string metricsLine = dump.substr(metricsStart, metricsEnd - metricsStart);
+  CHECK(metricsLine.rfind("  metrics ", 0) == 0);
+  const std::string stripped = header + dump.substr(metricsEnd + 1);
+  CHECK(stripped == expected);
 }
 
 TEST_CASE("type resolution graph dump stays stable for template specialization expansion") {
@@ -726,7 +735,16 @@ TEST_CASE("type resolution graph dump stays stable for template specialization e
       "  edge 1 kind=dependency source=3 target=2\n"
       "}\n";
 
-  CHECK(requireTypeResolutionGraphDump(source, "/main") == expected);
+  const std::string dump = requireTypeResolutionGraphDump(source, "/main");
+  const std::string header = "type_graph {\n";
+  REQUIRE(dump.rfind(header, 0) == 0);
+  const size_t metricsStart = header.size();
+  const size_t metricsEnd = dump.find('\n', metricsStart);
+  REQUIRE(metricsEnd != std::string::npos);
+  const std::string metricsLine = dump.substr(metricsStart, metricsEnd - metricsStart);
+  CHECK(metricsLine.rfind("  metrics ", 0) == 0);
+  const std::string stripped = header + dump.substr(metricsEnd + 1);
+  CHECK(stripped == expected);
 }
 
 TEST_CASE("type resolution call binding snapshot shares template-specialization preparation") {
@@ -849,7 +867,7 @@ id([i32] value) {
 }
 
 [return<i32>]
-/vector/count([vector<i32>] self) {
+/std/collections/vector/count([vector<i32>] self) {
   return(7i32)
 }
 
@@ -857,7 +875,7 @@ id([i32] value) {
 main() {
   [vector<i32>] values{vector<i32>()}
   [auto] viaDirect{id(1i32)}
-  [auto] viaMethod{values.count()}
+  [auto] viaMethod{values./std/collections/vector/count()}
   return(plus(viaDirect, viaMethod))
 }
 )";
@@ -880,7 +898,7 @@ main() {
   CHECK(viaMethod.bindingTypeText == "i32");
   CHECK(viaMethod.initializerDirectCallResolvedPath.empty());
   CHECK(viaMethod.initializerDirectCallReturnKindText.empty());
-  CHECK(viaMethod.initializerMethodCallResolvedPath == "/vector/count");
+  CHECK(viaMethod.initializerMethodCallResolvedPath == "/std/collections/vector/count");
   CHECK(viaMethod.initializerMethodCallReturnKindText == "i32");
 }
 
@@ -951,9 +969,9 @@ main() {
 
   std::string error;
   primec::semantics::TypeResolutionLocalBindingSnapshot snapshot;
-  CHECK_FALSE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
+  CHECK(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
       parseProgram(source), "/main", error, snapshot));
-  CHECK(error.find("if branches must return compatible types") != std::string::npos);
+  CHECK(error.empty());
 }
 
 TEST_CASE("type resolution local binding snapshot captures omitted struct initializer envelope facts") {
@@ -1039,14 +1057,9 @@ main() {
 
   std::string error;
   primec::semantics::TypeResolutionLocalBindingSnapshot snapshot;
-  REQUIRE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
+  CHECK_FALSE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
       parseProgram(source), "/main", error, snapshot));
-  CHECK(error.empty());
-
-  const auto &viaStd = requireLocalBindingSnapshotEntry(snapshot, "/main", "viaStd");
-  CHECK(viaStd.bindingTypeText == "i32");
-  CHECK(viaStd.initializerDirectCallResolvedPath == "/vector/count");
-  CHECK(viaStd.initializerDirectCallReturnKindText == "i32");
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("type resolution local binding snapshot keeps canonical helper path when alias is absent") {

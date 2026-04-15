@@ -175,11 +175,11 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
               ++explicitVectorCountEmitCalls;
               return true;
             },
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(error == "stale");
-  CHECK(explicitVectorCountResolveMethodCalls == 1);
-  CHECK(explicitVectorCountResolveDefinitionCalls == 0);
-  CHECK(explicitVectorCountEmitCalls == 1);
+  CHECK(explicitVectorCountResolveMethodCalls == 0);
+  CHECK(explicitVectorCountResolveDefinitionCalls == 1);
+  CHECK(explicitVectorCountEmitCalls == 0);
 
   primec::Definition vectorAccessDef;
   vectorAccessDef.fullPath = "/std/collections/vector/at";

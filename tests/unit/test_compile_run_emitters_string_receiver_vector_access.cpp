@@ -114,7 +114,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/missing_tag") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects slash-method string vector access helpers before lowering") {
@@ -261,7 +262,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /Marker/tag") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter self") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vector alias access field expression without same-path helper in C++ emitter") {
@@ -290,7 +292,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
 }
 
 TEST_CASE("keeps canonical vector access call struct method chain forwarding in C++ emitter") {
@@ -386,15 +388,17 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_map_access_struct_method_chain_forwarding.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_canonical_direct_map_access_struct_method_chain_forwarding_exe")
+       "primec_cpp_canonical_direct_map_access_struct_method_chain_forwarding_err.txt")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(quoteShellArg(exePath)) == 2);
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("native backend only supports arithmetic/comparison") !=
+        std::string::npos);
+  CHECK(readFile(errPath).find("call=/std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("keeps canonical direct-call map unsafe struct method chain forwarding in C++ emitter") {
@@ -421,15 +425,17 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_direct_map_unsafe_struct_method_chain_forwarding.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_canonical_direct_map_unsafe_struct_method_chain_forwarding_exe")
+       "primec_cpp_canonical_direct_map_unsafe_struct_method_chain_forwarding_err.txt")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(quoteShellArg(exePath)) == 2);
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("native backend only supports arithmetic/comparison") !=
+        std::string::npos);
+  CHECK(readFile(errPath).find("call=/std/collections/map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("keeps canonical direct-call map access primitive diagnostics in C++ emitter") {

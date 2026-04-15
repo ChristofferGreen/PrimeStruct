@@ -388,7 +388,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /string/count parameter values") != std::string::npos);
 }
 
 TEST_CASE("runs vm with user vector count method shadow") {

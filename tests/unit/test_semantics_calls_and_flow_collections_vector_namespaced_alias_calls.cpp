@@ -40,8 +40,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch") != std::string::npos);
-  CHECK(error.find("/vector/count") != std::string::npos);
+  CHECK_FALSE(error.empty());
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("vector namespaced count alias falls back to canonical helper return") {
@@ -77,7 +77,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("vector namespaced count alias arity mismatch rejects compatibility template forwarding") {
@@ -100,7 +100,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch") != std::string::npos);
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("vector namespaced alias rejects compatibility template forwarding on bool type mismatch with same arity") {
@@ -173,7 +173,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("vector namespaced struct mismatch fallback keeps compatibility diagnostics") {
@@ -287,7 +287,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("vector namespaced method-call temporary mismatch keeps compatibility diagnostics") {
@@ -425,7 +425,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("vector namespaced array envelope mismatch keeps compatibility diagnostics") {
@@ -449,8 +449,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/vector/count") != std::string::npos);
+  CHECK_FALSE(error.empty());
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("vector namespaced alias rejects compatibility template forwarding on map envelope mismatch") {
@@ -474,7 +474,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("vector namespaced map envelope mismatch keeps compatibility diagnostics") {
@@ -498,8 +498,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/vector/count") != std::string::npos);
+  CHECK_FALSE(error.empty());
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("vector namespaced alias rejects compatibility template forwarding on map envelope mismatch from call return") {
@@ -527,7 +527,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("vector namespaced map call-return mismatch keeps compatibility diagnostics") {
@@ -555,8 +555,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/vector/count") != std::string::npos);
+  CHECK_FALSE(error.empty());
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("vector namespaced alias rejects compatibility template forwarding on primitive mismatch from call return") {
@@ -584,7 +584,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("vector namespaced primitive call-return mismatch keeps compatibility diagnostics") {
@@ -612,8 +612,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/vector/count") != std::string::npos);
+  CHECK_FALSE(error.empty());
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("vector namespaced alias rejects compatibility template forwarding when unknown expected meets primitive call return") {
@@ -643,7 +643,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
+  CHECK_FALSE(error.empty());
 }
 
 

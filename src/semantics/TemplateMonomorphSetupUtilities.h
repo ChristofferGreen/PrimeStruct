@@ -189,23 +189,40 @@ bool replaceBindingTypeTransform(Expr &binding, const std::string &typeName, std
   return replaced;
 }
 
+bool isTemplatedAutoCompatDefinitionPath(std::string_view fullPath) {
+  return fullPath == "/std/collections/vectorPush" || fullPath == "/std/collections/vectorPop" ||
+         fullPath == "/std/collections/vectorReserve" || fullPath == "/std/collections/vectorClear" ||
+         fullPath == "/std/collections/vectorRemoveAt" || fullPath == "/std/collections/vectorRemoveSwap" ||
+         fullPath == "/std/collections/vectorAt" || fullPath == "/std/collections/vectorAtUnsafe";
+}
+
 bool applyImplicitAutoTemplates(Program &program, Context &ctx, std::string &error) {
   for (auto &def : program.definitions) {
     std::vector<std::string> implicitParams;
     if (!def.templateArgs.empty()) {
-      for (const auto &param : def.parameters) {
+      const bool allowTemplatedAuto = isTemplatedAutoCompatDefinitionPath(def.fullPath);
+      for (auto &param : def.parameters) {
         if (!param.isBinding) {
           continue;
         }
         BindingInfo info;
-        if (!hasExplicitBindingTypeTransform(param)) {
+        if (!hasExplicitBindingTypeTransform(param) ||
+            !extractExplicitBindingType(param, info)) {
+          if (allowTemplatedAuto) {
+            continue;
+          }
           error = "implicit auto parameters are only supported on non-templated definitions: " + def.fullPath;
           return false;
         }
-        if (extractExplicitBindingType(param, info) &&
-            info.typeName == "auto") {
-          error = "implicit auto parameters are only supported on non-templated definitions: " + def.fullPath;
-          return false;
+        if (info.typeName == "auto") {
+          if (!allowTemplatedAuto) {
+            error = "implicit auto parameters are only supported on non-templated definitions: " + def.fullPath;
+            return false;
+          }
+          if (!info.typeTemplateArg.empty()) {
+            error = "auto parameters do not accept template arguments: " + def.fullPath;
+            return false;
+          }
         }
       }
       continue;

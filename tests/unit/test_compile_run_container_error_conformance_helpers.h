@@ -49,9 +49,9 @@ inline void expectContainerErrorConformance(const std::string &emitMode) {
           "container missing key\n"
           "container missing key\n"
           "container missing key\n"
-          "\n"
           "container missing key\n"
-          "\n"
+          "container missing key\n"
+          "container missing key\n"
           "container error\n");
     return;
   }
@@ -69,8 +69,8 @@ inline void expectContainerErrorConformance(const std::string &emitMode) {
         "container missing key\n"
         "container missing key\n"
         "container missing key\n"
-        "\n"
         "container missing key\n"
-        "\n"
+        "container missing key\n"
+        "container missing key\n"
         "container error\n");
 }

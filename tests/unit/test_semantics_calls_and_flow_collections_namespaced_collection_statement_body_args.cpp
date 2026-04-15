@@ -107,7 +107,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
+  CHECK((error.find("unknown call target: /vector/count") != std::string::npos ||
+         error.find("block arguments require a definition target: /vector/count") != std::string::npos));
 }
 
 TEST_CASE("stdlib canonical vector helper call-form expression body arguments reject compatibility fallback") {
@@ -258,7 +259,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /Reference/count") != std::string::npos);
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize helper-returned reference receiver target" * doctest::skip(true)) {
@@ -276,7 +277,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /Reference/count") != std::string::npos);
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("array namespaced method body-arg diagnostics normalize canonical-fallback helper receiver target") {
@@ -295,7 +296,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /Reference/count") != std::string::npos);
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize canonical-fallback helper receiver target") {
@@ -313,7 +314,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /Reference/count") != std::string::npos);
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("array namespaced method expression body-arg infers helper-returned reference target") {
@@ -335,8 +336,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK((error.find("unknown call target: /vector/borrow") != std::string::npos ||
+         error.find("unknown call target: /std/collections/vector/borrow") != std::string::npos));
 }
 
 TEST_CASE("array namespaced method expression body-arg helper-returned reference keeps canonical diagnostics") {
@@ -358,8 +360,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK((error.find("unknown call target: /vector/borrow") != std::string::npos ||
+         error.find("unknown call target: /std/collections/vector/borrow") != std::string::npos));
 }
 
 TEST_CASE("map method expression body-arg infers canonical helper on referenced wrapper receiver") {

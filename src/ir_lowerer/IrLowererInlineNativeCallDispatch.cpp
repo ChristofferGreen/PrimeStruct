@@ -537,16 +537,6 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         return emitCanonicalInlineDefinitionCall(callExpr, callee);
       },
       error);
-  const bool debugDirectMapAtCountCall =
-      !expr.isMethodCall &&
-      (isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) &&
-      expr.args.size() == 1 &&
-      expr.args.front().kind == Expr::Kind::Call &&
-      expr.args.front().name == "/std/collections/map/at";
-  if (debugDirectMapAtCountCall && inlineResult == InlineCallDispatchResult::Emitted) {
-    error = "debug: inline dispatch emitted direct map-at count";
-    return InlineCallDispatchResult::Error;
-  }
   return inlineResult;
 }
 

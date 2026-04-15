@@ -6,7 +6,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
-TEST_CASE("rejects wrapper canonical direct-call struct method chain forwarding in C++ emitter") {
+TEST_CASE("compiles and runs wrapper canonical direct-call struct method chain forwarding in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -34,15 +34,14 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_canonical_direct_struct_method_chain_forwarding.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_wrapper_canonical_direct_struct_method_chain_forwarding.err")
+       "primec_cpp_wrapper_canonical_direct_struct_method_chain_forwarding_exe")
           .string();
 
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("rejects wrapper canonical direct-call method receiver fallback without helper in C++ emitter") {
@@ -143,7 +142,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /map/at") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps wrapper-returned vector direct-call string count forwarding") {
+TEST_CASE("C++ emitter rejects wrapper-returned vector direct-call string count forwarding") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -173,17 +172,19 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_vector_access_direct_count_forwarding.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_wrapper_vector_access_direct_count_forwarding_exe")
+       "primec_cpp_wrapper_vector_access_direct_count_forwarding.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 182);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("argument type mismatch for /string/count parameter values") !=
+        std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps vector alias direct-call count canonical wrapper return forwarding") {
+TEST_CASE("C++ emitter rejects vector alias direct-call count canonical wrapper return forwarding") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
 wrapValues() {
@@ -202,14 +203,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_alias_access_direct_count_canonical_wrapper_forwarding.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_vector_alias_access_direct_count_canonical_wrapper_forwarding_exe")
+       "primec_cpp_vector_alias_access_direct_count_canonical_wrapper_forwarding.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 91);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps primitive diagnostics on vector alias access count with canonical non-string wrapper return") {
@@ -289,7 +291,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs user wrapper temporary access shadow precedence in C++ emitter") {
+TEST_CASE("rejects user wrapper temporary access shadow precedence in C++ emitter") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -331,13 +333,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_user_wrapper_temp_access_shadow_precedence.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_user_wrapper_temp_access_shadow_precedence_exe")
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_user_wrapper_temp_access_shadow_precedence.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == expectedProcessExitCode(814));
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects user wrapper temporary access shadow value mismatch in C++ emitter") {
@@ -434,7 +438,7 @@ main() {
   CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs user array capacity helper shadow in C++ emitter") {
+TEST_CASE("rejects user array capacity helper shadow in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /array/capacity([array<i32>] values) {
@@ -448,12 +452,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_user_array_capacity_shadow.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_user_array_capacity_shadow_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_user_array_capacity_shadow.err").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 14);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs std math vector and color types") {

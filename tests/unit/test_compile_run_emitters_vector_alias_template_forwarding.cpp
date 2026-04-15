@@ -37,7 +37,7 @@ main() {
   CHECK(readFile(errPath).find("argument count mismatch") != std::string::npos);
 }
 
-TEST_CASE("rejects vector alias compatibility template forwarding on bool type mismatch in C++ emitter") {
+TEST_CASE("compiles vector alias compatibility template forwarding on bool->i32 conversion in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [i32] marker) {
@@ -63,7 +63,8 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  expectCppVectorCountCompatibilityTypeMismatchReject(compileCmd);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 14);
 }
 
 TEST_CASE("rejects vector alias compatibility template forwarding on non-bool type mismatch in C++ emitter") {
@@ -731,7 +732,7 @@ main() {
   CHECK(runCommand(exePath) == 50);
 }
 
-TEST_CASE("compiles and runs array alias slash-method helpers through same-path helpers in C++ emitter") {
+TEST_CASE("rejects array alias slash-method helper chains on vector receivers in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -777,12 +778,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_array_alias_method_helpers_same_path_vector_receivers.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_array_alias_method_helpers_same_path_vector_receivers_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_array_alias_method_helpers_same_path_vector_receivers.err")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 219);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter self") !=
+        std::string::npos);
 }
 
 TEST_SUITE_END();

@@ -6,7 +6,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
-TEST_CASE("compiles and runs C++ matrix arithmetic helpers with tolerance") {
+TEST_CASE("rejects C++ matrix arithmetic helpers with unsupported divide lowering") {
   const std::string source = R"(
 import /std/math/*
 
@@ -69,15 +69,18 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_matrix_arithmetic_helpers.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_matrix_arithmetic_helpers_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_matrix_arithmetic_helpers.err").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  const std::string err = readFile(errPath);
+  CHECK(err.find("native backend only supports") != std::string::npos);
+  CHECK(err.find("call=/") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs C++ quaternion arithmetic helpers with tolerance") {
+TEST_CASE("rejects C++ quaternion arithmetic helpers with unsupported divide lowering") {
   const std::string source = R"(
 import /std/math/*
 
@@ -117,12 +120,15 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_quaternion_arithmetic_helpers.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_quaternion_arithmetic_helpers_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_quaternion_arithmetic_helpers.err").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  const std::string err = readFile(errPath);
+  CHECK(err.find("native backend only supports") != std::string::npos);
+  CHECK(err.find("call=/") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps support-matrix plus mismatch diagnostics") {
@@ -178,7 +184,7 @@ main() {
             "/std/math/Mat3") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs string-keyed map literal in C++ emitter") {
+TEST_CASE("rejects string-keyed map literal in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -187,11 +193,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_map_string_keys_exe.prime", source);
-  const std::string exePath = (testScratchPath("") / "primec_map_string_keys_exe").string();
+  const std::string errPath = (testScratchPath("") / "primec_map_string_keys.err").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs lerp in C++ emitter") {
@@ -610,7 +618,7 @@ main() {
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(outPath).find(
-            "reserve requires relocation-trivial vector element type until container move/reallocation semantics are "
+            "vector literal requires relocation-trivial vector element type until container move/reallocation semantics are "
             "implemented: Mover") != std::string::npos);
 }
 

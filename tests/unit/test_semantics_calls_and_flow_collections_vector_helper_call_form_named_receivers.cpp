@@ -201,8 +201,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("vector at call-form helper shadow accepts reordered named arguments") {
@@ -219,8 +219,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("at call-form helper shadow prefers labeled named receiver") {
@@ -280,8 +280,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("map at call-form helper shadow accepts string positional reordered arguments") {
@@ -357,8 +357,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("vector at call-form helper shadow skips temp-leading positional probing") {

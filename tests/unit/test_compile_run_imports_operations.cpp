@@ -91,10 +91,13 @@ main() {
   const std::string methodSrcPath = writeTemp("compile_graph_query_vector_helper_method_exe.prime", methodSource);
   const std::string methodExePath =
       (testScratchPath("") / "compile_graph_query_vector_helper_method_exe").string();
+  const std::string methodErrPath =
+      (testScratchPath("") / "compile_graph_query_vector_helper_method_exe.err").string();
   const std::string methodCmd =
-      "./primec --emit=exe " + methodSrcPath + " -o " + methodExePath + " --entry /main";
-  CHECK(runCommand(methodCmd) == 0);
-  CHECK(runCommand(methodExePath) == 17);
+      "./primec --emit=exe " + methodSrcPath + " -o " + methodExePath + " --entry /main 2> " +
+      methodErrPath;
+  CHECK(runCommand(methodCmd) == 2);
+  CHECK(readFile(methodErrPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs experimental soa_vector stdlib helpers in C++ emitter") {
@@ -414,7 +417,7 @@ main() {
   CHECK(runCommand(exePath) == 17);
 }
 
-TEST_CASE("compiles and runs graph-solved direct local-auto vector helper shadows in C++ emitter") {
+TEST_CASE("rejects graph-solved direct local-auto vector helper shadows in C++ emitter") {
   const std::string source = R"(
 /vector/count([vector<i32>] values) {
   return(17i32)
@@ -436,10 +439,13 @@ main() {
       writeTemp("compile_graph_direct_local_auto_vector_helper_shadows_exe.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_graph_direct_local_auto_vector_helper_shadows_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_graph_direct_local_auto_vector_helper_shadows_exe.err").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 34);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE(

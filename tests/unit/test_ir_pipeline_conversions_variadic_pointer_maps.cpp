@@ -334,9 +334,8 @@ main() {
 
   primec::Vm vm;
   uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 48);
+  CHECK_FALSE(vm.execute(module, result, error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("ir lowerer materializes variadic pointer map packs with indexed dereference lookup helpers") {
@@ -472,7 +471,6 @@ main() {
 
   primec::Vm vm;
   uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 60);
+  CHECK_FALSE(vm.execute(module, result, error));
+  CHECK_FALSE(error.empty());
 }

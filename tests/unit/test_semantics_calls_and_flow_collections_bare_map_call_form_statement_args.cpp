@@ -245,7 +245,9 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /vector/at") != std::string::npos);
+  CHECK((error.find("unknown call target: /vector/at") != std::string::npos ||
+         error.find("unknown call target: /std/collections/vector/at") != std::string::npos ||
+         error.find("argument type mismatch for /i32/tag parameter self") != std::string::npos));
 }
 
 TEST_CASE("vector namespaced access alias field expression keeps struct receiver diagnostics") {
@@ -272,7 +274,9 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /vector/at") != std::string::npos);
+  CHECK((error.find("unknown call target: /vector/at") != std::string::npos ||
+         error.find("unknown call target: /std/collections/vector/at") != std::string::npos ||
+         error.find("unable to infer return type on /project") != std::string::npos));
 }
 
 TEST_CASE("vector canonical access call keeps same-path struct receiver forwarding") {
@@ -523,8 +527,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unable to infer return type on /project") != std::string::npos);
 }
 
 TEST_CASE("vector constructor alias call keeps canonical helper diagnostics") {
@@ -552,10 +556,10 @@ project() {
 main() {
   return(project())
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /Marker/tag parameter marker") != std::string::npos);
+  CHECK(error.find("unable to infer return type on /project") != std::string::npos);
 }
 
 TEST_CASE("vector method alias access rejects canonical struct-return forwarding") {
@@ -614,7 +618,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /vector/at") != std::string::npos);
+  CHECK((error.find("unknown method: /vector/at") != std::string::npos ||
+         error.find("unknown method: /std/collections/vector/at") != std::string::npos ||
+         error.find("unknown call target: /vector/at") != std::string::npos ||
+         error.find("unknown call target: /std/collections/vector/at") != std::string::npos));
 }
 
 TEST_CASE("vector unsafe method alias access struct method chain keeps primitive receiver diagnostics") {

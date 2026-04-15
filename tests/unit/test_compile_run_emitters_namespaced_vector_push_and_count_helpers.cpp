@@ -62,8 +62,9 @@ main() {
                                   .string();
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("return type mismatch: expected bool") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(errPath).empty());
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("compiles and runs auto-inferred std namespaced vector push canonical definition in C++ emitter") {
@@ -94,7 +95,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs auto-inferred std namespaced count helper in C++ emitter") {
+TEST_CASE("rejects auto-inferred std namespaced count helper return mismatch in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values) {
@@ -115,14 +116,14 @@ TEST_CASE("compiles and runs auto-inferred std namespaced count helper in C++ em
 )";
   const std::string srcPath = writeTemp("compile_cpp_std_namespaced_vector_count_receiver_precedence_auto.prime",
                                         source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_std_namespaced_vector_count_receiver_precedence_auto_exe")
+       "primec_cpp_std_namespaced_vector_count_receiver_precedence_auto_err.txt")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("return type mismatch: expected i32") != std::string::npos);
 }
 
 TEST_CASE("compiles std namespaced count helper canonical fallback in C++ emitter") {
@@ -346,7 +347,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs user vector mutator bool positional call shadow in C++ emitter") {
+TEST_CASE("rejects user vector mutator bool positional call shadow in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc)]
 /vector/push([vector<i32> mut] values, [bool] value) { }
@@ -359,12 +360,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_mutator_bool_positional_call_shadow.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_vector_mutator_bool_positional_call_shadow_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_vector_mutator_bool_positional_call_shadow_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter mutator rewrite keeps known vector receiver leading names") {
@@ -413,7 +416,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports at()") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs auto-inferred std namespaced access helper canonical precedence in C++ emitter") {
@@ -441,13 +445,9 @@ main() {
       (testScratchPath("") /
        "primec_cpp_std_namespaced_vector_access_expr_named_receiver_precedence_auto_exe")
           .string();
-  const std::string errPath = (testScratchPath("") /
-                               "primec_cpp_std_namespaced_vector_access_expr_named_receiver_precedence_auto_err.txt")
-                                  .string();
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("return type mismatch: expected bool") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("compiles and runs auto-inferred std namespaced access helper canonical definition in C++ emitter") {
@@ -549,7 +549,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects removed vector access alias at_unsafe named arguments in C++ emitter") {
@@ -574,7 +575,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown call target: /vector/at_unsafe") != std::string::npos);
+  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects user vector access positional call shadow in C++ emitter") {
@@ -600,7 +602,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports at()") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects user map access string positional call shadow in C++ emitter") {

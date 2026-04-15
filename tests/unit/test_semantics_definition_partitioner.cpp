@@ -651,8 +651,8 @@ unexpected_error([i32] err) {
 main() {
   [auto] direct{id(1i32)}
   [auto] values{vector<i32>(1i32)}
-  [i32] method{values.count()}
-  [i32] bridge{count(values)}
+  [i32] method{/vector/count(values)}
+  [i32] bridge{/vector/count(values)}
   [i32] tried{try(direct)}
   return(plus(plus(method, bridge), tried))
 }
@@ -740,7 +740,7 @@ main() {
 
   CHECK(singleWorker.directCallTargetCount > 0);
   CHECK(singleWorker.methodCallTargetCount > 0);
-  CHECK(singleWorker.bridgePathChoiceCount > 0);
+  CHECK(singleWorker.bridgePathChoiceCount == 0);
   CHECK(singleWorker.bindingFactCount > 0);
   CHECK(singleWorker.localAutoFactCount > 0);
   CHECK(singleWorker.queryFactCount > 0);

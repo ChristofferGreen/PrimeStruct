@@ -520,9 +520,9 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [i32 mut] total{plus(/std/collections/vectorPair(31i32, 37i32).count(),
-                       /std/collections/vectorPair(41i32, 43i32).at_unsafe(1i32))}
-  assign(total, plus(total, /std/collections/vectorPair(47i32, 53i32).at(0i32)))
+  [i32 mut] total{plus(/std/collections/vector/count(/std/collections/vectorPair(31i32, 37i32)),
+                       /std/collections/vector/at_unsafe(/std/collections/vectorPair(41i32, 43i32), 1i32))}
+  assign(total, plus(total, /std/collections/vector/at(/std/collections/vectorPair(47i32, 53i32), 0i32)))
   return(total)
 }
 )";
@@ -605,9 +605,9 @@ wrapValues<T>([T] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [i32 mut] total{plus(wrapValues(/std/collections/vectorPair(31i32, 37i32)).count(),
-                       wrapValues(/std/collections/vectorPair(41i32, 43i32)).at_unsafe(1i32))}
-  assign(total, plus(total, wrapValues(/std/collections/vectorPair(47i32, 53i32)).at(0i32)))
+  [i32 mut] total{plus(/std/collections/vector/count(wrapValues(/std/collections/vectorPair(31i32, 37i32))),
+                       /std/collections/vector/at_unsafe(wrapValues(/std/collections/vectorPair(41i32, 43i32)), 1i32))}
+  assign(total, plus(total, /std/collections/vector/at(wrapValues(/std/collections/vectorPair(47i32, 53i32)), 0i32)))
   return(total)
 }
 )";

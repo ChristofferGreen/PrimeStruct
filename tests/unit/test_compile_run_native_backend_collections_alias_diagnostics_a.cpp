@@ -184,7 +184,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter self: expected i32 got array") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects native vector alias access field expression with struct receiver diagnostics") {
@@ -213,7 +214,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
 }
 
 TEST_CASE("keeps native canonical vector access call struct method chain forwarding") {

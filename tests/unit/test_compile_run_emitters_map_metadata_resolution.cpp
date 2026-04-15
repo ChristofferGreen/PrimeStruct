@@ -710,7 +710,7 @@ TEST_CASE("C++ emitter helper keeps same-path map access direct-call return meta
   expectResolved("/std/collections/map/at_unsafe", "/CanonicalAtUnsafeMarker/tag");
 }
 
-TEST_CASE("C++ emitter helper rejects cross-path vector alias access struct-return metadata") {
+TEST_CASE("C++ emitter helper keeps cross-path vector alias access struct-return metadata") {
   primec::Expr receiverCall;
   receiverCall.kind = primec::Expr::Kind::Call;
   receiverCall.name = "/vector/at";
@@ -750,9 +750,9 @@ TEST_CASE("C++ emitter helper rejects cross-path vector alias access struct-retu
   returnStructs.emplace("/std/collections/vector/at", "/Marker");
 
   std::string resolved;
-  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+  CHECK(primec::emitter::resolveMethodCallPath(
       methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved.empty());
+  CHECK(resolved == "/i32/tag");
 }
 
 TEST_SUITE_END();

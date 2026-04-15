@@ -277,7 +277,7 @@ TEST_CASE("ir lowerer count access helpers classify capacity and string count") 
   stringCount.args = {textName};
   CHECK(primec::ir_lowerer::isStringCountCall(stringCount, locals));
   stringCount.name = "/vector/count";
-  CHECK(primec::ir_lowerer::isStringCountCall(stringCount, locals));
+  CHECK_FALSE(primec::ir_lowerer::isStringCountCall(stringCount, locals));
 
   capacityCall.name = "count";
   CHECK_FALSE(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));

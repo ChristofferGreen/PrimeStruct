@@ -6,7 +6,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
-TEST_CASE("C++ emitter keeps canonical direct-call map count string receivers") {
+TEST_CASE("C++ emitter compiles canonical direct-call map count string receivers") {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, string>] values) {
@@ -34,11 +34,17 @@ main() {
       (testScratchPath("") /
        "primec_cpp_stdlib_namespaced_map_count_direct_call_string_receiver.err")
           .string();
+  const std::string runtimeErrPath =
+      (testScratchPath("") /
+       "primec_cpp_stdlib_namespaced_map_count_direct_call_string_receiver_runtime.err")
+          .string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(errPath).empty());
+  CHECK(runCommand(exePath + " > /dev/null 2> " + runtimeErrPath) == 1);
+  CHECK(readFile(runtimeErrPath).find("invalid string index in IR") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps canonical diagnostics on direct-call map count receivers") {
@@ -372,7 +378,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects array namespaced wrapper capacity builtin fallback") {

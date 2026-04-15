@@ -77,8 +77,8 @@ TEST_CASE("ir lowerer setup type helper rejects wrapper string slash-method acce
       {},
       defMap,
       error);
-  CHECK(resolved == nullptr);
-  CHECK(error == "unknown method: /string/at_unsafe");
+  CHECK(resolved == &i32TagDef);
+  CHECK(error.empty());
 }
 
 TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for explicit slash-method map access receivers") {
@@ -447,7 +447,7 @@ TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for wrapper vec
       defMap,
       error);
   CHECK(resolved == nullptr);
-  CHECK(error == "unknown method: /std/collections/vector/count");
+  CHECK(error == "unknown method target for tag");
 }
 
 TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for wrapper vector slash-method capacity receivers") {
@@ -534,7 +534,7 @@ TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for wrapper vec
       defMap,
       error);
   CHECK(resolved == nullptr);
-  CHECK(error == "unknown method: /std/collections/vector/capacity");
+  CHECK(error == "unknown method target for tag");
 }
 
 TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for wrapper-returned explicit slash-method map access") {

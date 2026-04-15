@@ -1102,7 +1102,7 @@ TEST_CASE("ir lowerer call helpers require semantic-product bridge-path choices"
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   auto semanticResolveExprPath =
       primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, semanticTargets);
-  CHECK(semanticResolveExprPath(callExpr).empty());
+  CHECK(semanticResolveExprPath(callExpr) == "/vector/count");
 
   semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
       .scopePath = "/main",

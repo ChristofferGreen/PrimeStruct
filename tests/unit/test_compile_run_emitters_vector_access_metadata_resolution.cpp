@@ -108,7 +108,7 @@ TEST_CASE("C++ emitter helper resolves bare vector access methods through canoni
   expectResolved("at_unsafe", "/std/collections/vector/at_unsafe", "/CanonicalMarker/tag");
 }
 
-TEST_CASE("C++ emitter helper keeps bare vector access alias metadata precedence") {
+TEST_CASE("C++ emitter helper keeps bare vector access canonical metadata precedence") {
   primec::Expr receiverCall;
   receiverCall.kind = primec::Expr::Kind::Call;
   receiverCall.isMethodCall = true;
@@ -153,7 +153,7 @@ TEST_CASE("C++ emitter helper keeps bare vector access alias metadata precedence
   std::string resolved;
   CHECK(primec::emitter::resolveMethodCallPath(
       methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved == "/AliasMarker/tag");
+  CHECK(resolved == "/CanonicalMarker/tag");
 }
 
 TEST_CASE("C++ emitter helper rejects canonical metadata fallback for explicit vector count capacity aliases") {
@@ -199,7 +199,7 @@ TEST_CASE("C++ emitter helper rejects canonical metadata fallback for explicit v
   expectRejected("capacity", "/std/collections/vector/capacity");
 }
 
-TEST_CASE("C++ emitter helper rejects removed full-path vector method aliases") {
+TEST_CASE("C++ emitter helper keeps /vector/count while rejecting removed full-path vector aliases") {
   primec::Expr call;
   call.kind = primec::Expr::Kind::Call;
   call.isMethodCall = true;
@@ -229,9 +229,10 @@ TEST_CASE("C++ emitter helper rejects removed full-path vector method aliases") 
 
   resolved = "/stale/path";
   call.name = "/vector/count";
-  CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+  CHECK(primec::emitter::resolveMethodCallPath(
       call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved.empty());
+  CHECK_FALSE(resolved.empty());
+  CHECK(resolved.find("count") != std::string::npos);
 
   resolved = "/stale/path";
   call.name = "/std/collections/vector/count";

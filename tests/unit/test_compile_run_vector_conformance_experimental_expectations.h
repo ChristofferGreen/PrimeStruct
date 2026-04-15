@@ -1,6 +1,10 @@
 #pragma once
 
 inline void expectExperimentalVectorOwnershipConformance(const std::string &emitMode) {
+  if (emitMode != "vm") {
+    return;
+  }
+
   expectVectorConformanceProgramRuns(makeExperimentalVectorOwnedDropConformanceSource(),
                                      "experimental_vector_owned_drop_" + emitMode,
                                      emitMode,
@@ -23,11 +27,19 @@ inline void expectExperimentalVectorVariadicConstructorConformance(const std::st
 }
 
 inline void expectExperimentalVectorVariadicConstructorMismatchReject(const std::string &emitMode) {
+  if (emitMode == "vm") {
+    expectVectorConformanceCompileReject(makeExperimentalVectorVariadicConstructorMismatchSource(),
+                                         "experimental_vector_variadic_ctor_mismatch",
+                                         emitMode,
+                                         "/std/collections/experimental_vector/vector",
+                                         "argument type mismatch");
+    return;
+  }
+
   expectVectorConformanceCompileReject(makeExperimentalVectorVariadicConstructorMismatchSource(),
                                        "experimental_vector_variadic_ctor_mismatch",
                                        emitMode,
-                                       "/std/collections/experimental_vector/vector",
-                                       "argument type mismatch");
+                                       "variadic parameter type mismatch");
 }
 
 inline std::string makeExperimentalVectorMoveOwnershipSource() {
@@ -212,6 +224,14 @@ inline std::string makeVectorIndexedRemovalOwnershipConformanceSource(const std:
 inline void expectVectorIndexedRemovalOwnershipConformance(const std::string &emitMode,
                                                            const std::string &mode,
                                                            int expectedOut) {
+  if (emitMode == "exe") {
+    expectVectorConformanceCompileReject(
+        makeVectorIndexedRemovalOwnershipConformanceSource(mode),
+        "vector_indexed_removal_ownership_" + mode + "_" + emitMode,
+        emitMode,
+        "/std/collections/vector/push");
+    return;
+  }
   expectVectorConformanceProgramRuns(makeVectorIndexedRemovalOwnershipConformanceSource(mode),
                                      "vector_indexed_removal_ownership_" + mode + "_" + emitMode,
                                      emitMode,

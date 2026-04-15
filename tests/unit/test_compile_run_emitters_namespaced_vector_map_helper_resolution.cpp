@@ -57,7 +57,7 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   const std::string errors = readFile(errPath);
-  CHECK(errors.find("unknown call target: /vector/count") != std::string::npos);
+  CHECK(errors.find("unknown call target: /std/collections/vector/at") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter lowers stdlib namespaced vector mutator statement through imported helper") {
@@ -188,7 +188,7 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("C++ emitter rejects wrapper-returned canonical map references through reference binding validation") {
+TEST_CASE("C++ emitter keeps wrapper-returned canonical map references through reference binding") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -220,8 +220,9 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("reference binding requires location(...) initializer") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(errPath).empty());
+  CHECK(runCommand(exePath) == 4);
 }
 
 TEST_CASE("C++ emitter keeps canonical diagnostics on wrapper-returned canonical map reference method sugar") {

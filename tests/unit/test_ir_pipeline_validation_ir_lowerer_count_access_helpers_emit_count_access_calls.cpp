@@ -218,13 +218,9 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Emitted);
-  CHECK(dynamicCapacityEmitExprCalls == 1);
-  REQUIRE(instructions.size() == 4);
-  CHECK(instructions[1].op == primec::IrOpcode::PushI64);
-  CHECK(instructions[1].imm == primec::IrSlotBytes);
-  CHECK(instructions[2].op == primec::IrOpcode::AddI64);
-  CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
+            error) == Result::NotHandled);
+  CHECK(dynamicCapacityEmitExprCalls == 0);
+  CHECK(instructions.empty());
 
   instructions.clear();
   error.clear();
@@ -261,7 +257,7 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   countEntry.args = {entryName};
   CHECK(isArrayCountCall(countEntry, locals));
   countEntry.name = "/vector/count";
-  CHECK(isArrayCountCall(countEntry, locals));
+  CHECK_FALSE(isArrayCountCall(countEntry, locals));
   countEntry.name = "/soa_vector/count";
   CHECK_FALSE(isArrayCountCall(countEntry, locals));
 

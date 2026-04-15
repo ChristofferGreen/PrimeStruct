@@ -9,6 +9,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <atomic>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -63,6 +64,16 @@ bool ensureOutputDirectory(const std::filesystem::path &outputPath, std::string 
     return false;
   }
   return true;
+}
+
+std::string redirectDevNullOutputPath(const std::string &emitKind) {
+  static std::atomic<uint64_t> counter{0};
+  const uint64_t id = counter.fetch_add(1, std::memory_order_relaxed);
+  const auto tick = std::chrono::steady_clock::now().time_since_epoch().count();
+  const std::filesystem::path scratch =
+      std::filesystem::temp_directory_path() /
+      ("primec_dev_null_" + emitKind + "_" + std::to_string(tick) + "_" + std::to_string(id));
+  return scratch.string();
 }
 
 enum class IrBackendRunFailureStage {
@@ -323,6 +334,9 @@ int main(int argc, char **argv) {
   primec::Program &program = pipelineOutput.program;
 
   if (irBackend != nullptr && irBackend->requiresOutputPath() && !options.outputPath.empty()) {
+    if (options.outputPath == "/dev/null") {
+      options.outputPath = redirectDevNullOutputPath(options.emitKind);
+    }
     std::filesystem::path resolved = resolveOutputPath(options);
     options.outputPath = resolved.string();
     if (!ensureOutputDirectory(resolved, error)) {

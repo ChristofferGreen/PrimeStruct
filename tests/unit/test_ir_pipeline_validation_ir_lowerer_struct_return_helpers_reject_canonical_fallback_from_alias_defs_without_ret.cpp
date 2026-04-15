@@ -268,7 +268,7 @@ TEST_CASE("ir lowerer struct return helpers keep vector method alias precedence"
                                                           structNames,
                                                           resolveStructTypePath,
                                                           resolveStructLayoutExprPath,
-                                                          defMap) == "/pkg/AliasMarker");
+                                                          defMap).empty());
 }
 
 TEST_CASE("ir lowerer struct return helpers reject canonical vector method forwarding") {

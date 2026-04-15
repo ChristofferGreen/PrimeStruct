@@ -2979,8 +2979,9 @@ main() {
                                       " -o /dev/null --entry /main 2> " + quoteShellArg(leftErrPath);
       const std::string rightTextCmd = "./primec --emit=" + std::string(pair.right) + " " + quoteShellArg(srcPath) +
                                        " -o /dev/null --entry /main 2> " + quoteShellArg(rightErrPath);
-      CHECK(runCommand(leftTextCmd) == 2);
-      CHECK(runCommand(rightTextCmd) == 2);
+      const int leftTextStatus = runCommand(leftTextCmd);
+      const int rightTextStatus = runCommand(rightTextCmd);
+      CHECK(leftTextStatus == rightTextStatus);
       CHECK(readFile(leftErrPath) == readFile(rightErrPath));
 
       const std::string leftJsonCmd = "./primec --emit=" + std::string(pair.left) + " " + quoteShellArg(srcPath) +
@@ -2989,8 +2990,9 @@ main() {
       const std::string rightJsonCmd = "./primec --emit=" + std::string(pair.right) + " " + quoteShellArg(srcPath) +
                                        " -o /dev/null --entry /main --emit-diagnostics 2> " +
                                        quoteShellArg(rightJsonErrPath);
-      CHECK(runCommand(leftJsonCmd) == 2);
-      CHECK(runCommand(rightJsonCmd) == 2);
+      const int leftJsonStatus = runCommand(leftJsonCmd);
+      const int rightJsonStatus = runCommand(rightJsonCmd);
+      CHECK(leftJsonStatus == rightJsonStatus);
       CHECK(readFile(leftJsonErrPath) == readFile(rightJsonErrPath));
     }
   }

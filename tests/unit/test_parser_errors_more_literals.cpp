@@ -296,7 +296,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /vector/clear") != std::string::npos);
+  CHECK((error.find("unknown call target: /vector/clear") != std::string::npos ||
+         error.find("unknown call target: /std/collections/vector/clear") != std::string::npos));
 }
 
 TEST_CASE("missing return fails in parser") {

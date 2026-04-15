@@ -331,11 +331,11 @@ main() {
   [vector<i32> mut] values{vectorNew<i32>()}
   vectorPush<bool>(values, true)
   return(vectorCount<i32>(values))
-}
+  }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_push_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 1);
 }
 
 TEST_CASE("runs vm with stdlib collection shim vector pop") {
@@ -395,11 +395,11 @@ main() {
   [vector<i32> mut] values{vectorNew<i32>()}
   vectorReserve<bool>(values, 6i32)
   return(vectorCount<i32>(values))
-}
+  }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_reserve_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 0);
 }
 
 TEST_CASE("runs vm with stdlib collection shim vector clear") {
@@ -427,11 +427,11 @@ main() {
   [vector<i32> mut] values{vectorTriple<i32>(2i32, 4i32, 6i32)}
   vectorClear<bool>(values)
   return(vectorCount<i32>(values))
-}
+  }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_clear_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 0);
 }
 
 TEST_CASE("runs vm with stdlib collection shim vector remove at") {

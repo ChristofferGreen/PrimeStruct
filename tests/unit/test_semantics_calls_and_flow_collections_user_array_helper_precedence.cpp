@@ -196,8 +196,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK((error.find("unknown call target: /std/collections/vector/count") != std::string::npos ||
+         error.find("unknown call target: /vector/count") != std::string::npos));
 }
 
 TEST_CASE("capacity call keeps user-defined vector helper precedence") {
@@ -214,8 +215,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK((error.find("unknown call target: /std/collections/vector/capacity") != std::string::npos ||
+         error.find("unknown call target: /vector/capacity") != std::string::npos));
 }
 
 TEST_CASE("bare vector count auto inference resolves through imported stdlib helper") {
@@ -436,8 +438,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK((error.find("unknown call target: /std/collections/vector/at") != std::string::npos ||
+         error.find("unknown call target: /vector/at") != std::string::npos));
 }
 
 TEST_CASE("at method keeps user-defined vector helper precedence") {
@@ -454,8 +457,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK((error.find("unknown method: /vector/at") != std::string::npos ||
+         error.find("unknown method: /std/collections/vector/at") != std::string::npos ||
+         error.find("unknown call target: /std/collections/vector/at") != std::string::npos));
 }
 
 TEST_CASE("at_unsafe call keeps user-defined string helper precedence") {
@@ -508,8 +513,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK((error.find("unknown call target: /std/collections/vector/at_unsafe") != std::string::npos ||
+         error.find("unknown call target: /vector/at_unsafe") != std::string::npos));
 }
 
 TEST_CASE("at_unsafe method keeps user-defined vector helper precedence") {
@@ -526,8 +532,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK((error.find("unknown method: /vector/at_unsafe") != std::string::npos ||
+         error.find("unknown method: /std/collections/vector/at_unsafe") != std::string::npos ||
+         error.find("unknown call target: /std/collections/vector/at_unsafe") != std::string::npos));
 }
 
 TEST_CASE("at call keeps user-defined string helper precedence") {

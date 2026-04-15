@@ -142,12 +142,12 @@ main() {
   assign(total, plus(total, /std/collections/vectorAtUnsafe<Owned>(values, 2i32).value))
   /std/collections/vector/push<Owned>(values, Owned(40i32))
   assign(total, plus(total, /std/collections/vector/count<Owned>(values)))
-  assign(total, plus(total, values.at(3i32).value))
+  assign(total, plus(total, /std/collections/vector/at<Owned>(values, 3i32).value))
   /std/collections/vector/remove_at<Owned>(values, 1i32)
   /std/collections/vectorRemoveSwap<Owned>(values, 0i32)
-  values.pop()
+  /std/collections/vector/pop<Owned>(values)
   /std/collections/vector/clear<Owned>(values)
-  return(plus(total, values.count()))
+  return(plus(total, /std/collections/vector/count<Owned>(values)))
 }
 )";
   std::string error;
@@ -678,7 +678,7 @@ Owned() {
 [effects(heap_alloc), return<int>]
 main() {
   [Vector<Owned> mut] values{/std/collections/vectorSingle<Owned>(Owned())}
-  values.pop()
+  /std/collections/vector/pop<Owned>(values)
   return(/std/collections/vector/count<Owned>(values))
 }
 )";

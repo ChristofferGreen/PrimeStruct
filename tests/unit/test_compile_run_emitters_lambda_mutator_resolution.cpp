@@ -517,7 +517,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("C++ emitter statement mutator call-form resolves user helper") {
+TEST_CASE("C++ emitter statement mutator call-form rejects shadow helper") {
   const std::string source = R"(
 /vector/push([vector<i32> mut] values, [i32] value) { }
 
@@ -529,13 +529,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_mutator_call_shadow_precedence.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_vector_mutator_call_shadow_precedence.cpp").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_vector_mutator_call_shadow_precedence.err").string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, heapAllocations, argc, argv);") != std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects canonical reordered vector mutator statements with alias-only helper in C++ emitter" * doctest::skip(true)) {
@@ -587,7 +588,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("C++ emitter statement mutator named call prefers values receiver") {
+TEST_CASE("C++ emitter statement mutator named call rejects shadow helper") {
   const std::string source = R"(
 /vector/push([vector<i32> mut] values, [vector<i32> mut] value) { }
 
@@ -600,12 +601,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_mutator_named_values_receiver.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_vector_mutator_named_values_receiver_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_vector_mutator_named_values_receiver.err").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs user vector mutator positional call shadow in C++ emitter" * doctest::skip(true)) {

@@ -53,10 +53,10 @@
               ++vectorCountEmitCalls;
               return true;
             },
-            error) == Result::NoCallee);
+            error) == Result::Emitted);
   CHECK(error.empty());
   CHECK(vectorCountResolveCalls == 1);
-  CHECK(vectorCountEmitCalls == 0);
+  CHECK(vectorCountEmitCalls == 1);
 
   primec::Definition canonicalVectorCountCallee;
   canonicalVectorCountCallee.fullPath = "/std/collections/vector/count";
@@ -102,10 +102,10 @@
               CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(error.empty());
-  CHECK(aliasCountResolveCalls == 1);
-  CHECK(aliasCountEmitCalls == 1);
+  CHECK(aliasCountResolveCalls == 0);
+  CHECK(aliasCountEmitCalls == 0);
 
   primec::Expr canonicalCountCall = countCall;
   canonicalCountCall.name = "/std/collections/vector/count";
@@ -182,10 +182,10 @@
               ++capacityEmitCalls;
               return true;
             },
-            error) == Result::NoCallee);
+            error) == Result::Emitted);
   CHECK(error.empty());
   CHECK(capacityResolveCalls == 1);
-  CHECK(capacityEmitCalls == 0);
+  CHECK(capacityEmitCalls == 1);
 
   primec::Expr canonicalCapacityCall = capacityCall;
   canonicalCapacityCall.name = "/std/collections/vector/capacity";

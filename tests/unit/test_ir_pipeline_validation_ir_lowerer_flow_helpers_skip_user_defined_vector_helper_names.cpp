@@ -85,9 +85,9 @@ TEST_CASE("ir lowerer flow helpers skip user-defined vector helper names") {
             [] {},
             [] {},
             [] {},
-            error) == EmitResult::Emitted);
+            error) == EmitResult::NotMatched);
   CHECK(error.empty());
-  CHECK_FALSE(instructions.empty());
+  CHECK(instructions.empty());
   CHECK(vectorMethodProbeCalls == 0);
 
   primec::Expr stdlibAliasPushCall = pushCall;

@@ -212,7 +212,7 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_cpp_bare_vector_at_method_deleted_stub_cpp.err").string();
   CHECK(runCommand(compileCmd + " 2> " + errPath) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects bare vector at methods without helper in C++ emitter") {
@@ -230,7 +230,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects bare vector at_unsafe methods without helper before emission") {
@@ -251,7 +251,7 @@ main() {
       (testScratchPath("") / "primec_cpp_bare_vector_at_unsafe_method_deleted_stub_cpp.err")
           .string();
   CHECK(runCommand(compileCmd + " 2> " + errPath) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/at_unsafe") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("rejects wrapper vector at_unsafe methods without helper in C++ emitter") {
@@ -275,7 +275,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/at_unsafe") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects wrapper bare vector at calls before deleted stubs") {
@@ -373,7 +373,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects wrapper bare vector at_unsafe calls without helper in C++ emitter") {
@@ -422,7 +423,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects bare vector mutator calls without helper before emission") {
@@ -441,7 +443,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects bare vector mutator methods without helper before emission") {
@@ -461,7 +464,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /vector/push") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/push") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects explicit vector mutator alias methods without helper before emission") {
@@ -501,7 +505,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects bare vector mutator method statements without helper in C++ emitter") {
@@ -520,7 +525,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /vector/push") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/push") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects explicit vector mutator alias method statements without helper in C++ emitter") {
@@ -633,7 +639,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/reserve") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs explicit canonical vector mutator method helper in C++ emitter") {
+TEST_CASE("rejects explicit canonical vector mutator method helper without access helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -649,14 +655,16 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_explicit_canonical_vector_mutator_method_helper.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_explicit_canonical_vector_mutator_method_helper_exe")
+       "primec_cpp_explicit_canonical_vector_mutator_method_helper.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 73);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects alias vector mutator methods with canonical-only helper before emission") {

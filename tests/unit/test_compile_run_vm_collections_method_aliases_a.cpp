@@ -354,7 +354,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter self") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector alias access field expression with struct receiver diagnostics") {
@@ -382,7 +382,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
 }
 
 TEST_CASE("keeps vm canonical vector access call struct method chain forwarding") {
