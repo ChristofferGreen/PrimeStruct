@@ -192,12 +192,12 @@ bool runTypeResolutionSnapshot(
 
 namespace {
 
-std::string semanticModuleKeyForPath(const std::string &path) {
+std::string semanticModuleKeyForPath(std::string_view path) {
   if (path.empty()) {
     return "/";
   }
 
-  std::string normalized = path;
+  std::string normalized(path);
   if (normalized.front() != '/') {
     normalized.insert(normalized.begin(), '/');
   }
@@ -387,6 +387,11 @@ SemanticProgram buildSemanticProgram(const Program &program,
                      buildConfig->collectorAllowlist.end(),
                      collectorFamily) != buildConfig->collectorAllowlist.end();
   };
+  auto releaseInternedField = [](std::string &text, SymbolId id) {
+    if (id != InvalidSymbolId) {
+      text.clear();
+    }
+  };
 
   SemanticProgram semanticProgram;
   semanticProgram.entryPath = entryPath;
@@ -425,7 +430,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
   std::unordered_map<std::string, std::size_t> moduleIndexByKey;
   moduleIndexByKey.reserve(semanticProgram.definitions.size() + semanticProgram.executions.size());
   auto ensureModuleResolvedArtifacts =
-      [&](const std::string &scopePath) -> SemanticProgramModuleResolvedArtifacts & {
+      [&](std::string_view scopePath) -> SemanticProgramModuleResolvedArtifacts & {
     const std::string moduleKey = semanticModuleKeyForPath(scopePath);
     const auto it = moduleIndexByKey.find(moduleKey);
     if (it != moduleIndexByKey.end()) {
@@ -628,10 +633,18 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.bindingTypeTextId =
           semanticProgramInternCallTargetString(semanticProgram, entry.bindingTypeText);
       entry.referenceRootId = semanticProgramInternCallTargetString(semanticProgram, entry.referenceRoot);
+      const std::string_view moduleScopePath =
+          entry.scopePathId != InvalidSymbolId
+              ? semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId)
+              : std::string_view(entry.scopePath);
+      auto &module = ensureModuleResolvedArtifacts(moduleScopePath);
+      releaseInternedField(entry.scopePath, entry.scopePathId);
+      releaseInternedField(entry.siteKind, entry.siteKindId);
+      releaseInternedField(entry.name, entry.nameId);
+      releaseInternedField(entry.referenceRoot, entry.referenceRootId);
       semanticProgram.bindingFacts.push_back(std::move(entry));
       const std::size_t entryIndex = semanticProgram.bindingFacts.size() - 1;
-      ensureModuleResolvedArtifacts(semanticProgram.bindingFacts.back().scopePath)
-          .bindingFactIndices.push_back(entryIndex);
+      module.bindingFactIndices.push_back(entryIndex);
     }
     validator.releaseTransientSnapshotCaches();
     maybeRelieveSemanticAllocatorPressure();
@@ -783,10 +796,16 @@ SemanticProgram buildSemanticProgram(const Program &program,
           semanticProgramInternCallTargetString(semanticProgram, receiverBindingTypeText);
       entry.resultValueTypeId = semanticProgramInternCallTargetString(semanticProgram, entry.resultValueType);
       entry.resultErrorTypeId = semanticProgramInternCallTargetString(semanticProgram, entry.resultErrorType);
+      const std::string_view moduleScopePath =
+          entry.scopePathId != InvalidSymbolId
+              ? semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId)
+              : std::string_view(entry.scopePath);
+      auto &module = ensureModuleResolvedArtifacts(moduleScopePath);
+      releaseInternedField(entry.scopePath, entry.scopePathId);
+      releaseInternedField(entry.callName, entry.callNameId);
       semanticProgram.queryFacts.push_back(std::move(entry));
       const std::size_t entryIndex = semanticProgram.queryFacts.size() - 1;
-      ensureModuleResolvedArtifacts(semanticProgram.queryFacts.back().scopePath)
-          .queryFactIndices.push_back(entryIndex);
+      module.queryFactIndices.push_back(entryIndex);
     }
     validator.releaseTransientSnapshotCaches();
     maybeRelieveSemanticAllocatorPressure();

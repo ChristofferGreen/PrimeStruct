@@ -82,6 +82,8 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
   const bool collectDiagnostics = shouldCollectStructuredDiagnostics();
   const bool benchmarkPerDefinitionRss =
       std::getenv("PRIMEC_BENCHMARK_SEMANTIC_PER_DEFINITION_RSS") != nullptr;
+  const bool forceAllocatorReliefEachDefinition =
+      std::getenv("PRIMEC_BENCHMARK_SEMANTIC_FORCE_DEFINITION_RELIEF") != nullptr;
   const bool disableAllocatorRelief =
       std::getenv("PRIMEC_DISABLE_SEMANTIC_ALLOCATOR_RELIEF") != nullptr;
   uint64_t lastAllocatorReliefRss = 0;
@@ -100,6 +102,21 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
     }
     relieveAllocatorPressure();
     lastAllocatorReliefRss = captureCurrentResidentBytes();
+  };
+  auto resetDefinitionInferenceCaches = [&]() {
+    callTargetResolutionScratch_.resetArena();
+    inferExprReturnKindMemo_.clear();
+    inferExprReturnKindMemo_.rehash(0);
+    inferStructReturnMemo_.clear();
+    inferStructReturnMemo_.rehash(0);
+    structFieldReturnKindMemo_.clear();
+    structFieldReturnKindMemo_.rehash(0);
+    localBindingMemoRevisionByIdentity_.clear();
+    localBindingMemoRevisionByIdentity_.rehash(0);
+    queryTypeInferenceDefinitionStack_.clear();
+    queryTypeInferenceDefinitionStack_.rehash(0);
+    queryTypeInferenceExprStack_.clear();
+    queryTypeInferenceExprStack_.rehash(0);
   };
   struct DefinitionRssRecord {
     std::string fullPath;
@@ -294,6 +311,7 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
               true,
           });
         }
+        resetDefinitionInferenceCaches();
         continue;
       }
     }
@@ -313,6 +331,7 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
               false,
           });
         }
+        resetDefinitionInferenceCaches();
         return false;
       }
       moveCurrentStructuredDiagnosticTo(collectedRecords);
@@ -329,10 +348,13 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
               std::chrono::duration_cast<std::chrono::nanoseconds>(wallEnd - wallStart).count()),
           ok,
       });
-      maybeRelieveAllocatorPressure(rssAfter, false);
+      maybeRelieveAllocatorPressure(rssAfter, forceAllocatorReliefEachDefinition);
     } else if ((stableOrdinal & 0x7u) == 0x7u) {
-      maybeRelieveAllocatorPressure(captureCurrentResidentBytes(), false);
+      maybeRelieveAllocatorPressure(
+          captureCurrentResidentBytes(),
+          forceAllocatorReliefEachDefinition);
     }
+    resetDefinitionInferenceCaches();
   }
 
   if (benchmarkPerDefinitionRss) {

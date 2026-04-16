@@ -1638,7 +1638,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.fullPath).callableSummaryIndices.push_back(") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).bindingFactIndices.push_back(") !=
+  CHECK(semanticsValidate.find("auto &module = ensureModuleResolvedArtifacts(moduleScopePath);") !=
+        std::string::npos);
+  CHECK(semanticsValidate.find("module.bindingFactIndices.push_back(entryIndex);") !=
         std::string::npos);
   CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(entry.scopePath).directCallTargets.push_back(entry);") ==
         std::string::npos);
@@ -1663,7 +1665,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).localAutoFactIndices.push_back(entryIndex);") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).queryFactIndices.push_back(entryIndex);") !=
+  CHECK(semanticsValidate.find("module.queryFactIndices.push_back(entryIndex);") !=
         std::string::npos);
   CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).tryFactIndices.push_back(entryIndex);") !=
         std::string::npos);
@@ -1702,7 +1704,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("entry->resolvedPathId == InvalidSymbolId") != std::string::npos);
   CHECK(semanticTargetAdapterSource.find("entry->helperNameId != InvalidSymbolId") != std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("semanticProgramResolveCallTargetString(*adapter.semanticProgram, pathId)") !=
+  CHECK(semanticTargetAdapterSource.find("semanticProgramResolveCallTargetString(*adapter.semanticProgram, *pathId)") !=
         std::string::npos);
 
   CHECK(irCallResolution.find("bool validateSemanticProductDirectCallCoverage(const Program &program,") !=

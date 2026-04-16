@@ -108,8 +108,12 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
   for (const auto *queryFact : queryFacts) {
     const std::string_view resolvedPath =
         semanticProgramQueryFactResolvedPath(*semanticProgram, *queryFact);
+    const std::string_view queryCallNameView =
+        queryFact->callNameId != InvalidSymbolId
+            ? semanticProgramResolveCallTargetString(*semanticProgram, queryFact->callNameId)
+            : std::string_view(queryFact->callName);
     const std::string queryCallName =
-        queryFact->callName.empty() ? "<call>" : queryFact->callName;
+        queryCallNameView.empty() ? "<call>" : std::string(queryCallNameView);
     if (queryFact->resolvedPathId == InvalidSymbolId || resolvedPath.empty()) {
       error = "missing semantic-product query resolved path id: " + queryCallName;
       return false;

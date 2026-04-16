@@ -279,6 +279,9 @@ bool SemanticsValidator::run() {
               << ",\"query_type_inference_definition_stack\":" << queryTypeInferenceDefinitionStack_.size()
               << ",\"query_type_inference_expr_stack\":" << queryTypeInferenceExprStack_.size()
               << ",\"active_local_scopes\":" << activeLocalBindingScopes_.size()
+              << ",\"local_binding_memo_revisions\":" << localBindingMemoRevisionByIdentity_.size()
+              << ",\"local_binding_memo_revision_buckets\":"
+              << localBindingMemoRevisionByIdentity_.bucket_count()
               << ",\"expr_return_memo\":" << inferExprReturnKindMemo_.size()
               << ",\"expr_return_memo_buckets\":" << inferExprReturnKindMemo_.bucket_count()
               << ",\"struct_return_memo\":" << inferStructReturnMemo_.size()

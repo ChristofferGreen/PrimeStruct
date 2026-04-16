@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -15,6 +16,30 @@ namespace primec {
 inline constexpr uint32_t SemanticProductContractVersionV1 = 1;
 inline constexpr uint32_t SemanticProductContractVersionCurrent =
     SemanticProductContractVersionV1;
+
+struct SemanticProgramStringHash {
+  using is_transparent = void;
+
+  std::size_t operator()(std::string_view value) const noexcept {
+    return std::hash<std::string_view>{}(value);
+  }
+
+  std::size_t operator()(const std::string &value) const noexcept {
+    return (*this)(std::string_view(value));
+  }
+
+  std::size_t operator()(const char *value) const noexcept {
+    return (*this)(std::string_view(value));
+  }
+};
+
+struct SemanticProgramStringEqual {
+  using is_transparent = void;
+
+  bool operator()(std::string_view left, std::string_view right) const noexcept {
+    return left == right;
+  }
+};
 
 struct SemanticProgramDefinition {
   std::string name;
@@ -317,7 +342,8 @@ struct SemanticProgram {
   std::vector<std::string> sourceImports;
   std::vector<std::string> imports;
   std::vector<std::string> callTargetStringTable;
-  std::unordered_map<std::string, SymbolId> callTargetStringIdsByText;
+  std::unordered_map<std::string, SymbolId, SemanticProgramStringHash, SemanticProgramStringEqual>
+      callTargetStringIdsByText;
   std::vector<SemanticProgramModuleResolvedArtifacts> moduleResolvedArtifacts;
   std::vector<SemanticProgramDefinition> definitions;
   std::vector<SemanticProgramExecution> executions;

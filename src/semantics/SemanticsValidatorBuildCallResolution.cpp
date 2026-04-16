@@ -134,12 +134,12 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     }
     if (const auto cacheIt = callTargetResolutionScratch_.rootedCallNamePathCache.find(key);
         cacheIt != callTargetResolutionScratch_.rootedCallNamePathCache.end()) {
-      return cacheIt->second;
+      return std::string(cacheIt->second);
     }
     auto [insertIt, inserted] =
         callTargetResolutionScratch_.rootedCallNamePathCache.emplace(key, "/" + std::string(name));
     (void)inserted;
-    return insertIt->second;
+    return std::string(insertIt->second);
   };
   auto normalizedPrefixPath = [&](std::string_view namespacePrefix) -> std::string {
     if (!hasScopedOwner) {
@@ -159,7 +159,7 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     }
     if (const auto cacheIt = callTargetResolutionScratch_.normalizedNamespacePrefixCache.find(key);
         cacheIt != callTargetResolutionScratch_.normalizedNamespacePrefixCache.end()) {
-      return cacheIt->second;
+      return std::string(cacheIt->second);
     }
     std::string normalizedPrefix(namespacePrefix);
     if (!normalizedPrefix.empty() && normalizedPrefix.front() != '/') {
@@ -168,7 +168,7 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     auto [insertIt, inserted] =
         callTargetResolutionScratch_.normalizedNamespacePrefixCache.emplace(key, std::move(normalizedPrefix));
     (void)inserted;
-    return insertIt->second;
+    return std::string(insertIt->second);
   };
   auto joinedPath = [&](std::string_view prefix, std::string_view name) -> std::string {
     if (!hasScopedOwner) {
@@ -182,13 +182,13 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     const CallTargetResolutionScratch::SymbolPairKey key{prefixKey, nameKey};
     if (const auto cacheIt = callTargetResolutionScratch_.joinedCallPathCache.find(key);
         cacheIt != callTargetResolutionScratch_.joinedCallPathCache.end()) {
-      return cacheIt->second;
+      return std::string(cacheIt->second);
     }
     std::string joined = std::string(prefix) + "/" + std::string(name);
     auto [insertIt, inserted] =
         callTargetResolutionScratch_.joinedCallPathCache.emplace(key, std::move(joined));
     (void)inserted;
-    return insertIt->second;
+    return std::string(insertIt->second);
   };
   auto rewriteCanonicalCollectionHelperPath = [&](const std::string &resolvedPath) -> std::string {
     auto canonicalMapHelperAliasPath = [&](std::string_view) -> std::string {
