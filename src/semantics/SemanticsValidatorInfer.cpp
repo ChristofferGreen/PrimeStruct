@@ -9,25 +9,23 @@ namespace primec::semantics {
 ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
                                                    const std::vector<ParameterInfo> &params,
                                                    const std::unordered_map<std::string, BindingInfo> &locals) {
-  if (inferExprReturnKindMemoDefinitionOwner_ != currentDefinitionContext_ ||
-      inferExprReturnKindMemoExecutionOwner_ != currentExecutionContext_) {
-    inferExprReturnKindMemo_.clear();
-    inferExprReturnKindMemoDefinitionOwner_ = currentDefinitionContext_;
-    inferExprReturnKindMemoExecutionOwner_ = currentExecutionContext_;
-  }
+  const uint64_t localsRevision = currentLocalBindingMemoRevision(&locals);
   const ExprReturnKindMemoKey memoKey{
       &expr,
+      currentDefinitionContext_,
+      currentExecutionContext_,
       params.empty() ? nullptr : params.data(),
       params.size(),
       &locals,
       locals.size(),
   };
   if (const auto memoIt = inferExprReturnKindMemo_.find(memoKey);
-      memoIt != inferExprReturnKindMemo_.end()) {
-    return memoIt->second;
+      memoIt != inferExprReturnKindMemo_.end() &&
+      memoIt->second.localsRevision == localsRevision) {
+    return memoIt->second.kind;
   }
   const ReturnKind inferred = inferExprReturnKindImpl(expr, params, locals);
-  inferExprReturnKindMemo_.emplace(memoKey, inferred);
+  inferExprReturnKindMemo_[memoKey] = ExprReturnKindMemoValue{inferred, localsRevision};
   return inferred;
 }
 
@@ -214,7 +212,19 @@ ReturnKind SemanticsValidator::inferExprReturnKindImpl(const Expr &expr,
         if (defIt == defMap_.end() || !defIt->second) {
           return ReturnKind::Unknown;
         }
-        for (const auto &stmt : defIt->second->statements) {
+        const Definition *structDefinition = defIt->second;
+        StructFieldReturnKindMemoKey fieldMemoKey{
+            structDefinition,
+            fieldName,
+            isTypeReceiver,
+        };
+        if (const auto memoIt = structFieldReturnKindMemo_.find(fieldMemoKey);
+            memoIt != structFieldReturnKindMemo_.end()) {
+          return memoIt->second;
+        }
+
+        ReturnKind inferredFieldKind = ReturnKind::Unknown;
+        for (const auto &stmt : structDefinition->statements) {
           if (!stmt.isBinding) {
             continue;
           }
@@ -225,24 +235,27 @@ ReturnKind SemanticsValidator::inferExprReturnKindImpl(const Expr &expr,
             continue;
           }
           BindingInfo fieldBinding;
-          if (!resolveStructFieldBinding(*defIt->second, stmt, fieldBinding)) {
-            return ReturnKind::Unknown;
+          if (!resolveStructFieldBinding(*structDefinition, stmt, fieldBinding)) {
+            inferredFieldKind = ReturnKind::Unknown;
+            break;
           }
           std::string typeName = fieldBinding.typeName;
           if ((typeName == "Reference" || typeName == "Pointer") && !fieldBinding.typeTemplateArg.empty()) {
             typeName = fieldBinding.typeTemplateArg;
           }
-          ReturnKind kind = returnKindForTypeName(typeName);
-          if (kind != ReturnKind::Unknown) {
-            return kind;
+          inferredFieldKind = returnKindForTypeName(typeName);
+          if (inferredFieldKind != ReturnKind::Unknown) {
+            break;
           }
           std::string fieldStructPath;
           if (resolveStructPathFromType(typeName, stmt.namespacePrefix, fieldStructPath)) {
-            return ReturnKind::Array;
+            inferredFieldKind = ReturnKind::Array;
           }
-          return ReturnKind::Unknown;
+          break;
         }
-        return ReturnKind::Unknown;
+
+        structFieldReturnKindMemo_.insert_or_assign(std::move(fieldMemoKey), inferredFieldKind);
+        return inferredFieldKind;
       };
       if (expr.args.size() != 1) {
         return ReturnKind::Unknown;

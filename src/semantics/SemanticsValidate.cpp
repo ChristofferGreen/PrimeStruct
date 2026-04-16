@@ -448,6 +448,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
       ensureModuleResolvedArtifacts(snapshotEntry.scopePath).directCallTargetIndices.push_back(
           entryIndex);
     }
+    validator.releaseTransientSnapshotCaches();
   }
   if (isCollectorEnabled("method_call_targets")) {
     const auto methodCallTargets = validator.methodCallTargetSnapshotForSemanticProduct();
@@ -471,6 +472,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
       ensureModuleResolvedArtifacts(snapshotEntry.scopePath).methodCallTargetIndices.push_back(
           entryIndex);
     }
+    validator.releaseTransientSnapshotCaches();
   }
   if (isCollectorEnabled("bridge_path_choices")) {
     const auto bridgePathChoices = directCallTargetSnapshotsForBridgeDerivation.has_value()
@@ -614,6 +616,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
       ensureModuleResolvedArtifacts(semanticProgram.bindingFacts.back().scopePath)
           .bindingFactIndices.push_back(entryIndex);
     }
+    validator.releaseTransientSnapshotCaches();
   }
   if (isCollectorEnabled("return_facts")) {
     const auto returnFacts = validator.returnFactSnapshotForSemanticProduct();
@@ -641,6 +644,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
       const std::size_t entryIndex = semanticProgram.returnFacts.size() - 1;
       ensureModuleResolvedArtifacts(snapshotEntry.definitionPath).returnFactIndices.push_back(entryIndex);
     }
+    validator.releaseTransientSnapshotCaches();
   }
   if (isCollectorEnabled("local_auto_facts")) {
     const auto localAutoFacts = validator.localAutoFactSnapshotForSemanticProduct();
@@ -765,6 +769,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
       ensureModuleResolvedArtifacts(semanticProgram.queryFacts.back().scopePath)
           .queryFactIndices.push_back(entryIndex);
     }
+    validator.releaseTransientSnapshotCaches();
   }
   if (isCollectorEnabled("try_facts")) {
     const auto tryFacts = validator.tryFactSnapshotForSemanticProduct();
@@ -807,6 +812,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
       const std::size_t entryIndex = semanticProgram.tryFacts.size() - 1;
       ensureModuleResolvedArtifacts(snapshotEntry.scopePath).tryFactIndices.push_back(entryIndex);
     }
+    validator.releaseTransientSnapshotCaches();
   }
   if (isCollectorEnabled("on_error_facts")) {
     const auto onErrorFacts = validator.onErrorFactSnapshotForSemanticProduct();

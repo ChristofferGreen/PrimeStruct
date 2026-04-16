@@ -344,6 +344,7 @@ public:
   std::vector<QueryReceiverBindingSnapshotEntry> queryReceiverBindingSnapshotForTesting();
   std::vector<OnErrorSnapshotEntry> onErrorSnapshotForTesting();
   std::vector<ValidationContextSnapshotEntry> validationContextSnapshotForTesting() const;
+  void releaseTransientSnapshotCaches();
 
 private:
   struct GraphLocalAutoKey {
@@ -466,8 +467,12 @@ private:
       validator.activeLocalBindingScopes_.push_back(this);
     }
     ~LocalBindingScope() {
+      bool erasedAny = false;
       for (auto it = insertedNames.rbegin(); it != insertedNames.rend(); ++it) {
-        locals.erase(*it);
+        erasedAny = locals.erase(*it) > 0 || erasedAny;
+      }
+      if (erasedAny) {
+        validator.bumpLocalBindingMemoRevision(&locals);
       }
       if (!validator.activeLocalBindingScopes_.empty()) {
         validator.activeLocalBindingScopes_.pop_back();
@@ -614,6 +619,8 @@ private:
 
   struct ExprReturnKindMemoKey {
     const Expr *expr = nullptr;
+    const Definition *definitionOwner = nullptr;
+    const Execution *executionOwner = nullptr;
     const ParameterInfo *paramsData = nullptr;
     std::size_t paramsSize = 0;
     const void *localsIdentity = nullptr;
@@ -621,6 +628,8 @@ private:
 
     bool operator==(const ExprReturnKindMemoKey &other) const {
       return expr == other.expr &&
+             definitionOwner == other.definitionOwner &&
+             executionOwner == other.executionOwner &&
              paramsData == other.paramsData &&
              paramsSize == other.paramsSize &&
              localsIdentity == other.localsIdentity &&
@@ -631,6 +640,10 @@ private:
   struct ExprReturnKindMemoKeyHash {
     std::size_t operator()(const ExprReturnKindMemoKey &key) const {
       std::size_t hash = std::hash<const Expr *>{}(key.expr);
+      hash ^= std::hash<const Definition *>{}(key.definitionOwner) + 0x9e3779b9 +
+              (hash << 6) + (hash >> 2);
+      hash ^= std::hash<const Execution *>{}(key.executionOwner) + 0x9e3779b9 +
+              (hash << 6) + (hash >> 2);
       hash ^= std::hash<const ParameterInfo *>{}(key.paramsData) + 0x9e3779b9 +
               (hash << 6) + (hash >> 2);
       hash ^= std::hash<std::size_t>{}(key.paramsSize) + 0x9e3779b9 +
@@ -643,8 +656,15 @@ private:
     }
   };
 
+  struct ExprReturnKindMemoValue {
+    ReturnKind kind = ReturnKind::Unknown;
+    uint64_t localsRevision = 0;
+  };
+
   struct ExprStructReturnMemoKey {
     const Expr *expr = nullptr;
+    const Definition *definitionOwner = nullptr;
+    const Execution *executionOwner = nullptr;
     const ParameterInfo *paramsData = nullptr;
     std::size_t paramsSize = 0;
     const void *localsIdentity = nullptr;
@@ -652,6 +672,8 @@ private:
 
     bool operator==(const ExprStructReturnMemoKey &other) const {
       return expr == other.expr &&
+             definitionOwner == other.definitionOwner &&
+             executionOwner == other.executionOwner &&
              paramsData == other.paramsData &&
              paramsSize == other.paramsSize &&
              localsIdentity == other.localsIdentity &&
@@ -662,6 +684,10 @@ private:
   struct ExprStructReturnMemoKeyHash {
     std::size_t operator()(const ExprStructReturnMemoKey &key) const {
       std::size_t hash = std::hash<const Expr *>{}(key.expr);
+      hash ^= std::hash<const Definition *>{}(key.definitionOwner) + 0x9e3779b9 +
+              (hash << 6) + (hash >> 2);
+      hash ^= std::hash<const Execution *>{}(key.executionOwner) + 0x9e3779b9 +
+              (hash << 6) + (hash >> 2);
       hash ^= std::hash<const ParameterInfo *>{}(key.paramsData) + 0x9e3779b9 +
               (hash << 6) + (hash >> 2);
       hash ^= std::hash<std::size_t>{}(key.paramsSize) + 0x9e3779b9 +
@@ -670,6 +696,32 @@ private:
               (hash << 6) + (hash >> 2);
       hash ^= std::hash<std::size_t>{}(key.localsSize) + 0x9e3779b9 +
               (hash << 6) + (hash >> 2);
+      return hash;
+    }
+  };
+
+  struct ExprStructReturnMemoValue {
+    std::string structPath;
+    uint64_t localsRevision = 0;
+  };
+
+  struct StructFieldReturnKindMemoKey {
+    const Definition *structDefinition = nullptr;
+    std::string fieldName;
+    bool staticReceiver = false;
+
+    bool operator==(const StructFieldReturnKindMemoKey &other) const {
+      return structDefinition == other.structDefinition &&
+             fieldName == other.fieldName &&
+             staticReceiver == other.staticReceiver;
+    }
+  };
+
+  struct StructFieldReturnKindMemoKeyHash {
+    std::size_t operator()(const StructFieldReturnKindMemoKey &key) const {
+      std::size_t hash = std::hash<const Definition *>{}(key.structDefinition);
+      hash ^= std::hash<std::string>{}(key.fieldName) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+      hash ^= std::hash<bool>{}(key.staticReceiver) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
       return hash;
     }
   };
@@ -762,14 +814,13 @@ private:
   const Definition *currentDefinitionContext_ = nullptr;
   const Execution *currentExecutionContext_ = nullptr;
   std::vector<LocalBindingScope *> activeLocalBindingScopes_;
-  std::unordered_map<ExprReturnKindMemoKey, ReturnKind, ExprReturnKindMemoKeyHash>
+  std::unordered_map<const void *, uint64_t> localBindingMemoRevisionByIdentity_;
+  std::unordered_map<ExprReturnKindMemoKey, ExprReturnKindMemoValue, ExprReturnKindMemoKeyHash>
       inferExprReturnKindMemo_;
-  std::unordered_map<ExprStructReturnMemoKey, std::string, ExprStructReturnMemoKeyHash>
+  std::unordered_map<ExprStructReturnMemoKey, ExprStructReturnMemoValue, ExprStructReturnMemoKeyHash>
       inferStructReturnMemo_;
-  const Definition *inferExprReturnKindMemoDefinitionOwner_ = nullptr;
-  const Execution *inferExprReturnKindMemoExecutionOwner_ = nullptr;
-  const Definition *inferStructReturnMemoDefinitionOwner_ = nullptr;
-  const Execution *inferStructReturnMemoExecutionOwner_ = nullptr;
+  std::unordered_map<StructFieldReturnKindMemoKey, ReturnKind, StructFieldReturnKindMemoKeyHash>
+      structFieldReturnKindMemo_;
   mutable CallTargetResolutionScratch callTargetResolutionScratch_;
 
   void observeCallVisited();

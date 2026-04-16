@@ -15,9 +15,13 @@
 
 #if defined(__APPLE__)
 #include <mach/mach.h>
+#include <malloc/malloc.h>
 #elif defined(__linux__)
 #include <unistd.h>
 #include <fstream>
+#if defined(__GLIBC__)
+#include <malloc.h>
+#endif
 #endif
 
 namespace primec::semantics {
@@ -52,6 +56,14 @@ uint64_t captureCurrentResidentBytes() {
 #endif
 }
 
+void relieveAllocatorPressure() {
+#if defined(__APPLE__)
+  (void)malloc_zone_pressure_relief(nullptr, 0);
+#elif defined(__linux__) && defined(__GLIBC__)
+  (void)malloc_trim(0);
+#endif
+}
+
 } // namespace
 
 bool SemanticsValidator::publishPassesDefinitionsDiagnostic(const Expr *expr) {
@@ -70,6 +82,25 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
   const bool collectDiagnostics = shouldCollectStructuredDiagnostics();
   const bool benchmarkPerDefinitionRss =
       std::getenv("PRIMEC_BENCHMARK_SEMANTIC_PER_DEFINITION_RSS") != nullptr;
+  const bool disableAllocatorRelief =
+      std::getenv("PRIMEC_DISABLE_SEMANTIC_ALLOCATOR_RELIEF") != nullptr;
+  uint64_t lastAllocatorReliefRss = 0;
+  auto maybeRelieveAllocatorPressure = [&](uint64_t rssNow, bool force) {
+    if (disableAllocatorRelief || rssNow == 0) {
+      return;
+    }
+    constexpr uint64_t kReliefThresholdBytes = 256ull * 1024ull * 1024ull;
+    constexpr uint64_t kReliefDeltaBytes = 24ull * 1024ull * 1024ull;
+    if (!force && rssNow < kReliefThresholdBytes) {
+      return;
+    }
+    if (!force && lastAllocatorReliefRss != 0 &&
+        rssNow < lastAllocatorReliefRss + kReliefDeltaBytes) {
+      return;
+    }
+    relieveAllocatorPressure();
+    lastAllocatorReliefRss = captureCurrentResidentBytes();
+  };
   struct DefinitionRssRecord {
     std::string fullPath;
     uint64_t rssBefore = 0;
@@ -298,6 +329,9 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
               std::chrono::duration_cast<std::chrono::nanoseconds>(wallEnd - wallStart).count()),
           ok,
       });
+      maybeRelieveAllocatorPressure(rssAfter, false);
+    } else if ((stableOrdinal & 0x7u) == 0x7u) {
+      maybeRelieveAllocatorPressure(captureCurrentResidentBytes(), false);
     }
   }
 

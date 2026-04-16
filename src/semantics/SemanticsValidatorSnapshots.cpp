@@ -871,23 +871,6 @@ SemanticsValidator::structFieldMetadataSnapshotForSemanticProduct() {
 std::vector<SemanticsValidator::BindingFactSnapshotEntry>
 SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
   using ActiveLocalBindings = std::unordered_map<std::string, BindingInfo>;
-  struct LocalBranchBindingScope {
-    ActiveLocalBindings &activeLocals;
-    std::vector<std::string> insertedNames;
-
-    explicit LocalBranchBindingScope(ActiveLocalBindings &activeLocalsIn)
-        : activeLocals(activeLocalsIn) {}
-
-    void observeInsert(const std::string &name) {
-      insertedNames.push_back(name);
-    }
-
-    ~LocalBranchBindingScope() {
-      for (auto it = insertedNames.rbegin(); it != insertedNames.rend(); ++it) {
-        activeLocals.erase(*it);
-      }
-    }
-  };
 
   std::vector<BindingFactSnapshotEntry> entries;
 
@@ -963,20 +946,20 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
                      const std::vector<ParameterInfo> &,
                      const Expr &,
                      ActiveLocalBindings &,
-                     LocalBranchBindingScope &)>
+                     LocalBindingScope &)>
       visitExpr;
   std::function<void(const Definition &,
                      const std::vector<ParameterInfo> &,
                      const std::vector<Expr> &,
                      ActiveLocalBindings &,
-                     LocalBranchBindingScope &)>
+                     LocalBindingScope &)>
       visitExprSequence;
 
   visitExprSequence = [&](const Definition &def,
                           const std::vector<ParameterInfo> &defParams,
                           const std::vector<Expr> &exprs,
                           ActiveLocalBindings &activeLocals,
-                          LocalBranchBindingScope &scope) {
+                          LocalBindingScope &scope) {
     for (const auto &expr : exprs) {
       visitExpr(def, defParams, expr, activeLocals, scope);
     }
@@ -986,14 +969,15 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
                   const std::vector<ParameterInfo> &defParams,
                   const Expr &expr,
                   ActiveLocalBindings &activeLocals,
-                  LocalBranchBindingScope &scope) {
+                  LocalBindingScope &scope) {
+    (void)scope;
     if (expr.isBinding) {
       for (const auto &arg : expr.args) {
-        LocalBranchBindingScope argScope(activeLocals);
+        LocalBindingScope argScope(*this, activeLocals);
         visitExpr(def, defParams, arg, activeLocals, argScope);
       }
       if (!expr.bodyArguments.empty()) {
-        LocalBranchBindingScope bodyScope(activeLocals);
+        LocalBindingScope bodyScope(*this, activeLocals);
         visitExprSequence(def, defParams, expr.bodyArguments, activeLocals, bodyScope);
       }
 
@@ -1009,10 +993,7 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
             binding,
             expr.semanticNodeId,
         });
-        const auto [it, inserted] = activeLocals.emplace(expr.name, std::move(binding));
-        if (inserted) {
-          scope.observeInsert(it->first);
-        }
+        insertLocalBinding(activeLocals, expr.name, std::move(binding));
       }
       return;
     }
@@ -1035,11 +1016,11 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
     }
 
     for (const auto &arg : expr.args) {
-      LocalBranchBindingScope argScope(activeLocals);
+      LocalBindingScope argScope(*this, activeLocals);
       visitExpr(def, defParams, arg, activeLocals, argScope);
     }
     if (!expr.bodyArguments.empty()) {
-      LocalBranchBindingScope bodyScope(activeLocals);
+      LocalBindingScope bodyScope(*this, activeLocals);
       visitExprSequence(def, defParams, expr.bodyArguments, activeLocals, bodyScope);
     }
   };
@@ -1054,10 +1035,10 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
     const auto &defParams = paramsIt->second;
 
     ActiveLocalBindings definitionLocals;
-    LocalBranchBindingScope definitionScopeLocals(definitionLocals);
+    LocalBindingScope definitionScopeLocals(*this, definitionLocals);
     visitExprSequence(def, defParams, def.statements, definitionLocals, definitionScopeLocals);
     if (def.returnExpr.has_value()) {
-      LocalBranchBindingScope returnScope(definitionLocals);
+      LocalBindingScope returnScope(*this, definitionLocals);
       visitExpr(def, defParams, *def.returnExpr, definitionLocals, returnScope);
     }
   }

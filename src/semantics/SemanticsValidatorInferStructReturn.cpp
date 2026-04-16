@@ -9,25 +9,23 @@ std::string SemanticsValidator::inferStructReturnPath(
   if (!structReturnMemoizationEnabled_) {
     return inferStructReturnPathImpl(expr, params, locals);
   }
-  if (inferStructReturnMemoDefinitionOwner_ != currentDefinitionContext_ ||
-      inferStructReturnMemoExecutionOwner_ != currentExecutionContext_) {
-    inferStructReturnMemo_.clear();
-    inferStructReturnMemoDefinitionOwner_ = currentDefinitionContext_;
-    inferStructReturnMemoExecutionOwner_ = currentExecutionContext_;
-  }
+  const uint64_t localsRevision = currentLocalBindingMemoRevision(&locals);
   const ExprStructReturnMemoKey memoKey{
       &expr,
+      currentDefinitionContext_,
+      currentExecutionContext_,
       params.empty() ? nullptr : params.data(),
       params.size(),
       &locals,
       locals.size(),
   };
   if (const auto memoIt = inferStructReturnMemo_.find(memoKey);
-      memoIt != inferStructReturnMemo_.end()) {
-    return memoIt->second;
+      memoIt != inferStructReturnMemo_.end() &&
+      memoIt->second.localsRevision == localsRevision) {
+    return memoIt->second.structPath;
   }
   std::string inferred = inferStructReturnPathImpl(expr, params, locals);
-  inferStructReturnMemo_.emplace(memoKey, inferred);
+  inferStructReturnMemo_[memoKey] = ExprStructReturnMemoValue{inferred, localsRevision};
   return inferred;
 }
 

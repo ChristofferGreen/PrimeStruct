@@ -19,6 +19,8 @@
   void insertLocalBinding(std::unordered_map<std::string, BindingInfo> &locals,
                           const std::string &name,
                           BindingInfo info);
+  uint64_t currentLocalBindingMemoRevision(const void *localsIdentity) const;
+  void bumpLocalBindingMemoRevision(const void *localsIdentity);
   bool validatePathSpaceComputeBuiltinStatement(const std::vector<ParameterInfo> &params,
                                                 const std::unordered_map<std::string, BindingInfo> &locals,
                                                 const Expr &stmt,

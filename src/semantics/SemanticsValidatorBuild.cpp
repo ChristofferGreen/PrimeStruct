@@ -36,12 +36,10 @@ bool SemanticsValidator::buildDefinitionMaps() {
   structNames_.clear();
   publicDefinitions_.clear();
   paramsByDef_.clear();
+  localBindingMemoRevisionByIdentity_.clear();
   inferExprReturnKindMemo_.clear();
   inferStructReturnMemo_.clear();
-  inferExprReturnKindMemoDefinitionOwner_ = nullptr;
-  inferExprReturnKindMemoExecutionOwner_ = nullptr;
-  inferStructReturnMemoDefinitionOwner_ = nullptr;
-  inferStructReturnMemoExecutionOwner_ = nullptr;
+  structFieldReturnKindMemo_.clear();
   currentValidationState_ = {};
 
   for (const auto &effect : defaultEffects_) {

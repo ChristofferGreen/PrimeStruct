@@ -138,11 +138,13 @@ void SemanticsValidator::insertLocalBinding(
     const std::string &name,
     BindingInfo info) {
   auto [it, inserted] = locals.emplace(name, std::move(info));
-  if (!inserted || activeLocalBindingScopes_.empty()) {
+  if (!inserted) {
     return;
   }
-  inferExprReturnKindMemo_.clear();
-  inferStructReturnMemo_.clear();
+  bumpLocalBindingMemoRevision(&locals);
+  if (activeLocalBindingScopes_.empty()) {
+    return;
+  }
   for (auto scopeIt = activeLocalBindingScopes_.rbegin();
        scopeIt != activeLocalBindingScopes_.rend();
        ++scopeIt) {
@@ -151,6 +153,27 @@ void SemanticsValidator::insertLocalBinding(
     }
     (*scopeIt)->insertedNames.push_back(it->first);
     return;
+  }
+}
+
+uint64_t SemanticsValidator::currentLocalBindingMemoRevision(const void *localsIdentity) const {
+  if (localsIdentity == nullptr) {
+    return 0;
+  }
+  const auto it = localBindingMemoRevisionByIdentity_.find(localsIdentity);
+  if (it == localBindingMemoRevisionByIdentity_.end()) {
+    return 0;
+  }
+  return it->second;
+}
+
+void SemanticsValidator::bumpLocalBindingMemoRevision(const void *localsIdentity) {
+  if (localsIdentity == nullptr) {
+    return;
+  }
+  auto [it, inserted] = localBindingMemoRevisionByIdentity_.try_emplace(localsIdentity, 1);
+  if (!inserted) {
+    ++it->second;
   }
 }
 
@@ -184,6 +207,35 @@ std::string SemanticsValidator::diagnosticCallTargetPath(const std::string &path
     return path;
   }
   return basePath;
+}
+
+void SemanticsValidator::releaseTransientSnapshotCaches() {
+  queryFactSnapshotCacheValid_ = false;
+  queryReceiverBindingSnapshotCacheValid_ = false;
+  queryCallTypeSnapshotCacheValid_ = false;
+  queryBindingSnapshotCacheValid_ = false;
+  queryResultTypeSnapshotCacheValid_ = false;
+  tryValueSnapshotCacheValid_ = false;
+  callBindingSnapshotCacheValid_ = false;
+
+  std::vector<QueryFactSnapshotEntry>().swap(queryFactSnapshotCache_);
+  std::vector<QueryReceiverBindingSnapshotEntry>().swap(queryReceiverBindingSnapshotCache_);
+  std::vector<QueryCallTypeSnapshotEntry>().swap(queryCallTypeSnapshotCache_);
+  std::vector<QueryBindingSnapshotEntry>().swap(queryBindingSnapshotCache_);
+  std::vector<QueryResultTypeSnapshotEntry>().swap(queryResultTypeSnapshotCache_);
+  std::vector<TryValueSnapshotEntry>().swap(tryValueSnapshotCache_);
+  std::vector<CallBindingSnapshotEntry>().swap(callBindingSnapshotCache_);
+
+  callTargetResolutionScratch_.resetArena();
+
+  inferExprReturnKindMemo_.clear();
+  inferExprReturnKindMemo_.rehash(0);
+  inferStructReturnMemo_.clear();
+  inferStructReturnMemo_.rehash(0);
+  structFieldReturnKindMemo_.clear();
+  structFieldReturnKindMemo_.rehash(0);
+  localBindingMemoRevisionByIdentity_.clear();
+  localBindingMemoRevisionByIdentity_.rehash(0);
 }
 
 bool SemanticsValidator::run() {
