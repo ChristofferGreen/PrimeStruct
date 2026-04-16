@@ -288,6 +288,13 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   }
   body << "\n";
   body << "#include <iostream>\n\n";
+  body << "static bool psEnsureStack(std::size_t sp, std::size_t required, const char *operation) {\n";
+  body << "  if (sp < required) {\n";
+  body << "    std::cerr << \"IR stack underflow on \" << operation << '\\n';\n";
+  body << "    return false;\n";
+  body << "  }\n";
+  body << "  return true;\n";
+  body << "}\n\n";
   if (needsF32Helpers) {
     body << "static float psBitsToF32(uint64_t raw) {\n";
     body << "  uint32_t bits = static_cast<uint32_t>(raw);\n";

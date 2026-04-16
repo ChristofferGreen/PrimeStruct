@@ -14,12 +14,7 @@ bool emitPrintAndFileInstruction(const IrInstruction &instruction,
                                  std::ostringstream &out,
                                  std::string &error) {
   const auto emitStackUnderflowGuard = [&](size_t required, const char *operation) {
-    if (required == 1) {
-      out << "        if (sp == 0) {\n";
-    } else {
-      out << "        if (sp < " << required << ") {\n";
-    }
-    out << "          std::cerr << \"IR stack underflow on " << operation << "\\n\";\n";
+    out << "        if (!psEnsureStack(sp, " << required << "ull, \"" << operation << "\")) {\n";
     out << "          return 1;\n";
     out << "        }\n";
   };

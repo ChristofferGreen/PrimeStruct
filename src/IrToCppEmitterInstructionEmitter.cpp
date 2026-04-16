@@ -21,12 +21,7 @@ bool emitInstruction(const IrInstruction &instruction,
                      std::ostringstream &out,
                      std::string &error) {
   const auto emitStackUnderflowGuard = [&](size_t required, const char *operation) {
-    if (required == 1) {
-      out << "        if (sp == 0) {\n";
-    } else {
-      out << "        if (sp < " << required << ") {\n";
-    }
-    out << "          std::cerr << \"IR stack underflow on " << operation << "\\n\";\n";
+    out << "        if (!psEnsureStack(sp, " << required << "ull, \"" << operation << "\")) {\n";
     out << "          return 1;\n";
     out << "        }\n";
   };
@@ -246,8 +241,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::Dup:
-      out << "        if (sp == 0) {\n";
-      out << "          std::cerr << \"IR stack underflow on dup\\n\";\n";
+      out << "        if (!psEnsureStack(sp, 1ull, \"dup\")) {\n";
       out << "          return 1;\n";
       out << "        }\n";
       out << "        uint64_t dupValue = stack[sp - 1];\n";
@@ -256,8 +250,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::Pop:
-      out << "        if (sp == 0) {\n";
-      out << "          std::cerr << \"IR stack underflow on pop\\n\";\n";
+      out << "        if (!psEnsureStack(sp, 1ull, \"pop\")) {\n";
       out << "          return 1;\n";
       out << "        }\n";
       out << "        --sp;\n";
