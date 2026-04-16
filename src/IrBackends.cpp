@@ -479,9 +479,10 @@ public:
             const IrBackendEmitOptions &options,
             IrBackendEmitResult & /*result*/,
             std::string &error) const override {
+    const IrModule prunedModule = pruneIrModuleToReachableFunctions(module);
     IrToCppEmitter emitter;
     std::string cppSource;
-    if (!emitter.emitSource(module, cppSource, error)) {
+    if (!emitter.emitSource(prunedModule, cppSource, error)) {
       error = "ir-to-cpp failed: " + error;
       return false;
     }

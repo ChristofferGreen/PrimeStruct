@@ -236,6 +236,10 @@ std::string irFunctionSymbol(size_t functionIndex) {
   return "ps_fn_" + std::to_string(functionIndex);
 }
 
+std::string irFunctionChunkSymbol(size_t functionIndex, size_t chunkIndex) {
+  return "ps_fn_" + std::to_string(functionIndex) + "_chunk_" + std::to_string(chunkIndex);
+}
+
 } // namespace
 
 bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::string &error) const {
@@ -586,30 +590,59 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
       .functionCount = module.functions.size(),
       .stringLengths = std::move(stringLengths),
   };
+  constexpr size_t DispatchChunkSize = 8192ull;
   for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
     const IrFunction &function = module.functions[functionIndex];
     const size_t localCount = computeLocalCount(function);
+    const size_t instructionCount = function.instructions.size();
+    const size_t chunkCount = (instructionCount + DispatchChunkSize - 1ull) / DispatchChunkSize;
+
+    for (size_t chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex) {
+      const size_t chunkBegin = chunkIndex * DispatchChunkSize;
+      const size_t chunkEnd = std::min(chunkBegin + DispatchChunkSize, instructionCount);
+      body << "static int64_t " << irFunctionChunkSymbol(functionIndex, chunkIndex)
+           << "(PsStack &stack, std::size_t &sp, std::vector<uint64_t> &locals, "
+              "std::vector<uint64_t> &heapSlots, std::vector<PsHeapAllocation> &heapAllocations, "
+              "std::size_t &pc, int argc, char **argv, bool &transfer) {\n";
+      body << "  while (true) {\n";
+      body << "    switch (pc) {\n";
+
+      for (size_t i = chunkBegin; i < chunkEnd; ++i) {
+        const size_t next = i + 1;
+        body << "      case " << i << ": {\n";
+        if (!emitInstruction(function.instructions[i], i, next, instructionCount, localCount, context, body, error)) {
+          return false;
+        }
+        body << "      }\n";
+      }
+
+      body << "      default:\n";
+      body << "        transfer = true;\n";
+      body << "        return 0;\n";
+      body << "    }\n";
+      body << "  }\n";
+      body << "}\n\n";
+    }
+
     body << "static int64_t " << irFunctionSymbol(functionIndex)
          << "(PsStack &stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, "
             "std::vector<PsHeapAllocation> &heapAllocations, int argc, char **argv) {\n";
     body << "  std::vector<uint64_t> locals(" << localCount << "ull, 0ull);\n";
     body << "  std::size_t pc = 0;\n";
     body << "  while (true) {\n";
-    body << "    switch (pc) {\n";
-
-    const size_t instructionCount = function.instructions.size();
-    for (size_t i = 0; i < instructionCount; ++i) {
-      const size_t next = i + 1;
-      body << "      case " << i << ": {\n";
-      if (!emitInstruction(function.instructions[i], i, next, instructionCount, localCount, context, body, error)) {
-        return false;
-      }
+    body << "    bool transfer = false;\n";
+    for (size_t chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex) {
+      const size_t chunkEnd = std::min((chunkIndex + 1u) * DispatchChunkSize, instructionCount);
+      body << "    if (pc < " << chunkEnd << "ull) {\n";
+      body << "      int64_t chunkResult = " << irFunctionChunkSymbol(functionIndex, chunkIndex)
+           << "(stack, sp, locals, heapSlots, heapAllocations, pc, argc, argv, transfer);\n";
+      body << "      if (!transfer) {\n";
+      body << "        return chunkResult;\n";
       body << "      }\n";
+      body << "      continue;\n";
+      body << "    }\n";
     }
-
-    body << "      default:\n";
-    body << "        return 0;\n";
-    body << "    }\n";
+    body << "    return 0;\n";
     body << "  }\n";
     body << "}\n\n";
   }
