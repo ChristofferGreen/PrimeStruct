@@ -62,12 +62,21 @@ bool SemanticsValidator::inferQuerySnapshotData(const std::vector<ParameterInfo>
        out.resolvedPath.rfind("/std/collections/", 0) == 0 ||
        out.resolvedPath.rfind("/array/", 0) == 0 ||
        out.resolvedPath.rfind("/map/", 0) == 0);
-  if (receiverQueryCandidate &&
-      !(withPreservedError([&]() {
-          return inferBindingTypeFromInitializer(expr.args.front(), defParams, activeLocals, out.receiverBinding);
-        }) &&
-        !out.receiverBinding.typeName.empty())) {
-    out.receiverBinding = {};
+  if (receiverQueryCandidate) {
+    const Expr &receiverExpr = expr.args.front();
+    if (receiverExpr.kind == Expr::Kind::Name) {
+      if (const BindingInfo *boundReceiver = findBinding(defParams, activeLocals, receiverExpr.name);
+          boundReceiver != nullptr) {
+        out.receiverBinding = *boundReceiver;
+      }
+    }
+    if (out.receiverBinding.typeName.empty() &&
+        !(withPreservedError([&]() {
+            return inferBindingTypeFromInitializer(receiverExpr, defParams, activeLocals, out.receiverBinding);
+          }) &&
+          !out.receiverBinding.typeName.empty())) {
+      out.receiverBinding = {};
+    }
   }
 
   return !out.resolvedPath.empty() ||
@@ -256,11 +265,28 @@ void SemanticsValidator::forEachLocalAwareSnapshotCall(
     }
   };
 
+  auto resetSnapshotInferenceCaches = [&]() {
+    callTargetResolutionScratch_.resetArena();
+    inferExprReturnKindMemo_.clear();
+    inferExprReturnKindMemo_.rehash(0);
+    inferStructReturnMemo_.clear();
+    inferStructReturnMemo_.rehash(0);
+    structFieldReturnKindMemo_.clear();
+    structFieldReturnKindMemo_.rehash(0);
+    localBindingMemoRevisionByIdentity_.clear();
+    localBindingMemoRevisionByIdentity_.rehash(0);
+    queryTypeInferenceDefinitionStack_.clear();
+    queryTypeInferenceDefinitionStack_.rehash(0);
+    queryTypeInferenceExprStack_.clear();
+    queryTypeInferenceExprStack_.rehash(0);
+  };
+
   for (const auto &def : program_.definitions) {
     DefinitionContextScope definitionScope(*this, def);
     ValidationStateScope validationContextScope(*this, buildDefinitionValidationState(def));
     const auto paramsIt = paramsByDef_.find(def.fullPath);
     if (paramsIt == paramsByDef_.end()) {
+      resetSnapshotInferenceCaches();
       continue;
     }
     const auto &defParams = paramsIt->second;
@@ -285,6 +311,7 @@ void SemanticsValidator::forEachLocalAwareSnapshotCall(
       LocalBindingScope returnScope(*this, definitionLocals);
       visitExpr(def, defParams, *def.returnExpr, definitionLocals, returnScope);
     }
+    resetSnapshotInferenceCaches();
   }
 }
 

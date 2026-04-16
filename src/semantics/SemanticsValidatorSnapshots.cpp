@@ -1025,11 +1025,28 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
     }
   };
 
+  auto resetSnapshotInferenceCaches = [&]() {
+    callTargetResolutionScratch_.resetArena();
+    inferExprReturnKindMemo_.clear();
+    inferExprReturnKindMemo_.rehash(0);
+    inferStructReturnMemo_.clear();
+    inferStructReturnMemo_.rehash(0);
+    structFieldReturnKindMemo_.clear();
+    structFieldReturnKindMemo_.rehash(0);
+    localBindingMemoRevisionByIdentity_.clear();
+    localBindingMemoRevisionByIdentity_.rehash(0);
+    queryTypeInferenceDefinitionStack_.clear();
+    queryTypeInferenceDefinitionStack_.rehash(0);
+    queryTypeInferenceExprStack_.clear();
+    queryTypeInferenceExprStack_.rehash(0);
+  };
+
   for (const auto &def : program_.definitions) {
     DefinitionContextScope definitionScope(*this, def);
     ValidationStateScope validationStateScope(*this, buildDefinitionValidationState(def));
     const auto paramsIt = paramsByDef_.find(def.fullPath);
     if (paramsIt == paramsByDef_.end()) {
+      resetSnapshotInferenceCaches();
       continue;
     }
     const auto &defParams = paramsIt->second;
@@ -1041,6 +1058,7 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
       LocalBindingScope returnScope(*this, definitionLocals);
       visitExpr(def, defParams, *def.returnExpr, definitionLocals, returnScope);
     }
+    resetSnapshotInferenceCaches();
   }
 
   std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
