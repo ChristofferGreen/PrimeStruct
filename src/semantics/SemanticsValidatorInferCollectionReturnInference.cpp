@@ -332,12 +332,13 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     if (isIfCall(candidate) && candidate.args.size() == 3) {
       const Expr &thenArg = candidate.args[1];
       const Expr &elseArg = candidate.args[2];
+      std::unordered_map<std::string, BindingInfo> ifBranchLocals = locals;
       auto inferIfBranchTypeText = [&](const Expr &branchExpr, std::string &branchTypeTextOut) -> bool {
         branchTypeTextOut.clear();
         if (!this->isEnvelopeValueExpr(branchExpr, true)) {
           return inferExprTypeText(branchExpr, branchTypeTextOut);
         }
-        std::unordered_map<std::string, BindingInfo> branchLocals = locals;
+        LocalBindingScope branchScope(*this, ifBranchLocals);
         const Expr *valueExpr = nullptr;
         bool sawReturn = false;
         for (const auto &bodyExpr : branchExpr.bodyArguments) {
@@ -364,7 +365,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
                 hasExplicitType && normalizeBindingTypeName(binding.typeName) == "auto";
             if (bodyExpr.args.size() == 1 && (!hasExplicitType || explicitAutoType)) {
               (void)inferBindingTypeFromInitializer(
-                  bodyExpr.args.front(), params, branchLocals, binding, &bodyExpr);
+                  bodyExpr.args.front(), params, ifBranchLocals, binding, &bodyExpr);
             }
             if (restrictType.has_value()) {
               const bool hasTemplate = !binding.typeTemplateArg.empty();
@@ -376,7 +377,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
                 return false;
               }
             }
-            branchLocals.emplace(bodyExpr.name, std::move(binding));
+            insertLocalBinding(ifBranchLocals, bodyExpr.name, std::move(binding));
             continue;
           }
           if (isReturnCall(bodyExpr) && bodyExpr.args.size() == 1) {
@@ -391,7 +392,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
         if (valueExpr == nullptr) {
           return false;
         }
-        return inferQueryExprTypeText(*valueExpr, params, branchLocals, branchTypeTextOut);
+        return inferQueryExprTypeText(*valueExpr, params, ifBranchLocals, branchTypeTextOut);
       };
       std::string thenTypeText;
       std::string elseTypeText;

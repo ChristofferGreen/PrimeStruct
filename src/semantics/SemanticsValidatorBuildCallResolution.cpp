@@ -1,9 +1,59 @@
 #include "SemanticsValidator.h"
 #include "MapConstructorHelpers.h"
 
+#include <cctype>
 #include <string_view>
 
 namespace primec::semantics {
+
+void SemanticsValidator::rebuildCallResolutionFamilyIndexes() {
+  overloadFamilyBasePaths_.clear();
+  uniqueSpecializationPathByBase_.clear();
+  ambiguousSpecializationBasePaths_.clear();
+
+  auto observePath = [&](const std::string &path) {
+    const size_t overloadMarker = path.rfind("__ov");
+    if (overloadMarker != std::string::npos && overloadMarker > 0 && overloadMarker + 4 < path.size()) {
+      bool hasOnlyDigits = true;
+      for (size_t index = overloadMarker + 4; index < path.size(); ++index) {
+        if (!std::isdigit(static_cast<unsigned char>(path[index]))) {
+          hasOnlyDigits = false;
+          break;
+        }
+      }
+      if (hasOnlyDigits) {
+        overloadFamilyBasePaths_.insert(path.substr(0, overloadMarker));
+      }
+    }
+
+    const size_t specializationMarker = path.rfind("__t");
+    if (specializationMarker == std::string::npos || specializationMarker == 0 ||
+        specializationMarker + 3 >= path.size()) {
+      return;
+    }
+    const std::string basePath = path.substr(0, specializationMarker);
+    auto [it, inserted] = uniqueSpecializationPathByBase_.emplace(basePath, path);
+    if (!inserted && it->second != path) {
+      ambiguousSpecializationBasePaths_.insert(basePath);
+    }
+  };
+
+  overloadFamilyBasePaths_.reserve(defMap_.size());
+  uniqueSpecializationPathByBase_.reserve(defMap_.size());
+  ambiguousSpecializationBasePaths_.reserve(defMap_.size());
+  for (const auto &[path, def] : defMap_) {
+    (void)def;
+    observePath(path);
+  }
+  for (const auto &[path, params] : paramsByDef_) {
+    (void)params;
+    observePath(path);
+  }
+
+  for (const auto &basePath : ambiguousSpecializationBasePaths_) {
+    uniqueSpecializationPathByBase_.erase(basePath);
+  }
+}
 
 std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
   const Definition *activeDefinition = currentDefinitionContext_;

@@ -9,6 +9,31 @@ namespace primec::semantics {
 ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
                                                    const std::vector<ParameterInfo> &params,
                                                    const std::unordered_map<std::string, BindingInfo> &locals) {
+  if (inferExprReturnKindMemoDefinitionOwner_ != currentDefinitionContext_ ||
+      inferExprReturnKindMemoExecutionOwner_ != currentExecutionContext_) {
+    inferExprReturnKindMemo_.clear();
+    inferExprReturnKindMemoDefinitionOwner_ = currentDefinitionContext_;
+    inferExprReturnKindMemoExecutionOwner_ = currentExecutionContext_;
+  }
+  const ExprReturnKindMemoKey memoKey{
+      &expr,
+      params.empty() ? nullptr : params.data(),
+      params.size(),
+      &locals,
+      locals.size(),
+  };
+  if (const auto memoIt = inferExprReturnKindMemo_.find(memoKey);
+      memoIt != inferExprReturnKindMemo_.end()) {
+    return memoIt->second;
+  }
+  const ReturnKind inferred = inferExprReturnKindImpl(expr, params, locals);
+  inferExprReturnKindMemo_.emplace(memoKey, inferred);
+  return inferred;
+}
+
+ReturnKind SemanticsValidator::inferExprReturnKindImpl(const Expr &expr,
+                                                       const std::vector<ParameterInfo> &params,
+                                                       const std::unordered_map<std::string, BindingInfo> &locals) {
   auto bindingTypeText = [](const BindingInfo &binding) {
     if (binding.typeTemplateArg.empty()) {
       return binding.typeName;

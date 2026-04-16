@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 
+#include <algorithm>
 #include <cctype>
 #include <functional>
 #include <string>
@@ -77,10 +78,9 @@ bool SemanticsValidator::statementsUseNameFrom(const std::vector<Expr> &statemen
   return false;
 }
 
-void SemanticsValidator::expireReferenceBorrowsForRemainder(const std::vector<ParameterInfo> &params,
-                                                            const std::unordered_map<std::string, BindingInfo> &locals,
-                                                            const std::vector<Expr> &statements,
-                                                            size_t nextIndex) {
+void SemanticsValidator::expireReferenceBorrowsForRanges(const std::vector<ParameterInfo> &params,
+                                                         const std::unordered_map<std::string, BindingInfo> &locals,
+                                                         const std::vector<BorrowLivenessRange> &ranges) {
   std::function<bool(const Expr &, const std::string &, bool)> exprUsesNameOutsideWriteTarget;
   exprUsesNameOutsideWriteTarget = [&](const Expr &expr, const std::string &name, bool inWriteTarget) -> bool {
     if (name.empty()) {
@@ -171,11 +171,32 @@ void SemanticsValidator::expireReferenceBorrowsForRemainder(const std::vector<Pa
     }
     return false;
   };
-  auto statementsUseNameOutsideWriteTargetsFrom =
-      [&](const std::vector<Expr> &candidates, size_t startIndex, const std::string &name) -> bool {
-    for (size_t index = startIndex; index < candidates.size(); ++index) {
-      if (exprUsesNameOutsideWriteTarget(candidates[index], name, false)) {
-        return true;
+  auto rangesUseNameOutsideWriteTargets = [&](const std::string &name) -> bool {
+    for (const BorrowLivenessRange &range : ranges) {
+      if (range.statements == nullptr) {
+        continue;
+      }
+      const std::vector<Expr> &candidates = *range.statements;
+      const size_t startIndex = std::min(range.startIndex, candidates.size());
+      for (size_t index = startIndex; index < candidates.size(); ++index) {
+        if (exprUsesNameOutsideWriteTarget(candidates[index], name, false)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+  auto rangesUseName = [&](const std::string &name) -> bool {
+    for (const BorrowLivenessRange &range : ranges) {
+      if (range.statements == nullptr) {
+        continue;
+      }
+      const std::vector<Expr> &candidates = *range.statements;
+      const size_t startIndex = std::min(range.startIndex, candidates.size());
+      for (size_t index = startIndex; index < candidates.size(); ++index) {
+        if (exprUsesName(candidates[index], name)) {
+          return true;
+        }
       }
     }
     return false;
@@ -211,7 +232,7 @@ void SemanticsValidator::expireReferenceBorrowsForRemainder(const std::vector<Pa
       if (binding.typeName != "Pointer" || binding.referenceRoot != referenceRoot) {
         return false;
       }
-      return statementsUseNameOutsideWriteTargetsFrom(statements, nextIndex, bindingName);
+      return rangesUseNameOutsideWriteTargets(bindingName);
     };
     for (const auto &param : params) {
       if (pointerUsesRoot(param.name, param.binding)) {
@@ -231,7 +252,7 @@ void SemanticsValidator::expireReferenceBorrowsForRemainder(const std::vector<Pa
       return;
     }
     const std::string referenceRoot = referenceRootForBinding(bindingName, binding);
-    if (statementsUseNameFrom(statements, nextIndex, bindingName) ||
+    if (rangesUseName(bindingName) ||
         pointerAliasUsesReferenceRoot(referenceRoot)) {
       currentValidationState_.endedReferenceBorrows.erase(bindingName);
       return;
@@ -244,6 +265,16 @@ void SemanticsValidator::expireReferenceBorrowsForRemainder(const std::vector<Pa
   for (const auto &entry : locals) {
     updateName(entry.first, entry.second);
   }
+}
+
+void SemanticsValidator::expireReferenceBorrowsForRemainder(const std::vector<ParameterInfo> &params,
+                                                            const std::unordered_map<std::string, BindingInfo> &locals,
+                                                            const std::vector<Expr> &statements,
+                                                            size_t nextIndex) {
+  const std::vector<BorrowLivenessRange> ranges = {
+      BorrowLivenessRange{&statements, nextIndex},
+  };
+  expireReferenceBorrowsForRanges(params, locals, ranges);
 }
 
 } // namespace primec::semantics

@@ -16,6 +16,9 @@
                                 bool allowBindings,
                                 const std::string &namespacePrefix,
                                 bool &handled);
+  void insertLocalBinding(std::unordered_map<std::string, BindingInfo> &locals,
+                          const std::string &name,
+                          BindingInfo info);
   bool validatePathSpaceComputeBuiltinStatement(const std::vector<ParameterInfo> &params,
                                                 const std::unordered_map<std::string, BindingInfo> &locals,
                                                 const Expr &stmt,
@@ -89,6 +92,13 @@
   bool resolveExecutionEffects(const Expr &expr, std::unordered_set<std::string> &effectsOut);
   bool exprUsesName(const Expr &expr, const std::string &name) const;
   bool statementsUseNameFrom(const std::vector<Expr> &statements, size_t startIndex, const std::string &name) const;
+  struct BorrowLivenessRange {
+    const std::vector<Expr> *statements = nullptr;
+    size_t startIndex = 0;
+  };
+  void expireReferenceBorrowsForRanges(const std::vector<ParameterInfo> &params,
+                                       const std::unordered_map<std::string, BindingInfo> &locals,
+                                       const std::vector<BorrowLivenessRange> &ranges);
   void expireReferenceBorrowsForRemainder(const std::vector<ParameterInfo> &params,
                                           const std::unordered_map<std::string, BindingInfo> &locals,
                                           const std::vector<Expr> &statements,

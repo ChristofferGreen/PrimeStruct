@@ -3,6 +3,10 @@
   ReturnKind inferExprReturnKind(const Expr &expr,
                                 const std::vector<ParameterInfo> &params,
                                 const std::unordered_map<std::string, BindingInfo> &locals);
+  ReturnKind inferExprReturnKindImpl(
+      const Expr &expr,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals);
   bool ensureDefinitionReturnKindReady(const Definition &def);
   bool inferDefinitionReturnKind(const Definition &def);
   struct DefinitionReturnInferenceState {

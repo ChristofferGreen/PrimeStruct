@@ -56,20 +56,20 @@ ReturnKind SemanticsValidator::inferControlFlowExprReturnKind(
 
   if (isIfCall(expr) && expr.args.size() == 3) {
     handled = true;
+    std::unordered_map<std::string, BindingInfo> branchLocals = locals;
     auto inferBlockEnvelopeValue = [&](const Expr &candidate,
-                                       const std::unordered_map<std::string, BindingInfo> &localsIn,
-                                       const Expr *&valueExprOut,
-                                       std::unordered_map<std::string, BindingInfo> &localsOut) -> bool {
-      valueExprOut = nullptr;
-      localsOut = localsIn;
+                                       ReturnKind &kindOut) -> bool {
+      kindOut = ReturnKind::Unknown;
       if (!isEnvelopeValueExpr(candidate, true)) {
         return false;
       }
+      LocalBindingScope branchScope(*this, branchLocals);
+      const Expr *valueExpr = nullptr;
       bool sawReturn = false;
       for (const auto &bodyExpr : candidate.bodyArguments) {
         if (isSyntheticBlockValueBinding(bodyExpr)) {
           if (!sawReturn) {
-            valueExprOut = &bodyExpr.args.front();
+            valueExpr = &bodyExpr.args.front();
           }
           continue;
         }
@@ -83,37 +83,37 @@ ReturnKind SemanticsValidator::inferControlFlowExprReturnKind(
           const bool hasExplicitType = hasExplicitBindingTypeTransform(bodyExpr);
           const bool explicitAutoType = hasExplicitType && normalizeBindingTypeName(binding.typeName) == "auto";
           if (bodyExpr.args.size() == 1 && (!hasExplicitType || explicitAutoType)) {
-            (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, localsOut, binding, &bodyExpr);
+            (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, branchLocals, binding, &bodyExpr);
           }
-          localsOut.emplace(bodyExpr.name, std::move(binding));
+          insertLocalBinding(branchLocals, bodyExpr.name, std::move(binding));
           continue;
         }
         if (isReturnCall(bodyExpr)) {
           if (bodyExpr.args.size() != 1) {
             return false;
           }
-          valueExprOut = &bodyExpr.args.front();
+          valueExpr = &bodyExpr.args.front();
           sawReturn = true;
           continue;
         }
         if (!sawReturn) {
-          valueExprOut = &bodyExpr;
+          valueExpr = &bodyExpr;
         }
       }
-      return valueExprOut != nullptr;
+      if (valueExpr == nullptr) {
+        return false;
+      }
+      kindOut = inferExprReturnKind(*valueExpr, params, branchLocals);
+      return true;
     };
 
-    const Expr *thenValueExpr = nullptr;
-    const Expr *elseValueExpr = nullptr;
-    std::unordered_map<std::string, BindingInfo> thenLocals;
-    std::unordered_map<std::string, BindingInfo> elseLocals;
-    if (!inferBlockEnvelopeValue(expr.args[1], locals, thenValueExpr, thenLocals) ||
-        !inferBlockEnvelopeValue(expr.args[2], locals, elseValueExpr, elseLocals)) {
+    ReturnKind thenKind = ReturnKind::Unknown;
+    ReturnKind elseKind = ReturnKind::Unknown;
+    if (!inferBlockEnvelopeValue(expr.args[1], thenKind) ||
+        !inferBlockEnvelopeValue(expr.args[2], elseKind)) {
       return ReturnKind::Unknown;
     }
 
-    ReturnKind thenKind = inferExprReturnKind(*thenValueExpr, params, thenLocals);
-    ReturnKind elseKind = inferExprReturnKind(*elseValueExpr, params, elseLocals);
     if (thenKind == elseKind) {
       return thenKind;
     }
@@ -152,7 +152,7 @@ ReturnKind SemanticsValidator::inferControlFlowExprReturnKind(
               return ReturnKind::Unknown;
             }
           }
-          blockLocals.emplace(bodyExpr.name, std::move(info));
+          insertLocalBinding(blockLocals, bodyExpr.name, std::move(info));
           continue;
         }
         if (isReturnCall(bodyExpr)) {

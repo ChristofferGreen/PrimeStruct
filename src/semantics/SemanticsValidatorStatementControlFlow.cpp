@@ -1,6 +1,8 @@
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorStatementLoopCountStep.h"
 
+#include <algorithm>
+
 namespace primec::semantics {
 namespace {
 
@@ -93,29 +95,23 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
     if (condKind != ReturnKind::Bool) {
       return failStatementDiagnostic("if condition requires bool");
     }
-    std::vector<Expr> postMergeStatements;
-    if (enclosingStatements != nullptr) {
-      size_t start = statementIndex + 1;
-      if (start > enclosingStatements->size()) {
-        start = enclosingStatements->size();
-      }
-      postMergeStatements.insert(postMergeStatements.end(),
-                                 enclosingStatements->begin() + start,
-                                 enclosingStatements->end());
-    }
+    const std::vector<Expr> *postMergeStatements = enclosingStatements;
+    const size_t postMergeStartIndex = enclosingStatements == nullptr
+                                           ? 0
+                                           : std::min(statementIndex + 1, enclosingStatements->size());
     auto validateBranch = [&](const Expr &branch) -> bool {
       if (!isIfBlockEnvelope(branch)) {
         return failStatementDiagnostic("if branches require block envelopes");
       }
-      std::unordered_map<std::string, BindingInfo> branchLocals = locals;
-      std::vector<Expr> livenessStatements = branch.bodyArguments;
-      livenessStatements.insert(livenessStatements.end(), postMergeStatements.begin(), postMergeStatements.end());
+      LocalBindingScope branchScope(*this, locals);
+      std::vector<BorrowLivenessRange> livenessRanges;
+      livenessRanges.reserve(2);
       OnErrorScope onErrorScope(*this, std::nullopt);
       BorrowEndScope borrowScope(*this, currentValidationState_.endedReferenceBorrows);
       for (size_t bodyIndex = 0; bodyIndex < branch.bodyArguments.size(); ++bodyIndex) {
         const Expr &bodyExpr = branch.bodyArguments[bodyIndex];
         if (!validateStatement(params,
-                               branchLocals,
+                               locals,
                                bodyExpr,
                                returnKind,
                                allowReturn,
@@ -126,7 +122,12 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
                                bodyIndex)) {
           return false;
         }
-        expireReferenceBorrowsForRemainder(params, branchLocals, livenessStatements, bodyIndex + 1);
+        livenessRanges.clear();
+        livenessRanges.push_back(BorrowLivenessRange{&branch.bodyArguments, bodyIndex + 1});
+        if (postMergeStatements != nullptr && postMergeStartIndex < postMergeStatements->size()) {
+          livenessRanges.push_back(BorrowLivenessRange{postMergeStatements, postMergeStartIndex});
+        }
+        expireReferenceBorrowsForRanges(params, locals, livenessRanges);
       }
       return true;
     };
@@ -140,24 +141,21 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
   }
 
   auto validateLoopBody = [&](const Expr &body,
-                              const std::unordered_map<std::string, BindingInfo> &baseLocals,
+                              std::unordered_map<std::string, BindingInfo> &activeLocals,
                               const std::vector<Expr> &boundaryStatements,
                               bool includeNextIterationBody) -> bool {
     if (!isLoopBlockEnvelope(body)) {
       return failStatementDiagnostic("loop body requires a block envelope");
     }
-    std::unordered_map<std::string, BindingInfo> blockLocals = baseLocals;
-    std::vector<Expr> livenessStatements = body.bodyArguments;
-    livenessStatements.insert(livenessStatements.end(), boundaryStatements.begin(), boundaryStatements.end());
-    if (includeNextIterationBody) {
-      livenessStatements.insert(livenessStatements.end(), body.bodyArguments.begin(), body.bodyArguments.end());
-    }
+    LocalBindingScope bodyScope(*this, activeLocals);
+    std::vector<BorrowLivenessRange> livenessRanges;
+    livenessRanges.reserve(includeNextIterationBody ? 3 : 2);
     OnErrorScope onErrorScope(*this, std::nullopt);
     BorrowEndScope borrowScope(*this, currentValidationState_.endedReferenceBorrows);
     for (size_t bodyIndex = 0; bodyIndex < body.bodyArguments.size(); ++bodyIndex) {
       const Expr &bodyExpr = body.bodyArguments[bodyIndex];
       if (!validateStatement(params,
-                             blockLocals,
+                             activeLocals,
                              bodyExpr,
                              returnKind,
                              allowReturn,
@@ -168,7 +166,15 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
                              bodyIndex)) {
         return false;
       }
-      expireReferenceBorrowsForRemainder(params, blockLocals, livenessStatements, bodyIndex + 1);
+      livenessRanges.clear();
+      livenessRanges.push_back(BorrowLivenessRange{&body.bodyArguments, bodyIndex + 1});
+      if (!boundaryStatements.empty()) {
+        livenessRanges.push_back(BorrowLivenessRange{&boundaryStatements, 0});
+      }
+      if (includeNextIterationBody) {
+        livenessRanges.push_back(BorrowLivenessRange{&body.bodyArguments, 0});
+      }
+      expireReferenceBorrowsForRanges(params, activeLocals, livenessRanges);
     }
     return true;
   };
@@ -250,34 +256,34 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
     if (stmt.args.size() != 4) {
       return failStatementDiagnostic("for requires init, condition, step, and body");
     }
-    std::unordered_map<std::string, BindingInfo> loopLocals = locals;
+    LocalBindingScope forScope(*this, locals);
     if (!validateStatement(
-            params, loopLocals, stmt.args[0], returnKind, false, allowBindings, nullptr, namespacePrefix)) {
+            params, locals, stmt.args[0], returnKind, false, allowBindings, nullptr, namespacePrefix)) {
       return false;
     }
     const Expr &cond = stmt.args[1];
     if (cond.isBinding) {
       if (!validateStatement(
-              params, loopLocals, cond, returnKind, false, allowBindings, nullptr, namespacePrefix)) {
+              params, locals, cond, returnKind, false, allowBindings, nullptr, namespacePrefix)) {
         return false;
       }
-      auto it = loopLocals.find(cond.name);
-      ReturnKind condKind = it == loopLocals.end() ? ReturnKind::Unknown
-                                                   : returnKindForStatementControlFlowBinding(it->second);
+      auto it = locals.find(cond.name);
+      ReturnKind condKind = it == locals.end() ? ReturnKind::Unknown
+                                               : returnKindForStatementControlFlowBinding(it->second);
       if (condKind != ReturnKind::Bool) {
         return failStatementDiagnostic("for condition requires bool");
       }
     } else {
-      if (!validateExpr(params, loopLocals, cond)) {
+      if (!validateExpr(params, locals, cond)) {
         return false;
       }
-      ReturnKind condKind = inferExprReturnKind(cond, params, loopLocals);
+      ReturnKind condKind = inferExprReturnKind(cond, params, locals);
       if (condKind != ReturnKind::Bool) {
         return failStatementDiagnostic("for condition requires bool");
       }
     }
     if (!validateStatement(
-            params, loopLocals, stmt.args[2], returnKind, false, allowBindings, nullptr, namespacePrefix)) {
+            params, locals, stmt.args[2], returnKind, false, allowBindings, nullptr, namespacePrefix)) {
       return false;
     }
     std::vector<Expr> boundaryStatements;
@@ -286,7 +292,7 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
       boundaryStatements.push_back(stmt.args[2]);
       boundaryStatements.push_back(cond);
     }
-    return validateLoopBody(stmt.args[3], loopLocals, boundaryStatements, !conditionAlwaysFalse);
+    return validateLoopBody(stmt.args[3], locals, boundaryStatements, !conditionAlwaysFalse);
   }
 
   if (isRepeatCall(stmt)) {

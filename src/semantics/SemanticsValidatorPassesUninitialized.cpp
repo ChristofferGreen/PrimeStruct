@@ -271,14 +271,35 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
     bool terminated = false;
   };
 
+  struct LocalBindingScope {
+    std::unordered_map<std::string, BindingInfo> &locals;
+    std::vector<std::string> insertedNames;
+
+    explicit LocalBindingScope(
+        std::unordered_map<std::string, BindingInfo> &localsIn)
+        : locals(localsIn) {}
+
+    void add(const std::string &name, BindingInfo info) {
+      auto [it, inserted] = locals.try_emplace(name, std::move(info));
+      if (inserted) {
+        insertedNames.push_back(it->first);
+      }
+    }
+
+    ~LocalBindingScope() {
+      for (auto it = insertedNames.rbegin(); it != insertedNames.rend(); ++it) {
+        locals.erase(*it);
+      }
+    }
+  };
+
   std::function<std::optional<std::string>(const Expr &,
                                            std::unordered_map<std::string, BindingInfo> &,
                                            StateMap &)>
       applyExprEffects;
 
   std::function<std::optional<std::string>(const std::vector<Expr> &,
-                                           std::unordered_map<std::string, BindingInfo>,
-                                           StateMap,
+                                           std::unordered_map<std::string, BindingInfo> &,
                                            StateMap &)>
       analyzeValueBlock;
 
@@ -288,35 +309,30 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
       analyzeStatement;
 
   std::function<FlowResult(const std::vector<Expr> &,
-                           std::unordered_map<std::string, BindingInfo>,
-                           StateMap,
+                           std::unordered_map<std::string, BindingInfo> &,
                            StateMap &)>
       analyzeStatements;
 
   analyzeStatements = [&](const std::vector<Expr> &stmts,
-                          std::unordered_map<std::string, BindingInfo> localsIn,
-                          StateMap statesIn,
-                          StateMap &statesOut) -> FlowResult {
+                          std::unordered_map<std::string, BindingInfo> &localsIn,
+                          StateMap &statesIn) -> FlowResult {
     for (const auto &stmt : stmts) {
       FlowResult result = analyzeStatement(stmt, localsIn, statesIn);
       if (result.error.has_value()) {
         return result;
       }
       if (result.terminated) {
-        statesOut = std::move(statesIn);
         return result;
       }
     }
-    statesOut = std::move(statesIn);
     return {};
   };
 
   analyzeValueBlock = [&](const std::vector<Expr> &stmts,
-                          std::unordered_map<std::string, BindingInfo> localsIn,
-                          StateMap statesIn,
-                          StateMap &statesOut) -> std::optional<std::string> {
+                          std::unordered_map<std::string, BindingInfo> &localsIn,
+                          StateMap &statesIn) -> std::optional<std::string> {
+    LocalBindingScope localScope(localsIn);
     if (stmts.empty()) {
-      statesOut = std::move(statesIn);
       return std::nullopt;
     }
     for (size_t i = 0; i < stmts.size(); ++i) {
@@ -341,8 +357,9 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
             info.referenceRoot = std::move(referenceRoot);
           }
         }
-        localsIn.emplace(stmt.name, info);
-        if (isUninitializedBinding(info)) {
+        const bool uninitializedBinding = isUninitializedBinding(info);
+        localScope.add(stmt.name, std::move(info));
+        if (uninitializedBinding) {
           statesIn[stmt.name] = UninitState::Uninitialized;
         }
         continue;
@@ -353,7 +370,6 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
             return err;
           }
         }
-        statesOut = std::move(statesIn);
         return std::nullopt;
       }
       if (!stmt.isMethodCall &&
@@ -364,7 +380,6 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
           return err;
         }
         if (isLast) {
-          statesOut = std::move(statesIn);
           return std::nullopt;
         }
         continue;
@@ -373,11 +388,9 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
         return err;
       }
       if (isLast) {
-        statesOut = std::move(statesIn);
         return std::nullopt;
       }
     }
-    statesOut = std::move(statesIn);
     return std::nullopt;
   };
 
@@ -414,20 +427,18 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
         const Expr &thenArg = expr.args[1];
         const Expr &elseArg = expr.args[2];
         if (thenArg.kind == Expr::Kind::Call && (thenArg.hasBodyArguments || !thenArg.bodyArguments.empty())) {
-          StateMap branchStates;
-          if (auto err = analyzeValueBlock(thenArg.bodyArguments, locals, thenStates, branchStates)) {
+          LocalBindingScope thenScope(locals);
+          if (auto err = analyzeValueBlock(thenArg.bodyArguments, locals, thenStates)) {
             return err;
           }
-          thenStates = std::move(branchStates);
         } else if (auto err = applyExprEffects(thenArg, locals, thenStates)) {
           return err;
         }
         if (elseArg.kind == Expr::Kind::Call && (elseArg.hasBodyArguments || !elseArg.bodyArguments.empty())) {
-          StateMap branchStates;
-          if (auto err = analyzeValueBlock(elseArg.bodyArguments, locals, elseStates, branchStates)) {
+          LocalBindingScope elseScope(locals);
+          if (auto err = analyzeValueBlock(elseArg.bodyArguments, locals, elseStates)) {
             return err;
           }
-          elseStates = std::move(branchStates);
         } else if (auto err = applyExprEffects(elseArg, locals, elseStates)) {
           return err;
         }
@@ -440,11 +451,10 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
         }
       }
       if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-        StateMap bodyStates;
-        if (auto err = analyzeValueBlock(expr.bodyArguments, locals, states, bodyStates)) {
+        LocalBindingScope bodyScope(locals);
+        if (auto err = analyzeValueBlock(expr.bodyArguments, locals, states)) {
           return err;
         }
-        states = std::move(bodyStates);
       }
       return std::nullopt;
     };
@@ -512,25 +522,23 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
       }
       const Expr &thenArg = stmt.args[1];
       const Expr &elseArg = stmt.args[2];
-      StateMap thenStates;
-      StateMap elseStates;
+      StateMap thenStates = statesIn;
+      StateMap elseStates = statesIn;
       FlowResult thenResult;
       FlowResult elseResult;
       if (thenArg.kind == Expr::Kind::Call && (thenArg.hasBodyArguments || !thenArg.bodyArguments.empty())) {
-        thenResult = analyzeStatements(thenArg.bodyArguments, localsIn, statesIn, thenStates);
+        LocalBindingScope thenScope(localsIn);
+        thenResult = analyzeStatements(thenArg.bodyArguments, localsIn, thenStates);
         if (thenResult.error.has_value()) {
           return thenResult;
         }
-      } else {
-        thenStates = statesIn;
       }
       if (elseArg.kind == Expr::Kind::Call && (elseArg.hasBodyArguments || !elseArg.bodyArguments.empty())) {
-        elseResult = analyzeStatements(elseArg.bodyArguments, localsIn, statesIn, elseStates);
+        LocalBindingScope elseScope(localsIn);
+        elseResult = analyzeStatements(elseArg.bodyArguments, localsIn, elseStates);
         if (elseResult.error.has_value()) {
           return elseResult;
         }
-      } else {
-        elseStates = statesIn;
       }
       if (thenResult.terminated && elseResult.terminated) {
         return {std::nullopt, true};
@@ -547,12 +555,15 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
       return {};
     }
     auto analyzeLoopBody = [&](const Expr &body,
-                               const std::unordered_map<std::string, BindingInfo> &localsBase,
+                               std::unordered_map<std::string, BindingInfo> &localsBase,
                                const StateMap &statesBase,
                                StateMap &statesOut,
                                bool &terminatedOut) -> FlowResult {
       if (body.kind == Expr::Kind::Call && (body.hasBodyArguments || !body.bodyArguments.empty())) {
-        FlowResult result = analyzeStatements(body.bodyArguments, localsBase, statesBase, statesOut);
+        StateMap bodyStates = statesBase;
+        LocalBindingScope bodyScope(localsBase);
+        FlowResult result = analyzeStatements(body.bodyArguments, localsBase, bodyStates);
+        statesOut = std::move(bodyStates);
         terminatedOut = result.terminated;
         return result;
       }
@@ -651,7 +662,8 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
     }
     if (isForCall(stmt)) {
       StateMap loopStates = statesIn;
-      std::unordered_map<std::string, BindingInfo> loopLocals = localsIn;
+      LocalBindingScope forScope(localsIn);
+      auto &loopLocals = localsIn;
       auto applyForCondition = [&](const Expr &condExpr,
                                    std::unordered_map<std::string, BindingInfo> &condLocals,
                                    StateMap &condStates) -> FlowResult {
@@ -717,8 +729,12 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
         if (auto exactIterations = boundedRepeatCount(stmt.args.front()); exactIterations.has_value()) {
           StateMap iterStates = statesIn;
           for (size_t i = 0; i < *exactIterations; ++i) {
-            StateMap bodyStates;
-            FlowResult result = analyzeStatements(stmt.bodyArguments, localsIn, iterStates, bodyStates);
+            StateMap bodyStates = iterStates;
+            FlowResult result;
+            {
+              LocalBindingScope bodyScope(localsIn);
+              result = analyzeStatements(stmt.bodyArguments, localsIn, bodyStates);
+            }
             if (result.error.has_value()) {
               return result;
             }
@@ -736,8 +752,12 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
       StateMap exitStates = loopHead;
       const size_t maxIterations = loopIterationLimit(loopHead);
       for (size_t i = 0; i < maxIterations; ++i) {
-        StateMap bodyStates;
-        FlowResult result = analyzeStatements(stmt.bodyArguments, localsIn, loopHead, bodyStates);
+        StateMap bodyStates = loopHead;
+        FlowResult result;
+        {
+          LocalBindingScope bodyScope(localsIn);
+          result = analyzeStatements(stmt.bodyArguments, localsIn, bodyStates);
+        }
         if (result.error.has_value()) {
           return result;
         }
@@ -757,8 +777,12 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
       return {};
     }
     if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
-      StateMap bodyStates;
-      FlowResult result = analyzeStatements(stmt.bodyArguments, localsIn, statesIn, bodyStates);
+      StateMap bodyStates = statesIn;
+      FlowResult result;
+      {
+        LocalBindingScope bodyScope(localsIn);
+        result = analyzeStatements(stmt.bodyArguments, localsIn, bodyStates);
+      }
       if (result.error.has_value()) {
         return result;
       }
@@ -791,15 +815,14 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
     locals.emplace(param.name, param.binding);
   }
   StateMap states;
-  StateMap finalStates;
-  FlowResult result = analyzeStatements(statements, locals, states, finalStates);
+  FlowResult result = analyzeStatements(statements, locals, states);
   if (result.error.has_value()) {
     return result.error;
   }
   if (result.terminated) {
     return std::nullopt;
   }
-  if (auto name = firstNonUninitialized(finalStates)) {
+  if (auto name = firstNonUninitialized(states)) {
     return "uninitialized storage must be dropped before end of scope: " + *name;
   }
   return std::nullopt;

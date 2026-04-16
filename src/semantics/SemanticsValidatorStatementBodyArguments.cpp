@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 
+#include <algorithm>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -355,19 +356,19 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
     return false;
   }
 
-  std::unordered_map<std::string, BindingInfo> blockLocals = locals;
-  std::vector<Expr> livenessStatements = stmt.bodyArguments;
-  if (enclosingStatements != nullptr && statementIndex < enclosingStatements->size()) {
-    for (size_t idx = statementIndex + 1; idx < enclosingStatements->size(); ++idx) {
-      livenessStatements.push_back((*enclosingStatements)[idx]);
-    }
-  }
+  LocalBindingScope blockScope(*this, locals);
+  const std::vector<Expr> *postMergeStatements = enclosingStatements;
+  const size_t postMergeStartIndex = enclosingStatements == nullptr
+                                         ? 0
+                                         : std::min(statementIndex + 1, enclosingStatements->size());
+  std::vector<BorrowLivenessRange> livenessRanges;
+  livenessRanges.reserve(2);
 
   BorrowEndScope borrowScope(*this, currentValidationState_.endedReferenceBorrows);
   for (size_t bodyIndex = 0; bodyIndex < stmt.bodyArguments.size(); ++bodyIndex) {
     const Expr &bodyExpr = stmt.bodyArguments[bodyIndex];
     if (!validateStatement(params,
-                           blockLocals,
+                           locals,
                            bodyExpr,
                            returnKind,
                            false,
@@ -378,7 +379,12 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
                            bodyIndex)) {
       return false;
     }
-    expireReferenceBorrowsForRemainder(params, blockLocals, livenessStatements, bodyIndex + 1);
+    livenessRanges.clear();
+    livenessRanges.push_back(BorrowLivenessRange{&stmt.bodyArguments, bodyIndex + 1});
+    if (postMergeStatements != nullptr && postMergeStartIndex < postMergeStatements->size()) {
+      livenessRanges.push_back(BorrowLivenessRange{postMergeStatements, postMergeStartIndex});
+    }
+    expireReferenceBorrowsForRanges(params, locals, livenessRanges);
   }
   return true;
 }

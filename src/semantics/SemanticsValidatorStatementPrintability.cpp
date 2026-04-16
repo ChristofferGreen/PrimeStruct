@@ -206,7 +206,7 @@ bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
             if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
               (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, branchLocals, info, &bodyExpr);
             }
-            branchLocals.emplace(bodyExpr.name, std::move(info));
+            insertLocalBinding(branchLocals, bodyExpr.name, std::move(info));
             continue;
           }
           if (isReturnCall(bodyExpr) && bodyExpr.args.size() == 1) {

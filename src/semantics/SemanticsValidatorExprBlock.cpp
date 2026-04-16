@@ -132,7 +132,7 @@ bool SemanticsValidator::validateBlockExpr(const std::vector<ParameterInfo> &par
                                      "Reference bindings require location(...)");
         }
       }
-      blockLocals.emplace(bodyExpr.name, info);
+      insertLocalBinding(blockLocals, bodyExpr.name, std::move(info));
       continue;
     }
 

@@ -387,7 +387,32 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
         sourceNode.scopePath, sourceNode.sourceLine, sourceNode.sourceColumn));
   }
 
-  using ActiveLocalBindings = std::unordered_map<std::string, BindingInfo>;
+  struct ActiveLocalBindings {
+    struct Scope {
+      explicit Scope(ActiveLocalBindings &localsIn) : locals(localsIn), marker(localsIn.insertedNames.size()) {}
+      ~Scope() {
+        while (locals.insertedNames.size() > marker) {
+          locals.bindings.erase(locals.insertedNames.back());
+          locals.insertedNames.pop_back();
+        }
+      }
+
+      ActiveLocalBindings &locals;
+      size_t marker = 0;
+    };
+
+    void addBinding(std::string name, BindingInfo binding) {
+      auto [it, inserted] = bindings.emplace(std::move(name), std::move(binding));
+      (void)it;
+      if (!inserted) {
+        return;
+      }
+      insertedNames.push_back(it->first);
+    }
+
+    std::unordered_map<std::string, BindingInfo> bindings;
+    std::vector<std::string> insertedNames;
+  };
 
   auto withPreservedError = [&](const std::function<bool()> &fn) {
     const std::string previousError = error_;
@@ -428,7 +453,7 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
 
   auto inferBindingForLocals = [&](const Definition &def,
                                    const std::vector<ParameterInfo> &defParams,
-                                   const ActiveLocalBindings &activeLocals,
+                                   const std::unordered_map<std::string, BindingInfo> &activeLocals,
                                    const Expr &bindingExpr,
                                    BindingInfo &bindingOut) {
     const std::string namespacePrefix =
@@ -479,16 +504,16 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
                   ActiveLocalBindings &activeLocals) {
     if (expr.isBinding) {
       for (const auto &arg : expr.args) {
-        ActiveLocalBindings argLocals = activeLocals;
-        visitExpr(def, defParams, arg, argLocals);
+        ActiveLocalBindings::Scope argScope(activeLocals);
+        visitExpr(def, defParams, arg, activeLocals);
       }
       if (!expr.bodyArguments.empty()) {
-        ActiveLocalBindings bodyLocals = activeLocals;
-        visitExprSequence(def, defParams, expr.bodyArguments, bodyLocals);
+        ActiveLocalBindings::Scope bodyScope(activeLocals);
+        visitExprSequence(def, defParams, expr.bodyArguments, activeLocals);
       }
 
       BindingInfo binding;
-      if (!inferBindingForLocals(def, defParams, activeLocals, expr, binding)) {
+      if (!inferBindingForLocals(def, defParams, activeLocals.bindings, expr, binding)) {
         return;
       }
       if (shouldCaptureGraphBinding(def, expr) && graphBindingIsUsable(binding)) {
@@ -515,7 +540,7 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
         }
         CallSnapshotData initializerCallData;
         if (initializerAnalysisExpr != nullptr &&
-            inferCallSnapshotData(defParams, activeLocals, *initializerAnalysisExpr, initializerCallData)) {
+            inferCallSnapshotData(defParams, activeLocals.bindings, *initializerAnalysisExpr, initializerCallData)) {
           if (!initializerCallData.resolvedPath.empty()) {
             fact.initializerResolvedPath = std::move(initializerCallData.resolvedPath);
           } else {
@@ -571,7 +596,7 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
           bool isBuiltinMethod = false;
           if (withPreservedError([&]() {
                 return resolveMethodTarget(defParams,
-                                           activeLocals,
+                                           activeLocals.bindings,
                                            initializerAnalysisExpr->namespacePrefix,
                                            initializerAnalysisExpr->args.front(),
                                            initializerAnalysisExpr->name,
@@ -600,7 +625,7 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
         }
         QuerySnapshotData initializerQueryData;
         if (initializerAnalysisExpr != nullptr &&
-            inferQuerySnapshotData(defParams, activeLocals, *initializerAnalysisExpr, initializerQueryData)) {
+            inferQuerySnapshotData(defParams, activeLocals.bindings, *initializerAnalysisExpr, initializerQueryData)) {
           fact.hasQuerySnapshot = true;
           fact.querySnapshot = std::move(initializerQueryData);
         } else {
@@ -609,7 +634,7 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
         }
         LocalAutoTrySnapshotData initializerTryValue;
         if (expr.args.size() == 1 &&
-            inferTrySnapshotData(def, defParams, activeLocals, expr.args.front(), initializerTryValue)) {
+            inferTrySnapshotData(def, defParams, activeLocals.bindings, expr.args.front(), initializerTryValue)) {
           fact.hasTryValue = true;
           fact.tryValue = std::move(initializerTryValue);
         } else {
@@ -617,7 +642,7 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
           fact.tryValue = LocalAutoTrySnapshotData{};
         }
       }
-      activeLocals.emplace(expr.name, std::move(binding));
+      activeLocals.addBinding(expr.name, std::move(binding));
       return;
     }
 
@@ -630,58 +655,64 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
     }
 
     if (isIfCall(expr) && expr.args.size() == 3) {
-      ActiveLocalBindings conditionLocals = activeLocals;
-      visitExpr(def, defParams, expr.args.front(), conditionLocals);
-
-      ActiveLocalBindings thenLocals = activeLocals;
-      visitExpr(def, defParams, expr.args[1], thenLocals);
-
-      ActiveLocalBindings elseLocals = activeLocals;
-      visitExpr(def, defParams, expr.args[2], elseLocals);
+      {
+        ActiveLocalBindings::Scope conditionScope(activeLocals);
+        visitExpr(def, defParams, expr.args.front(), activeLocals);
+      }
+      {
+        ActiveLocalBindings::Scope thenScope(activeLocals);
+        visitExpr(def, defParams, expr.args[1], activeLocals);
+      }
+      {
+        ActiveLocalBindings::Scope elseScope(activeLocals);
+        visitExpr(def, defParams, expr.args[2], activeLocals);
+      }
       return;
     }
 
     if ((isLoopCall(expr) || isWhileCall(expr)) && expr.args.size() == 2) {
-      ActiveLocalBindings loopLocals = activeLocals;
-      visitExpr(def, defParams, expr.args.front(), loopLocals);
-      visitExpr(def, defParams, expr.args[1], loopLocals);
+      ActiveLocalBindings::Scope loopScope(activeLocals);
+      visitExpr(def, defParams, expr.args.front(), activeLocals);
+      visitExpr(def, defParams, expr.args[1], activeLocals);
       return;
     }
 
     if (isForCall(expr) && expr.args.size() == 4) {
-      ActiveLocalBindings loopLocals = activeLocals;
-      visitExpr(def, defParams, expr.args[0], loopLocals);
+      ActiveLocalBindings::Scope loopScope(activeLocals);
+      visitExpr(def, defParams, expr.args[0], activeLocals);
       if (expr.args[1].isBinding) {
-        visitExpr(def, defParams, expr.args[1], loopLocals);
+        visitExpr(def, defParams, expr.args[1], activeLocals);
       } else {
-        ActiveLocalBindings indexLocals = loopLocals;
-        visitExpr(def, defParams, expr.args[1], indexLocals);
+        ActiveLocalBindings::Scope indexScope(activeLocals);
+        visitExpr(def, defParams, expr.args[1], activeLocals);
       }
-      ActiveLocalBindings limitLocals = loopLocals;
-      visitExpr(def, defParams, expr.args[2], limitLocals);
-      visitExpr(def, defParams, expr.args[3], loopLocals);
+      {
+        ActiveLocalBindings::Scope limitScope(activeLocals);
+        visitExpr(def, defParams, expr.args[2], activeLocals);
+      }
+      visitExpr(def, defParams, expr.args[3], activeLocals);
       return;
     }
 
     if (isRepeatCall(expr)) {
-      ActiveLocalBindings repeatLocals = activeLocals;
-      visitExprSequence(def, defParams, expr.bodyArguments, repeatLocals);
+      ActiveLocalBindings::Scope repeatScope(activeLocals);
+      visitExprSequence(def, defParams, expr.bodyArguments, activeLocals);
       return;
     }
 
     if (isBuiltinBlockCall(expr) && expr.hasBodyArguments) {
-      ActiveLocalBindings blockLocals = activeLocals;
-      visitExprSequence(def, defParams, expr.bodyArguments, blockLocals);
+      ActiveLocalBindings::Scope blockScope(activeLocals);
+      visitExprSequence(def, defParams, expr.bodyArguments, activeLocals);
       return;
     }
 
     for (const auto &arg : expr.args) {
-      ActiveLocalBindings argLocals = activeLocals;
-      visitExpr(def, defParams, arg, argLocals);
+      ActiveLocalBindings::Scope argScope(activeLocals);
+      visitExpr(def, defParams, arg, activeLocals);
     }
     if (!expr.bodyArguments.empty()) {
-      ActiveLocalBindings bodyLocals = activeLocals;
-      visitExprSequence(def, defParams, expr.bodyArguments, bodyLocals);
+      ActiveLocalBindings::Scope bodyScope(activeLocals);
+      visitExprSequence(def, defParams, expr.bodyArguments, activeLocals);
     }
   };
 
@@ -708,8 +739,8 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
     ActiveLocalBindings definitionLocals;
     visitExprSequence(def, defParams, def.statements, definitionLocals);
     if (def.returnExpr.has_value()) {
-      ActiveLocalBindings returnLocals = definitionLocals;
-      visitExpr(def, defParams, *def.returnExpr, returnLocals);
+      ActiveLocalBindings::Scope returnScope(definitionLocals);
+      visitExpr(def, defParams, *def.returnExpr, definitionLocals);
     }
   }
 

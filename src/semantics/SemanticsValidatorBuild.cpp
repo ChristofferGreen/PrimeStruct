@@ -36,6 +36,9 @@ bool SemanticsValidator::buildDefinitionMaps() {
   structNames_.clear();
   publicDefinitions_.clear();
   paramsByDef_.clear();
+  inferExprReturnKindMemo_.clear();
+  inferExprReturnKindMemoDefinitionOwner_ = nullptr;
+  inferExprReturnKindMemoExecutionOwner_ = nullptr;
   currentValidationState_ = {};
 
   for (const auto &effect : defaultEffects_) {
@@ -192,6 +195,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
   if (!buildParameters()) {
     return false;
   }
+  rebuildCallResolutionFamilyIndexes();
 
   for (const auto &declaration : definitionPrepassSnapshot_.declarationsInStableOrder) {
     const Definition &def = program_.definitions[declaration.stableIndex];

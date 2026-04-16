@@ -16,6 +16,7 @@
 #include <exception>
 #include <fstream>
 #include <functional>
+#include <iostream>
 #include <limits>
 #include <optional>
 #include <sstream>
@@ -6124,84 +6125,129 @@ bool Semantics::validate(Program &program,
   if (!semantics::rewriteConvertConstructors(program, error)) {
     return false;
   }
-  semantics::SemanticsValidator validator(
-      program,
-      entryPath,
-      error,
-      defaultEffects,
-      entryDefaultEffects,
-      diagnosticInfo,
-      collectDiagnostics,
-      benchmarkSemanticDefinitionValidationWorkerCount,
-      benchmarkSemanticPhaseCounters != nullptr,
-      benchmarkSemanticDisableMethodTargetMemoization,
-      benchmarkSemanticGraphLocalAutoLegacyKeyShadow,
-      benchmarkSemanticGraphLocalAutoLegacySideChannelShadow,
-      benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr);
+  const bool benchmarkValidatorLifetime =
+      std::getenv("PRIMEC_BENCHMARK_SEMANTIC_VALIDATOR_LIFETIME") != nullptr;
+  ProcessAllocationSample validatorLifetimeAllocationBefore;
+  ProcessAllocationSample validatorLifetimeAllocationAfterRun;
+  ProcessAllocationSample validatorLifetimeAllocationAfterDestroy;
+  ProcessRssSample validatorLifetimeRssBefore;
+  ProcessRssSample validatorLifetimeRssAfterRun;
+  ProcessRssSample validatorLifetimeRssAfterDestroy;
+  if (benchmarkValidatorLifetime) {
+    validatorLifetimeAllocationBefore = captureProcessAllocationSample();
+    validatorLifetimeRssBefore = captureProcessRssSample();
+  }
+
   ProcessAllocationSample validationAllocationBefore;
+  ProcessAllocationSample validationAllocationAfter;
   ProcessRssSample validationRssBefore;
+  ProcessRssSample validationRssAfter;
+  semantics::SemanticsValidator::ValidationCounters validationCounters;
+  bool hasValidationAllocationAfter = false;
+  bool hasValidationRssAfter = false;
   if (benchmarkSemanticPhaseCounters != nullptr && benchmarkSemanticAllocationCountersEnabled) {
     validationAllocationBefore = captureProcessAllocationSample();
   }
   if (benchmarkSemanticPhaseCounters != nullptr && benchmarkSemanticRssCheckpointsEnabled) {
     validationRssBefore = captureProcessRssSample();
   }
-  try {
-    if (!validator.run()) {
+  {
+    semantics::SemanticsValidator validator(
+        program,
+        entryPath,
+        error,
+        defaultEffects,
+        entryDefaultEffects,
+        diagnosticInfo,
+        collectDiagnostics,
+        benchmarkSemanticDefinitionValidationWorkerCount,
+        benchmarkSemanticPhaseCounters != nullptr,
+        benchmarkSemanticDisableMethodTargetMemoization,
+        benchmarkSemanticGraphLocalAutoLegacyKeyShadow,
+        benchmarkSemanticGraphLocalAutoLegacySideChannelShadow,
+        benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr);
+    try {
+      if (!validator.run()) {
+        return false;
+      }
+    } catch (const std::exception &ex) {
+      error = std::string("semantic validator exception: ") + ex.what();
       return false;
     }
-  } catch (const std::exception &ex) {
-    error = std::string("semantic validator exception: ") + ex.what();
-    return false;
+    validationCounters = validator.validationCounters();
+    if (!rewriteOmittedStructInitializers(program, error)) {
+      return false;
+    }
+    semantics::assignSemanticNodeIds(program);
+    if (benchmarkSemanticPhaseCounters != nullptr && benchmarkSemanticAllocationCountersEnabled) {
+      validationAllocationAfter = captureProcessAllocationSample();
+      hasValidationAllocationAfter = true;
+    }
+    if (benchmarkSemanticPhaseCounters != nullptr && benchmarkSemanticRssCheckpointsEnabled) {
+      validationRssAfter = captureProcessRssSample();
+      hasValidationRssAfter = true;
+    }
+    if (benchmarkValidatorLifetime) {
+      validatorLifetimeAllocationAfterRun = captureProcessAllocationSample();
+      validatorLifetimeRssAfterRun = captureProcessRssSample();
+    }
+    if (semanticProgramOut != nullptr) {
+      ProcessAllocationSample semanticProductAllocationBefore;
+      ProcessRssSample semanticProductRssBefore;
+      if (benchmarkSemanticPhaseCounters != nullptr && benchmarkSemanticAllocationCountersEnabled) {
+        semanticProductAllocationBefore = captureProcessAllocationSample();
+      }
+      if (benchmarkSemanticPhaseCounters != nullptr && benchmarkSemanticRssCheckpointsEnabled) {
+        semanticProductRssBefore = captureProcessRssSample();
+      }
+      *semanticProgramOut = buildSemanticProgram(program, entryPath, validator, semanticProductBuildConfig);
+      if (benchmarkSemanticPhaseCounters != nullptr) {
+        benchmarkSemanticPhaseCounters->semanticProductBuild.callsVisited = 1;
+        benchmarkSemanticPhaseCounters->semanticProductBuild.factsProduced =
+            semanticProgramFactCount(*semanticProgramOut);
+        if (benchmarkSemanticAllocationCountersEnabled) {
+          const ProcessAllocationSample semanticProductAllocationAfter = captureProcessAllocationSample();
+          populateAllocationDelta(benchmarkSemanticPhaseCounters->semanticProductBuild,
+                                  semanticProductAllocationBefore,
+                                  semanticProductAllocationAfter);
+        }
+        if (benchmarkSemanticRssCheckpointsEnabled) {
+          const ProcessRssSample semanticProductRssAfter = captureProcessRssSample();
+          populateRssCheckpoints(benchmarkSemanticPhaseCounters->semanticProductBuild,
+                                 semanticProductRssBefore,
+                                 semanticProductRssAfter);
+        }
+      }
+    }
   }
-  if (!rewriteOmittedStructInitializers(program, error)) {
-    return false;
+
+  if (benchmarkValidatorLifetime) {
+    validatorLifetimeAllocationAfterDestroy = captureProcessAllocationSample();
+    validatorLifetimeRssAfterDestroy = captureProcessRssSample();
+    std::cerr << "[benchmark-semantic-validator-lifetime] "
+              << "{\"schema\":\"primestruct_semantic_validator_lifetime_v1\""
+              << ",\"allocation_before_bytes\":" << validatorLifetimeAllocationBefore.allocatedBytes
+              << ",\"allocation_after_run_bytes\":" << validatorLifetimeAllocationAfterRun.allocatedBytes
+              << ",\"allocation_after_destroy_bytes\":" << validatorLifetimeAllocationAfterDestroy.allocatedBytes
+              << ",\"rss_before_bytes\":" << validatorLifetimeRssBefore.residentBytes
+              << ",\"rss_after_run_bytes\":" << validatorLifetimeRssAfterRun.residentBytes
+              << ",\"rss_after_destroy_bytes\":" << validatorLifetimeRssAfterDestroy.residentBytes
+              << "}" << std::endl;
   }
-  semantics::assignSemanticNodeIds(program);
+
   if (benchmarkSemanticPhaseCounters != nullptr) {
-    const auto &validationCounters = validator.validationCounters();
     benchmarkSemanticPhaseCounters->validation.callsVisited =
         validationCounters.callsVisited;
     benchmarkSemanticPhaseCounters->validation.peakLocalMapSize =
         validationCounters.peakLocalMapSize;
-    if (benchmarkSemanticAllocationCountersEnabled) {
-      const ProcessAllocationSample validationAllocationAfter = captureProcessAllocationSample();
+    if (benchmarkSemanticAllocationCountersEnabled && hasValidationAllocationAfter) {
       populateAllocationDelta(benchmarkSemanticPhaseCounters->validation,
                               validationAllocationBefore,
                               validationAllocationAfter);
     }
-    if (benchmarkSemanticRssCheckpointsEnabled) {
-      const ProcessRssSample validationRssAfter = captureProcessRssSample();
+    if (benchmarkSemanticRssCheckpointsEnabled && hasValidationRssAfter) {
       populateRssCheckpoints(
           benchmarkSemanticPhaseCounters->validation, validationRssBefore, validationRssAfter);
-    }
-  }
-  if (semanticProgramOut != nullptr) {
-    ProcessAllocationSample semanticProductAllocationBefore;
-    ProcessRssSample semanticProductRssBefore;
-    if (benchmarkSemanticPhaseCounters != nullptr && benchmarkSemanticAllocationCountersEnabled) {
-      semanticProductAllocationBefore = captureProcessAllocationSample();
-    }
-    if (benchmarkSemanticPhaseCounters != nullptr && benchmarkSemanticRssCheckpointsEnabled) {
-      semanticProductRssBefore = captureProcessRssSample();
-    }
-    *semanticProgramOut = buildSemanticProgram(program, entryPath, validator, semanticProductBuildConfig);
-    if (benchmarkSemanticPhaseCounters != nullptr) {
-      benchmarkSemanticPhaseCounters->semanticProductBuild.callsVisited = 1;
-      benchmarkSemanticPhaseCounters->semanticProductBuild.factsProduced =
-          semanticProgramFactCount(*semanticProgramOut);
-      if (benchmarkSemanticAllocationCountersEnabled) {
-        const ProcessAllocationSample semanticProductAllocationAfter = captureProcessAllocationSample();
-        populateAllocationDelta(benchmarkSemanticPhaseCounters->semanticProductBuild,
-                                semanticProductAllocationBefore,
-                                semanticProductAllocationAfter);
-      }
-      if (benchmarkSemanticRssCheckpointsEnabled) {
-        const ProcessRssSample semanticProductRssAfter = captureProcessRssSample();
-        populateRssCheckpoints(benchmarkSemanticPhaseCounters->semanticProductBuild,
-                               semanticProductRssBefore,
-                               semanticProductRssAfter);
-      }
     }
   }
   error.clear();

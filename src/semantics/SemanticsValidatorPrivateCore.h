@@ -23,6 +23,7 @@
   bool buildDefinitionReturnKinds(const std::unordered_set<std::string> &explicitStructs);
   bool validateLifecycleHelperDefinitions();
   bool buildParameters();
+  void rebuildCallResolutionFamilyIndexes();
   bool inferUnknownReturnKinds();
   bool inferUnknownReturnKindsGraph();
   void collectGraphLocalAutoBindings(const TypeResolutionGraph &graph);

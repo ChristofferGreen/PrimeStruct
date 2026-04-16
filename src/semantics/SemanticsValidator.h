@@ -456,6 +456,24 @@ private:
       validator.currentValidationState_.endedReferenceBorrows = std::move(previous);
     }
   };
+  struct LocalBindingScope {
+    SemanticsValidator &validator;
+    std::unordered_map<std::string, BindingInfo> &locals;
+    std::vector<std::string> insertedNames;
+    explicit LocalBindingScope(SemanticsValidator &validatorIn,
+                               std::unordered_map<std::string, BindingInfo> &localsIn)
+        : validator(validatorIn), locals(localsIn) {
+      validator.activeLocalBindingScopes_.push_back(this);
+    }
+    ~LocalBindingScope() {
+      for (auto it = insertedNames.rbegin(); it != insertedNames.rend(); ++it) {
+        locals.erase(*it);
+      }
+      if (!validator.activeLocalBindingScopes_.empty()) {
+        validator.activeLocalBindingScopes_.pop_back();
+      }
+    }
+  };
   struct ExprContextScope {
     SemanticsValidator &validator;
     const Expr *previous;
@@ -594,6 +612,37 @@ private:
     }
   };
 
+  struct ExprReturnKindMemoKey {
+    const Expr *expr = nullptr;
+    const ParameterInfo *paramsData = nullptr;
+    std::size_t paramsSize = 0;
+    const void *localsIdentity = nullptr;
+    std::size_t localsSize = 0;
+
+    bool operator==(const ExprReturnKindMemoKey &other) const {
+      return expr == other.expr &&
+             paramsData == other.paramsData &&
+             paramsSize == other.paramsSize &&
+             localsIdentity == other.localsIdentity &&
+             localsSize == other.localsSize;
+    }
+  };
+
+  struct ExprReturnKindMemoKeyHash {
+    std::size_t operator()(const ExprReturnKindMemoKey &key) const {
+      std::size_t hash = std::hash<const Expr *>{}(key.expr);
+      hash ^= std::hash<const ParameterInfo *>{}(key.paramsData) + 0x9e3779b9 +
+              (hash << 6) + (hash >> 2);
+      hash ^= std::hash<std::size_t>{}(key.paramsSize) + 0x9e3779b9 +
+              (hash << 6) + (hash >> 2);
+      hash ^= std::hash<const void *>{}(key.localsIdentity) + 0x9e3779b9 +
+              (hash << 6) + (hash >> 2);
+      hash ^= std::hash<std::size_t>{}(key.localsSize) + 0x9e3779b9 +
+              (hash << 6) + (hash >> 2);
+      return hash;
+    }
+  };
+
   const Program &program_;
   const std::string &entryPath_;
   std::string &error_;
@@ -643,6 +692,9 @@ private:
   std::unordered_set<std::string> structNames_;
   std::unordered_set<std::string> publicDefinitions_;
   std::unordered_map<std::string, std::vector<ParameterInfo>> paramsByDef_;
+  std::unordered_set<std::string> overloadFamilyBasePaths_;
+  std::unordered_map<std::string, std::string> uniqueSpecializationPathByBase_;
+  std::unordered_set<std::string> ambiguousSpecializationBasePaths_;
   ValidationState currentValidationState_;
   std::unordered_set<std::string> inferenceStack_;
   std::unordered_set<std::string> returnBindingInferenceStack_;
@@ -672,6 +724,11 @@ private:
   const Expr *currentExprContext_ = nullptr;
   const Definition *currentDefinitionContext_ = nullptr;
   const Execution *currentExecutionContext_ = nullptr;
+  std::vector<LocalBindingScope *> activeLocalBindingScopes_;
+  std::unordered_map<ExprReturnKindMemoKey, ReturnKind, ExprReturnKindMemoKeyHash>
+      inferExprReturnKindMemo_;
+  const Definition *inferExprReturnKindMemoDefinitionOwner_ = nullptr;
+  const Execution *inferExprReturnKindMemoExecutionOwner_ = nullptr;
   mutable CallTargetResolutionScratch callTargetResolutionScratch_;
 
   void observeCallVisited();

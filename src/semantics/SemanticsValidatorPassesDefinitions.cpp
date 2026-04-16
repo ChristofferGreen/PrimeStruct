@@ -3,14 +3,56 @@
 #include "primec/SemanticsDefinitionPartitioner.h"
 
 #include <algorithm>
+#include <chrono>
+#include <cstdlib>
 #include <functional>
 #include <future>
 #include <iterator>
+#include <iostream>
 #include <optional>
 #include <utility>
 #include <vector>
 
+#if defined(__APPLE__)
+#include <mach/mach.h>
+#elif defined(__linux__)
+#include <unistd.h>
+#include <fstream>
+#endif
+
 namespace primec::semantics {
+
+namespace {
+
+uint64_t captureCurrentResidentBytes() {
+#if defined(__APPLE__)
+  mach_task_basic_info info{};
+  mach_msg_type_number_t count = MACH_TASK_BASIC_INFO_COUNT;
+  if (task_info(mach_task_self(),
+                MACH_TASK_BASIC_INFO,
+                reinterpret_cast<task_info_t>(&info),
+                &count) == KERN_SUCCESS) {
+    return static_cast<uint64_t>(info.resident_size);
+  }
+  return 0;
+#elif defined(__linux__)
+  std::ifstream statm("/proc/self/statm");
+  uint64_t pages = 0;
+  uint64_t residentPages = 0;
+  if (!(statm >> pages >> residentPages)) {
+    return 0;
+  }
+  const long pageSize = sysconf(_SC_PAGESIZE);
+  if (pageSize <= 0) {
+    return 0;
+  }
+  return residentPages * static_cast<uint64_t>(pageSize);
+#else
+  return 0;
+#endif
+}
+
+} // namespace
 
 bool SemanticsValidator::publishPassesDefinitionsDiagnostic(const Expr *expr) {
   if (expr != nullptr) {
@@ -26,6 +68,20 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
     const std::function<std::size_t(std::size_t)> &resolveStableIndex) {
   std::vector<SemanticDiagnosticRecord> collectedRecords;
   const bool collectDiagnostics = shouldCollectStructuredDiagnostics();
+  const bool benchmarkPerDefinitionRss =
+      std::getenv("PRIMEC_BENCHMARK_SEMANTIC_PER_DEFINITION_RSS") != nullptr;
+  struct DefinitionRssRecord {
+    std::string fullPath;
+    uint64_t rssBefore = 0;
+    uint64_t rssAfter = 0;
+    int64_t rssDelta = 0;
+    uint64_t wallNanos = 0;
+    bool ok = false;
+  };
+  std::vector<DefinitionRssRecord> definitionRssRecords;
+  if (benchmarkPerDefinitionRss) {
+    definitionRssRecords.reserve(stableCount);
+  }
   auto validateDefinition = [&](const Definition &def) -> bool {
     auto failPassesDefinitionsDiagnostic =
         [&](const Expr *expr, std::string message) -> bool {
@@ -181,6 +237,9 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
        ++stableOrdinal) {
     const std::size_t stableIndex = resolveStableIndex(stableOrdinal);
     const Definition &def = program_.definitions[stableIndex];
+    const uint64_t rssBefore = benchmarkPerDefinitionRss ? captureCurrentResidentBytes() : 0;
+    const auto wallStart = benchmarkPerDefinitionRss ? std::chrono::steady_clock::now()
+                                                     : std::chrono::steady_clock::time_point{};
     clearStructuredDiagnosticContext();
     if (collectDiagnostics) {
       ValidationStateScope validationContextScope(*this, buildDefinitionValidationState(def));
@@ -191,15 +250,84 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
         collectedRecords.insert(collectedRecords.end(),
                                 std::make_move_iterator(intraDefinitionRecords.begin()),
                                 std::make_move_iterator(intraDefinitionRecords.end()));
+        if (benchmarkPerDefinitionRss) {
+          const uint64_t rssAfter = captureCurrentResidentBytes();
+          const auto wallEnd = std::chrono::steady_clock::now();
+          definitionRssRecords.push_back(DefinitionRssRecord{
+              def.fullPath,
+              rssBefore,
+              rssAfter,
+              static_cast<int64_t>(rssAfter) - static_cast<int64_t>(rssBefore),
+              static_cast<uint64_t>(
+                  std::chrono::duration_cast<std::chrono::nanoseconds>(wallEnd - wallStart).count()),
+              true,
+          });
+        }
         continue;
       }
     }
-    if (!validateDefinition(def)) {
+    const bool ok = validateDefinition(def);
+    if (!ok) {
       if (!collectDiagnostics) {
+        if (benchmarkPerDefinitionRss) {
+          const uint64_t rssAfter = captureCurrentResidentBytes();
+          const auto wallEnd = std::chrono::steady_clock::now();
+          definitionRssRecords.push_back(DefinitionRssRecord{
+              def.fullPath,
+              rssBefore,
+              rssAfter,
+              static_cast<int64_t>(rssAfter) - static_cast<int64_t>(rssBefore),
+              static_cast<uint64_t>(
+                  std::chrono::duration_cast<std::chrono::nanoseconds>(wallEnd - wallStart).count()),
+              false,
+          });
+        }
         return false;
       }
       moveCurrentStructuredDiagnosticTo(collectedRecords);
     }
+    if (benchmarkPerDefinitionRss) {
+      const uint64_t rssAfter = captureCurrentResidentBytes();
+      const auto wallEnd = std::chrono::steady_clock::now();
+      definitionRssRecords.push_back(DefinitionRssRecord{
+          def.fullPath,
+          rssBefore,
+          rssAfter,
+          static_cast<int64_t>(rssAfter) - static_cast<int64_t>(rssBefore),
+          static_cast<uint64_t>(
+              std::chrono::duration_cast<std::chrono::nanoseconds>(wallEnd - wallStart).count()),
+          ok,
+      });
+    }
+  }
+
+  if (benchmarkPerDefinitionRss) {
+    std::vector<DefinitionRssRecord> sortedRecords = definitionRssRecords;
+    std::sort(sortedRecords.begin(),
+              sortedRecords.end(),
+              [](const DefinitionRssRecord &left, const DefinitionRssRecord &right) {
+                if (left.rssDelta != right.rssDelta) {
+                  return left.rssDelta > right.rssDelta;
+                }
+                return left.wallNanos > right.wallNanos;
+              });
+    const size_t limit = std::min<size_t>(10, sortedRecords.size());
+    std::cerr << "[benchmark-semantic-definition-rss-top] {\"count\":"
+              << definitionRssRecords.size() << ",\"top\":[";
+    for (size_t i = 0; i < limit; ++i) {
+      if (i > 0) {
+        std::cerr << ",";
+      }
+      const DefinitionRssRecord &record = sortedRecords[i];
+      std::cerr << "{\"path\":\"" << record.fullPath
+                << "\",\"rss_before\":" << record.rssBefore
+                << ",\"rss_after\":" << record.rssAfter
+                << ",\"rss_delta\":" << record.rssDelta
+                << ",\"wall_nanos\":" << record.wallNanos
+                << ",\"ok\":" << (record.ok ? "true" : "false")
+                << "}";
+    }
+    std::cerr << "]}" << std::endl;
   }
 
   if (!finalizeCollectedStructuredDiagnostics(collectedRecords)) {

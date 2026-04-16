@@ -1,6 +1,7 @@
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorExprCaptureSplitStep.h"
 
+#include <algorithm>
 #include <optional>
 #include <unordered_set>
 
@@ -180,16 +181,16 @@ bool SemanticsValidator::validateLambdaExpr(const std::vector<ParameterInfo> &pa
                                     "restrict type does not match binding type");
       }
     }
-    lambdaLocals.emplace(info.name, info.binding);
+    insertLocalBinding(lambdaLocals, info.name, info.binding);
     lambdaParams.push_back(std::move(info));
   }
 
-  std::vector<Expr> lambdaLivenessStatements = expr.bodyArguments;
-  if (enclosingStatements != nullptr && statementIndex < enclosingStatements->size()) {
-    for (size_t idx = statementIndex + 1; idx < enclosingStatements->size(); ++idx) {
-      lambdaLivenessStatements.push_back((*enclosingStatements)[idx]);
-    }
-  }
+  const std::vector<Expr> *postMergeStatements = enclosingStatements;
+  const size_t postMergeStartIndex = enclosingStatements == nullptr
+                                         ? 0
+                                         : std::min(statementIndex + 1, enclosingStatements->size());
+  std::vector<BorrowLivenessRange> livenessRanges;
+  livenessRanges.reserve(2);
   bool sawReturn = false;
   for (size_t stmtIndex = 0; stmtIndex < expr.bodyArguments.size(); ++stmtIndex) {
     const Expr &stmt = expr.bodyArguments[stmtIndex];
@@ -205,7 +206,12 @@ bool SemanticsValidator::validateLambdaExpr(const std::vector<ParameterInfo> &pa
                            stmtIndex)) {
       return false;
     }
-    expireReferenceBorrowsForRemainder(lambdaParams, lambdaLocals, lambdaLivenessStatements, stmtIndex + 1);
+    livenessRanges.clear();
+    livenessRanges.push_back(BorrowLivenessRange{&expr.bodyArguments, stmtIndex + 1});
+    if (postMergeStatements != nullptr && postMergeStartIndex < postMergeStatements->size()) {
+      livenessRanges.push_back(BorrowLivenessRange{postMergeStatements, postMergeStartIndex});
+    }
+    expireReferenceBorrowsForRanges(lambdaParams, lambdaLocals, livenessRanges);
   }
   return true;
 }

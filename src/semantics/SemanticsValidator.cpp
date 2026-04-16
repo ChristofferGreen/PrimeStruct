@@ -6,10 +6,19 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <functional>
+#include <iostream>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
+
+#if defined(__APPLE__)
+#include <mach/mach.h>
+#elif defined(__linux__)
+#include <unistd.h>
+#include <fstream>
+#endif
 
 namespace primec::semantics {
 
@@ -20,6 +29,34 @@ bool isSlashlessMapHelperName(std::string_view name) {
     name.remove_prefix(1);
   }
   return name.rfind("map/", 0) == 0 || name.rfind("std/collections/map/", 0) == 0;
+}
+
+uint64_t captureCurrentResidentBytes() {
+#if defined(__APPLE__)
+  mach_task_basic_info info{};
+  mach_msg_type_number_t count = MACH_TASK_BASIC_INFO_COUNT;
+  if (task_info(mach_task_self(),
+                MACH_TASK_BASIC_INFO,
+                reinterpret_cast<task_info_t>(&info),
+                &count) == KERN_SUCCESS) {
+    return static_cast<uint64_t>(info.resident_size);
+  }
+  return 0;
+#elif defined(__linux__)
+  std::ifstream statm("/proc/self/statm");
+  uint64_t pages = 0;
+  uint64_t residentPages = 0;
+  if (!(statm >> pages >> residentPages)) {
+    return 0;
+  }
+  const long pageSize = sysconf(_SC_PAGESIZE);
+  if (pageSize <= 0) {
+    return 0;
+  }
+  return residentPages * static_cast<uint64_t>(pageSize);
+#else
+  return 0;
+#endif
 }
 
 } // namespace
@@ -92,6 +129,26 @@ void SemanticsValidator::observeLocalMapSize(std::size_t size) {
                          static_cast<uint64_t>(size));
 }
 
+void SemanticsValidator::insertLocalBinding(
+    std::unordered_map<std::string, BindingInfo> &locals,
+    const std::string &name,
+    BindingInfo info) {
+  auto [it, inserted] = locals.emplace(name, std::move(info));
+  if (!inserted || activeLocalBindingScopes_.empty()) {
+    return;
+  }
+  inferExprReturnKindMemo_.clear();
+  for (auto scopeIt = activeLocalBindingScopes_.rbegin();
+       scopeIt != activeLocalBindingScopes_.rend();
+       ++scopeIt) {
+    if (&((*scopeIt)->locals) != &locals) {
+      continue;
+    }
+    (*scopeIt)->insertedNames.push_back(it->first);
+    return;
+  }
+}
+
 std::string SemanticsValidator::formatUnknownCallTarget(const Expr &expr) const {
   if (!isSlashlessMapHelperName(expr.name)) {
     return expr.name;
@@ -125,6 +182,66 @@ std::string SemanticsValidator::diagnosticCallTargetPath(const std::string &path
 }
 
 bool SemanticsValidator::run() {
+  const bool benchmarkDumpValidatorState =
+      std::getenv("PRIMEC_BENCHMARK_SEMANTIC_VALIDATOR_STATE") != nullptr;
+  auto dumpValidatorState = [&](const char *stageName) {
+    if (!benchmarkDumpValidatorState) {
+      return;
+    }
+    size_t parameterCount = 0;
+    for (const auto &entry : paramsByDef_) {
+      parameterCount += entry.second.size();
+    }
+    std::cerr << "[benchmark-semantic-validator-state] {\"stage\":\""
+              << stageName
+              << "\",\"definitions\":" << defMap_.size()
+              << ",\"structs\":" << structNames_.size()
+              << ",\"params_by_def\":" << paramsByDef_.size()
+              << ",\"params_total\":" << parameterCount
+              << ",\"return_kinds\":" << returnKinds_.size()
+              << ",\"return_structs\":" << returnStructs_.size()
+              << ",\"return_bindings\":" << returnBindings_.size()
+              << ",\"graph_local_auto_scope_paths\":" << graphLocalAutoScopePathInterner_.size()
+              << ",\"graph_local_auto_facts\":" << graphLocalAutoFacts_.size()
+              << ",\"graph_local_auto_legacy_binding\":" << graphLocalAutoLegacyBindingShadow_.size()
+              << ",\"graph_local_auto_legacy_query\":" << graphLocalAutoLegacyQuerySnapshotShadow_.size()
+              << ",\"graph_local_auto_legacy_try\":" << graphLocalAutoLegacyTryValueShadow_.size()
+              << ",\"query_fact_snapshot_cache\":" << queryFactSnapshotCache_.size()
+              << ",\"query_receiver_snapshot_cache\":" << queryReceiverBindingSnapshotCache_.size()
+              << ",\"query_call_snapshot_cache\":" << queryCallTypeSnapshotCache_.size()
+              << ",\"query_binding_snapshot_cache\":" << queryBindingSnapshotCache_.size()
+              << ",\"query_result_snapshot_cache\":" << queryResultTypeSnapshotCache_.size()
+              << ",\"try_value_snapshot_cache\":" << tryValueSnapshotCache_.size()
+              << ",\"call_binding_snapshot_cache\":" << callBindingSnapshotCache_.size()
+              << ",\"callable_summary_snapshot_cache\":" << callableSummaryDefinitionSnapshotCache_.size()
+              << ",\"on_error_snapshot_cache\":" << onErrorSnapshotCache_.size()
+              << ",\"effect_free_def_cache\":" << effectFreeDefCache_.size()
+              << ",\"effect_free_struct_cache\":" << effectFreeStructCache_.size()
+              << ",\"inference_stack\":" << inferenceStack_.size()
+              << ",\"return_binding_inference_stack\":" << returnBindingInferenceStack_.size()
+              << ",\"query_type_inference_definition_stack\":" << queryTypeInferenceDefinitionStack_.size()
+              << ",\"query_type_inference_expr_stack\":" << queryTypeInferenceExprStack_.size()
+              << ",\"active_local_scopes\":" << activeLocalBindingScopes_.size()
+              << ",\"expr_return_memo\":" << inferExprReturnKindMemo_.size()
+              << ",\"expr_return_memo_buckets\":" << inferExprReturnKindMemo_.bucket_count()
+              << ",\"call_cache_key_interner\":" << callTargetResolutionScratch_.keyInterner.size()
+              << ",\"call_cache_definition_family\":" << callTargetResolutionScratch_.definitionFamilyPathCache.size()
+              << ",\"call_cache_overload_family\":" << callTargetResolutionScratch_.overloadFamilyPathCache.size()
+              << ",\"call_cache_overload_prefix\":" << callTargetResolutionScratch_.overloadFamilyPrefixCache.size()
+              << ",\"call_cache_specialization_prefix\":" << callTargetResolutionScratch_.specializationPrefixCache.size()
+              << ",\"call_cache_overload_candidate\":" << callTargetResolutionScratch_.overloadCandidatePathCache.size()
+              << ",\"call_cache_rooted\":" << callTargetResolutionScratch_.rootedCallNamePathCache.size()
+              << ",\"call_cache_namespace\":" << callTargetResolutionScratch_.normalizedNamespacePrefixCache.size()
+              << ",\"call_cache_joined\":" << callTargetResolutionScratch_.joinedCallPathCache.size()
+              << ",\"call_cache_normalized_method\":" << callTargetResolutionScratch_.normalizedMethodNameCache.size()
+              << ",\"call_cache_explicit_removed\":" << callTargetResolutionScratch_.explicitRemovedMethodPathCache.size()
+              << ",\"call_cache_method_memo\":" << callTargetResolutionScratch_.methodTargetMemoCache.size()
+              << ",\"call_cache_concrete_candidates\":" << callTargetResolutionScratch_.concreteCallBaseCandidates.size()
+              << ",\"call_cache_method_receiver_candidates\":" << callTargetResolutionScratch_.methodReceiverResolutionCandidates.size()
+              << ",\"call_cache_receiver_alias\":" << callTargetResolutionScratch_.canonicalReceiverAliasPathCache.size()
+              << ",\"rss_bytes\":" << captureCurrentResidentBytes()
+              << "}" << std::endl;
+  };
   auto runStage = [&](const char *stageName, auto &&fn) {
     try {
       const bool ok = fn();
@@ -146,27 +263,38 @@ bool SemanticsValidator::run() {
   if (!runStage("buildDefinitionMaps", [&] { return buildDefinitionMaps(); })) {
     return false;
   }
+  dumpValidatorState("buildDefinitionMaps");
   if (!runStage("inferUnknownReturnKinds",
                 [&] { return inferUnknownReturnKinds(); })) {
     return false;
   }
+  dumpValidatorState("inferUnknownReturnKinds");
   if (!runStage("validateTraitConstraints",
                 [&] { return validateTraitConstraints(); })) {
     return false;
   }
+  dumpValidatorState("validateTraitConstraints");
   if (!runStage("validateStructLayouts",
                 [&] { return validateStructLayouts(); })) {
     return false;
   }
+  dumpValidatorState("validateStructLayouts");
   if (!runStage("validateDefinitions",
                 [&] { return validateDefinitions(); })) {
     return false;
   }
+  dumpValidatorState("validateDefinitions");
   if (!runStage("validateExecutions",
                 [&] { return validateExecutions(); })) {
     return false;
   }
-  return runStage("validateEntry", [&] { return validateEntry(); });
+  dumpValidatorState("validateExecutions");
+  const bool entryOk = runStage("validateEntry", [&] { return validateEntry(); });
+  if (!entryOk) {
+    return false;
+  }
+  dumpValidatorState("validateEntry");
+  return true;
 }
 
 bool SemanticsValidator::allowMathBareName(const std::string &name) const {

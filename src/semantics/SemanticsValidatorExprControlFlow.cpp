@@ -70,6 +70,7 @@ bool SemanticsValidator::validateIfExpr(const std::vector<ParameterInfo> &params
     return failIfDiagnostic(cond, "if condition requires bool");
   }
 
+  std::unordered_map<std::string, BindingInfo> branchLocals = locals;
   auto validateBranchValueKind = [&](const Expr &branch, const char *label, ReturnKind &kindOut, bool &stringOut) -> bool {
     kindOut = ReturnKind::Unknown;
     stringOut = false;
@@ -81,7 +82,7 @@ bool SemanticsValidator::validateIfExpr(const std::vector<ParameterInfo> &params
                               std::string(label) + " block must produce a value");
     }
 
-    std::unordered_map<std::string, BindingInfo> branchLocals = locals;
+    LocalBindingScope branchScope(*this, branchLocals);
     const Expr *valueExpr = nullptr;
     bool sawReturn = false;
     for (const auto &bodyExpr : branch.bodyArguments) {
@@ -186,7 +187,7 @@ bool SemanticsValidator::validateIfExpr(const std::vector<ParameterInfo> &params
                                     "Reference bindings require location(...)");
           }
         }
-        branchLocals.emplace(bodyExpr.name, info);
+        insertLocalBinding(branchLocals, bodyExpr.name, std::move(info));
         continue;
       }
 

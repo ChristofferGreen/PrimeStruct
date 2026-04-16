@@ -373,13 +373,13 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         }
       }
     }
-    std::unordered_map<std::string, BindingInfo> blockLocals = locals;
+    LocalBindingScope blockLocalScope(*this, locals);
     OnErrorScope onErrorScope(*this, blockOnError);
     BorrowEndScope borrowScope(*this, currentValidationState_.endedReferenceBorrows);
     for (size_t bodyIndex = 0; bodyIndex < stmt.bodyArguments.size(); ++bodyIndex) {
       const Expr &bodyExpr = stmt.bodyArguments[bodyIndex];
       if (!validateStatement(params,
-                             blockLocals,
+                             locals,
                              bodyExpr,
                              returnKind,
                              allowReturn,
@@ -390,7 +390,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
                              bodyIndex)) {
         return false;
       }
-      expireReferenceBorrowsForRemainder(params, blockLocals, stmt.bodyArguments, bodyIndex + 1);
+      expireReferenceBorrowsForRemainder(params, locals, stmt.bodyArguments, bodyIndex + 1);
     }
     auto isSoaOwnerBinding = [&](const BindingInfo &binding) -> bool {
       if (binding.typeName == "soa_vector") {
@@ -443,24 +443,26 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
           return true;
         }
       }
-      for (const auto &entry : blockLocals) {
+      for (const auto &entry : locals) {
         if (hasBorrowFrom(entry.first, entry.second)) {
           return true;
         }
       }
       return false;
     };
-    for (const auto &entry : blockLocals) {
-      if (locals.count(entry.first) > 0) {
+    for (const auto &name : blockLocalScope.insertedNames) {
+      auto entryIt = locals.find(name);
+      if (entryIt == locals.end()) {
         continue;
       }
-      if (!isSoaOwnerBinding(entry.second)) {
+      const BindingInfo &binding = entryIt->second;
+      if (!isSoaOwnerBinding(binding)) {
         continue;
       }
-      if (hasActiveBorrowForRoot(entry.first)) {
+      if (hasActiveBorrowForRoot(name)) {
         return failStatementDiagnostic(
-            "borrowed binding: " + entry.first + " (root: " + entry.first +
-            ", sink: " + entry.first + ")");
+            "borrowed binding: " + name + " (root: " + name +
+            ", sink: " + name + ")");
       }
     }
     return true;

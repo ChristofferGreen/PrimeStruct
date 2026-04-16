@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -45,14 +46,12 @@ bool SemanticsValidator::validateExprBodyArguments(
   }
 
   std::unordered_map<std::string, BindingInfo> blockLocals = locals;
-  std::vector<Expr> livenessStatements = expr.bodyArguments;
-  if (enclosingStatements != nullptr &&
-      statementIndex < enclosingStatements->size()) {
-    for (size_t idx = statementIndex + 1; idx < enclosingStatements->size();
-         ++idx) {
-      livenessStatements.push_back((*enclosingStatements)[idx]);
-    }
-  }
+  const std::vector<Expr> *postMergeStatements = enclosingStatements;
+  const size_t postMergeStartIndex = enclosingStatements == nullptr
+                                         ? 0
+                                         : std::min(statementIndex + 1, enclosingStatements->size());
+  std::vector<BorrowLivenessRange> livenessRanges;
+  livenessRanges.reserve(2);
   OnErrorScope onErrorScope(*this, std::nullopt);
   BorrowEndScope borrowScope(*this,
                              currentValidationState_.endedReferenceBorrows);
@@ -64,8 +63,12 @@ bool SemanticsValidator::validateExprBodyArguments(
                            &expr.bodyArguments, bodyIndex)) {
       return false;
     }
-    expireReferenceBorrowsForRemainder(params, blockLocals, livenessStatements,
-                                       bodyIndex + 1);
+    livenessRanges.clear();
+    livenessRanges.push_back(BorrowLivenessRange{&expr.bodyArguments, bodyIndex + 1});
+    if (postMergeStatements != nullptr && postMergeStartIndex < postMergeStatements->size()) {
+      livenessRanges.push_back(BorrowLivenessRange{postMergeStatements, postMergeStartIndex});
+    }
+    expireReferenceBorrowsForRanges(params, blockLocals, livenessRanges);
   }
   return true;
 }

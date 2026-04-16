@@ -167,20 +167,7 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     return insertIt->second;
   };
   auto computeHasOverloadFamily = [&](const std::string &path) {
-    const std::string overloadPrefix = overloadFamilyPrefix(path);
-    for (const auto &[candidate, defPtr] : defMap_) {
-      (void)defPtr;
-      if (candidate.rfind(overloadPrefix, 0) == 0) {
-        return true;
-      }
-    }
-    for (const auto &[candidate, candidateParams] : paramsByDef_) {
-      (void)candidateParams;
-      if (candidate.rfind(overloadPrefix, 0) == 0) {
-        return true;
-      }
-    }
-    return false;
+    return overloadFamilyBasePaths_.count(path) > 0;
   };
   auto hasOverloadFamily = [&](const std::string &path) {
     if (!hasScopedOwner) {
@@ -277,33 +264,14 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     if (pathExists(directCandidate)) {
       return directCandidate;
     }
-    std::string singleCandidate;
-    auto considerCandidate = [&](const std::string &candidate) {
-      if (candidate.rfind(specializationPrefixText, 0) != 0) {
-        return;
-      }
-      if (!singleCandidate.empty() && singleCandidate != candidate) {
-        singleCandidate.clear();
-        singleCandidate = "__ambiguous__";
-        return;
-      }
-      singleCandidate = candidate;
-    };
-    for (const auto &[candidate, defPtr] : defMap_) {
-      (void)defPtr;
-      considerCandidate(candidate);
-      if (singleCandidate == "__ambiguous__") {
-        return std::string{};
-      }
+    if (ambiguousSpecializationBasePaths_.count(basePath) > 0) {
+      return std::string{};
     }
-    for (const auto &[candidate, candidateParams] : paramsByDef_) {
-      (void)candidateParams;
-      considerCandidate(candidate);
-      if (singleCandidate == "__ambiguous__") {
-        return std::string{};
-      }
+    const auto specializationIt = uniqueSpecializationPathByBase_.find(basePath);
+    if (specializationIt == uniqueSpecializationPathByBase_.end()) {
+      return std::string{};
     }
-    return singleCandidate == "__ambiguous__" ? std::string{} : singleCandidate;
+    return pathExists(specializationIt->second) ? specializationIt->second : std::string{};
   };
 
   const bool hasTemplateOverloads = hasOverloadFamily(candidatePath);

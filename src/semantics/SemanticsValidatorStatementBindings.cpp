@@ -117,7 +117,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
         return false;
       }
-      locals.emplace(stmt.name, info);
+      insertLocalBinding(locals, stmt.name, std::move(info));
       return true;
     }
     if (!validateOmittedBindingInitializer(stmt, info, namespacePrefix)) {
@@ -132,7 +132,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
       return false;
     }
-    locals.emplace(stmt.name, info);
+    insertLocalBinding(locals, stmt.name, std::move(info));
     return true;
   }
 
@@ -166,7 +166,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
       return false;
     }
-    locals.emplace(stmt.name, info);
+    insertLocalBinding(locals, stmt.name, std::move(info));
     return true;
   }
 
@@ -517,7 +517,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
       return false;
     }
-    locals.emplace(stmt.name, info);
+    insertLocalBinding(locals, stmt.name, std::move(info));
     return true;
   }
 
@@ -1063,7 +1063,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
         return false;
       }
-      locals.emplace(stmt.name, info);
+      insertLocalBinding(locals, stmt.name, std::move(info));
       return true;
     }
     if (!initIsLocation && currentValidationState_.context.definitionIsUnsafe) {
@@ -1082,7 +1082,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
         return false;
       }
-      locals.emplace(stmt.name, info);
+      insertLocalBinding(locals, stmt.name, std::move(info));
       return true;
     }
 
@@ -1428,7 +1428,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
     return false;
   }
-  locals.emplace(stmt.name, info);
+  insertLocalBinding(locals, stmt.name, std::move(info));
   return true;
 }
 

@@ -250,7 +250,7 @@ bool SemanticsValidator::inferDefinitionStatementReturns(
             "restrict type does not match binding type");
       }
     }
-    activeLocals.emplace(stmt.name, std::move(info));
+    insertLocalBinding(activeLocals, stmt.name, std::move(info));
     return true;
   }
   if (isReturnCall(stmt)) {
@@ -265,7 +265,8 @@ bool SemanticsValidator::inferDefinitionStatementReturns(
     return inferDefinitionStatementReturns(def, defParams, expanded, activeLocals, state);
   }
   auto inferStatementBody = [&](const std::vector<Expr> &body,
-                                std::unordered_map<std::string, BindingInfo> bodyLocals) {
+                                std::unordered_map<std::string, BindingInfo> &bodyLocals) {
+    LocalBindingScope bodyScope(*this, bodyLocals);
     for (const auto &bodyExpr : body) {
       if (!inferDefinitionStatementReturns(def, defParams, bodyExpr, bodyLocals, state)) {
         return false;
@@ -274,33 +275,45 @@ bool SemanticsValidator::inferDefinitionStatementReturns(
     return true;
   };
   if (isIfCall(stmt) && stmt.args.size() == 3) {
-    return inferStatementBody(stmt.args[1].bodyArguments, activeLocals) &&
-           inferStatementBody(stmt.args[2].bodyArguments, activeLocals);
+    {
+      LocalBindingScope thenScope(*this, activeLocals);
+      if (!inferStatementBody(stmt.args[1].bodyArguments, activeLocals)) {
+        return false;
+      }
+    }
+    {
+      LocalBindingScope elseScope(*this, activeLocals);
+      return inferStatementBody(stmt.args[2].bodyArguments, activeLocals);
+    }
   }
   if (isLoopCall(stmt) && stmt.args.size() == 2) {
+    LocalBindingScope loopScope(*this, activeLocals);
     return inferStatementBody(stmt.args[1].bodyArguments, activeLocals);
   }
   if (isWhileCall(stmt) && stmt.args.size() == 2) {
+    LocalBindingScope whileScope(*this, activeLocals);
     return inferStatementBody(stmt.args[1].bodyArguments, activeLocals);
   }
   if (isForCall(stmt) && stmt.args.size() == 4) {
-    std::unordered_map<std::string, BindingInfo> loopLocals = activeLocals;
-    if (!inferDefinitionStatementReturns(def, defParams, stmt.args[0], loopLocals, state)) {
+    LocalBindingScope loopScope(*this, activeLocals);
+    if (!inferDefinitionStatementReturns(def, defParams, stmt.args[0], activeLocals, state)) {
       return false;
     }
     if (stmt.args[1].isBinding &&
-        !inferDefinitionStatementReturns(def, defParams, stmt.args[1], loopLocals, state)) {
+        !inferDefinitionStatementReturns(def, defParams, stmt.args[1], activeLocals, state)) {
       return false;
     }
-    if (!inferDefinitionStatementReturns(def, defParams, stmt.args[2], loopLocals, state)) {
+    if (!inferDefinitionStatementReturns(def, defParams, stmt.args[2], activeLocals, state)) {
       return false;
     }
-    return inferStatementBody(stmt.args[3].bodyArguments, std::move(loopLocals));
+    return inferStatementBody(stmt.args[3].bodyArguments, activeLocals);
   }
   if (isRepeatCall(stmt)) {
+    LocalBindingScope repeatScope(*this, activeLocals);
     return inferStatementBody(stmt.bodyArguments, activeLocals);
   }
   if (isBlockCall(stmt) && stmt.hasBodyArguments) {
+    LocalBindingScope blockScope(*this, activeLocals);
     return inferStatementBody(stmt.bodyArguments, activeLocals);
   }
   return true;
