@@ -37,13 +37,17 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
   }
 
   Expr rewrittenVectorHelperCall;
+  const bool isBareVectorAccessHelperCall =
+      expr.namespacePrefix.empty() &&
+      (expr.name == "at" || expr.name == "at_unsafe");
+  const bool isResolvedCanonicalVectorAccessHelper =
+      resolved == "/std/collections/vector/at" ||
+      resolved == "/std/collections/vector/at_unsafe";
   if (!expr.isMethodCall &&
       !hasNamedArguments(expr.argNames) &&
       expr.args.size() >= 1 &&
-      ((expr.namespacePrefix.empty() &&
-        (expr.name == "at" || expr.name == "at_unsafe")) ||
-       resolved == "/std/collections/vector/at" ||
-       resolved == "/std/collections/vector/at_unsafe")) {
+      (isBareVectorAccessHelperCall ||
+       isResolvedCanonicalVectorAccessHelper)) {
     const bool isUnsafeHelper =
         expr.name == "at_unsafe" ||
         resolved == "/std/collections/vector/at_unsafe";
@@ -77,10 +81,13 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
     std::string experimentalElemType;
     if (resolvesExperimentalVectorValueReceiverForBareAccess(
             expr.args.front(), experimentalElemType)) {
-      rewrittenExprOut = expr;
-      rewrittenExprOut->isMethodCall = true;
-      rewrittenExprOut->name = helperName;
-      rewrittenExprOut->namespacePrefix.clear();
+      if (isBareVectorAccessHelperCall) {
+        rewrittenExprOut = expr;
+        rewrittenExprOut->isMethodCall = true;
+        rewrittenExprOut->name = helperName;
+        rewrittenExprOut->namespacePrefix.clear();
+        return true;
+      }
       return true;
     }
     bool isBuiltinMethod = false;

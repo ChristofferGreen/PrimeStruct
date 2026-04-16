@@ -543,7 +543,8 @@ main() {
   const std::string errPath =
       (std::filesystem::temp_directory_path() / "primec_vm_vector_literal_unsafe_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 139);
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("vm backend only supports at()") != std::string::npos);
 }
 
 TEST_CASE("runs vm bare vector at through imported stdlib helper") {

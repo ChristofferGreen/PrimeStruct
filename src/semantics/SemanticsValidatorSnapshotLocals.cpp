@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 
+#include <algorithm>
 #include <functional>
 
 namespace primec::semantics {

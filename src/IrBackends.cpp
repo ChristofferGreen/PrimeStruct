@@ -54,6 +54,14 @@ std::string injectComputeLayout(const std::string &glslSource) {
   return glslSource.substr(0, lineEnd + 1) + layoutLine + glslSource.substr(lineEnd + 1);
 }
 
+size_t totalInstructionCount(const IrModule &module) {
+  size_t count = 0;
+  for (const IrFunction &function : module.functions) {
+    count += function.instructions.size();
+  }
+  return count;
+}
+
 IrModule pruneIrModuleToReachableFunctions(const IrModule &module) {
   const std::size_t functionCount = module.functions.size();
   if (functionCount == 0 || module.entryIndex < 0 ||
@@ -480,24 +488,50 @@ public:
             IrBackendEmitResult & /*result*/,
             std::string &error) const override {
     const IrModule prunedModule = pruneIrModuleToReachableFunctions(module);
-    IrToCppEmitter emitter;
-    std::string cppSource;
-    if (!emitter.emitSource(prunedModule, cppSource, error)) {
-      error = "ir-to-cpp failed: " + error;
-      return false;
-    }
-
     const std::filesystem::path outputPath(options.outputPath);
     std::filesystem::path cppPath = outputPath;
     cppPath.replace_extension(".cpp");
-    if (!writeTextFile(cppPath.string(), cppSource)) {
-      error = cppPath.string();
+
+    auto emitCppSidecar = [&]() -> bool {
+      IrToCppEmitter emitter;
+      std::string cppSource;
+      if (!emitter.emitSource(prunedModule, cppSource, error)) {
+        error = "ir-to-cpp failed: " + error;
+        return false;
+      }
+      if (!writeTextFile(cppPath.string(), cppSource)) {
+        error = cppPath.string();
+        return false;
+      }
+      return true;
+    };
+
+    // Prefer native executable emission for `--emit=exe` to avoid host-compiler
+    // memory spikes on large IR modules. Keep writing the `.cpp` sidecar for
+    // normal-sized programs and diagnostics, but skip sidecar generation for
+    // very large modules where the sidecar itself causes significant RSS growth.
+    constexpr size_t ExeCppSidecarInstructionLimit = 50000u;
+    NativeEmitter nativeEmitter;
+    std::string nativeError;
+    if (nativeEmitter.emitExecutable(prunedModule, options.outputPath, nativeError)) {
+      if (totalInstructionCount(prunedModule) <= ExeCppSidecarInstructionLimit) {
+        if (!emitCppSidecar()) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    if (!emitCppSidecar()) {
       return false;
     }
 
     const ProcessRunner &processRunner = systemProcessRunner();
     if (!compileCppExecutable(processRunner, cppPath, outputPath)) {
       error = "Failed to compile output executable";
+      if (!nativeError.empty()) {
+        error += " (native backend fallback failed: " + nativeError + ")";
+      }
       return false;
     }
     return true;

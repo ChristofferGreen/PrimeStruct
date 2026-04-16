@@ -1,3 +1,6 @@
+import /std/collections/experimental_buffer_checked/*
+import /std/collections/experimental_buffer_unchecked/*
+
 namespace std {
   namespace collections {
   namespace experimental_soa_storage {

@@ -22,7 +22,6 @@ import signal
 import subprocess
 import sys
 import time
-from collections import defaultdict
 
 command_text = sys.argv[1]
 guard_mb_arg = sys.argv[2]
@@ -57,38 +56,33 @@ guard_triggered = False
 def subtree_rss_kb(root_pid: int) -> int:
     try:
         out = subprocess.check_output(
-            ["ps", "-axo", "pid=,ppid=,rss="],
+            ["ps", "-axo", "pid=,pgid=,rss="],
             text=True,
             stderr=subprocess.DEVNULL,
         )
     except Exception:
         return 0
 
-    children = defaultdict(list)
     rss_by_pid = {}
+    pgid_by_pid = {}
     for line in out.splitlines():
         parts = line.split()
         if len(parts) != 3:
             continue
         try:
             pid = int(parts[0])
-            ppid = int(parts[1])
+            pgid = int(parts[1])
             rss = int(parts[2])
         except ValueError:
             continue
-        children[ppid].append(pid)
         rss_by_pid[pid] = rss
+        pgid_by_pid[pid] = pgid
 
+    root_pgid = pgid_by_pid.get(root_pid, root_pid)
     total = 0
-    stack = [root_pid]
-    seen = set()
-    while stack:
-        pid = stack.pop()
-        if pid in seen:
-            continue
-        seen.add(pid)
-        total += rss_by_pid.get(pid, 0)
-        stack.extend(children.get(pid, []))
+    for pid, rss in rss_by_pid.items():
+        if pgid_by_pid.get(pid) == root_pgid:
+            total += rss
     return total
 
 while True:
@@ -108,10 +102,6 @@ while True:
         break
 
     time.sleep(0.1)
-
-final_rss = subtree_rss_kb(proc.pid)
-if final_rss > peak_rss_kb:
-    peak_rss_kb = final_rss
 
 proc.wait()
 if proc.returncode is None:

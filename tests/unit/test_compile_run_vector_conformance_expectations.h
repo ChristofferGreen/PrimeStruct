@@ -1,5 +1,11 @@
 #pragma once
 
+inline void expectVectorConformanceCompileReject(const std::string &source,
+                                                 const std::string &nameStem,
+                                                 const std::string &emitMode,
+                                                 const std::string &expectedFragment,
+                                                 const std::string &requiredFragment = "");
+
 inline void expectVectorConformanceProgramRuns(const std::string &source,
                                                const std::string &nameStem,
                                                const std::string &emitMode,
@@ -28,14 +34,19 @@ inline void expectExperimentalVectorCanonicalHelperRoutingConformance(const std:
                                        93);
     return;
   }
-
-  const std::string nameStem = "experimental_vector_canonical_helper_routing_" + emitMode;
-  const std::string srcPath = writeTemp(nameStem + ".prime", makeExperimentalVectorCanonicalHelperRoutingSource());
-  const std::string outPath = (testScratchPath("") / (nameStem + "_out.txt")).string();
-  const std::string exePath = (testScratchPath("") / (nameStem + "_exe")).string();
-  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
-                                 quoteShellArg(exePath) + " --entry /main > " + quoteShellArg(outPath) + " 2>&1";
-  CHECK(runCommand(compileCmd) == 139);
+  if (emitMode == "native" || emitMode == "exe") {
+    expectVectorConformanceCompileReject(
+        makeExperimentalVectorCanonicalHelperRoutingSource(),
+        "experimental_vector_canonical_helper_routing_" + emitMode,
+        emitMode,
+        "unknown call target: /std/collections/experimental_vector/vectorPop");
+    return;
+  }
+  expectVectorConformanceProgramRuns(
+      makeExperimentalVectorCanonicalHelperRoutingSource(),
+      "experimental_vector_canonical_helper_routing_" + emitMode,
+      emitMode,
+      93);
 }
 
 inline void expectVectorVmProgramRunsWithOutput(const std::string &source,
@@ -55,7 +66,7 @@ inline void expectVectorConformanceCompileReject(const std::string &source,
                                                  const std::string &nameStem,
                                                  const std::string &emitMode,
                                                  const std::string &expectedFragment,
-                                                 const std::string &requiredFragment = "") {
+                                                 const std::string &requiredFragment) {
   CAPTURE(nameStem);
   CAPTURE(emitMode);
   CAPTURE(expectedFragment);
@@ -244,10 +255,11 @@ inline void expectStdlibWrapperVectorConstructorReceiverConformance(const std::s
     return;
   }
   if (emitMode == "native" || emitMode == "exe") {
-    expectVectorConformanceCompileCrash(
+    expectVectorConformanceCompileReject(
         makeStdlibWrapperVectorConstructorReceiverConformanceSource(),
         "vector_wrapper_constructor_receiver_" + emitMode,
-        emitMode);
+        emitMode,
+        "native backend only supports at()");
     return;
   }
   expectVectorConformanceProgramRuns(
@@ -293,10 +305,11 @@ inline void expectCanonicalVectorNamespaceNamedArgsTemporaryReceiverConformance(
     return;
   }
   if (emitMode == "native" || emitMode == "exe") {
-    expectVectorConformanceCompileCrash(
+    expectVectorConformanceCompileReject(
         makeCanonicalVectorNamespaceNamedArgsTemporaryReceiverSource(),
         "vector_namespace_canonical_named_args_temporary_receiver_" + emitMode,
-        emitMode);
+        emitMode,
+        "count requires array, vector, map, or string target");
     return;
   }
   expectVectorConformanceProgramRuns(
@@ -804,10 +817,11 @@ inline void expectCanonicalVectorNamespaceTemporaryReceiverConformance(const std
     return;
   }
   if (emitMode == "native" || emitMode == "exe") {
-    expectVectorConformanceCompileCrash(
+    expectVectorConformanceCompileReject(
         makeCanonicalVectorNamespaceTemporaryReceiverSource(),
         "vector_namespace_canonical_temporary_receiver_" + emitMode,
-        emitMode);
+        emitMode,
+        "count requires array, vector, map, or string target");
     return;
   }
   expectVectorConformanceProgramRuns(

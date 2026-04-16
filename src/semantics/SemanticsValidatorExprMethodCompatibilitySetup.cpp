@@ -95,7 +95,7 @@ bool SemanticsValidator::prepareExprMethodCompatibilitySetup(
     }
   }
 
-  auto isKnownCollectionTarget = [this, &dispatchBootstrap](
+  auto isKnownCollectionTarget = [&dispatchBootstrap](
                                      const Expr &targetExpr) -> bool {
     std::string elemType;
     return dispatchBootstrap.dispatchResolvers.resolveVectorTarget(targetExpr,
@@ -134,7 +134,7 @@ bool SemanticsValidator::prepareExprMethodCompatibilitySetup(
     return structNames_.count(receiverPath) > 0;
   };
   setupOut.unavailableMethodDiagnostic =
-      [this](const std::string &resolvedPath) -> std::string {
+      [](const std::string &resolvedPath) -> std::string {
     if (resolvedPath == "/std/gfx/experimental/Device/create_pipeline") {
       return "experimental gfx entry point not implemented yet: "
              "Device.create_pipeline([vertex_type] type, ...)";
