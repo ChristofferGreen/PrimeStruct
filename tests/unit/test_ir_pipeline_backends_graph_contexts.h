@@ -983,11 +983,11 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterHeader.find("std::unordered_map<std::string, const SemanticProgramTypeMetadata *> typeMetadataByPath;") !=
+  CHECK(semanticTargetAdapterHeader.find("std::unordered_map<std::string_view, const SemanticProgramTypeMetadata *> typeMetadataByPath;") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::vector<const SemanticProgramTypeMetadata *> orderedStructTypeMetadata;") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterHeader.find("std::unordered_map<std::string, std::vector<const SemanticProgramStructFieldMetadata *>>") !=
+  CHECK(semanticTargetAdapterHeader.find("std::unordered_map<std::string_view, std::vector<const SemanticProgramStructFieldMetadata *>>") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramTypeMetadata *findSemanticProductTypeMetadata(") !=
         std::string::npos);

@@ -1164,9 +1164,9 @@ TEST_CASE("ir lowerer semantic-product adapter ignores bridge-path choices with 
   });
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
-  CHECK(adapter.semanticIndex.bridgePathChoicesByExpr.count(118) == 0);
-  CHECK(adapter.semanticIndex.bridgePathChoicesByExpr.count(119) == 1);
-  CHECK(adapter.semanticIndex.bridgePathChoicesByExpr.count(120) == 0);
+  CHECK(adapter.semanticIndex.bridgePathChoiceIdsByExpr.count(118) == 0);
+  CHECK(adapter.semanticIndex.bridgePathChoiceIdsByExpr.count(119) == 1);
+  CHECK(adapter.semanticIndex.bridgePathChoiceIdsByExpr.count(120) == 0);
 
   primec::Expr missingHelperExpr;
   missingHelperExpr.kind = primec::Expr::Kind::Call;

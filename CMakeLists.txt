@@ -1401,6 +1401,13 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_graph_budget PROPERTIES RUN_SERIAL TRUE TIMEOUT 120 LABELS "parallel-safe")
 
+  set(PRIMESTRUCT_SEMANTIC_MEMORY_POLICY
+      ${CMAKE_SOURCE_DIR}/benchmarks/semantic_memory_budget_policy.json)
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(PRIMESTRUCT_SEMANTIC_MEMORY_POLICY
+        ${CMAKE_SOURCE_DIR}/benchmarks/semantic_memory_budget_policy_debug.json)
+  endif()
+
   add_custom_target(
     primestruct_semantic_memory_benchmark
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/semantic_memory_ci_artifacts.py
@@ -1409,7 +1416,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             --primec $<TARGET_FILE:primec>
             --repo-root ${CMAKE_SOURCE_DIR}
             --runs 3
-            --policy ${CMAKE_SOURCE_DIR}/benchmarks/semantic_memory_budget_policy.json
+            --policy ${PRIMESTRUCT_SEMANTIC_MEMORY_POLICY}
             --history-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_history
             --history-limit 2
             --benchmark-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_report.json
@@ -1430,7 +1437,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             --primec $<TARGET_FILE:primec>
             --repo-root ${CMAKE_SOURCE_DIR}
             --runs 3
-            --policy ${CMAKE_SOURCE_DIR}/benchmarks/semantic_memory_budget_policy.json
+            --policy ${PRIMESTRUCT_SEMANTIC_MEMORY_POLICY}
             --history-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_history
             --history-limit 2
             --benchmark-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_report.json
@@ -1450,7 +1457,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             --primec $<TARGET_FILE:primec>
             --repo-root ${CMAKE_SOURCE_DIR}
             --runs 3
-            --policy ${CMAKE_SOURCE_DIR}/benchmarks/semantic_memory_budget_policy.json
+            --policy ${PRIMESTRUCT_SEMANTIC_MEMORY_POLICY}
             --benchmark-definition-validation-workers both
             --history-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_definition_worker_parity_history
             --history-limit 2
@@ -1472,7 +1479,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             --primec $<TARGET_FILE:primec>
             --repo-root ${CMAKE_SOURCE_DIR}
             --runs 3
-            --policy ${CMAKE_SOURCE_DIR}/benchmarks/semantic_memory_budget_policy.json
+            --policy ${PRIMESTRUCT_SEMANTIC_MEMORY_POLICY}
             --benchmark-definition-validation-workers both
             --history-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_definition_worker_parity_history
             --history-limit 2
@@ -1492,7 +1499,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             --run-label semantic_memory_trend
             --primec $<TARGET_FILE:primec>
             --runs 3
-            --policy ${CMAKE_SOURCE_DIR}/benchmarks/semantic_memory_budget_policy.json
+            --policy ${PRIMESTRUCT_SEMANTIC_MEMORY_POLICY}
             --history-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_history
             --history-limit 2
             --benchmark-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_report.json
@@ -1512,7 +1519,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             --run-label semantic_memory_trend
             --primec $<TARGET_FILE:primec>
             --runs 3
-            --policy ${CMAKE_SOURCE_DIR}/benchmarks/semantic_memory_budget_policy.json
+            --policy ${PRIMESTRUCT_SEMANTIC_MEMORY_POLICY}
             --history-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_history
             --history-limit 2
             --benchmark-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_report.json
