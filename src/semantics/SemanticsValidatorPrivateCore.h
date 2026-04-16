@@ -62,6 +62,9 @@
   std::string inferStructReturnPath(const Expr &expr,
                                     const std::vector<ParameterInfo> &params,
                                     const std::unordered_map<std::string, BindingInfo> &locals);
+  std::string inferStructReturnPathImpl(const Expr &expr,
+                                        const std::vector<ParameterInfo> &params,
+                                        const std::unordered_map<std::string, BindingInfo> &locals);
   ReturnKind combineInferredNumericKinds(ReturnKind left, ReturnKind right) const;
   bool isInferStructTypeName(const std::string &typeName, const std::string &namespacePrefix) const;
   ReturnKind inferReferenceTargetKind(const std::string &templateArg, const std::string &namespacePrefix) const;

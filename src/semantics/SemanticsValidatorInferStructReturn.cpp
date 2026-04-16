@@ -6,6 +6,35 @@ std::string SemanticsValidator::inferStructReturnPath(
     const Expr &expr,
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals) {
+  if (!structReturnMemoizationEnabled_) {
+    return inferStructReturnPathImpl(expr, params, locals);
+  }
+  if (inferStructReturnMemoDefinitionOwner_ != currentDefinitionContext_ ||
+      inferStructReturnMemoExecutionOwner_ != currentExecutionContext_) {
+    inferStructReturnMemo_.clear();
+    inferStructReturnMemoDefinitionOwner_ = currentDefinitionContext_;
+    inferStructReturnMemoExecutionOwner_ = currentExecutionContext_;
+  }
+  const ExprStructReturnMemoKey memoKey{
+      &expr,
+      params.empty() ? nullptr : params.data(),
+      params.size(),
+      &locals,
+      locals.size(),
+  };
+  if (const auto memoIt = inferStructReturnMemo_.find(memoKey);
+      memoIt != inferStructReturnMemo_.end()) {
+    return memoIt->second;
+  }
+  std::string inferred = inferStructReturnPathImpl(expr, params, locals);
+  inferStructReturnMemo_.emplace(memoKey, inferred);
+  return inferred;
+}
+
+std::string SemanticsValidator::inferStructReturnPathImpl(
+    const Expr &expr,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals) {
   auto isMatrixQuaternionTypePath = [](const std::string &typePath) {
     return typePath == "/std/math/Mat2" || typePath == "/std/math/Mat3" || typePath == "/std/math/Mat4" ||
            typePath == "/std/math/Quat";

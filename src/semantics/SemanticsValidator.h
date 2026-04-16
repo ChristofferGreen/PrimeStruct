@@ -643,6 +643,37 @@ private:
     }
   };
 
+  struct ExprStructReturnMemoKey {
+    const Expr *expr = nullptr;
+    const ParameterInfo *paramsData = nullptr;
+    std::size_t paramsSize = 0;
+    const void *localsIdentity = nullptr;
+    std::size_t localsSize = 0;
+
+    bool operator==(const ExprStructReturnMemoKey &other) const {
+      return expr == other.expr &&
+             paramsData == other.paramsData &&
+             paramsSize == other.paramsSize &&
+             localsIdentity == other.localsIdentity &&
+             localsSize == other.localsSize;
+    }
+  };
+
+  struct ExprStructReturnMemoKeyHash {
+    std::size_t operator()(const ExprStructReturnMemoKey &key) const {
+      std::size_t hash = std::hash<const Expr *>{}(key.expr);
+      hash ^= std::hash<const ParameterInfo *>{}(key.paramsData) + 0x9e3779b9 +
+              (hash << 6) + (hash >> 2);
+      hash ^= std::hash<std::size_t>{}(key.paramsSize) + 0x9e3779b9 +
+              (hash << 6) + (hash >> 2);
+      hash ^= std::hash<const void *>{}(key.localsIdentity) + 0x9e3779b9 +
+              (hash << 6) + (hash >> 2);
+      hash ^= std::hash<std::size_t>{}(key.localsSize) + 0x9e3779b9 +
+              (hash << 6) + (hash >> 2);
+      return hash;
+    }
+  };
+
   const Program &program_;
   const std::string &entryPath_;
   std::string &error_;
@@ -654,6 +685,7 @@ private:
   uint32_t benchmarkSemanticDefinitionValidationWorkerCount_ = 1;
   bool benchmarkSemanticPhaseCountersEnabled_ = false;
   bool methodTargetMemoizationEnabled_ = true;
+  bool structReturnMemoizationEnabled_ = true;
   bool benchmarkGraphLocalAutoLegacyKeyShadowEnabled_ = false;
   bool benchmarkGraphLocalAutoLegacySideChannelShadowEnabled_ = false;
   bool benchmarkGraphLocalAutoDependencyScratchPmrEnabled_ = true;
@@ -727,8 +759,12 @@ private:
   std::vector<LocalBindingScope *> activeLocalBindingScopes_;
   std::unordered_map<ExprReturnKindMemoKey, ReturnKind, ExprReturnKindMemoKeyHash>
       inferExprReturnKindMemo_;
+  std::unordered_map<ExprStructReturnMemoKey, std::string, ExprStructReturnMemoKeyHash>
+      inferStructReturnMemo_;
   const Definition *inferExprReturnKindMemoDefinitionOwner_ = nullptr;
   const Execution *inferExprReturnKindMemoExecutionOwner_ = nullptr;
+  const Definition *inferStructReturnMemoDefinitionOwner_ = nullptr;
+  const Execution *inferStructReturnMemoExecutionOwner_ = nullptr;
   mutable CallTargetResolutionScratch callTargetResolutionScratch_;
 
   void observeCallVisited();

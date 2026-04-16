@@ -111,6 +111,10 @@ SemanticsValidator::SemanticsValidator(const Program &program,
   for (const auto &importPath : program_.imports) {
     registerMathImport(importPath);
   }
+  if (std::getenv("PRIMEC_BENCHMARK_DISABLE_STRUCT_RETURN_MEMOIZATION") !=
+      nullptr) {
+    structReturnMemoizationEnabled_ = false;
+  }
 }
 
 void SemanticsValidator::observeCallVisited() {
@@ -138,6 +142,7 @@ void SemanticsValidator::insertLocalBinding(
     return;
   }
   inferExprReturnKindMemo_.clear();
+  inferStructReturnMemo_.clear();
   for (auto scopeIt = activeLocalBindingScopes_.rbegin();
        scopeIt != activeLocalBindingScopes_.rend();
        ++scopeIt) {
@@ -224,6 +229,8 @@ bool SemanticsValidator::run() {
               << ",\"active_local_scopes\":" << activeLocalBindingScopes_.size()
               << ",\"expr_return_memo\":" << inferExprReturnKindMemo_.size()
               << ",\"expr_return_memo_buckets\":" << inferExprReturnKindMemo_.bucket_count()
+              << ",\"struct_return_memo\":" << inferStructReturnMemo_.size()
+              << ",\"struct_return_memo_buckets\":" << inferStructReturnMemo_.bucket_count()
               << ",\"call_cache_key_interner\":" << callTargetResolutionScratch_.keyInterner.size()
               << ",\"call_cache_definition_family\":" << callTargetResolutionScratch_.definitionFamilyPathCache.size()
               << ",\"call_cache_overload_family\":" << callTargetResolutionScratch_.overloadFamilyPathCache.size()
