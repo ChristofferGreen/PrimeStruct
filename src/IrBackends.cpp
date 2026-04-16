@@ -13,6 +13,7 @@
 
 #include <array>
 #include <cstdint>
+#include <deque>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -51,6 +52,67 @@ std::string injectComputeLayout(const std::string &glslSource) {
     return glslSource + "\n" + layoutLine;
   }
   return glslSource.substr(0, lineEnd + 1) + layoutLine + glslSource.substr(lineEnd + 1);
+}
+
+IrModule pruneIrModuleToReachableFunctions(const IrModule &module) {
+  const std::size_t functionCount = module.functions.size();
+  if (functionCount == 0 || module.entryIndex < 0 ||
+      static_cast<std::size_t>(module.entryIndex) >= functionCount) {
+    return module;
+  }
+
+  std::vector<bool> reachable(functionCount, false);
+  std::deque<std::size_t> pending;
+  const std::size_t entryIndex = static_cast<std::size_t>(module.entryIndex);
+  reachable[entryIndex] = true;
+  pending.push_back(entryIndex);
+
+  while (!pending.empty()) {
+    const std::size_t functionIndex = pending.front();
+    pending.pop_front();
+    const auto &function = module.functions[functionIndex];
+    for (const auto &instruction : function.instructions) {
+      if (instruction.op != IrOpcode::Call && instruction.op != IrOpcode::CallVoid) {
+        continue;
+      }
+      const std::size_t targetIndex = static_cast<std::size_t>(instruction.imm);
+      if (targetIndex >= functionCount || reachable[targetIndex]) {
+        continue;
+      }
+      reachable[targetIndex] = true;
+      pending.push_back(targetIndex);
+    }
+  }
+
+  std::vector<int32_t> oldToNew(functionCount, -1);
+  IrModule pruned;
+  pruned.stringTable = module.stringTable;
+  pruned.structLayouts = module.structLayouts;
+  pruned.instructionSourceMap = module.instructionSourceMap;
+  pruned.functions.reserve(functionCount);
+  for (std::size_t oldIndex = 0; oldIndex < functionCount; ++oldIndex) {
+    if (!reachable[oldIndex]) {
+      continue;
+    }
+    oldToNew[oldIndex] = static_cast<int32_t>(pruned.functions.size());
+    pruned.functions.push_back(module.functions[oldIndex]);
+  }
+
+  pruned.entryIndex = oldToNew[entryIndex];
+  for (auto &function : pruned.functions) {
+    for (auto &instruction : function.instructions) {
+      if (instruction.op != IrOpcode::Call && instruction.op != IrOpcode::CallVoid) {
+        continue;
+      }
+      const std::size_t oldTarget = static_cast<std::size_t>(instruction.imm);
+      if (oldTarget >= oldToNew.size() || oldToNew[oldTarget] < 0) {
+        continue;
+      }
+      instruction.imm = static_cast<uint64_t>(oldToNew[oldTarget]);
+    }
+  }
+
+  return pruned;
 }
 
 class VmIrBackend final : public IrBackend {
@@ -369,9 +431,10 @@ public:
             const IrBackendEmitOptions &options,
             IrBackendEmitResult & /*result*/,
             std::string &error) const override {
+    const IrModule prunedModule = pruneIrModuleToReachableFunctions(module);
     IrToCppEmitter emitter;
     std::string cppSource;
-    if (!emitter.emitSource(module, cppSource, error)) {
+    if (!emitter.emitSource(prunedModule, cppSource, error)) {
       error = "ir-to-cpp failed: " + error;
       return false;
     }

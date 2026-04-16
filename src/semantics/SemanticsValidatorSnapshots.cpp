@@ -1132,7 +1132,8 @@ std::vector<SemanticsValidator::QueryFactSnapshotEntry>
 SemanticsValidator::queryFactSnapshotForSemanticProduct() {
   ensureQuerySnapshotFactCaches(
       true, false, false, false, false);
-  return queryFactSnapshotCache_;
+  queryFactSnapshotCacheValid_ = false;
+  return std::exchange(queryFactSnapshotCache_, {});
 }
 
 std::vector<SemanticsValidator::TryValueSnapshotEntry>

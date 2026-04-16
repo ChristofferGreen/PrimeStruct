@@ -231,6 +231,21 @@ std::string fallbackBindingResolvedPathForSemanticProduct(std::string_view scope
   return normalizedScope;
 }
 
+void relieveSemanticAllocatorPressure() {
+#if defined(__APPLE__)
+  (void)malloc_zone_pressure_relief(nullptr, 0);
+#elif defined(__linux__) && defined(__GLIBC__)
+  (void)malloc_trim(0);
+#endif
+}
+
+void maybeRelieveSemanticAllocatorPressure() {
+  if (std::getenv("PRIMEC_DISABLE_SEMANTIC_ALLOCATOR_RELIEF") != nullptr) {
+    return;
+  }
+  relieveSemanticAllocatorPressure();
+}
+
 bool isBridgeHelperNameForSemanticProductBuild(std::string_view collectionFamily,
                                                std::string_view helperName) {
   if (collectionFamily == "vector") {
@@ -449,6 +464,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
           entryIndex);
     }
     validator.releaseTransientSnapshotCaches();
+    maybeRelieveSemanticAllocatorPressure();
   }
   if (isCollectorEnabled("method_call_targets")) {
     const auto methodCallTargets = validator.methodCallTargetSnapshotForSemanticProduct();
@@ -473,6 +489,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
           entryIndex);
     }
     validator.releaseTransientSnapshotCaches();
+    maybeRelieveSemanticAllocatorPressure();
   }
   if (isCollectorEnabled("bridge_path_choices")) {
     const auto bridgePathChoices = directCallTargetSnapshotsForBridgeDerivation.has_value()
@@ -617,6 +634,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
           .bindingFactIndices.push_back(entryIndex);
     }
     validator.releaseTransientSnapshotCaches();
+    maybeRelieveSemanticAllocatorPressure();
   }
   if (isCollectorEnabled("return_facts")) {
     const auto returnFacts = validator.returnFactSnapshotForSemanticProduct();
@@ -645,6 +663,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
       ensureModuleResolvedArtifacts(snapshotEntry.definitionPath).returnFactIndices.push_back(entryIndex);
     }
     validator.releaseTransientSnapshotCaches();
+    maybeRelieveSemanticAllocatorPressure();
   }
   if (isCollectorEnabled("local_auto_facts")) {
     const auto localAutoFacts = validator.localAutoFactSnapshotForSemanticProduct();
@@ -770,6 +789,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
           .queryFactIndices.push_back(entryIndex);
     }
     validator.releaseTransientSnapshotCaches();
+    maybeRelieveSemanticAllocatorPressure();
   }
   if (isCollectorEnabled("try_facts")) {
     const auto tryFacts = validator.tryFactSnapshotForSemanticProduct();
@@ -813,6 +833,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
       ensureModuleResolvedArtifacts(snapshotEntry.scopePath).tryFactIndices.push_back(entryIndex);
     }
     validator.releaseTransientSnapshotCaches();
+    maybeRelieveSemanticAllocatorPressure();
   }
   if (isCollectorEnabled("on_error_facts")) {
     const auto onErrorFacts = validator.onErrorFactSnapshotForSemanticProduct();
@@ -862,6 +883,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
     semanticProgram.moduleResolvedArtifacts[moduleIndex].identity.stableOrder = moduleIndex;
   }
 
+  maybeRelieveSemanticAllocatorPressure();
   return semanticProgram;
 }
 
@@ -6187,6 +6209,7 @@ bool Semantics::validate(Program &program,
       return false;
     }
     semantics::assignSemanticNodeIds(program);
+    maybeRelieveSemanticAllocatorPressure();
     if (benchmarkSemanticPhaseCounters != nullptr && benchmarkSemanticAllocationCountersEnabled) {
       validationAllocationAfter = captureProcessAllocationSample();
       hasValidationAllocationAfter = true;
