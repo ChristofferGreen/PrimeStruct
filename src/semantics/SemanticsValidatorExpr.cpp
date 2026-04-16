@@ -351,6 +351,20 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (expr.isFieldAccess) {
       return validateExprFieldAccess(params, locals, expr);
     }
+    bool handledFastNumericBuiltin = false;
+    if (!expr.isMethodCall &&
+        !hasNamedArguments(expr.argNames) &&
+        expr.templateArgs.empty() &&
+        !expr.hasBodyArguments &&
+        expr.bodyArguments.empty()) {
+      if (!validateNumericBuiltinExpr(params, locals, expr,
+                                      handledFastNumericBuiltin)) {
+        return false;
+      }
+      if (handledFastNumericBuiltin) {
+        return true;
+      }
+    }
     bool hasVectorHelperCallResolution = false;
     std::string vectorHelperCallResolvedPath;
     size_t vectorHelperCallReceiverIndex = 0;
