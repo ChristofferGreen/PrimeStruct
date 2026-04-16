@@ -232,6 +232,15 @@ def run_non_expensive_suite(build_dir: Path, marked_file: Path, fast_exclude_fil
     if fast_exclude_file is not None:
         combined |= read_line_set(fast_exclude_file)
 
+    selected = all_test_names(build_dir) - combined
+    if not selected:
+        print(
+            "error: non-expensive gate selected zero tests after exclusions; refusing to pass.",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 1
+
     if combined:
         with tempfile.NamedTemporaryFile(prefix="primestruct-ctest-exclude-", delete=False) as tmp:
             combined_file = Path(tmp.name)
@@ -295,6 +304,19 @@ def cmd_run_gate(args: argparse.Namespace) -> int:
         refresh_marked(build_dir, auto_file, marked_file)
 
         marked = read_line_set(marked_file)
+        all_tests = all_test_names(build_dir)
+        if all_tests and len(marked) >= len(all_tests):
+            auto_marked = read_line_set(auto_file) & all_tests
+            if auto_marked:
+                print(
+                    "Auto offender file currently marks every discovered test; "
+                    "clearing auto offenders for this gate run.",
+                    flush=True,
+                )
+                write_line_set(auto_file, [])
+                refresh_marked(build_dir, auto_file, marked_file)
+                marked = read_line_set(marked_file)
+
         if marked:
             if include_expensive:
                 print(f"Marked expensive tests: {len(marked)} (will run serially).", flush=True)
