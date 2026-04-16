@@ -71,6 +71,7 @@ bool SemanticsValidator::inferQuerySnapshotData(const std::vector<ParameterInfo>
       }
     }
     if (out.receiverBinding.typeName.empty() &&
+        expr.isMethodCall &&
         !(withPreservedError([&]() {
             return inferBindingTypeFromInitializer(receiverExpr, defParams, activeLocals, out.receiverBinding);
           }) &&
