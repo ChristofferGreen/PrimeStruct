@@ -48,17 +48,8 @@ inline std::string quoteShellArg(const std::string &value) {
   return quoted;
 }
 
-inline std::string wrappedCommand(const std::string &command) {
-  const char *wrapperPath = std::getenv("PRIMESTRUCT_RUN_COMMAND_WRAPPER");
-  if (wrapperPath == nullptr || wrapperPath[0] == '\0') {
-    return command;
-  }
-  return quoteShellArg(wrapperPath) + " " + quoteShellArg(command);
-}
-
 inline int runCommand(const std::string &command) {
-  const std::string commandToRun = wrappedCommand(command);
-  int code = std::system(commandToRun.c_str());
+  int code = std::system(command.c_str());
 #if defined(__unix__) || defined(__APPLE__)
   if (code == -1) {
     return -1;

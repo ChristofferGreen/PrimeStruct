@@ -142,7 +142,7 @@ This report captures:
 - Median and worst-case wall/RSS across 3 runs.
 - Semantic-product key-cardinality metrics (distinct direct/method target keys and max key length).
 - `1x/2x/4x` scale-fixture slope estimates for RSS/time.
-- Expensive-threshold annotations (`3s` runtime, `500 MiB` peak RSS): per-row flags plus an `expensive_offenders` summary.
+- Threshold annotations (`3s` runtime, `500 MiB` peak RSS): per-row flags plus an `expensive_offenders` summary.
 
 Benchmark-only collector controls are forwarded to `primec`:
 
@@ -177,8 +177,8 @@ Initial checked-in baseline report:
   `P2-13` per-definition arena/PMR scratch-allocation RSS/time delta on
   `math_star_repro` (`semantic-product`, 3 runs) against that baseline.
 
-The CTest target `PrimeStruct_semantic_memory_benchmark` is labeled `expensive`
-and `RUN_SERIAL` because baseline fixtures exceed the expensive-test thresholds.
+The CTest target `PrimeStruct_semantic_memory_benchmark` runs `RUN_SERIAL`
+because baseline fixtures exceed the benchmark threshold annotations.
 
 Check semantic memory report budgets against policy:
 

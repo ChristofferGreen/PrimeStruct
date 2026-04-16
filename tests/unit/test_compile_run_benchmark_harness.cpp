@@ -207,7 +207,7 @@ TEST_CASE("semantic memory baseline report is checked in with fixture phase cove
   CHECK(readFile(validateErrPath).empty());
 }
 
-TEST_CASE("semantic memory ctest targets stay serial and expensive when baseline exceeds thresholds") {
+TEST_CASE("semantic memory ctest targets stay serial when baseline exceeds thresholds") {
   if (!hasPython3()) {
     INFO("python3 not available");
     return;
@@ -219,8 +219,8 @@ TEST_CASE("semantic memory ctest targets stay serial and expensive when baseline
   REQUIRE(std::filesystem::exists(cmakePath));
   REQUIRE(std::filesystem::exists(baselinePath));
 
-  const std::string validateOutPath = writeTemp("semantic_memory_ctest_expensive_validate.out", "");
-  const std::string validateErrPath = writeTemp("semantic_memory_ctest_expensive_validate.err", "");
+  const std::string validateOutPath = writeTemp("semantic_memory_ctest_serial_validate.out", "");
+  const std::string validateErrPath = writeTemp("semantic_memory_ctest_serial_validate.err", "");
   const std::string validateCmd =
       "python3 -c " +
       quoteShellArg(
@@ -240,14 +240,14 @@ TEST_CASE("semantic memory ctest targets stay serial and expensive when baseline
           ")\n"
           "benchmark_guard = re.search(\n"
           "  r'set_tests_properties\\(\\s*PrimeStruct_semantic_memory_benchmark\\s*'\n"
-          "  r'PROPERTIES\\s*RUN_SERIAL TRUE\\s*TIMEOUT 1800\\s*LABELS \"expensive\"\\s*\\)',\n"
+          "  r'PROPERTIES\\s*RUN_SERIAL TRUE\\s*TIMEOUT 1800\\s*\\)',\n"
           "  cmake_text,\n"
           "  re.S,\n"
           ") is not None\n"
           "trend_guard = re.search(\n"
           "  r'set_tests_properties\\(\\s*PrimeStruct_semantic_memory_trend\\s*'\n"
           "  r'PROPERTIES\\s*DEPENDS PrimeStruct_semantic_memory_benchmark\\s*'\n"
-          "  r'RUN_SERIAL TRUE\\s*TIMEOUT 300\\s*LABELS \"expensive\"\\s*\\)',\n"
+          "  r'RUN_SERIAL TRUE\\s*TIMEOUT 300\\s*\\)',\n"
           "  cmake_text,\n"
           "  re.S,\n"
           ") is not None\n"

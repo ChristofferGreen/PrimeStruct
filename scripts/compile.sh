@@ -5,13 +5,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="$ROOT_DIR/build-debug"
 BUILD_TYPE="Debug"
 SKIP_TESTS=0
-INCLUDE_EXPENSIVE_TESTS=0
-EXPENSIVE_RUNTIME_THRESHOLD_SECONDS=3
-EXPENSIVE_MEMORY_THRESHOLD_MB=500
-DEFAULT_TEST_MEMORY_GUARD_MB=8192
 
 usage() {
-  echo "Usage: ./scripts/compile.sh [--release] [--runtime-threshold <seconds>] [--skip-tests] [--include-expensive-tests]" >&2
+  echo "Usage: ./scripts/compile.sh [--release] [--skip-tests]" >&2
 }
 
 detect_jobs() {
@@ -43,20 +39,8 @@ while [[ $# -gt 0 ]]; do
       BUILD_TYPE="Release"
       shift
       ;;
-    --runtime-threshold)
-      if [[ $# -lt 2 || ! "$2" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
-        usage
-        exit 2
-      fi
-      EXPENSIVE_RUNTIME_THRESHOLD_SECONDS="$2"
-      shift 2
-      ;;
     --skip-tests)
       SKIP_TESTS=1
-      shift
-      ;;
-    --include-expensive-tests)
-      INCLUDE_EXPENSIVE_TESTS=1
       shift
       ;;
     *)
@@ -79,17 +63,5 @@ if [[ "$SKIP_TESTS" -eq 1 ]]; then
   exit 0
 fi
 
-export PRIMESTRUCT_RUN_COMMAND_WRAPPER="$ROOT_DIR/scripts/test_command_wrapper.sh"
-if [[ ! -x "$PRIMESTRUCT_RUN_COMMAND_WRAPPER" ]]; then
-  echo "error: command wrapper is missing or not executable: $PRIMESTRUCT_RUN_COMMAND_WRAPPER" >&2
-  exit 1
-fi
-
-export PRIMESTRUCT_EXPENSIVE_MEMORY_THRESHOLD_MB="${PRIMESTRUCT_EXPENSIVE_MEMORY_THRESHOLD_MB:-$EXPENSIVE_MEMORY_THRESHOLD_MB}"
-export PRIMESTRUCT_TEST_MEMORY_GUARD_MB="${PRIMESTRUCT_TEST_MEMORY_GUARD_MB:-$DEFAULT_TEST_MEMORY_GUARD_MB}"
-
-python3 "$ROOT_DIR/scripts/manage_expensive_tests.py" run-gate \
-  --build-dir "$BUILD_DIR" \
-  --include-expensive-tests "$INCLUDE_EXPENSIVE_TESTS" \
-  --runtime-threshold "$EXPENSIVE_RUNTIME_THRESHOLD_SECONDS" \
-  --memory-threshold "$EXPENSIVE_MEMORY_THRESHOLD_MB"
+CTEST_JOBS="${CTEST_PARALLEL_LEVEL:-$JOBS}"
+ctest --test-dir "$BUILD_DIR" --output-on-failure --parallel "$CTEST_JOBS"
