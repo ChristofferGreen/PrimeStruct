@@ -597,7 +597,7 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
       .functionCount = module.functions.size(),
       .stringLengths = std::move(stringLengths),
   };
-  constexpr size_t DispatchChunkSize = 8192ull;
+  constexpr size_t DispatchChunkSize = 1024ull;
   for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
     const IrFunction &function = module.functions[functionIndex];
     const size_t localCount = computeLocalCount(function);
