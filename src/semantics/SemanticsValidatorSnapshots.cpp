@@ -437,31 +437,36 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
 
 std::vector<SemanticsValidator::QueryCallTypeSnapshotEntry>
 SemanticsValidator::queryCallTypeSnapshotForTesting() {
-  ensureQuerySnapshotFactCaches();
+  ensureQuerySnapshotFactCaches(
+      false, false, true, false, false);
   return queryCallTypeSnapshotCache_;
 }
 
 std::vector<SemanticsValidator::QueryBindingSnapshotEntry>
 SemanticsValidator::queryBindingSnapshotForTesting() {
-  ensureQuerySnapshotFactCaches();
+  ensureQuerySnapshotFactCaches(
+      false, false, false, true, false);
   return queryBindingSnapshotCache_;
 }
 
 std::vector<SemanticsValidator::QueryResultTypeSnapshotEntry>
 SemanticsValidator::queryResultTypeSnapshotForTesting() {
-  ensureQuerySnapshotFactCaches();
+  ensureQuerySnapshotFactCaches(
+      false, false, false, false, true);
   return queryResultTypeSnapshotCache_;
 }
 
 std::vector<SemanticsValidator::TryValueSnapshotEntry>
 SemanticsValidator::tryValueSnapshotForTesting() {
-  ensureCallAndTrySnapshotFactCaches();
+  ensureCallAndTrySnapshotFactCaches(
+      true, false);
   return tryValueSnapshotCache_;
 }
 
 std::vector<SemanticsValidator::CallBindingSnapshotEntry>
 SemanticsValidator::callBindingSnapshotForTesting() {
-  ensureCallAndTrySnapshotFactCaches();
+  ensureCallAndTrySnapshotFactCaches(
+      false, true);
   return callBindingSnapshotCache_;
 }
 
@@ -866,6 +871,23 @@ SemanticsValidator::structFieldMetadataSnapshotForSemanticProduct() {
 std::vector<SemanticsValidator::BindingFactSnapshotEntry>
 SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
   using ActiveLocalBindings = std::unordered_map<std::string, BindingInfo>;
+  struct LocalBranchBindingScope {
+    ActiveLocalBindings &activeLocals;
+    std::vector<std::string> insertedNames;
+
+    explicit LocalBranchBindingScope(ActiveLocalBindings &activeLocalsIn)
+        : activeLocals(activeLocalsIn) {}
+
+    void observeInsert(const std::string &name) {
+      insertedNames.push_back(name);
+    }
+
+    ~LocalBranchBindingScope() {
+      for (auto it = insertedNames.rbegin(); it != insertedNames.rend(); ++it) {
+        activeLocals.erase(*it);
+      }
+    }
+  };
 
   std::vector<BindingFactSnapshotEntry> entries;
 
@@ -937,35 +959,42 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
         *restrictType, bindingOut.typeName, bindingOut.typeTemplateArg, hasTemplate, namespacePrefix);
   };
 
-  std::function<void(const Definition &, const std::vector<ParameterInfo> &, const Expr &, ActiveLocalBindings &)>
+  std::function<void(const Definition &,
+                     const std::vector<ParameterInfo> &,
+                     const Expr &,
+                     ActiveLocalBindings &,
+                     LocalBranchBindingScope &)>
       visitExpr;
   std::function<void(const Definition &,
                      const std::vector<ParameterInfo> &,
                      const std::vector<Expr> &,
-                     ActiveLocalBindings &)>
+                     ActiveLocalBindings &,
+                     LocalBranchBindingScope &)>
       visitExprSequence;
 
   visitExprSequence = [&](const Definition &def,
                           const std::vector<ParameterInfo> &defParams,
                           const std::vector<Expr> &exprs,
-                          ActiveLocalBindings &activeLocals) {
+                          ActiveLocalBindings &activeLocals,
+                          LocalBranchBindingScope &scope) {
     for (const auto &expr : exprs) {
-      visitExpr(def, defParams, expr, activeLocals);
+      visitExpr(def, defParams, expr, activeLocals, scope);
     }
   };
 
   visitExpr = [&](const Definition &def,
                   const std::vector<ParameterInfo> &defParams,
                   const Expr &expr,
-                  ActiveLocalBindings &activeLocals) {
+                  ActiveLocalBindings &activeLocals,
+                  LocalBranchBindingScope &scope) {
     if (expr.isBinding) {
       for (const auto &arg : expr.args) {
-        ActiveLocalBindings argLocals = activeLocals;
-        visitExpr(def, defParams, arg, argLocals);
+        LocalBranchBindingScope argScope(activeLocals);
+        visitExpr(def, defParams, arg, activeLocals, argScope);
       }
       if (!expr.bodyArguments.empty()) {
-        ActiveLocalBindings bodyLocals = activeLocals;
-        visitExprSequence(def, defParams, expr.bodyArguments, bodyLocals);
+        LocalBranchBindingScope bodyScope(activeLocals);
+        visitExprSequence(def, defParams, expr.bodyArguments, activeLocals, bodyScope);
       }
 
       BindingInfo binding;
@@ -980,7 +1009,10 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
             binding,
             expr.semanticNodeId,
         });
-        activeLocals.emplace(expr.name, std::move(binding));
+        const auto [it, inserted] = activeLocals.emplace(expr.name, std::move(binding));
+        if (inserted) {
+          scope.observeInsert(it->first);
+        }
       }
       return;
     }
@@ -1003,12 +1035,12 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
     }
 
     for (const auto &arg : expr.args) {
-      ActiveLocalBindings argLocals = activeLocals;
-      visitExpr(def, defParams, arg, argLocals);
+      LocalBranchBindingScope argScope(activeLocals);
+      visitExpr(def, defParams, arg, activeLocals, argScope);
     }
     if (!expr.bodyArguments.empty()) {
-      ActiveLocalBindings bodyLocals = activeLocals;
-      visitExprSequence(def, defParams, expr.bodyArguments, bodyLocals);
+      LocalBranchBindingScope bodyScope(activeLocals);
+      visitExprSequence(def, defParams, expr.bodyArguments, activeLocals, bodyScope);
     }
   };
 
@@ -1022,10 +1054,11 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
     const auto &defParams = paramsIt->second;
 
     ActiveLocalBindings definitionLocals;
-    visitExprSequence(def, defParams, def.statements, definitionLocals);
+    LocalBranchBindingScope definitionScopeLocals(definitionLocals);
+    visitExprSequence(def, defParams, def.statements, definitionLocals, definitionScopeLocals);
     if (def.returnExpr.has_value()) {
-      ActiveLocalBindings returnLocals = definitionLocals;
-      visitExpr(def, defParams, *def.returnExpr, returnLocals);
+      LocalBranchBindingScope returnScope(definitionLocals);
+      visitExpr(def, defParams, *def.returnExpr, definitionLocals, returnScope);
     }
   }
 
@@ -1116,7 +1149,8 @@ SemanticsValidator::localAutoFactSnapshotForSemanticProduct() const {
 
 std::vector<SemanticsValidator::QueryFactSnapshotEntry>
 SemanticsValidator::queryFactSnapshotForSemanticProduct() {
-  ensureQuerySnapshotFactCaches();
+  ensureQuerySnapshotFactCaches(
+      true, false, false, false, false);
   return queryFactSnapshotCache_;
 }
 
@@ -1132,7 +1166,8 @@ SemanticsValidator::onErrorFactSnapshotForSemanticProduct() {
 
 std::vector<SemanticsValidator::QueryReceiverBindingSnapshotEntry>
 SemanticsValidator::queryReceiverBindingSnapshotForTesting() {
-  ensureQuerySnapshotFactCaches();
+  ensureQuerySnapshotFactCaches(
+      false, true, false, false, false);
   return queryReceiverBindingSnapshotCache_;
 }
 

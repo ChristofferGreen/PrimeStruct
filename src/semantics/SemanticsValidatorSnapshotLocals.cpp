@@ -138,6 +138,23 @@ void SemanticsValidator::forEachLocalAwareSnapshotCall(
                              const Expr &,
                              const std::unordered_map<std::string, BindingInfo> &)> &visitor) {
   using ActiveLocalBindings = std::unordered_map<std::string, BindingInfo>;
+  struct LocalBranchBindingScope {
+    ActiveLocalBindings &activeLocals;
+    std::vector<std::string> insertedNames;
+
+    explicit LocalBranchBindingScope(ActiveLocalBindings &activeLocalsIn)
+        : activeLocals(activeLocalsIn) {}
+
+    void observeInsert(const std::string &name) {
+      insertedNames.push_back(name);
+    }
+
+    ~LocalBranchBindingScope() {
+      for (auto it = insertedNames.rbegin(); it != insertedNames.rend(); ++it) {
+        activeLocals.erase(*it);
+      }
+    }
+  };
 
   auto withPreservedError = [&](const std::function<bool()> &fn) {
     const std::string previousError = error_;
@@ -181,40 +198,50 @@ void SemanticsValidator::forEachLocalAwareSnapshotCall(
         *restrictType, bindingOut.typeName, bindingOut.typeTemplateArg, hasTemplate, namespacePrefix);
   };
 
-  std::function<void(const Definition &, const std::vector<ParameterInfo> &, const Expr &, ActiveLocalBindings &)>
+  std::function<void(const Definition &,
+                     const std::vector<ParameterInfo> &,
+                     const Expr &,
+                     ActiveLocalBindings &,
+                     LocalBranchBindingScope &)>
       visitExpr;
   std::function<void(const Definition &,
                      const std::vector<ParameterInfo> &,
                      const std::vector<Expr> &,
-                     ActiveLocalBindings &)>
+                     ActiveLocalBindings &,
+                     LocalBranchBindingScope &)>
       visitExprSequence;
 
   visitExprSequence = [&](const Definition &def,
                           const std::vector<ParameterInfo> &defParams,
                           const std::vector<Expr> &exprs,
-                          ActiveLocalBindings &activeLocals) {
+                          ActiveLocalBindings &activeLocals,
+                          LocalBranchBindingScope &scope) {
     for (const auto &expr : exprs) {
-      visitExpr(def, defParams, expr, activeLocals);
+      visitExpr(def, defParams, expr, activeLocals, scope);
     }
   };
 
   visitExpr = [&](const Definition &def,
                   const std::vector<ParameterInfo> &defParams,
                   const Expr &expr,
-                  ActiveLocalBindings &activeLocals) {
+                  ActiveLocalBindings &activeLocals,
+                  LocalBranchBindingScope &scope) {
     if (expr.isBinding) {
       for (const auto &arg : expr.args) {
-        ActiveLocalBindings argLocals = activeLocals;
-        visitExpr(def, defParams, arg, argLocals);
+        LocalBranchBindingScope argScope(activeLocals);
+        visitExpr(def, defParams, arg, activeLocals, argScope);
       }
       if (!expr.bodyArguments.empty()) {
-        ActiveLocalBindings bodyLocals = activeLocals;
-        visitExprSequence(def, defParams, expr.bodyArguments, bodyLocals);
+        LocalBranchBindingScope bodyScope(activeLocals);
+        visitExprSequence(def, defParams, expr.bodyArguments, activeLocals, bodyScope);
       }
 
       BindingInfo binding;
       if (inferBindingForLocals(def, defParams, activeLocals, expr, binding)) {
-        activeLocals.emplace(expr.name, std::move(binding));
+        const auto [it, inserted] = activeLocals.emplace(expr.name, std::move(binding));
+        if (inserted) {
+          scope.observeInsert(it->first);
+        }
       }
       return;
     }
@@ -224,12 +251,12 @@ void SemanticsValidator::forEachLocalAwareSnapshotCall(
     }
 
     for (const auto &arg : expr.args) {
-      ActiveLocalBindings argLocals = activeLocals;
-      visitExpr(def, defParams, arg, argLocals);
+      LocalBranchBindingScope argScope(activeLocals);
+      visitExpr(def, defParams, arg, activeLocals, argScope);
     }
     if (!expr.bodyArguments.empty()) {
-      ActiveLocalBindings bodyLocals = activeLocals;
-      visitExprSequence(def, defParams, expr.bodyArguments, bodyLocals);
+      LocalBranchBindingScope bodyScope(activeLocals);
+      visitExprSequence(def, defParams, expr.bodyArguments, activeLocals, bodyScope);
     }
   };
 
@@ -245,19 +272,22 @@ void SemanticsValidator::forEachLocalAwareSnapshotCall(
     for (const auto &param : def.parameters) {
       for (const auto &arg : param.args) {
         ActiveLocalBindings paramLocals;
-        visitExpr(def, defParams, arg, paramLocals);
+        LocalBranchBindingScope paramScope(paramLocals);
+        visitExpr(def, defParams, arg, paramLocals, paramScope);
       }
       if (!param.bodyArguments.empty()) {
         ActiveLocalBindings paramLocals;
-        visitExprSequence(def, defParams, param.bodyArguments, paramLocals);
+        LocalBranchBindingScope paramScope(paramLocals);
+        visitExprSequence(def, defParams, param.bodyArguments, paramLocals, paramScope);
       }
     }
 
     ActiveLocalBindings definitionLocals;
-    visitExprSequence(def, defParams, def.statements, definitionLocals);
+    LocalBranchBindingScope definitionScopeLocals(definitionLocals);
+    visitExprSequence(def, defParams, def.statements, definitionLocals, definitionScopeLocals);
     if (def.returnExpr.has_value()) {
-      ActiveLocalBindings returnLocals = definitionLocals;
-      visitExpr(def, defParams, *def.returnExpr, returnLocals);
+      LocalBranchBindingScope returnScope(definitionLocals);
+      visitExpr(def, defParams, *def.returnExpr, definitionLocals, returnScope);
     }
   }
 }
@@ -276,35 +306,62 @@ void SemanticsValidator::forEachInferredQuerySnapshot(
   });
 }
 
-void SemanticsValidator::ensureQuerySnapshotFactCaches() {
-  if (querySnapshotFactCacheValid_) {
+void SemanticsValidator::ensureQuerySnapshotFactCaches(bool includeQueryFacts,
+                                                       bool includeQueryReceiverBindings,
+                                                       bool includeQueryCallTypes,
+                                                       bool includeQueryBindings,
+                                                       bool includeQueryResultTypes) {
+  const bool buildQueryFacts = includeQueryFacts && !queryFactSnapshotCacheValid_;
+  const bool buildQueryReceiverBindings =
+      includeQueryReceiverBindings && !queryReceiverBindingSnapshotCacheValid_;
+  const bool buildQueryCallTypes = includeQueryCallTypes && !queryCallTypeSnapshotCacheValid_;
+  const bool buildQueryBindings = includeQueryBindings && !queryBindingSnapshotCacheValid_;
+  const bool buildQueryResultTypes = includeQueryResultTypes && !queryResultTypeSnapshotCacheValid_;
+  if (!buildQueryFacts &&
+      !buildQueryReceiverBindings &&
+      !buildQueryCallTypes &&
+      !buildQueryBindings &&
+      !buildQueryResultTypes) {
     return;
   }
 
-  queryFactSnapshotCache_.clear();
-  queryReceiverBindingSnapshotCache_.clear();
-  queryCallTypeSnapshotCache_.clear();
-  queryBindingSnapshotCache_.clear();
-  queryResultTypeSnapshotCache_.clear();
-  forEachInferredQuerySnapshot([&](const Definition &def, const Expr &expr, QuerySnapshotData &&queryData) {
-    QueryFactSnapshotEntry factEntry{
-        def.fullPath,
-        expr.name,
-        queryData.resolvedPath,
-        expr.sourceLine,
-        expr.sourceColumn,
-        queryData.typeText,
-        queryData.binding,
-        queryData.receiverBinding,
-        queryData.resultInfo.isResult,
-        queryData.resultInfo.isResult && queryData.resultInfo.hasValue,
-        queryData.resultInfo.valueType,
-        queryData.resultInfo.errorType,
-        expr.semanticNodeId,
-    };
-    queryFactSnapshotCache_.push_back(std::move(factEntry));
+  if (buildQueryFacts) {
+    queryFactSnapshotCache_.clear();
+  }
+  if (buildQueryReceiverBindings) {
+    queryReceiverBindingSnapshotCache_.clear();
+  }
+  if (buildQueryCallTypes) {
+    queryCallTypeSnapshotCache_.clear();
+  }
+  if (buildQueryBindings) {
+    queryBindingSnapshotCache_.clear();
+  }
+  if (buildQueryResultTypes) {
+    queryResultTypeSnapshotCache_.clear();
+  }
 
-    if (!queryData.typeText.empty()) {
+  forEachInferredQuerySnapshot([&](const Definition &def, const Expr &expr, QuerySnapshotData &&queryData) {
+    if (buildQueryFacts) {
+      QueryFactSnapshotEntry factEntry{
+          def.fullPath,
+          expr.name,
+          queryData.resolvedPath,
+          expr.sourceLine,
+          expr.sourceColumn,
+          queryData.typeText,
+          queryData.binding,
+          queryData.receiverBinding,
+          queryData.resultInfo.isResult,
+          queryData.resultInfo.isResult && queryData.resultInfo.hasValue,
+          queryData.resultInfo.valueType,
+          queryData.resultInfo.errorType,
+          expr.semanticNodeId,
+      };
+      queryFactSnapshotCache_.push_back(std::move(factEntry));
+    }
+
+    if (buildQueryCallTypes && !queryData.typeText.empty()) {
       queryCallTypeSnapshotCache_.push_back(QueryCallTypeSnapshotEntry{
           def.fullPath,
           expr.name,
@@ -315,7 +372,7 @@ void SemanticsValidator::ensureQuerySnapshotFactCaches() {
       });
     }
 
-    if (!queryData.binding.typeName.empty()) {
+    if (buildQueryBindings && !queryData.binding.typeName.empty()) {
       queryBindingSnapshotCache_.push_back(QueryBindingSnapshotEntry{
           def.fullPath,
           expr.name,
@@ -326,7 +383,7 @@ void SemanticsValidator::ensureQuerySnapshotFactCaches() {
       });
     }
 
-    if (queryData.resultInfo.isResult) {
+    if (buildQueryResultTypes && queryData.resultInfo.isResult) {
       queryResultTypeSnapshotCache_.push_back(QueryResultTypeSnapshotEntry{
           def.fullPath,
           expr.name,
@@ -339,7 +396,7 @@ void SemanticsValidator::ensureQuerySnapshotFactCaches() {
       });
     }
 
-    if (!queryData.receiverBinding.typeName.empty()) {
+    if (buildQueryReceiverBindings && !queryData.receiverBinding.typeName.empty()) {
       queryReceiverBindingSnapshotCache_.push_back(QueryReceiverBindingSnapshotEntry{
           def.fullPath,
           expr.name,
@@ -351,158 +408,194 @@ void SemanticsValidator::ensureQuerySnapshotFactCaches() {
     }
   });
 
-  std::stable_sort(queryFactSnapshotCache_.begin(),
-                   queryFactSnapshotCache_.end(),
-                   [](const auto &left, const auto &right) {
-                     if (left.scopePath != right.scopePath) {
-                       return left.scopePath < right.scopePath;
-                     }
-                     if (left.sourceLine != right.sourceLine) {
-                       return left.sourceLine < right.sourceLine;
-                     }
-                     if (left.sourceColumn != right.sourceColumn) {
-                       return left.sourceColumn < right.sourceColumn;
-                     }
-                     if (left.callName != right.callName) {
+  if (buildQueryFacts) {
+    std::stable_sort(queryFactSnapshotCache_.begin(),
+                     queryFactSnapshotCache_.end(),
+                     [](const auto &left, const auto &right) {
+                       if (left.scopePath != right.scopePath) {
+                         return left.scopePath < right.scopePath;
+                       }
+                       if (left.sourceLine != right.sourceLine) {
+                         return left.sourceLine < right.sourceLine;
+                       }
+                       if (left.sourceColumn != right.sourceColumn) {
+                         return left.sourceColumn < right.sourceColumn;
+                       }
+                       if (left.callName != right.callName) {
+                         return left.callName < right.callName;
+                       }
+                       return left.resolvedPath < right.resolvedPath;
+                     });
+    queryFactSnapshotCacheValid_ = true;
+  }
+
+  if (buildQueryReceiverBindings) {
+    std::stable_sort(queryReceiverBindingSnapshotCache_.begin(),
+                     queryReceiverBindingSnapshotCache_.end(),
+                     [](const auto &left, const auto &right) {
+                       if (left.scopePath != right.scopePath) {
+                         return left.scopePath < right.scopePath;
+                       }
+                       if (left.sourceLine != right.sourceLine) {
+                         return left.sourceLine < right.sourceLine;
+                       }
+                       if (left.sourceColumn != right.sourceColumn) {
+                         return left.sourceColumn < right.sourceColumn;
+                       }
                        return left.callName < right.callName;
-                     }
-                     return left.resolvedPath < right.resolvedPath;
-                   });
-  std::stable_sort(queryReceiverBindingSnapshotCache_.begin(),
-                   queryReceiverBindingSnapshotCache_.end(),
-                   [](const auto &left, const auto &right) {
-                     if (left.scopePath != right.scopePath) {
-                       return left.scopePath < right.scopePath;
-                     }
-                     if (left.sourceLine != right.sourceLine) {
-                       return left.sourceLine < right.sourceLine;
-                     }
-                     if (left.sourceColumn != right.sourceColumn) {
-                       return left.sourceColumn < right.sourceColumn;
-                     }
-                     return left.callName < right.callName;
-                   });
-  std::stable_sort(queryCallTypeSnapshotCache_.begin(),
-                   queryCallTypeSnapshotCache_.end(),
-                   [](const auto &left, const auto &right) {
-                     if (left.scopePath != right.scopePath) {
-                       return left.scopePath < right.scopePath;
-                     }
-                     if (left.sourceLine != right.sourceLine) {
-                       return left.sourceLine < right.sourceLine;
-                     }
-                     if (left.sourceColumn != right.sourceColumn) {
-                       return left.sourceColumn < right.sourceColumn;
-                     }
-                     return left.callName < right.callName;
-                   });
-  std::stable_sort(queryBindingSnapshotCache_.begin(),
-                   queryBindingSnapshotCache_.end(),
-                   [](const auto &left, const auto &right) {
-                     if (left.scopePath != right.scopePath) {
-                       return left.scopePath < right.scopePath;
-                     }
-                     if (left.sourceLine != right.sourceLine) {
-                       return left.sourceLine < right.sourceLine;
-                     }
-                     if (left.sourceColumn != right.sourceColumn) {
-                       return left.sourceColumn < right.sourceColumn;
-                     }
-                     return left.callName < right.callName;
-                   });
-  std::stable_sort(queryResultTypeSnapshotCache_.begin(),
-                   queryResultTypeSnapshotCache_.end(),
-                   [](const auto &left, const auto &right) {
-                     if (left.scopePath != right.scopePath) {
-                       return left.scopePath < right.scopePath;
-                     }
-                     if (left.sourceLine != right.sourceLine) {
-                       return left.sourceLine < right.sourceLine;
-                     }
-                     if (left.sourceColumn != right.sourceColumn) {
-                       return left.sourceColumn < right.sourceColumn;
-                     }
-                     return left.callName < right.callName;
-                   });
-  querySnapshotFactCacheValid_ = true;
+                     });
+    queryReceiverBindingSnapshotCacheValid_ = true;
+  }
+
+  if (buildQueryCallTypes) {
+    std::stable_sort(queryCallTypeSnapshotCache_.begin(),
+                     queryCallTypeSnapshotCache_.end(),
+                     [](const auto &left, const auto &right) {
+                       if (left.scopePath != right.scopePath) {
+                         return left.scopePath < right.scopePath;
+                       }
+                       if (left.sourceLine != right.sourceLine) {
+                         return left.sourceLine < right.sourceLine;
+                       }
+                       if (left.sourceColumn != right.sourceColumn) {
+                         return left.sourceColumn < right.sourceColumn;
+                       }
+                       return left.callName < right.callName;
+                     });
+    queryCallTypeSnapshotCacheValid_ = true;
+  }
+
+  if (buildQueryBindings) {
+    std::stable_sort(queryBindingSnapshotCache_.begin(),
+                     queryBindingSnapshotCache_.end(),
+                     [](const auto &left, const auto &right) {
+                       if (left.scopePath != right.scopePath) {
+                         return left.scopePath < right.scopePath;
+                       }
+                       if (left.sourceLine != right.sourceLine) {
+                         return left.sourceLine < right.sourceLine;
+                       }
+                       if (left.sourceColumn != right.sourceColumn) {
+                         return left.sourceColumn < right.sourceColumn;
+                       }
+                       return left.callName < right.callName;
+                     });
+    queryBindingSnapshotCacheValid_ = true;
+  }
+
+  if (buildQueryResultTypes) {
+    std::stable_sort(queryResultTypeSnapshotCache_.begin(),
+                     queryResultTypeSnapshotCache_.end(),
+                     [](const auto &left, const auto &right) {
+                       if (left.scopePath != right.scopePath) {
+                         return left.scopePath < right.scopePath;
+                       }
+                       if (left.sourceLine != right.sourceLine) {
+                         return left.sourceLine < right.sourceLine;
+                       }
+                       if (left.sourceColumn != right.sourceColumn) {
+                         return left.sourceColumn < right.sourceColumn;
+                       }
+                       return left.callName < right.callName;
+                     });
+    queryResultTypeSnapshotCacheValid_ = true;
+  }
 }
 
-void SemanticsValidator::ensureCallAndTrySnapshotFactCaches() {
-  if (callAndTrySnapshotFactCacheValid_) {
+void SemanticsValidator::ensureCallAndTrySnapshotFactCaches(bool includeTryValues,
+                                                            bool includeCallBindings) {
+  const bool buildTryValues = includeTryValues && !tryValueSnapshotCacheValid_;
+  const bool buildCallBindings = includeCallBindings && !callBindingSnapshotCacheValid_;
+  if (!buildTryValues && !buildCallBindings) {
     return;
   }
 
-  callBindingSnapshotCache_.clear();
-  tryValueSnapshotCache_.clear();
+  if (buildCallBindings) {
+    callBindingSnapshotCache_.clear();
+  }
+  if (buildTryValues) {
+    tryValueSnapshotCache_.clear();
+  }
+
   forEachLocalAwareSnapshotCall([&](const Definition &def,
                                     const std::vector<ParameterInfo> &defParams,
                                     const Expr &expr,
                                     const std::unordered_map<std::string, BindingInfo> &activeLocals) {
-    CallSnapshotData callData;
-    if (inferCallSnapshotData(defParams, activeLocals, expr, callData) &&
-        !callData.resolvedPath.empty() &&
-        !callData.binding.typeName.empty()) {
-      callBindingSnapshotCache_.push_back(CallBindingSnapshotEntry{
+    if (buildCallBindings) {
+      CallSnapshotData callData;
+      if (inferCallSnapshotData(defParams, activeLocals, expr, callData) &&
+          !callData.resolvedPath.empty() &&
+          !callData.binding.typeName.empty()) {
+        callBindingSnapshotCache_.push_back(CallBindingSnapshotEntry{
+            def.fullPath,
+            expr.name,
+            std::move(callData.resolvedPath),
+            expr.sourceLine,
+            expr.sourceColumn,
+            std::move(callData.binding),
+        });
+      }
+    }
+
+    if (buildTryValues) {
+      LocalAutoTrySnapshotData tryData;
+      if (!inferTrySnapshotData(def, defParams, activeLocals, expr, tryData)) {
+        return;
+      }
+      tryValueSnapshotCache_.push_back(TryValueSnapshotEntry{
           def.fullPath,
-          expr.name,
-          std::move(callData.resolvedPath),
+          std::move(tryData.operandResolvedPath),
           expr.sourceLine,
           expr.sourceColumn,
-          std::move(callData.binding),
+          std::move(tryData.operandBinding),
+          std::move(tryData.operandReceiverBinding),
+          std::move(tryData.operandQueryTypeText),
+          std::move(tryData.valueType),
+          std::move(tryData.errorType),
+          tryData.contextReturnKind,
+          std::move(tryData.onErrorHandlerPath),
+          std::move(tryData.onErrorErrorType),
+          tryData.onErrorBoundArgCount,
+          expr.semanticNodeId,
       });
     }
-
-    LocalAutoTrySnapshotData tryData;
-    if (!inferTrySnapshotData(def, defParams, activeLocals, expr, tryData)) {
-      return;
-    }
-    tryValueSnapshotCache_.push_back(TryValueSnapshotEntry{
-        def.fullPath,
-        std::move(tryData.operandResolvedPath),
-        expr.sourceLine,
-        expr.sourceColumn,
-        std::move(tryData.operandBinding),
-        std::move(tryData.operandReceiverBinding),
-        std::move(tryData.operandQueryTypeText),
-        std::move(tryData.valueType),
-        std::move(tryData.errorType),
-        tryData.contextReturnKind,
-        std::move(tryData.onErrorHandlerPath),
-        std::move(tryData.onErrorErrorType),
-        tryData.onErrorBoundArgCount,
-        expr.semanticNodeId,
-    });
   });
 
-  std::stable_sort(callBindingSnapshotCache_.begin(),
-                   callBindingSnapshotCache_.end(),
-                   [](const auto &left, const auto &right) {
-                     if (left.scopePath != right.scopePath) {
-                       return left.scopePath < right.scopePath;
-                     }
-                     if (left.sourceLine != right.sourceLine) {
-                       return left.sourceLine < right.sourceLine;
-                     }
-                     if (left.sourceColumn != right.sourceColumn) {
-                       return left.sourceColumn < right.sourceColumn;
-                     }
-                     return left.callName < right.callName;
-                   });
-  std::stable_sort(tryValueSnapshotCache_.begin(),
-                   tryValueSnapshotCache_.end(),
-                   [](const auto &left, const auto &right) {
-                     if (left.scopePath != right.scopePath) {
-                       return left.scopePath < right.scopePath;
-                     }
-                     if (left.sourceLine != right.sourceLine) {
-                       return left.sourceLine < right.sourceLine;
-                     }
-                     if (left.sourceColumn != right.sourceColumn) {
-                       return left.sourceColumn < right.sourceColumn;
-                     }
-                     return left.operandResolvedPath < right.operandResolvedPath;
-                   });
-  callAndTrySnapshotFactCacheValid_ = true;
+  if (buildCallBindings) {
+    std::stable_sort(callBindingSnapshotCache_.begin(),
+                     callBindingSnapshotCache_.end(),
+                     [](const auto &left, const auto &right) {
+                       if (left.scopePath != right.scopePath) {
+                         return left.scopePath < right.scopePath;
+                       }
+                       if (left.sourceLine != right.sourceLine) {
+                         return left.sourceLine < right.sourceLine;
+                       }
+                       if (left.sourceColumn != right.sourceColumn) {
+                         return left.sourceColumn < right.sourceColumn;
+                       }
+                       return left.callName < right.callName;
+                     });
+    callBindingSnapshotCacheValid_ = true;
+  }
+
+  if (buildTryValues) {
+    std::stable_sort(tryValueSnapshotCache_.begin(),
+                     tryValueSnapshotCache_.end(),
+                     [](const auto &left, const auto &right) {
+                       if (left.scopePath != right.scopePath) {
+                         return left.scopePath < right.scopePath;
+                       }
+                       if (left.sourceLine != right.sourceLine) {
+                         return left.sourceLine < right.sourceLine;
+                       }
+                       if (left.sourceColumn != right.sourceColumn) {
+                         return left.sourceColumn < right.sourceColumn;
+                       }
+                       return left.operandResolvedPath < right.operandResolvedPath;
+                     });
+    tryValueSnapshotCacheValid_ = true;
+  }
 }
 
 SemanticsValidator::GraphLocalAutoKey SemanticsValidator::graphLocalAutoBindingKey(std::string_view scopePath,

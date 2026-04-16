@@ -581,18 +581,18 @@ SemanticProgram buildSemanticProgram(const Program &program,
     }
   }
   if (isCollectorEnabled("binding_facts")) {
-    const auto bindingFacts = validator.bindingFactSnapshotForSemanticProduct();
+    auto bindingFacts = validator.bindingFactSnapshotForSemanticProduct();
     semanticProgram.bindingFacts.reserve(bindingFacts.size());
-    for (const auto &snapshotEntry : bindingFacts) {
+    for (auto &snapshotEntry : bindingFacts) {
       SemanticProgramBindingFact entry;
-      entry.scopePath = snapshotEntry.scopePath;
-      entry.siteKind = snapshotEntry.siteKind;
-      entry.name = snapshotEntry.name;
+      entry.scopePath = std::move(snapshotEntry.scopePath);
+      entry.siteKind = std::move(snapshotEntry.siteKind);
+      entry.name = std::move(snapshotEntry.name);
       entry.bindingTypeText = bindingTypeTextForSemanticProduct(snapshotEntry.binding);
       entry.isMutable = snapshotEntry.binding.isMutable;
       entry.isEntryArgString = snapshotEntry.binding.isEntryArgString;
       entry.isUnsafeReference = snapshotEntry.binding.isUnsafeReference;
-      entry.referenceRoot = snapshotEntry.binding.referenceRoot;
+      entry.referenceRoot = std::move(snapshotEntry.binding.referenceRoot);
       entry.sourceLine = snapshotEntry.sourceLine;
       entry.sourceColumn = snapshotEntry.sourceColumn;
       entry.semanticNodeId = snapshotEntry.semanticNodeId;
@@ -602,8 +602,8 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.nameId = semanticProgramInternCallTargetString(semanticProgram, entry.name);
       const std::string resolvedPath = snapshotEntry.resolvedPath.empty()
                                            ? fallbackBindingResolvedPathForSemanticProduct(
-                                                 snapshotEntry.scopePath, snapshotEntry.name)
-                                           : snapshotEntry.resolvedPath;
+                                                 entry.scopePath, entry.name)
+                                           : std::move(snapshotEntry.resolvedPath);
       entry.resolvedPathId =
           semanticProgramInternCallTargetString(semanticProgram, resolvedPath);
       entry.bindingTypeTextId =
@@ -611,7 +611,8 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.referenceRootId = semanticProgramInternCallTargetString(semanticProgram, entry.referenceRoot);
       semanticProgram.bindingFacts.push_back(std::move(entry));
       const std::size_t entryIndex = semanticProgram.bindingFacts.size() - 1;
-      ensureModuleResolvedArtifacts(snapshotEntry.scopePath).bindingFactIndices.push_back(entryIndex);
+      ensureModuleResolvedArtifacts(semanticProgram.bindingFacts.back().scopePath)
+          .bindingFactIndices.push_back(entryIndex);
     }
   }
   if (isCollectorEnabled("return_facts")) {
@@ -731,20 +732,20 @@ SemanticProgram buildSemanticProgram(const Program &program,
     }
   }
   if (isCollectorEnabled("query_facts")) {
-    const auto queryFacts = validator.queryFactSnapshotForSemanticProduct();
+    auto queryFacts = validator.queryFactSnapshotForSemanticProduct();
     semanticProgram.queryFacts.reserve(queryFacts.size());
-    for (const auto &snapshotEntry : queryFacts) {
+    for (auto &snapshotEntry : queryFacts) {
       const std::string receiverBindingTypeText =
           bindingTypeTextForSemanticProduct(snapshotEntry.receiverBinding);
       SemanticProgramQueryFact entry;
-      entry.scopePath = snapshotEntry.scopePath;
-      entry.callName = snapshotEntry.callName;
-      entry.queryTypeText = snapshotEntry.typeText;
+      entry.scopePath = std::move(snapshotEntry.scopePath);
+      entry.callName = std::move(snapshotEntry.callName);
+      entry.queryTypeText = std::move(snapshotEntry.typeText);
       entry.bindingTypeText = bindingTypeTextForSemanticProduct(snapshotEntry.binding);
       entry.hasResultType = snapshotEntry.hasResultType;
       entry.resultTypeHasValue = snapshotEntry.resultTypeHasValue;
-      entry.resultValueType = snapshotEntry.resultValueType;
-      entry.resultErrorType = snapshotEntry.resultErrorType;
+      entry.resultValueType = std::move(snapshotEntry.resultValueType);
+      entry.resultErrorType = std::move(snapshotEntry.resultErrorType);
       entry.sourceLine = snapshotEntry.sourceLine;
       entry.sourceColumn = snapshotEntry.sourceColumn;
       entry.semanticNodeId = snapshotEntry.semanticNodeId;
@@ -761,7 +762,8 @@ SemanticProgram buildSemanticProgram(const Program &program,
       entry.resultErrorTypeId = semanticProgramInternCallTargetString(semanticProgram, entry.resultErrorType);
       semanticProgram.queryFacts.push_back(std::move(entry));
       const std::size_t entryIndex = semanticProgram.queryFacts.size() - 1;
-      ensureModuleResolvedArtifacts(snapshotEntry.scopePath).queryFactIndices.push_back(entryIndex);
+      ensureModuleResolvedArtifacts(semanticProgram.queryFacts.back().scopePath)
+          .queryFactIndices.push_back(entryIndex);
     }
   }
   if (isCollectorEnabled("try_facts")) {
