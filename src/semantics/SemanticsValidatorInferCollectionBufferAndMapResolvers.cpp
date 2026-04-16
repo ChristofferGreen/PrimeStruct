@@ -19,7 +19,12 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
     const std::function<bool(const BindingInfo &, std::string &, std::string &)>
         &extractExperimentalMapFieldTypes,
     const std::function<bool(const Expr &)> &isDirectMapConstructorCall) {
+  const std::weak_ptr<BuiltinCollectionDispatchResolvers> weakState = state;
   state->resolveBufferTarget = [=, this](const Expr &target, std::string &elemType) -> bool {
+    const std::shared_ptr<BuiltinCollectionDispatchResolvers> lockedState = weakState.lock();
+    if (!lockedState) {
+      return false;
+    }
     auto resolveReferenceBufferType = [&](const std::string &typeName,
                                           const std::string &typeTemplateArg,
                                           std::string &elemTypeOut) -> bool {
@@ -131,12 +136,16 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
         return true;
       }
       if (isSimpleCallName(target, "upload") && target.args.size() == 1) {
-        return state->resolveArrayTarget(target.args.front(), elemType);
+        return lockedState->resolveArrayTarget(target.args.front(), elemType);
       }
     }
     return false;
   };
   state->resolveMapTarget = [=, this](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
+    const std::shared_ptr<BuiltinCollectionDispatchResolvers> lockedState = weakState.lock();
+    if (!lockedState) {
+      return false;
+    }
     keyTypeOut.clear();
     valueTypeOut.clear();
     auto isRootMapAliasPath = [](const std::string &path) {
@@ -231,15 +240,15 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
         return true;
       }
       std::string elemType;
-      if (state->resolveIndexedArgsPackElementType(target, elemType) &&
+      if (lockedState->resolveIndexedArgsPackElementType(target, elemType) &&
           extractMapKeyValueTypesFromTypeText(elemType, keyTypeOut, valueTypeOut)) {
         return true;
       }
-      if (state->resolveWrappedIndexedArgsPackElementType(target, elemType) &&
+      if (lockedState->resolveWrappedIndexedArgsPackElementType(target, elemType) &&
           extractMapKeyValueTypesFromTypeText(elemType, keyTypeOut, valueTypeOut)) {
         return true;
       }
-      if (state->resolveDereferencedIndexedArgsPackElementType(target, elemType) &&
+      if (lockedState->resolveDereferencedIndexedArgsPackElementType(target, elemType) &&
           extractMapKeyValueTypesFromTypeText(elemType, keyTypeOut, valueTypeOut)) {
         return true;
       }

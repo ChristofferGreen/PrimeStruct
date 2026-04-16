@@ -47,6 +47,7 @@
     std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget;
     std::function<bool(const Expr &, std::string &, std::string &)> resolveExperimentalMapTarget;
     std::function<bool(const Expr &, std::string &, std::string &)> resolveExperimentalMapValueTarget;
+    std::shared_ptr<void> resolverStateKeepAlive;
   };
 
   bool validateExpr(const std::vector<ParameterInfo> &params,

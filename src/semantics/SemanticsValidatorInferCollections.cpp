@@ -347,6 +347,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
   };
 
   auto state = std::make_shared<BuiltinCollectionDispatchResolvers>();
+  const std::weak_ptr<BuiltinCollectionDispatchResolvers> weakState = state;
 
   state->resolveArgsPackAccessTarget = [=, this](const Expr &target, std::string &elemType) -> bool {
     elemType.clear();
@@ -380,42 +381,54 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     return it != locals.end() && resolveBinding(it->second);
   };
   state->resolveDereferencedIndexedArgsPackElementType = [=](const Expr &target, std::string &elemTypeOut) -> bool {
+    const std::shared_ptr<BuiltinCollectionDispatchResolvers> lockedState = weakState.lock();
+    if (!lockedState) {
+      return false;
+    }
     elemTypeOut.clear();
     if (!isSimpleCallName(target, "dereference") || target.args.size() != 1) {
       return false;
     }
     std::string wrappedType;
-    if (!state->resolveIndexedArgsPackElementType(target.args.front(), wrappedType)) {
+    if (!lockedState->resolveIndexedArgsPackElementType(target.args.front(), wrappedType)) {
       return false;
     }
     return extractWrappedPointeeType(wrappedType, elemTypeOut);
   };
   state->resolveWrappedIndexedArgsPackElementType = [=](const Expr &target, std::string &elemTypeOut) -> bool {
+    const std::shared_ptr<BuiltinCollectionDispatchResolvers> lockedState = weakState.lock();
+    if (!lockedState) {
+      return false;
+    }
     elemTypeOut.clear();
     std::string wrappedType;
-    if (!state->resolveIndexedArgsPackElementType(target, wrappedType)) {
+    if (!lockedState->resolveIndexedArgsPackElementType(target, wrappedType)) {
       return false;
     }
     return extractWrappedPointeeType(wrappedType, elemTypeOut);
   };
   state->resolveArrayTarget = [=, this](const Expr &target, std::string &elemType) -> bool {
+    const std::shared_ptr<BuiltinCollectionDispatchResolvers> lockedState = weakState.lock();
+    if (!lockedState) {
+      return false;
+    }
     BindingInfo binding;
     if (resolveBindingTarget(target, binding)) {
       return resolveArrayLikeBinding(binding, elemType);
     }
     if (target.kind == Expr::Kind::Call) {
       std::string indexedElemType;
-      if (state->resolveIndexedArgsPackElementType(target, indexedElemType) &&
+      if (lockedState->resolveIndexedArgsPackElementType(target, indexedElemType) &&
           (extractCollectionElementType(indexedElemType, "array", elemType) ||
            extractCollectionElementType(indexedElemType, "vector", elemType))) {
         return true;
       }
-      if (state->resolveWrappedIndexedArgsPackElementType(target, indexedElemType) &&
+      if (lockedState->resolveWrappedIndexedArgsPackElementType(target, indexedElemType) &&
           (extractCollectionElementType(indexedElemType, "array", elemType) ||
            extractCollectionElementType(indexedElemType, "vector", elemType))) {
         return true;
       }
-      if (state->resolveDereferencedIndexedArgsPackElementType(target, indexedElemType) &&
+      if (lockedState->resolveDereferencedIndexedArgsPackElementType(target, indexedElemType) &&
           (extractCollectionElementType(indexedElemType, "array", elemType) ||
            extractCollectionElementType(indexedElemType, "vector", elemType))) {
         return true;
@@ -442,6 +455,10 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     return false;
   };
   state->resolveVectorTarget = [=, this](const Expr &target, std::string &elemType) -> bool {
+    const std::shared_ptr<BuiltinCollectionDispatchResolvers> lockedState = weakState.lock();
+    if (!lockedState) {
+      return false;
+    }
     auto extractBindingFromTypeText = [&](const std::string &typeText, BindingInfo &bindingOut) {
       const std::string normalizedType = normalizeBindingTypeName(typeText);
       std::string base;
@@ -460,15 +477,15 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     }
     if (target.kind == Expr::Kind::Call) {
       std::string indexedElemType;
-      if (state->resolveIndexedArgsPackElementType(target, indexedElemType) &&
+      if (lockedState->resolveIndexedArgsPackElementType(target, indexedElemType) &&
           extractCollectionElementType(indexedElemType, "vector", elemType)) {
         return true;
       }
-      if (state->resolveWrappedIndexedArgsPackElementType(target, indexedElemType) &&
+      if (lockedState->resolveWrappedIndexedArgsPackElementType(target, indexedElemType) &&
           extractCollectionElementType(indexedElemType, "vector", elemType)) {
         return true;
       }
-      if (state->resolveDereferencedIndexedArgsPackElementType(target, indexedElemType) &&
+      if (lockedState->resolveDereferencedIndexedArgsPackElementType(target, indexedElemType) &&
           extractCollectionElementType(indexedElemType, "vector", elemType)) {
         return true;
       }
@@ -501,7 +518,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
               resolvedSoaToAosCanonical, "to_aos_ref");
       if ((matchesSoaToAosTarget || matchesBorrowedSoaToAosTarget) &&
           target.args.size() == 1) {
-        return state->resolveSoaVectorTarget(target.args.front(), elemType);
+        return lockedState->resolveSoaVectorTarget(target.args.front(), elemType);
       }
     }
     if (inferCallBinding(target, binding)) {
@@ -591,6 +608,10 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     return extractValueBinding(inferredBinding);
   };
   state->resolveSoaVectorTarget = [=, this](const Expr &target, std::string &elemType) -> bool {
+    const std::shared_ptr<BuiltinCollectionDispatchResolvers> lockedState = weakState.lock();
+    if (!lockedState) {
+      return false;
+    }
     auto extractBindingFromTypeText = [&](const std::string &typeText, BindingInfo &bindingOut) {
       const std::string normalizedType = normalizeBindingTypeName(typeText);
       std::string base;
@@ -615,15 +636,15 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     }
     if (target.kind == Expr::Kind::Call) {
       std::string indexedElemType;
-      if (state->resolveIndexedArgsPackElementType(target, indexedElemType) &&
+      if (lockedState->resolveIndexedArgsPackElementType(target, indexedElemType) &&
           extractCollectionElementType(indexedElemType, "soa_vector", elemType)) {
         return true;
       }
-      if (state->resolveWrappedIndexedArgsPackElementType(target, indexedElemType) &&
+      if (lockedState->resolveWrappedIndexedArgsPackElementType(target, indexedElemType) &&
           extractCollectionElementType(indexedElemType, "soa_vector", elemType)) {
         return true;
       }
-      if (state->resolveDereferencedIndexedArgsPackElementType(target, indexedElemType) &&
+      if (lockedState->resolveDereferencedIndexedArgsPackElementType(target, indexedElemType) &&
           extractCollectionElementType(indexedElemType, "soa_vector", elemType)) {
         return true;
       }
@@ -639,7 +660,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
       if (((!target.isMethodCall && isSimpleCallName(target, "to_soa")) ||
            resolveCalleePath(target) == "/to_soa") &&
           target.args.size() == 1) {
-        return state->resolveVectorTarget(target.args.front(), elemType);
+        return lockedState->resolveVectorTarget(target.args.front(), elemType);
       }
     }
     std::string inferredTypeText;
@@ -661,6 +682,10 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
       isDirectMapConstructorCall);
   const auto isDirectCanonicalVectorAccessCallOnBuiltinReceiver =
       [=](const Expr &candidate, size_t &receiverIndexOut) -> bool {
+    const std::shared_ptr<BuiltinCollectionDispatchResolvers> lockedState = weakState.lock();
+    if (!lockedState) {
+      return false;
+    }
     receiverIndexOut = 0;
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return false;
@@ -693,10 +718,10 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
       return false;
     }
     std::string elemType;
-    return state->resolveArgsPackAccessTarget(candidate.args[receiverIndexOut], elemType) ||
-           state->resolveVectorTarget(candidate.args[receiverIndexOut], elemType) ||
-           state->resolveArrayTarget(candidate.args[receiverIndexOut], elemType) ||
-           state->resolveStringTarget(candidate.args[receiverIndexOut]);
+    return lockedState->resolveArgsPackAccessTarget(candidate.args[receiverIndexOut], elemType) ||
+           lockedState->resolveVectorTarget(candidate.args[receiverIndexOut], elemType) ||
+           lockedState->resolveArrayTarget(candidate.args[receiverIndexOut], elemType) ||
+           lockedState->resolveStringTarget(candidate.args[receiverIndexOut]);
   };
   populateBuiltinCollectionDispatchStringResolver(
       params,
@@ -705,20 +730,24 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
       resolveBindingTarget,
       isDirectCanonicalVectorAccessCallOnBuiltinReceiver);
 
-  return {state->resolveIndexedArgsPackElementType,
-          state->resolveDereferencedIndexedArgsPackElementType,
-          state->resolveWrappedIndexedArgsPackElementType,
-          state->resolveArgsPackAccessTarget,
-          state->resolveArrayTarget,
-          state->resolveVectorTarget,
-          state->resolveExperimentalVectorTarget,
-          state->resolveExperimentalVectorValueTarget,
-          state->resolveSoaVectorTarget,
-          state->resolveBufferTarget,
-          state->resolveStringTarget,
-          state->resolveMapTarget,
-          state->resolveExperimentalMapTarget,
-          state->resolveExperimentalMapValueTarget};
+  BuiltinCollectionDispatchResolvers resolvers{
+      state->resolveIndexedArgsPackElementType,
+      state->resolveDereferencedIndexedArgsPackElementType,
+      state->resolveWrappedIndexedArgsPackElementType,
+      state->resolveArgsPackAccessTarget,
+      state->resolveArrayTarget,
+      state->resolveVectorTarget,
+      state->resolveExperimentalVectorTarget,
+      state->resolveExperimentalVectorValueTarget,
+      state->resolveSoaVectorTarget,
+      state->resolveBufferTarget,
+      state->resolveStringTarget,
+      state->resolveMapTarget,
+      state->resolveExperimentalMapTarget,
+      state->resolveExperimentalMapValueTarget,
+      nullptr};
+  resolvers.resolverStateKeepAlive = state;
+  return resolvers;
 }
 
 } // namespace primec::semantics

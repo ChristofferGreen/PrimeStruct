@@ -15,9 +15,13 @@
 
 #if defined(__APPLE__)
 #include <mach/mach.h>
+#include <malloc/malloc.h>
 #elif defined(__linux__)
 #include <unistd.h>
 #include <fstream>
+#if defined(__GLIBC__)
+#include <malloc.h>
+#endif
 #endif
 
 namespace primec::semantics {
@@ -54,6 +58,19 @@ uint64_t captureCurrentResidentBytes() {
     return 0;
   }
   return residentPages * static_cast<uint64_t>(pageSize);
+#else
+  return 0;
+#endif
+}
+
+uint64_t captureCurrentAllocatedBytes() {
+#if defined(__APPLE__)
+  malloc_statistics_t stats{};
+  malloc_zone_statistics(nullptr, &stats);
+  return static_cast<uint64_t>(stats.size_in_use);
+#elif defined(__linux__) && defined(__GLIBC__)
+  const struct mallinfo2 info = mallinfo2();
+  return info.uordblks > 0 ? static_cast<uint64_t>(info.uordblks) : 0;
 #else
   return 0;
 #endif
@@ -252,17 +269,30 @@ bool SemanticsValidator::run() {
     std::cerr << "[benchmark-semantic-validator-state] {\"stage\":\""
               << stageName
               << "\",\"definitions\":" << defMap_.size()
+              << ",\"definition_buckets\":" << defMap_.bucket_count()
               << ",\"structs\":" << structNames_.size()
+              << ",\"struct_buckets\":" << structNames_.bucket_count()
               << ",\"params_by_def\":" << paramsByDef_.size()
+              << ",\"params_by_def_buckets\":" << paramsByDef_.bucket_count()
               << ",\"params_total\":" << parameterCount
               << ",\"return_kinds\":" << returnKinds_.size()
+              << ",\"return_kind_buckets\":" << returnKinds_.bucket_count()
               << ",\"return_structs\":" << returnStructs_.size()
+              << ",\"return_struct_buckets\":" << returnStructs_.bucket_count()
               << ",\"return_bindings\":" << returnBindings_.size()
+              << ",\"return_binding_buckets\":" << returnBindings_.bucket_count()
               << ",\"graph_local_auto_scope_paths\":" << graphLocalAutoScopePathInterner_.size()
               << ",\"graph_local_auto_facts\":" << graphLocalAutoFacts_.size()
+              << ",\"graph_local_auto_fact_buckets\":" << graphLocalAutoFacts_.bucket_count()
               << ",\"graph_local_auto_legacy_binding\":" << graphLocalAutoLegacyBindingShadow_.size()
+              << ",\"graph_local_auto_legacy_binding_buckets\":"
+              << graphLocalAutoLegacyBindingShadow_.bucket_count()
               << ",\"graph_local_auto_legacy_query\":" << graphLocalAutoLegacyQuerySnapshotShadow_.size()
+              << ",\"graph_local_auto_legacy_query_buckets\":"
+              << graphLocalAutoLegacyQuerySnapshotShadow_.bucket_count()
               << ",\"graph_local_auto_legacy_try\":" << graphLocalAutoLegacyTryValueShadow_.size()
+              << ",\"graph_local_auto_legacy_try_buckets\":"
+              << graphLocalAutoLegacyTryValueShadow_.bucket_count()
               << ",\"query_fact_snapshot_cache\":" << queryFactSnapshotCache_.size()
               << ",\"query_receiver_snapshot_cache\":" << queryReceiverBindingSnapshotCache_.size()
               << ",\"query_call_snapshot_cache\":" << queryCallTypeSnapshotCache_.size()
@@ -273,7 +303,32 @@ bool SemanticsValidator::run() {
               << ",\"callable_summary_snapshot_cache\":" << callableSummaryDefinitionSnapshotCache_.size()
               << ",\"on_error_snapshot_cache\":" << onErrorSnapshotCache_.size()
               << ",\"effect_free_def_cache\":" << effectFreeDefCache_.size()
+              << ",\"effect_free_def_cache_buckets\":" << effectFreeDefCache_.bucket_count()
               << ",\"effect_free_struct_cache\":" << effectFreeStructCache_.size()
+              << ",\"effect_free_struct_cache_buckets\":" << effectFreeStructCache_.bucket_count()
+              << ",\"import_aliases\":" << importAliases_.size()
+              << ",\"import_alias_buckets\":" << importAliases_.bucket_count()
+              << ",\"overload_family_paths\":" << overloadFamilyBasePaths_.size()
+              << ",\"overload_family_path_buckets\":" << overloadFamilyBasePaths_.bucket_count()
+              << ",\"unique_specialization_paths\":" << uniqueSpecializationPathByBase_.size()
+              << ",\"unique_specialization_path_buckets\":"
+              << uniqueSpecializationPathByBase_.bucket_count()
+              << ",\"ambiguous_specialization_paths\":" << ambiguousSpecializationBasePaths_.size()
+              << ",\"ambiguous_specialization_path_buckets\":"
+              << ambiguousSpecializationBasePaths_.bucket_count()
+              << ",\"default_effects\":" << defaultEffectSet_.size()
+              << ",\"default_effect_buckets\":" << defaultEffectSet_.bucket_count()
+              << ",\"entry_default_effects\":" << entryDefaultEffectSet_.size()
+              << ",\"entry_default_effect_buckets\":" << entryDefaultEffectSet_.bucket_count()
+              << ",\"active_effects\":" << currentValidationState_.context.activeEffects.size()
+              << ",\"active_effect_buckets\":"
+              << currentValidationState_.context.activeEffects.bucket_count()
+              << ",\"moved_bindings\":" << currentValidationState_.movedBindings.size()
+              << ",\"moved_binding_buckets\":"
+              << currentValidationState_.movedBindings.bucket_count()
+              << ",\"ended_reference_borrows\":" << currentValidationState_.endedReferenceBorrows.size()
+              << ",\"ended_reference_borrow_buckets\":"
+              << currentValidationState_.endedReferenceBorrows.bucket_count()
               << ",\"inference_stack\":" << inferenceStack_.size()
               << ",\"return_binding_inference_stack\":" << returnBindingInferenceStack_.size()
               << ",\"query_type_inference_definition_stack\":" << queryTypeInferenceDefinitionStack_.size()
@@ -301,6 +356,7 @@ bool SemanticsValidator::run() {
               << ",\"call_cache_concrete_candidates\":" << callTargetResolutionScratch_.concreteCallBaseCandidates.size()
               << ",\"call_cache_method_receiver_candidates\":" << callTargetResolutionScratch_.methodReceiverResolutionCandidates.size()
               << ",\"call_cache_receiver_alias\":" << callTargetResolutionScratch_.canonicalReceiverAliasPathCache.size()
+              << ",\"allocated_bytes\":" << captureCurrentAllocatedBytes()
               << ",\"rss_bytes\":" << captureCurrentResidentBytes()
               << "}" << std::endl;
   };

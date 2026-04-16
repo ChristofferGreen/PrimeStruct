@@ -13,7 +13,12 @@ void SemanticsValidator::populateBuiltinCollectionDispatchStringResolver(
     const std::function<bool(const Expr &, BindingInfo &)> &resolveBindingTarget,
     const std::function<bool(const Expr &, size_t &)>
         &isDirectCanonicalVectorAccessCallOnBuiltinReceiver) {
+  const std::weak_ptr<BuiltinCollectionDispatchResolvers> weakState = state;
   state->resolveStringTarget = [=, this](const Expr &target) -> bool {
+    const std::shared_ptr<BuiltinCollectionDispatchResolvers> lockedState = weakState.lock();
+    if (!lockedState) {
+      return false;
+    }
     if (target.kind == Expr::Kind::StringLiteral) {
       return true;
     }
@@ -40,8 +45,8 @@ void SemanticsValidator::populateBuiltinCollectionDispatchStringResolver(
         return true;
       }
       std::string elemType;
-      if ((state->resolveIndexedArgsPackElementType(receiver, elemType) ||
-           state->resolveDereferencedIndexedArgsPackElementType(receiver, elemType)) &&
+      if ((lockedState->resolveIndexedArgsPackElementType(receiver, elemType) ||
+           lockedState->resolveDereferencedIndexedArgsPackElementType(receiver, elemType)) &&
           normalizeBindingTypeName(unwrapReferencePointerTypeText(elemType)) == "FileError") {
         return true;
       }
@@ -55,16 +60,16 @@ void SemanticsValidator::populateBuiltinCollectionDispatchStringResolver(
       std::string elemType;
       std::string keyType;
       std::string valueType;
-      if (state->resolveArgsPackAccessTarget(*accessReceiver, elemType) ||
-          state->resolveArrayTarget(*accessReceiver, elemType) ||
-          state->resolveVectorTarget(*accessReceiver, elemType) ||
-          state->resolveExperimentalVectorTarget(*accessReceiver, elemType)) {
+      if (lockedState->resolveArgsPackAccessTarget(*accessReceiver, elemType) ||
+          lockedState->resolveArrayTarget(*accessReceiver, elemType) ||
+          lockedState->resolveVectorTarget(*accessReceiver, elemType) ||
+          lockedState->resolveExperimentalVectorTarget(*accessReceiver, elemType)) {
         return normalizeBindingTypeName(elemType) == "string";
       }
-      if (state->resolveMapTarget(*accessReceiver, keyType, valueType)) {
+      if (lockedState->resolveMapTarget(*accessReceiver, keyType, valueType)) {
         return normalizeBindingTypeName(valueType) == "string";
       }
-      if (state->resolveStringTarget(*accessReceiver)) {
+      if (lockedState->resolveStringTarget(*accessReceiver)) {
         return false;
       }
     }
@@ -72,10 +77,10 @@ void SemanticsValidator::populateBuiltinCollectionDispatchStringResolver(
     size_t receiverIndex = 0;
     if (isDirectCanonicalVectorAccessCallOnBuiltinReceiver(target, receiverIndex)) {
       std::string elemType;
-      return (state->resolveArgsPackAccessTarget(target.args[receiverIndex], elemType) ||
-              state->resolveArrayTarget(target.args[receiverIndex], elemType) ||
-              state->resolveVectorTarget(target.args[receiverIndex], elemType) ||
-              state->resolveExperimentalVectorTarget(target.args[receiverIndex], elemType)) &&
+      return (lockedState->resolveArgsPackAccessTarget(target.args[receiverIndex], elemType) ||
+              lockedState->resolveArrayTarget(target.args[receiverIndex], elemType) ||
+              lockedState->resolveVectorTarget(target.args[receiverIndex], elemType) ||
+              lockedState->resolveExperimentalVectorTarget(target.args[receiverIndex], elemType)) &&
              normalizeBindingTypeName(elemType) == "string";
     }
 
@@ -92,16 +97,16 @@ void SemanticsValidator::populateBuiltinCollectionDispatchStringResolver(
     }
 
     std::string elemType;
-    if ((state->resolveArgsPackAccessTarget(target.args.front(), elemType) ||
-         state->resolveArrayTarget(target.args.front(), elemType) ||
-         state->resolveVectorTarget(target.args.front(), elemType) ||
-         state->resolveExperimentalVectorTarget(target.args.front(), elemType)) &&
+    if ((lockedState->resolveArgsPackAccessTarget(target.args.front(), elemType) ||
+         lockedState->resolveArrayTarget(target.args.front(), elemType) ||
+         lockedState->resolveVectorTarget(target.args.front(), elemType) ||
+         lockedState->resolveExperimentalVectorTarget(target.args.front(), elemType)) &&
         elemType == "string") {
       return true;
     }
     std::string keyType;
     std::string valueType;
-    return state->resolveMapTarget(target.args.front(), keyType, valueType) &&
+    return lockedState->resolveMapTarget(target.args.front(), keyType, valueType) &&
            normalizeBindingTypeName(valueType) == "string";
   };
 }
