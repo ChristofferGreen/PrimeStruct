@@ -458,6 +458,9 @@ int main(int argc, char **argv) {
   }
 
   primec::Program &program = pipelineOutput.program;
+  if (pipelineOutput.hasSemanticProgram) {
+    primec::releaseSemanticProgramLookupMap(pipelineOutput.semanticProgram);
+  }
   const primec::SemanticProgram *semanticProgram =
       pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr;
 
@@ -468,6 +471,11 @@ int main(int argc, char **argv) {
         std::cerr,
         options,
         primec::describeIrPreparationFailure(irFailure, vmDiagnostics, &primec::normalizeVmLoweringError));
+  }
+  // VM execution only needs lowered IR at this point.
+  program = {};
+  if (pipelineOutput.hasSemanticProgram) {
+    pipelineOutput.semanticProgram = {};
   }
 
   primec::Vm vm;

@@ -120,12 +120,15 @@ struct SemanticProductIndexBuilder {
 
   void buildDirectCallIndex(SemanticProductIndex &index) const {
     const auto directCallTargets = semanticProgramDirectCallTargetView(*semanticProgram);
-    index.directCallTargetsByExpr.reserve(directCallTargets.size());
+    index.directCallTargetIdsByExpr.reserve(directCallTargets.size());
     for (const auto *entry : directCallTargets) {
+      if (entry->semanticNodeId == 0 || entry->resolvedPathId == InvalidSymbolId) {
+        continue;
+      }
       const std::string_view resolvedPath =
           semanticProgramResolveCallTargetString(*semanticProgram, entry->resolvedPathId);
-      if (entry->semanticNodeId != 0 && !resolvedPath.empty()) {
-        index.directCallTargetsByExpr.insert_or_assign(entry->semanticNodeId, std::string(resolvedPath));
+      if (!resolvedPath.empty()) {
+        index.directCallTargetIdsByExpr.insert_or_assign(entry->semanticNodeId, entry->resolvedPathId);
       }
     }
   }
@@ -147,17 +150,18 @@ struct SemanticProductIndexBuilder {
 
   void buildBridgePathChoiceIndex(SemanticProductIndex &index) const {
     const auto bridgePathChoices = semanticProgramBridgePathChoiceView(*semanticProgram);
-    index.bridgePathChoicesByExpr.reserve(bridgePathChoices.size());
+    index.bridgePathChoiceIdsByExpr.reserve(bridgePathChoices.size());
     for (const auto *entry : bridgePathChoices) {
       const std::string_view helperName =
           semanticProgramBridgePathChoiceHelperName(*semanticProgram, *entry);
       const std::string_view chosenPath =
           semanticProgramResolveCallTargetString(*semanticProgram, entry->chosenPathId);
       if (entry->semanticNodeId != 0 &&
+          entry->chosenPathId != InvalidSymbolId &&
           entry->helperNameId != InvalidSymbolId &&
           !helperName.empty() &&
           !chosenPath.empty()) {
-        index.bridgePathChoicesByExpr.insert_or_assign(entry->semanticNodeId, std::string(chosenPath));
+        index.bridgePathChoiceIdsByExpr.insert_or_assign(entry->semanticNodeId, entry->chosenPathId);
       }
     }
   }
@@ -165,15 +169,9 @@ struct SemanticProductIndexBuilder {
   void buildOnErrorIndex(SemanticProductIndex &index) const {
     const auto onErrorFacts = semanticProgramOnErrorFactView(*semanticProgram);
     index.onErrorFactsByDefinitionId.reserve(onErrorFacts.size());
-    index.onErrorFactsByDefinitionPathId.reserve(onErrorFacts.size());
     for (const auto *entry : onErrorFacts) {
       if (entry->semanticNodeId != 0) {
         index.onErrorFactsByDefinitionId.insert_or_assign(entry->semanticNodeId, entry);
-      }
-      const std::string_view definitionPath =
-          semanticProgramResolveCallTargetString(*semanticProgram, entry->definitionPathId);
-      if (entry->definitionPathId != InvalidSymbolId && !definitionPath.empty()) {
-        index.onErrorFactsByDefinitionPathId.insert_or_assign(entry->definitionPathId, entry);
       }
     }
   }
@@ -181,22 +179,9 @@ struct SemanticProductIndexBuilder {
   void buildLocalAutoIndex(SemanticProductIndex &index) const {
     const auto localAutoFacts = semanticProgramLocalAutoFactView(*semanticProgram);
     index.localAutoFactsByExpr.reserve(localAutoFacts.size());
-    index.localAutoFactsByInitPathAndBindingNameId.reserve(localAutoFacts.size());
     for (const auto *entry : localAutoFacts) {
       if (entry->semanticNodeId != 0) {
         index.localAutoFactsByExpr.insert_or_assign(entry->semanticNodeId, entry);
-      }
-      const std::string_view initializerResolvedPath =
-          semanticProgramLocalAutoFactInitializerResolvedPath(*semanticProgram, *entry);
-      const std::string_view bindingName =
-          semanticProgramResolveCallTargetString(*semanticProgram, entry->bindingNameId);
-      if (entry->initializerResolvedPathId != InvalidSymbolId &&
-          !initializerResolvedPath.empty() &&
-          entry->bindingNameId != InvalidSymbolId &&
-          !bindingName.empty()) {
-        index.localAutoFactsByInitPathAndBindingNameId.insert_or_assign(
-            makeLocalAutoInitPathBindingNameKey(entry->initializerResolvedPathId, entry->bindingNameId),
-            entry);
       }
     }
   }
@@ -204,22 +189,9 @@ struct SemanticProductIndexBuilder {
   void buildQueryIndex(SemanticProductIndex &index) const {
     const auto queryFacts = semanticProgramQueryFactView(*semanticProgram);
     index.queryFactsByExpr.reserve(queryFacts.size());
-    index.queryFactsByResolvedPathAndCallNameId.reserve(queryFacts.size());
     for (const auto *entry : queryFacts) {
       if (entry->semanticNodeId != 0) {
         index.queryFactsByExpr.insert_or_assign(entry->semanticNodeId, entry);
-      }
-      const std::string_view resolvedPath =
-          semanticProgramQueryFactResolvedPath(*semanticProgram, *entry);
-      const std::string_view callName =
-          semanticProgramResolveCallTargetString(*semanticProgram, entry->callNameId);
-      if (entry->resolvedPathId != InvalidSymbolId &&
-          !resolvedPath.empty() &&
-          entry->callNameId != InvalidSymbolId &&
-          !callName.empty()) {
-        index.queryFactsByResolvedPathAndCallNameId.insert_or_assign(
-            makeQueryFactResolvedPathCallNameKey(entry->resolvedPathId, entry->callNameId),
-            entry);
       }
     }
   }
@@ -227,22 +199,9 @@ struct SemanticProductIndexBuilder {
   void buildTryIndex(SemanticProductIndex &index) const {
     const auto tryFacts = semanticProgramTryFactView(*semanticProgram);
     index.tryFactsByExpr.reserve(tryFacts.size());
-    index.tryFactsByOperandPathAndSource.reserve(tryFacts.size());
     for (const auto *entry : tryFacts) {
       if (entry->semanticNodeId != 0) {
         index.tryFactsByExpr.insert_or_assign(entry->semanticNodeId, entry);
-      }
-      const std::string_view operandResolvedPath =
-          semanticProgramTryFactOperandResolvedPath(*semanticProgram, *entry);
-      if (entry->operandResolvedPathId != InvalidSymbolId &&
-          !operandResolvedPath.empty() &&
-          entry->sourceLine > 0 &&
-          entry->sourceColumn > 0) {
-        index.tryFactsByOperandPathAndSource.insert_or_assign(
-            makeTryFactOperandPathSourceKey(entry->operandResolvedPathId,
-                                            entry->sourceLine,
-                                            entry->sourceColumn),
-            entry);
       }
     }
   }
@@ -258,15 +217,16 @@ struct SemanticProductIndexBuilder {
   }
 };
 
-std::string lookupDirectCallTarget(const SemanticProductIndex &index, uint64_t semanticNodeId) {
+std::optional<SymbolId> lookupDirectCallTargetId(const SemanticProductIndex &index,
+                                                 uint64_t semanticNodeId) {
   if (semanticNodeId == 0) {
-    return {};
+    return std::nullopt;
   }
-  if (const auto it = index.directCallTargetsByExpr.find(semanticNodeId);
-      it != index.directCallTargetsByExpr.end()) {
+  if (const auto it = index.directCallTargetIdsByExpr.find(semanticNodeId);
+      it != index.directCallTargetIdsByExpr.end()) {
     return it->second;
   }
-  return {};
+  return std::nullopt;
 }
 
 std::optional<SymbolId> lookupMethodCallTargetId(const SemanticProductIndex &index,
@@ -281,15 +241,16 @@ std::optional<SymbolId> lookupMethodCallTargetId(const SemanticProductIndex &ind
   return std::nullopt;
 }
 
-std::string lookupBridgePathChoice(const SemanticProductIndex &index, uint64_t semanticNodeId) {
+std::optional<SymbolId> lookupBridgePathChoiceId(const SemanticProductIndex &index,
+                                                 uint64_t semanticNodeId) {
   if (semanticNodeId == 0) {
-    return {};
+    return std::nullopt;
   }
-  if (const auto it = index.bridgePathChoicesByExpr.find(semanticNodeId);
-      it != index.bridgePathChoicesByExpr.end()) {
+  if (const auto it = index.bridgePathChoiceIdsByExpr.find(semanticNodeId);
+      it != index.bridgePathChoiceIdsByExpr.end()) {
     return it->second;
   }
-  return {};
+  return std::nullopt;
 }
 
 } // namespace
@@ -349,15 +310,9 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
 
   const auto returnFacts = semanticProgramReturnFactView(*semanticProgram);
   adapter.returnFactsByDefinitionId.reserve(returnFacts.size());
-  adapter.returnFactsByDefinitionPathId.reserve(returnFacts.size());
   for (const auto *entry : returnFacts) {
     if (entry->semanticNodeId != 0) {
       adapter.returnFactsByDefinitionId.insert_or_assign(entry->semanticNodeId, entry);
-    }
-    const std::string_view definitionPath =
-        semanticProgramReturnFactDefinitionPath(*semanticProgram, *entry);
-    if (entry->definitionPathId != InvalidSymbolId && !definitionPath.empty()) {
-      adapter.returnFactsByDefinitionPathId.insert_or_assign(entry->definitionPathId, entry);
     }
   }
 
@@ -365,10 +320,16 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
 }
 
 std::string findSemanticProductDirectCallTarget(const SemanticProductTargetAdapter &adapter, const Expr &expr) {
-  if (const std::string resolvedPath =
-          lookupDirectCallTarget(adapter.semanticIndex, expr.semanticNodeId);
-      !resolvedPath.empty()) {
-    return resolvedPath;
+  if (adapter.semanticProgram == nullptr || expr.semanticNodeId == 0) {
+    return {};
+  }
+  if (const auto pathId = lookupDirectCallTargetId(adapter.semanticIndex, expr.semanticNodeId);
+      pathId.has_value() && *pathId != InvalidSymbolId) {
+    const std::string_view resolvedPath =
+        semanticProgramResolveCallTargetString(*adapter.semanticProgram, *pathId);
+    if (!resolvedPath.empty()) {
+      return std::string(resolvedPath);
+    }
   }
   return {};
 }
@@ -393,10 +354,16 @@ std::string findSemanticProductMethodCallTarget(const SemanticProductTargetAdapt
 }
 
 std::string findSemanticProductBridgePathChoice(const SemanticProductTargetAdapter &adapter, const Expr &expr) {
-  if (const std::string chosenPath =
-          lookupBridgePathChoice(adapter.semanticIndex, expr.semanticNodeId);
-      !chosenPath.empty()) {
-    return chosenPath;
+  if (adapter.semanticProgram == nullptr || expr.semanticNodeId == 0) {
+    return {};
+  }
+  if (const auto pathId = lookupBridgePathChoiceId(adapter.semanticIndex, expr.semanticNodeId);
+      pathId.has_value() && *pathId != InvalidSymbolId) {
+    const std::string_view chosenPath =
+        semanticProgramResolveCallTargetString(*adapter.semanticProgram, *pathId);
+    if (!chosenPath.empty()) {
+      return std::string(chosenPath);
+    }
   }
   return {};
 }
@@ -434,6 +401,12 @@ const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(const SemanticP
   if (const auto it = adapter.semanticIndex.onErrorFactsByDefinitionPathId.find(*definitionPathId);
       it != adapter.semanticIndex.onErrorFactsByDefinitionPathId.end()) {
     return it->second;
+  }
+  const auto onErrorFacts = semanticProgramOnErrorFactView(*adapter.semanticProgram);
+  for (const auto *entry : onErrorFacts) {
+    if (entry->definitionPathId == *definitionPathId) {
+      return entry;
+    }
   }
   return nullptr;
 }
@@ -480,6 +453,12 @@ const SemanticProgramReturnFact *findSemanticProductReturnFact(const SemanticPro
       it != adapter.returnFactsByDefinitionPathId.end()) {
     return it->second;
   }
+  const auto returnFacts = semanticProgramReturnFactView(*adapter.semanticProgram);
+  for (const auto *entry : returnFacts) {
+    if (entry->definitionPathId == *definitionPathId) {
+      return entry;
+    }
+  }
   return nullptr;
 }
 
@@ -507,6 +486,13 @@ const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(const Seman
       it != adapter.semanticIndex.localAutoFactsByInitPathAndBindingNameId.end()) {
     return it->second;
   }
+  const auto localAutoFacts = semanticProgramLocalAutoFactView(*adapter.semanticProgram);
+  for (const auto *entry : localAutoFacts) {
+    if (entry->initializerResolvedPathId == *initializerPathId &&
+        entry->bindingNameId == *bindingNameId) {
+      return entry;
+    }
+  }
   return nullptr;
 }
 
@@ -533,6 +519,13 @@ const SemanticProgramQueryFact *findSemanticProductQueryFact(const SemanticProdu
       it != adapter.semanticIndex.queryFactsByResolvedPathAndCallNameId.end()) {
     return it->second;
   }
+  const auto queryFacts = semanticProgramQueryFactView(*adapter.semanticProgram);
+  for (const auto *entry : queryFacts) {
+    if (entry->resolvedPathId == *resolvedPathId &&
+        entry->callNameId == *callNameId) {
+      return entry;
+    }
+  }
   return nullptr;
 }
 
@@ -554,6 +547,14 @@ const SemanticProgramTryFact *findSemanticProductTryFact(const SemanticProductTa
           makeTryFactOperandPathSourceKey(*operandPathId, expr.sourceLine, expr.sourceColumn));
       it != adapter.semanticIndex.tryFactsByOperandPathAndSource.end()) {
     return it->second;
+  }
+  const auto tryFacts = semanticProgramTryFactView(*adapter.semanticProgram);
+  for (const auto *entry : tryFacts) {
+    if (entry->operandResolvedPathId == *operandPathId &&
+        entry->sourceLine == expr.sourceLine &&
+        entry->sourceColumn == expr.sourceColumn) {
+      return entry;
+    }
   }
   return nullptr;
 }

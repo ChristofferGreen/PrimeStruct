@@ -94,11 +94,24 @@ std::optional<SymbolId> semanticProgramLookupCallTargetStringId(const SemanticPr
   if (text.empty()) {
     return std::nullopt;
   }
-  if (const auto existing = semanticProgram.callTargetStringIdsByText.find(text);
-      existing != semanticProgram.callTargetStringIdsByText.end()) {
-    return existing->second;
+  if (!semanticProgram.callTargetStringIdsByText.empty()) {
+    if (const auto existing = semanticProgram.callTargetStringIdsByText.find(text);
+        existing != semanticProgram.callTargetStringIdsByText.end()) {
+      return existing->second;
+    }
+    return std::nullopt;
+  }
+  for (size_t i = 0; i < semanticProgram.callTargetStringTable.size(); ++i) {
+    if (semanticProgram.callTargetStringTable[i] == text) {
+      return static_cast<SymbolId>(i + 1u);
+    }
   }
   return std::nullopt;
+}
+
+void releaseSemanticProgramLookupMap(SemanticProgram &semanticProgram) {
+  semanticProgram.callTargetStringIdsByText.clear();
+  semanticProgram.callTargetStringIdsByText.rehash(0);
 }
 
 std::string_view semanticProgramResolveCallTargetString(const SemanticProgram &semanticProgram, SymbolId id) {

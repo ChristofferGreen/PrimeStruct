@@ -188,7 +188,7 @@ void emitBenchmarkSemanticRepeatLeakCheck(std::ostream &err,
 
 bool runIrBackend(const primec::IrBackend &backend,
                   primec::Program &program,
-                  const primec::SemanticProgram *semanticProgram,
+                  primec::SemanticProgram *semanticProgram,
                   const primec::Options &options,
                   primec::IrBackendEmitResult &result,
                   IrBackendRunFailure &failure) {
@@ -201,6 +201,12 @@ bool runIrBackend(const primec::IrBackend &backend,
   if (!primec::prepareIrModule(program, semanticProgram, options, validationTarget, ir, prepFailure)) {
     failure.cliFailure = primec::describeIrPreparationFailure(prepFailure, backend);
     return false;
+  }
+  // Lowering no longer needs the parsed AST or semantic-product payload.
+  // Release them before backend emission (especially VM execution) to cap RSS.
+  program = {};
+  if (semanticProgram != nullptr) {
+    *semanticProgram = {};
   }
 
   std::string error;
@@ -357,7 +363,10 @@ int main(int argc, char **argv) {
     const primec::IrBackendDiagnostics &diagnostics = irBackend->diagnostics();
     primec::IrBackendEmitResult emitResult;
     IrBackendRunFailure failure;
-    const primec::SemanticProgram *semanticProgram =
+    if (pipelineOutput.hasSemanticProgram) {
+      primec::releaseSemanticProgramLookupMap(pipelineOutput.semanticProgram);
+    }
+    primec::SemanticProgram *semanticProgram =
         pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr;
     if (!runIrBackend(*irBackend, program, semanticProgram, options, emitResult, failure)) {
       if (failure.cliFailure.has_value()) {

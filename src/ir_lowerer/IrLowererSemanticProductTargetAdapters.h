@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -12,9 +13,9 @@
 namespace primec::ir_lowerer {
 
 struct SemanticProductIndex {
-  std::unordered_map<uint64_t, std::string> directCallTargetsByExpr;
+  std::unordered_map<uint64_t, SymbolId> directCallTargetIdsByExpr;
   std::unordered_map<uint64_t, SymbolId> methodCallTargetIdsByExpr;
-  std::unordered_map<uint64_t, std::string> bridgePathChoicesByExpr;
+  std::unordered_map<uint64_t, SymbolId> bridgePathChoiceIdsByExpr;
   std::unordered_map<uint64_t, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionId;
   std::unordered_map<SymbolId, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionPathId;
   std::unordered_map<uint64_t, const SemanticProgramLocalAutoFact *> localAutoFactsByExpr;
@@ -30,25 +31,13 @@ struct SemanticProductTargetAdapter {
   bool hasSemanticProduct = false;
   const SemanticProgram *semanticProgram = nullptr;
   SemanticProductIndex semanticIndex;
-  std::unordered_map<uint64_t, std::string> directCallTargetsByExpr;
-  std::unordered_map<uint64_t, SymbolId> methodCallTargetIdsByExpr;
-  std::unordered_map<uint64_t, std::string> bridgePathChoicesByExpr;
   std::unordered_map<SymbolId, const SemanticProgramCallableSummary *> callableSummariesByPathId;
-  std::unordered_map<uint64_t, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionId;
-  std::unordered_map<SymbolId, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionPathId;
-  std::unordered_map<std::string, const SemanticProgramTypeMetadata *> typeMetadataByPath;
+  std::unordered_map<std::string_view, const SemanticProgramTypeMetadata *> typeMetadataByPath;
   std::vector<const SemanticProgramTypeMetadata *> orderedStructTypeMetadata;
-  std::unordered_map<std::string, std::vector<const SemanticProgramStructFieldMetadata *>>
+  std::unordered_map<std::string_view, std::vector<const SemanticProgramStructFieldMetadata *>>
       structFieldMetadataByStructPath;
   std::unordered_map<uint64_t, const SemanticProgramReturnFact *> returnFactsByDefinitionId;
   std::unordered_map<SymbolId, const SemanticProgramReturnFact *> returnFactsByDefinitionPathId;
-  std::unordered_map<uint64_t, const SemanticProgramLocalAutoFact *> localAutoFactsByExpr;
-  std::unordered_map<uint64_t, const SemanticProgramLocalAutoFact *> localAutoFactsByInitPathAndBindingNameId;
-  std::unordered_map<uint64_t, const SemanticProgramQueryFact *> queryFactsByExpr;
-  std::unordered_map<uint64_t, const SemanticProgramQueryFact *> queryFactsByResolvedPathAndCallNameId;
-  std::unordered_map<uint64_t, const SemanticProgramTryFact *> tryFactsByExpr;
-  std::unordered_map<uint64_t, const SemanticProgramTryFact *> tryFactsByOperandPathAndSource;
-  std::unordered_map<uint64_t, const SemanticProgramBindingFact *> bindingFactsByExpr;
 };
 
 SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticProgram *semanticProgram);

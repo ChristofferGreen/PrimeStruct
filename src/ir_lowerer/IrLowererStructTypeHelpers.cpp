@@ -150,7 +150,7 @@ void buildDefinitionMapAndStructNames(
     structNamesOut.reserve(semanticProductTargets->typeMetadataByPath.size());
     for (const auto &[fullPath, typeMetadata] : semanticProductTargets->typeMetadataByPath) {
       if (typeMetadata != nullptr && isStructLikeSemanticProductCategory(typeMetadata->category)) {
-        structNamesOut.insert(fullPath);
+        structNamesOut.insert(std::string(fullPath));
       }
     }
     return;

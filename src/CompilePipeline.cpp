@@ -632,6 +632,9 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
         continue;
       }
 
+      const bool skipExperimentalCollectionsInBaseWildcard =
+          (key == "/std/collections");
+
       std::filesystem::path siblingModuleFile = moduleRoot;
       siblingModuleFile += ".prime";
       if (std::filesystem::exists(siblingModuleFile, ec) &&
@@ -648,6 +651,12 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
         }
         if (!entry.is_regular_file(ec) || entry.path().extension() != ".prime") {
           continue;
+        }
+        if (skipExperimentalCollectionsInBaseWildcard) {
+          const std::string stem = entry.path().stem().string();
+          if (stem.rfind("experimental_", 0) == 0) {
+            continue;
+          }
         }
         if (!appendFile(entry.path())) {
           return false;
