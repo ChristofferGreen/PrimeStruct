@@ -378,6 +378,148 @@ std::vector<std::string> collectStdlibAutoIncludeKeys(const std::string &importP
   return keys;
 }
 
+bool isMathBuiltinOrConstantName(std::string_view name) {
+  constexpr std::array<std::string_view, 44> MathBuiltinsAndConstants = {
+      "abs",
+      "sign",
+      "min",
+      "max",
+      "clamp",
+      "lerp",
+      "saturate",
+      "floor",
+      "ceil",
+      "round",
+      "trunc",
+      "fract",
+      "sqrt",
+      "cbrt",
+      "pow",
+      "exp",
+      "exp2",
+      "log",
+      "log2",
+      "log10",
+      "sin",
+      "cos",
+      "tan",
+      "asin",
+      "acos",
+      "atan",
+      "atan2",
+      "radians",
+      "degrees",
+      "sinh",
+      "cosh",
+      "tanh",
+      "asinh",
+      "acosh",
+      "atanh",
+      "fma",
+      "hypot",
+      "copysign",
+      "is_nan",
+      "is_inf",
+      "is_finite",
+      "pi",
+      "tau",
+      "e",
+  };
+  return std::find(MathBuiltinsAndConstants.begin(), MathBuiltinsAndConstants.end(), name) !=
+         MathBuiltinsAndConstants.end();
+}
+
+bool isMathStdlibSurfaceName(std::string_view name) {
+  constexpr std::array<std::string_view, 16> MathStdlibSurfaceNames = {
+      "Vec2",
+      "Vec3",
+      "Vec4",
+      "Mat2",
+      "Mat3",
+      "Mat4",
+      "Quat",
+      "ColorRGB",
+      "ColorRGBA",
+      "ColorSRGB",
+      "ColorSRGBA",
+      "quat_to_mat3",
+      "quat_to_mat4",
+      "mat3_to_quat",
+      "srgbToLinearChannel",
+      "linearToSrgbChannel",
+  };
+  return std::find(MathStdlibSurfaceNames.begin(), MathStdlibSurfaceNames.end(), name) !=
+         MathStdlibSurfaceNames.end();
+}
+
+bool sourceReferencesNonBuiltinMathSymbols(const std::string &source) {
+  Lexer lexer(source);
+  const std::vector<Token> tokens = lexer.tokenize();
+  auto skipIgnorableTokens = [&](size_t cursor) {
+    while (cursor < tokens.size() && isIgnorableImportToken(tokens[cursor].kind)) {
+      ++cursor;
+    }
+    return cursor;
+  };
+
+  for (size_t scan = 0; scan < tokens.size();) {
+    if (tokens[scan].kind == TokenKind::KeywordImport) {
+      size_t cursor = skipIgnorableTokens(scan + 1);
+      while (cursor < tokens.size()) {
+        if (tokens[cursor].kind != TokenKind::Identifier || tokens[cursor].text.empty() ||
+            tokens[cursor].text[0] != '/') {
+          break;
+        }
+        size_t next = skipIgnorableTokens(cursor + 1);
+        if (!tokens[cursor].text.empty() && tokens[cursor].text.back() == '/' &&
+            next < tokens.size() && tokens[next].kind == TokenKind::Star) {
+          cursor = next + 1;
+        } else {
+          ++cursor;
+        }
+        cursor = skipIgnorableTokens(cursor);
+      }
+      scan = cursor;
+      continue;
+    }
+
+    if (tokens[scan].kind != TokenKind::Identifier) {
+      ++scan;
+      continue;
+    }
+
+    const std::string &text = tokens[scan].text;
+    if (text.rfind("/std/math/", 0) == 0 && text.size() > 10) {
+      const std::string_view name(text.data() + 10, text.size() - 10);
+      if (!isMathBuiltinOrConstantName(name)) {
+        return true;
+      }
+      ++scan;
+      continue;
+    }
+    if (text.find('/') == std::string::npos && isMathStdlibSurfaceName(text)) {
+      return true;
+    }
+    ++scan;
+  }
+  return false;
+}
+
+bool shouldSkipMathWildcardStdlibModule(const std::vector<std::string> &sourceImports,
+                                        const std::string &source) {
+  bool hasMathWildcardImport = false;
+  for (const auto &importPath : sourceImports) {
+    if (importPath == "/std/math/*") {
+      hasMathWildcardImport = true;
+      break;
+    }
+  }
+  if (!hasMathWildcardImport) {
+    return false;
+  }
+  return !sourceReferencesNonBuiltinMathSymbols(source);
+}
+
 bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
                                const std::vector<std::string> &sourceImports,
                                const std::vector<std::string> &implicitKeys,
@@ -386,8 +528,12 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
   std::error_code ec;
   std::deque<std::string> pendingKeys;
   std::unordered_set<std::string> queuedKeys;
+  const bool skipMathWildcardStdlibModule = shouldSkipMathWildcardStdlibModule(sourceImports, source);
   for (const auto &importPath : sourceImports) {
     for (const auto &key : collectStdlibAutoIncludeKeys(importPath)) {
+      if (skipMathWildcardStdlibModule && importPath == "/std/math/*" && key == "/std/math") {
+        continue;
+      }
       if (queuedKeys.insert(key).second) {
         pendingKeys.push_back(key);
       }
