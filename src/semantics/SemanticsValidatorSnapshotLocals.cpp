@@ -10,6 +10,16 @@ bool SemanticsValidator::inferQuerySnapshotData(const std::vector<ParameterInfo>
                                                 QuerySnapshotData &out) {
   out = {};
 
+  auto bindingTypeText = [](const BindingInfo &binding) {
+    if (binding.typeName.empty()) {
+      return std::string{};
+    }
+    if (binding.typeTemplateArg.empty()) {
+      return binding.typeName;
+    }
+    return binding.typeName + "<" + binding.typeTemplateArg + ">";
+  };
+
   auto withPreservedError = [&](const std::function<bool()> &fn) {
     const std::string previousError = error_;
     error_.clear();
@@ -24,18 +34,23 @@ bool SemanticsValidator::inferQuerySnapshotData(const std::vector<ParameterInfo>
     out.resolvedPath = std::move(callData.resolvedPath);
     out.binding = std::move(callData.binding);
   }
-  withPreservedError([&]() {
-    return inferQueryExprTypeText(expr, defParams, activeLocals, out.typeText);
-  });
-  if (out.typeText.empty() && !out.binding.typeName.empty()) {
-    out.typeText = out.binding.typeTemplateArg.empty()
-                       ? out.binding.typeName
-                       : out.binding.typeName + "<" + out.binding.typeTemplateArg + ">";
+
+  out.typeText = bindingTypeText(out.binding);
+  if (out.typeText.empty()) {
+    withPreservedError([&]() {
+      return inferQueryExprTypeText(expr, defParams, activeLocals, out.typeText);
+    });
   }
-  if (!(withPreservedError([&]() {
-          return resolveResultTypeForExpr(expr, defParams, activeLocals, out.resultInfo);
-        }) &&
-        out.resultInfo.isResult)) {
+
+  if (!out.binding.typeName.empty()) {
+    if (!resolveResultTypeFromTypeName(out.typeText, out.resultInfo) ||
+        !out.resultInfo.isResult) {
+      out.resultInfo = {};
+    }
+  } else if (!(withPreservedError([&]() {
+               return resolveResultTypeForExpr(expr, defParams, activeLocals, out.resultInfo);
+             }) &&
+               out.resultInfo.isResult)) {
     out.resultInfo = {};
   }
 

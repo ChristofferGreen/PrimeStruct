@@ -87,6 +87,12 @@ bool SemanticsValidator::inferResolvedDirectCallBindingType(const std::string &r
       std::string base;
       std::string argText;
       if (splitTemplateTypeName(normalizedReturnTypeText, base, argText)) {
+        const std::string normalizedBase = normalizeBindingTypeName(base);
+        if (!normalizedBase.empty() && !argText.empty()) {
+          bindingOut.typeName = normalizedBase;
+          bindingOut.typeTemplateArg = argText;
+          return true;
+        }
         continue;
       }
       if (normalizeCollectionTypePath(normalizedReturnTypeText).empty() &&
