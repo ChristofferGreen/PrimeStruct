@@ -290,6 +290,7 @@ int main(int argc, char **argv) {
     primec::CompilePipelineOutput runOutput;
     primec::CompilePipelineErrorStage runError = primec::CompilePipelineErrorStage::None;
     std::string runErrorText;
+    const bool isFinalRun = (runIndex + 1u == repeatCount);
     const auto runStart = std::chrono::steady_clock::now();
     const bool ok = primec::runCompilePipeline(options, runOutput, runError, runErrorText);
     (void)runError;
@@ -300,9 +301,9 @@ int main(int argc, char **argv) {
       const ProcessRssSample rssAfterRun = captureProcessRssSample();
       repeatLeakCheck.rssAfterEachRunBytes.push_back(rssAfterRun.valid ? rssAfterRun.residentBytes : 0);
     }
-    pipelineOutput = std::move(runOutput);
-    error = std::move(runErrorText);
     if (!ok) {
+      pipelineOutput = std::move(runOutput);
+      error = std::move(runErrorText);
       if (repeatLeakCheck.enabled) {
         const ProcessRssSample rssAfter = captureProcessRssSample();
         if (rssAfter.valid) {
@@ -314,6 +315,10 @@ int main(int argc, char **argv) {
       emitBenchmarkSemanticPhaseCounters(std::cerr, pipelineOutput);
       emitBenchmarkSemanticRepeatLeakCheck(std::cerr, repeatLeakCheck);
       return primec::emitCliFailure(std::cerr, options, primec::describeCompilePipelineFailure(pipelineOutput));
+    }
+    if (isFinalRun) {
+      pipelineOutput = std::move(runOutput);
+      error = std::move(runErrorText);
     }
   }
   if (repeatLeakCheck.enabled) {
