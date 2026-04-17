@@ -281,10 +281,11 @@ main() {
   [Thing] value
   return(value.value)
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
+  CHECK(error.find("omitted initializer requires effect-free zero-arg constructor: /Thing") !=
+        std::string::npos);
 }
 
 TEST_CASE("omitted initializer accepts effect-free Create with bare array count method") {

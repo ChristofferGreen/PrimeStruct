@@ -480,7 +480,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
+  const std::string err = readFile(errPath);
+  CHECK(err.find("validateExprMethodCallTarget failed") != std::string::npos);
+  CHECK(err.find("/vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects native array compatibility access slash methods on vector receiver") {

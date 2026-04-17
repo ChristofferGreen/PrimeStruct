@@ -494,13 +494,13 @@ main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   return(project(values))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /vector/at") != std::string::npos);
+  CHECK(error.find("unable to infer return type on /project") != std::string::npos);
 }
 
-TEST_CASE("vector constructor alias call infers canonical helper return kind") {
+TEST_CASE("canonical vector constructor call infers canonical helper return kind") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -518,7 +518,7 @@ Marker {
 
 [return<auto>]
 project() {
-  return(/vector/vector(9i32).tag())
+  return(/std/collections/vector/vector(9i32).tag())
 }
 
 [effects(heap_alloc), return<int>]
@@ -527,11 +527,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unable to infer return type on /project") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("vector constructor alias call keeps canonical helper diagnostics") {
+TEST_CASE("vector constructor alias call keeps removed-alias diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -542,24 +542,19 @@ Marker {
   return(Marker(seed))
 }
 
-[return<int>]
-/Marker/tag([Marker] self, [bool] marker) {
-  return(self.value)
-}
-
-[return<auto>]
+[return<Marker>]
 project() {
-  return(/vector/vector(9i32).tag(1i32))
+  return(/vector/vector(9i32))
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  return(project())
+  return(project().value)
 }
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unable to infer return type on /project") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/vector") != std::string::npos);
 }
 
 TEST_CASE("vector method alias access rejects canonical struct-return forwarding") {

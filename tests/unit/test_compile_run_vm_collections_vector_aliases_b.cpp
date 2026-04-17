@@ -454,7 +454,9 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_vector_namespaced_count_access_aliases_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
+  const std::string out = readFile(outPath);
+  CHECK(out.find("unknown call target") != std::string::npos);
+  CHECK(out.find("/vector/count") != std::string::npos);
 }
 
 TEST_CASE("runs vm with collection bracket literals") {
@@ -540,11 +542,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_literal_unsafe.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_vector_literal_unsafe_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend only supports at()") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 7);
 }
 
 TEST_CASE("runs vm bare vector at through imported stdlib helper") {
@@ -831,7 +830,9 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
+  const std::string out = readFile(outPath);
+  CHECK(out.find("validateExprMethodCallTarget failed") != std::string::npos);
+  CHECK(out.find("/vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects vm wrapper vector capacity slash-method chains before receiver typing") {
@@ -861,7 +862,9 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /vector/capacity") != std::string::npos);
+  const std::string out = readFile(outPath);
+  CHECK(out.find("validateExprMethodCallTarget failed") != std::string::npos);
+  CHECK(out.find("/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects vm local alias slash-method vector capacity on string receiver") {

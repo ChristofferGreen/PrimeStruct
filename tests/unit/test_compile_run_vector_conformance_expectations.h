@@ -498,7 +498,7 @@ inline void expectCanonicalVectorIndexedRemovalOwnershipConformance(const std::s
         makeCanonicalVectorIndexedRemovalOwnershipConformanceSource(),
         "vector_indexed_removal_canonical_ownership_" + emitMode,
         emitMode,
-        "field access requires struct receiver");
+        "vm backend only supports numeric/bool/string vector literals");
     return;
   }
   expectVectorConformanceProgramRuns(

@@ -666,7 +666,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
+  CHECK(error.find("validateExprMethodCallTarget failed") != std::string::npos);
+  CHECK(error.find("/vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector method explicit count alias namespace resolves when alias helper exists") {
@@ -725,7 +726,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
+  CHECK(error.find("validateExprMethodCallTarget failed") != std::string::npos);
+  CHECK(error.find("/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("vector method explicit capacity alias namespace resolves when alias helper exists") {
@@ -784,7 +786,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /vector/at") != std::string::npos);
+  CHECK(error.find("validateExprMethodCallTarget failed") != std::string::npos);
+  CHECK(error.find("/vector/at") != std::string::npos);
 }
 
 TEST_CASE("vector method explicit at alias namespace stays rejected even when alias helper exists") {
@@ -807,7 +810,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /vector/at") != std::string::npos);
+  CHECK(error.find("validateExprMethodCallTarget failed") != std::string::npos);
+  CHECK(error.find("/vector/at") != std::string::npos);
 }
 
 TEST_CASE("vector method bare at_unsafe rejects canonical-only helper path") {
@@ -843,7 +847,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /vector/at_unsafe") != std::string::npos);
+  CHECK(error.find("validateExprMethodCallTarget failed") != std::string::npos);
+  CHECK(error.find("/vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("vector method explicit at_unsafe alias namespace stays rejected even when alias helper exists") {
@@ -866,7 +871,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /vector/at_unsafe") != std::string::npos);
+  CHECK(error.find("validateExprMethodCallTarget failed") != std::string::npos);
+  CHECK(error.find("/vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("vector method at uses alias helper signature when alias helper has string index") {

@@ -628,7 +628,9 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
+  const std::string err = readFile(errPath);
+  CHECK(err.find("validateExprMethodCallTarget failed") != std::string::npos);
+  CHECK(err.find("/vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects vm array compatibility access slash methods on vector receiver") {

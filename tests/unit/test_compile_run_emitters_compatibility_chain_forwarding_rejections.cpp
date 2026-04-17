@@ -236,8 +236,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter self") !=
-        std::string::npos);
+  const std::string err = readFile(errPath);
+  CHECK(err.find("validateExprMethodCallTarget failed") != std::string::npos);
+  CHECK(err.find("/vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects vector method alias access canonical-only helper routing in C++ emitter" * doctest::skip(true)) {
@@ -394,8 +395,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter self") !=
-        std::string::npos);
+  const std::string err = readFile(errPath);
+  CHECK(err.find("validateExprMethodCallTarget failed") != std::string::npos);
+  CHECK(err.find("/vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("rejects vector method alias access receiver fallback without helper in C++ emitter") {
@@ -423,7 +425,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
+  const std::string err = readFile(errPath);
+  CHECK(err.find("validateExprMethodCallTarget failed") != std::string::npos);
+  CHECK(err.find("/vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects vector unsafe method alias access field expression with struct receiver diagnostics in C++ emitter") {
@@ -487,7 +491,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/at_unsafe") != std::string::npos);
+  const std::string err = readFile(errPath);
+  CHECK(err.find("validateExprMethodCallTarget failed") != std::string::npos);
+  CHECK(err.find("/vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps vector method alias struct-return precedence over canonical helper" * doctest::skip(true)) {

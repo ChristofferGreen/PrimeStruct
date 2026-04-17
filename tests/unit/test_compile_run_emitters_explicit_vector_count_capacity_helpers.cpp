@@ -363,8 +363,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unknown call target: /vector/capacity") !=
-        std::string::npos);
+  const std::string out = readFile(outPath);
+  CHECK(out.find("validateExprMethodCallTarget failed") != std::string::npos);
+  CHECK(out.find("/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects duplicate local canonical slash-method vector capacity overloads") {
@@ -532,7 +533,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
+  const std::string err = readFile(errPath);
+  CHECK(err.find("validateExprMethodCallTarget failed") != std::string::npos);
+  CHECK(err.find("/vector/count") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs stdlib namespaced vector count capacity slash methods in C++ emitter") {
@@ -584,7 +587,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
+  const std::string err = readFile(errPath);
+  CHECK(err.find("validateExprMethodCallTarget failed") != std::string::npos);
+  CHECK(err.find("/vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects stdlib namespaced vector count capacity slash methods without same-path helper") {
@@ -628,7 +633,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
+  const std::string err = readFile(errPath);
+  CHECK(err.find("validateExprMethodCallTarget failed") != std::string::npos);
+  CHECK(err.find("/vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects stdlib namespaced vector count capacity slash methods without same-path helper in C++ emitter") {

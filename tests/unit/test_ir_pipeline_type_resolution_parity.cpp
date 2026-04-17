@@ -189,9 +189,9 @@ main() {
   [auto] values{makeValues()}
   return(values./vector/count())
 }
-)",
+      )",
           false,
-          "unknown call target: /vector/count",
+          "validateExprMethodCallTarget failed name=/vector/count",
       },
       {
           "query_local_auto_scalar_success",
@@ -319,9 +319,9 @@ main() {
   }
   return(values./vector/count())
 }
-)",
+      )",
           false,
-          "unknown call target: /vector/count",
+          "validateExprMethodCallTarget failed name=/vector/count",
       },
       {
           "result_try_local_auto_error_type_boundary",

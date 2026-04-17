@@ -97,7 +97,9 @@ main() {
       "./primec --emit=exe " + methodSrcPath + " -o " + methodExePath + " --entry /main 2> " +
       methodErrPath;
   CHECK(runCommand(methodCmd) == 2);
-  CHECK(readFile(methodErrPath).find("unknown call target: /vector/count") != std::string::npos);
+  const std::string err = readFile(methodErrPath);
+  CHECK(err.find("validateExprMethodCallTarget failed") != std::string::npos);
+  CHECK(err.find("/vector/count") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs experimental soa_vector stdlib helpers in C++ emitter") {
@@ -445,7 +447,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
+  const std::string err = readFile(errPath);
+  CHECK(err.find("validateExprMethodCallTarget failed") != std::string::npos);
+  CHECK(err.find("/vector/count") != std::string::npos);
 }
 
 TEST_CASE(

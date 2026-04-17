@@ -68,7 +68,7 @@ std::string experimentalMapConstructorRewritePath(const std::string &resolvedPat
 
 std::string experimentalVectorConstructorRewritePath(const std::string &resolvedPath, size_t argumentCount) {
   (void)argumentCount;
-  if (resolvedPath == "/vector" || resolvedPath == "/std/collections/vector/vector") {
+  if (resolvedPath == "/std/collections/vector/vector") {
     return "/std/collections/experimental_vector/vector";
   }
   if (resolvedPath == "/std/collections/vectorNew") {
