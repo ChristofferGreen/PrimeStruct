@@ -499,13 +499,11 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   const bool hasNamedArgs = hasNamedArguments(expr.argNames);
   const bool isStdNamespacedVectorCanonicalHelperCall =
       !expr.isMethodCall && isStdNamespacedVectorCanonicalCompatibilityHelper;
-  const bool allowStdNamespacedUserReceiverProbe =
-      isStdNamespacedVectorCanonicalHelperCall &&
-      (namespacedHelper == "count" || namespacedHelper == "capacity") &&
-      hasNamedArgs;
   if (isStdNamespacedVectorCanonicalHelperCall &&
       !hasVisibleDefinitionPath(resolved) &&
-      !allowStdNamespacedUserReceiverProbe) {
+      !(isStdNamespacedVectorCanonicalHelperCall &&
+        (namespacedHelper == "count" || namespacedHelper == "capacity") &&
+        hasNamedArgs)) {
     return failVectorHelperDiagnostic("unknown call target: " + resolved);
   }
   if (expr.isMethodCall && isStdNamespacedVectorCanonicalCompatibilityHelper) {
@@ -520,14 +518,19 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     if (!(receiverFamily == "vector" || receiverFamily == "experimental_vector") &&
         !(defMap_.count(resolved) > 0 &&
           hasReceiverCompatibleVisibleDefinitionPath(resolved, receiverExpr)) &&
-        !allowStdNamespacedUserReceiverProbe) {
+        !(isStdNamespacedVectorCanonicalHelperCall &&
+          (namespacedHelper == "count" || namespacedHelper == "capacity") &&
+          hasNamedArgs)) {
       return failVectorHelperDiagnostic("unknown call target: " + resolved);
     }
   }
 
   size_t resolvedReceiverIndex = 0;
   const bool shouldProbeVectorHelperReceiver =
-      (!isStdNamespacedVectorCanonicalHelperCall || allowStdNamespacedUserReceiverProbe) &&
+      (!isStdNamespacedVectorCanonicalHelperCall ||
+       (isStdNamespacedVectorCanonicalHelperCall &&
+        (namespacedHelper == "count" || namespacedHelper == "capacity") &&
+        hasNamedArgs)) &&
       defMap_.find(resolved) == defMap_.end();
   if (shouldProbeVectorHelperReceiver && !expr.args.empty()) {
     auto tryResolveReceiverIndex = [&](size_t receiverIndex) {
