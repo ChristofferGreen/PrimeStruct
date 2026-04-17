@@ -29,7 +29,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("array namespaced vector capacity alias rejects named arguments with unknown-target diagnostics") {
@@ -209,7 +209,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced capacity array target without helper reports unknown target") {
@@ -222,7 +222,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("rooted vector helper with named arguments rejects with unknown-target diagnostics") {
