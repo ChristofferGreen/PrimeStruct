@@ -512,11 +512,12 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   std::string namespacedHelper;
   getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper);
   const bool hasNamedArgs = hasNamedArguments(expr.argNames);
-  if (isStdNamespacedVectorCanonicalCompatibilityDirectCall(
-          expr, resolved, namespacedCollection, namespacedHelper) &&
+  const bool isStdNamespacedVectorCanonicalCompatibilityDirectCallSite =
+      isStdNamespacedVectorCanonicalCompatibilityDirectCall(
+          expr, resolved, namespacedCollection, namespacedHelper);
+  if (isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&
       !hasVisibleDefinitionPath(resolved) &&
-      !(isStdNamespacedVectorCanonicalCompatibilityDirectCall(
-            expr, resolved, namespacedCollection, namespacedHelper) &&
+      !(isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&
         (namespacedHelper == "count" || namespacedHelper == "capacity") &&
         hasNamedArgs)) {
     return failVectorHelperDiagnostic("unknown call target: " + resolved);
@@ -526,8 +527,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
           resolved, namespacedCollection, namespacedHelper)) {
     return true;
   }
-  if (isStdNamespacedVectorCanonicalCompatibilityDirectCall(
-          expr, resolved, namespacedCollection, namespacedHelper) &&
+  if (isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&
       expr.args.size() == 1 &&
       !expr.hasBodyArguments &&
       expr.bodyArguments.empty()) {
@@ -536,8 +536,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     if (!(receiverFamily == "vector" || receiverFamily == "experimental_vector") &&
         !(defMap_.count(resolved) > 0 &&
           hasReceiverCompatibleVisibleDefinitionPath(resolved, receiverExpr)) &&
-        !(isStdNamespacedVectorCanonicalCompatibilityDirectCall(
-              expr, resolved, namespacedCollection, namespacedHelper) &&
+        !(isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&
           (namespacedHelper == "count" || namespacedHelper == "capacity") &&
           hasNamedArgs)) {
       return failVectorHelperDiagnostic("unknown call target: " + resolved);
@@ -545,10 +544,8 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   }
 
   size_t resolvedReceiverIndex = 0;
-  if ((!isStdNamespacedVectorCanonicalCompatibilityDirectCall(
-           expr, resolved, namespacedCollection, namespacedHelper) ||
-       (isStdNamespacedVectorCanonicalCompatibilityDirectCall(
-            expr, resolved, namespacedCollection, namespacedHelper) &&
+  if ((!isStdNamespacedVectorCanonicalCompatibilityDirectCallSite ||
+       (isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&
         (namespacedHelper == "count" || namespacedHelper == "capacity") &&
         hasNamedArgs)) &&
       defMap_.find(resolved) == defMap_.end() &&
@@ -600,8 +597,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     }
 
     const bool probePositionalReorderedReceiver =
-        !isStdNamespacedVectorCanonicalCompatibilityDirectCall(
-            expr, resolved, namespacedCollection, namespacedHelper) &&
+        !isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&
         !hasNamedArgs && expr.args.size() > 1 &&
         (expr.args.front().kind == Expr::Kind::Literal || expr.args.front().kind == Expr::Kind::BoolLiteral ||
          expr.args.front().kind == Expr::Kind::FloatLiteral ||
@@ -618,8 +614,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   }
 
   if (defMap_.find(resolved) == defMap_.end()) {
-    if (!isStdNamespacedVectorCanonicalCompatibilityDirectCall(
-            expr, resolved, namespacedCollection, namespacedHelper)) {
+    if (!isStdNamespacedVectorCanonicalCompatibilityDirectCallSite) {
       return failVectorHelperDiagnostic(vectorHelper + " is only supported as a statement");
     }
     return true;
