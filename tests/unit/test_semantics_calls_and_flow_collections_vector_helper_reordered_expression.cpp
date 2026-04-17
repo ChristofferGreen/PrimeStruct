@@ -163,6 +163,36 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("rooted vector constructor alias auto binding is rejected even with stdlib import") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto] values{/vector/vector<i32>(4i32, 5i32)}
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/vector") != std::string::npos);
+}
+
+TEST_CASE("rooted vector constructor alias named-argument auto binding is rejected") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto] values{/vector/vector<i32>([first] 4i32, [second] 5i32)}
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/vector") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced vector constructor rejects explicit builtin vector binding" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/collections/*

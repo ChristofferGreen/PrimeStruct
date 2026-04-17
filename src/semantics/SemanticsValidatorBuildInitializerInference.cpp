@@ -69,9 +69,7 @@ bool SemanticsValidator::shouldBypassGraphBindingLookup(const Expr &candidate) c
   if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
     normalizedPrefix.erase(normalizedPrefix.begin());
   }
-  if (normalizedName == "vector/vector" ||
-      normalizedName == "vector" ||
-      (normalizedPrefix == "vector" && normalizedName == "vector") ||
+  if (normalizedName == "vector" ||
       (normalizedPrefix == "std/collections/vector" && normalizedName == "vector")) {
     return true;
   }

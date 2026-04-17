@@ -932,6 +932,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             "std::string SemanticsValidator::preferredVisibleDefinitionPathForCurrentImports(") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
+            "normalizedName == \"vector/vector\"") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "normalizedPrefix == \"vector\" && normalizedName == \"vector\"") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
             "std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
