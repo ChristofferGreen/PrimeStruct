@@ -386,7 +386,7 @@ main() {
   CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced count slash method accepts same-path helper on string target") {
+TEST_CASE("vector namespaced count slash method rejects same-path helper on string target") {
   const std::string source = R"(
 [return<int>]
 /vector/count([string] values) {
@@ -404,11 +404,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /string/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced count slash method accepts same-path helper on map target") {
+TEST_CASE("vector namespaced count slash method rejects same-path helper on map target") {
   const std::string source = R"(
 [return<int>]
 /vector/count([map<i32, i32>] values) {
@@ -426,8 +426,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /map/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count slash method map target without helper reports unknown method") {
@@ -464,7 +464,7 @@ main() {
   CHECK(error.find("unknown method: /string/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced count slash method accepts same-path helper on array target") {
+TEST_CASE("vector namespaced count slash method rejects same-path helper on array target") {
   const std::string source = R"(
 [return<int>]
 /vector/count([array<i32>] values) {
@@ -482,8 +482,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /array/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count slash method array target without helper reports unknown method") {

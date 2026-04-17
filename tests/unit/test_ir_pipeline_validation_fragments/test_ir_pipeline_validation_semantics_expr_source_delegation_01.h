@@ -319,6 +319,9 @@
             "         resolvedOut == \"/std/collections/vector/at_unsafe\") &&\n"
             "        explicitVectorHelperPath.empty() &&") ==
         std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "explicitVectorHelperPath == \"/vector/count\" &&") ==
+        std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "auto isExplicitVectorCompatibilityMethodWithTemplateArgs = [&]() {") ==
         std::string::npos);
