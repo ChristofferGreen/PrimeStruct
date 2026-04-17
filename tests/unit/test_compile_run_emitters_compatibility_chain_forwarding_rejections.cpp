@@ -394,8 +394,7 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   const std::string err = readFile(errPath);
-  CHECK(err.find("validateExprMethodCallTarget failed") != std::string::npos);
-  CHECK(err.find("/vector/at_unsafe") != std::string::npos);
+  CHECK(err.find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("rejects vector method alias access receiver fallback without helper in C++ emitter") {
@@ -489,8 +488,7 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   const std::string err = readFile(errPath);
-  CHECK(err.find("validateExprMethodCallTarget failed") != std::string::npos);
-  CHECK(err.find("/vector/at_unsafe") != std::string::npos);
+  CHECK(err.find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps vector method alias struct-return precedence over canonical helper" * doctest::skip(true)) {
