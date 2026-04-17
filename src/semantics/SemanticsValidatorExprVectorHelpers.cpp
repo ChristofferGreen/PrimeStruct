@@ -492,15 +492,14 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   std::string namespacedCollection;
   std::string namespacedHelper;
   getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper);
-  const bool isStdNamespacedVectorCanonicalHelperCall =
-      !expr.isMethodCall && resolved.rfind("/std/collections/vector/", 0) == 0 &&
+  const bool isStdNamespacedVectorCanonicalCompatibilityHelper =
+      resolved.rfind("/std/collections/vector/", 0) == 0 &&
+      namespacedCollection == "vector" &&
       isVectorCompatibilityHelperName(namespacedHelper);
+  const bool isStdNamespacedVectorCanonicalHelperCall =
+      !expr.isMethodCall && isStdNamespacedVectorCanonicalCompatibilityHelper;
   const bool isExplicitStdNamespacedVectorCompatibilityMethod =
-      expr.isMethodCall &&
-      (resolved == "/std/collections/vector/count" ||
-       resolved == "/std/collections/vector/capacity" ||
-       resolved == "/std/collections/vector/at" ||
-       resolved == "/std/collections/vector/at_unsafe");
+      expr.isMethodCall && isStdNamespacedVectorCanonicalCompatibilityHelper;
   const bool hasVisibleStdNamespacedVectorCanonicalHelper =
       isStdNamespacedVectorCanonicalHelperCall && hasVisibleDefinitionPath(resolved);
   const bool allowStdNamespacedUserReceiverProbe =

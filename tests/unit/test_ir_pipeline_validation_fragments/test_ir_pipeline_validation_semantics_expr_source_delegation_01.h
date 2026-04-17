@@ -500,6 +500,21 @@
   CHECK(semanticsExprMethodResolutionSource.find(
             "normalizedName == \"std/collections/vector/capacity\"") ==
         std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "resolved == \"/std/collections/vector/count\"") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "resolved == \"/std/collections/vector/capacity\"") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "resolved == \"/std/collections/vector/at\"") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "resolved == \"/std/collections/vector/at_unsafe\"") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "const bool isStdNamespacedVectorCanonicalCompatibilityHelper =") !=
+        std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "if (resolved == \"/std/collections/vector/count\" &&\n"
             "        hasImportedDefinitionPath(\"/std/collections/vector/count\") &&\n"
