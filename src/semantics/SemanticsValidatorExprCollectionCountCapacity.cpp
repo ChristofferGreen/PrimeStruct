@@ -129,6 +129,19 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     usedMethodTarget = true;
     hasMethodReceiverIndex = true;
     methodReceiverIndex = 0;
+    if (!expr.isMethodCall && context.isNamespacedVectorCountCall &&
+        expr.args.size() == 1 &&
+        expr.args.front().kind == Expr::Kind::Call) {
+      std::string receiverCollectionTypePath;
+      if (resolveCallCollectionTypePath(expr.args.front(), params, locals,
+                                        receiverCollectionTypePath) &&
+          receiverCollectionTypePath == "/vector" &&
+          !hasDeclaredDefinitionPath("/vector/count") &&
+          !hasImportedDefinitionPath("/vector/count")) {
+        return failCollectionCountCapacityDiagnostic(
+            "unknown call target: /vector/count");
+      }
+    }
     bool isBuiltinMethod = false;
     std::string methodResolved;
     auto hasVisibleStdlibMapCountDefinition = [&]() {
