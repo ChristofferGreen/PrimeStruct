@@ -75,7 +75,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
 TEST_CASE("rejects stdlib namespaced vector capacity on map target in C++ emitter") {
