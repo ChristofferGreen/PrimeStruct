@@ -195,6 +195,15 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         }
         return methodTarget;
       };
+  auto preferResolvedVectorCompatibilityMethodTarget =
+      [&](const std::string &methodTarget) {
+        if (isBuiltinMethod || !isVectorCompatibilityMethodName(expr.name) ||
+            methodTarget.rfind("/std/collections/experimental_vector/Vector__", 0) != 0) {
+          return methodTarget;
+        }
+        return preferVectorStdlibHelperPath(
+            preferVisibleCanonicalVectorMethodTarget(methodTarget, false));
+      };
   if (isVectorCompatibilityMethodName(expr.name) &&
       !hasExplicitVectorCompatibilityNamespace(normalizedMethodNamespace) &&
       resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
@@ -267,11 +276,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       isBuiltinMethod = false;
     }
   }
-  if (!isBuiltinMethod && isVectorCompatibilityMethodName(expr.name) &&
-      resolved.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
-    resolved = preferVisibleCanonicalVectorMethodTarget(resolved, false);
-    resolved = preferVectorStdlibHelperPath(resolved);
-  }
+  resolved = preferResolvedVectorCompatibilityMethodTarget(resolved);
   bool keepBuiltinIndexedArgsPackMapMethod = false;
   keepBuiltinIndexedArgsPackMapMethod = resolveMapTarget(expr.args.front());
   if (expr.args.front().kind == Expr::Kind::Call) {
