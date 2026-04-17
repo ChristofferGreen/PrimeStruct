@@ -524,6 +524,9 @@
   CHECK(semanticsExprVectorHelpersSource.find(
             "const bool shouldProbeVectorHelperReceiver =") ==
         std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "const bool isStdNamespacedVectorCanonicalHelperCall =") ==
+        std::string::npos);
   const auto vectorHelpersHasNamedArgsPos = semanticsExprVectorHelpersSource.find(
       "const bool hasNamedArgs = hasNamedArguments(expr.argNames);");
   CHECK(vectorHelpersHasNamedArgsPos != std::string::npos);
