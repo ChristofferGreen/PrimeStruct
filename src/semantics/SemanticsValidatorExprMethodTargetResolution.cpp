@@ -2298,15 +2298,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         !removedVectorMethodCompatibilityPath.empty() &&
         (hasDefinitionPath(removedVectorMethodCompatibilityPath) ||
          hasImportedDefinitionPath(removedVectorMethodCompatibilityPath));
-    if (removedVectorMethodCompatibilityPath == "/std/collections/vector/capacity" &&
-        !hasSamePathRemovedVectorMethodHelper &&
-        !receiver.args.empty()) {
-      std::string vectorElemType;
-      if (resolveVectorTarget(receiver.args.front(), vectorElemType)) {
-        return failMethodTargetResolutionDiagnostic("unknown method: " +
-                                                    removedVectorMethodCompatibilityPath);
-      }
-    }
     std::string accessHelperName;
     if (getBuiltinArrayAccessName(receiver, accessHelperName) && !receiver.args.empty()) {
       const std::string removedMapCompatibilityPath = getDirectMapHelperCompatibilityPath(receiver);

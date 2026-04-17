@@ -356,7 +356,7 @@
             "         removedVectorMethodCompatibilityPath == \"/std/collections/vector/capacity\") &&") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "if (removedVectorMethodCompatibilityPath == \"/std/collections/vector/capacity\" &&") !=
+            "if (removedVectorMethodCompatibilityPath == \"/std/collections/vector/capacity\" &&") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "explicitVectorReceiverFamily + \"/count\"") ==
