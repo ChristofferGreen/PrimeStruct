@@ -219,13 +219,14 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   } else {
     explicitRemovedMethodPath = explicitRemovedCollectionMethodPath(methodName, expr.namespacePrefix);
   }
-  auto isExplicitRootedVectorCountCapacityMethod = [&]() {
+  auto isExplicitRootedVectorMethod = [&]() {
     std::string normalizedNamespace = expr.namespacePrefix;
     if (!normalizedNamespace.empty() && normalizedNamespace.front() == '/') {
       normalizedNamespace.erase(normalizedNamespace.begin());
     }
     if (normalizedNamespace == "vector" &&
-        (methodName == "count" || methodName == "capacity")) {
+        (methodName == "count" || methodName == "capacity" ||
+         methodName == "at" || methodName == "at_unsafe")) {
       return true;
     }
     std::string normalizedMethodPath = methodName;
@@ -233,7 +234,9 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       normalizedMethodPath.erase(normalizedMethodPath.begin());
     }
     return normalizedMethodPath == "vector/count" ||
-           normalizedMethodPath == "vector/capacity";
+           normalizedMethodPath == "vector/capacity" ||
+           normalizedMethodPath == "vector/at" ||
+           normalizedMethodPath == "vector/at_unsafe";
   };
   auto methodTargetMemoKey = [&](std::string_view receiverTypeText)
       -> std::optional<CallTargetResolutionScratch::MethodTargetMemoKey> {
@@ -287,7 +290,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     callTargetResolutionScratch_.methodTargetMemoCache.insert_or_assign(*key, resolvedOut);
   };
-  if (isExplicitRootedVectorCountCapacityMethod()) {
+  if (isExplicitRootedVectorMethod()) {
     std::string elemType;
     if ((resolveExperimentalVectorValueTarget != nullptr &&
          resolveExperimentalVectorValueTarget(receiver, elemType)) ||

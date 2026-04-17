@@ -2116,7 +2116,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
   auto explicitVectorReceiverFamily = classifyExplicitVectorHelperReceiver(receiver);
   if (explicitVectorHelperPath.rfind("/vector/", 0) == 0 &&
-      (normalizedMethodName == "count" || normalizedMethodName == "capacity") &&
+      (normalizedMethodName == "count" || normalizedMethodName == "capacity" ||
+       normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
       (explicitVectorReceiverFamily == "vector" ||
        explicitVectorReceiverFamily == "experimental_vector" ||
        explicitVectorReceiverFamily == "soa_vector")) {

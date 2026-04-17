@@ -501,7 +501,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK((error.find("/vector/at") != std::string::npos ||
+         error.find("/vector/at_unsafe") != std::string::npos));
+  CHECK((error.find("unknown method") != std::string::npos ||
+         error.find("unknown call target") != std::string::npos));
 }
 
 TEST_CASE("vector namespaced access slash method vector target without canonical helper reports unknown method") {
