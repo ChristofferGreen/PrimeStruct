@@ -715,10 +715,10 @@ main() {
   [string] value{"abc"raw_utf8}
   return(value./vector/capacity())
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /string/capacity") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced capacity method rejects local array receiver without helper") {
@@ -728,10 +728,10 @@ main() {
   [array<i32>] items{array<i32>(1i32, 2i32, 3i32)}
   return(items./vector/capacity())
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /array/capacity") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector capacity method on builtin vector receiver requires same-path helper") {
@@ -780,10 +780,10 @@ wrapMap() {
 main() {
   return(wrapMap()./vector/capacity())
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /map/capacity") != std::string::npos);
 }
 
 TEST_CASE(
