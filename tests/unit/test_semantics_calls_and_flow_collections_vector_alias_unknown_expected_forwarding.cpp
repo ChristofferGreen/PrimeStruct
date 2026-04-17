@@ -666,8 +666,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("validateExprMethodCallTarget failed") != std::string::npos);
-  CHECK(error.find("/vector/count") != std::string::npos);
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector method explicit count alias namespace resolves when alias helper exists") {
@@ -689,8 +688,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector method bare capacity rejects canonical-only helper path") {

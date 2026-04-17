@@ -324,6 +324,20 @@
             "      (explicitVectorReceiverFamily == \"string\" ||") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "if (explicitVectorHelperPath.rfind(\"/vector/\", 0) == 0 &&\n"
+            "      (normalizedMethodName == \"count\" || normalizedMethodName == \"capacity\" ||\n"
+            "       normalizedMethodName == \"at\" || normalizedMethodName == \"at_unsafe\") &&\n"
+            "      (explicitVectorReceiverFamily == \"vector\" ||\n"
+            "       explicitVectorReceiverFamily == \"experimental_vector\" ||\n"
+            "       explicitVectorReceiverFamily == \"soa_vector\"))") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "if (explicitVectorHelperPath == \"/vector/count\" &&\n"
+            "      (explicitVectorReceiverFamily == \"vector\" ||\n"
+            "       explicitVectorReceiverFamily == \"experimental_vector\" ||\n"
+            "       explicitVectorReceiverFamily == \"soa_vector\"))") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
             "(normalizedMethodName == \"count\" || normalizedMethodName == \"capacity\") &&\n"
             "      (explicitVectorReceiverFamily == \"string\" ||") ==
         std::string::npos);

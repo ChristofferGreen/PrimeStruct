@@ -2116,9 +2116,20 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return setPreferredMapMethodTarget(receiver, normalizedMethodName);
   }
   auto explicitVectorReceiverFamily = classifyExplicitVectorHelperReceiver(receiver);
+  if (explicitVectorHelperPath == "/vector/count" &&
+      (explicitVectorReceiverFamily == "vector" ||
+       explicitVectorReceiverFamily == "experimental_vector" ||
+       explicitVectorReceiverFamily == "soa_vector")) {
+    if (hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {
+      resolvedOut = explicitVectorHelperPath;
+      isBuiltinOut = false;
+      return true;
+    }
+    return failMethodTargetResolutionDiagnostic("unknown method: " + explicitVectorHelperPath);
+  }
   if (explicitVectorHelperPath.rfind("/vector/", 0) == 0 &&
-      (normalizedMethodName == "count" || normalizedMethodName == "capacity" ||
-       normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
+      (normalizedMethodName == "capacity" || normalizedMethodName == "at" ||
+       normalizedMethodName == "at_unsafe") &&
       (explicitVectorReceiverFamily == "vector" ||
        explicitVectorReceiverFamily == "experimental_vector" ||
        explicitVectorReceiverFamily == "soa_vector")) {

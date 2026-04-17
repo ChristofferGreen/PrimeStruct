@@ -955,10 +955,10 @@ main() {
   CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced count method on builtin vector receiver requires same-path helper" * doctest::skip(true)) {
+TEST_CASE("vector namespaced count method on builtin vector receiver requires same-path helper") {
   const std::string source = R"(
 [return<int>]
-/std/collections/vector/count([vector<i32>] values) {
+/vector/count([vector<i32>] values) {
   return(31i32)
 }
 
