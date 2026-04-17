@@ -561,6 +561,9 @@
             "auto tryResolveNamedFallbackReceivers = [&]() {") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
+            "auto tryResolveNamedInitialReceivers = [&]() {") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
             "auto tryResolveReorderedReceiver = [&]() {") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
@@ -599,8 +602,7 @@
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "if (hasNamedArgs) {\n"
-            "      tryResolveNamedValuesReceiver();\n"
-            "      return tryResolveNamedFallbackReceivers();") ==
+            "      tryResolveNamedInitialReceivers();") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "auto tryResolveInitialReceiver = [&]() {") ==
