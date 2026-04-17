@@ -546,6 +546,9 @@
             "const bool hasNamedValuesReceiver = [&]() {") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
+            "auto tryResolveRemainingReceivers = [&](size_t startIndex) {") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
             "auto tryResolvePrimaryReceiver = [&]() {") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
@@ -574,6 +577,10 @@
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "} else {\n      resolvedReceiver = tryResolveReceiverIndex(0);") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "for (size_t i = 1; i < expr.args.size(); ++i) {\n"
+            "          if (tryResolveReceiverIndex(i)) {") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "const bool probePositionalReorderedReceiver =") ==

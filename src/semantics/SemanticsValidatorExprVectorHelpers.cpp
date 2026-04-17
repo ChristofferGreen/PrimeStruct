@@ -620,6 +620,15 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     };
 
     bool resolvedReceiver = false;
+    auto tryResolveRemainingReceivers = [&](size_t startIndex) {
+      for (size_t i = startIndex; i < expr.args.size(); ++i) {
+        if (tryResolveReceiverIndex(i)) {
+          resolvedReceiver = true;
+          return true;
+        }
+      }
+      return false;
+    };
     auto tryResolvePrimaryReceiver = [&]() {
       resolvedReceiver = tryResolveReceiverIndex(0);
       return resolvedReceiver;
@@ -632,12 +641,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
         if (tryResolvePrimaryReceiver()) {
           return;
         }
-        for (size_t i = 1; i < expr.args.size(); ++i) {
-          if (tryResolveReceiverIndex(i)) {
-            resolvedReceiver = true;
-            return;
-          }
-        }
+        tryResolveRemainingReceivers(1);
       };
       if (hasNamedValuesReceiver) {
         resolvedReceiver = tryResolveReceiverIndex(namedValuesReceiverIndex);
@@ -651,11 +655,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
             expr, isStdNamespacedVectorCanonicalCompatibilityDirectCallSite,
             hasNamedArgs, params, locals) &&
         !resolvedReceiver) {
-      for (size_t i = 1; i < expr.args.size(); ++i) {
-        if (tryResolveReceiverIndex(i)) {
-          break;
-        }
-      }
+      tryResolveRemainingReceivers(1);
     }
   }
 
