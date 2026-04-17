@@ -403,8 +403,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return resolvedReceiver == ctorPath ||
                resolvedReceiver.rfind(std::string(ctorPath) + "__t", 0) == 0;
       };
-      if (matchesCtorPath("/std/collections/vector/vector") ||
-          matchesCtorPath("/std/collections/experimental_vector/vector") ||
+      if (matchesCtorPath("/std/collections/experimental_vector/vector") ||
           matchesCtorPath("/std/collections/experimental_vector/vectorNew") ||
           matchesCtorPath("/std/collections/experimental_vector/vectorSingle") ||
           matchesCtorPath("/std/collections/experimental_vector/vectorPair") ||

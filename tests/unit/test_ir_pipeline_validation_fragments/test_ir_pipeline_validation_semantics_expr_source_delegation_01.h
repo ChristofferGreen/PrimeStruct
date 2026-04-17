@@ -261,6 +261,9 @@
             "            expr,\n"
             "            methodResolutionContext,") !=
         std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "matchesCtorPath(\"/std/collections/vector/vector\")") ==
+        std::string::npos);
   CHECK(semanticsExprSource.find("prepareExprDispatchBootstrap(params, locals, dispatchBootstrap);") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(

@@ -595,6 +595,27 @@ main() {
   CHECK(error.find("unknown method: /Marker/count") != std::string::npos);
 }
 
+TEST_CASE("templated canonical vector constructor helper return keeps non-vector capacity diagnostics") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/vector/vector<T>([T] seed) {
+  return(Marker(9i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/vector/vector<i32>(9i32).capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /Marker/capacity") != std::string::npos);
+}
+
 TEST_CASE("vector constructor alias call keeps removed-alias diagnostics") {
   const std::string source = R"(
 Marker {
