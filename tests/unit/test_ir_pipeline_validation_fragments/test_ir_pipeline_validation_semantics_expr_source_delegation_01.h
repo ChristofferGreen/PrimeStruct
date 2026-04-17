@@ -513,6 +513,18 @@
             "const bool hasVisiblePreferredVectorMethodTarget =") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
+            "const bool hasExplicitVectorCompatibilityNamespace =") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "const bool isVectorCompatibilityMethodName =") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "bool hasExplicitVectorCompatibilityNamespace(std::string_view normalizedMethodNamespace)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "bool isVectorCompatibilityMethodName(std::string_view helperName)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
             "expr.args.front().kind == Expr::Kind::Call &&\n"
             "      !expr.args.front().isBinding &&\n"
             "      !expr.args.front().isMethodCall &&\n"

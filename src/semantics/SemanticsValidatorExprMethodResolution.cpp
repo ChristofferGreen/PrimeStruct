@@ -4,6 +4,22 @@
 #include <string_view>
 
 namespace primec::semantics {
+namespace {
+
+bool isVectorCompatibilityMethodName(std::string_view helperName) {
+  return helperName == "count" || helperName == "capacity" || helperName == "at" ||
+         helperName == "at_unsafe" || helperName == "push" || helperName == "pop" ||
+         helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
+         helperName == "remove_swap";
+}
+
+bool hasExplicitVectorCompatibilityNamespace(std::string_view normalizedMethodNamespace) {
+  return normalizedMethodNamespace == "vector" ||
+         normalizedMethodNamespace == "std/collections/vector";
+}
+
+} // namespace
+
 bool SemanticsValidator::validateExprMethodCallTarget(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
@@ -156,17 +172,9 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     }
     return normalized;
   }();
-  const bool hasExplicitVectorCompatibilityNamespace =
-      normalizedMethodNamespace == "vector" ||
-      normalizedMethodNamespace == "std/collections/vector";
   std::string vectorMethodTarget;
-  const bool isVectorCompatibilityMethodName =
-      expr.name == "count" || expr.name == "capacity" || expr.name == "at" ||
-      expr.name == "at_unsafe" || expr.name == "push" || expr.name == "pop" ||
-      expr.name == "reserve" || expr.name == "clear" || expr.name == "remove_at" ||
-      expr.name == "remove_swap";
-  if (isVectorCompatibilityMethodName &&
-      !hasExplicitVectorCompatibilityNamespace &&
+  if (isVectorCompatibilityMethodName(expr.name) &&
+      !hasExplicitVectorCompatibilityNamespace(normalizedMethodNamespace) &&
       resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
                                       vectorMethodTarget)) {
     if (vectorMethodTarget.rfind("/std/collections/experimental_vector/", 0) == 0 &&
@@ -245,7 +253,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       isBuiltinMethod = false;
     }
   }
-  if (!isBuiltinMethod && isVectorCompatibilityMethodName &&
+  if (!isBuiltinMethod && isVectorCompatibilityMethodName(expr.name) &&
       resolved.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
     const std::string canonicalVectorMethodTarget =
         "/std/collections/vector/" + expr.name;
