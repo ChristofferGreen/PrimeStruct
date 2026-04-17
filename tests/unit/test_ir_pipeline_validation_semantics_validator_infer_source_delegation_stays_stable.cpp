@@ -401,6 +401,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferCollectionDirectCountCapacitySource.find(
             "auto rejectsRootedVectorBuiltinAlias =") ==
         std::string::npos);
+  CHECK(semanticsInferCollectionDirectCountCapacitySource.find(
+            "auto rejectsRootedVectorCountNonVectorAlias =") ==
+        std::string::npos);
   CHECK(semanticsInferCollectionDirectCountCapacitySource.find("const auto inferHelperReturnKind = [&](const std::string &helperName,") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDirectCountCapacitySource.find("if (context.isDirectCountCall)") != std::string::npos);
