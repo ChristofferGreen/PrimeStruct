@@ -116,9 +116,15 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
       }
       return true;
     }
+    std::string builtinVectorElemType;
+    const bool resolvesBuiltinVectorReceiver =
+        dispatchResolvers.resolveVectorTarget != nullptr &&
+        dispatchResolvers.resolveVectorTarget(expr.args.front(),
+                                             builtinVectorElemType);
     bool isBuiltinMethod = false;
     std::string methodResolved;
-    if (resolveMethodTarget(params, locals, expr.namespacePrefix,
+    if (!resolvesBuiltinVectorReceiver &&
+        resolveMethodTarget(params, locals, expr.namespacePrefix,
                             expr.args.front(), helperName, methodResolved,
                             isBuiltinMethod) &&
         !isBuiltinMethod &&
