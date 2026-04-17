@@ -226,7 +226,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     if (normalizedNamespace == "vector" &&
         (methodName == "count" || methodName == "capacity" ||
-         methodName == "at" || methodName == "at_unsafe")) {
+         methodName == "at")) {
       return true;
     }
     std::string normalizedMethodPath = methodName;
@@ -235,8 +235,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     return normalizedMethodPath == "vector/count" ||
            normalizedMethodPath == "vector/capacity" ||
-           normalizedMethodPath == "vector/at" ||
-           normalizedMethodPath == "vector/at_unsafe";
+           normalizedMethodPath == "vector/at";
   };
   auto methodTargetMemoKey = [&](std::string_view receiverTypeText)
       -> std::optional<CallTargetResolutionScratch::MethodTargetMemoKey> {

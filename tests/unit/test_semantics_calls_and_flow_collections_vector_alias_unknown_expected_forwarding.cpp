@@ -869,6 +869,49 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector method explicit at_unsafe alias namespace keeps auto inference on same-path helper") {
+  const std::string source = R"(
+[return<int>]
+/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return(plus(index, 91i32))
+}
+
+[return<bool>]
+/std/collections/vector/at_unsafe<T>([vector<T>] values, [i32] index) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [auto] inferred{values./vector/at_unsafe(1i32)}
+  return(inferred)
+}
+  )";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector method explicit at_unsafe alias namespace auto inference still rejects canonical-only helper path") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/vector/at_unsafe<T>([vector<T>] values, [i32] index) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [auto] inferred{values./vector/at_unsafe(1i32)}
+  return(inferred)
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/at_unsafe") != std::string::npos);
+}
+
 TEST_CASE("vector method at uses alias helper signature when alias helper has string index") {
   const std::string source = R"(
 [return<int>]

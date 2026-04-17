@@ -277,6 +277,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferMethodResolutionSource.find(
             "resolvedOut = preferredSoaHelperTargetForCollectionType(") !=
         std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "normalizedMethodPath == \"vector/at_unsafe\"") ==
+        std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = \"/soa_vector/ref\";") ==
         std::string::npos);
   CHECK((semanticsInferMethodResolutionSource.find(
