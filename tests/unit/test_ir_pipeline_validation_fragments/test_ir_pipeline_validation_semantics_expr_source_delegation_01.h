@@ -426,10 +426,37 @@
             "       explicitVectorReceiverFamily == \"soa_vector\"))") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "const bool isExplicitRootedVectorMethod =") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "const bool isExplicitVectorFamilyReceiver =") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "if (isExplicitRootedVectorMethod && isExplicitVectorFamilyReceiver)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "if (explicitVectorHelperPath == \"/vector/count\" &&\n"
+            "      (explicitVectorReceiverFamily == \"vector\" ||\n"
+            "       explicitVectorReceiverFamily == \"experimental_vector\" ||\n"
+            "       explicitVectorReceiverFamily == \"soa_vector\"))") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "if (explicitVectorHelperPath == \"/vector/capacity\" &&\n"
+            "      (explicitVectorReceiverFamily == \"vector\" ||\n"
+            "       explicitVectorReceiverFamily == \"experimental_vector\" ||\n"
+            "       explicitVectorReceiverFamily == \"soa_vector\"))") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "if (explicitVectorHelperPath == \"/vector/at\" &&\n"
+            "      (explicitVectorReceiverFamily == \"vector\" ||\n"
+            "       explicitVectorReceiverFamily == \"experimental_vector\" ||\n"
+            "       explicitVectorReceiverFamily == \"soa_vector\"))") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
             "if (explicitVectorHelperPath == \"/vector/at_unsafe\" &&\n"
             "      (explicitVectorReceiverFamily == \"vector\" ||\n"
             "       explicitVectorReceiverFamily == \"experimental_vector\" ||\n"
-            "       explicitVectorReceiverFamily == \"soa_vector\"))") !=
+            "       explicitVectorReceiverFamily == \"soa_vector\"))") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "auto isExplicitVectorCompatibilityMethodWithTemplateArgs = [&]() {") ==
