@@ -655,10 +655,13 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       tryResolveNamedValuesReceiver();
       return tryResolveNamedFallbackReceivers();
     };
+    auto tryResolvePositionalInitialReceiver = [&]() {
+      return tryResolvePrimaryReceiver();
+    };
     if (hasNamedArgs) {
       tryResolveNamedInitialReceivers();
     } else {
-      tryResolvePrimaryReceiver();
+      tryResolvePositionalInitialReceiver();
     }
     auto tryResolveReorderedReceiver = [&]() {
       if (resolvedReceiver) {
