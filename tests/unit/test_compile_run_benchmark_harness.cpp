@@ -211,7 +211,7 @@ TEST_CASE("semantic memory baseline report is checked in with fixture phase cove
   CHECK(readFile(validateErrPath).empty());
 }
 
-TEST_CASE("semantic memory ctest targets stay serial when baseline exceeds thresholds") {
+TEST_CASE("semantic memory ctest targets keep dependency ordering and wall-ignore gating") {
   if (!hasPython3()) {
     INFO("python3 not available");
     return;
@@ -223,8 +223,8 @@ TEST_CASE("semantic memory ctest targets stay serial when baseline exceeds thres
   REQUIRE(std::filesystem::exists(cmakePath));
   REQUIRE(std::filesystem::exists(baselinePath));
 
-  const std::string validateOutPath = writeTemp("semantic_memory_ctest_serial_validate.out", "");
-  const std::string validateErrPath = writeTemp("semantic_memory_ctest_serial_validate.err", "");
+  const std::string validateOutPath = writeTemp("semantic_memory_ctest_policy_validate.out", "");
+  const std::string validateErrPath = writeTemp("semantic_memory_ctest_policy_validate.err", "");
   const std::string validateCmd =
       "python3 -c " +
       quoteShellArg(
@@ -242,27 +242,32 @@ TEST_CASE("semantic memory ctest targets stay serial when baseline exceeds thres
           "  or bool(row.get('exceeds_expensive_rss_threshold'))\n"
           "  for row in offenders\n"
           ")\n"
-          "benchmark_guard = re.search(\n"
+          "benchmark_timeout_guard = re.search(\n"
           "  r'set_tests_properties\\(\\s*PrimeStruct_semantic_memory_benchmark\\s*'\n"
-          "  r'PROPERTIES\\s*RUN_SERIAL TRUE\\s*TIMEOUT 1800\\s*\\)',\n"
+          "  r'PROPERTIES\\s*TIMEOUT 1800\\s*\\)',\n"
           "  cmake_text,\n"
           "  re.S,\n"
           ") is not None\n"
-          "trend_guard = re.search(\n"
+          "trend_timeout_guard = re.search(\n"
           "  r'set_tests_properties\\(\\s*PrimeStruct_semantic_memory_trend\\s*'\n"
           "  r'PROPERTIES\\s*DEPENDS PrimeStruct_semantic_memory_benchmark\\s*'\n"
-          "  r'RUN_SERIAL TRUE\\s*TIMEOUT 300\\s*\\)',\n"
+          "  r'TIMEOUT 300\\s*\\)',\n"
           "  cmake_text,\n"
           "  re.S,\n"
           ") is not None\n"
-          "ok = has_thresholds and has_offenders and offender_exceeds and benchmark_guard and trend_guard\n"
+          "no_run_serial = 'RUN_SERIAL' not in cmake_text\n"
+          "wall_ignore_occurrences = cmake_text.count('--ignore-wall-seconds')\n"
+          "has_wall_ignore = wall_ignore_occurrences >= 6\n"
+          "ok = has_thresholds and has_offenders and offender_exceeds and benchmark_timeout_guard and trend_timeout_guard and no_run_serial and has_wall_ignore\n"
           "if not ok:\n"
           "  print(json.dumps({\n"
           "    'thresholds': thresholds,\n"
           "    'offender_count': len(offenders) if isinstance(offenders, list) else -1,\n"
           "    'offender_exceeds': offender_exceeds,\n"
-          "    'benchmark_guard': benchmark_guard,\n"
-          "    'trend_guard': trend_guard,\n"
+          "    'benchmark_timeout_guard': benchmark_timeout_guard,\n"
+          "    'trend_timeout_guard': trend_timeout_guard,\n"
+          "    'no_run_serial': no_run_serial,\n"
+          "    'wall_ignore_occurrences': wall_ignore_occurrences,\n"
           "  }, indent=2, sort_keys=True))\n"
           "sys.exit(0 if ok else 1)\n") +
       " " + quoteShellArg(baselinePath.string()) +
@@ -3189,7 +3194,7 @@ TEST_CASE("tsan semantics smoke is gated behind optional-ci wiring") {
   const std::string cmakeText = readFile(cmakePath.string());
   CHECK(cmakeText.find("option(PRIMESTRUCT_ENABLE_TSAN_SEMANTICS_SMOKE") != std::string::npos);
   CHECK(cmakeText.find("add_executable(PrimeStruct_semantics_tsan_smoke") != std::string::npos);
-  CHECK(cmakeText.find("LABELS \"optional-ci;tsan;serial-required\"") != std::string::npos);
+  CHECK(cmakeText.find("LABELS \"optional-ci;tsan\"") != std::string::npos);
 
   REQUIRE(std::filesystem::exists(scriptPath));
   const std::string scriptText = readFile(scriptPath.string());

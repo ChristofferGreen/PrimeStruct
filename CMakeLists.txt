@@ -1368,6 +1368,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             --repo-root ${CMAKE_SOURCE_DIR}
             --runs 3
             --policy ${PRIMESTRUCT_SEMANTIC_MEMORY_POLICY}
+            --ignore-wall-seconds
             --history-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_history
             --history-limit 2
             --benchmark-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_report.json
@@ -1389,6 +1390,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             --repo-root ${CMAKE_SOURCE_DIR}
             --runs 3
             --policy ${PRIMESTRUCT_SEMANTIC_MEMORY_POLICY}
+            --ignore-wall-seconds
             --history-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_history
             --history-limit 2
             --benchmark-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_report.json
@@ -1409,6 +1411,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             --repo-root ${CMAKE_SOURCE_DIR}
             --runs 3
             --policy ${PRIMESTRUCT_SEMANTIC_MEMORY_POLICY}
+            --ignore-wall-seconds
             --benchmark-definition-validation-workers both
             --history-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_definition_worker_parity_history
             --history-limit 2
@@ -1431,6 +1434,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             --repo-root ${CMAKE_SOURCE_DIR}
             --runs 3
             --policy ${PRIMESTRUCT_SEMANTIC_MEMORY_POLICY}
+            --ignore-wall-seconds
             --benchmark-definition-validation-workers both
             --history-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_definition_worker_parity_history
             --history-limit 2
@@ -1451,6 +1455,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             --primec $<TARGET_FILE:primec>
             --runs 3
             --policy ${PRIMESTRUCT_SEMANTIC_MEMORY_POLICY}
+            --ignore-wall-seconds
             --history-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_history
             --history-limit 2
             --benchmark-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_report.json
@@ -1471,6 +1476,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             --primec $<TARGET_FILE:primec>
             --runs 3
             --policy ${PRIMESTRUCT_SEMANTIC_MEMORY_POLICY}
+            --ignore-wall-seconds
             --history-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_history
             --history-limit 2
             --benchmark-report ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_report.json

@@ -60,6 +60,11 @@ def main() -> int:
       default=[],
       help="Optional prior semantic memory report JSON (repeatable) for sustained-window checks.",
   )
+  parser.add_argument(
+      "--ignore-wall-seconds",
+      action="store_true",
+      help="Ignore wall-time regressions and gate only on RSS metrics.",
+  )
   parser.add_argument("--report-json", help="Optional output path for observed checker summary JSON.")
   args = parser.parse_args()
 
@@ -145,7 +150,7 @@ def main() -> int:
     if observed_rss > max_rss:
       failures.append(
           f"{entry_name} worst_peak_rss_bytes regression observed={observed_rss} allowed<={max_rss}")
-    if observed_wall > max_wall:
+    if not args.ignore_wall_seconds and observed_wall > max_wall:
       failures.append(
           f"{entry_name} worst_wall_seconds regression observed={observed_wall:.6f} allowed<={max_wall:.6f}")
 
@@ -159,13 +164,13 @@ def main() -> int:
         wall_value = as_float(row, "worst_wall_seconds", f"window:{entry_name}")
         if rss_value > soft_rss:
           sustained_rss_regressions += 1
-        if wall_value > soft_wall:
+        if not args.ignore_wall_seconds and wall_value > soft_wall:
           sustained_wall_regressions += 1
       if sustained_rss_regressions >= minimum_regressions:
         failures.append(
             f"{entry_name} sustained RSS regression count={sustained_rss_regressions} "
             f"window={window_size} threshold={minimum_regressions}")
-      if sustained_wall_regressions >= minimum_regressions:
+      if not args.ignore_wall_seconds and sustained_wall_regressions >= minimum_regressions:
         failures.append(
             f"{entry_name} sustained wall regression count={sustained_wall_regressions} "
             f"window={window_size} threshold={minimum_regressions}")
@@ -205,6 +210,7 @@ def main() -> int:
         "history_reports": [str(path) for path in history_report_paths],
         "entries": summaries,
         "failure_count": len(failures),
+        "ignore_wall_seconds": bool(args.ignore_wall_seconds),
     }
     report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"[check_semantic_memory_budget] wrote report: {report_path}")
