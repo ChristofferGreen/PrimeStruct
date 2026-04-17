@@ -859,6 +859,50 @@ main() {
   CHECK(error.find("unknown method: /map/count") != std::string::npos);
 }
 
+TEST_CASE("stdlib namespaced vector count method rejects wrapper array same-path helper") {
+  const std::string source = R"(
+[return<array<i32>>]
+wrapArray() {
+  return(array<i32>(1i32, 2i32, 3i32))
+}
+
+[return<int>]
+/std/collections/vector/count([array<i32>] values) {
+  return(48i32)
+}
+
+[return<int>]
+main() {
+  return(wrapArray()./std/collections/vector/count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /array/count") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector count method rejects wrapper string same-path helper") {
+  const std::string source = R"(
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+/std/collections/vector/count([string] values) {
+  return(49i32)
+}
+
+[return<int>]
+main() {
+  return(wrapText()./std/collections/vector/count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /string/count") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced vector count method rejects wrapper array receiver without helper") {
   const std::string source = R"(
 [return<array<i32>>]

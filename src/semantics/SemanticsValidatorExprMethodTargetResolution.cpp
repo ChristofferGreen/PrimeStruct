@@ -2669,19 +2669,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return setCollectionMethodTarget(preferredBareVectorHelperTarget(normalizedMethodName));
     }
   }
-  if (!explicitVectorHelperPath.empty() &&
-      explicitVectorHelperPath.rfind("/std/collections/vector/", 0) == 0 &&
-      normalizedMethodName == "count" &&
-      (normalizedTypeName == "string" || normalizedTypeName == "array" ||
-       isMapCollectionTypeName(normalizedTypeName))) {
-    if (!hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {
-      stampFileErrorResultFailure("std-vector-helper-incompatible", typeName);
-      return failMethodTargetResolutionDiagnostic("unknown method: " + explicitVectorHelperPath);
-    }
-    resolvedOut = explicitVectorHelperPath;
-    isBuiltinOut = false;
-    return true;
-  }
   if (normalizedMethodName == "to_soa" && normalizedTypeName == "vector") {
     return setCollectionMethodTarget("/to_soa");
   }

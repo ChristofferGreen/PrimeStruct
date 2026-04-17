@@ -474,7 +474,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /array/count") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps canonical slash-method vector count same-path helper on array receiver") {
+TEST_CASE("C++ emitter rejects canonical slash-method vector count same-path helper on array receiver") {
   const std::string source = R"(
 [return<array<i32>>]
 wrapArray() {
@@ -493,14 +493,47 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_slash_vector_count_array_same_path_helper.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_canonical_slash_vector_count_array_same_path_helper_exe")
+       "primec_cpp_canonical_slash_vector_count_array_same_path_helper.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 88);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown method: /array/count") !=
+        std::string::npos);
+}
+
+TEST_CASE("C++ emitter rejects canonical slash-method vector count same-path helper on string receiver") {
+  const std::string source = R"(
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+/std/collections/vector/count([string] values) {
+  return(89i32)
+}
+
+[return<int>]
+main() {
+  return(wrapText()./std/collections/vector/count())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_canonical_slash_vector_count_string_same_path_helper.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_canonical_slash_vector_count_string_same_path_helper.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown method: /string/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects wrapper-returned canonical vector capacity slash-method on array receiver in C++ emitter") {
