@@ -27,7 +27,10 @@ build and layout solidify.
 
 ## Language/design docs
 - Primary design doc: `docs/PrimeStruct.md`.
+- PrimeStruct code-quality and example-style guide: `docs/CodeQuality.md`.
 - When semantics change, update docs first (or alongside code) and keep examples aligned.
+- When changing user-facing PrimeStruct examples or style guidance, keep
+  `docs/CodeQuality.md` aligned with the supported surface syntax.
 - When ownership classification changes for a public type/surface, update the canonical `core` / `hybrid` / `stdlib-owned` matrix in `docs/PrimeStruct.md` and keep the summary note in `docs/todo.md` aligned in the same change.
 - If new public syntax/IR features are added, document them with a minimal runnable
   example and expected IR snippet.
