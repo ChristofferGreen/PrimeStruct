@@ -306,6 +306,28 @@ TEST_CASE("semantics namespaced vector helper detection rejects removed rooted a
   CHECK(helperName.empty());
 }
 
+TEST_CASE("ir lowerer setup-type vector helper detection rejects removed rooted aliases") {
+  primec::Expr canonicalCountCall;
+  canonicalCountCall.kind = primec::Expr::Kind::Call;
+  canonicalCountCall.name = "/std/collections/vector/count";
+
+  std::string collectionName;
+  std::string helperName;
+  CHECK(primec::ir_lowerer::getNamespacedCollectionHelperName(
+      canonicalCountCall, collectionName, helperName));
+  CHECK(collectionName == "vector");
+  CHECK(helperName == "count");
+
+  primec::Expr removedAliasCall = canonicalCountCall;
+  removedAliasCall.name = "/vector/count";
+  collectionName.clear();
+  helperName.clear();
+  CHECK_FALSE(primec::ir_lowerer::getNamespacedCollectionHelperName(
+      removedAliasCall, collectionName, helperName));
+  CHECK(collectionName.empty());
+  CHECK(helperName.empty());
+}
+
 TEST_CASE("ir lowerer access helper rejects removed rooted vector access aliases") {
   primec::Expr canonicalAccessCall;
   canonicalAccessCall.kind = primec::Expr::Kind::Call;

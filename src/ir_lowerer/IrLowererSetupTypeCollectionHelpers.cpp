@@ -345,17 +345,9 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(0, 1);
   }
-  const std::string vectorPrefix = "vector/";
   const std::string arrayPrefix = "array/";
   const std::string stdVectorPrefix = "std/collections/vector/";
   const std::string experimentalVectorPrefix = "std/collections/experimental_vector/";
-  if (normalized.rfind(vectorPrefix, 0) == 0) {
-    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(vectorPrefix.size()));
-    if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
-      return false;
-    }
-    return true;
-  }
   if (normalized.rfind(arrayPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(normalized.substr(arrayPrefix.size()));
     if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
