@@ -116,18 +116,6 @@ bool isExperimentalMapTypeText(const std::string &typeText) {
   }
 }
 
-bool isRemovedVectorAccessAliasCall(const Expr &candidate) {
-  if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
-      candidate.name.empty()) {
-    return false;
-  }
-  std::string normalized = candidate.name;
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(normalized.begin());
-  }
-  return normalized == "vector/at" || normalized == "vector/at_unsafe";
-}
-
 } // namespace
 
 bool SemanticsValidator::validateExprCollectionAccessFallbacks(
@@ -328,7 +316,6 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
 
   std::string builtinName;
   if (getCanonicalCollectionAccessBuiltinName(expr, builtinName) &&
-      !(resolvedMissing && isRemovedVectorAccessAliasCall(expr)) &&
       (!context.isStdNamespacedVectorAccessCall ||
        context.shouldAllowStdAccessCompatibilityFallback ||
        context.hasStdNamespacedVectorAccessDefinition) &&
