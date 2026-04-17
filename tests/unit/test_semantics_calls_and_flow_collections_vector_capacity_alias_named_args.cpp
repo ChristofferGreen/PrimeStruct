@@ -225,14 +225,16 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("namespaced vector helper with named arguments is statement-only in expressions") {
+TEST_CASE("rooted vector helper with named arguments rejects with unknown-target diagnostics") {
   struct HelperCase {
     const char *name;
     const char *args;
   };
   const HelperCase helpers[] = {
       {"push", "[values] values, [value] 2i32"},
+      {"pop", "[values] values"},
       {"reserve", "[values] values, [capacity] 8i32"},
+      {"clear", "[values] values"},
       {"remove_at", "[values] values, [index] 0i32"},
       {"remove_swap", "[values] values, [index] 0i32"},
   };
@@ -247,7 +249,35 @@ TEST_CASE("namespaced vector helper with named arguments is statement-only in ex
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK_FALSE(error.empty());
+    CHECK(error.find(std::string("unknown call target: /vector/") + helper.name) != std::string::npos);
+  }
+}
+
+TEST_CASE("stdlib namespaced vector helper with named arguments is statement-only in expressions") {
+  struct HelperCase {
+    const char *name;
+    const char *args;
+  };
+  const HelperCase helpers[] = {
+      {"push", "[values] values, [value] 2i32"},
+      {"pop", "[values] values"},
+      {"reserve", "[values] values, [capacity] 8i32"},
+      {"clear", "[values] values"},
+      {"remove_at", "[values] values, [index] 0i32"},
+      {"remove_swap", "[values] values, [index] 0i32"},
+  };
+  for (const auto &helper : helpers) {
+    CAPTURE(helper.name);
+    const std::string source =
+        "[effects(heap_alloc), return<int>]\n"
+        "main() {\n"
+        "  [vector<i32> mut] values{vector<i32>(1i32)}\n"
+        "  return(/std/collections/vector/" +
+        std::string(helper.name) + "(" + helper.args + "))\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("only supported as a statement") != std::string::npos);
   }
 }
 
@@ -258,7 +288,9 @@ TEST_CASE("array namespaced vector helper with named arguments is statement-only
   };
   const HelperCase helpers[] = {
       {"push", "[values] values, [value] 2i32"},
+      {"pop", "[values] values"},
       {"reserve", "[values] values, [capacity] 8i32"},
+      {"clear", "[values] values"},
       {"remove_at", "[values] values, [index] 0i32"},
       {"remove_swap", "[values] values, [index] 0i32"},
   };

@@ -22,9 +22,7 @@ bool SemanticsValidator::validateExprNamedArguments(
       if (!normalized.empty() && normalized.front() == '/') {
         normalized.erase(normalized.begin());
       }
-      if (normalized.rfind("vector/", 0) == 0) {
-        normalized = normalized.substr(std::string("vector/").size());
-      } else if (normalized.rfind("array/", 0) == 0) {
+      if (normalized.rfind("array/", 0) == 0) {
         const std::string helperName =
             normalized.substr(std::string("array/").size());
         const std::string canonicalPath =
@@ -261,17 +259,13 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    if (normalized.rfind("vector/", 0) != 0) {
-      if (normalized.rfind("array/", 0) == 0) {
-        normalized = normalized.substr(std::string("array/").size());
-      } else if (normalized.rfind("std/collections/vector/", 0) == 0) {
-        normalized =
-            normalized.substr(std::string("std/collections/vector/").size());
-      } else {
-        return false;
-      }
+    if (normalized.rfind("array/", 0) == 0) {
+      normalized = normalized.substr(std::string("array/").size());
+    } else if (normalized.rfind("std/collections/vector/", 0) == 0) {
+      normalized =
+          normalized.substr(std::string("std/collections/vector/").size());
     } else {
-      normalized = normalized.substr(std::string("vector/").size());
+      return false;
     }
     if (normalized == "push" || normalized == "pop" || normalized == "reserve" ||
         normalized == "clear" || normalized == "remove_at" ||
