@@ -423,6 +423,16 @@ TEST_CASE("C++ emitter helper rejects full-path array mutator aliases") {
   CHECK_FALSE(primec::emitter::getVectorMutatorName(call, nameMap, helper));
 }
 
+TEST_CASE("C++ emitter helper rejects rooted vector mutator aliases") {
+  primec::Expr call;
+  call.kind = primec::Expr::Kind::Call;
+  call.name = "/vector/push";
+
+  std::unordered_map<std::string, std::string> nameMap;
+  std::string helper;
+  CHECK_FALSE(primec::emitter::getVectorMutatorName(call, nameMap, helper));
+}
+
 TEST_CASE("C++ emitter helper accepts canonical vector mutators without alias bridge") {
   auto expectAccepted = [&](const char *name, const char *expectedHelper) {
     primec::Expr call;
@@ -435,6 +445,7 @@ TEST_CASE("C++ emitter helper accepts canonical vector mutators without alias br
     CHECK(helper == expectedHelper);
   };
 
+  expectAccepted("/std/collections/vector/push", "push");
   expectAccepted("/std/collections/vector/clear", "clear");
   expectAccepted("/std/collections/vector/remove_at", "remove_at");
   expectAccepted("/std/collections/vector/remove_swap", "remove_swap");

@@ -178,6 +178,7 @@ Wave D (queue hygiene):
   - progress: Completed child slice `TODO-0412` (archived in `docs/todo_finished.md`): shared semantics/lowerer access/helper recognizers no longer classify removed rooted `/vector/*` helper spellings as builtin vector helper metadata, while canonical `/std/collections/vector/*` spellings stay accepted.
   - progress: Completed child slice `TODO-0413` (archived in `docs/todo_finished.md`): shared collection constructor recognizers no longer classify removed rooted `/vector/vector` as a builtin vector constructor, while the lowerer still accepts canonical `/std/collections/vector/vector`.
   - progress: Completed child slice `TODO-0414` (archived in `docs/todo_finished.md`): shared semantics/lowerer/emitter simple-call helpers no longer treat removed rooted `/vector/vector` as a builtin `vector(...)` token, while bare `vector(...)` calls stay accepted.
+  - progress: Completed child slice `TODO-0415` (archived in `docs/todo_finished.md`): emitter vector-mutator helper classification no longer treats removed rooted `/vector/*` mutator spellings as builtin helpers, while canonical `/std/collections/vector/*` mutator paths stay accepted.
 
 - [ ] TODO-0406: Split production semantics APIs from testing snapshots
   - owner: ai

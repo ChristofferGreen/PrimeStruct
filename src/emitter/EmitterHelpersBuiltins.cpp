@@ -42,9 +42,7 @@ bool getVectorMutatorName(const Expr &expr,
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
-  if (name.rfind("vector/", 0) == 0) {
-    name = stripGeneratedHelperSuffix(name.substr(std::string("vector/").size()));
-  } else if (name.rfind("std/collections/vector/", 0) == 0) {
+  if (name.rfind("std/collections/vector/", 0) == 0) {
     name = stripGeneratedHelperSuffix(name.substr(std::string("std/collections/vector/").size()));
   } else if (name.find('/') != std::string::npos) {
     return false;
