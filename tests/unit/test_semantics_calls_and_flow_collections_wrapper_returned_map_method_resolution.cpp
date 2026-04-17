@@ -727,6 +727,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib namespaced vector count method rejects incompatible local same-path helper") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/count([map<i32, i32>] values) {
+  return(39i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [string] value{"abc"raw_utf8}
+  return(value./std/collections/vector/count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced count method rejects local string receiver without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

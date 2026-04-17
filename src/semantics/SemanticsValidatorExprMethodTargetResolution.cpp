@@ -1729,6 +1729,27 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return classifyExplicitVectorHelperParam(paramsIt->second.front().binding) == receiverFamily;
   };
+  auto tryResolveExplicitCanonicalVectorCountMethodTarget = [&](const Expr &receiverExpr)
+      -> std::optional<bool> {
+    if (explicitVectorHelperPath.empty() ||
+        explicitVectorHelperPath.rfind("/std/collections/vector/", 0) != 0 ||
+        normalizedMethodName != "count") {
+      return std::nullopt;
+    }
+    const std::string receiverFamily = classifyExplicitVectorHelperReceiver(receiverExpr);
+    if (receiverFamily != "string" && receiverFamily != "array" &&
+        receiverFamily != "map") {
+      return std::nullopt;
+    }
+    if (hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath,
+                                                      receiverExpr)) {
+      resolvedOut = explicitVectorHelperPath;
+      isBuiltinOut = false;
+      return true;
+    }
+    return failMethodTargetResolutionDiagnostic("unknown method: " +
+                                                explicitVectorHelperPath);
+  };
   auto resolveExplicitDirectCallReturnMethodTarget = [&](const Expr &receiverExpr) -> bool {
     if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.isMethodCall) {
       return false;
@@ -2103,19 +2124,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
        explicitVectorReceiverFamily == "soa_vector")) {
     return false;
   }
-  if (!explicitVectorHelperPath.empty() &&
-      explicitVectorHelperPath.rfind("/std/collections/vector/", 0) == 0 &&
-      normalizedMethodName == "count") {
-    if (explicitVectorReceiverFamily == "string" || explicitVectorReceiverFamily == "array" ||
-        explicitVectorReceiverFamily == "map") {
-      if (hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {
-        resolvedOut = explicitVectorHelperPath;
-        isBuiltinOut = false;
-        return true;
-      }
-      return failMethodTargetResolutionDiagnostic("unknown method: " + explicitVectorHelperPath);
-    }
-  }
   const bool usesBuiltinVectorMethodSemantics =
       normalizedMethodName == "count" || normalizedMethodName == "capacity" ||
       normalizedMethodName == "at" || normalizedMethodName == "at_unsafe";
@@ -2145,15 +2153,27 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           preferredSoaHelperTargetForCollectionType("count", "/soa_vector"));
     }
     if (resolveArrayTarget(receiver, elemType)) {
+      if (auto explicitTarget = tryResolveExplicitCanonicalVectorCountMethodTarget(receiver);
+          explicitTarget.has_value()) {
+        return *explicitTarget;
+      }
       return setCollectionMethodTarget("/array/count");
     }
     if (resolveStringTarget(receiver)) {
+      if (auto explicitTarget = tryResolveExplicitCanonicalVectorCountMethodTarget(receiver);
+          explicitTarget.has_value()) {
+        return *explicitTarget;
+      }
       return setCollectionMethodTarget("/string/count");
     }
     if (setIndexedArgsPackMapMethodTarget(receiver, "count")) {
       return true;
     }
     if (resolveMapTarget(receiver)) {
+      if (auto explicitTarget = tryResolveExplicitCanonicalVectorCountMethodTarget(receiver);
+          explicitTarget.has_value()) {
+        return *explicitTarget;
+      }
       return setPreferredMapMethodTarget(receiver, "count");
     }
   }
