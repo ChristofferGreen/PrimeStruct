@@ -352,6 +352,13 @@
             "       isMapCollectionTypeName(normalizedTypeName))") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "if ((removedVectorMethodCompatibilityPath == \"/std/collections/vector/count\" ||\n"
+            "         removedVectorMethodCompatibilityPath == \"/std/collections/vector/capacity\") &&") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "if (removedVectorMethodCompatibilityPath == \"/std/collections/vector/capacity\" &&") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
             "explicitVectorReceiverFamily + \"/count\"") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(

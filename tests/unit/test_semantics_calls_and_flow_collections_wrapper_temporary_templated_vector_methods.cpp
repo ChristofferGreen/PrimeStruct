@@ -1064,6 +1064,59 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib namespaced vector count wrapper vector chain without helper reports unknown target") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/vector/count(wrapVector()).tag())
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector count wrapper vector chain accepts same-path helper") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  tag([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[return<int>]
+/std/collections/vector/count([vector<i32>] values) {
+  return(41i32)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+wrapVector() {
+  return(vector<i32>(1i32, 2i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/collections/vector/count(wrapVector()).tag())
+}
+  )";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("array namespaced count wrapper vector target without helper reports unknown target") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
