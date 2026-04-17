@@ -640,7 +640,10 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       resolvedReceiver = tryResolveReceiverIndex(namedValuesReceiverIndex);
       return resolvedReceiver;
     };
-    if (hasNamedArgs) {
+    auto tryResolveInitialReceiver = [&]() {
+      if (!hasNamedArgs) {
+        return tryResolvePrimaryReceiver();
+      }
       auto tryResolveNamedFallbackReceivers = [&]() {
         if (hasNamedValuesReceiver || resolvedReceiver) {
           return;
@@ -652,9 +655,9 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       };
       tryResolveNamedValuesReceiver();
       tryResolveNamedFallbackReceivers();
-    } else {
-      tryResolvePrimaryReceiver();
-    }
+      return resolvedReceiver;
+    };
+    tryResolveInitialReceiver();
 
     if (shouldProbePositionalReorderedVectorHelperReceiver(
             expr, isStdNamespacedVectorCanonicalCompatibilityDirectCallSite,
