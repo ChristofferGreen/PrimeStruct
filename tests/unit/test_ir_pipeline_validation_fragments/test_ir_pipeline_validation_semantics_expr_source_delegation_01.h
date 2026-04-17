@@ -308,6 +308,12 @@
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (resolved == \"/std/collections/vector/count\" &&") ==
         std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "auto explicitVectorCountCapacityMethodMissingSamePathHelper = [&]() -> std::string {") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "normalizedName == \"std/collections/vector/capacity\"") ==
+        std::string::npos);
   CHECK(semanticsExprMethodCompatibilitySetupSource.find(
             "return soaUnavailableMethodDiagnostic(resolvedPath);") !=
         std::string::npos);

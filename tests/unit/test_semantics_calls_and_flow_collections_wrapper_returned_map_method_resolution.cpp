@@ -456,6 +456,45 @@ main() {
   CHECK(error.find("expected i32") != std::string::npos);
 }
 
+TEST_CASE("stdlib namespaced vector capacity alias uses same-path helper auto inference") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/vector/capacity([vector<i32>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [auto] inferred{values./std/collections/vector/capacity(true)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib namespaced vector capacity alias method-call inference keeps return mismatch diagnostics") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/vector/capacity([vector<i32>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [auto] inferred{values./std/collections/vector/capacity(true)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced vector count method local same-path overload set rejects duplicate definitions") {
   const std::string source = R"(
 [return<int>]
