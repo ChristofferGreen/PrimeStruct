@@ -513,7 +513,17 @@
             "resolved == \"/std/collections/vector/at_unsafe\"") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
-            "const bool isStdNamespacedVectorCanonicalCompatibilityHelper =") !=
+            "const bool isStdNamespacedVectorCanonicalCompatibilityHelper =") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "bool isStdNamespacedVectorCanonicalCompatibilityHelperPath(") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "bool isStdNamespacedVectorCanonicalCompatibilityDirectCall(") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "isStdNamespacedVectorCanonicalCompatibilityDirectCall(\n"
+            "          expr, resolved, namespacedCollection, namespacedHelper)") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "const bool isExplicitStdNamespacedVectorCompatibilityMethod =") ==

@@ -13,6 +13,25 @@ bool isVectorCompatibilityHelperName(const std::string &helperName) {
          helperName == "remove_swap";
 }
 
+bool isStdNamespacedVectorCanonicalCompatibilityHelperPath(
+    const std::string &resolved,
+    const std::string &namespacedCollection,
+    const std::string &namespacedHelper) {
+  return resolved.rfind("/std/collections/vector/", 0) == 0 &&
+         namespacedCollection == "vector" &&
+         isVectorCompatibilityHelperName(namespacedHelper);
+}
+
+bool isStdNamespacedVectorCanonicalCompatibilityDirectCall(
+    const Expr &expr,
+    const std::string &resolved,
+    const std::string &namespacedCollection,
+    const std::string &namespacedHelper) {
+  return !expr.isMethodCall &&
+         isStdNamespacedVectorCanonicalCompatibilityHelperPath(
+             resolved, namespacedCollection, namespacedHelper);
+}
+
 bool isVectorHelperReceiverName(const Expr &candidate,
                                 const std::vector<ParameterInfo> &params,
                                 const std::unordered_map<std::string, BindingInfo> &locals) {
@@ -492,25 +511,23 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   std::string namespacedCollection;
   std::string namespacedHelper;
   getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper);
-  const bool isStdNamespacedVectorCanonicalCompatibilityHelper =
-      resolved.rfind("/std/collections/vector/", 0) == 0 &&
-      namespacedCollection == "vector" &&
-      isVectorCompatibilityHelperName(namespacedHelper);
   const bool hasNamedArgs = hasNamedArguments(expr.argNames);
-  if (!expr.isMethodCall &&
-      isStdNamespacedVectorCanonicalCompatibilityHelper &&
+  if (isStdNamespacedVectorCanonicalCompatibilityDirectCall(
+          expr, resolved, namespacedCollection, namespacedHelper) &&
       !hasVisibleDefinitionPath(resolved) &&
-      !(!expr.isMethodCall &&
-        isStdNamespacedVectorCanonicalCompatibilityHelper &&
+      !(isStdNamespacedVectorCanonicalCompatibilityDirectCall(
+            expr, resolved, namespacedCollection, namespacedHelper) &&
         (namespacedHelper == "count" || namespacedHelper == "capacity") &&
         hasNamedArgs)) {
     return failVectorHelperDiagnostic("unknown call target: " + resolved);
   }
-  if (expr.isMethodCall && isStdNamespacedVectorCanonicalCompatibilityHelper) {
+  if (expr.isMethodCall &&
+      isStdNamespacedVectorCanonicalCompatibilityHelperPath(
+          resolved, namespacedCollection, namespacedHelper)) {
     return true;
   }
-  if (!expr.isMethodCall &&
-      isStdNamespacedVectorCanonicalCompatibilityHelper &&
+  if (isStdNamespacedVectorCanonicalCompatibilityDirectCall(
+          expr, resolved, namespacedCollection, namespacedHelper) &&
       expr.args.size() == 1 &&
       !expr.hasBodyArguments &&
       expr.bodyArguments.empty()) {
@@ -519,8 +536,8 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     if (!(receiverFamily == "vector" || receiverFamily == "experimental_vector") &&
         !(defMap_.count(resolved) > 0 &&
           hasReceiverCompatibleVisibleDefinitionPath(resolved, receiverExpr)) &&
-        !(!expr.isMethodCall &&
-          isStdNamespacedVectorCanonicalCompatibilityHelper &&
+        !(isStdNamespacedVectorCanonicalCompatibilityDirectCall(
+              expr, resolved, namespacedCollection, namespacedHelper) &&
           (namespacedHelper == "count" || namespacedHelper == "capacity") &&
           hasNamedArgs)) {
       return failVectorHelperDiagnostic("unknown call target: " + resolved);
@@ -528,9 +545,10 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   }
 
   size_t resolvedReceiverIndex = 0;
-  if ((!(!expr.isMethodCall && isStdNamespacedVectorCanonicalCompatibilityHelper) ||
-       (!expr.isMethodCall &&
-        isStdNamespacedVectorCanonicalCompatibilityHelper &&
+  if ((!isStdNamespacedVectorCanonicalCompatibilityDirectCall(
+           expr, resolved, namespacedCollection, namespacedHelper) ||
+       (isStdNamespacedVectorCanonicalCompatibilityDirectCall(
+            expr, resolved, namespacedCollection, namespacedHelper) &&
         (namespacedHelper == "count" || namespacedHelper == "capacity") &&
         hasNamedArgs)) &&
       defMap_.find(resolved) == defMap_.end() &&
@@ -582,7 +600,8 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     }
 
     const bool probePositionalReorderedReceiver =
-        !(!expr.isMethodCall && isStdNamespacedVectorCanonicalCompatibilityHelper) &&
+        !isStdNamespacedVectorCanonicalCompatibilityDirectCall(
+            expr, resolved, namespacedCollection, namespacedHelper) &&
         !hasNamedArgs && expr.args.size() > 1 &&
         (expr.args.front().kind == Expr::Kind::Literal || expr.args.front().kind == Expr::Kind::BoolLiteral ||
          expr.args.front().kind == Expr::Kind::FloatLiteral ||
@@ -599,7 +618,8 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   }
 
   if (defMap_.find(resolved) == defMap_.end()) {
-    if (!(!expr.isMethodCall && isStdNamespacedVectorCanonicalCompatibilityHelper)) {
+    if (!isStdNamespacedVectorCanonicalCompatibilityDirectCall(
+            expr, resolved, namespacedCollection, namespacedHelper)) {
       return failVectorHelperDiagnostic(vectorHelper + " is only supported as a statement");
     }
     return true;

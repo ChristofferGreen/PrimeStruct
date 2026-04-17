@@ -45,8 +45,6 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   const auto &resolveArgsPackAccessTarget = builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget;
   const auto &resolveArrayTarget = builtinCollectionDispatchResolvers.resolveArrayTarget;
   const auto &resolveVectorTarget = builtinCollectionDispatchResolvers.resolveVectorTarget;
-  const auto &resolveExperimentalVectorValueTarget =
-      builtinCollectionDispatchResolvers.resolveExperimentalVectorValueTarget;
   const auto &resolveSoaVectorTarget = builtinCollectionDispatchResolvers.resolveSoaVectorTarget;
   const auto &resolveBufferTarget = builtinCollectionDispatchResolvers.resolveBufferTarget;
   const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;

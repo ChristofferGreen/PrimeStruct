@@ -44,6 +44,25 @@ This file stores durable session-derived facts that are useful in later work. Ke
   guard in `SemanticsValidatorInferCollectionCallResolution.cpp`; the release
   gate passed afterward with focused semantics and native/C++ conformance
   coverage updated around those cases.
+- `vector-canonical-count-capacity-builtin-fallback`:
+  canonical `./std/collections/vector/count()` and
+  `./std/collections/vector/capacity()` on builtin vector receivers now
+  compile and run without same-path helpers by falling through to builtin
+  behavior, so compile-run coverage must treat the no-helper case as success
+  instead of `unknown method`.
+  Evidence: `test_compile_run_emitters_explicit_vector_count_capacity_helpers.cpp`
+  was updated after a focused `primec` repro showed the canonical no-helper
+  case compiling successfully and exiting with status `6`; the full release
+  gate passed afterward.
+- `vector-canonical-helper-gate-shared-predicates`:
+  `SemanticsValidatorExprVectorHelpers.cpp` now owns the surviving canonical
+  `/std/collections/vector/*` direct-call gate through shared
+  `isStdNamespacedVectorCanonicalCompatibilityHelperPath(...)` and
+  `isStdNamespacedVectorCanonicalCompatibilityDirectCall(...)` predicates
+  instead of a local compatibility boolean plus repeated inline conditions.
+  Evidence: `TODO-0502` replaced the last local alias/repeated direct-call
+  cluster with those shared helper predicates, and focused IR source-lock
+  coverage was updated to keep the deleted alias absent.
 - `vector-removed-access-alias-named-args-unknown-target`:
   unresolved explicit `/vector/at` and `/vector/at_unsafe` calls with named
   arguments are now treated as removed aliases (unknown-target diagnostics)
