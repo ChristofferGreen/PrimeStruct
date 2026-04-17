@@ -356,8 +356,8 @@
             "auto rejectsRemovedRootedVectorDirectCall =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const std::string removedRootedVectorDirectCallPath =\n"
-            "      getRemovedRootedVectorDirectCallPath(expr);") !=
+            "const std::string removedRootedVectorDirectCallDiagnostic =\n"
+            "      getRemovedRootedVectorDirectCallDiagnostic(expr, \"count\", \"capacity\");") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "context.isNamespacedVectorCountCall &&\n"
@@ -370,29 +370,33 @@
             "        !hasDeclaredDefinitionPath(\"/vector/count\") &&") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "removedRootedVectorDirectCallPath == \"/vector/count\"") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "context.isNamespacedVectorCapacityCall &&\n"
             "        expr.args.size() == 1 &&\n"
             "        !hasDeclaredDefinitionPath(\"/vector/capacity\") &&") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "removedRootedVectorDirectCallPath == \"/vector/capacity\"") !=
+            "if (!removedRootedVectorDirectCallDiagnostic.empty()) {\n"
+            "      return failCollectionCountCapacityDiagnostic(\n"
+            "          removedRootedVectorDirectCallDiagnostic);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "getRemovedRootedVectorDirectCallPath(expr)") !=
+            "getRemovedRootedVectorDirectCallDiagnostic(expr, \"count\", \"capacity\")") !=
         std::string::npos);
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
-            "const std::string removedRootedVectorDirectCallPath =\n"
-            "      getRemovedRootedVectorDirectCallPath(expr);") !=
+            "const std::string removedRootedVectorDirectCallDiagnostic =\n"
+            "      getRemovedRootedVectorDirectCallDiagnostic(expr, \"at\", \"at_unsafe\");") !=
         std::string::npos);
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
             "explicitPath == \"/vector/at\" || explicitPath == \"/vector/at_unsafe\"") ==
         std::string::npos);
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
-            "removedRootedVectorDirectCallPath == \"/vector/at\" ||\n"
-            "      removedRootedVectorDirectCallPath == \"/vector/at_unsafe\"") !=
+            "if (!removedRootedVectorDirectCallDiagnostic.empty()) {\n"
+            "    return failDirectCollectionFallbackDiagnostic(\n"
+            "        removedRootedVectorDirectCallDiagnostic);\n"
+            "  }") !=
+        std::string::npos);
+  CHECK(semanticsExprDirectCollectionFallbacksSource.find(
+            "getRemovedRootedVectorDirectCallDiagnostic(expr, \"at\", \"at_unsafe\")") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
             "getRemovedRootedVectorDirectCallPath(") ==

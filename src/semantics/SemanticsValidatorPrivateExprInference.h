@@ -87,6 +87,10 @@
       const BuiltinCollectionDispatchResolverAdapters &adapters = {});
   std::string getRemovedRootedVectorDirectCallPath(
       const Expr &candidate) const;
+  std::string getRemovedRootedVectorDirectCallDiagnostic(
+      const Expr &candidate,
+      const std::string &primaryHelperName,
+      const std::string &secondaryHelperName = "") const;
   std::string explicitRemovedCollectionMethodPath(std::string_view rawMethodName,
                                                   std::string_view namespacePrefix) const;
   bool shouldPreserveRemovedCollectionHelperPath(const std::string &path) const;

@@ -18,12 +18,11 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
     return true;
   }
 
-  const std::string removedRootedVectorDirectCallPath =
-      getRemovedRootedVectorDirectCallPath(expr);
-  if (removedRootedVectorDirectCallPath == "/vector/at" ||
-      removedRootedVectorDirectCallPath == "/vector/at_unsafe") {
-    return failDirectCollectionFallbackDiagnostic("unknown call target: " +
-                                                  removedRootedVectorDirectCallPath);
+  const std::string removedRootedVectorDirectCallDiagnostic =
+      getRemovedRootedVectorDirectCallDiagnostic(expr, "at", "at_unsafe");
+  if (!removedRootedVectorDirectCallDiagnostic.empty()) {
+    return failDirectCollectionFallbackDiagnostic(
+        removedRootedVectorDirectCallDiagnostic);
   }
 
   const auto &dispatchResolvers = *context.dispatchResolvers;

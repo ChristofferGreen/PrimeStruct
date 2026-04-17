@@ -25,8 +25,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   auto hasResolvableDefinitionPath = [&](const std::string &path) {
     return hasDeclaredDefinitionPath(path) || hasImportedDefinitionPath(path);
   };
-  const std::string removedRootedVectorDirectCallPath =
-      getRemovedRootedVectorDirectCallPath(expr);
+  const std::string removedRootedVectorDirectCallDiagnostic =
+      getRemovedRootedVectorDirectCallDiagnostic(expr, "count", "capacity");
   auto isConcreteCountCapacityInstantiation = [&](const std::string &path) {
     if (defMap_.find(path) == defMap_.end()) {
       return false;
@@ -208,8 +208,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         resolved.rfind(methodResolved + "__t", 0) == 0) {
       methodResolved = resolved;
     }
-    if (removedRootedVectorDirectCallPath == "/vector/count") {
-      return failCollectionCountCapacityDiagnostic("unknown call target: /vector/count");
+    if (!removedRootedVectorDirectCallDiagnostic.empty()) {
+      return failCollectionCountCapacityDiagnostic(
+          removedRootedVectorDirectCallDiagnostic);
     }
     if (!expr.isMethodCall &&
         expr.args.size() == 1 &&
@@ -292,8 +293,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         resolved.rfind(methodResolved + "__t", 0) == 0) {
       methodResolved = resolved;
     }
-    if (removedRootedVectorDirectCallPath == "/vector/capacity") {
-      return failCollectionCountCapacityDiagnostic("unknown call target: /vector/capacity");
+    if (!removedRootedVectorDirectCallDiagnostic.empty()) {
+      return failCollectionCountCapacityDiagnostic(
+          removedRootedVectorDirectCallDiagnostic);
     }
     if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {
       if (requireSingleArg &&

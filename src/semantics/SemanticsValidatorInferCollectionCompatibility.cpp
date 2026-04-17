@@ -713,6 +713,25 @@ std::string SemanticsValidator::getRemovedRootedVectorDirectCallPath(
              : removedPath;
 }
 
+std::string SemanticsValidator::getRemovedRootedVectorDirectCallDiagnostic(
+    const Expr &candidate,
+    const std::string &primaryHelperName,
+    const std::string &secondaryHelperName) const {
+  const std::string removedPath = getRemovedRootedVectorDirectCallPath(candidate);
+  if (removedPath.empty()) {
+    return "";
+  }
+
+  auto matchesHelperName = [&](const std::string &helperName) {
+    return !helperName.empty() && removedPath == "/vector/" + helperName;
+  };
+  if (!matchesHelperName(primaryHelperName) &&
+      !matchesHelperName(secondaryHelperName)) {
+    return "";
+  }
+  return "unknown call target: " + removedPath;
+}
+
 bool SemanticsValidator::shouldPreserveRemovedCollectionHelperPath(const std::string &path) const {
   RemovedCollectionHelperFamily family = RemovedCollectionHelperFamily::VectorLike;
   std::string_view helperName;
