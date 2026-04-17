@@ -344,6 +344,12 @@
             "       explicitVectorReceiverFamily == \"soa_vector\"))") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "if (explicitVectorHelperPath == \"/vector/at\" &&\n"
+            "      (explicitVectorReceiverFamily == \"vector\" ||\n"
+            "       explicitVectorReceiverFamily == \"experimental_vector\" ||\n"
+            "       explicitVectorReceiverFamily == \"soa_vector\"))") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
             "(normalizedMethodName == \"count\" || normalizedMethodName == \"capacity\") &&\n"
             "      (explicitVectorReceiverFamily == \"string\" ||") ==
         std::string::npos);
@@ -382,7 +388,11 @@
             "explicitVectorReceiverFamily + \"/count\"") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "explicitVectorHelperPath == \"/vector/capacity\" &&") ==
+            "if (explicitVectorHelperPath.rfind(\"/vector/\", 0) == 0 &&\n"
+            "      normalizedMethodName == \"at_unsafe\" &&\n"
+            "      (explicitVectorReceiverFamily == \"vector\" ||\n"
+            "       explicitVectorReceiverFamily == \"experimental_vector\" ||\n"
+            "       explicitVectorReceiverFamily == \"soa_vector\"))") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "auto isExplicitVectorCompatibilityMethodWithTemplateArgs = [&]() {") ==

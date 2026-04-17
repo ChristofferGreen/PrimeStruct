@@ -2138,8 +2138,19 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return failMethodTargetResolutionDiagnostic("unknown method: " + explicitVectorHelperPath);
   }
+  if (explicitVectorHelperPath == "/vector/at" &&
+      (explicitVectorReceiverFamily == "vector" ||
+       explicitVectorReceiverFamily == "experimental_vector" ||
+       explicitVectorReceiverFamily == "soa_vector")) {
+    if (hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {
+      resolvedOut = explicitVectorHelperPath;
+      isBuiltinOut = false;
+      return true;
+    }
+    return failMethodTargetResolutionDiagnostic("unknown method: " + explicitVectorHelperPath);
+  }
   if (explicitVectorHelperPath.rfind("/vector/", 0) == 0 &&
-      (normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
+      normalizedMethodName == "at_unsafe" &&
       (explicitVectorReceiverFamily == "vector" ||
        explicitVectorReceiverFamily == "experimental_vector" ||
        explicitVectorReceiverFamily == "soa_vector")) {

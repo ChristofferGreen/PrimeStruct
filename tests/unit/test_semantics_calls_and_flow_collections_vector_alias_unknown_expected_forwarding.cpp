@@ -784,11 +784,10 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("validateExprMethodCallTarget failed") != std::string::npos);
-  CHECK(error.find("/vector/at") != std::string::npos);
+  CHECK(error.find("unknown method: /vector/at") != std::string::npos);
 }
 
-TEST_CASE("vector method explicit at alias namespace stays rejected even when alias helper exists") {
+TEST_CASE("vector method explicit at alias namespace uses alias helper when alias helper exists") {
   const std::string source = R"(
 [return<int>]
 /vector/at([vector<i32>] values, [i32] index) {
@@ -807,9 +806,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("validateExprMethodCallTarget failed") != std::string::npos);
-  CHECK(error.find("/vector/at") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector method bare at_unsafe rejects canonical-only helper path") {
