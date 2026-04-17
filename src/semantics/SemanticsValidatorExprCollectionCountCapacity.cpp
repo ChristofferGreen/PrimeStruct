@@ -239,6 +239,15 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       methodResolved = resolved;
     }
     if (!expr.isMethodCall &&
+        context.isNamespacedVectorCountCall &&
+        expr.args.size() == 1 &&
+        expr.args.front().kind == Expr::Kind::Call &&
+        !hasDeclaredDefinitionPath("/vector/count") &&
+        !hasImportedDefinitionPath("/vector/count") &&
+        methodResolved != "/vector/count") {
+      return failCollectionCountCapacityDiagnostic("unknown call target: /vector/count");
+    }
+    if (!expr.isMethodCall &&
         expr.args.size() == 1 &&
         expr.args.front().kind == Expr::Kind::Name &&
         methodResolved == "/map/count" &&
