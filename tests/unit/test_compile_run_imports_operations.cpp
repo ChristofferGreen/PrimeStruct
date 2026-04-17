@@ -91,15 +91,10 @@ main() {
   const std::string methodSrcPath = writeTemp("compile_graph_query_vector_helper_method_exe.prime", methodSource);
   const std::string methodExePath =
       (testScratchPath("") / "compile_graph_query_vector_helper_method_exe").string();
-  const std::string methodErrPath =
-      (testScratchPath("") / "compile_graph_query_vector_helper_method_exe.err").string();
   const std::string methodCmd =
-      "./primec --emit=exe " + methodSrcPath + " -o " + methodExePath + " --entry /main 2> " +
-      methodErrPath;
-  CHECK(runCommand(methodCmd) == 2);
-  const std::string err = readFile(methodErrPath);
-  CHECK(err.find("validateExprMethodCallTarget failed") != std::string::npos);
-  CHECK(err.find("/vector/count") != std::string::npos);
+      "./primec --emit=exe " + methodSrcPath + " -o " + methodExePath + " --entry /main";
+  CHECK(runCommand(methodCmd) == 0);
+  CHECK(runCommand(methodExePath) == 17);
 }
 
 TEST_CASE("compiles and runs experimental soa_vector stdlib helpers in C++ emitter") {

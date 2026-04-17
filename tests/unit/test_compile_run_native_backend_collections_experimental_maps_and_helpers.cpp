@@ -113,7 +113,8 @@ main() {
       (testScratchPath("") / "compile_native_graph_query_vector_helper_method_exe").string();
   const std::string methodCmd =
       "./primec --emit=native " + methodSrcPath + " -o " + methodExePath + " --entry /main";
-  CHECK(runCommand(methodCmd) == 2);
+  CHECK(runCommand(methodCmd) == 0);
+  CHECK(runCommand(methodExePath) == 17);
 }
 
 TEST_CASE("compiles and runs native experimental soa_vector stdlib helpers") {
@@ -457,7 +458,8 @@ main() {
       (testScratchPath("") / "primec_native_graph_direct_local_auto_vector_helper_shadows_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 34);
 }
 
 TEST_CASE(
