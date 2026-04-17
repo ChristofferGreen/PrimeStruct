@@ -23,11 +23,8 @@ Budgets are defined per `(fixture, phase)` pair where phase is one of:
 Each policy entry contains:
 
 - `baseline_worst_peak_rss_bytes`
-- `baseline_worst_wall_seconds`
 - `soft_max_worst_peak_rss_bytes`
-- `soft_max_worst_wall_seconds`
 - `max_worst_peak_rss_bytes`
-- `max_worst_wall_seconds`
 
 Interpretation:
 
@@ -47,30 +44,20 @@ Current rule:
 
 - Window size: `3` reports
 - Sustained regression trigger: `2` or more soft-threshold regressions in that
-  3-report window for the same `(fixture, phase, metric)` tuple
+  3-report window for the same `(fixture, phase)` RSS metric
 
 This sustained rule exists to avoid fail/noise on one-off machine variance while
 still catching trend regressions.
 
-## Serial Benchmark Targets
+## Parallel Benchmark Targets
 
-Semantic-memory benchmark and trend CTest entries must stay serial when
-semantic-memory reports exceed benchmark threshold annotations.
-
-Current threshold annotations (from benchmark report payload):
-
-- max wall time: `3.0` seconds
-- max peak RSS: `524288000` bytes
-
-When `benchmarks/semantic_memory_baseline_report.json` reports one or more
-`expensive_offenders` above either threshold, keep:
-
-- `PrimeStruct_semantic_memory_benchmark` as `RUN_SERIAL`
-- `PrimeStruct_semantic_memory_trend` as `RUN_SERIAL`
+Semantic-memory benchmark and trend targets run in parallel with the wider test
+suite. Budget policy gating is RSS-only so concurrency noise does not trip
+runtime-based false regressions.
 
 ## Update Workflow
 
-When semantic behavior changes intentionally shift memory/runtime:
+When semantic behavior changes intentionally shift memory usage:
 
 1. Produce a fresh report with `scripts/semantic_memory_benchmark.py`.
 2. Compare report results against current policy entries.

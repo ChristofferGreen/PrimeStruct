@@ -64,11 +64,6 @@ def main() -> int:
       "--checker",
       default="",
       help="Optional explicit path to check_semantic_memory_budget.py.")
-  parser.add_argument(
-      "--ignore-wall-seconds",
-      action="store_true",
-      help="Forward --ignore-wall-seconds to check_semantic_memory_budget.py.",
-  )
   args = parser.parse_args()
 
   if args.history_limit < 0:
@@ -134,8 +129,6 @@ def main() -> int:
     command.extend(["--history-report", str(history_path)])
   if checker_report_path is not None:
     command.extend(["--report-json", str(checker_report_path)])
-  if args.ignore_wall_seconds:
-    command.append("--ignore-wall-seconds")
 
   if history_paths:
     print("[check_semantic_memory_trend] history reports:", flush=True)
@@ -165,7 +158,6 @@ def main() -> int:
         "history_count": len(history_paths),
         "checker": str(checker_path),
         "checker_exit_code": int(result.returncode),
-        "ignore_wall_seconds": bool(args.ignore_wall_seconds),
         "status": "passed" if result.returncode == 0 else "failed",
         "budget_report": str(checker_report_path) if checker_report_path is not None else None,
         "budget_summary": budget_summary,

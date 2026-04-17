@@ -46,11 +46,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--trend-cmd", default="",
                         help="Optional shell command override for trend step.")
     parser.add_argument(
-        "--ignore-wall-seconds",
-        action="store_true",
-        help="Pass --ignore-wall-seconds to the trend budget checker.",
-    )
-    parser.add_argument(
         "--skip-budget-check-in-benchmark",
         action="store_true",
         help=("When mode=benchmark, skip the policy/trend budget check stage and run benchmark only."),
@@ -110,10 +105,9 @@ def default_trend_command(repo_root: Path,
                           history_dir: Path,
                           history_limit: int,
                           budget_report: Path,
-                          trend_report: Path,
-                          ignore_wall_seconds: bool) -> str:
+                          trend_report: Path) -> str:
     script = repo_root / "scripts" / "check_semantic_memory_trend.py"
-    command = (
+    return (
         f"{quote_shell_arg(sys.executable)} {quote_shell_arg(str(script))} "
         f"--policy {quote_shell_arg(str(policy))} "
         f"--report {quote_shell_arg(str(report))} "
@@ -122,9 +116,6 @@ def default_trend_command(repo_root: Path,
         f"--report-json {quote_shell_arg(str(budget_report))} "
         f"--trend-report-json {quote_shell_arg(str(trend_report))}"
     )
-    if ignore_wall_seconds:
-        command += " --ignore-wall-seconds"
-    return command
 
 
 def main() -> int:
@@ -193,8 +184,7 @@ def main() -> int:
         history_dir,
         args.history_limit,
         budget_report,
-        trend_report,
-        args.ignore_wall_seconds)
+        trend_report)
 
     benchmark_exit_code: Optional[int] = None
     trend_exit_code: Optional[int] = None
@@ -267,7 +257,6 @@ def main() -> int:
             "trend_stderr": trend_stderr.name,
         },
         "history_report": copied_history_report,
-        "ignore_wall_seconds": bool(args.ignore_wall_seconds),
         "commands": {
             "benchmark": benchmark_command if args.mode in ("benchmark", "full") else None,
             "trend": trend_command if trend_requested else None,

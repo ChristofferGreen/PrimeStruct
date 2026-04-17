@@ -10,201 +10,141 @@
       "fixture": "math_star_repro",
       "phase": "ast-semantic",
       "baseline_worst_peak_rss_bytes": 3493576704,
-      "baseline_worst_wall_seconds": 3.24695,
       "soft_max_worst_peak_rss_bytes": 3842934375,
-      "soft_max_worst_wall_seconds": 6.5,
-      "max_worst_peak_rss_bytes": 3842934375,
-      "max_worst_wall_seconds": 6.5
+      "max_worst_peak_rss_bytes": 3842934375
     },
     {
       "fixture": "math_star_repro",
       "phase": "semantic-product",
       "baseline_worst_peak_rss_bytes": 7100088320,
-      "baseline_worst_wall_seconds": 5.206857,
       "soft_max_worst_peak_rss_bytes": 7810097153,
-      "soft_max_worst_wall_seconds": 12.0,
-      "max_worst_peak_rss_bytes": 7810097153,
-      "max_worst_wall_seconds": 12.0
+      "max_worst_peak_rss_bytes": 7810097153
     },
     {
       "fixture": "no_import",
       "phase": "ast-semantic",
       "baseline_worst_peak_rss_bytes": 9076736,
-      "baseline_worst_wall_seconds": 0.023977,
       "soft_max_worst_peak_rss_bytes": 16777216,
-      "soft_max_worst_wall_seconds": 0.2,
-      "max_worst_peak_rss_bytes": 16777216,
-      "max_worst_wall_seconds": 0.2
+      "max_worst_peak_rss_bytes": 16777216
     },
     {
       "fixture": "no_import",
       "phase": "semantic-product",
       "baseline_worst_peak_rss_bytes": 9076736,
-      "baseline_worst_wall_seconds": 0.022012,
       "soft_max_worst_peak_rss_bytes": 16777216,
-      "soft_max_worst_wall_seconds": 0.2,
-      "max_worst_peak_rss_bytes": 16777216,
-      "max_worst_wall_seconds": 0.2
+      "max_worst_peak_rss_bytes": 16777216
     },
     {
       "fixture": "math_vector",
       "phase": "ast-semantic",
       "baseline_worst_peak_rss_bytes": 3492954112,
-      "baseline_worst_wall_seconds": 3.266061,
       "soft_max_worst_peak_rss_bytes": 3842249524,
-      "soft_max_worst_wall_seconds": 6.0,
-      "max_worst_peak_rss_bytes": 3842249524,
-      "max_worst_wall_seconds": 6.0
+      "max_worst_peak_rss_bytes": 3842249524
     },
     {
       "fixture": "math_vector",
       "phase": "semantic-product",
       "baseline_worst_peak_rss_bytes": 7099547648,
-      "baseline_worst_wall_seconds": 5.43564,
       "soft_max_worst_peak_rss_bytes": 7809502413,
-      "soft_max_worst_wall_seconds": 12.0,
-      "max_worst_peak_rss_bytes": 7809502413,
-      "max_worst_wall_seconds": 12.0
+      "max_worst_peak_rss_bytes": 7809502413
     },
     {
       "fixture": "math_vector_matrix",
       "phase": "ast-semantic",
       "baseline_worst_peak_rss_bytes": 3494068224,
-      "baseline_worst_wall_seconds": 3.372302,
       "soft_max_worst_peak_rss_bytes": 3843475047,
-      "soft_max_worst_wall_seconds": 4.046762,
-      "max_worst_peak_rss_bytes": 3843475047,
-      "max_worst_wall_seconds": 4.046762
+      "max_worst_peak_rss_bytes": 3843475047
     },
     {
       "fixture": "math_vector_matrix",
       "phase": "semantic-product",
       "baseline_worst_peak_rss_bytes": 7099629568,
-      "baseline_worst_wall_seconds": 5.343283,
       "soft_max_worst_peak_rss_bytes": 7809592525,
-      "soft_max_worst_wall_seconds": 10.0,
-      "max_worst_peak_rss_bytes": 7809592525,
-      "max_worst_wall_seconds": 10.0
+      "max_worst_peak_rss_bytes": 7809592525
     },
     {
       "fixture": "non_math_large_include",
       "phase": "ast-semantic",
       "baseline_worst_peak_rss_bytes": 155598848,
-      "baseline_worst_wall_seconds": 0.355065,
       "soft_max_worst_peak_rss_bytes": 171158733,
-      "soft_max_worst_wall_seconds": 2.6,
-      "max_worst_peak_rss_bytes": 171158733,
-      "max_worst_wall_seconds": 2.6
+      "max_worst_peak_rss_bytes": 171158733
     },
     {
       "fixture": "non_math_large_include",
       "phase": "semantic-product",
       "baseline_worst_peak_rss_bytes": 439631872,
-      "baseline_worst_wall_seconds": 0.657366,
       "soft_max_worst_peak_rss_bytes": 483595060,
-      "soft_max_worst_wall_seconds": 3.0,
-      "max_worst_peak_rss_bytes": 483595060,
-      "max_worst_wall_seconds": 3.0
+      "max_worst_peak_rss_bytes": 483595060
     },
     {
       "fixture": "inline_math_body",
       "phase": "ast-semantic",
       "baseline_worst_peak_rss_bytes": 9830400,
-      "baseline_worst_wall_seconds": 0.022214,
       "soft_max_worst_peak_rss_bytes": 16777216,
-      "soft_max_worst_wall_seconds": 0.2,
-      "max_worst_peak_rss_bytes": 16777216,
-      "max_worst_wall_seconds": 0.2
+      "max_worst_peak_rss_bytes": 16777216
     },
     {
       "fixture": "inline_math_body",
       "phase": "semantic-product",
       "baseline_worst_peak_rss_bytes": 15187968,
-      "baseline_worst_wall_seconds": 0.024006,
       "soft_max_worst_peak_rss_bytes": 16777216,
-      "soft_max_worst_wall_seconds": 0.2,
-      "max_worst_peak_rss_bytes": 16777216,
-      "max_worst_wall_seconds": 0.2
+      "max_worst_peak_rss_bytes": 16777216
     },
     {
       "fixture": "imported_math_body",
       "phase": "ast-semantic",
       "baseline_worst_peak_rss_bytes": 3497230336,
-      "baseline_worst_wall_seconds": 3.315065,
       "soft_max_worst_peak_rss_bytes": 3846953370,
-      "soft_max_worst_wall_seconds": 6.0,
-      "max_worst_peak_rss_bytes": 3846953370,
-      "max_worst_wall_seconds": 6.0
+      "max_worst_peak_rss_bytes": 3846953370
     },
     {
       "fixture": "imported_math_body",
       "phase": "semantic-product",
       "baseline_worst_peak_rss_bytes": 7108263936,
-      "baseline_worst_wall_seconds": 5.298312,
       "soft_max_worst_peak_rss_bytes": 7819090330,
-      "soft_max_worst_wall_seconds": 12.0,
-      "max_worst_peak_rss_bytes": 7819090330,
-      "max_worst_wall_seconds": 12.0
+      "max_worst_peak_rss_bytes": 7819090330
     },
     {
       "fixture": "scale_1x",
       "phase": "ast-semantic",
       "baseline_worst_peak_rss_bytes": 9076736,
-      "baseline_worst_wall_seconds": 0.028119,
       "soft_max_worst_peak_rss_bytes": 16777216,
-      "soft_max_worst_wall_seconds": 0.2,
-      "max_worst_peak_rss_bytes": 16777216,
-      "max_worst_wall_seconds": 0.2
+      "max_worst_peak_rss_bytes": 16777216
     },
     {
       "fixture": "scale_1x",
       "phase": "semantic-product",
       "baseline_worst_peak_rss_bytes": 14303232,
-      "baseline_worst_wall_seconds": 0.027095,
       "soft_max_worst_peak_rss_bytes": 16777216,
-      "soft_max_worst_wall_seconds": 0.2,
-      "max_worst_peak_rss_bytes": 16777216,
-      "max_worst_wall_seconds": 0.2
+      "max_worst_peak_rss_bytes": 16777216
     },
     {
       "fixture": "scale_2x",
       "phase": "ast-semantic",
       "baseline_worst_peak_rss_bytes": 12664832,
-      "baseline_worst_wall_seconds": 0.026471,
       "soft_max_worst_peak_rss_bytes": 16777216,
-      "soft_max_worst_wall_seconds": 0.2,
-      "max_worst_peak_rss_bytes": 16777216,
-      "max_worst_wall_seconds": 0.2
+      "max_worst_peak_rss_bytes": 16777216
     },
     {
       "fixture": "scale_2x",
       "phase": "semantic-product",
       "baseline_worst_peak_rss_bytes": 23134208,
-      "baseline_worst_wall_seconds": 0.030864,
       "soft_max_worst_peak_rss_bytes": 25447629,
-      "soft_max_worst_wall_seconds": 0.2,
-      "max_worst_peak_rss_bytes": 25447629,
-      "max_worst_wall_seconds": 0.2
+      "max_worst_peak_rss_bytes": 25447629
     },
     {
       "fixture": "scale_4x",
       "phase": "ast-semantic",
       "baseline_worst_peak_rss_bytes": 19841024,
-      "baseline_worst_wall_seconds": 0.033838,
       "soft_max_worst_peak_rss_bytes": 21825127,
-      "soft_max_worst_wall_seconds": 0.2,
-      "max_worst_peak_rss_bytes": 21825127,
-      "max_worst_wall_seconds": 0.2
+      "max_worst_peak_rss_bytes": 21825127
     },
     {
       "fixture": "scale_4x",
       "phase": "semantic-product",
       "baseline_worst_peak_rss_bytes": 40845312,
-      "baseline_worst_wall_seconds": 0.05342,
       "soft_max_worst_peak_rss_bytes": 44929844,
-      "soft_max_worst_wall_seconds": 0.2,
-      "max_worst_peak_rss_bytes": 44929844,
-      "max_worst_wall_seconds": 0.2
+      "max_worst_peak_rss_bytes": 44929844
     }
   ]
 }

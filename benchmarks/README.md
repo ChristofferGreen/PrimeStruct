@@ -155,7 +155,7 @@ Initial checked-in baseline report:
 
 - `benchmarks/semantic_memory_baseline_report.json`
 - `benchmarks/semantic_memory_budget_policy.json` defines per-fixture per-phase
-  soft/hard RSS/time budgets plus the sustained-window rule (`2` regressions in
+  soft/hard RSS budgets plus the sustained-window rule (`2` regressions in
   a `3`-report window).
 - `docs/semantic_memory_benchmark_policy.md` documents how to update those
   budgets safely.
@@ -176,9 +176,6 @@ Initial checked-in baseline report:
 - `benchmarks/semantic_memory/per_definition_arena_pmr_delta.md` records the
   `P2-13` per-definition arena/PMR scratch-allocation RSS/time delta on
   `math_star_repro` (`semantic-product`, 3 runs) against that baseline.
-
-The CTest target `PrimeStruct_semantic_memory_benchmark` runs `RUN_SERIAL`
-because baseline fixtures exceed the benchmark threshold annotations.
 
 Check semantic memory report budgets against policy:
 

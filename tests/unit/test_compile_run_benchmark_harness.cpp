@@ -211,7 +211,7 @@ TEST_CASE("semantic memory baseline report is checked in with fixture phase cove
   CHECK(readFile(validateErrPath).empty());
 }
 
-TEST_CASE("semantic memory ctest targets keep dependency ordering and wall-ignore gating") {
+TEST_CASE("semantic memory ctest targets keep dependency ordering") {
   if (!hasPython3()) {
     INFO("python3 not available");
     return;
@@ -256,9 +256,7 @@ TEST_CASE("semantic memory ctest targets keep dependency ordering and wall-ignor
           "  re.S,\n"
           ") is not None\n"
           "no_run_serial = 'RUN_SERIAL' not in cmake_text\n"
-          "wall_ignore_occurrences = cmake_text.count('--ignore-wall-seconds')\n"
-          "has_wall_ignore = wall_ignore_occurrences >= 6\n"
-          "ok = has_thresholds and has_offenders and offender_exceeds and benchmark_timeout_guard and trend_timeout_guard and no_run_serial and has_wall_ignore\n"
+          "ok = has_thresholds and has_offenders and offender_exceeds and benchmark_timeout_guard and trend_timeout_guard and no_run_serial\n"
           "if not ok:\n"
           "  print(json.dumps({\n"
           "    'thresholds': thresholds,\n"
@@ -267,7 +265,6 @@ TEST_CASE("semantic memory ctest targets keep dependency ordering and wall-ignor
           "    'benchmark_timeout_guard': benchmark_timeout_guard,\n"
           "    'trend_timeout_guard': trend_timeout_guard,\n"
           "    'no_run_serial': no_run_serial,\n"
-          "    'wall_ignore_occurrences': wall_ignore_occurrences,\n"
           "  }, indent=2, sort_keys=True))\n"
           "sys.exit(0 if ok else 1)\n") +
       " " + quoteShellArg(baselinePath.string()) +
@@ -2180,9 +2177,7 @@ TEST_CASE("semantic memory budget checker passes for in-budget report") {
       "      \"fixture\": \"toy\",\n"
       "      \"phase\": \"ast-semantic\",\n"
       "      \"soft_max_worst_peak_rss_bytes\": 120,\n"
-      "      \"soft_max_worst_wall_seconds\": 1.2,\n"
-      "      \"max_worst_peak_rss_bytes\": 140,\n"
-      "      \"max_worst_wall_seconds\": 1.4\n"
+      "      \"max_worst_peak_rss_bytes\": 140\n"
       "    }\n"
       "  ]\n"
       "}\n");
@@ -2229,9 +2224,7 @@ TEST_CASE("semantic memory budget checker fails when report tuple lacks policy e
       "      \"fixture\": \"toy\",\n"
       "      \"phase\": \"ast-semantic\",\n"
       "      \"soft_max_worst_peak_rss_bytes\": 120,\n"
-      "      \"soft_max_worst_wall_seconds\": 1.2,\n"
-      "      \"max_worst_peak_rss_bytes\": 140,\n"
-      "      \"max_worst_wall_seconds\": 1.4\n"
+      "      \"max_worst_peak_rss_bytes\": 140\n"
       "    }\n"
       "  ]\n"
       "}\n");
@@ -2285,9 +2278,7 @@ TEST_CASE("semantic memory budget checker fails for sustained regressions") {
       "      \"fixture\": \"toy\",\n"
       "      \"phase\": \"ast-semantic\",\n"
       "      \"soft_max_worst_peak_rss_bytes\": 120,\n"
-      "      \"soft_max_worst_wall_seconds\": 1.2,\n"
-      "      \"max_worst_peak_rss_bytes\": 200,\n"
-      "      \"max_worst_wall_seconds\": 2.0\n"
+      "      \"max_worst_peak_rss_bytes\": 200\n"
       "    }\n"
       "  ]\n"
       "}\n");
@@ -2342,7 +2333,6 @@ TEST_CASE("semantic memory budget checker fails for sustained regressions") {
   const std::string stderrText = readFile(stderrPath);
   CHECK(stderrText.find("budget check failed") != std::string::npos);
   CHECK(stderrText.find("sustained RSS regression") != std::string::npos);
-  CHECK(stderrText.find("sustained wall regression") != std::string::npos);
 }
 
 TEST_CASE("semantic memory phase-one checker passes for current and sustained window") {
@@ -2535,9 +2525,7 @@ TEST_CASE("semantic memory trend checker passes without history reports") {
       "      \"fixture\": \"toy\",\n"
       "      \"phase\": \"ast-semantic\",\n"
       "      \"soft_max_worst_peak_rss_bytes\": 120,\n"
-      "      \"soft_max_worst_wall_seconds\": 1.2,\n"
-      "      \"max_worst_peak_rss_bytes\": 200,\n"
-      "      \"max_worst_wall_seconds\": 2.0\n"
+      "      \"max_worst_peak_rss_bytes\": 200\n"
       "    }\n"
       "  ]\n"
       "}\n");
@@ -2587,9 +2575,7 @@ TEST_CASE("semantic memory trend checker writes trend summary report") {
       "      \"fixture\": \"toy\",\n"
       "      \"phase\": \"ast-semantic\",\n"
       "      \"soft_max_worst_peak_rss_bytes\": 120,\n"
-      "      \"soft_max_worst_wall_seconds\": 1.2,\n"
-      "      \"max_worst_peak_rss_bytes\": 200,\n"
-      "      \"max_worst_wall_seconds\": 2.0\n"
+      "      \"max_worst_peak_rss_bytes\": 200\n"
       "    }\n"
       "  ]\n"
       "}\n");
@@ -2670,9 +2656,7 @@ TEST_CASE("semantic memory trend checker fails for sustained regressions from hi
       "      \"fixture\": \"toy\",\n"
       "      \"phase\": \"ast-semantic\",\n"
       "      \"soft_max_worst_peak_rss_bytes\": 120,\n"
-      "      \"soft_max_worst_wall_seconds\": 1.2,\n"
-      "      \"max_worst_peak_rss_bytes\": 200,\n"
-      "      \"max_worst_wall_seconds\": 2.0\n"
+      "      \"max_worst_peak_rss_bytes\": 200\n"
       "    }\n"
       "  ]\n"
       "}\n");
@@ -2737,7 +2721,6 @@ TEST_CASE("semantic memory trend checker fails for sustained regressions from hi
   const std::string stderrText = readFile(stderrPath);
   CHECK(stderrText.find("budget check failed") != std::string::npos);
   CHECK(stderrText.find("sustained RSS regression") != std::string::npos);
-  CHECK(stderrText.find("sustained wall regression") != std::string::npos);
 }
 
 TEST_CASE("semantic memory trend checker ignores duplicate current report in history dir") {
@@ -2759,9 +2742,7 @@ TEST_CASE("semantic memory trend checker ignores duplicate current report in his
       "      \"fixture\": \"toy\",\n"
       "      \"phase\": \"ast-semantic\",\n"
       "      \"soft_max_worst_peak_rss_bytes\": 120,\n"
-      "      \"soft_max_worst_wall_seconds\": 1.2,\n"
-      "      \"max_worst_peak_rss_bytes\": 200,\n"
-      "      \"max_worst_wall_seconds\": 2.0\n"
+      "      \"max_worst_peak_rss_bytes\": 200\n"
       "    }\n"
       "  ]\n"
       "}\n");

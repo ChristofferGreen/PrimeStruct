@@ -35,13 +35,6 @@ def to_result_map(report: dict, label: str) -> dict[tuple[str, str], dict]:
   return mapped
 
 
-def as_float(row: dict, key: str, context: str) -> float:
-  try:
-    return float(row[key])
-  except Exception as exc:
-    raise ValueError(f"{context} missing/invalid {key}") from exc
-
-
 def as_int(row: dict, key: str, context: str) -> int:
   try:
     return int(row[key])
@@ -59,11 +52,6 @@ def main() -> int:
       action="append",
       default=[],
       help="Optional prior semantic memory report JSON (repeatable) for sustained-window checks.",
-  )
-  parser.add_argument(
-      "--ignore-wall-seconds",
-      action="store_true",
-      help="Ignore wall-time regressions and gate only on RSS metrics.",
   )
   parser.add_argument("--report-json", help="Optional output path for observed checker summary JSON.")
   args = parser.parse_args()
@@ -128,9 +116,7 @@ def main() -> int:
 
     try:
       soft_rss = as_int(raw_entry, "soft_max_worst_peak_rss_bytes", entry_name)
-      soft_wall = as_float(raw_entry, "soft_max_worst_wall_seconds", entry_name)
       max_rss = as_int(raw_entry, "max_worst_peak_rss_bytes", entry_name)
-      max_wall = as_float(raw_entry, "max_worst_wall_seconds", entry_name)
     except ValueError as exc:
       failures.append(str(exc))
       continue
@@ -142,7 +128,6 @@ def main() -> int:
 
     try:
       observed_rss = as_int(current_row, "worst_peak_rss_bytes", f"report:{entry_name}")
-      observed_wall = as_float(current_row, "worst_wall_seconds", f"report:{entry_name}")
     except ValueError as exc:
       failures.append(str(exc))
       continue
@@ -150,49 +135,34 @@ def main() -> int:
     if observed_rss > max_rss:
       failures.append(
           f"{entry_name} worst_peak_rss_bytes regression observed={observed_rss} allowed<={max_rss}")
-    if not args.ignore_wall_seconds and observed_wall > max_wall:
-      failures.append(
-          f"{entry_name} worst_wall_seconds regression observed={observed_wall:.6f} allowed<={max_wall:.6f}")
 
     recent_rows = [mapped[key] for mapped in ordered_maps if key in mapped]
     recent_window = recent_rows[-window_size:] if recent_rows else []
     sustained_rss_regressions = 0
-    sustained_wall_regressions = 0
     if len(recent_window) == window_size:
       for row in recent_window:
         rss_value = as_int(row, "worst_peak_rss_bytes", f"window:{entry_name}")
-        wall_value = as_float(row, "worst_wall_seconds", f"window:{entry_name}")
         if rss_value > soft_rss:
           sustained_rss_regressions += 1
-        if not args.ignore_wall_seconds and wall_value > soft_wall:
-          sustained_wall_regressions += 1
       if sustained_rss_regressions >= minimum_regressions:
         failures.append(
             f"{entry_name} sustained RSS regression count={sustained_rss_regressions} "
-            f"window={window_size} threshold={minimum_regressions}")
-      if not args.ignore_wall_seconds and sustained_wall_regressions >= minimum_regressions:
-        failures.append(
-            f"{entry_name} sustained wall regression count={sustained_wall_regressions} "
             f"window={window_size} threshold={minimum_regressions}")
 
     summaries.append({
         "fixture": fixture,
         "phase": phase,
         "observed_worst_peak_rss_bytes": observed_rss,
-        "observed_worst_wall_seconds": observed_wall,
         "soft_max_worst_peak_rss_bytes": soft_rss,
-        "soft_max_worst_wall_seconds": soft_wall,
         "max_worst_peak_rss_bytes": max_rss,
-        "max_worst_wall_seconds": max_wall,
         "sustained_window_size": window_size,
         "sustained_minimum_regressions": minimum_regressions,
         "sustained_window_samples": len(recent_window),
         "sustained_rss_regressions": sustained_rss_regressions,
-        "sustained_wall_regressions": sustained_wall_regressions,
     })
     print(
         "[check_semantic_memory_budget] "
-        f"{entry_name} rss={observed_rss}/{max_rss} wall={observed_wall:.6f}/{max_wall:.6f}")
+        f"{entry_name} rss={observed_rss}/{max_rss}")
 
   for fixture, phase in sorted(current_map.keys()):
     key = (fixture, phase)
@@ -210,7 +180,6 @@ def main() -> int:
         "history_reports": [str(path) for path in history_report_paths],
         "entries": summaries,
         "failure_count": len(failures),
-        "ignore_wall_seconds": bool(args.ignore_wall_seconds),
     }
     report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"[check_semantic_memory_budget] wrote report: {report_path}")
