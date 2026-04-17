@@ -584,6 +584,37 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("canonical vector constructor auto binding keeps same-path overload family") {
+  const std::string source = R"(
+Box() {
+  [i32] value{0i32}
+}
+
+Other() {
+  [i32] alt{0i32}
+}
+
+[return<Box>]
+/std/collections/vector/vector([i32] seed) {
+  return(Box(seed))
+}
+
+[return<Other>]
+/std/collections/vector/vector([i32] first, [i32] second) {
+  return(Other(plus(first, second)))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto] boxed{/std/collections/vector/vector(9i32)}
+  return(boxed.value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("canonical vector constructor helper return keeps non-vector count diagnostics") {
   const std::string source = R"(
 Marker {

@@ -1864,6 +1864,9 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphTypeResolutionSource.find(
             "helperPath = vectorConstructorHelperPath();") ==
         std::string::npos);
+  CHECK(templateMonomorphTypeResolutionSource.find(
+            "resolvedPath == \"/std/collections/vector/vector\" ||") ==
+        std::string::npos);
   CHECK(templateMonomorphAssignmentTargetResolutionSource.find(
             "bool inferCallTargetBinding(const Expr &bindingExpr,") !=
         std::string::npos);
