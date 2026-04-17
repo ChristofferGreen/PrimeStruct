@@ -206,8 +206,7 @@ main() {
   return(values./vector/count())
 }
       )",
-          false,
-          "validateExprMethodCallTarget failed name=/vector/count",
+          true,
       },
       {
           "query_local_auto_scalar_success",
@@ -336,8 +335,7 @@ main() {
   return(values./vector/count())
 }
       )",
-          false,
-          "validateExprMethodCallTarget failed name=/vector/count",
+          true,
       },
       {
           "result_try_local_auto_error_type_boundary",
