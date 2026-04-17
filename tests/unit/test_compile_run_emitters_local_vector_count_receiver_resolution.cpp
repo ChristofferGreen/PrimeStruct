@@ -24,9 +24,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  const std::string err = readFile(errPath);
-  CHECK(err.find("unknown method") != std::string::npos);
-  CHECK(err.find("count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /string/count") != std::string::npos);
 }
 
 TEST_CASE("rejects local alias slash-method vector count on string receiver in C++ emitter") {
@@ -47,9 +45,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  const std::string err = readFile(errPath);
-  CHECK(err.find("unknown method") != std::string::npos);
-  CHECK(err.find("count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /string/count") != std::string::npos);
 }
 
 TEST_CASE("rejects local alias slash-method vector count on array receiver in C++ emitter") {
@@ -70,9 +66,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  const std::string err = readFile(errPath);
-  CHECK(err.find("unknown method") != std::string::npos);
-  CHECK(err.find("count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /array/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps alias slash-method vector count same-path helper on string receiver") {
