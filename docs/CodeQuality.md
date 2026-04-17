@@ -130,11 +130,16 @@ Why this is good:
 - The loop shape is explicit and easy to scan.
 
 Current note:
-- Use `import /std/collections/*` for vector helper examples today.
+- Use `import /std/collections/*` for bare vector helper names and method-sugar
+  examples.
+- Exact `import /std/collections/vector` is now a supported current style for
+  the explicit constructor plus canonical `/std/collections/vector/*` helper
+  surface.
 - Use the explicit constructor form `vector<T>{...}` in bindings today.
 - The shorter target form using exact `import /std/collections/vector` and a
-  binding like `[vector<int>] values{4, 8, 15}` is tracked as follow-up work in
-  `TODO-0476` and should not be presented as supported current style yet.
+  binding like `[vector<int>] values{4, 8, 15}` is still tracked as follow-up
+  work in `TODO-0476` and should not be presented as supported current style
+  yet.
 
 ## Example Hygiene
 

@@ -102,6 +102,13 @@ bool SemanticsValidator::buildImportAliases() {
     }
     return true;
   };
+
+  const auto resolveSingleImportAliasTarget = [](const std::string &importPath) {
+    if (importPath == "/std/collections/vector") {
+      return std::string("/std/collections/vector/vector");
+    }
+    return importPath;
+  };
   const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
   for (const auto &importPath : importPaths) {
     if (importPath == "/std/math") {
@@ -211,7 +218,8 @@ bool SemanticsValidator::buildImportAliases() {
         isMathBuiltinImport = true;
       }
     }
-    auto defIt = defMap_.find(importPath);
+    const std::string aliasTargetPath = resolveSingleImportAliasTarget(importPath);
+    auto defIt = defMap_.find(aliasTargetPath);
     if (defIt == defMap_.end()) {
       if (!isMathBuiltinImport) {
         if (!addImportDiagnostic("unknown import path: " + importPath)) {
@@ -220,7 +228,7 @@ bool SemanticsValidator::buildImportAliases() {
       }
       continue;
     }
-    if (publicDefinitions_.count(importPath) == 0) {
+    if (publicDefinitions_.count(aliasTargetPath) == 0) {
       if (!addImportDiagnostic("import path refers to private definition: " + importPath, defIt->second)) {
         return false;
       }
@@ -250,8 +258,8 @@ bool SemanticsValidator::buildImportAliases() {
       }
       continue;
     }
-    auto [it, inserted] = importAliases_.emplace(remainder, importPath);
-    if (!inserted && it->second != importPath) {
+    auto [it, inserted] = importAliases_.emplace(remainder, aliasTargetPath);
+    if (!inserted && it->second != aliasTargetPath) {
       if (!addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
         return false;
       }
@@ -304,8 +312,9 @@ bool SemanticsValidator::buildImportAliases() {
         }
         return;
       }
-      auto defIt = defMap_.find(importPath);
-      if (defIt == defMap_.end() || publicDefinitions_.count(importPath) == 0) {
+      const std::string aliasTargetPath = resolveSingleImportAliasTarget(importPath);
+      auto defIt = defMap_.find(aliasTargetPath);
+      if (defIt == defMap_.end() || publicDefinitions_.count(aliasTargetPath) == 0) {
         return;
       }
       const std::string remainder = importPath.substr(importPath.find_last_of('/') + 1);
@@ -317,7 +326,7 @@ bool SemanticsValidator::buildImportAliases() {
       if (defMap_.find(rootPath) != defMap_.end()) {
         return;
       }
-      importAliases_.emplace(remainder, importPath);
+      importAliases_.emplace(remainder, aliasTargetPath);
     };
     for (const auto &importPath : program_.imports) {
       if (directImportSet.count(importPath) != 0) {

@@ -97,6 +97,27 @@ main() {
   CHECK(runCommand(methodExePath) == 17);
 }
 
+TEST_CASE("exact vector import runs explicit stdlib surface in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/vector
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 8i32, 15i32)}
+  return(plus(/std/collections/vector/count(values),
+      plus(/std/collections/vector/at(values, 0i32),
+          /std/collections/vector/at_unsafe(values, 2i32))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_exact_vector_import_exe.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "compile_exact_vector_import_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 22);
+}
+
 TEST_CASE("compiles and runs experimental soa_vector stdlib helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

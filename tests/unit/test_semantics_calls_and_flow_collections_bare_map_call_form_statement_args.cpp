@@ -751,7 +751,24 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/vector") != std::string::npos);
 }
 
-TEST_CASE("explicit vector import no longer rewrites to canonical constructor path") {
+TEST_CASE("explicit vector import supports bare stdlib constructor and namespaced helpers") {
+  const std::string source = R"(
+import /std/collections/vector
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 8i32, 15i32)}
+  return(plus(/std/collections/vector/count(values),
+      plus(/std/collections/vector/at(values, 0i32),
+          /std/collections/vector/at_unsafe(values, 2i32))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("explicit vector import keeps duplicate same-path ctor diagnostics") {
   const std::string source = R"(
 import /std/collections/vector
 

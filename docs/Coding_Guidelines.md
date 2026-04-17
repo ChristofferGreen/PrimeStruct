@@ -126,10 +126,13 @@ main() {
 }
 ```
 
-Use the wildcard collections import and the explicit `vector<T>{...}`
-constructor form for current docs/examples. The shorter target surface
-(`import /std/collections/vector` plus `[vector<T>] values{...}` bindings) is
-tracked separately and is not yet a verified portable example shape.
+Use the wildcard collections import when an example depends on bare helper
+names or method sugar, and use the explicit `vector<T>{...}` constructor form
+for current docs/examples. Exact `import /std/collections/vector` is acceptable
+for the explicit constructor plus canonical `/std/collections/vector/*` helper
+surface. The shorter target shape (`import /std/collections/vector` plus
+`[vector<T>] values{...}` bindings) is tracked separately and is not yet a
+verified portable example shape.
 
 ## Gold-Standard Surface Example (Pure PrimeStruct)
 
