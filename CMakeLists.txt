@@ -990,7 +990,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     )
     set_tests_properties(
       PrimeStruct_semantics_tsan_smoke
-      PROPERTIES RUN_SERIAL TRUE TIMEOUT 300 LABELS "optional-ci;tsan;serial-required")
+      PROPERTIES TIMEOUT 300 LABELS "optional-ci;tsan")
   endif()
 
   set(PrimeStructMiscTestSuites
@@ -1086,7 +1086,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
 
   function(addPrimeStructDoctestSuite suite)
-    set(options RUN_SERIAL)
+    set(options)
     set(oneValueArgs TARGET TIMEOUT LABEL SHARD_NAME FIRST LAST SOURCE_FILE TEST_CASE TEST_CASE_EXCLUDE)
     cmake_parse_arguments(PrimeStructSuite "${options}" "${oneValueArgs}" "" ${ARGN})
     if (NOT PrimeStructSuite_TARGET)
@@ -1128,13 +1128,10 @@ if(PRIMESTRUCT_BUILD_TESTS)
     if (PrimeStructSuite_LABEL)
       set_tests_properties("${testName}" PROPERTIES LABELS "${PrimeStructSuite_LABEL}")
     endif()
-    if (PrimeStructSuite_RUN_SERIAL)
-      set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE)
-    endif()
   endfunction()
 
   function(addPrimeStructManagedDoctestSuite suite)
-    set(options RUN_SERIAL)
+    set(options)
     set(oneValueArgs TARGET TIMEOUT LABEL SOURCE_FILE TEST_CASE TEST_CASE_EXCLUDE TOTAL_CASES SHARD_PREFIX CASES_PER_SHARD RANGE_FIRST RANGE_LAST)
     cmake_parse_arguments(PrimeStructManaged "${options}" "${oneValueArgs}" "" ${ARGN})
     if (NOT PrimeStructManaged_CASES_PER_SHARD)
@@ -1173,10 +1170,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
     if (PrimeStructManaged_TEST_CASE_EXCLUDE)
       list(APPEND commonArgs TEST_CASE_EXCLUDE "${PrimeStructManaged_TEST_CASE_EXCLUDE}")
     endif()
-    if (PrimeStructManaged_RUN_SERIAL)
-      list(APPEND commonArgs RUN_SERIAL)
-    endif()
-
     if (NOT PrimeStructManaged_TOTAL_CASES OR
         PrimeStructManaged_TOTAL_CASES LESS_EQUAL PrimeStructManaged_CASES_PER_SHARD)
       set(singleShardArgs ${commonArgs})
@@ -1228,43 +1221,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
   include("${CMAKE_SOURCE_DIR}/cmake/PrimeStructManagedParserTextMiscSuites.cmake" OPTIONAL)
   include("${CMAKE_SOURCE_DIR}/cmake/PrimeStructManagedCompileRunSuites.cmake" OPTIONAL)
 
-  # These emitter shards reuse small cached C++ fixtures. Keep siblings that
-  # share one fixture from starting at the same time so only the first case pays
-  # the cold compile; follow-on cases then see the warm artifact instead of
-  # spending their whole runtime blocked on the same build lock.
-  foreach(testName IN ITEMS
-          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_12_12
-          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_13_13)
-    set_tests_properties("${testName}" PROPERTIES RESOURCE_LOCK "primec_cpp_emitter_result_fixture")
-  endforeach()
-  foreach(testName IN ITEMS
-          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_15_15
-          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_16_16)
-    set_tests_properties("${testName}" PROPERTIES RESOURCE_LOCK "primec_cpp_emitter_ui_commands_fixture")
-  endforeach()
-  foreach(testName IN ITEMS
-          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_17_17
-          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_18_18)
-    set_tests_properties("${testName}" PROPERTIES RESOURCE_LOCK "primec_cpp_emitter_ui_layout_fixture")
-  endforeach()
-  foreach(testName IN ITEMS
-          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_19_19
-          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_20_20
-          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_21_21)
-    set_tests_properties("${testName}" PROPERTIES RESOURCE_LOCK "primec_cpp_emitter_ui_widgets_fixture")
-  endforeach()
-  foreach(testName IN ITEMS
-          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_22_22
-          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_23_23)
-    set_tests_properties("${testName}" PROPERTIES RESOURCE_LOCK "primec_cpp_emitter_ui_login_fixture")
-  endforeach()
-  foreach(testName IN ITEMS
-          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_24_24
-          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_25_25
-          PrimeStruct_primestruct_compile_run_emitters_cpp_lambda_and_mutator_resolution_26_26)
-    set_tests_properties("${testName}" PROPERTIES RESOURCE_LOCK "primec_cpp_emitter_ui_events_fixture")
-  endforeach()
-
   foreach(suite IN LISTS PrimeStructMiscTestSuites)
     if (suite IN_LIST PrimeStructManagedMiscSuites)
       continue()
@@ -1272,7 +1228,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
     add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_misc_tests> "--test-suite=${suite}")
-    set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE)
     set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
   endforeach()
 
@@ -1299,7 +1254,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
       set(semanticsTimeout 900)
     elseif(suite STREQUAL "primestruct.semantics.result_helpers")
       set(semanticsTimeout 600)
-      set(semanticsLabels "serial-required")
     endif()
     if (suite STREQUAL "primestruct.semantics.operators")
       add_test(NAME "${testName}_matrix_and_shape_rules_core"
@@ -1338,9 +1292,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
       set_tests_properties("${testName}_scalar_and_mixed_numeric_rules" PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
     else()
       add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests> "--test-suite=${suite}")
-      if (suite STREQUAL "primestruct.semantics.result_helpers")
-        set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE)
-      endif()
       set_tests_properties("${testName}" PROPERTIES TIMEOUT "${semanticsTimeout}" LABELS "${semanticsLabels}")
     endif()
   endforeach()
@@ -1371,14 +1322,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
             --root ${CMAKE_SOURCE_DIR}
             --allowlist ${CMAKE_SOURCE_DIR}/scripts/include_layer_allowlist.txt
   )
-  set_tests_properties(PrimeStruct_include_layers PROPERTIES RUN_SERIAL TRUE TIMEOUT 60)
+  set_tests_properties(PrimeStruct_include_layers PROPERTIES TIMEOUT 60)
 
   add_test(
     NAME PrimeStruct_test_suite_naming
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_test_suite_naming.py
             --root ${CMAKE_SOURCE_DIR}
   )
-  set_tests_properties(PrimeStruct_test_suite_naming PROPERTIES RUN_SERIAL TRUE TIMEOUT 60)
+  set_tests_properties(PrimeStruct_test_suite_naming PROPERTIES TIMEOUT 60)
 
   add_custom_target(
     primestruct_graph_budget_check
@@ -1399,7 +1350,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             --repo-root ${CMAKE_SOURCE_DIR}
             --baseline ${CMAKE_SOURCE_DIR}/benchmarks/type_graph_budget_baseline.json
   )
-  set_tests_properties(PrimeStruct_graph_budget PROPERTIES RUN_SERIAL TRUE TIMEOUT 120 LABELS "parallel-safe")
+  set_tests_properties(PrimeStruct_graph_budget PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
 
   set(PRIMESTRUCT_SEMANTIC_MEMORY_POLICY
       ${CMAKE_SOURCE_DIR}/benchmarks/semantic_memory_budget_policy.json)
@@ -1447,7 +1398,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(
     PrimeStruct_semantic_memory_benchmark
-    PROPERTIES RUN_SERIAL TRUE TIMEOUT 1800)
+    PROPERTIES TIMEOUT 1800)
 
   add_custom_target(
     primestruct_semantic_memory_definition_worker_parity
@@ -1490,7 +1441,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(
     PrimeStruct_semantic_memory_definition_worker_parity
-    PROPERTIES RUN_SERIAL TRUE TIMEOUT 1800)
+    PROPERTIES TIMEOUT 1800)
 
   add_custom_target(
     primestruct_semantic_memory_trend_check
@@ -1529,7 +1480,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(
     PrimeStruct_semantic_memory_trend
-    PROPERTIES DEPENDS PrimeStruct_semantic_memory_benchmark RUN_SERIAL TRUE TIMEOUT 300)
+    PROPERTIES DEPENDS PrimeStruct_semantic_memory_benchmark TIMEOUT 300)
 
   set(PrimeStructCompileRunSuites
     primestruct.compile.run.smoke
@@ -1796,10 +1747,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900
                                  SHARD_NAME "operations_and_collections"
                                  SOURCE_FILE "*test_compile_run_imports_operations.cpp")
-      # This shard compiles and runs enough native helper cases that it becomes
-      # resource-sensitive under the default parallel ctest load on macOS.
-      set_tests_properties("PrimeStruct_primestruct_compile_run_imports_operations_and_collections"
-                           PROPERTIES RUN_SERIAL TRUE)
     elseif(suite STREQUAL "primestruct.compile.run.text_filters")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "flag_and_transform_basics"
                                  SOURCE_FILE "*test_compile_run_text_filters_core_lists.cpp" FIRST 1 LAST 28)
@@ -1851,7 +1798,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
               -DEXPECTED_SUITES_FILE=${expectedSuitesFile}
               -P ${CMAKE_SOURCE_DIR}/cmake/CheckDoctestSuites.cmake
     )
-    set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE TIMEOUT 60)
+    set_tests_properties("${testName}" PROPERTIES TIMEOUT 60)
   endfunction()
 
   addPrimeStructSuiteRegistration(

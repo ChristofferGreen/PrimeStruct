@@ -185,8 +185,7 @@ addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.result_helpers"
   TARGET PrimeStruct_semantics_tests
   TIMEOUT 600
-  LABEL "serial-required"
-  RUN_SERIAL
+  LABEL "parallel-safe"
   TOTAL_CASES 76
   CASES_PER_SHARD 2
   SHARD_PREFIX "result_helpers"

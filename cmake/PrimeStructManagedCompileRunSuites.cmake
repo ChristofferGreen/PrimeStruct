@@ -10,7 +10,6 @@ list(APPEND PrimeStructManagedCompileRunSuites
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.glsl"
                                   TIMEOUT 900
-                                  RUN_SERIAL
                                   SHARD_PREFIX "glsl"
                                   TOTAL_CASES 61
                                   CASES_PER_SHARD 5)

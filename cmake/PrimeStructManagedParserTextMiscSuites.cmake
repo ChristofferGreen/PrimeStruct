@@ -8,35 +8,30 @@ list(APPEND PrimeStructManagedMiscSuites
 
 addPrimeStructManagedDoctestSuite("primestruct.dumps.ast_ir"
   TARGET PrimeStruct_misc_tests
-  RUN_SERIAL
   TIMEOUT 300
   TOTAL_CASES 43
   CASES_PER_SHARD 10
 )
 addPrimeStructManagedDoctestSuite("primestruct.imports.errors"
   TARGET PrimeStruct_misc_tests
-  RUN_SERIAL
   TIMEOUT 300
   TOTAL_CASES 37
   CASES_PER_SHARD 10
 )
 addPrimeStructManagedDoctestSuite("primestruct.imports.resolver"
   TARGET PrimeStruct_misc_tests
-  RUN_SERIAL
   TIMEOUT 300
   TOTAL_CASES 38
   CASES_PER_SHARD 10
 )
 addPrimeStructManagedDoctestSuite("primestruct.lexer"
   TARGET PrimeStruct_misc_tests
-  RUN_SERIAL
   TIMEOUT 300
   TOTAL_CASES 19
   CASES_PER_SHARD 10
 )
 addPrimeStructManagedDoctestSuite("primestruct.semantics.manual"
   TARGET PrimeStruct_misc_tests
-  RUN_SERIAL
   TIMEOUT 300
   TOTAL_CASES 145
   CASES_PER_SHARD 10

@@ -20,7 +20,6 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
                                   TIMEOUT 900
-                                  RUN_SERIAL
                                   SHARD_PREFIX "operations_and_collections"
                                   SOURCE_FILE "*test_compile_run_imports_operations.cpp"
                                   TOTAL_CASES 81
@@ -48,7 +47,6 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   TIMEOUT 900
-                                  RUN_SERIAL
                                   SHARD_PREFIX "misc_language_and_diagnostics_basics"
                                   SOURCE_FILE "*test_compile_run_text_filters_misc.h"
                                   RANGE_FIRST 1

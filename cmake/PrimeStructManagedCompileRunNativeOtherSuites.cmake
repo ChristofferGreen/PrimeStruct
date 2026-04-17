@@ -26,7 +26,6 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.pointe
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.math_numeric"
                                   TIMEOUT 900
-                                  RUN_SERIAL
                                   SHARD_PREFIX "math_builtins"
                                   SOURCE_FILE "*test_compile_run_native_backend_math_numeric.cpp"
                                   RANGE_FIRST 1
@@ -34,7 +33,6 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.math_n
                                   CASES_PER_SHARD 2)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.math_numeric"
                                   TIMEOUT 900
-                                  RUN_SERIAL
                                   SHARD_PREFIX "numeric_and_boolean_flow"
                                   SOURCE_FILE "*test_compile_run_native_backend_math_numeric.cpp"
                                   RANGE_FIRST 23
@@ -42,7 +40,6 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.math_n
                                   CASES_PER_SHARD 4)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.math_numeric"
                                   TIMEOUT 900
-                                  RUN_SERIAL
                                   SHARD_PREFIX "conversions_and_rejections"
                                   SOURCE_FILE "*test_compile_run_native_backend_math_numeric.cpp"
                                   RANGE_FIRST 35
