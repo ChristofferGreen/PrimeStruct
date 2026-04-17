@@ -45,8 +45,12 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_stdlib_collection_shim_templated_return_vector_temp_call_index_mismatch.prime", source);
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_stdlib_collection_shim_templated_return_vector_temp_call_index_mismatch")
+          .string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("rejects native templated stdlib vector wrapper temporary call arity mismatch") {
@@ -126,8 +130,12 @@ main() {
 )";
   const std::string srcPath = writeTemp(
       "compile_native_stdlib_collection_shim_templated_return_vector_temp_unsafe_call_index_mismatch.prime", source);
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  const std::string exePath = (testScratchPath("") /
+                               "primec_native_stdlib_collection_shim_templated_return_vector_temp_unsafe_call_index_mismatch")
+                                  .string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("rejects native templated stdlib vector wrapper temporary unsafe call arity mismatch") {

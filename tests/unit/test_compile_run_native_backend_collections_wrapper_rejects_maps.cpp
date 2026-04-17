@@ -312,7 +312,7 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " +
                                  quoteShellArg(errPath) + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/at parameter key") !=
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/mapAt__") !=
         std::string::npos);
 }
 
@@ -359,7 +359,7 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " +
                                  quoteShellArg(errPath) + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/at_unsafe parameter key") !=
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/mapAtUnsafe__") !=
         std::string::npos);
 }
 
