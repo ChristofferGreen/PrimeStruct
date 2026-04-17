@@ -342,6 +342,11 @@
             "          receiverCollectionTypePath != \"/vector\" && receiverCollectionTypePath != \"/soa_vector\")") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "(normalizedMethodName == \"count\" || normalizedMethodName == \"capacity\") &&\n"
+            "      (normalizedTypeName == \"string\" || normalizedTypeName == \"array\" ||\n"
+            "       isMapCollectionTypeName(normalizedTypeName))") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
             "explicitVectorHelperPath == \"/vector/capacity\" &&") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
