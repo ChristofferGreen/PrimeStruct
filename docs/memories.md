@@ -63,6 +63,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
   Evidence: `TODO-0502` replaced the last local alias/repeated direct-call
   cluster with those shared helper predicates, and focused IR source-lock
   coverage was updated to keep the deleted alias absent.
+- `vector-expr-helper-visible-reprobe`:
+  expression-form vector helper routing must keep probing receiver-specific
+  visible helpers even when the initially resolved builtin statement-only
+  helper path is visible, and it must recompute helper-definition-missing
+  state after switching `resolved` to a receiver-specific method target.
+  Evidence: `SemanticsValidatorExprVectorHelpers.cpp` now updates
+  `resolvedVectorHelperDefinitionMissing` after `resolved = methodTarget` and
+  no longer gates receiver probing on the initial helper-missing state;
+  this fixed expression-form `push`/`reserve` shadow regressions and the full
+  release gate passed afterward.
 - `vector-removed-access-alias-named-args-unknown-target`:
   unresolved explicit `/vector/at` and `/vector/at_unsafe` calls with named
   arguments are now treated as removed aliases (unknown-target diagnostics)
@@ -73,6 +83,14 @@ This file stores durable session-derived facts that are useful in later work. Ke
   builtin named-argument classification for unresolved removed vector access
   aliases; updated coverage in vector alias named-arg tests across semantics,
   VM/native backend compile-run, and C++ emitter suites.
+- `vector-rooted-method-prereject-redundant`:
+  rooted `/vector/{count,capacity,at,at_unsafe}` method calls must not be
+  pre-rejected in `SemanticsValidatorExprMethodResolution.cpp`, because
+  helper-routing and method-target resolution already own same-path alias
+  success plus canonical-only `unknown method: /vector/...` rejection.
+  Evidence: `TODO-0522` deleted the early rooted pre-reject branch from
+  `SemanticsValidatorExprMethodResolution.cpp`, added source-lock coverage to
+  keep it absent, and the full release gate passed afterward.
 - `vector-stdlib-access-compat-fallback-gate`:
   std-namespaced vector access spellings on non-vector compatibility receivers
   need `shouldAllowStdAccessCompatibilityFallback` enabled in both expression

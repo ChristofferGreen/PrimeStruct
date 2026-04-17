@@ -52,6 +52,10 @@ bool isStdNamespacedVectorCanonicalDirectCallReceiverCompatible(
          isCountCapacityNamedArgException;
 }
 
+bool isVectorHelperReceiverName(const Expr &candidate,
+                                const std::vector<ParameterInfo> &params,
+                                const std::unordered_map<std::string, BindingInfo> &locals);
+
 bool shouldProbePositionalReorderedVectorHelperReceiver(
     const Expr &expr,
     bool isStdNamespacedVectorCanonicalCompatibilityDirectCallSite,
@@ -579,8 +583,8 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     }
   }
 
-  const bool resolvedVectorHelperDefinitionMissing =
-      defMap_.find(resolved) == defMap_.end();
+  bool resolvedVectorHelperDefinitionMissing =
+      !hasVisibleDefinitionPath(resolved);
   size_t namedValuesReceiverIndex = expr.args.size();
   const bool hasNamedValuesReceiver = [&]() {
     if (!hasNamedArgs) {
@@ -598,7 +602,6 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   size_t resolvedReceiverIndex = 0;
   if ((!isStdNamespacedVectorCanonicalCompatibilityDirectCallSite ||
        isStdNamespacedVectorCanonicalCountCapacityNamedArgException) &&
-      resolvedVectorHelperDefinitionMissing &&
       !expr.args.empty()) {
     auto tryResolveReceiverIndex = [&](size_t receiverIndex) {
       if (receiverIndex >= expr.args.size()) {
@@ -615,6 +618,8 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
         return false;
       }
       resolved = methodTarget;
+      resolvedVectorHelperDefinitionMissing =
+          !hasVisibleDefinitionPath(resolved);
       resolvedReceiverIndex = receiverIndex;
       return true;
     };

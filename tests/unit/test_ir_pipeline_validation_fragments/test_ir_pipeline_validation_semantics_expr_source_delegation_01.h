@@ -500,6 +500,12 @@
   CHECK(semanticsExprMethodResolutionSource.find(
             "normalizedName == \"std/collections/vector/capacity\"") ==
         std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "if (normalizedMethodNamespace == \"vector\" &&\n"
+            "      (expr.name == \"count\" || expr.name == \"capacity\" ||\n"
+            "       expr.name == \"at\" || expr.name == \"at_unsafe\") &&\n"
+            "      !expr.args.empty())") ==
+        std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "resolved == \"/std/collections/vector/count\"") ==
         std::string::npos);
