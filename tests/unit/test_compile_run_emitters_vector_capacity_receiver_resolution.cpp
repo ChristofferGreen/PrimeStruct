@@ -267,7 +267,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unknown method: /vector/capacity") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown method: /map/capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects alias slash-method vector capacity on map receiver in C++ emitter") {
@@ -292,7 +292,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /vector/capacity") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /map/capacity") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter infers wrapper collection builtin fallback") {
