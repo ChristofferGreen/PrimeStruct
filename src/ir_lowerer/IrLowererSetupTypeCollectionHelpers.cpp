@@ -462,13 +462,9 @@ bool isExplicitRemovedVectorMethodAliasPath(const std::string &methodName) {
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  const std::string vectorPrefix = "vector/";
   const std::string arrayPrefix = "array/";
   const std::string stdVectorPrefix = "std/collections/vector/";
   const std::string experimentalVectorPrefix = "std/collections/experimental_vector/";
-  if (normalized.rfind(vectorPrefix, 0) == 0) {
-    return isRemovedVectorCompatibilityHelper(stripGeneratedHelperSuffix(normalized.substr(vectorPrefix.size())));
-  }
   if (normalized.rfind(arrayPrefix, 0) == 0) {
     return isRemovedVectorCompatibilityHelper(stripGeneratedHelperSuffix(normalized.substr(arrayPrefix.size())));
   }

@@ -30,6 +30,7 @@ LocalInfo::ValueKind combineNumericKinds(LocalInfo::ValueKind left, LocalInfo::V
 LocalInfo::ValueKind comparisonKind(LocalInfo::ValueKind left, LocalInfo::ValueKind right);
 std::string typeNameForValueKind(LocalInfo::ValueKind kind);
 std::string normalizeDeclaredCollectionTypeBase(const std::string &base);
+bool isExplicitRemovedVectorMethodAliasPath(const std::string &methodName);
 bool inferDeclaredReturnCollection(const Definition &definition,
                                    std::string &collectionNameOut,
                                    std::vector<std::string> &collectionArgsOut);

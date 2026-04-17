@@ -328,6 +328,12 @@ TEST_CASE("ir lowerer setup-type vector helper detection rejects removed rooted 
   CHECK(helperName.empty());
 }
 
+TEST_CASE("ir lowerer setup-type removed vector method alias helper rejects rooted aliases") {
+  CHECK(primec::ir_lowerer::isExplicitRemovedVectorMethodAliasPath("/array/count"));
+  CHECK(primec::ir_lowerer::isExplicitRemovedVectorMethodAliasPath("/std/collections/vector/count"));
+  CHECK_FALSE(primec::ir_lowerer::isExplicitRemovedVectorMethodAliasPath("/vector/count"));
+}
+
 TEST_CASE("ir lowerer access helper rejects removed rooted vector access aliases") {
   primec::Expr canonicalAccessCall;
   canonicalAccessCall.kind = primec::Expr::Kind::Call;

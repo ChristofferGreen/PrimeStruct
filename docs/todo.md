@@ -182,6 +182,7 @@ Wave D (queue hygiene):
   - progress: Completed child slice `TODO-0416` (archived in `docs/todo_finished.md`): semantics removed-alias helper classifiers no longer parse removed rooted `/vector/*` call/method spellings, while the remaining `/array/*` and canonical `/std/collections/vector/*` helper checks stay covered.
   - progress: Completed child slice `TODO-0417` (archived in `docs/todo_finished.md`): lowerer count-access classifiers/helpers no longer parse rooted `/vector/count` as a vector helper alias or compatibility name, while canonical `/std/collections/vector/count` handling stays covered through bundled classifier tests.
   - progress: Completed child slice `TODO-0418` (archived in `docs/todo_finished.md`): lowerer setup-type collection helper classification no longer parses removed rooted `/vector/count` through `resolveVectorHelperAliasName(...)`/`getNamespacedCollectionHelperName(...)`, while canonical `/std/collections/vector/count` setup-type helper detection stays covered.
+  - progress: Completed child slice `TODO-0419` (archived in `docs/todo_finished.md`): lowerer setup-type removed-method alias classification no longer treats rooted `/vector/count` as an explicit removed vector method alias, while `/array/count` and canonical `/std/collections/vector/count` remain covered.
 
 - [ ] TODO-0406: Split production semantics APIs from testing snapshots
   - owner: ai
