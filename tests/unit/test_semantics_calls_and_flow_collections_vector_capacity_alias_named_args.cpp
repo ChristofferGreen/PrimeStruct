@@ -173,6 +173,24 @@ main() {
   CHECK(error.find("unknown call target: /vector/at") != std::string::npos);
 }
 
+TEST_CASE("vector namespaced access helper named arguments stay rejected with canonical helper in scope") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/std/collections/vector/at([vector<i32>] values, [i32] index) {
+  return(index)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(/vector/at([values] values, [index] 0i32))
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/at") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced at_unsafe helper rejects named arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
