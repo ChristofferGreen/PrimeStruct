@@ -274,12 +274,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     usedMethodTarget = true;
     hasMethodReceiverIndex = true;
     methodReceiverIndex = 0;
-    if (rejectsRootedVectorBuiltinAlias(expr.args.front(),
-                                        context.isNamespacedVectorCapacityCall,
-                                        "capacity")) {
-      return failCollectionCountCapacityDiagnostic(
-          "unknown call target: /vector/capacity");
-    }
     bool isBuiltinMethod = false;
     std::string methodResolved;
     if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), "capacity",
@@ -300,6 +294,14 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&
         resolved.rfind(methodResolved + "__t", 0) == 0) {
       methodResolved = resolved;
+    }
+    if (!expr.isMethodCall &&
+        context.isNamespacedVectorCapacityCall &&
+        expr.args.size() == 1 &&
+        !hasDeclaredDefinitionPath("/vector/capacity") &&
+        !hasImportedDefinitionPath("/vector/capacity") &&
+        methodResolved != "/vector/capacity") {
+      return failCollectionCountCapacityDiagnostic("unknown call target: /vector/capacity");
     }
     if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {
       if (requireSingleArg &&

@@ -362,6 +362,11 @@
             "        expr.args.size() == 1 &&\n"
             "        !hasDeclaredDefinitionPath(\"/vector/count\") &&") !=
         std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "context.isNamespacedVectorCapacityCall &&\n"
+            "        expr.args.size() == 1 &&\n"
+            "        !hasDeclaredDefinitionPath(\"/vector/capacity\") &&") !=
+        std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "(normalizedMethodName == \"count\" || normalizedMethodName == \"capacity\") &&\n"
             "      (explicitVectorReceiverFamily == \"string\" ||") ==
