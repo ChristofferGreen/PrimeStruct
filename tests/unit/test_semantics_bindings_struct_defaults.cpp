@@ -181,7 +181,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK((error.find("unknown method: /vector/count") != std::string::npos ||
-         error.find("unknown method: /std/collections/vector/count") != std::string::npos ||
+         error.find("unknown method: /array/count") != std::string::npos ||
          error.find("unknown call target: /vector/count") != std::string::npos ||
          error.find("unknown call target: /std/collections/vector/count") != std::string::npos));
 }

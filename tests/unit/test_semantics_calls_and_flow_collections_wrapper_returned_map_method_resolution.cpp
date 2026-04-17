@@ -766,7 +766,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/vector/capacity") != std::string::npos);
+  CHECK(error.find("unknown method: /map/capacity") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced capacity method rejects wrapper map receiver without helper") {

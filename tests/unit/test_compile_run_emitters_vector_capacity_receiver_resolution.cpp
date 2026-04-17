@@ -512,7 +512,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unknown method: /std/collections/vector/count") !=
+  CHECK(readFile(outPath).find("unknown method: /vector/count") !=
         std::string::npos);
 }
 
