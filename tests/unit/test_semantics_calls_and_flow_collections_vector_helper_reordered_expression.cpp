@@ -118,6 +118,58 @@ main() {
   CHECK(error.find("parameter") != std::string::npos);
 }
 
+TEST_CASE("explicit canonical push on templated canonical constructor helper keeps same-path helper resolution") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/vector/vector<T>([T] seed) {
+  return(Marker(9i32))
+}
+
+[return<void>]
+/std/collections/vector/push([Marker] self, [i32] value) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  /std/collections/vector/push(/std/collections/vector/vector<i32>(9i32), 2i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("bare push on templated canonical constructor helper keeps vector-binding diagnostics") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/vector/vector<T>([T] seed) {
+  return(Marker(9i32))
+}
+
+[return<void>]
+/std/collections/vector/push([Marker] self, [i32] value) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  push(/std/collections/vector/vector<i32>(9i32), 2i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("push requires vector binding") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced vector constructor resolves through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*

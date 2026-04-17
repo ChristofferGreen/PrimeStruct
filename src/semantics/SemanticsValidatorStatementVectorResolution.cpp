@@ -270,8 +270,7 @@ bool SemanticsValidator::resolveVectorStatementHelperTargetPath(
         return resolvedCandidate == basePath ||
                resolvedCandidate.rfind(std::string(basePath) + "__t", 0) == 0;
       };
-      if (matchesVectorCtorPath("/std/collections/vector/vector") ||
-          matchesVectorCtorPath("/std/collections/experimental_vector/vector") ||
+      if (matchesVectorCtorPath("/std/collections/experimental_vector/vector") ||
           matchesVectorCtorPath("/std/collections/experimental_vector/vectorNew") ||
           matchesVectorCtorPath("/std/collections/experimental_vector/vectorSingle") ||
           matchesVectorCtorPath("/std/collections/experimental_vector/vectorPair") ||
