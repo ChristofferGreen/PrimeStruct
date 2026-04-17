@@ -1229,6 +1229,9 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "matchesVectorCtorPath(\"/std/collections/vector/vector\")") ==
         std::string::npos);
   CHECK(semanticsStatementVectorResolutionSource.find(
+            "matchesVectorCtorPath(\"/std/collections/experimental_vector/vector\")") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorResolutionSource.find(
             "return failExprDiagnostic(receiver, std::move(message));") !=
         std::string::npos);
   CHECK(semanticsStatementVectorResolutionSource.find(
