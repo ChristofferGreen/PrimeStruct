@@ -81,12 +81,6 @@ bool SemanticsValidator::prepareExprMethodCompatibilitySetup(
                                              compatibilityPath);
   }
   if (!expr.isMethodCall) {
-    const std::string removedVectorCompatibilityPath =
-        getDirectVectorHelperCompatibilityPath(expr);
-    if (!removedVectorCompatibilityPath.empty()) {
-      return failMethodCompatibilityDiagnostic("unknown call target: " +
-                                               removedVectorCompatibilityPath);
-    }
     const std::string removedMapCompatibilityPath = directMapHelperCompatibilityPath(
         expr, params, locals, dispatchBootstrap.dispatchResolverAdapters);
     if (!removedMapCompatibilityPath.empty()) {

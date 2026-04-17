@@ -48,7 +48,7 @@
   CHECK(semanticsExprSource.find("const std::string removedVectorCompatibilityPath =") ==
         std::string::npos);
   CHECK(semanticsExprMethodCompatibilitySetupSource.find(
-            "const std::string removedVectorCompatibilityPath =") !=
+            "const std::string removedVectorCompatibilityPath =") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("const std::string removedMapCompatibilityPath =") ==
         std::string::npos);
