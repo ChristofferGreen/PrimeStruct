@@ -165,31 +165,10 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       expr.name == "at_unsafe" || expr.name == "push" || expr.name == "pop" ||
       expr.name == "reserve" || expr.name == "clear" || expr.name == "remove_at" ||
       expr.name == "remove_swap";
-  std::string receiverCollectionTypePath;
-  std::string experimentalVectorElemType;
-  const bool isExperimentalVectorCallReceiver =
-      dispatchResolvers.resolveExperimentalVectorValueTarget != nullptr &&
-      dispatchResolvers.resolveExperimentalVectorValueTarget(
-          expr.args.front(), experimentalVectorElemType);
-  const std::string preferredVisibleVectorMethodTarget =
-      preferVectorStdlibHelperPath(preferredBareVectorHelperTarget(expr.name));
-  const bool hasVisiblePreferredVectorMethodTarget =
-      hasImportedDefinitionPath(preferredVisibleVectorMethodTarget) ||
-      defMap_.count(preferredVisibleVectorMethodTarget) > 0;
   if (isVectorCompatibilityMethodName &&
       !hasExplicitVectorCompatibilityNamespace &&
-      expr.args.front().kind == Expr::Kind::Call &&
-      !expr.args.front().isBinding &&
-      !expr.args.front().isMethodCall &&
-      resolveCallCollectionTypePath(expr.args.front(), params, locals, receiverCollectionTypePath) &&
-      receiverCollectionTypePath == "/vector" &&
-      (isExperimentalVectorCallReceiver || hasVisiblePreferredVectorMethodTarget)) {
-    resolved = preferredVisibleVectorMethodTarget;
-    isBuiltinMethod = false;
-  } else if (isVectorCompatibilityMethodName &&
-             !hasExplicitVectorCompatibilityNamespace &&
-             resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
-                                             vectorMethodTarget)) {
+      resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
+                                      vectorMethodTarget)) {
     if (vectorMethodTarget.rfind("/std/collections/experimental_vector/", 0) == 0 &&
         !hasImportedDefinitionPath(vectorMethodTarget) &&
         defMap_.count(vectorMethodTarget) == 0) {

@@ -506,6 +506,19 @@
             "       expr.name == \"at\" || expr.name == \"at_unsafe\") &&\n"
             "      !expr.args.empty())") ==
         std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "const std::string preferredVisibleVectorMethodTarget =") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "const bool hasVisiblePreferredVectorMethodTarget =") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "expr.args.front().kind == Expr::Kind::Call &&\n"
+            "      !expr.args.front().isBinding &&\n"
+            "      !expr.args.front().isMethodCall &&\n"
+            "      resolveCallCollectionTypePath(expr.args.front(), params, locals, receiverCollectionTypePath) &&\n"
+            "      receiverCollectionTypePath == \"/vector\"") ==
+        std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "resolved == \"/std/collections/vector/count\"") ==
         std::string::npos);
