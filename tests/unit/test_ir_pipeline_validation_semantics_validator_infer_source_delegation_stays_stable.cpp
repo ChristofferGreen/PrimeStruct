@@ -985,6 +985,8 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("resolvedCallPath.rfind(\"/std/collections/experimental_vector/vectorSlotUnsafe\", 0) == 0") !=
         std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find("isExplicitCanonicalVectorConstructor") ==
+        std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("borrow conflict: ") != std::string::npos);
   CHECK(semanticsStatementBuiltinsSource.find("bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(") !=
         std::string::npos);

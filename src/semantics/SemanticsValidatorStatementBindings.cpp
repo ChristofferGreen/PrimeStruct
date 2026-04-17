@@ -278,25 +278,6 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     const std::string expectedType = normalizeBindingTypeName(info.typeName);
     const std::string expectedRepresentation =
         collectionRepresentation(info.typeName, info.typeTemplateArg);
-    auto isExplicitCanonicalVectorConstructor = [&](const Expr &candidate) {
-      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall) {
-        return false;
-      }
-      if (candidate.name == "/std/collections/vector/vector" ||
-          candidate.name == "std/collections/vector/vector") {
-        return true;
-      }
-      std::string normalizedPrefix = candidate.namespacePrefix;
-      if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
-        normalizedPrefix.erase(normalizedPrefix.begin());
-      }
-      return normalizedPrefix == "std/collections/vector" && candidate.name == "vector";
-    };
-    if (expectedRepresentation == "builtin_vector" &&
-        isExplicitCanonicalVectorConstructor(initializer) &&
-        hasImportedDefinitionPath("/std/collections/vector/vector")) {
-        return failBindingDiagnostic("binding initializer type mismatch");
-    }
     ResultTypeInfo resultInfo;
     if (expectedType != "Result" &&
         resolveResultTypeForExpr(initializer, params, locals, resultInfo) &&

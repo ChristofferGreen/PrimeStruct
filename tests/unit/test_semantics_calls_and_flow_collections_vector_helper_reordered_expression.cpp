@@ -193,7 +193,7 @@ main() {
   CHECK(error.find("unknown call target: /vector/vector") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced vector constructor rejects explicit builtin vector binding" * doctest::skip(true)) {
+TEST_CASE("stdlib namespaced vector constructor accepts explicit builtin vector binding") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -208,7 +208,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib namespaced vector constructor rejects named-argument explicit builtin vector binding") {
+TEST_CASE("stdlib namespaced vector constructor accepts named-argument explicit builtin vector binding") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -219,8 +219,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("mismatch") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib namespaced vector constructor requires imported stdlib helper") {
