@@ -31,7 +31,7 @@ build and layout solidify.
 - When ownership classification changes for a public type/surface, update the canonical `core` / `hybrid` / `stdlib-owned` matrix in `docs/PrimeStruct.md` and keep the summary note in `docs/todo.md` aligned in the same change.
 - If new public syntax/IR features are added, document them with a minimal runnable
   example and expected IR snippet.
-- When specs change, add a matching TODO entry unless explicitly marked as docs-only/no TODO.
+- When specs change, add a matching TODO entry only if implementation, validation, or follow-up work remains open; do not add a TODO for spec changes that are already fully completed in the same change. Use an explicit docs-only/no TODO note when that exception needs to be called out.
 - If a TODO item becomes too large for one code-affecting commit, split it into
   smaller `TODO-XXXX` task blocks in `docs/todo.md` with explicit `scope`,
   `acceptance`, and `stop_rule`, then complete them incrementally across separate
@@ -59,7 +59,7 @@ build and layout solidify.
 - **Test-count helper:** `./scripts/test_count.sh` reports total defined `TEST_CASE` macros under `tests/` and, when test binaries exist, sums doctest `--count` output across `build-release/PrimeStruct_*_tests`.
 - **Top-lines helper:** `./scripts/top_lines_of_code.sh` reports the top files by line count across `src/`, `include/`, and `tests/` (default: top 10).
 - **CTest:** prefer running from `build-release/` via `ctest --output-on-failure`; use `build-debug/` when investigating failures in more detail.
-- **Direct test binary runs:** prefer executing `build-release/PrimeStruct_backend_tests` from `build-release/` so compile-run suites can resolve `./primec`; use the matching `PrimeStruct_misc_tests`, `PrimeStruct_semantics_tests`, `PrimeStruct_text_filter_tests`, or `PrimeStruct_parser_tests` binaries there for narrower doctest runs. Switch to the `build-debug/` binaries when deeper debugging is needed.
+- **Direct test binary runs:** prefer executing the matching release-mode doctest binary from `build-release/` so compile-run suites can resolve `./primec` correctly. For example, use `PrimeStruct_backend_tests` for backend/compile-run coverage or the corresponding narrower release binary for parser, semantics, text-filter, or misc slices. Switch to the matching `build-debug/` binary only when deeper debugging is needed.
 - **Failure triage rule:** if the full release gate fails, diagnose with the smallest relevant release-mode rerun (single `ctest` case or one release test binary slice), fix the issue, then return to the full `./scripts/compile.sh --release` gate instead of camping on long serial debug sweeps.
 
 ## Generated artifacts
@@ -168,6 +168,6 @@ Explain why the dump is needed and how it changes tooling workflows.
 ## Multi-agent workspaces
 - Use git worktrees per agent under `workspaces/agent-<name>/PrimeStruct` where `<name>`
   is a short feature description.
-- Each workspace should use its own build dir (e.g., `build-debug-<agent>`).
-- Merge protocol: run tests, commit, write a short summary in
+- Each workspace should use its own release build dir by default (e.g., `build-release-<agent>`). Use a debug build dir only when deeper debugging is specifically needed for that workspace.
+- Merge protocol: run the release validation path for that workspace first, commit, write a short summary in
   `workspaces/agent-<name>/MERGE.md`, then cherry-pick into root.

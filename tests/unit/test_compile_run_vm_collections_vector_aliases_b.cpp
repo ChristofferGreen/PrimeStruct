@@ -831,7 +831,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown method: /std/collections/vector/count") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects vm wrapper vector capacity slash-method chains before receiver typing") {
@@ -861,7 +861,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown method: /std/collections/vector/capacity") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects vm local alias slash-method vector capacity on string receiver") {
@@ -880,7 +880,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("capacity requires vector target") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown method: /string/capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects vm local alias slash-method vector capacity on array receiver") {
@@ -899,7 +899,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("capacity requires vector target") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown method: /array/capacity") != std::string::npos);
 }
 
 TEST_SUITE_END();

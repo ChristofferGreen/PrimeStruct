@@ -129,7 +129,7 @@ bool isVectorCountTarget(const Expr &target, const LocalMap &localsIn) {
   return isVectorTargetImpl(target, localsIn);
 }
 
-bool isDereferencedCollectionCountTarget(const Expr &countExpr, const Expr &target, const LocalMap &localsIn) {
+bool isDereferencedCollectionCountTarget(const Expr &, const Expr &target, const LocalMap &localsIn) {
   if (!(target.kind == Expr::Kind::Call && isSimpleCallName(target, "dereference") && target.args.size() == 1)) {
     return false;
   }
