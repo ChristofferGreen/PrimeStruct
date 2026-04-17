@@ -557,6 +557,32 @@ main() {
   CHECK(error.find("unknown call target: /vector/vector") != std::string::npos);
 }
 
+TEST_CASE("canonical vector constructor call no longer falls back to vectorPair helper") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/vectorPair([i32] first, [i32] second) {
+  return(Marker(plus(first, second)))
+}
+
+[return<Marker>]
+project() {
+  return(/std/collections/vector/vector(9i32, 11i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(project().value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/vector") != std::string::npos);
+}
+
 TEST_CASE("vector method alias access rejects canonical struct-return forwarding") {
   const std::string source = R"(
 Marker {

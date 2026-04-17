@@ -383,40 +383,11 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     if (expr.isMethodCall) {
       return rewriteCanonicalCollectionHelperPath(resolvedPath);
     }
-    auto vectorConstructorHelperPath = [&]() -> std::string {
-      switch (expr.args.size()) {
-      case 0:
-        return "/std/collections/vectorNew";
-      case 1:
-        return "/std/collections/vectorSingle";
-      case 2:
-        return "/std/collections/vectorPair";
-      case 3:
-        return "/std/collections/vectorTriple";
-      case 4:
-        return "/std/collections/vectorQuad";
-      case 5:
-        return "/std/collections/vectorQuint";
-      case 6:
-        return "/std/collections/vectorSext";
-      case 7:
-        return "/std/collections/vectorSept";
-      case 8:
-        return "/std/collections/vectorOct";
-      default:
-        return {};
-      }
-    };
     auto mapConstructorHelperPath = [&](size_t argumentCount) -> std::string {
       return canonicalMapConstructorHelperPath(argumentCount);
     };
     std::string helperPath;
-    if (resolvedPath == "/std/collections/vector/vector") {
-      if (hasDefinitionFamilyPath(resolvedPath) || hasImportedDefinitionPath(resolvedPath)) {
-        return resolvedPath;
-      }
-      helperPath = vectorConstructorHelperPath();
-    } else if (resolvedPath == "/std/collections/map/map") {
+    if (resolvedPath == "/std/collections/map/map") {
       if (hasDefinitionFamilyPath(resolvedPath) || hasImportedDefinitionPath(resolvedPath)) {
         return resolvedPath;
       }

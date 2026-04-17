@@ -649,6 +649,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferDefinition.cpp";
   const std::filesystem::path inferCollectionReturnInferencePath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferCollectionReturnInference.cpp";
+  const std::filesystem::path buildCallResolutionPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorBuildCallResolution.cpp";
   const std::filesystem::path exprResolvedCallArgumentsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprResolvedCallArguments.cpp";
   const std::filesystem::path exprMutationBorrowsPath =
@@ -673,6 +675,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
   REQUIRE(std::filesystem::exists(exprCollectionAccessValidationPath));
   REQUIRE(std::filesystem::exists(inferDefinitionPath));
   REQUIRE(std::filesystem::exists(inferCollectionReturnInferencePath));
+  REQUIRE(std::filesystem::exists(buildCallResolutionPath));
   REQUIRE(std::filesystem::exists(exprResolvedCallArgumentsPath));
   REQUIRE(std::filesystem::exists(exprMutationBorrowsPath));
   REQUIRE(std::filesystem::exists(statementBindingsPath));
@@ -698,6 +701,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
   const std::string inferDefinitionSource = readText(inferDefinitionPath);
   const std::string inferCollectionReturnInferenceSource =
       readText(inferCollectionReturnInferencePath);
+  const std::string buildCallResolutionSource = readText(buildCallResolutionPath);
   const std::string exprResolvedCallArgumentsSource = readText(exprResolvedCallArgumentsPath);
   const std::string exprMutationBorrowsSource = readText(exprMutationBorrowsPath);
   const std::string statementBindingsSource = readText(statementBindingsPath);
@@ -936,6 +940,10 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
             "normalizedPrefix == \"vector\" && normalizedName == \"vector\"") ==
+        std::string::npos);
+  CHECK(buildCallResolutionSource.find("auto vectorConstructorHelperPath = [&]() -> std::string {") ==
+        std::string::npos);
+  CHECK(buildCallResolutionSource.find("if (resolvedPath == \"/std/collections/vector/vector\") {") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
             "std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(") !=
