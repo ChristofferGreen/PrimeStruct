@@ -143,6 +143,19 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector namespaced count builtin vector target without helper reports unknown target") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(/vector/count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced vector count map target without helper reports unknown target") {
   const std::string source = R"(
 [return<map<i32, i32>>]
