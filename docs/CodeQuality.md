@@ -102,6 +102,40 @@ Why this is good:
 - The helper name does not imply mutation.
 - Data and related behavior stay together.
 
+### Vector Loop with Current Verified Surface
+
+For vector examples, keep the currently verified import and constructor spelling
+visible.
+
+```prime
+import /std/collections/*
+
+[effects(heap_alloc), int]
+sumValues() {
+  [vector<int> mut] values{vector<int>{4, 8, 15}}
+  [int mut] total{0}
+  [int] count{values.count()}
+
+  for([int mut] index{0}; index < count; ++index) {
+    total = total + values[index]
+  }
+
+  return(total)
+}
+```
+
+Why this is good:
+- The example is small but still shows a real collection workflow.
+- The required heap-allocation effect is visible at the function boundary.
+- The loop shape is explicit and easy to scan.
+
+Current note:
+- Use `import /std/collections/*` for vector helper examples today.
+- Use the explicit constructor form `vector<T>{...}` in bindings today.
+- The shorter target form using exact `import /std/collections/vector` and a
+  binding like `[vector<int>] values{4, 8, 15}` is tracked as follow-up work in
+  `TODO-0476` and should not be presented as supported current style yet.
+
 ## Example Hygiene
 
 When adding or editing examples in docs:
