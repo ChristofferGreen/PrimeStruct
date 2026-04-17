@@ -385,7 +385,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects native map unsafe compatibility call struct method chain with primitive argument diagnostics") {
@@ -481,8 +481,7 @@ main() {
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   const std::string err = readFile(errPath);
-  CHECK(err.find("validateExprMethodCallTarget failed") != std::string::npos);
-  CHECK(err.find("/vector/at") != std::string::npos);
+  CHECK(err.find("unknown method: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects native array compatibility access slash methods on vector receiver") {
