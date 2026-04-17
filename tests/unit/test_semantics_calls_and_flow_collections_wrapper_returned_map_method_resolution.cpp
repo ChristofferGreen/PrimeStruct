@@ -1137,6 +1137,72 @@ main() {
   CHECK(error.find("unknown method: /map/capacity") != std::string::npos);
 }
 
+TEST_CASE("stdlib namespaced vector capacity method rejects wrapper map same-path helper") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+/std/collections/vector/capacity([map<i32, i32>] values) {
+  return(48i32)
+}
+
+[return<int>]
+main() {
+  return(wrapMap()./std/collections/vector/capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /map/capacity") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector capacity method rejects wrapper array same-path helper") {
+  const std::string source = R"(
+[return<array<i32>>]
+wrapArray() {
+  return(array<i32>(1i32, 2i32, 3i32))
+}
+
+[return<int>]
+/std/collections/vector/capacity([array<i32>] values) {
+  return(49i32)
+}
+
+[return<int>]
+main() {
+  return(wrapArray()./std/collections/vector/capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /array/capacity") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector capacity method rejects wrapper string same-path helper") {
+  const std::string source = R"(
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+/std/collections/vector/capacity([string] values) {
+  return(50i32)
+}
+
+[return<int>]
+main() {
+  return(wrapText()./std/collections/vector/capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /string/capacity") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced capacity method rejects wrapper map receiver without helper") {
   const std::string source = R"(
 [return<map<i32, i32>>]

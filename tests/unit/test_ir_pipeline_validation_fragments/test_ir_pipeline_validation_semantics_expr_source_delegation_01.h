@@ -337,6 +337,11 @@
             "          receiverCollectionTypePath == \"/map\")") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "(normalizedMethodName == \"capacity\" &&\n"
+            "          explicitVectorHelperPath.rfind(\"/std/collections/vector/\", 0) == 0 &&\n"
+            "          receiverCollectionTypePath != \"/vector\" && receiverCollectionTypePath != \"/soa_vector\")") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
             "explicitVectorHelperPath == \"/vector/capacity\" &&") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
