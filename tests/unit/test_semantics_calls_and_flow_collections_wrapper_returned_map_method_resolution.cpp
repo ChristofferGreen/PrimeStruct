@@ -837,6 +837,28 @@ main() {
   CHECK(error.find("unknown method: /map/count") != std::string::npos);
 }
 
+TEST_CASE("stdlib namespaced vector count method rejects wrapper map same-path helper") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+/std/collections/vector/count([map<i32, i32>] values) {
+  return(47i32)
+}
+
+[return<int>]
+main() {
+  return(wrapMap()./std/collections/vector/count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /map/count") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced vector count method rejects wrapper array receiver without helper") {
   const std::string source = R"(
 [return<array<i32>>]

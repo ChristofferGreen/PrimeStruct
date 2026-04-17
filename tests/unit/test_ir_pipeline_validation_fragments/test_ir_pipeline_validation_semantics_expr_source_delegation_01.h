@@ -332,6 +332,11 @@
             "      normalizedMethodName == \"count\" &&") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "(normalizedMethodName == \"count\" &&\n"
+            "          explicitVectorHelperPath.rfind(\"/std/collections/vector/\", 0) == 0 &&\n"
+            "          receiverCollectionTypePath == \"/map\")") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
             "explicitVectorHelperPath == \"/vector/capacity\" &&") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(

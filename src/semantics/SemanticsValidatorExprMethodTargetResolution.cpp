@@ -2585,10 +2585,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         resolveCallCollectionTypePath(receiver, params, locals, receiverCollectionTypePath) &&
         ((normalizedMethodName == "capacity" &&
           explicitVectorHelperPath.rfind("/std/collections/vector/", 0) == 0 &&
-          receiverCollectionTypePath != "/vector" && receiverCollectionTypePath != "/soa_vector") ||
-         (normalizedMethodName == "count" &&
-          explicitVectorHelperPath.rfind("/std/collections/vector/", 0) == 0 &&
-          receiverCollectionTypePath == "/map"))) {
+          receiverCollectionTypePath != "/vector" && receiverCollectionTypePath != "/soa_vector"))) {
       if (!hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {
         return failMethodTargetResolutionDiagnostic("unknown method: " + explicitVectorHelperPath);
       }
