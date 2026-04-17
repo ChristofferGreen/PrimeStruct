@@ -574,6 +574,47 @@ TEST_CASE("ir lowerer setup type helper rejects explicit slash-method vector acc
   expectUnknownKind("/std/collections/vector/at_unsafe");
 }
 
+TEST_CASE("ir lowerer setup type helper rejects explicit slash-method vector access return kinds for constructor receivers") {
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Call;
+  receiverExpr.name = "vector";
+  receiverExpr.templateArgs = {"i32"};
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 1;
+
+  auto expectUnknownKind = [&](const char *methodName) {
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.name = methodName;
+    methodCall.isMethodCall = true;
+    methodCall.args = {receiverExpr, indexExpr};
+
+    primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    bool methodResolved = false;
+    CHECK_FALSE(primec::ir_lowerer::resolveMethodCallReturnKind(
+        methodCall,
+        {},
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+          return nullptr;
+        },
+        {},
+        {},
+        false,
+        kindOut,
+        &methodResolved));
+    CHECK_FALSE(methodResolved);
+    CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  };
+
+  expectUnknownKind("/vector/at");
+  expectUnknownKind("/vector/at_unsafe");
+  expectUnknownKind("/std/collections/vector/at");
+  expectUnknownKind("/std/collections/vector/at_unsafe");
+}
+
 TEST_CASE("ir lowerer setup type helper rejects bare vector access method return kinds") {
   primec::Expr receiverExpr;
   receiverExpr.kind = primec::Expr::Kind::Name;

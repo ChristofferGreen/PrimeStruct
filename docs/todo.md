@@ -184,6 +184,7 @@ Wave D (queue hygiene):
   - progress: Completed child slice `TODO-0418` (archived in `docs/todo_finished.md`): lowerer setup-type collection helper classification no longer parses removed rooted `/vector/count` through `resolveVectorHelperAliasName(...)`/`getNamespacedCollectionHelperName(...)`, while canonical `/std/collections/vector/count` setup-type helper detection stays covered.
   - progress: Completed child slice `TODO-0419` (archived in `docs/todo_finished.md`): lowerer setup-type removed-method alias classification no longer treats rooted `/vector/count` as an explicit removed vector method alias, while `/array/count` and canonical `/std/collections/vector/count` remain covered.
   - progress: Completed child slice `TODO-0420` (archived in `docs/todo_finished.md`): semantics named-argument builtin validation no longer treats rooted `/vector/push|reserve|remove_at|remove_swap` spellings as statement-only builtin helpers, while canonical `/std/collections/vector/*` and `/array/*` named-argument mutator diagnostics remain covered.
+  - progress: Completed child slice `TODO-0421` (archived in `docs/todo_finished.md`): lowerer setup-type return-kind resolution dropped the dead explicit vector access removed-alias lambda that still carried rooted `/vector/at*` branches, and focused helper coverage now locks rooted plus canonical explicit slash-method vector access rejection even when the receiver is a `vector<i32>(...)` constructor call.
 
 - [ ] TODO-0406: Split production semantics APIs from testing snapshots
   - owner: ai
