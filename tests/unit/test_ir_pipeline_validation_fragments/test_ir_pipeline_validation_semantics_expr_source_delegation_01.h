@@ -528,6 +528,9 @@
             "bool isExperimentalVectorCompatibilityMethodTarget(std::string_view methodTarget)") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
+            "bool isExperimentalVectorCompatibilityResolvedMethodTarget(std::string_view methodTarget)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
             "auto preferVisibleCanonicalVectorMethodTarget =") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
@@ -549,6 +552,9 @@
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (!isBuiltinMethod && isVectorCompatibilityMethodName(expr.name) &&\n"
             "      resolved.rfind(\"/std/collections/experimental_vector/Vector__\", 0) == 0) {") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "methodTarget.rfind(\"/std/collections/experimental_vector/Vector__\", 0) != 0") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "expr.args.front().kind == Expr::Kind::Call &&\n"

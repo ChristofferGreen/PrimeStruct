@@ -23,6 +23,10 @@ bool isExperimentalVectorCompatibilityMethodTarget(std::string_view methodTarget
          methodTarget.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
 }
 
+bool isExperimentalVectorCompatibilityResolvedMethodTarget(std::string_view methodTarget) {
+  return methodTarget.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+}
+
 } // namespace
 
 bool SemanticsValidator::validateExprMethodCallTarget(
@@ -200,7 +204,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   auto preferResolvedVectorCompatibilityMethodTarget =
       [&](const std::string &methodTarget) {
         if (isBuiltinMethod || !isVectorCompatibilityMethodName(expr.name) ||
-            methodTarget.rfind("/std/collections/experimental_vector/Vector__", 0) != 0) {
+            !isExperimentalVectorCompatibilityResolvedMethodTarget(methodTarget)) {
           return methodTarget;
         }
         return preferVectorStdlibHelperPath(
