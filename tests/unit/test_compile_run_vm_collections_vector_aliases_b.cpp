@@ -862,8 +862,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
   const std::string out = readFile(outPath);
-  CHECK(out.find("validateExprMethodCallTarget failed") != std::string::npos);
-  CHECK(out.find("/vector/capacity") != std::string::npos);
+  CHECK(out.find("unknown method: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects vm local alias slash-method vector capacity on string receiver") {
