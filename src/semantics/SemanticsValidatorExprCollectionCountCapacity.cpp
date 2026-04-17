@@ -25,6 +25,31 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   auto hasResolvableDefinitionPath = [&](const std::string &path) {
     return hasDeclaredDefinitionPath(path) || hasImportedDefinitionPath(path);
   };
+  auto rejectsRootedVectorBuiltinAlias = [&](const Expr &receiver,
+                                             bool isNamespacedVectorCall,
+                                             const char *helperName) {
+    const std::string helperPath = std::string("/vector/") + helperName;
+    if (expr.isMethodCall || !isNamespacedVectorCall || expr.args.size() != 1 ||
+        hasDeclaredDefinitionPath(helperPath) || hasImportedDefinitionPath(helperPath)) {
+      return false;
+    }
+    if (receiver.kind == Expr::Kind::Call) {
+      std::string receiverCollectionTypePath;
+      return resolveCallCollectionTypePath(receiver, params, locals,
+                                           receiverCollectionTypePath) &&
+             receiverCollectionTypePath == "/vector";
+    }
+    if (receiver.kind != Expr::Kind::Name) {
+      return false;
+    }
+    std::string typeName;
+    if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
+      typeName = paramBinding->typeName;
+    } else if (auto it = locals.find(receiver.name); it != locals.end()) {
+      typeName = it->second.typeName;
+    }
+    return normalizeBindingTypeName(typeName) == "vector";
+  };
 
   auto isConcreteCountCapacityInstantiation = [&](const std::string &path) {
     if (defMap_.find(path) == defMap_.end()) {
@@ -129,31 +154,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     usedMethodTarget = true;
     hasMethodReceiverIndex = true;
     methodReceiverIndex = 0;
-    auto rejectsRootedVectorCountBuiltinAlias = [&](const Expr &receiver) {
-      if (expr.isMethodCall || !context.isNamespacedVectorCountCall ||
-          expr.args.size() != 1 ||
-          hasDeclaredDefinitionPath("/vector/count") ||
-          hasImportedDefinitionPath("/vector/count")) {
-        return false;
-      }
-      if (receiver.kind == Expr::Kind::Call) {
-        std::string receiverCollectionTypePath;
-        return resolveCallCollectionTypePath(receiver, params, locals,
-                                             receiverCollectionTypePath) &&
-               receiverCollectionTypePath == "/vector";
-      }
-      if (receiver.kind != Expr::Kind::Name) {
-        return false;
-      }
-      std::string typeName;
-      if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
-        typeName = paramBinding->typeName;
-      } else if (auto it = locals.find(receiver.name); it != locals.end()) {
-        typeName = it->second.typeName;
-      }
-      return normalizeBindingTypeName(typeName) == "vector";
-    };
-    if (rejectsRootedVectorCountBuiltinAlias(expr.args.front())) {
+    if (rejectsRootedVectorBuiltinAlias(expr.args.front(),
+                                        context.isNamespacedVectorCountCall,
+                                        "count")) {
       return failCollectionCountCapacityDiagnostic(
           "unknown call target: /vector/count");
     }
@@ -295,6 +298,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     usedMethodTarget = true;
     hasMethodReceiverIndex = true;
     methodReceiverIndex = 0;
+    if (rejectsRootedVectorBuiltinAlias(expr.args.front(),
+                                        context.isNamespacedVectorCapacityCall,
+                                        "capacity")) {
+      return failCollectionCountCapacityDiagnostic(
+          "unknown call target: /vector/capacity");
+    }
     bool isBuiltinMethod = false;
     std::string methodResolved;
     if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), "capacity",

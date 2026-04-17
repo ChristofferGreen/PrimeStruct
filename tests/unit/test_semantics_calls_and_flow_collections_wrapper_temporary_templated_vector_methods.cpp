@@ -1158,6 +1158,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector namespaced capacity accepts same-path helper on builtin vector target") {
+  const std::string source = R"(
+[return<int>]
+/vector/capacity([vector<i32>] values) {
+  return(44i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(/vector/capacity(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector namespaced capacity accepts same-path helper on wrapper vector target") {
   const std::string source = R"(
 [return<int>]

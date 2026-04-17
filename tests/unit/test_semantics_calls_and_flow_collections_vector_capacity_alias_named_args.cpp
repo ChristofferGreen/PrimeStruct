@@ -19,6 +19,19 @@ main() {
   CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
+TEST_CASE("vector namespaced capacity builtin vector target without helper reports unknown target") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(/vector/capacity(values))
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced capacity rejects named arguments as builtin alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
