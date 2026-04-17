@@ -353,7 +353,9 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("/vector/count") != std::string::npos);
+  CHECK((error.find("unknown call target") != std::string::npos ||
+         error.find("unknown method") != std::string::npos));
 }
 
 TEST_CASE("vector namespaced capacity alias rejects method-call sugar auto inference") {
@@ -372,7 +374,9 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("/vector/capacity") != std::string::npos);
+  CHECK((error.find("unknown call target") != std::string::npos ||
+         error.find("unknown method") != std::string::npos));
 }
 
 TEST_CASE("array namespaced vector capacity alias keeps unknown-method diagnostics for auto inference") {
@@ -620,8 +624,10 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("/vector/count") != std::string::npos);
+  CHECK((error.find("unknown call target") != std::string::npos ||
+         error.find("unknown method") != std::string::npos));
 }
 
 TEST_CASE("bare vector capacity method on builtin vector receiver requires same-path helper") {
@@ -807,8 +813,10 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("/vector/capacity") != std::string::npos);
+  CHECK((error.find("unknown call target") != std::string::npos ||
+         error.find("unknown method") != std::string::npos));
 }
 
 TEST_CASE("array namespaced slash method spelling rejects statement body arguments") {

@@ -45,6 +45,8 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   const auto &resolveArgsPackAccessTarget = builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget;
   const auto &resolveArrayTarget = builtinCollectionDispatchResolvers.resolveArrayTarget;
   const auto &resolveVectorTarget = builtinCollectionDispatchResolvers.resolveVectorTarget;
+  const auto &resolveExperimentalVectorValueTarget =
+      builtinCollectionDispatchResolvers.resolveExperimentalVectorValueTarget;
   const auto &resolveSoaVectorTarget = builtinCollectionDispatchResolvers.resolveSoaVectorTarget;
   const auto &resolveBufferTarget = builtinCollectionDispatchResolvers.resolveBufferTarget;
   const auto &resolveStringTarget = builtinCollectionDispatchResolvers.resolveStringTarget;
@@ -217,6 +219,22 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   } else {
     explicitRemovedMethodPath = explicitRemovedCollectionMethodPath(methodName, expr.namespacePrefix);
   }
+  auto isExplicitRootedVectorCountCapacityMethod = [&]() {
+    std::string normalizedNamespace = expr.namespacePrefix;
+    if (!normalizedNamespace.empty() && normalizedNamespace.front() == '/') {
+      normalizedNamespace.erase(normalizedNamespace.begin());
+    }
+    if (normalizedNamespace == "vector" &&
+        (methodName == "count" || methodName == "capacity")) {
+      return true;
+    }
+    std::string normalizedMethodPath = methodName;
+    if (!normalizedMethodPath.empty() && normalizedMethodPath.front() == '/') {
+      normalizedMethodPath.erase(normalizedMethodPath.begin());
+    }
+    return normalizedMethodPath == "vector/count" ||
+           normalizedMethodPath == "vector/capacity";
+  };
   auto methodTargetMemoKey = [&](std::string_view receiverTypeText)
       -> std::optional<CallTargetResolutionScratch::MethodTargetMemoKey> {
     if (!hasScopedOwner || expr.semanticNodeId == 0 || receiverTypeText.empty() ||
@@ -269,6 +287,15 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     callTargetResolutionScratch_.methodTargetMemoCache.insert_or_assign(*key, resolvedOut);
   };
+  if (isExplicitRootedVectorCountCapacityMethod()) {
+    std::string elemType;
+    if ((resolveExperimentalVectorValueTarget != nullptr &&
+         resolveExperimentalVectorValueTarget(receiver, elemType)) ||
+        resolveVectorTarget(receiver, elemType) ||
+        resolveSoaVectorTarget(receiver, elemType)) {
+      return false;
+    }
+  }
   auto resolveCollectionMethodFromTypePath = [&](const std::string &collectionTypePath) -> bool {
     if (!explicitRemovedMethodPath.empty() && hasDefinitionPath(explicitRemovedMethodPath)) {
       if (normalizedMethodName == "count" &&

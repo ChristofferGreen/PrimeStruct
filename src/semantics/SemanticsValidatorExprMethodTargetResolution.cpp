@@ -2115,6 +2115,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return setPreferredMapMethodTarget(receiver, normalizedMethodName);
   }
   auto explicitVectorReceiverFamily = classifyExplicitVectorHelperReceiver(receiver);
+  if (explicitVectorHelperPath.rfind("/vector/", 0) == 0 &&
+      (normalizedMethodName == "count" || normalizedMethodName == "capacity") &&
+      (explicitVectorReceiverFamily == "vector" ||
+       explicitVectorReceiverFamily == "experimental_vector" ||
+       explicitVectorReceiverFamily == "soa_vector")) {
+    return false;
+  }
   if (!explicitVectorHelperPath.empty() &&
       explicitVectorHelperPath.rfind("/std/collections/vector/", 0) == 0 &&
       (normalizedMethodName == "count" || normalizedMethodName == "capacity") &&
