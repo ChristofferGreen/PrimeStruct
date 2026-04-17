@@ -85,8 +85,9 @@ cmake --build "$BUILD_DIR" --parallel "$JOBS"
 rm -rf "$REPORT_DIR"
 mkdir -p "$PROFILE_DIR"
 
+CTEST_JOBS="${CTEST_PARALLEL_LEVEL:-11}"
 LLVM_PROFILE_FILE="$PROFILE_DIR/%p-%m.profraw" \
-  ctest --test-dir "$BUILD_DIR" --output-on-failure --parallel "$JOBS"
+  ctest --test-dir "$BUILD_DIR" --output-on-failure --parallel "$CTEST_JOBS"
 
 if ! find "$PROFILE_DIR" -name '*.profraw' -print -quit | grep -q .; then
   echo "[code_coverage.sh] ERROR: no coverage profiles were produced." >&2

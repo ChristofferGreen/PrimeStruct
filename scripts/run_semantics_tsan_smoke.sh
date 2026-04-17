@@ -40,7 +40,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 export CMAKE_BUILD_PARALLEL_LEVEL="${CMAKE_BUILD_PARALLEL_LEVEL:-2}"
-export CTEST_PARALLEL_LEVEL="${CTEST_PARALLEL_LEVEL:-1}"
+export CTEST_PARALLEL_LEVEL="${CTEST_PARALLEL_LEVEL:-11}"
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
   if [[ "${PRIMESTRUCT_TSAN_USE_ENV_COMPILER:-0}" != "1" ]]; then
@@ -66,5 +66,5 @@ cmake -S "$ROOT_DIR" -B "$BUILD_DIR" \
 cmake --build "$BUILD_DIR" --target PrimeStruct_semantics_tsan_smoke
 
 if [[ "$SKIP_TESTS" -eq 0 ]]; then
-  ctest --test-dir "$BUILD_DIR" --output-on-failure --parallel 1 -R '^PrimeStruct_semantics_tsan_smoke$'
+  ctest --test-dir "$BUILD_DIR" --output-on-failure --parallel "$CTEST_PARALLEL_LEVEL" -R '^PrimeStruct_semantics_tsan_smoke$'
 fi

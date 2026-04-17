@@ -63,10 +63,6 @@ if [[ "$SKIP_TESTS" -eq 1 ]]; then
   exit 0
 fi
 
-DEFAULT_CTEST_JOBS="$JOBS"
-if [[ "$BUILD_TYPE" == "Release" ]]; then
-  DEFAULT_CTEST_JOBS=11
-fi
-
+DEFAULT_CTEST_JOBS=11
 CTEST_JOBS="${CTEST_PARALLEL_LEVEL:-$DEFAULT_CTEST_JOBS}"
 ctest --test-dir "$BUILD_DIR" --output-on-failure --parallel "$CTEST_JOBS"
