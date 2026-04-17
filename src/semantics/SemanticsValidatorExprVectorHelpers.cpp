@@ -126,34 +126,6 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
                                                std::string &elemTypeOut) -> bool {
     BindingInfo inferredBinding;
     if (candidate.kind == Expr::Kind::Call) {
-      const std::string resolvedCandidate = resolveCalleePath(candidate);
-      auto matchesVectorCtorPath = [&](std::string_view basePath) {
-        return resolvedCandidate == basePath ||
-               resolvedCandidate.rfind(std::string(basePath) + "__t", 0) == 0;
-      };
-      if (matchesVectorCtorPath("/std/collections/experimental_vector/vector") ||
-          matchesVectorCtorPath("/std/collections/experimental_vector/vectorNew") ||
-          matchesVectorCtorPath("/std/collections/experimental_vector/vectorSingle") ||
-          matchesVectorCtorPath("/std/collections/experimental_vector/vectorPair") ||
-          matchesVectorCtorPath("/std/collections/experimental_vector/vectorTriple") ||
-          matchesVectorCtorPath("/std/collections/experimental_vector/vectorQuad") ||
-          matchesVectorCtorPath("/std/collections/experimental_vector/vectorQuint") ||
-          matchesVectorCtorPath("/std/collections/experimental_vector/vectorSext") ||
-          matchesVectorCtorPath("/std/collections/experimental_vector/vectorSept") ||
-          matchesVectorCtorPath("/std/collections/experimental_vector/vectorOct")) {
-        std::vector<std::string> templateArgs;
-        if (resolveCallCollectionTemplateArgs(candidate, "vector", params, locals, templateArgs) &&
-            templateArgs.size() == 1) {
-          elemTypeOut = templateArgs.front();
-          return true;
-        }
-        if (candidate.templateArgs.size() == 1) {
-          elemTypeOut = candidate.templateArgs.front();
-          return true;
-        }
-      }
-    }
-    if (candidate.kind == Expr::Kind::Call) {
       auto defIt = defMap_.find(resolveCalleePath(candidate));
       if (defIt != defMap_.end() && defIt->second != nullptr &&
           inferDefinitionReturnBinding(*defIt->second, inferredBinding) &&
