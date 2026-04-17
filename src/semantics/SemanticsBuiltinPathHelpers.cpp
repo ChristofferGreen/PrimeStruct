@@ -258,8 +258,6 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverPath, std
   if (isVectorFamilyReceiver) {
     if (rawMethodName.rfind("array/", 0) == 0) {
       helperName = std::string_view(rawMethodName).substr(std::string_view("array/").size());
-    } else if (rawMethodName.rfind("vector/", 0) == 0) {
-      helperName = std::string_view(rawMethodName).substr(std::string_view("vector/").size());
     } else if (rawMethodName.rfind("std/collections/vector/", 0) == 0) {
       helperName = std::string_view(rawMethodName).substr(std::string_view("std/collections/vector/").size());
     }
@@ -285,10 +283,6 @@ bool isExplicitRemovedCollectionCallAlias(std::string rawPath) {
   std::string_view helperName;
   if (rawPath.rfind("array/", 0) == 0) {
     helperName = std::string_view(rawPath).substr(std::string_view("array/").size());
-    return !helperName.empty() && isRemovedVectorCompatibilityHelper(helperName);
-  }
-  if (rawPath.rfind("vector/", 0) == 0) {
-    helperName = std::string_view(rawPath).substr(std::string_view("vector/").size());
     return !helperName.empty() && isRemovedVectorCompatibilityHelper(helperName);
   }
   if (rawPath.rfind("map/", 0) == 0) {

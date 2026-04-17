@@ -53,6 +53,7 @@ bool validateBuiltinMapKeyType(const std::string &typeName,
                                std::string &error);
 bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out);
 bool isRootBuiltinName(const std::string &name);
+bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverPath, std::string rawMethodName);
 bool isExplicitRemovedCollectionCallAlias(std::string rawPath);
 bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collectionOut, std::string &helperOut);
 bool lowerMatchToIf(const Expr &expr, Expr &out, std::string &error);

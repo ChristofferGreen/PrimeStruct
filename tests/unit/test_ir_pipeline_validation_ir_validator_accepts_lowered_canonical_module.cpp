@@ -274,6 +274,16 @@ TEST_CASE("shared simple-call helpers reject removed array count alias") {
   CHECK_FALSE(primec::emitter::isSimpleCallName(removedAliasCall, "count"));
 }
 
+TEST_CASE("semantics removed-alias helpers reject rooted vector spellings") {
+  CHECK(primec::semantics::isExplicitRemovedCollectionCallAlias("/array/push"));
+  CHECK_FALSE(primec::semantics::isExplicitRemovedCollectionCallAlias("/vector/push"));
+
+  CHECK(primec::semantics::isExplicitRemovedCollectionMethodAlias("/array", "/array/push"));
+  CHECK(primec::semantics::isExplicitRemovedCollectionMethodAlias(
+      "/vector", "/std/collections/vector/push"));
+  CHECK_FALSE(primec::semantics::isExplicitRemovedCollectionMethodAlias("/vector", "/vector/push"));
+}
+
 TEST_CASE("semantics namespaced vector helper detection rejects removed rooted aliases") {
   primec::Expr canonicalCountCall;
   canonicalCountCall.kind = primec::Expr::Kind::Call;
