@@ -525,10 +525,16 @@
             "bool isVectorCompatibilityMethodName(std::string_view helperName)") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
+            "bool isExperimentalVectorCompatibilityMethodTarget(std::string_view methodTarget)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
             "auto preferVisibleCanonicalVectorMethodTarget =") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "auto preferResolvedVectorCompatibilityMethodTarget =") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "const bool isExperimentalVectorMethodTarget =") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (vectorMethodTarget.rfind(\"/std/collections/experimental_vector/\", 0) == 0 &&") ==
