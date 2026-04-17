@@ -413,8 +413,8 @@ TEST_CASE("ir lowerer setup inference helper resolves slash-method vector access
             accessExpr,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            kindOut) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+            kindOut) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   accessExpr.name = "/vector/at_unsafe";
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
@@ -422,8 +422,8 @@ TEST_CASE("ir lowerer setup inference helper resolves slash-method vector access
             accessExpr,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            kindOut) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+            kindOut) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   accessExpr.name = "/std/collections/vector/at";
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
@@ -476,8 +476,8 @@ TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned vector ac
             {},
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             kindOut,
-            resolveWrapValuesKind) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+            resolveWrapValuesKind) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   primec::Expr methodAccessExpr;
   methodAccessExpr.kind = primec::Expr::Kind::Call;

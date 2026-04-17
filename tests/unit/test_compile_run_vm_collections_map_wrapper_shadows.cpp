@@ -388,7 +388,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /string/count parameter values") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("runs vm with user vector count method shadow") {
@@ -452,7 +452,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown method: /map/count") !=
+  CHECK(readFile(outPath).find("unknown method: /std/collections/vector/count") !=
         std::string::npos);
 }
 
@@ -476,7 +476,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown method: /map/capacity") !=
+  CHECK(readFile(outPath).find("unknown method: /std/collections/vector/capacity") !=
         std::string::npos);
 }
 

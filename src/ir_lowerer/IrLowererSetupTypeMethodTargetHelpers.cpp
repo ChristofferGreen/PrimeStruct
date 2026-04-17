@@ -222,11 +222,13 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     }
     return nullptr;
   };
-  if (isExplicitVectorAliasMethod || isExplicitCanonicalVectorMethod) {
+  if (isExplicitVectorAliasMethod) {
+    errorOut = "unknown method: /vector/" + normalizedMethodName;
+    return nullptr;
+  }
+  if (isExplicitCanonicalVectorMethod) {
     const std::string explicitPath =
-        std::string("/") +
-        (isExplicitCanonicalVectorMethod ? "std/collections/vector/" : "vector/") +
-        normalizedMethodName;
+        std::string("/std/collections/vector/") + normalizedMethodName;
     if (const Definition *resolved = findMethodDefinitionByPath(explicitPath)) {
       errorOut.clear();
       return resolved;

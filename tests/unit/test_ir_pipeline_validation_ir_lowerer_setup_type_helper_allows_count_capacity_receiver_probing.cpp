@@ -132,7 +132,7 @@ TEST_CASE("ir lowerer setup type helper resolves method call definitions from ex
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowerer setup type helper keeps explicit vector same-path precedence while honoring /array/count") {
+TEST_CASE("ir lowerer setup type helper rejects explicit rooted vector slash methods while honoring /array/count") {
   primec::Definition arrayCountDef;
   arrayCountDef.fullPath = "/array/count";
   primec::Definition vectorCountDef;
@@ -210,6 +210,31 @@ TEST_CASE("ir lowerer setup type helper keeps explicit vector same-path preceden
     CHECK(resolved == expectedDef);
     CHECK(error.empty());
   };
+  auto expectRejectedMethod = [&](const char *methodName, const std::vector<primec::Expr> &args) {
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.name = methodName;
+    methodCall.isMethodCall = true;
+    methodCall.args = args;
+
+    std::string error;
+    const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+        methodCall,
+        locals,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        {},
+        {},
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        },
+        [](const primec::Expr &) { return std::string(); },
+        defMap,
+        error);
+    CHECK(resolved == nullptr);
+    CHECK(error == std::string("unknown method: ") + methodName);
+  };
 
   primec::Expr arrayCountCall;
   arrayCountCall.kind = primec::Expr::Kind::Call;
@@ -235,15 +260,15 @@ TEST_CASE("ir lowerer setup type helper keeps explicit vector same-path preceden
   CHECK(resolved == &arrayCountDef);
   CHECK(error.empty());
 
-  expectResolvedMethod("/vector/count", {receiverExpr}, &vectorCountDef);
+  expectRejectedMethod("/vector/count", {receiverExpr});
   expectResolvedMethod("/std/collections/vector/count", {receiverExpr}, &stdCountDef);
-  expectResolvedMethod("/vector/capacity", {receiverExpr}, &vectorCapacityDef);
+  expectRejectedMethod("/vector/capacity", {receiverExpr});
   expectResolvedMethod("/std/collections/vector/capacity", {receiverExpr}, &stdCapacityDef);
-  expectResolvedMethod("/vector/at", {receiverExpr, indexExpr}, &vectorAtDef);
+  expectRejectedMethod("/vector/at", {receiverExpr, indexExpr});
   expectResolvedMethod("/std/collections/vector/at", {receiverExpr, indexExpr}, &stdAtDef);
-  expectResolvedMethod("/vector/at_unsafe", {receiverExpr, indexExpr}, &vectorAtUnsafeDef);
+  expectRejectedMethod("/vector/at_unsafe", {receiverExpr, indexExpr});
   expectResolvedMethod("/std/collections/vector/at_unsafe", {receiverExpr, indexExpr}, &stdAtUnsafeDef);
-  expectResolvedMethod("/vector/push", {receiverExpr, indexExpr}, &vectorPushDef);
+  expectRejectedMethod("/vector/push", {receiverExpr, indexExpr});
   expectResolvedMethod("/std/collections/vector/push", {receiverExpr, indexExpr}, &stdPushDef);
 }
 

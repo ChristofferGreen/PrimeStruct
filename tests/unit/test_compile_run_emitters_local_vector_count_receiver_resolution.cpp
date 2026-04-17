@@ -24,7 +24,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /string/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects local alias slash-method vector count on string receiver in C++ emitter") {
@@ -45,7 +45,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /string/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects local alias slash-method vector count on array receiver in C++ emitter") {
@@ -66,10 +66,10 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /array/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps alias slash-method vector count same-path helper on string receiver") {
+TEST_CASE("C++ emitter rejects alias slash-method vector count same-path helper on string receiver") {
   const std::string source = R"(
 [return<string>]
 wrapText() {
@@ -88,14 +88,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_alias_slash_vector_count_string_same_path_helper.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_alias_slash_vector_count_string_same_path_helper_exe")
+       "primec_cpp_alias_slash_vector_count_string_same_path_helper.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 96);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects alias slash-method vector count on string receiver before emission") {
@@ -120,7 +121,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unknown method: /string/count") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects alias slash-method vector count on string receiver in C++ emitter") {
@@ -145,7 +146,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /string/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps alias slash-method vector count same-path helper on map receiver") {
@@ -228,7 +229,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /map/capacity") !=
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/capacity") !=
         std::string::npos);
 }
 
@@ -254,7 +255,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unknown method: /map/count") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects alias slash-method vector count on map receiver in C++ emitter") {
@@ -279,7 +280,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /map/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects alias slash-method vector count same-path helper on array receiver") {
@@ -363,7 +364,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /array/capacity") !=
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/capacity") !=
         std::string::npos);
 }
 
@@ -389,7 +390,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unknown method: /array/count") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects alias slash-method vector count on array receiver in C++ emitter") {
@@ -414,7 +415,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /array/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps canonical direct-call vector count same-path helper on string receiver") {
@@ -550,8 +551,7 @@ main() {
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
   const std::string out = readFile(outPath);
-  CHECK(out.find("native backend only supports") != std::string::npos);
-  CHECK(out.find("call=/vector/count") != std::string::npos);
+  CHECK(out.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects alias direct-call vector count on string receiver in C++ emitter") {
@@ -577,8 +577,7 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   const std::string err = readFile(errPath);
-  CHECK(err.find("native backend only supports") != std::string::npos);
-  CHECK(err.find("call=/vector/count") != std::string::npos);
+  CHECK(err.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps alias direct-call vector count same-path helper on array receiver") {
@@ -633,8 +632,7 @@ main() {
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
   const std::string out = readFile(outPath);
-  CHECK(out.find("native backend only supports") != std::string::npos);
-  CHECK(out.find("call=/vector/count") != std::string::npos);
+  CHECK(out.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects alias direct-call vector count on array receiver in C++ emitter") {
@@ -660,8 +658,7 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   const std::string err = readFile(errPath);
-  CHECK(err.find("native backend only supports") != std::string::npos);
-  CHECK(err.find("call=/vector/count") != std::string::npos);
+  CHECK(err.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps canonical direct-call vector count same-path helper on array receiver") {

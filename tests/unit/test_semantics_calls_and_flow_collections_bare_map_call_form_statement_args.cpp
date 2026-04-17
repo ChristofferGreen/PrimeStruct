@@ -621,7 +621,8 @@ main() {
   CHECK((error.find("unknown method: /vector/at") != std::string::npos ||
          error.find("unknown method: /std/collections/vector/at") != std::string::npos ||
          error.find("unknown call target: /vector/at") != std::string::npos ||
-         error.find("unknown call target: /std/collections/vector/at") != std::string::npos));
+         error.find("unknown call target: /std/collections/vector/at") != std::string::npos ||
+         error.find("unable to infer return type on /project") != std::string::npos));
 }
 
 TEST_CASE("vector unsafe method alias access struct method chain keeps primitive receiver diagnostics") {

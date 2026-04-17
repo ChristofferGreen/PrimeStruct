@@ -317,7 +317,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /Marker/tag") != std::string::npos);
+  CHECK(readFile(errPath).find("unable to infer return type on /project") != std::string::npos);
 }
 
 TEST_CASE("rejects vector method alias access field expression with struct receiver diagnostics in C++ emitter") {

@@ -229,8 +229,8 @@ TEST_CASE("ir lowerer call helpers emit local vector count capacity calls throug
   expectDispatch("/std/collections/vector/capacity", {valuesName}, Result::Emitted, "stale", true);
   expectDispatch("/vector/at",
                  {valuesName, indexName},
-                 Result::Error,
-                 "native backend requires integer indices for at",
+                 Result::NotHandled,
+                 "stale",
                  false);
   expectDispatch("/std/collections/vector/at",
                  {valuesName, indexName},
@@ -239,8 +239,8 @@ TEST_CASE("ir lowerer call helpers emit local vector count capacity calls throug
                  false);
   expectDispatch("/vector/at_unsafe",
                  {valuesName, indexName},
-                 Result::Error,
-                 "native backend requires integer indices for at_unsafe",
+                 Result::NotHandled,
+                 "stale",
                  false);
   expectDispatch("/std/collections/vector/at_unsafe",
                  {valuesName, indexName},

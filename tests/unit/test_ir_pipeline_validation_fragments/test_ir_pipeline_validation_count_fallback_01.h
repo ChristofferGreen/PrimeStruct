@@ -293,10 +293,10 @@
               CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(error.empty());
-  CHECK(aliasAtResolveCalls == 1);
-  CHECK(aliasAtEmitCalls == 1);
+  CHECK(aliasAtResolveCalls == 0);
+  CHECK(aliasAtEmitCalls == 0);
 
   primec::Expr aliasMapAtCall = atCall;
   aliasMapAtCall.name = "/map/at";

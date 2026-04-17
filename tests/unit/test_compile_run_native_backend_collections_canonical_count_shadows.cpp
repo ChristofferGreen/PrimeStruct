@@ -499,7 +499,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /string/count parameter values") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native wrapper-returned vector access string count fallback") {
@@ -579,7 +579,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /string/count parameter values") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native user vector count method shadow") {
@@ -655,7 +655,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /map/count") !=
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") !=
         std::string::npos);
 }
 
@@ -681,7 +681,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /map/capacity") !=
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/capacity") !=
         std::string::npos);
 }
 
@@ -736,7 +736,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /array/count") !=
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") !=
         std::string::npos);
 }
 
@@ -762,7 +762,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /array/capacity") !=
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/capacity") !=
         std::string::npos);
 }
 

@@ -15,8 +15,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced capacity rejects named arguments as builtin alias") {
@@ -114,8 +114,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector access helper accepts named arguments through imported stdlib helper" * doctest::skip(true)) {
@@ -277,7 +277,8 @@ TEST_CASE("stdlib namespaced vector helper with named arguments is statement-onl
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("only supported as a statement") != std::string::npos);
+    CHECK(error.find(std::string("unknown call target: /std/collections/vector/") + helper.name) !=
+          std::string::npos);
   }
 }
 

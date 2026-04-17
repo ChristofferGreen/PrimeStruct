@@ -665,8 +665,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector method explicit count alias namespace resolves when alias helper exists") {
@@ -724,8 +724,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("vector method explicit capacity alias namespace resolves when alias helper exists") {

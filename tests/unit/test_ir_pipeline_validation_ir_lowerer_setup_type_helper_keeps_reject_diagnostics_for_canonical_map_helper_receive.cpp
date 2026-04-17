@@ -710,8 +710,8 @@ TEST_CASE("ir lowerer setup type helper rejects slash-method vector alias primit
       {},
       defMap,
       error);
-  CHECK(resolved == &i32TagDef);
-  CHECK(error.empty());
+  CHECK(resolved == nullptr);
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("ir lowerer setup type helper rejects wrapper string access primitive receiver fallback") {
