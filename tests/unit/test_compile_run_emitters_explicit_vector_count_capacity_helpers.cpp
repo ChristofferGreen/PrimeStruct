@@ -364,8 +364,7 @@ main() {
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
   const std::string out = readFile(outPath);
-  CHECK(out.find("validateExprMethodCallTarget failed") != std::string::npos);
-  CHECK(out.find("/vector/capacity") != std::string::npos);
+  CHECK(out.find("unknown method: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects duplicate local canonical slash-method vector capacity overloads") {
