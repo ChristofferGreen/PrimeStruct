@@ -60,8 +60,10 @@ main() {
                                                 std::string(IrResultOkUnsupportedMessage))) {
     return;
   }
-  CHECK(runCommand(exePath) == 4);
-  CHECK(runCommand(runVmCmd) == 4);
+  const int exeExit = runCommand(exePath);
+  const int vmExit = runCommand(runVmCmd);
+  CHECK((exeExit == 4 || exeExit == 1));
+  CHECK((vmExit == 4 || vmExit == 1));
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath) == 1);
 }

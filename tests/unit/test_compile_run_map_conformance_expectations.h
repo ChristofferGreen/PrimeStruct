@@ -523,7 +523,7 @@ inline void expectBuiltinCanonicalMapInsertNonLocalGrowthConformance(const std::
       makeBuiltinCanonicalMapInsertNonLocalGrowthConformanceSource(),
       "map_builtin_canonical_insert_non_local_growth_" + emitMode,
       emitMode,
-      "native backend only supports at() on numeric/bool/string arrays or vectors");
+      "");
 }
 
 inline void expectBuiltinCanonicalMapInsertNestedNonLocalGrowthConformance(const std::string &emitMode) {
@@ -541,7 +541,7 @@ inline void expectBuiltinCanonicalMapInsertNestedNonLocalGrowthConformance(const
       makeBuiltinCanonicalMapInsertNestedNonLocalGrowthConformanceSource(),
       "map_builtin_canonical_insert_nested_non_local_growth_" + emitMode,
       emitMode,
-      "native backend only supports at() on numeric/bool/string arrays or vectors");
+      "");
 }
 
 inline void expectBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConformance(const std::string &emitMode) {
@@ -559,7 +559,7 @@ inline void expectBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConformance
       makeBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConformanceSource(),
       "map_builtin_canonical_insert_helper_return_borrowed_method_" + emitMode,
       emitMode,
-      "native backend only supports at() on numeric/bool/string arrays or vectors");
+      "");
 }
 
 inline void expectBuiltinCanonicalMapStructFieldInitializerConformance(const std::string &emitMode) {

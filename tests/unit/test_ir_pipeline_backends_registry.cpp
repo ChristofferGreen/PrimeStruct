@@ -2055,26 +2055,41 @@ main() {
 
   const auto *cppQuery = findSemanticEntry(primec::semanticProgramQueryFactView(cppConformance.output.semanticProgram),
       [&cppConformance](const primec::SemanticProgramQueryFact &entry) {
-        return entry.scopePath == "/main" &&
+        const std::string_view scopePath =
+            entry.scopePathId != primec::InvalidSymbolId
+                ? primec::semanticProgramResolveCallTargetString(
+                      cppConformance.output.semanticProgram, entry.scopePathId)
+                : std::string_view(entry.scopePath);
+        return scopePath == "/main" &&
                primec::semanticProgramQueryFactResolvedPath(cppConformance.output.semanticProgram, entry) ==
                    "/lookup";
       });
   const auto *vmQuery = findSemanticEntry(primec::semanticProgramQueryFactView(vmConformance.output.semanticProgram),
       [&vmConformance](const primec::SemanticProgramQueryFact &entry) {
-        return entry.scopePath == "/main" &&
+        const std::string_view scopePath =
+            entry.scopePathId != primec::InvalidSymbolId
+                ? primec::semanticProgramResolveCallTargetString(
+                      vmConformance.output.semanticProgram, entry.scopePathId)
+                : std::string_view(entry.scopePath);
+        return scopePath == "/main" &&
                primec::semanticProgramQueryFactResolvedPath(vmConformance.output.semanticProgram, entry) ==
                    "/lookup";
       });
   const auto *nativeQuery = findSemanticEntry(primec::semanticProgramQueryFactView(nativeConformance.output.semanticProgram),
       [&nativeConformance](const primec::SemanticProgramQueryFact &entry) {
-        return entry.scopePath == "/main" &&
+        const std::string_view scopePath =
+            entry.scopePathId != primec::InvalidSymbolId
+                ? primec::semanticProgramResolveCallTargetString(
+                      nativeConformance.output.semanticProgram, entry.scopePathId)
+                : std::string_view(entry.scopePath);
+        return scopePath == "/main" &&
                primec::semanticProgramQueryFactResolvedPath(nativeConformance.output.semanticProgram, entry) ==
                    "/lookup";
       });
   REQUIRE(cppQuery != nullptr);
   REQUIRE(vmQuery != nullptr);
   REQUIRE(nativeQuery != nullptr);
-  CHECK(cppQuery->bindingTypeText == "i64");
+  CHECK(cppQuery->bindingTypeText == "Result<int, i32>");
   CHECK(cppQuery->resultValueType == "int");
   CHECK(cppQuery->resultErrorType == "i32");
   CHECK(vmQuery->bindingTypeText == cppQuery->bindingTypeText);

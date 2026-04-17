@@ -19,6 +19,18 @@ using count_access_detail::isVectorCountTarget;
 
 namespace {
 
+std::string_view resolveSemanticProductText(const SemanticProgram &semanticProgram,
+                                            SymbolId id,
+                                            const std::string &fallback) {
+  if (id != InvalidSymbolId) {
+    const std::string_view resolved = semanticProgramResolveCallTargetString(semanticProgram, id);
+    if (!resolved.empty()) {
+      return resolved;
+    }
+  }
+  return fallback;
+}
+
 bool hasInferredTypedWrappedMap(const LocalInfo &info, LocalInfo::Kind kind) {
   return (kind == LocalInfo::Kind::Reference || kind == LocalInfo::Kind::Pointer) &&
          info.mapKeyKind != LocalInfo::ValueKind::Unknown &&
@@ -40,7 +52,11 @@ bool resolveEntryArgsParameterFromSemanticProduct(const Definition &entryDef,
   std::size_t entryParamCount = 0;
   const auto bindingFacts = semanticProgramBindingFactView(*semanticProgram);
   for (const auto *entry : bindingFacts) {
-    if (entry->scopePath != entryDef.fullPath || entry->siteKind != "parameter") {
+    const std::string_view scopePath =
+        resolveSemanticProductText(*semanticProgram, entry->scopePathId, entry->scopePath);
+    const std::string_view siteKind =
+        resolveSemanticProductText(*semanticProgram, entry->siteKindId, entry->siteKind);
+    if (scopePath != entryDef.fullPath || siteKind != "parameter") {
       continue;
     }
     ++entryParamCount;
@@ -60,13 +76,16 @@ bool resolveEntryArgsParameterFromSemanticProduct(const Definition &entryDef,
     error = "native backend only supports a single array<string> entry parameter";
     return false;
   }
-  if (entryParamFact->bindingTypeText != "array<string>") {
+  const std::string_view bindingTypeText = resolveSemanticProductText(
+      *semanticProgram, entryParamFact->bindingTypeTextId, entryParamFact->bindingTypeText);
+  if (bindingTypeText != "array<string>") {
     error = "native backend entry parameter must be array<string>";
     return false;
   }
 
   hasEntryArgsOut = true;
-  entryArgsNameOut = entryParamFact->name;
+  entryArgsNameOut = std::string(resolveSemanticProductText(
+      *semanticProgram, entryParamFact->nameId, entryParamFact->name));
   return true;
 }
 

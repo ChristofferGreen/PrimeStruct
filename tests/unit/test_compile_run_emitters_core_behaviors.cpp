@@ -580,7 +580,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
   CHECK(output.find("heapAllocSlotCount") != std::string::npos);
-  CHECK(output.find("static int64_t ps_fn_1(") != std::string::npos);
+  CHECK(output.find("static int64_t ps_fn_0(") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter renders lambda captures") {

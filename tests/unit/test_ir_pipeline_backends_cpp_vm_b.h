@@ -71,9 +71,9 @@ TEST_CASE("cpp-ir backend emits dup and pop underflow guards") {
   CHECK(result.exitCode == 0);
 
   const std::string source = readTextFile(outputPath);
-  CHECK(source.find("if (sp == 0) {") != std::string::npos);
-  CHECK(source.find("IR stack underflow on dup") != std::string::npos);
-  CHECK(source.find("IR stack underflow on pop") != std::string::npos);
+  CHECK(source.find("IR stack underflow on ") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 1ull, \"dup\")") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 1ull, \"pop\")") != std::string::npos);
 }
 
 TEST_CASE("cpp-ir backend emits arithmetic print file return underflow guards") {
@@ -163,30 +163,29 @@ TEST_CASE("cpp-ir backend emits arithmetic print file return underflow guards") 
   CHECK(result.exitCode == 0);
 
   const std::string source = readTextFile(outputPath);
-  CHECK(source.find("IR stack underflow on add") != std::string::npos);
-  CHECK(source.find("IR stack underflow on sub") != std::string::npos);
-  CHECK(source.find("IR stack underflow on mul") != std::string::npos);
-  CHECK(source.find("IR stack underflow on div") != std::string::npos);
-  CHECK(source.find("IR stack underflow on float op") != std::string::npos);
-  CHECK(source.find("IR stack underflow on compare") != std::string::npos);
-  CHECK(source.find("IR stack underflow on negate") != std::string::npos);
-  CHECK(source.find("IR stack underflow on convert") != std::string::npos);
-  CHECK(source.find("IR stack underflow on store") != std::string::npos);
-  CHECK(source.find("IR stack underflow on load indirect") != std::string::npos);
-  CHECK(source.find("IR stack underflow on store indirect") != std::string::npos);
-  CHECK(source.find("IR stack underflow on heap alloc") != std::string::npos);
-  CHECK(source.find("IR stack underflow on heap free") != std::string::npos);
-  CHECK(source.find("IR stack underflow on heap realloc") != std::string::npos);
-  CHECK(source.find("IR stack underflow on jump") != std::string::npos);
-  CHECK(source.find("IR stack underflow on print") != std::string::npos);
-  CHECK(source.find("IR stack underflow on file close") != std::string::npos);
-  CHECK(source.find("IR stack underflow on file flush") != std::string::npos);
-  CHECK(source.find("IR stack underflow on file write") != std::string::npos);
-  CHECK(source.find("IR stack underflow on string byte") != std::string::npos);
-  CHECK(source.find("IR stack underflow on return") != std::string::npos);
+  CHECK(source.find("IR stack underflow on ") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 2ull, \"add\")") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 2ull, \"sub\")") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 2ull, \"mul\")") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 2ull, \"div\")") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 2ull, \"float op\")") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 2ull, \"compare\")") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 1ull, \"negate\")") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 1ull, \"convert\")") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 1ull, \"store\")") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 1ull, \"load indirect\")") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 2ull, \"store indirect\")") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 1ull, \"heap alloc\")") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 1ull, \"heap free\")") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 2ull, \"heap realloc\")") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 1ull, \"jump\")") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 1ull, \"print\")") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 1ull, \"file close\")") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 1ull, \"file flush\")") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 2ull, \"file write\")") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 1ull, \"string byte\")") != std::string::npos);
+  CHECK(source.find("psEnsureStack(sp, 1ull, \"return\")") != std::string::npos);
   CHECK(source.find("uint64_t dupValue = stack[sp - 1];") != std::string::npos);
-  CHECK(source.find("if (sp < 2)") != std::string::npos);
-  CHECK(source.find("if (sp == 0)") != std::string::npos);
 }
 
 TEST_CASE("cpp-ir backend writes file io paths") {

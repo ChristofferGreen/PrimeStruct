@@ -192,6 +192,8 @@ bool runTypeResolutionSnapshot(
 
 namespace {
 
+thread_local bool gDisableSemanticAllocatorReliefForBenchmark = false;
+
 std::string semanticModuleKeyForPath(std::string_view path) {
   if (path.empty()) {
     return "/";
@@ -240,6 +242,9 @@ void relieveSemanticAllocatorPressure() {
 }
 
 void maybeRelieveSemanticAllocatorPressure() {
+  if (gDisableSemanticAllocatorReliefForBenchmark) {
+    return;
+  }
   if (std::getenv("PRIMEC_DISABLE_SEMANTIC_ALLOCATOR_RELIEF") != nullptr) {
     return;
   }
@@ -6106,6 +6111,20 @@ bool Semantics::validate(Program &program,
       }
     }
   } validationDiagnosticScope{diagnosticSink, error, validationSucceeded};
+  struct ScopedBenchmarkAllocatorReliefDisable {
+    explicit ScopedBenchmarkAllocatorReliefDisable(bool enabled)
+        : previous(gDisableSemanticAllocatorReliefForBenchmark) {
+      if (enabled) {
+        gDisableSemanticAllocatorReliefForBenchmark = true;
+      }
+    }
+    ~ScopedBenchmarkAllocatorReliefDisable() {
+      gDisableSemanticAllocatorReliefForBenchmark = previous;
+    }
+    bool previous = false;
+  };
+  const ScopedBenchmarkAllocatorReliefDisable scopedBenchmarkAllocatorReliefDisable(
+      benchmarkSemanticAllocationCountersEnabled || benchmarkSemanticRssCheckpointsEnabled);
   if (!semantics::applySemanticTransforms(program, semanticTransforms, error)) {
     return false;
   }

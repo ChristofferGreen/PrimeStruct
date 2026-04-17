@@ -130,6 +130,7 @@ TEST_CASE("cpp-ir backend rejects empty non-entry function bodies") {
   module.entryIndex = 0;
   primec::IrFunction entry;
   entry.name = "/main";
+  entry.instructions.push_back({primec::IrOpcode::CallVoid, 1});
   entry.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
   module.functions.push_back(entry);
 

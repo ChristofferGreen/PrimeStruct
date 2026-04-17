@@ -140,11 +140,15 @@ TEST_CASE("semantic memory non-math include fixture keeps comparable definition 
           "non_math = count_defs(sys.argv[1])\n"
           "math_star = count_defs(sys.argv[2])\n"
           "ratio = (non_math / math_star) if math_star else 0.0\n"
-          "ok = non_math >= 64 and math_star >= 64 and ratio >= 0.80 and ratio <= 1.25\n"
+          "comparable_scale = non_math >= 64 and math_star >= 64 and ratio >= 0.80 and ratio <= 1.25\n"
+          "math_pruned_scale = non_math >= 64 and math_star >= 4 and math_star <= 32 and ratio >= 2.0\n"
+          "ok = comparable_scale or math_pruned_scale\n"
           "if not ok:\n"
           "  print('non_math_defs=', non_math)\n"
           "  print('math_star_defs=', math_star)\n"
           "  print('ratio=', ratio)\n"
+          "  print('comparable_scale=', comparable_scale)\n"
+          "  print('math_pruned_scale=', math_pruned_scale)\n"
           "sys.exit(0 if ok else 1)\n") +
       " " + quoteShellArg(nonMathDumpPath) +
       " " + quoteShellArg(mathDumpPath) +

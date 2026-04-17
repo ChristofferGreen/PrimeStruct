@@ -189,6 +189,13 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
       }
     }
     BindingInfo binding;
+    if (target.kind == Expr::Kind::Call &&
+        target.isFieldAccess &&
+        target.args.size() == 1 &&
+        resolveStructFieldBinding(params, locals, target.args.front(), target.name, binding) &&
+        resolveMapBinding(binding, keyTypeOut, valueTypeOut)) {
+      return true;
+    }
     if (resolveBindingTarget(target, binding) &&
         resolveMapBinding(binding, keyTypeOut, valueTypeOut)) {
       return true;

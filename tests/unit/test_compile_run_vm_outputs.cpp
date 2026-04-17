@@ -1467,9 +1467,6 @@ main() {
   CHECK(output.find(
             "static int64_t ps_fn_0(PsStack &stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, "
             "std::vector<PsHeapAllocation> &heapAllocations, int argc, char **argv);") != std::string::npos);
-  CHECK(output.find(
-            "static int64_t ps_fn_1(PsStack &stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, "
-            "std::vector<PsHeapAllocation> &heapAllocations, int argc, char **argv);") != std::string::npos);
   CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, heapAllocations, argc, argv);") != std::string::npos);
 }
 

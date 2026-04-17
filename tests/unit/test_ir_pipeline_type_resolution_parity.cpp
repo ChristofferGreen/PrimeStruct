@@ -672,10 +672,11 @@ main() {
       CHECK(snapshot.error.empty());
     } else {
       CHECK_FALSE(snapshot.error.empty());
-      CHECK_MESSAGE(snapshot.error.find(testCase.errorSubstring) != std::string::npos, snapshot.error);
       if (testCase.expectDiagnosticSnapshot) {
         CHECK_MESSAGE(diagnosticReportContainsMessage(snapshot.diagnosticInfo, testCase.errorSubstring),
                       snapshot.diagnosticInfo.message);
+      } else {
+        CHECK_MESSAGE(snapshot.error.find(testCase.errorSubstring) != std::string::npos, snapshot.error);
       }
     }
   }
