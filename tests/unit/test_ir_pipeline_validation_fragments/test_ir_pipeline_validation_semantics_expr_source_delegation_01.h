@@ -525,6 +525,19 @@
             "bool isVectorCompatibilityMethodName(std::string_view helperName)") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
+            "auto preferVisibleCanonicalVectorMethodTarget =") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "if (vectorMethodTarget.rfind(\"/std/collections/experimental_vector/\", 0) == 0 &&") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "const std::string canonicalVectorMethodTarget =\n"
+            "        \"/std/collections/vector/\" + expr.name;\n"
+            "    if (hasImportedDefinitionPath(canonicalVectorMethodTarget) ||\n"
+            "        defMap_.count(canonicalVectorMethodTarget) > 0) {\n"
+            "      resolved = canonicalVectorMethodTarget;") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
             "expr.args.front().kind == Expr::Kind::Call &&\n"
             "      !expr.args.front().isBinding &&\n"
             "      !expr.args.front().isMethodCall &&\n"
