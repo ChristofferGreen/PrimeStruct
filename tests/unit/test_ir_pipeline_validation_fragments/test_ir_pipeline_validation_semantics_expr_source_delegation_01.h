@@ -383,6 +383,17 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "getRemovedRootedVectorDirectCallPath(expr)") !=
         std::string::npos);
+  CHECK(semanticsExprDirectCollectionFallbacksSource.find(
+            "const std::string removedRootedVectorDirectCallPath =\n"
+            "      getRemovedRootedVectorDirectCallPath(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprDirectCollectionFallbacksSource.find(
+            "explicitPath == \"/vector/at\" || explicitPath == \"/vector/at_unsafe\"") ==
+        std::string::npos);
+  CHECK(semanticsExprDirectCollectionFallbacksSource.find(
+            "removedRootedVectorDirectCallPath == \"/vector/at\" ||\n"
+            "      removedRootedVectorDirectCallPath == \"/vector/at_unsafe\"") !=
+        std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
             "getRemovedRootedVectorDirectCallPath(") ==
         std::string::npos);

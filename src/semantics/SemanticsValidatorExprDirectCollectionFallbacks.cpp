@@ -18,30 +18,12 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
     return true;
   }
 
-  auto explicitDirectCallPath = [](const Expr &candidate) -> std::string {
-    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
-        candidate.name.empty()) {
-      return {};
-    }
-    if (candidate.name.front() == '/') {
-      return candidate.name;
-    }
-    std::string namespacePrefix = candidate.namespacePrefix;
-    if (!namespacePrefix.empty() && namespacePrefix.front() != '/') {
-      namespacePrefix.insert(namespacePrefix.begin(), '/');
-    }
-    if (namespacePrefix.empty()) {
-      return "/" + candidate.name;
-    }
-    return namespacePrefix + "/" + candidate.name;
-  };
-  const std::string explicitPath = explicitDirectCallPath(expr);
-  if (!expr.isMethodCall &&
-      (explicitPath == "/vector/at" || explicitPath == "/vector/at_unsafe") &&
-      !hasDeclaredDefinitionPath(explicitPath) &&
-      !hasImportedDefinitionPath(explicitPath)) {
+  const std::string removedRootedVectorDirectCallPath =
+      getRemovedRootedVectorDirectCallPath(expr);
+  if (removedRootedVectorDirectCallPath == "/vector/at" ||
+      removedRootedVectorDirectCallPath == "/vector/at_unsafe") {
     return failDirectCollectionFallbackDiagnostic("unknown call target: " +
-                                                  explicitPath);
+                                                  removedRootedVectorDirectCallPath);
   }
 
   const auto &dispatchResolvers = *context.dispatchResolvers;
