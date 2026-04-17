@@ -151,6 +151,22 @@ main() {
           true,
       },
       {
+          "canonical_vector_constructor_no_vector_pair_fallback",
+          R"(
+[return<i32>]
+/std/collections/vectorPair([i32] first, [i32] second) {
+  return(plus(first, second))
+}
+
+[return<i32>]
+main() {
+  return(/std/collections/vector/vector(4i32, 5i32))
+}
+)",
+          false,
+          "unknown call target: /std/collections/vector/vector",
+      },
+      {
           "direct_local_auto_vector_helper_call_success",
           R"(
 /vector/count([vector<i32>] values) {
