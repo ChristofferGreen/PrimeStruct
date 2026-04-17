@@ -2123,6 +2123,19 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
        explicitVectorReceiverFamily == "soa_vector")) {
     return false;
   }
+  if (explicitVectorHelperPath == "/vector/count" &&
+      (explicitVectorReceiverFamily == "string" ||
+       explicitVectorReceiverFamily == "array" ||
+       explicitVectorReceiverFamily == "map")) {
+    if (!hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {
+      return failMethodTargetResolutionDiagnostic("unknown method: /" +
+                                                  explicitVectorReceiverFamily +
+                                                  "/count");
+    }
+    resolvedOut = explicitVectorHelperPath;
+    isBuiltinOut = false;
+    return true;
+  }
   if (!explicitVectorHelperPath.empty() &&
       explicitVectorHelperPath.rfind("/std/collections/vector/", 0) == 0 &&
       (normalizedMethodName == "count" || normalizedMethodName == "capacity") &&

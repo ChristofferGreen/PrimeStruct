@@ -526,7 +526,7 @@ main() {
   CHECK(error.find("unknown method: /string/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced count method rejects local string receiver without helper" * doctest::skip(true)) {
+TEST_CASE("vector namespaced count method rejects local string receiver without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -535,8 +535,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /string/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count method rejects local array receiver without helper") {
@@ -548,8 +548,21 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /array/count") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced count method rejects local map receiver without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values./vector/count())
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /map/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector count method rejects wrapper map receiver without helper") {
