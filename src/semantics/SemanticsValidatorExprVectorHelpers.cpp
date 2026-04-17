@@ -125,7 +125,22 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
   auto resolveExperimentalVectorReceiver = [&](const Expr &candidate,
                                                std::string &elemTypeOut) -> bool {
     BindingInfo inferredBinding;
+    if (candidate.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(params, candidate.name)) {
+        return extractExperimentalVectorElementType(*paramBinding, elemTypeOut);
+      }
+      auto localIt = locals.find(candidate.name);
+      if (localIt != locals.end()) {
+        return extractExperimentalVectorElementType(localIt->second, elemTypeOut);
+      }
+    }
     if (candidate.kind == Expr::Kind::Call) {
+      std::string collectionTypePath;
+      if (resolveCallCollectionTypePath(candidate, params, locals, collectionTypePath) &&
+          (collectionTypePath == "/vector" || collectionTypePath == "/soa_vector" ||
+           collectionTypePath == "/map")) {
+        return false;
+      }
       auto defIt = defMap_.find(resolveCalleePath(candidate));
       if (defIt != defMap_.end() && defIt->second != nullptr &&
           inferDefinitionReturnBinding(*defIt->second, inferredBinding) &&
@@ -153,18 +168,27 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
         return true;
       }
     }
-    const std::string inferredStructPath = inferStructReturnPath(candidate, params, locals);
-    if (!inferredStructPath.empty()) {
-      inferredBinding.typeName = inferredStructPath;
-      inferredBinding.typeTemplateArg.clear();
-      return extractExperimentalVectorElementType(inferredBinding, elemTypeOut);
-    }
     return false;
   };
   auto resolveExperimentalSoaVectorReceiver = [&](const Expr &candidate,
                                                   std::string &elemTypeOut) -> bool {
     BindingInfo inferredBinding;
+    if (candidate.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(params, candidate.name)) {
+        return extractExperimentalSoaVectorElementType(*paramBinding, elemTypeOut);
+      }
+      auto localIt = locals.find(candidate.name);
+      if (localIt != locals.end()) {
+        return extractExperimentalSoaVectorElementType(localIt->second, elemTypeOut);
+      }
+    }
     if (candidate.kind == Expr::Kind::Call) {
+      std::string collectionTypePath;
+      if (resolveCallCollectionTypePath(candidate, params, locals, collectionTypePath) &&
+          (collectionTypePath == "/vector" || collectionTypePath == "/soa_vector" ||
+           collectionTypePath == "/map")) {
+        return false;
+      }
       auto defIt = defMap_.find(resolveCalleePath(candidate));
       if (defIt != defMap_.end() && defIt->second != nullptr &&
           inferDefinitionReturnBinding(*defIt->second, inferredBinding) &&
@@ -191,12 +215,6 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       if (extractExperimentalSoaVectorElementType(inferredBinding, elemTypeOut)) {
         return true;
       }
-    }
-    const std::string inferredStructPath = inferStructReturnPath(candidate, params, locals);
-    if (!inferredStructPath.empty()) {
-      inferredBinding.typeName = inferredStructPath;
-      inferredBinding.typeTemplateArg.clear();
-      return extractExperimentalSoaVectorElementType(inferredBinding, elemTypeOut);
     }
     return false;
   };

@@ -91,7 +91,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
         Expr rewrittenVectorMethodCall = expr;
         rewrittenVectorMethodCall.isMethodCall = false;
         rewrittenVectorMethodCall.namespacePrefix.clear();
-        rewrittenVectorMethodCall.name = normalizedMethodName;
+        rewrittenVectorMethodCall.name = vectorMethodTarget;
         handledOut = true;
         return validateExpr(params, locals, rewrittenVectorMethodCall);
       }
@@ -137,7 +137,8 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
         Expr rewrittenVectorMethodCall = expr;
         rewrittenVectorMethodCall.isMethodCall = false;
         rewrittenVectorMethodCall.namespacePrefix.clear();
-        rewrittenVectorMethodCall.name = normalizedMethodName;
+        rewrittenVectorMethodCall.name =
+            preferredBareVectorHelperTarget(normalizedMethodName);
         handledOut = true;
         return validateExpr(params, locals, rewrittenVectorMethodCall);
       }

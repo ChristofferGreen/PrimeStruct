@@ -681,7 +681,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/capacity") !=
+  CHECK(readFile(errPath).find("capacity requires vector target") !=
         std::string::npos);
 }
 
@@ -818,7 +818,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/capacity") !=
+  CHECK(readFile(errPath).find("capacity requires vector target") !=
         std::string::npos);
 }
 

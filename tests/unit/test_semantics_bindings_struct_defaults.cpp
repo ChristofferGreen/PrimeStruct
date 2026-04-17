@@ -284,7 +284,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("omitted initializer requires effect-free zero-arg constructor: /Thing") !=
+  CHECK(error.find("unknown call target: /vector/count") !=
         std::string::npos);
 }
 

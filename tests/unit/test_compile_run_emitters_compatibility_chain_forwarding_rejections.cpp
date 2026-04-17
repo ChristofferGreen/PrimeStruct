@@ -198,7 +198,7 @@ main() {
   CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps vector method alias access struct method forwarding") {
+TEST_CASE("C++ emitter rejects vector method alias access struct method forwarding") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -233,10 +233,17 @@ main() {
        "primec_cpp_vector_method_alias_access_struct_method_chain_same_path_forwarding_exe")
           .string();
 
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_vector_method_alias_access_struct_method_chain_same_path_forwarding.err")
+          .string();
+
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "argument type mismatch for /Marker/tag parameter self: expected /Marker got array") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vector method alias access canonical-only helper routing in C++ emitter" * doctest::skip(true)) {

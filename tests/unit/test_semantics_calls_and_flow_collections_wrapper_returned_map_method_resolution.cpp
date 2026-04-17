@@ -1072,7 +1072,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /map/capacity") != std::string::npos);
+  CHECK(error.find("capacity requires vector target") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector capacity method rejects array receiver without helper") {
@@ -1085,7 +1085,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /array/capacity") != std::string::npos);
+  CHECK(error.find("capacity requires vector target") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector capacity method rejects string receiver without helper") {
@@ -1098,7 +1098,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /string/capacity") != std::string::npos);
+  CHECK(error.find("capacity requires vector target") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector capacity method rejects local string same-path helper") {
@@ -1152,7 +1152,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /map/capacity") != std::string::npos);
+  CHECK(error.find("capacity requires vector target") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced capacity method rejects local string receiver without helper") {
@@ -1231,7 +1231,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /map/capacity") != std::string::npos);
+  CHECK(error.find("capacity requires vector target") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector capacity method rejects wrapper map same-path helper") {

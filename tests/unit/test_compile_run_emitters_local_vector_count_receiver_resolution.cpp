@@ -126,7 +126,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /string/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects local alias slash-method vector count on array receiver in C++ emitter") {
@@ -147,7 +147,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /array/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects local alias slash-method vector count same-path helper on string receiver") {
@@ -390,7 +390,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/capacity") !=
+  CHECK(readFile(errPath).find("capacity requires vector target") !=
         std::string::npos);
 }
 
@@ -556,7 +556,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/capacity") !=
+  CHECK(readFile(errPath).find("capacity requires vector target") !=
         std::string::npos);
 }
 

@@ -2346,10 +2346,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         receiver.isMethodCall
             ? this->explicitRemovedCollectionMethodPath(receiver.name, receiver.namespacePrefix)
             : std::string();
-    const bool hasSamePathRemovedVectorMethodHelper =
-        !removedVectorMethodCompatibilityPath.empty() &&
-        (hasDefinitionPath(removedVectorMethodCompatibilityPath) ||
-         hasImportedDefinitionPath(removedVectorMethodCompatibilityPath));
     std::string accessHelperName;
     if (getBuiltinArrayAccessName(receiver, accessHelperName) && !receiver.args.empty()) {
       const std::string removedMapCompatibilityPath = getDirectMapHelperCompatibilityPath(receiver);
