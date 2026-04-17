@@ -362,7 +362,7 @@ main() {
   CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps vector unsafe method alias access struct method forwarding") {
+TEST_CASE("C++ emitter rejects vector unsafe method alias access struct method forwarding") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -403,8 +403,10 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "argument type mismatch for /Marker/tag parameter self: expected /Marker got array") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vector method alias access receiver fallback without helper in C++ emitter") {

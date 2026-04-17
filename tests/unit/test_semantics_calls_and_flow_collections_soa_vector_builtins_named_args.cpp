@@ -1455,7 +1455,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /vector/at_unsafe") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /std/collections/vector/at") !=
+        std::string::npos);
 }
 
 TEST_SUITE_END();

@@ -132,6 +132,10 @@ bool SemanticsValidator::hasImportedDefinitionPath(const std::string &path) cons
     if (importPath == canonicalPath) {
       return true;
     }
+    if (importPath == "/std/collections/vector" &&
+        canonicalPath.rfind(importPath + "/", 0) == 0) {
+      return true;
+    }
     if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
       const std::string prefix = importPath.substr(0, importPath.size() - 2);
       if (canonicalPath == prefix || canonicalPath.rfind(prefix + "/", 0) == 0) {

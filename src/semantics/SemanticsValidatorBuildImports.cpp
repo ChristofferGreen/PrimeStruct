@@ -103,6 +103,19 @@ bool SemanticsValidator::buildImportAliases() {
     return true;
   };
 
+  auto hasPublicDefinitionUnderPrefix = [&](const std::string &prefix) {
+    const std::string scopedPrefix = prefix + "/";
+    for (const auto &[path, defPtr] : defMap_) {
+      if (defPtr == nullptr || publicDefinitions_.count(path) == 0) {
+        continue;
+      }
+      if (path.rfind(scopedPrefix, 0) == 0) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   const auto resolveSingleImportAliasTarget = [](const std::string &importPath) {
     if (importPath == "/std/collections/vector") {
       return std::string("/std/collections/vector/vector");
@@ -219,6 +232,17 @@ bool SemanticsValidator::buildImportAliases() {
       }
     }
     const std::string aliasTargetPath = resolveSingleImportAliasTarget(importPath);
+    if (importPath == "/std/collections/vector" &&
+        defMap_.find(aliasTargetPath) == defMap_.end() &&
+        hasPublicDefinitionUnderPrefix(importPath)) {
+      auto [it, inserted] = importAliases_.emplace("vector", aliasTargetPath);
+      if (!inserted && it->second != aliasTargetPath) {
+        if (!addImportDiagnostic("import creates name conflict: vector")) {
+          return false;
+        }
+      }
+      continue;
+    }
     auto defIt = defMap_.find(aliasTargetPath);
     if (defIt == defMap_.end()) {
       if (!isMathBuiltinImport) {

@@ -290,6 +290,19 @@ bool Parser::parseBindingInitializerList(std::vector<Expr> &out,
 }
 
 bool Parser::finalizeBindingInitializer(Expr &binding) {
+  bool hasNamed = false;
+  for (const auto &name : binding.argNames) {
+    if (name.has_value()) {
+      hasNamed = true;
+      break;
+    }
+  }
+  const bool hasSingleInitializer = !hasNamed && binding.args.size() <= 1;
+  const bool hasBlockInitializer = binding.args.size() == 1 &&
+                                   binding.args.front().kind == Expr::Kind::Call &&
+                                   binding.args.front().name == "block" &&
+                                   binding.args.front().hasBodyArguments;
+
   std::string typeName;
   std::vector<std::string> templateArgs;
   for (const auto &transform : binding.transforms) {
@@ -306,25 +319,16 @@ bool Parser::finalizeBindingInitializer(Expr &binding) {
     templateArgs = transform.templateArgs;
     break;
   }
+  if (hasSingleInitializer && (!hasBlockInitializer || typeName.empty() ||
+                               !isVectorBindingTypeName(typeName))) {
+    return true;
+  }
+
   if (typeName.empty()) {
     return fail("binding initializer requires explicit type");
   }
-
-  bool hasNamed = false;
-  for (const auto &name : binding.argNames) {
-    if (name.has_value()) {
-      hasNamed = true;
-      break;
-    }
-  }
-  const bool conciseVectorInitializer = !hasNamed && binding.args.size() == 1 &&
-                                        isVectorBindingTypeName(typeName) &&
-                                        binding.args.front().kind == Expr::Kind::Call &&
-                                        binding.args.front().name == "block" &&
-                                        binding.args.front().hasBodyArguments;
-  if (!hasNamed && binding.args.size() <= 1 && !conciseVectorInitializer) {
-    return true;
-  }
+  const bool conciseVectorInitializer = hasSingleInitializer && hasBlockInitializer &&
+                                        isVectorBindingTypeName(typeName);
   if (hasNamed) {
     std::string normalized = typeName;
     if (!normalized.empty() && normalized[0] == '/') {
@@ -340,8 +344,14 @@ bool Parser::finalizeBindingInitializer(Expr &binding) {
   constructorCall.name = typeName;
   constructorCall.namespacePrefix = binding.namespacePrefix;
   constructorCall.templateArgs = std::move(templateArgs);
-  constructorCall.args = std::move(binding.args);
-  constructorCall.argNames = std::move(binding.argNames);
+  if (conciseVectorInitializer) {
+    Expr block = std::move(binding.args.front());
+    constructorCall.args = std::move(block.bodyArguments);
+    constructorCall.argNames.assign(constructorCall.args.size(), std::nullopt);
+  } else {
+    constructorCall.args = std::move(binding.args);
+    constructorCall.argNames = std::move(binding.argNames);
+  }
   binding.args.clear();
   binding.argNames.clear();
   binding.args.push_back(std::move(constructorCall));

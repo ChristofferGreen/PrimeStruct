@@ -160,6 +160,39 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       (hasImportedDefinitionPath(resolveCalleePath(expr)) ||
        hasDeclaredDefinitionPath(resolveCalleePath(expr)));
   setupOut.shouldAllowStdAccessCompatibilityFallback = false;
+  if (setupOut.isStdNamespacedVectorAccessCall && expr.args.size() == 2) {
+    size_t receiverIndex = 0;
+    if (hasNamedArguments(expr.argNames)) {
+      for (size_t i = 0; i < expr.args.size(); ++i) {
+        if (i < expr.argNames.size() && expr.argNames[i].has_value() &&
+            *expr.argNames[i] == "values") {
+          receiverIndex = i;
+          break;
+        }
+      }
+    }
+    if (receiverIndex < expr.args.size()) {
+      const Expr &receiverExpr = expr.args[receiverIndex];
+      std::string elemType;
+      const bool isNonVectorCompatibilityReceiver =
+          (dispatchResolvers.resolveArgsPackAccessTarget != nullptr &&
+           dispatchResolvers.resolveArgsPackAccessTarget(receiverExpr, elemType)) ||
+          (dispatchResolvers.resolveArrayTarget != nullptr &&
+           dispatchResolvers.resolveArrayTarget(receiverExpr, elemType)) ||
+          (dispatchResolvers.resolveStringTarget != nullptr &&
+           dispatchResolvers.resolveStringTarget(receiverExpr));
+      if (isNonVectorCompatibilityReceiver) {
+        std::string ignoredElemType;
+        const bool isDirectVectorReceiver =
+            (dispatchResolvers.resolveVectorTarget != nullptr &&
+             dispatchResolvers.resolveVectorTarget(receiverExpr, ignoredElemType)) ||
+            (dispatchResolvers.resolveExperimentalVectorValueTarget != nullptr &&
+             dispatchResolvers.resolveExperimentalVectorValueTarget(receiverExpr, ignoredElemType));
+        setupOut.shouldAllowStdAccessCompatibilityFallback =
+            !isDirectVectorReceiver;
+      }
+    }
+  }
   setupOut.isDirectStdNamespacedVectorCountWrapperMapTarget =
       !expr.isMethodCall && setupOut.isStdNamespacedVectorCountCall &&
       expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call &&

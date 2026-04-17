@@ -435,7 +435,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /Pointer/count") != std::string::npos);
+  CHECK(error.find("validateExprMethodCallTarget failed name=count") != std::string::npos);
 }
 
 TEST_CASE("unknown method calls fail") {

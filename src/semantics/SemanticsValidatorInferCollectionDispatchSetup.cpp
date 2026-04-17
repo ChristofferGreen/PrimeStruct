@@ -163,6 +163,39 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       isMapAccessCompatibilityPath(resolved) &&
       !isMapNamespacedAccessCompatibilityCall;
   setupOut.shouldAllowStdAccessCompatibilityFallback = false;
+  if (setupOut.isStdNamespacedVectorAccessSpelling && expr.args.size() == 2) {
+    size_t receiverIndex = 0;
+    if (hasNamedArguments(expr.argNames)) {
+      for (size_t i = 0; i < expr.args.size(); ++i) {
+        if (i < expr.argNames.size() && expr.argNames[i].has_value() &&
+            *expr.argNames[i] == "values") {
+          receiverIndex = i;
+          break;
+        }
+      }
+    }
+    if (receiverIndex < expr.args.size()) {
+      const Expr &receiverExpr = expr.args[receiverIndex];
+      std::string elemType;
+      const bool isNonVectorCompatibilityReceiver =
+          (builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget != nullptr &&
+           builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget(receiverExpr, elemType)) ||
+          (builtinCollectionDispatchResolvers.resolveArrayTarget != nullptr &&
+           builtinCollectionDispatchResolvers.resolveArrayTarget(receiverExpr, elemType)) ||
+          (builtinCollectionDispatchResolvers.resolveStringTarget != nullptr &&
+           builtinCollectionDispatchResolvers.resolveStringTarget(receiverExpr));
+      if (isNonVectorCompatibilityReceiver) {
+        std::string ignoredElemType;
+        const bool isDirectVectorReceiver =
+            (builtinCollectionDispatchResolvers.resolveVectorTarget != nullptr &&
+             builtinCollectionDispatchResolvers.resolveVectorTarget(receiverExpr, ignoredElemType)) ||
+            (builtinCollectionDispatchResolvers.resolveExperimentalVectorValueTarget != nullptr &&
+             builtinCollectionDispatchResolvers.resolveExperimentalVectorValueTarget(receiverExpr, ignoredElemType));
+        setupOut.shouldAllowStdAccessCompatibilityFallback =
+            !isDirectVectorReceiver;
+      }
+    }
+  }
   setupOut.isBuiltinAccess =
       setupOut.hasBuiltinAccessSpelling &&
       (!setupOut.isStdNamespacedVectorAccessSpelling ||

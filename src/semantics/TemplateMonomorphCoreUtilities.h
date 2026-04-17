@@ -50,6 +50,9 @@ bool importPathCoversTarget(const std::string &importPath, const std::string &ta
   if (importPath == targetPath) {
     return true;
   }
+  if (importPath == "/std/collections/vector") {
+    return targetPath.rfind(importPath + "/", 0) == 0;
+  }
   if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
     const std::string prefix = importPath.substr(0, importPath.size() - 2);
     return targetPath == prefix || targetPath.rfind(prefix + "/", 0) == 0;

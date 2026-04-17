@@ -385,7 +385,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("rejects native map unsafe compatibility call struct method chain with primitive argument diagnostics") {
@@ -419,7 +419,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("rejects native vector method alias access struct method chain with primitive receiver diagnostics") {

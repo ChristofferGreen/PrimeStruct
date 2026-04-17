@@ -4,6 +4,35 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `direct-vector-access-fallback-order`:
+  direct vector `at` and `at_unsafe` calls must stay on the canonical
+  direct-helper rewrite before method-sugar fallback, otherwise imported bare
+  vector access can recurse through late unknown-target fallback and crash in
+  semantic re-entry.
+  Evidence: `SemanticsValidatorExprDirectCollectionFallbacks.cpp` was changed
+  so builtin vector receivers do not route bare `at(values, ...)` and
+  `at_unsafe(values, ...)` through method fallback first; this cleared the
+  imported bare vector access crash in emitter/VM coverage and the release
+  gate passed afterward.
+- `exact-vector-import-covers-canonical-surface`:
+  exact `import /std/collections/vector` must expose bare `vector(...)` plus
+  the canonical `/std/collections/vector/*` helper surface through import
+  aliasing and helper-visibility checks, rather than relying on old monomorph
+  constructor rewrites.
+  Evidence: exact vector import support required coordinated updates in
+  `SemanticsValidatorBuildImports.cpp`,
+  `TemplateMonomorphCoreUtilities.h`, and
+  `SemanticsValidatorInferCollectionCompatibility.cpp`, after which exact
+  vector imports validated and compile-ran again.
+- `parser-concise-vector-binding-flattening`:
+  `ParserLists::finalizeBindingInitializer(...)` must preserve omitted-type
+  single-value brace bindings like `[mut] value{1i32}` while flattening the
+  synthetic `block{...}` initializer used by explicit `vector<T>` concise
+  bindings into constructor arguments.
+  Evidence: restoring the early single-initializer fast path and only
+  flattening the vector-specific synthetic block fixed concise
+  `[vector<T>] values{...}` bindings without regressing ordinary omitted-type
+  brace bindings, and the full release gate passed afterward.
 - `resolve-call-collection-non-collection-return-guard`:
   `resolveCallCollectionTypePath(...)` must stop once a direct helper call has
   an inferred declared non-collection return type, because falling through to
@@ -25,6 +54,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
   builtin named-argument classification for unresolved removed vector access
   aliases; updated coverage in vector alias named-arg tests across semantics,
   VM/native backend compile-run, and C++ emitter suites.
+- `vector-stdlib-access-compat-fallback-gate`:
+  std-namespaced vector access spellings on non-vector compatibility receivers
+  need `shouldAllowStdAccessCompatibilityFallback` enabled in both expression
+  and inference dispatch setup, otherwise Buffer/args-pack/string/array access
+  cases miss canonical stdlib fallback and regress after vector alias cleanup.
+  Evidence: matching changes in
+  `SemanticsValidatorExprCollectionDispatchSetup.cpp` and
+  `SemanticsValidatorInferCollectionDispatchSetup.cpp` restored the focused
+  Buffer arg-pack, variadic access, and canonical vector access release tests.
 - `statement-vector-builtin-operand-index-helper`:
   statement vector helper builtin branches now share one
   `resolveBuiltinOperandIndex(...)` helper in
