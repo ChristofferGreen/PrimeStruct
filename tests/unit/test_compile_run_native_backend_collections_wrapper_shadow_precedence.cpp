@@ -217,12 +217,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_user_wrapper_temp_at_shadow_precedence.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_user_wrapper_temp_at_shadow_precedence_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_user_wrapper_temp_at_shadow_precedence.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 83);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + quoteShellArg(errPath) + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native user wrapper temporary count capacity shadow precedence") {
@@ -261,12 +262,12 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_user_wrapper_temp_count_capacity_shadow_precedence.prime", source);
-  const std::string exePath = (testScratchPath("") /
-                               "primec_native_user_wrapper_temp_count_capacity_shadow_precedence_exe")
-                                  .string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 163);
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_user_wrapper_temp_count_capacity_shadow_precedence.err").string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + quoteShellArg(errPath) + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("rejects native user wrapper temporary count capacity shadow value mismatch") {
@@ -341,13 +342,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_user_wrapper_temp_index_shadow_precedence.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_user_wrapper_temp_index_shadow_precedence_exe")
-          .string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_user_wrapper_temp_index_shadow_precedence.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 84);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + quoteShellArg(errPath) + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native user wrapper temporary syntax parity shadow precedence") {
@@ -385,13 +386,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_user_wrapper_temp_syntax_parity_shadow_precedence.prime", source);
-  const std::string exePath = (testScratchPath("") /
-                               "primec_native_user_wrapper_temp_syntax_parity_shadow_precedence_exe")
-                                  .string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_user_wrapper_temp_syntax_parity_shadow_precedence.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 177);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + quoteShellArg(errPath) + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("rejects native user wrapper temporary syntax parity shadow mismatch") {
