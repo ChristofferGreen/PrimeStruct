@@ -657,14 +657,19 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       tryResolveNamedFallbackReceivers();
       return resolvedReceiver;
     };
+    auto tryResolveReorderedReceiver = [&]() {
+      if (resolvedReceiver) {
+        return false;
+      }
+      if (!shouldProbePositionalReorderedVectorHelperReceiver(
+              expr, isStdNamespacedVectorCanonicalCompatibilityDirectCallSite,
+              hasNamedArgs, params, locals)) {
+        return false;
+      }
+      return tryResolveRemainingReceivers(1);
+    };
     tryResolveInitialReceiver();
-
-    if (shouldProbePositionalReorderedVectorHelperReceiver(
-            expr, isStdNamespacedVectorCanonicalCompatibilityDirectCallSite,
-            hasNamedArgs, params, locals) &&
-        !resolvedReceiver) {
-      tryResolveRemainingReceivers(1);
-    }
+    tryResolveReorderedReceiver();
   }
 
   if (resolvedVectorHelperDefinitionMissing) {
