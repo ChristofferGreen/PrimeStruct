@@ -183,14 +183,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   }();
   std::string vectorMethodTarget;
   auto preferVisibleCanonicalVectorMethodTarget =
-      [&](const std::string &methodTarget,
-          bool requireCurrentTargetMissing) {
+      [&](const std::string &methodTarget) {
         if (!isExperimentalVectorCompatibilityMethodTarget(methodTarget)) {
-          return methodTarget;
-        }
-        if (requireCurrentTargetMissing &&
-            (hasImportedDefinitionPath(methodTarget) ||
-             defMap_.count(methodTarget) > 0)) {
           return methodTarget;
         }
         const std::string canonicalVectorMethodTarget =
@@ -208,14 +202,17 @@ bool SemanticsValidator::validateExprMethodCallTarget(
           return methodTarget;
         }
         return preferVectorStdlibHelperPath(
-            preferVisibleCanonicalVectorMethodTarget(methodTarget, false));
+            preferVisibleCanonicalVectorMethodTarget(methodTarget));
       };
   if (isVectorCompatibilityMethodName(expr.name) &&
       !hasExplicitVectorCompatibilityNamespace(normalizedMethodNamespace) &&
       resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
                                       vectorMethodTarget)) {
-    vectorMethodTarget =
-        preferVisibleCanonicalVectorMethodTarget(vectorMethodTarget, true);
+    if (!hasImportedDefinitionPath(vectorMethodTarget) &&
+        defMap_.count(vectorMethodTarget) == 0) {
+      vectorMethodTarget =
+          preferVisibleCanonicalVectorMethodTarget(vectorMethodTarget);
+    }
     if (hasImportedDefinitionPath(vectorMethodTarget) ||
         defMap_.count(vectorMethodTarget) > 0) {
       resolved = vectorMethodTarget;
