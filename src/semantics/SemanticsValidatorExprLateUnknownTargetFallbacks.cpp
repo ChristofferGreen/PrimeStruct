@@ -21,6 +21,11 @@ bool isCanonicalVectorAccessMethodHelper(std::string_view helperName) {
   return helperName == "at" || helperName == "at_unsafe";
 }
 
+bool isExplicitVectorCompatibilityMethodNamespace(std::string_view namespacePrefix) {
+  return namespacePrefix == "vector" ||
+         namespacePrefix == "std/collections/vector";
+}
+
 bool isVectorFamilyHelperPath(const std::string &path) {
   return path.rfind("/soa_vector/", 0) == 0 ||
          path.rfind("/std/collections/soa_vector/", 0) == 0 ||
@@ -48,6 +53,11 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
   if (methodSlash != std::string::npos) {
     normalizedMethodName = normalizedMethodName.substr(methodSlash + 1);
   }
+  std::string normalizedMethodNamespace = expr.namespacePrefix;
+  if (!normalizedMethodNamespace.empty() &&
+      normalizedMethodNamespace.front() == '/') {
+    normalizedMethodNamespace.erase(normalizedMethodNamespace.begin());
+  }
   if (context.resolveMapTarget != nullptr && expr.isMethodCall &&
       isCanonicalMapMethodHelper(normalizedMethodName) && !expr.args.empty() &&
       context.resolveMapTarget(expr.args.front())) {
@@ -64,6 +74,8 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
     return validateExpr(params, locals, rewrittenMapMethodCall);
   }
   if (expr.isMethodCall &&
+      !isExplicitVectorCompatibilityMethodNamespace(
+          normalizedMethodNamespace) &&
       isCanonicalVectorAccessMethodHelper(normalizedMethodName) &&
       !expr.args.empty()) {
     const Expr &receiverExpr = expr.args.front();
