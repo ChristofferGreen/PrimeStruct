@@ -454,7 +454,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_vector_namespaced_count_access_aliases_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("runs vm with collection bracket literals") {

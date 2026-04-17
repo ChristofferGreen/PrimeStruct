@@ -244,7 +244,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects native removed vector access alias at_unsafe named arguments") {
@@ -263,7 +263,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("rejects native namespaced vector count with soa_vector literal target") {

@@ -170,7 +170,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced at_unsafe helper rejects named arguments") {
@@ -183,7 +183,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector capacity keeps non-vector target diagnostics") {

@@ -4,6 +4,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `vector-removed-access-alias-named-args-unknown-target`:
+  unresolved explicit `/vector/at` and `/vector/at_unsafe` calls with named
+  arguments are now treated as removed aliases (unknown-target diagnostics)
+  instead of builtin named-argument diagnostics, and compile-run expectations
+  must check `/vector/at(_unsafe)` unknown-call-target output rather than the
+  previous builtin error text.
+  Evidence: `SemanticsValidatorExprNamedArgumentBuiltins.cpp` now bypasses
+  builtin named-argument classification for unresolved removed vector access
+  aliases; updated coverage in vector alias named-arg tests across semantics,
+  VM/native backend compile-run, and C++ emitter suites.
 - `statement-vector-builtin-operand-index-helper`:
   statement vector helper builtin branches now share one
   `resolveBuiltinOperandIndex(...)` helper in

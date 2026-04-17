@@ -546,7 +546,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_removed_vector_access_alias_named_args_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects vm removed vector access alias at_unsafe named arguments") {
@@ -564,7 +564,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("runs vm with user map constructor block shadow") {

@@ -549,7 +549,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") !=
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") !=
         std::string::npos);
 }
 
@@ -575,7 +575,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("named arguments not supported for builtin calls") !=
+  CHECK(readFile(errPath).find("unknown call target: /vector/at_unsafe") !=
         std::string::npos);
 }
 

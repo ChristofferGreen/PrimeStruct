@@ -81,8 +81,29 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
        context.isNamedArgsPackMethodAccessCall(expr)) ||
       (context.isNamedArgsPackWrappedFileBuiltinAccessCall != nullptr &&
        context.isNamedArgsPackWrappedFileBuiltinAccessCall(expr));
+  auto isUnresolvedRemovedVectorAccessAliasCall = [&]() {
+    if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.name.empty()) {
+      return false;
+    }
+    std::string normalized = expr.name;
+    if (!normalized.empty() && normalized.front() == '/') {
+      normalized.erase(normalized.begin());
+    }
+    const size_t templateSuffix = normalized.find("__t");
+    if (templateSuffix != std::string::npos) {
+      normalized.erase(templateSuffix);
+    }
+    if (normalized != "vector/at" && normalized != "vector/at_unsafe") {
+      return false;
+    }
+    if (hasDeclaredDefinitionPath(resolved) || hasImportedDefinitionPath(resolved)) {
+      return false;
+    }
+    return defMap_.find(resolved) == defMap_.end();
+  };
   if (hasNamedArguments(expr.argNames) && resolvedMethod &&
-      !allowsNamedArgsPackBuiltinLabels) {
+      !allowsNamedArgsPackBuiltinLabels &&
+      !isUnresolvedRemovedVectorAccessAliasCall()) {
     std::string vectorHelperName;
     if (getVectorStatementHelperName(expr, vectorHelperName)) {
       return failNamedArgumentDiagnostic(vectorHelperName + " is only supported as a statement");
@@ -104,6 +125,9 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
   auto isLegacyArrayAccessBuiltinCall = [&]() {
     std::string arrayAccessName;
     if (!getBuiltinArrayAccessName(expr, arrayAccessName)) {
+      return false;
+    }
+    if (isUnresolvedRemovedVectorAccessAliasCall()) {
       return false;
     }
     const std::string resolvedPath = resolveCalleePath(expr);

@@ -116,8 +116,7 @@ bool isExperimentalMapTypeText(const std::string &typeText) {
   }
 }
 
-bool getRemovedVectorAccessBuiltinName(const Expr &candidate, std::string &helperOut) {
-  helperOut.clear();
+bool isRemovedVectorAccessAliasCall(const Expr &candidate) {
   if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
       candidate.name.empty()) {
     return false;
@@ -126,15 +125,7 @@ bool getRemovedVectorAccessBuiltinName(const Expr &candidate, std::string &helpe
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  if (normalized == "vector/at") {
-    helperOut = "at";
-    return true;
-  }
-  if (normalized == "vector/at_unsafe") {
-    helperOut = "at_unsafe";
-    return true;
-  }
-  return false;
+  return normalized == "vector/at" || normalized == "vector/at_unsafe";
 }
 
 } // namespace
@@ -335,32 +326,9 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     }
   }
 
-  if (!resolvedMethod && resolvedMissing &&
-      !(context.isStdNamespacedVectorAccessCall &&
-        hasNamedArguments(expr.argNames))) {
-    std::string removedVectorAccessBuiltinName;
-    if (getRemovedVectorAccessBuiltinName(expr, removedVectorAccessBuiltinName)) {
-      if (hasNamedArguments(expr.argNames)) {
-        return failCollectionAccessDiagnostic(
-            "named arguments not supported for builtin calls");
-      }
-      if (!expr.templateArgs.empty()) {
-        return failCollectionAccessDiagnostic(
-            removedVectorAccessBuiltinName + " does not accept template arguments");
-      }
-      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-        return failCollectionAccessDiagnostic(
-            removedVectorAccessBuiltinName + " does not accept block arguments");
-      }
-      if (expr.args.size() != 2) {
-        return failCollectionAccessDiagnostic(
-            "argument count mismatch for builtin " + removedVectorAccessBuiltinName);
-      }
-    }
-  }
-
   std::string builtinName;
   if (getCanonicalCollectionAccessBuiltinName(expr, builtinName) &&
+      !(resolvedMissing && isRemovedVectorAccessAliasCall(expr)) &&
       (!context.isStdNamespacedVectorAccessCall ||
        context.shouldAllowStdAccessCompatibilityFallback ||
        context.hasStdNamespacedVectorAccessDefinition) &&
