@@ -490,6 +490,79 @@ main() {
   CHECK(error.find("unknown method: /array/count") != std::string::npos);
 }
 
+TEST_CASE("vector namespaced capacity slash method accepts same-path helper on array target") {
+  const std::string source = R"(
+[return<int>]
+/vector/capacity([array<i32>] values) {
+  return(48i32)
+}
+
+[return<array<i32>>]
+wrapArray() {
+  return(array<i32>(1i32, 2i32, 3i32))
+}
+
+[return<int>]
+main() {
+  return(wrapArray()./vector/capacity())
+}
+  )";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector namespaced capacity slash method map target without helper reports unknown method") {
+  const std::string source = R"(
+[return<map<i32, i32>>]
+wrapMap() {
+  return(map<i32, i32>(1i32, 2i32))
+}
+
+[return<int>]
+main() {
+  return(wrapMap()./vector/capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /map/capacity") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced capacity slash method string target without helper reports unknown method") {
+  const std::string source = R"(
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+main() {
+  return(wrapText()./vector/capacity())
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /string/capacity") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced capacity slash method array target without helper reports unknown method") {
+  const std::string source = R"(
+[return<array<i32>>]
+wrapArray() {
+  return(array<i32>(1i32, 2i32, 3i32))
+}
+
+[return<int>]
+main() {
+  return(wrapArray()./vector/capacity())
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /array/capacity") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced access slash method vector target without alias helper reports unknown method") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
