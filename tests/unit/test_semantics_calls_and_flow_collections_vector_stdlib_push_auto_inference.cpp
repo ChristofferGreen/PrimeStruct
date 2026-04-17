@@ -37,6 +37,59 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
+TEST_CASE("vector namespaced count auto inference builtin vector target without helper reports unknown target") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(4i32, 5i32)}
+  [auto] inferred{/vector/count(values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced capacity auto inference builtin vector target without helper reports unknown target") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(4i32, 5i32)}
+  [auto] inferred{/vector/capacity(values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced count-capacity auto inference accepts same-path helpers on builtin vector target") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/count([vector<i32>] values) {
+  return(12i32)
+}
+
+[effects(heap_alloc), return<int>]
+/vector/capacity([vector<i32>] values) {
+  return(13i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  [auto] inferredCount{/vector/count(values)}
+  [auto] inferredCapacity{/vector/capacity(values)}
+  return(plus(inferredCount, inferredCapacity))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector namespaced count auto inference rejects map target without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
