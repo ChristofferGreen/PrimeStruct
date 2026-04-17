@@ -532,8 +532,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("wrapper-returned vector access count keeps primitive diagnostics") {
@@ -566,7 +566,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("wrapper-returned canonical map access count call auto inference keeps string helper mismatch diagnostics") {
