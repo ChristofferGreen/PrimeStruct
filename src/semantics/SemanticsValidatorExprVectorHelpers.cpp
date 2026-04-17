@@ -32,6 +32,16 @@ bool isStdNamespacedVectorCanonicalCompatibilityDirectCall(
              resolved, namespacedCollection, namespacedHelper);
 }
 
+bool isStdNamespacedVectorCanonicalCompatibilityMethodCall(
+    const Expr &expr,
+    const std::string &resolved,
+    const std::string &namespacedCollection,
+    const std::string &namespacedHelper) {
+  return expr.isMethodCall &&
+         isStdNamespacedVectorCanonicalCompatibilityHelperPath(
+             resolved, namespacedCollection, namespacedHelper);
+}
+
 bool isVectorHelperReceiverName(const Expr &candidate,
                                 const std::vector<ParameterInfo> &params,
                                 const std::unordered_map<std::string, BindingInfo> &locals) {
@@ -522,9 +532,8 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
         hasNamedArgs)) {
     return failVectorHelperDiagnostic("unknown call target: " + resolved);
   }
-  if (expr.isMethodCall &&
-      isStdNamespacedVectorCanonicalCompatibilityHelperPath(
-          resolved, namespacedCollection, namespacedHelper)) {
+  if (isStdNamespacedVectorCanonicalCompatibilityMethodCall(
+          expr, resolved, namespacedCollection, namespacedHelper)) {
     return true;
   }
   if (isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&

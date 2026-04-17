@@ -522,7 +522,14 @@
             "bool isStdNamespacedVectorCanonicalCompatibilityDirectCall(") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
+            "bool isStdNamespacedVectorCanonicalCompatibilityMethodCall(") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
             "const bool isStdNamespacedVectorCanonicalCompatibilityDirectCallSite =") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "expr.isMethodCall &&\n"
+            "      isStdNamespacedVectorCanonicalCompatibilityHelperPath(") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "const bool isExplicitStdNamespacedVectorCompatibilityMethod =") ==
