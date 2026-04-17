@@ -418,6 +418,9 @@
   CHECK(semanticsExprCollectionAccessSource.find(
             "tryResolveReceiverIndex(0, hasAlternativeCollectionReceiver)") !=
         std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "matchesVectorCtorPath(\"/std/collections/vector/vector\")") ==
+        std::string::npos);
   CHECK(semanticsExprCollectionAccessSource.find("std::vector<size_t> receiverIndices;") ==
         std::string::npos);
   CHECK(semanticsExprCollectionAccessSource.find("appendUniqueReceiverIndex(") ==
