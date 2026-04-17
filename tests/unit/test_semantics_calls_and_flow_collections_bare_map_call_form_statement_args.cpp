@@ -751,6 +751,29 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/vector") != std::string::npos);
 }
 
+TEST_CASE("explicit vector import no longer rewrites to canonical constructor path") {
+  const std::string source = R"(
+import /std/collections/vector
+
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/vector/vector([i32] seed) {
+  return(Marker(seed))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(vector(9i32).value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector") != std::string::npos);
+}
+
 TEST_CASE("vector method alias access rejects canonical struct-return forwarding") {
   const std::string source = R"(
 Marker {

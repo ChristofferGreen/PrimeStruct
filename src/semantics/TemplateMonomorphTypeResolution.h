@@ -272,9 +272,6 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
     if (expr.name != builtinCollection) {
       return resolvedPath;
     }
-    if (resolvedPath == "/std/collections/vector") {
-      return "/std/collections/vector/vector";
-    }
     if (resolvedPath == "/std/collections/map") {
       return "/std/collections/map/map";
     }
