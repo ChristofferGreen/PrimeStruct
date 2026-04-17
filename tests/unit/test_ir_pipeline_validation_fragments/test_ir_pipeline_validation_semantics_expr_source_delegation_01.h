@@ -349,6 +349,19 @@
             "       explicitVectorReceiverFamily == \"experimental_vector\" ||\n"
             "       explicitVectorReceiverFamily == \"soa_vector\"))") !=
         std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "auto rejectsRootedVectorBuiltinAlias =") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "context.isNamespacedVectorCountCall &&\n"
+            "        expr.args.size() == 1 &&\n"
+            "        expr.args.front().kind == Expr::Kind::Call &&") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "context.isNamespacedVectorCountCall &&\n"
+            "        expr.args.size() == 1 &&\n"
+            "        !hasDeclaredDefinitionPath(\"/vector/count\") &&") !=
+        std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "(normalizedMethodName == \"count\" || normalizedMethodName == \"capacity\") &&\n"
             "      (explicitVectorReceiverFamily == \"string\" ||") ==
