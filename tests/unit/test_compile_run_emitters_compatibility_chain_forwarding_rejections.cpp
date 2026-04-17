@@ -228,17 +228,15 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_vector_method_alias_access_struct_method_chain_same_path_forwarding.prime",
                 source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_vector_method_alias_access_struct_method_chain_same_path_forwarding.err")
+       "primec_cpp_vector_method_alias_access_struct_method_chain_same_path_forwarding_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  const std::string err = readFile(errPath);
-  CHECK(err.find("validateExprMethodCallTarget failed") != std::string::npos);
-  CHECK(err.find("/vector/at") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("rejects vector method alias access canonical-only helper routing in C++ emitter" * doctest::skip(true)) {
@@ -426,8 +424,7 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   const std::string err = readFile(errPath);
-  CHECK(err.find("validateExprMethodCallTarget failed") != std::string::npos);
-  CHECK(err.find("/vector/at") != std::string::npos);
+  CHECK(err.find("unknown method: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects vector unsafe method alias access field expression with struct receiver diagnostics in C++ emitter") {
