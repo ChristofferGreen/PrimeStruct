@@ -216,7 +216,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps alias slash-method vector capacity same-path helper on map receiver") {
+TEST_CASE("C++ emitter rejects alias slash-method vector capacity same-path helper on map receiver") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -240,9 +240,16 @@ main() {
        "primec_cpp_alias_slash_vector_capacity_map_same_path_helper_exe")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 98);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_alias_slash_vector_capacity_map_same_path_helper.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown method: /map/capacity") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects alias slash-method vector capacity on map receiver before emission") {

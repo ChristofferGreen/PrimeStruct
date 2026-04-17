@@ -322,6 +322,9 @@
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "explicitVectorHelperPath == \"/vector/count\" &&") ==
         std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "explicitVectorHelperPath == \"/vector/capacity\" &&") ==
+        std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "auto isExplicitVectorCompatibilityMethodWithTemplateArgs = [&]() {") ==
         std::string::npos);
