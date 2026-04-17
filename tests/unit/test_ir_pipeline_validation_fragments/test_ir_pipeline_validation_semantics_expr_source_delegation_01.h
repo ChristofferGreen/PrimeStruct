@@ -515,6 +515,9 @@
   CHECK(semanticsExprVectorHelpersSource.find(
             "const bool isStdNamespacedVectorCanonicalCompatibilityHelper =") !=
         std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "const bool isExplicitStdNamespacedVectorCompatibilityMethod =") ==
+        std::string::npos);
   const auto vectorHelpersHasNamedArgsPos = semanticsExprVectorHelpersSource.find(
       "const bool hasNamedArgs = hasNamedArguments(expr.argNames);");
   CHECK(vectorHelpersHasNamedArgsPos != std::string::npos);

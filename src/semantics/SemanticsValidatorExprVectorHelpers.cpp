@@ -499,8 +499,6 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   const bool hasNamedArgs = hasNamedArguments(expr.argNames);
   const bool isStdNamespacedVectorCanonicalHelperCall =
       !expr.isMethodCall && isStdNamespacedVectorCanonicalCompatibilityHelper;
-  const bool isExplicitStdNamespacedVectorCompatibilityMethod =
-      expr.isMethodCall && isStdNamespacedVectorCanonicalCompatibilityHelper;
   const bool allowStdNamespacedUserReceiverProbe =
       isStdNamespacedVectorCanonicalHelperCall &&
       (namespacedHelper == "count" || namespacedHelper == "capacity") &&
@@ -510,7 +508,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       !allowStdNamespacedUserReceiverProbe) {
     return failVectorHelperDiagnostic("unknown call target: " + resolved);
   }
-  if (isExplicitStdNamespacedVectorCompatibilityMethod) {
+  if (expr.isMethodCall && isStdNamespacedVectorCanonicalCompatibilityHelper) {
     return true;
   }
   if (isStdNamespacedVectorCanonicalHelperCall &&
