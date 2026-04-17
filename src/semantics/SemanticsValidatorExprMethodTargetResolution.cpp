@@ -2105,15 +2105,14 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
   if (!explicitVectorHelperPath.empty() &&
       explicitVectorHelperPath.rfind("/std/collections/vector/", 0) == 0 &&
-      normalizedMethodName == "count" &&
-      (explicitVectorReceiverFamily == "string" || explicitVectorReceiverFamily == "array" ||
-       explicitVectorReceiverFamily == "map")) {
-    if (!hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {
-      return failMethodTargetResolutionDiagnostic("unknown method: " + explicitVectorHelperPath);
+      normalizedMethodName == "count") {
+    const bool usesBuiltinVectorMethodSemantics =
+        explicitVectorReceiverFamily == "string" || explicitVectorReceiverFamily == "array" ||
+        explicitVectorReceiverFamily == "map";
+    if (usesBuiltinVectorMethodSemantics) {
+      return failMethodTargetResolutionDiagnostic("unknown method: /" +
+                                                  explicitVectorReceiverFamily + "/count");
     }
-    resolvedOut = explicitVectorHelperPath;
-    isBuiltinOut = false;
-    return true;
   }
   const bool usesBuiltinVectorMethodSemantics =
       normalizedMethodName == "count" || normalizedMethodName == "capacity" ||
