@@ -42,6 +42,16 @@ bool isStdNamespacedVectorCanonicalCompatibilityMethodCall(
              resolved, namespacedCollection, namespacedHelper);
 }
 
+bool isStdNamespacedVectorCanonicalDirectCallReceiverCompatible(
+    const std::string &receiverFamily,
+    bool hasReceiverCompatibleVisibleDefinition,
+    bool isCountCapacityNamedArgException) {
+  return receiverFamily == "vector" ||
+         receiverFamily == "experimental_vector" ||
+         hasReceiverCompatibleVisibleDefinition ||
+         isCountCapacityNamedArgException;
+}
+
 bool isVectorHelperReceiverName(const Expr &candidate,
                                 const std::vector<ParameterInfo> &params,
                                 const std::unordered_map<std::string, BindingInfo> &locals) {
@@ -544,10 +554,11 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       expr.bodyArguments.empty()) {
     const Expr &receiverExpr = expr.args.front();
     const std::string receiverFamily = classifyReceiverFamily(receiverExpr);
-    if (!(receiverFamily == "vector" || receiverFamily == "experimental_vector") &&
-        !(defMap_.count(resolved) > 0 &&
-          hasReceiverCompatibleVisibleDefinitionPath(resolved, receiverExpr)) &&
-        !isStdNamespacedVectorCanonicalCountCapacityNamedArgException) {
+    if (!isStdNamespacedVectorCanonicalDirectCallReceiverCompatible(
+            receiverFamily,
+            defMap_.count(resolved) > 0 &&
+                hasReceiverCompatibleVisibleDefinitionPath(resolved, receiverExpr),
+            isStdNamespacedVectorCanonicalCountCapacityNamedArgException)) {
       return failVectorHelperDiagnostic("unknown call target: " + resolved);
     }
   }

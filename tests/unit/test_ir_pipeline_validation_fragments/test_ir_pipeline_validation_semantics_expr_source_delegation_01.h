@@ -525,6 +525,9 @@
             "bool isStdNamespacedVectorCanonicalCompatibilityMethodCall(") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
+            "bool isStdNamespacedVectorCanonicalDirectCallReceiverCompatible(") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
             "const bool isStdNamespacedVectorCanonicalCompatibilityDirectCallSite =") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
@@ -538,6 +541,9 @@
             "isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&\n"
             "        (namespacedHelper == \"count\" || namespacedHelper == \"capacity\") &&\n"
             "        hasNamedArgs") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "receiverFamily == \"vector\" || receiverFamily == \"experimental_vector\"") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "const bool isExplicitStdNamespacedVectorCompatibilityMethod =") ==
