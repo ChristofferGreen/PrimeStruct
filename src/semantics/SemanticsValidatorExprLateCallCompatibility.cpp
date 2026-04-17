@@ -109,12 +109,6 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
       return failLateCallCompatibilityDiagnostic(
           "unknown call target: /std/collections/vector/count");
     }
-    if (resolved == "/std/collections/vector/count" &&
-        hasImportedDefinitionPath("/std/collections/vector/count") &&
-        (resolvesVector || resolvesExperimentalVector)) {
-      handledOut = true;
-      return validateExpr(params, locals, expr.args.front());
-    }
   }
 
   if (!expr.isMethodCall &&
@@ -153,11 +147,6 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
         (resolvesVector || resolvesExperimentalVector)) {
       return failLateCallCompatibilityDiagnostic(
           "unknown call target: /std/collections/vector/capacity");
-    }
-    if (resolved == "/std/collections/vector/capacity" &&
-        hasImportedDefinitionPath("/std/collections/vector/capacity")) {
-      handledOut = true;
-      return validateExpr(params, locals, expr.args.front());
     }
   }
 

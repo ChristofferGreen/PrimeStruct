@@ -406,6 +406,15 @@
   CHECK(semanticsExprMethodResolutionSource.find(
             "normalizedName == \"std/collections/vector/capacity\"") ==
         std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "if (resolved == \"/std/collections/vector/count\" &&\n"
+            "        hasImportedDefinitionPath(\"/std/collections/vector/count\") &&\n"
+            "        (resolvesVector || resolvesExperimentalVector))") ==
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "if (resolved == \"/std/collections/vector/capacity\" &&\n"
+            "        hasImportedDefinitionPath(\"/std/collections/vector/capacity\"))") ==
+        std::string::npos);
   CHECK(semanticsExprMethodCompatibilitySetupSource.find(
             "return soaUnavailableMethodDiagnostic(resolvedPath);") !=
         std::string::npos);

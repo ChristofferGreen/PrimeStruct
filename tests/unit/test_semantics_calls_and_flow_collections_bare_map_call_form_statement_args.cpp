@@ -759,8 +759,9 @@ import /std/collections/vector
 main() {
   [vector<i32>] values{vector<i32>(4i32, 8i32, 15i32)}
   return(plus(/std/collections/vector/count(values),
-      plus(/std/collections/vector/at(values, 0i32),
-          /std/collections/vector/at_unsafe(values, 2i32))))
+      plus(/std/collections/vector/capacity(values),
+          plus(/std/collections/vector/at(values, 0i32),
+              /std/collections/vector/at_unsafe(values, 2i32)))))
 }
 )";
   std::string error;
