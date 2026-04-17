@@ -1,51 +1,10 @@
 #include "SemanticsValidator.h"
 
-#include <cstdio>
-
 namespace primec::semantics {
 
 bool SemanticsValidator::validateExprFieldAccess(const std::vector<ParameterInfo> &params,
                                                  const std::unordered_map<std::string, BindingInfo> &locals,
                                                  const Expr &expr) {
-  if (expr.name == "values" &&
-      currentValidationState_.context.definitionPath == "/main") {
-    const char *receiverKind = "other";
-    std::string receiverName;
-    if (!expr.args.empty()) {
-      const Expr &receiverExpr = expr.args.front();
-      switch (receiverExpr.kind) {
-        case Expr::Kind::Name:
-          receiverKind = "name";
-          receiverName = receiverExpr.name;
-          break;
-        case Expr::Kind::Call:
-          receiverKind = receiverExpr.isFieldAccess ? "field-call" : "call";
-          receiverName = receiverExpr.name;
-          break;
-        case Expr::Kind::Literal:
-          receiverKind = "literal";
-          break;
-        case Expr::Kind::BoolLiteral:
-          receiverKind = "bool";
-          break;
-        case Expr::Kind::FloatLiteral:
-          receiverKind = "float";
-          break;
-        case Expr::Kind::StringLiteral:
-          receiverKind = "string";
-          break;
-      }
-    }
-    std::fprintf(stderr,
-                 "DBG field-access line=%d name=%s def=%s params=%zu locals=%zu recv_kind=%s recv_name=%s\n",
-                 expr.sourceLine,
-                 expr.name.c_str(),
-                 currentValidationState_.context.definitionPath.c_str(),
-                 params.size(),
-                 locals.size(),
-                 receiverKind,
-                 receiverName.c_str());
-  }
   auto failFieldAccessDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(expr, std::move(message));
   };
@@ -308,25 +267,41 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
   } else if (receiverExpr.kind == Expr::Kind::Call && !receiverExpr.isBinding) {
     const std::string receiverNamespace =
         !receiverExpr.namespacePrefix.empty() ? receiverExpr.namespacePrefix : currentDefinitionNamespace;
-    std::string accessName;
-    if (getBuiltinArrayAccessName(receiverExpr, accessName) && receiverExpr.args.size() == 2) {
-      std::string elemType;
-      if (resolveArgsPackAccessTarget(receiverExpr.args.front(), elemType) ||
-          resolveArrayTarget(receiverExpr.args.front(), elemType) ||
-          resolveVectorTarget(receiverExpr.args.front(), elemType)) {
-        const std::string unwrappedElemType = unwrapReferencePointerTypeText(elemType);
-        (void)resolveStructPathFromType(unwrappedElemType, receiverNamespace, structPathOut);
+    if (receiverExpr.isFieldAccess && receiverExpr.args.size() == 1) {
+      BindingInfo receiverFieldBinding;
+      if (resolveFieldBindingTarget(receiverExpr, receiverFieldBinding)) {
+        std::string receiverFieldType =
+            receiverFieldBinding.typeTemplateArg.empty()
+                ? receiverFieldBinding.typeName
+                : receiverFieldBinding.typeName + "<" + receiverFieldBinding.typeTemplateArg + ">";
+        receiverFieldType =
+            unwrapReferencePointerTypeText(normalizeBindingTypeName(receiverFieldType));
+        (void)resolveStructPathFromType(receiverFieldType, receiverNamespace, structPathOut);
       }
     }
-    std::string inferredStruct = inferStructReturnPath(receiverExpr, params, locals);
-    if (!inferredStruct.empty() && structNames_.count(inferredStruct) > 0) {
-      structPathOut = inferredStruct;
-    } else {
-      std::string inferredTypeText;
-      if (inferQueryExprTypeText(receiverExpr, params, locals, inferredTypeText)) {
-        const std::string inferredValueType =
-            unwrapReferencePointerTypeText(normalizeBindingTypeName(inferredTypeText));
-        (void)resolveStructPathFromType(inferredValueType, receiverNamespace, structPathOut);
+    if (structPathOut.empty()) {
+      std::string accessName;
+      if (getBuiltinArrayAccessName(receiverExpr, accessName) && receiverExpr.args.size() == 2) {
+        std::string elemType;
+        if (resolveArgsPackAccessTarget(receiverExpr.args.front(), elemType) ||
+            resolveArrayTarget(receiverExpr.args.front(), elemType) ||
+            resolveVectorTarget(receiverExpr.args.front(), elemType)) {
+          const std::string unwrappedElemType = unwrapReferencePointerTypeText(elemType);
+          (void)resolveStructPathFromType(unwrappedElemType, receiverNamespace, structPathOut);
+        }
+      }
+    }
+    if (structPathOut.empty()) {
+      std::string inferredStruct = inferStructReturnPath(receiverExpr, params, locals);
+      if (!inferredStruct.empty() && structNames_.count(inferredStruct) > 0) {
+        structPathOut = inferredStruct;
+      } else {
+        std::string inferredTypeText;
+        if (inferQueryExprTypeText(receiverExpr, params, locals, inferredTypeText)) {
+          const std::string inferredValueType =
+              unwrapReferencePointerTypeText(normalizeBindingTypeName(inferredTypeText));
+          (void)resolveStructPathFromType(inferredValueType, receiverNamespace, structPathOut);
+        }
       }
     }
     if (structPathOut.empty()) {
@@ -444,31 +419,10 @@ bool SemanticsValidator::resolveStructFieldBinding(const std::vector<ParameterIn
   std::string structPath;
   const bool isTypeReceiver = isTypeNamespaceFieldReceiver(params, locals, receiver, structPath);
   if (!isTypeReceiver && !resolveStructFieldReceiverPath(params, locals, receiver, structPath)) {
-    if (fieldName == "values" && currentValidationState_.context.definitionPath == "/main") {
-      std::fprintf(stderr,
-                   "DBG resolveStructFieldBinding failed receiver-path field=%s recv_kind=%d recv_name=%s locals=%zu\n",
-                   fieldName.c_str(),
-                   static_cast<int>(receiver.kind),
-                   receiver.name.c_str(),
-                   locals.size());
-    }
     return false;
-  }
-  if (fieldName == "values" && currentValidationState_.context.definitionPath == "/main") {
-    std::fprintf(stderr,
-                 "DBG resolveStructFieldBinding field=%s structPath=%s isType=%d locals=%zu\n",
-                 fieldName.c_str(),
-                 structPath.c_str(),
-                 isTypeReceiver ? 1 : 0,
-                 locals.size());
   }
   auto defIt = defMap_.find(structPath);
   if (defIt == defMap_.end() || !defIt->second) {
-    if (fieldName == "values" && currentValidationState_.context.definitionPath == "/main") {
-      std::fprintf(stderr,
-                   "DBG resolveStructFieldBinding missing def structPath=%s\n",
-                   structPath.c_str());
-    }
     return false;
   }
   const Definition *fieldSourceDef = defIt->second;
@@ -504,12 +458,6 @@ bool SemanticsValidator::resolveStructFieldBinding(const std::vector<ParameterIn
   }
   BindingInfo inferred;
   if (!inferStructFieldBinding(*templateSourceDef, fieldName, inferred, false, true)) {
-    if (fieldName == "values" && currentValidationState_.context.definitionPath == "/main") {
-      std::fprintf(stderr,
-                   "DBG resolveStructFieldBinding infer field failed templateDef=%s fieldSource=%s\n",
-                   templateSourceDef->fullPath.c_str(),
-                   fieldSourceDef->fullPath.c_str());
-    }
     return false;
   }
   BindingInfo receiverBinding;
