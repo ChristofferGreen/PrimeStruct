@@ -496,6 +496,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       resolved.rfind("/std/collections/vector/", 0) == 0 &&
       namespacedCollection == "vector" &&
       isVectorCompatibilityHelperName(namespacedHelper);
+  const bool hasNamedArgs = hasNamedArguments(expr.argNames);
   const bool isStdNamespacedVectorCanonicalHelperCall =
       !expr.isMethodCall && isStdNamespacedVectorCanonicalCompatibilityHelper;
   const bool isExplicitStdNamespacedVectorCompatibilityMethod =
@@ -503,7 +504,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   const bool allowStdNamespacedUserReceiverProbe =
       isStdNamespacedVectorCanonicalHelperCall &&
       (namespacedHelper == "count" || namespacedHelper == "capacity") &&
-      hasNamedArguments(expr.argNames);
+      hasNamedArgs;
   if (isStdNamespacedVectorCanonicalHelperCall &&
       !hasVisibleDefinitionPath(resolved) &&
       !allowStdNamespacedUserReceiverProbe) {
@@ -554,7 +555,6 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       return true;
     };
 
-    const bool hasNamedArgs = hasNamedArguments(expr.argNames);
     bool resolvedReceiver = false;
     if (hasNamedArgs) {
       bool hasValuesNamedReceiver = false;
