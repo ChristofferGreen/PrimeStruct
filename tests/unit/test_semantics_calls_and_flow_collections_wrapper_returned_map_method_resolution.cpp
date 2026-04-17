@@ -1181,6 +1181,24 @@ main() {
   CHECK(error.find("unknown method: /array/capacity") != std::string::npos);
 }
 
+TEST_CASE("vector namespaced capacity method on builtin vector receiver requires same-path helper") {
+  const std::string source = R"(
+[return<int>]
+/vector/capacity([vector<i32>] values) {
+  return(41i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values./vector/capacity())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib namespaced vector capacity method on builtin vector receiver rejects rooted helper fallback") {
   const std::string source = R"(
 [return<int>]

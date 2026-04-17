@@ -725,8 +725,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("validateExprMethodCallTarget failed") != std::string::npos);
-  CHECK(error.find("/vector/capacity") != std::string::npos);
+  CHECK(error.find("unknown method: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("vector method explicit capacity alias namespace resolves when alias helper exists") {
@@ -746,10 +745,10 @@ main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   return(values./vector/capacity())
 }
-  )";
+)";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector method bare at rejects canonical-only helper path") {
