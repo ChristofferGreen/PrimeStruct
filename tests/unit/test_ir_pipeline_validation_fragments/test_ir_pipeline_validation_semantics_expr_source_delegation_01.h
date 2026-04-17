@@ -534,6 +534,9 @@
             "const bool isStdNamespacedVectorCanonicalCountCapacityNamedArgException =") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
+            "const bool resolvedVectorHelperDefinitionMissing =") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
             "expr.isMethodCall &&\n"
             "      isStdNamespacedVectorCanonicalCompatibilityHelperPath(") ==
         std::string::npos);
@@ -544,6 +547,9 @@
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "receiverFamily == \"vector\" || receiverFamily == \"experimental_vector\"") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "defMap_.find(resolved) == defMap_.end()") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "const bool isExplicitStdNamespacedVectorCompatibilityMethod =") ==

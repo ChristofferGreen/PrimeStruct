@@ -563,10 +563,12 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     }
   }
 
+  const bool resolvedVectorHelperDefinitionMissing =
+      defMap_.find(resolved) == defMap_.end();
   size_t resolvedReceiverIndex = 0;
   if ((!isStdNamespacedVectorCanonicalCompatibilityDirectCallSite ||
        isStdNamespacedVectorCanonicalCountCapacityNamedArgException) &&
-      defMap_.find(resolved) == defMap_.end() &&
+      resolvedVectorHelperDefinitionMissing &&
       !expr.args.empty()) {
     auto tryResolveReceiverIndex = [&](size_t receiverIndex) {
       if (receiverIndex >= expr.args.size()) {
@@ -631,7 +633,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     }
   }
 
-  if (defMap_.find(resolved) == defMap_.end()) {
+  if (resolvedVectorHelperDefinitionMissing) {
     if (!isStdNamespacedVectorCanonicalCompatibilityDirectCallSite) {
       return failVectorHelperDiagnostic(vectorHelper + " is only supported as a statement");
     }
