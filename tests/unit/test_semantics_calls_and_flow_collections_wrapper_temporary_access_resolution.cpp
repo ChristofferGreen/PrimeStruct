@@ -249,6 +249,57 @@ main() {
   CHECK(error.find("unknown call target") != std::string::npos);
 }
 
+TEST_CASE("vector access methods resolve through imported stdlib helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(plus(values.at(1i32), values.at_unsafe(2i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("wrapper vector access methods resolve through imported stdlib helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc)]
+wrapVector() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(plus(wrapVector().at(1i32), wrapVector().at_unsafe(2i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector access methods keep imported helper argument diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(plus(values.at(true), values.at_unsafe(true)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /std/collections/vector/at parameter index") !=
+        std::string::npos);
+}
+
 TEST_CASE("bare vector capacity call resolves through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*

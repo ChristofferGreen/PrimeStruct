@@ -315,12 +315,9 @@
             "         resolvedOut == \"/std/collections/vector/at_unsafe\") &&") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "explicitVectorHelperPath.empty() &&") !=
-        std::string::npos);
-  CHECK(semanticsExprMethodTargetResolutionSource.find(
             "if ((resolvedOut == \"/std/collections/vector/at\" ||\n"
             "         resolvedOut == \"/std/collections/vector/at_unsafe\") &&\n"
-            "        hasImportedDefinitionPath(resolvedOut) &&") ==
+            "        explicitVectorHelperPath.empty() &&") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "auto isExplicitVectorCompatibilityMethodWithTemplateArgs = [&]() {") ==
