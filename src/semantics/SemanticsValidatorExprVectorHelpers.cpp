@@ -525,11 +525,13 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   const bool isStdNamespacedVectorCanonicalCompatibilityDirectCallSite =
       isStdNamespacedVectorCanonicalCompatibilityDirectCall(
           expr, resolved, namespacedCollection, namespacedHelper);
+  const bool isStdNamespacedVectorCanonicalCountCapacityNamedArgException =
+      isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&
+      (namespacedHelper == "count" || namespacedHelper == "capacity") &&
+      hasNamedArgs;
   if (isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&
       !hasVisibleDefinitionPath(resolved) &&
-      !(isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&
-        (namespacedHelper == "count" || namespacedHelper == "capacity") &&
-        hasNamedArgs)) {
+      !isStdNamespacedVectorCanonicalCountCapacityNamedArgException) {
     return failVectorHelperDiagnostic("unknown call target: " + resolved);
   }
   if (isStdNamespacedVectorCanonicalCompatibilityMethodCall(
@@ -545,18 +547,14 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     if (!(receiverFamily == "vector" || receiverFamily == "experimental_vector") &&
         !(defMap_.count(resolved) > 0 &&
           hasReceiverCompatibleVisibleDefinitionPath(resolved, receiverExpr)) &&
-        !(isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&
-          (namespacedHelper == "count" || namespacedHelper == "capacity") &&
-          hasNamedArgs)) {
+        !isStdNamespacedVectorCanonicalCountCapacityNamedArgException) {
       return failVectorHelperDiagnostic("unknown call target: " + resolved);
     }
   }
 
   size_t resolvedReceiverIndex = 0;
   if ((!isStdNamespacedVectorCanonicalCompatibilityDirectCallSite ||
-       (isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&
-        (namespacedHelper == "count" || namespacedHelper == "capacity") &&
-        hasNamedArgs)) &&
+       isStdNamespacedVectorCanonicalCountCapacityNamedArgException) &&
       defMap_.find(resolved) == defMap_.end() &&
       !expr.args.empty()) {
     auto tryResolveReceiverIndex = [&](size_t receiverIndex) {

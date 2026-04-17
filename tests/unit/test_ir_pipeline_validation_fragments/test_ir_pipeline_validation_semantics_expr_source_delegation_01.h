@@ -528,8 +528,16 @@
             "const bool isStdNamespacedVectorCanonicalCompatibilityDirectCallSite =") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
+            "const bool isStdNamespacedVectorCanonicalCountCapacityNamedArgException =") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
             "expr.isMethodCall &&\n"
             "      isStdNamespacedVectorCanonicalCompatibilityHelperPath(") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&\n"
+            "        (namespacedHelper == \"count\" || namespacedHelper == \"capacity\") &&\n"
+            "        hasNamedArgs") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "const bool isExplicitStdNamespacedVectorCompatibilityMethod =") ==
