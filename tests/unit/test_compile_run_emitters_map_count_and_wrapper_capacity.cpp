@@ -133,14 +133,16 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_user_wrapper_temp_count_capacity_shadow_precedence.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_user_wrapper_temp_count_capacity_shadow_precedence_exe")
+       "primec_cpp_user_wrapper_temp_count_capacity_shadow_precedence.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 163);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects user wrapper temporary count capacity shadow value mismatch in C++ emitter") {
