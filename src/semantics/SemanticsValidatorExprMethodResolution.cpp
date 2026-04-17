@@ -323,48 +323,6 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       !keepBuiltinIndexedArgsPackMapMethod) {
     isBuiltinMethod = false;
   }
-  auto explicitVectorCountMethodMissingSamePathHelper = [&]() -> std::string {
-    if (!expr.isMethodCall || expr.args.empty()) {
-      return "";
-    }
-    auto explicitVectorCountMethodPath = [&]() -> std::string {
-      if (expr.name.empty()) {
-        return "";
-      }
-      std::string normalizedName = expr.name;
-      if (!normalizedName.empty() && normalizedName.front() == '/') {
-        normalizedName.erase(normalizedName.begin());
-      }
-      std::string normalizedNamespace = expr.namespacePrefix;
-      if (!normalizedNamespace.empty() && normalizedNamespace.front() == '/') {
-        normalizedNamespace.erase(normalizedNamespace.begin());
-      }
-      if (normalizedName == "std/collections/vector/count") {
-        return "/" + normalizedName;
-      }
-      if (normalizedNamespace == "std/collections/vector" &&
-          normalizedName == "count") {
-        return "/" + normalizedNamespace + "/" + normalizedName;
-      }
-      return "";
-    }();
-    if (explicitVectorCountMethodPath.empty()) {
-      return "";
-    }
-    std::string elemType;
-    if (!resolveVectorTarget(expr.args.front(), elemType)) {
-      return "";
-    }
-    return hasDeclaredDefinitionPath(explicitVectorCountMethodPath) ||
-                   hasImportedDefinitionPath(explicitVectorCountMethodPath)
-               ? ""
-               : explicitVectorCountMethodPath;
-  };
-  if (const std::string missingSamePathHelper =
-          explicitVectorCountMethodMissingSamePathHelper();
-      !missingSamePathHelper.empty()) {
-    return failMethodResolutionDiagnostic("unknown method: " + missingSamePathHelper);
-  }
   auto bareVectorAccessMethodMissingSamePathHelper = [&]() -> std::string {
     if (!expr.isMethodCall || !expr.namespacePrefix.empty() || expr.args.empty()) {
       return "";

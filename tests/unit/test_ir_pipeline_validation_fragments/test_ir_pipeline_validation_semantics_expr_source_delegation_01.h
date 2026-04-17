@@ -438,6 +438,9 @@
             "if (resolved == \"/std/collections/vector/count\" &&") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
+            "auto explicitVectorCountMethodMissingSamePathHelper = [&]() -> std::string {") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
             "auto explicitVectorCountCapacityMethodMissingSamePathHelper = [&]() -> std::string {") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
