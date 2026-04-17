@@ -553,6 +553,37 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("canonical vector constructor auto binding ignores experimental constructor rewrite") {
+  const std::string source = R"(
+Box<T>() {
+  [T] value{0i32}
+}
+
+Other() {
+  [i32] alt{0i32}
+}
+
+[return<Box<T>>]
+/std/collections/vector/vector<T>([T] seed) {
+  return(Box<T>(seed))
+}
+
+[return<Other>]
+/std/collections/experimental_vector/vector<T>([T] seed) {
+  return(Other(7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto] boxed{/std/collections/vector/vector<i32>(9i32)}
+  return(boxed.value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("canonical vector constructor helper return keeps non-vector count diagnostics") {
   const std::string source = R"(
 Marker {

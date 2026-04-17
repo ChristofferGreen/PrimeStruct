@@ -2065,6 +2065,9 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphExperimentalCollectionConstructorPathsSource.find(
             "resolvedPath == \"/vector\" || resolvedPath == \"/std/collections/vector/vector\"") ==
         std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionConstructorPathsSource.find(
+            "resolvedPath == \"/std/collections/vector/vector\"") ==
+        std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReturnRewritesSource.find(
             "void rewriteExperimentalConstructorReturnTree(Expr &candidate, RewriteCurrentFn &&rewriteCurrent)") !=
         std::string::npos);
