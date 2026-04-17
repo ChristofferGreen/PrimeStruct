@@ -2105,7 +2105,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
   if (!explicitVectorHelperPath.empty() &&
       explicitVectorHelperPath.rfind("/std/collections/vector/", 0) == 0 &&
-      (normalizedMethodName == "count" || normalizedMethodName == "capacity") &&
+      normalizedMethodName == "count" &&
       (explicitVectorReceiverFamily == "string" || explicitVectorReceiverFamily == "array" ||
        explicitVectorReceiverFamily == "map")) {
     if (!hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {

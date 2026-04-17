@@ -324,6 +324,10 @@
             "      (explicitVectorReceiverFamily == \"string\" ||") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "(normalizedMethodName == \"count\" || normalizedMethodName == \"capacity\") &&\n"
+            "      (explicitVectorReceiverFamily == \"string\" ||") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
             "explicitVectorHelperPath == \"/vector/capacity\" &&") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(

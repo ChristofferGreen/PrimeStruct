@@ -6,6 +6,90 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
+TEST_CASE("C++ emitter rejects local canonical slash-method vector capacity same-path helper on string receiver") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/capacity([string] values) {
+  return(91i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [string] value{"abc"raw_utf8}
+  return(value./std/collections/vector/capacity())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_local_canonical_slash_vector_capacity_string_same_path_helper.prime",
+                source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_local_canonical_slash_vector_capacity_string_same_path_helper.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown method: /string/capacity") !=
+        std::string::npos);
+}
+
+TEST_CASE("C++ emitter rejects local canonical slash-method vector capacity same-path helper on map receiver") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/capacity([map<i32, i32>] values) {
+  return(92i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values./std/collections/vector/capacity())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_local_canonical_slash_vector_capacity_map_same_path_helper.prime",
+                source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_local_canonical_slash_vector_capacity_map_same_path_helper.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown method: /map/capacity") !=
+        std::string::npos);
+}
+
+TEST_CASE("C++ emitter rejects local canonical slash-method vector capacity same-path helper on array receiver") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/vector/capacity([array<i32>] values) {
+  return(93i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [array<i32>] items{array<i32>(1i32, 2i32, 3i32)}
+  return(items./std/collections/vector/capacity())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_local_canonical_slash_vector_capacity_array_same_path_helper.prime",
+                source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_local_canonical_slash_vector_capacity_array_same_path_helper.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown method: /array/capacity") !=
+        std::string::npos);
+}
+
 TEST_CASE("C++ emitter keeps alias direct-call vector capacity same-path helper on array receiver") {
   const std::string source = R"(
 [return<array<i32>>]
