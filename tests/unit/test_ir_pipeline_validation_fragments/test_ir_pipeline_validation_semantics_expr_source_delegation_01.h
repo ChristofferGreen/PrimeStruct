@@ -534,7 +534,7 @@
             "auto preferVisibleCanonicalVectorMethodTarget =") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
-            "auto preferResolvedVectorCompatibilityMethodTarget =") !=
+            "auto preferResolvedVectorCompatibilityMethodTarget =") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "const bool isExperimentalVectorMethodTarget =") ==
@@ -561,6 +561,10 @@
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "preferVisibleCanonicalVectorMethodTarget(vectorMethodTarget, true)") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "if (!isBuiltinMethod && isVectorCompatibilityMethodName(expr.name) &&\n"
+            "      isExperimentalVectorCompatibilityResolvedMethodTarget(resolved)) {") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (!isBuiltinMethod && isVectorCompatibilityMethodName(expr.name) &&\n"
