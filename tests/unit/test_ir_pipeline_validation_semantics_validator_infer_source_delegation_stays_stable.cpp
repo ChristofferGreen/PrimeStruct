@@ -593,6 +593,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferCollectionsSource.find(
             "matchesCollectionCtorPath(\"/std/collections/vector/vector\")") ==
         std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
+            "matchesCollectionCtorPath(\"/std/collections/experimental_vector/vector\")") ==
+        std::string::npos);
   CHECK(semanticsInferCollectionCompatibilitySource.find(
             "auto tryResolveReceiverIndex = [&](size_t index) -> bool {") !=
         std::string::npos);

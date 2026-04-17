@@ -87,12 +87,14 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
   const auto &resolveBufferTarget = builtinCollectionDispatchResolvers.resolveBufferTarget;
 
   std::string targetTypeText;
+  bool inferredNonCollectionTargetType = false;
   if (inferQueryExprTypeText(target, params, locals, targetTypeText)) {
     const std::string inferred = inferCollectionTypePathFromType(targetTypeText, inferCollectionTypePathFromType);
     if (!inferred.empty()) {
       typePathOut = inferred;
       return true;
     }
+    inferredNonCollectionTargetType = !targetTypeText.empty();
   }
 
   std::string bufferElemType;
@@ -110,6 +112,17 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
            explicitTarget == basePath ||
            explicitTarget.rfind(specializedPrefix, 0) == 0;
   };
+  const bool matchesExperimentalVectorCtorFamily =
+      !inferredNonCollectionTargetType &&
+      (matchesCollectionCtorPath("/std/collections/experimental_vector/vectorNew") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSingle") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorPair") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorTriple") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorQuad") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorQuint") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSext") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSept") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorOct"));
   if (matchesCollectionCtorPath("/std/collections/vectorNew") ||
       matchesCollectionCtorPath("/std/collections/vectorSingle") ||
       matchesCollectionCtorPath("/std/collections/vectorPair") ||
@@ -119,16 +132,7 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
       matchesCollectionCtorPath("/std/collections/vectorSext") ||
       matchesCollectionCtorPath("/std/collections/vectorSept") ||
       matchesCollectionCtorPath("/std/collections/vectorOct") ||
-      matchesCollectionCtorPath("/std/collections/experimental_vector/vector") ||
-      matchesCollectionCtorPath("/std/collections/experimental_vector/vectorNew") ||
-      matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSingle") ||
-      matchesCollectionCtorPath("/std/collections/experimental_vector/vectorPair") ||
-      matchesCollectionCtorPath("/std/collections/experimental_vector/vectorTriple") ||
-      matchesCollectionCtorPath("/std/collections/experimental_vector/vectorQuad") ||
-      matchesCollectionCtorPath("/std/collections/experimental_vector/vectorQuint") ||
-      matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSext") ||
-      matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSept") ||
-      matchesCollectionCtorPath("/std/collections/experimental_vector/vectorOct")) {
+      matchesExperimentalVectorCtorFamily) {
     typePathOut = "/vector";
     return true;
   }
@@ -146,6 +150,7 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
       return true;
     }
   }
+  bool inferredDeclaredNonCollectionReturnType = false;
   for (const std::string *candidatePath : {&resolvedTarget, &explicitTarget}) {
     if (candidatePath->empty()) {
       continue;
@@ -175,7 +180,13 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
       if (normalizedReturnType == "Pointer" || normalizedReturnType == "Reference") {
         return false;
       }
+      if (!normalizedReturnType.empty()) {
+        inferredDeclaredNonCollectionReturnType = true;
+      }
     }
+  }
+  if (inferredDeclaredNonCollectionReturnType) {
+    return false;
   }
   auto kindIt = returnKinds_.find(resolvedTarget);
   if (kindIt != returnKinds_.end()) {
@@ -279,10 +290,12 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
   };
 
   std::string targetTypeText;
+  bool inferredNonCollectionTargetType = false;
   if (inferQueryExprTypeText(target, params, locals, targetTypeText) &&
       extractCollectionArgsFromType(targetTypeText, extractCollectionArgsFromType)) {
     return true;
   }
+  inferredNonCollectionTargetType = !targetTypeText.empty();
 
   const bool hasVisibleCanonicalMapConstructor =
       hasVisibleDefinitionPathForCurrentImports("/std/collections/map/map");
@@ -291,7 +304,8 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
   const std::string resolvedTarget = resolvedCallPath(target);
   const std::string explicitTarget = explicitCallPath(target);
   std::string collectionName;
-  if (getBuiltinCollectionName(target, collectionName) && collectionName == expectedBase) {
+  if (!inferredNonCollectionTargetType &&
+      getBuiltinCollectionName(target, collectionName) && collectionName == expectedBase) {
     const size_t expectedArgCount = expectedBase == "map" ? 2u : 1u;
     if (target.templateArgs.size() == expectedArgCount &&
         (expectedBase != "map" ||
@@ -302,6 +316,17 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
     }
   }
 
+  const bool matchesExperimentalVectorCtorFamily =
+      !inferredNonCollectionTargetType &&
+      (matchesCollectionCtorPath("/std/collections/experimental_vector/vectorNew") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSingle") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorPair") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorTriple") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorQuad") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorQuint") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSext") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSept") ||
+       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorOct"));
   if (expectedBase == "vector" &&
       (matchesCollectionCtorPath("/std/collections/vectorNew") ||
        matchesCollectionCtorPath("/std/collections/vectorSingle") ||
@@ -312,16 +337,7 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
        matchesCollectionCtorPath("/std/collections/vectorSext") ||
        matchesCollectionCtorPath("/std/collections/vectorSept") ||
        matchesCollectionCtorPath("/std/collections/vectorOct") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vector") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorNew") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSingle") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorPair") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorTriple") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorQuad") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorQuint") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSext") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSept") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorOct")) &&
+       matchesExperimentalVectorCtorFamily) &&
       target.templateArgs.size() == 1) {
     argsOut = target.templateArgs;
     return true;

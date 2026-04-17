@@ -4,6 +4,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `resolve-call-collection-non-collection-return-guard`:
+  `resolveCallCollectionTypePath(...)` must stop once a direct helper call has
+  an inferred declared non-collection return type, because falling through to
+  the generic `ReturnKind::Array` cache will misclassify struct returns like
+  `Marker` as collection receivers and incorrectly enable builtin
+  `count/capacity/at` routing.
+  Evidence: `TODO-0452` fixed same-path canonical and experimental vector
+  constructor helpers returning `Marker` by adding a declared-non-collection
+  guard in `SemanticsValidatorInferCollectionCallResolution.cpp`; the release
+  gate passed afterward with focused semantics and native/C++ conformance
+  coverage updated around those cases.
 - `vector-removed-access-alias-named-args-unknown-target`:
   unresolved explicit `/vector/at` and `/vector/at_unsafe` calls with named
   arguments are now treated as removed aliases (unknown-target diagnostics)

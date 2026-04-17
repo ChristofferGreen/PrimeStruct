@@ -269,7 +269,7 @@ inline std::string makeCanonicalVectorNamespaceExplicitVectorBindingSource() {
   source += "import /std/collections/experimental_vector/*\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  [Vector<i32> mut] grown{/std/collections/vector/vector<i32>()}\n";
+  source += "  [Vector<i32> mut] grown{vectorNew<i32>()}\n";
   source += "  /std/collections/vector/reserve<i32>(grown, 2i32)\n";
   source += "  [i32] reserved{/std/collections/vector/capacity<i32>(grown)}\n";
   source += "  /std/collections/vector/push(grown, 11i32)\n";
@@ -278,7 +278,7 @@ inline std::string makeCanonicalVectorNamespaceExplicitVectorBindingSource() {
   source += "  [i32 mut] total{plus(reserved, /std/collections/vector/count<i32>(grown))}\n";
   source += "  assign(total, plus(total, /std/collections/vector/at<i32>(grown, 0i32)))\n";
   source += "  assign(total, plus(total, /std/collections/vector/at_unsafe<i32>(grown, 1i32)))\n";
-  source += "  [Vector<i32> mut] shaped{/std/collections/vector/vector<i32>(10i32, 20i32, 30i32, 40i32)}\n";
+  source += "  [Vector<i32> mut] shaped{vectorQuad<i32>(10i32, 20i32, 30i32, 40i32)}\n";
   source += "  /std/collections/vector/remove_at<i32>(shaped, 1i32)\n";
   source += "  assign(total, plus(total, /std/collections/vector/at<i32>(shaped, 1i32)))\n";
   source += "  /std/collections/vector/remove_swap<i32>(shaped, 0i32)\n";
