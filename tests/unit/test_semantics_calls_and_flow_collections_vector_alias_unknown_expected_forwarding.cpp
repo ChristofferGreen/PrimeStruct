@@ -846,7 +846,7 @@ main() {
   CHECK(error.find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("vector method explicit at_unsafe alias namespace stays rejected even when alias helper exists") {
+TEST_CASE("vector method explicit at_unsafe alias namespace resolves same-path helper when alias helper exists") {
   const std::string source = R"(
 [return<int>]
 /vector/at_unsafe([vector<i32>] values, [i32] index) {
@@ -865,8 +865,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /vector/at_unsafe") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector method at uses alias helper signature when alias helper has string index") {

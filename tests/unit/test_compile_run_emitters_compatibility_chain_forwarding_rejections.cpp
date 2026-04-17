@@ -396,12 +396,15 @@ main() {
       (testScratchPath("") /
        "primec_cpp_vector_method_alias_access_unsafe_struct_method_chain_same_path_forwarding.err")
           .string();
+  const std::string exePath =
+      (testScratchPath("") /
+       "primec_cpp_vector_method_alias_access_unsafe_struct_method_chain_same_path_forwarding_exe")
+          .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  const std::string err = readFile(errPath);
-  CHECK(err.find("unknown method: /vector/at_unsafe") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("rejects vector method alias access receiver fallback without helper in C++ emitter") {

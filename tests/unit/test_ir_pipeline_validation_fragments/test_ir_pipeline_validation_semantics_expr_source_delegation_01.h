@@ -392,6 +392,12 @@
             "      normalizedMethodName == \"at_unsafe\" &&\n"
             "      (explicitVectorReceiverFamily == \"vector\" ||\n"
             "       explicitVectorReceiverFamily == \"experimental_vector\" ||\n"
+            "       explicitVectorReceiverFamily == \"soa_vector\"))") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "if (explicitVectorHelperPath == \"/vector/at_unsafe\" &&\n"
+            "      (explicitVectorReceiverFamily == \"vector\" ||\n"
+            "       explicitVectorReceiverFamily == \"experimental_vector\" ||\n"
             "       explicitVectorReceiverFamily == \"soa_vector\"))") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(

@@ -2149,12 +2149,16 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return failMethodTargetResolutionDiagnostic("unknown method: " + explicitVectorHelperPath);
   }
-  if (explicitVectorHelperPath.rfind("/vector/", 0) == 0 &&
-      normalizedMethodName == "at_unsafe" &&
+  if (explicitVectorHelperPath == "/vector/at_unsafe" &&
       (explicitVectorReceiverFamily == "vector" ||
        explicitVectorReceiverFamily == "experimental_vector" ||
        explicitVectorReceiverFamily == "soa_vector")) {
-    return false;
+    if (hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {
+      resolvedOut = explicitVectorHelperPath;
+      isBuiltinOut = false;
+      return true;
+    }
+    return failMethodTargetResolutionDiagnostic("unknown method: " + explicitVectorHelperPath);
   }
   const bool usesBuiltinVectorMethodSemantics =
       normalizedMethodName == "count" || normalizedMethodName == "capacity" ||
