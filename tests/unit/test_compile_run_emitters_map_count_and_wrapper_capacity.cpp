@@ -486,7 +486,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /string/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps canonical slash-method vector count same-path helper on map receiver") {
@@ -540,7 +540,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /map/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps canonical slash-method vector count same-path helper on array receiver") {
@@ -594,7 +594,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /array/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects duplicate local canonical slash-method vector count overloads") {
@@ -655,7 +655,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unknown method: /std/collections/vector/count") !=
+  CHECK(readFile(outPath).find("unknown method: /map/count") !=
         std::string::npos);
 }
 

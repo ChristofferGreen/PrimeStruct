@@ -364,7 +364,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unknown method: /std/collections/vector/capacity") !=
+  CHECK(readFile(outPath).find("unknown method: /vector/capacity") !=
         std::string::npos);
 }
 
@@ -448,7 +448,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/capacity") !=
+  CHECK(readFile(errPath).find("unknown method: /string/capacity") !=
         std::string::npos);
 }
 

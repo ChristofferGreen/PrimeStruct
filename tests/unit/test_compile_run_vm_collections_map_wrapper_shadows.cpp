@@ -452,7 +452,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown method: /std/collections/vector/count") !=
+  CHECK(readFile(outPath).find("unknown method: /map/count") !=
         std::string::npos);
 }
 
@@ -476,7 +476,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown method: /std/collections/vector/capacity") !=
+  CHECK(readFile(outPath).find("unknown method: /map/capacity") !=
         std::string::npos);
 }
 
