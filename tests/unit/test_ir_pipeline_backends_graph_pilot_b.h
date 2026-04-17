@@ -183,7 +183,7 @@
         std::string::npos);
   CHECK(validatorExprMain.find("const std::string removedVectorCompatibilityPath =") ==
         std::string::npos);
-  CHECK(validatorExpr.find("const std::string removedVectorCompatibilityPath =") !=
+  CHECK(validatorExpr.find("const std::string removedVectorCompatibilityPath =") ==
         std::string::npos);
   CHECK(validatorExprMain.find("const std::string removedMapCompatibilityPath =") ==
         std::string::npos);

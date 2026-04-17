@@ -458,7 +458,6 @@
                                        const Expr &receiver,
                                        const std::string &helperName,
                                        std::string &resolvedOut);
-  std::string getDirectVectorHelperCompatibilityPath(const Expr &candidate) const;
   bool resolveExprVectorHelperCall(const std::vector<ParameterInfo> &params,
                                    const std::unordered_map<std::string, BindingInfo> &locals,
                                    const Expr &expr,

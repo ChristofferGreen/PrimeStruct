@@ -662,32 +662,6 @@ bool SemanticsValidator::getVectorStatementHelperName(const Expr &candidate,
   return true;
 }
 
-std::string SemanticsValidator::getDirectVectorHelperCompatibilityPath(const Expr &candidate) const {
-  if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
-    return "";
-  }
-
-  const std::string normalizedName = std::string(trimLeadingSlash(candidate.name));
-  const std::string normalizedPrefix = std::string(trimLeadingSlash(candidate.namespacePrefix));
-  const std::string resolvedPath = resolveCalleePath(candidate);
-  const bool spellsVectorCompatibility =
-      normalizedName.rfind("std/collections/vector/", 0) == 0 ||
-      normalizedPrefix == "std/collections/vector" ||
-      resolvedPath.rfind("/std/collections/vector/", 0) == 0;
-  if (!spellsVectorCompatibility) {
-    return "";
-  }
-
-  std::string removedPath = explicitRemovedCollectionMethodPath(candidate.name, candidate.namespacePrefix);
-  if (removedPath.empty()) {
-    removedPath = explicitRemovedCollectionMethodPath(resolvedPath, "");
-  }
-  if (removedPath.rfind("/std/collections/vector/", 0) != 0) {
-    return "";
-  }
-  return hasDefinitionPath(removedPath) ? "" : removedPath;
-}
-
 std::string SemanticsValidator::getRemovedRootedVectorDirectCallPath(
     const Expr &candidate) const {
   if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||

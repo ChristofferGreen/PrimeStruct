@@ -507,10 +507,6 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       isStdNamespacedVectorCanonicalHelperCall &&
       (namespacedHelper == "count" || namespacedHelper == "capacity") &&
       hasNamedArguments(expr.argNames);
-  const std::string removedVectorCompatibilityPath = getDirectVectorHelperCompatibilityPath(expr);
-  if (!removedVectorCompatibilityPath.empty()) {
-    return failVectorHelperDiagnostic("unknown call target: " + removedVectorCompatibilityPath);
-  }
   if (isStdNamespacedVectorCanonicalHelperCall && !hasVisibleStdNamespacedVectorCanonicalHelper &&
       !hasVisibleDefinitionPath(resolved) &&
       !allowStdNamespacedUserReceiverProbe) {
