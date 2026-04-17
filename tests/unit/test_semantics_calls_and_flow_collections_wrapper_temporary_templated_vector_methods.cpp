@@ -431,7 +431,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /map/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count slash method string target without helper reports unknown method") {
@@ -447,8 +447,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /string/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count slash method accepts same-path helper on array target") {
@@ -469,8 +469,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector namespaced count slash method array target without helper reports unknown method") {
@@ -486,8 +486,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /array/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced access slash method vector target without alias helper reports unknown method") {
