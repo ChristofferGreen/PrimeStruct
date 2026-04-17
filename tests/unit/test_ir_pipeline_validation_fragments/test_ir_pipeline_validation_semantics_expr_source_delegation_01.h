@@ -302,6 +302,12 @@
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "rememberedMethodTargetTraceFailure = std::move(message);") !=
         std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "auto isExplicitVectorCompatibilityMethodWithTemplateArgs = [&]() {") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "if (resolved == \"/std/collections/vector/count\" &&") ==
+        std::string::npos);
   CHECK(semanticsExprMethodCompatibilitySetupSource.find(
             "return soaUnavailableMethodDiagnostic(resolvedPath);") !=
         std::string::npos);

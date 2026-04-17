@@ -398,7 +398,7 @@ main() {
   CHECK(error.find("unknown method: /array/capacity") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced vector helper alias rejects method-call sugar auto inference") {
+TEST_CASE("stdlib namespaced vector helper alias uses same-path helper auto inference") {
   const std::string source = R"(
 [return<bool>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
@@ -413,8 +413,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib namespaced vector access alias keeps builtin element inference over same-path helper") {
@@ -436,7 +436,7 @@ main() {
   CHECK(error.find("return type mismatch: expected bool") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced vector helper alias method-call inference keeps unknown-method diagnostics") {
+TEST_CASE("stdlib namespaced vector helper alias method-call inference keeps return mismatch diagnostics") {
   const std::string source = R"(
 [return<bool>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
@@ -452,7 +452,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector count method local same-path overload set rejects duplicate definitions") {

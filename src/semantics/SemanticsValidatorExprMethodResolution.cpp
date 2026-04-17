@@ -72,39 +72,6 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     return it != locals.end() && isFileBinding(it->second);
   };
 
-  auto isExplicitVectorCompatibilityMethodWithTemplateArgs = [&]() {
-    if (expr.templateArgs.empty() || expr.args.empty()) {
-      return false;
-    }
-    if (expr.name != "/std/collections/vector/count") {
-      return false;
-    }
-    std::string elemType;
-    return resolveVectorTarget(expr.args.front(), elemType);
-  };
-  if (isExplicitVectorCompatibilityMethodWithTemplateArgs()) {
-    return failMethodResolutionDiagnostic(
-        "unknown method: /std/collections/vector/count");
-  }
-  if (resolved == "/std/collections/vector/count" &&
-      !expr.templateArgs.empty() &&
-      !expr.args.empty()) {
-    std::string elemType;
-    if (resolveVectorTarget(expr.args.front(), elemType)) {
-      return failMethodResolutionDiagnostic(
-          "unknown method: /std/collections/vector/count");
-    }
-  }
-  if (resolved == "/std/collections/vector/count" &&
-      !expr.hasBodyArguments &&
-      expr.bodyArguments.empty() &&
-      !expr.args.empty()) {
-    std::string elemType;
-    if (resolveVectorTarget(expr.args.front(), elemType) &&
-        expr.args.size() != 1) {
-      return failMethodResolutionDiagnostic("argument count mismatch for builtin count");
-    }
-  }
   if (expr.namespacePrefix.empty() &&
       !expr.args.empty() &&
       (expr.name == "count" || expr.name == "capacity" ||
