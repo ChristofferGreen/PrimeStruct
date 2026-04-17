@@ -1534,6 +1534,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     resolvedOut = preferVectorStdlibHelperPath(path);
     if ((resolvedOut == "/std/collections/vector/at" ||
          resolvedOut == "/std/collections/vector/at_unsafe") &&
+        explicitVectorHelperPath.empty() &&
         hasImportedDefinitionPath(resolvedOut) &&
         defMap_.count(resolvedOut) == 0) {
       isBuiltinOut = true;

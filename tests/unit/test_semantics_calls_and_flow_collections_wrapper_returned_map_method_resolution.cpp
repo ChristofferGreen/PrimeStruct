@@ -554,6 +554,54 @@ main() {
   CHECK(error.find("expected i32") != std::string::npos);
 }
 
+TEST_CASE("stdlib namespaced vector access slash method uses imported helper on vector receiver") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(plus(values./std/collections/vector/at(0i32),
+              values./std/collections/vector/at_unsafe(1i32)))
+}
+  )";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib namespaced vector access slash method uses imported helper diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values./std/collections/vector/at(true))
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /std/collections/vector/at parameter index") !=
+        std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector access unsafe slash method uses imported helper diagnostics") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values./std/collections/vector/at_unsafe(true))
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /std/collections/vector/at_unsafe parameter index") !=
+        std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced vector count method local same-path overload set rejects duplicate definitions") {
   const std::string source = R"(
 [return<int>]
