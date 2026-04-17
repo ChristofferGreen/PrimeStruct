@@ -712,6 +712,60 @@ main() {
   CHECK(error.find("unknown method: /map/count") != std::string::npos);
 }
 
+TEST_CASE("vector namespaced count method rejects local string same-path helper") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([string] values) {
+  return(34i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [string] value{"abc"raw_utf8}
+  return(value./vector/count())
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /string/count") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced count method rejects local array same-path helper") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([array<i32>] values) {
+  return(35i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [array<i32>] items{array<i32>(1i32, 2i32, 3i32)}
+  return(items./vector/count())
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /array/count") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced count method rejects local map same-path helper") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([map<i32, i32>] values) {
+  return(36i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values./vector/count())
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /map/count") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced vector count method rejects wrapper map receiver without helper") {
   const std::string source = R"(
 [return<map<i32, i32>>]

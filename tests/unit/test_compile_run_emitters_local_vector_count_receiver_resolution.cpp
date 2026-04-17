@@ -69,6 +69,84 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /array/count") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter rejects local alias slash-method vector count same-path helper on string receiver") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([string] values) {
+  return(96i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [string] value{"abc"raw_utf8}
+  return(value./vector/count())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_local_alias_slash_vector_count_string_same_path_helper.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_local_alias_slash_vector_count_string_same_path_helper.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown method: /string/count") != std::string::npos);
+}
+
+TEST_CASE("C++ emitter rejects local alias slash-method vector count same-path helper on map receiver") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([map<i32, i32>] values) {
+  return(97i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values./vector/count())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_local_alias_slash_vector_count_map_same_path_helper.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_local_alias_slash_vector_count_map_same_path_helper.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown method: /map/count") != std::string::npos);
+}
+
+TEST_CASE("C++ emitter rejects local alias slash-method vector count same-path helper on array receiver") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([array<i32>] values) {
+  return(98i32)
+}
+
+[return<int>]
+main() {
+  [array<i32>] items{array<i32>(1i32, 2i32, 3i32)}
+  return(items./vector/count())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_local_alias_slash_vector_count_array_same_path_helper.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_local_alias_slash_vector_count_array_same_path_helper.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("unknown method: /array/count") != std::string::npos);
+}
+
 TEST_CASE("C++ emitter rejects alias slash-method vector count same-path helper on string receiver") {
   const std::string source = R"(
 [return<string>]
@@ -168,18 +246,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_alias_slash_vector_count_map_same_path_helper.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_alias_slash_vector_count_map_same_path_helper_exe")
-          .string();
-
   const std::string errPath =
       (testScratchPath("") /
        "primec_cpp_alias_slash_vector_count_map_same_path_helper.err")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find("unknown method: /map/count") != std::string::npos);
 }

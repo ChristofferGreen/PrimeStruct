@@ -320,7 +320,8 @@
             "        explicitVectorHelperPath.empty() &&") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "explicitVectorHelperPath == \"/vector/count\" &&") ==
+            "explicitVectorHelperPath == \"/vector/count\" &&\n"
+            "      (explicitVectorReceiverFamily == \"string\" ||") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "explicitVectorHelperPath == \"/vector/capacity\" &&") ==
