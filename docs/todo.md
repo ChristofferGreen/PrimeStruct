@@ -177,6 +177,7 @@ Wave D (queue hygiene):
   - progress: Removed another named-argument compatibility fallback by stopping unresolved explicit `/vector/at` and `/vector/at_unsafe` alias calls from being classified as builtin access helpers in semantic named-argument validation, so removed aliases now surface unknown-target diagnostics instead of builtin named-argument diagnostics; added semantics + C++ emitter coverage for both aliases.
   - progress: Completed child slice `TODO-0412` (archived in `docs/todo_finished.md`): shared semantics/lowerer access/helper recognizers no longer classify removed rooted `/vector/*` helper spellings as builtin vector helper metadata, while canonical `/std/collections/vector/*` spellings stay accepted.
   - progress: Completed child slice `TODO-0413` (archived in `docs/todo_finished.md`): shared collection constructor recognizers no longer classify removed rooted `/vector/vector` as a builtin vector constructor, while the lowerer still accepts canonical `/std/collections/vector/vector`.
+  - progress: Completed child slice `TODO-0414` (archived in `docs/todo_finished.md`): shared semantics/lowerer/emitter simple-call helpers no longer treat removed rooted `/vector/vector` as a builtin `vector(...)` token, while bare `vector(...)` calls stay accepted.
 
 - [ ] TODO-0406: Split production semantics APIs from testing snapshots
   - owner: ai

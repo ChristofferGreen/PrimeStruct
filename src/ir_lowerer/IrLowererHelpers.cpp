@@ -34,12 +34,6 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (name.rfind("std/gpu/", 0) == 0) {
     name.erase(0, 8);
   }
-  if (name.rfind("vector/", 0) == 0) {
-    std::string alias = name.substr(std::string("vector/").size());
-    if (alias.find('/') == std::string::npos && alias == "vector") {
-      return alias == targetName;
-    }
-  }
   if (name.rfind("std/collections/vector/", 0) == 0) {
     std::string alias = name.substr(std::string("std/collections/vector/").size());
     if (alias.find('/') == std::string::npos &&

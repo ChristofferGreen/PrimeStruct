@@ -228,6 +228,21 @@ TEST_CASE("shared collection helpers reject removed rooted vector constructor al
   CHECK_FALSE(primec::emitter::getBuiltinCollectionName(removedAliasCall, builtin));
 }
 
+TEST_CASE("shared simple-call helpers reject removed rooted vector constructor alias") {
+  primec::Expr bareVectorCall;
+  bareVectorCall.kind = primec::Expr::Kind::Call;
+  bareVectorCall.name = "vector";
+  CHECK(primec::semantics::isSimpleCallName(bareVectorCall, "vector"));
+  CHECK(primec::ir_lowerer::isSimpleCallName(bareVectorCall, "vector"));
+  CHECK(primec::emitter::isSimpleCallName(bareVectorCall, "vector"));
+
+  primec::Expr removedAliasCall = bareVectorCall;
+  removedAliasCall.name = "/vector/vector";
+  CHECK_FALSE(primec::semantics::isSimpleCallName(removedAliasCall, "vector"));
+  CHECK_FALSE(primec::ir_lowerer::isSimpleCallName(removedAliasCall, "vector"));
+  CHECK_FALSE(primec::emitter::isSimpleCallName(removedAliasCall, "vector"));
+}
+
 TEST_CASE("ir lowerer helper keeps canonical vector constructor builtin") {
   primec::Expr canonicalVectorCall;
   canonicalVectorCall.kind = primec::Expr::Kind::Call;
