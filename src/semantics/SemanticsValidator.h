@@ -545,11 +545,17 @@ private:
 
     struct MethodTargetMemoKey {
       uint64_t semanticNodeId = 0;
+      int sourceLine = 0;
+      int sourceColumn = 0;
+      uint64_t localsRevision = 0;
       SymbolId receiverTypeText = InvalidSymbolId;
       SymbolId methodName = InvalidSymbolId;
 
       bool operator==(const MethodTargetMemoKey &other) const {
         return semanticNodeId == other.semanticNodeId &&
+               sourceLine == other.sourceLine &&
+               sourceColumn == other.sourceColumn &&
+               localsRevision == other.localsRevision &&
                receiverTypeText == other.receiverTypeText &&
                methodName == other.methodName;
       }
@@ -558,6 +564,9 @@ private:
     struct MethodTargetMemoKeyHash {
       std::size_t operator()(const MethodTargetMemoKey &key) const {
         std::size_t hash = std::hash<uint64_t>{}(key.semanticNodeId);
+        hash ^= std::hash<int>{}(key.sourceLine) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+        hash ^= std::hash<int>{}(key.sourceColumn) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+        hash ^= std::hash<uint64_t>{}(key.localsRevision) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
         hash ^= std::hash<SymbolId>{}(key.receiverTypeText) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
         hash ^= std::hash<SymbolId>{}(key.methodName) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
         return hash;

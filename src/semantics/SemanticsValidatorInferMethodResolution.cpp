@@ -228,8 +228,14 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if (receiverTypeTextKey == InvalidSymbolId) {
       return std::nullopt;
     }
+    const uint64_t localsRevision = currentLocalBindingMemoRevision(&locals);
     return CallTargetResolutionScratch::MethodTargetMemoKey{
-        expr.semanticNodeId, receiverTypeTextKey, normalizedMethodNameKey};
+        expr.semanticNodeId,
+        expr.sourceLine,
+        expr.sourceColumn,
+        localsRevision,
+        receiverTypeTextKey,
+        normalizedMethodNameKey};
   };
   auto lookupMethodTargetMemo = [&](std::string_view receiverTypeText,
                                     std::string &resolvedPathOut,

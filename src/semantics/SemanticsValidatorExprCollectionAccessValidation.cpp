@@ -269,19 +269,18 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       return failCollectionAccessDiagnostic("argument count mismatch for builtin " +
                                             helperName);
     }
+    if (!validateExpr(params, locals, expr.args.front())) {
+      return false;
+    }
     std::string mapKeyType;
     if (!(context.resolveMapKeyType != nullptr &&
           context.resolveMapKeyType(expr.args.front(), mapKeyType))) {
-      if (!validateExpr(params, locals, expr.args.front())) {
-        return false;
-      }
       return failCollectionAccessDiagnostic(helperName + " requires map target");
     }
     if (!validateMapKeyExpr(helperName, expr.args[1], mapKeyType)) {
       return false;
     }
-    if (!validateExpr(params, locals, expr.args.front()) ||
-        !validateExpr(params, locals, expr.args[1])) {
+    if (!validateExpr(params, locals, expr.args[1])) {
       return false;
     }
     return true;
