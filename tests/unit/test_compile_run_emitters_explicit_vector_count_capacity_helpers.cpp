@@ -585,8 +585,7 @@ main() {
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   const std::string err = readFile(errPath);
-  CHECK(err.find("validateExprMethodCallTarget failed") != std::string::npos);
-  CHECK(err.find("/vector/count") != std::string::npos);
+  CHECK(err.find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects stdlib namespaced vector count capacity slash methods without same-path helper") {
