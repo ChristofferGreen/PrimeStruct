@@ -217,6 +217,27 @@ TEST_CASE("ir lowerer helper rejects array namespaced vector constructor alias b
   CHECK_FALSE(primec::ir_lowerer::getBuiltinCollectionName(arrayVectorCall, builtin));
 }
 
+TEST_CASE("shared collection helpers reject removed rooted vector constructor alias") {
+  primec::Expr removedAliasCall;
+  removedAliasCall.kind = primec::Expr::Kind::Call;
+  removedAliasCall.name = "/vector/vector";
+
+  std::string builtin;
+  CHECK_FALSE(primec::semantics::getBuiltinCollectionName(removedAliasCall, builtin));
+  CHECK_FALSE(primec::ir_lowerer::getBuiltinCollectionName(removedAliasCall, builtin));
+  CHECK_FALSE(primec::emitter::getBuiltinCollectionName(removedAliasCall, builtin));
+}
+
+TEST_CASE("ir lowerer helper keeps canonical vector constructor builtin") {
+  primec::Expr canonicalVectorCall;
+  canonicalVectorCall.kind = primec::Expr::Kind::Call;
+  canonicalVectorCall.name = "/std/collections/vector/vector";
+
+  std::string builtin;
+  CHECK(primec::ir_lowerer::getBuiltinCollectionName(canonicalVectorCall, builtin));
+  CHECK(builtin == "vector");
+}
+
 TEST_CASE("shared simple-call helpers reject removed array count alias") {
   primec::Expr bareCountCall;
   bareCountCall.kind = primec::Expr::Kind::Call;
