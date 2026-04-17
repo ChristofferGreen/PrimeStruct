@@ -627,7 +627,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("native backend requires integer indices for at") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects later map receiver positional shadow without canonical reorder") {
