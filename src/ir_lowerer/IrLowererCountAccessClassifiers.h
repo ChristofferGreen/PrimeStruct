@@ -9,7 +9,6 @@
 namespace primec::ir_lowerer::count_access_detail {
 
 bool isExplicitArrayCountName(const Expr &expr);
-bool isExplicitVectorCompatibilityName(const Expr &expr, std::string_view helperName);
 bool isVectorCountTarget(const Expr &target, const LocalMap &localsIn);
 bool isDereferencedCollectionCountTarget(const Expr &countExpr, const Expr &target, const LocalMap &localsIn);
 bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut);

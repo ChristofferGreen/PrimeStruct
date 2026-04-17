@@ -11,7 +11,6 @@
 namespace primec::ir_lowerer {
 using count_access_detail::isDereferencedCollectionCountTarget;
 using count_access_detail::isExplicitArrayCountName;
-using count_access_detail::isExplicitVectorCompatibilityName;
 using count_access_detail::isMapBuiltinName;
 using count_access_detail::resolveMapHelperAliasName;
 using count_access_detail::isVectorBuiltinName;
@@ -195,7 +194,7 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
   const bool isBareVectorCountCall =
       expr.kind == Expr::Kind::Call && !expr.isMethodCall && expr.name == "count" &&
       expr.namespacePrefix.empty();
-  if ((isBareVectorCountCall || isExplicitVectorCompatibilityName(expr, "count") ||
+  if ((isBareVectorCountCall ||
        (expr.kind == Expr::Kind::Call && !expr.isMethodCall && expr.name == "count" &&
         (expr.namespacePrefix == "/std/collections/vector" ||
          expr.namespacePrefix == "std/collections/vector"))) &&
@@ -218,9 +217,6 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
     }
     if (it->second.isArgsPack) {
       const LocalInfo &info = it->second;
-      if (info.isSoaVector && isExplicitVectorCompatibilityName(expr, "count")) {
-        return false;
-      }
       if (info.argsPackElementKind == LocalInfo::Kind::Array ||
           info.argsPackElementKind == LocalInfo::Kind::Vector ||
           info.argsPackElementKind == LocalInfo::Kind::Buffer ||
@@ -244,9 +240,6 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
       return it->second.pointerToArray || it->second.pointerToVector ||
              it->second.pointerToBuffer || it->second.pointerToMap ||
              hasInferredTypedWrappedMap(it->second, it->second.kind);
-    }
-    if (it->second.isSoaVector && isExplicitVectorCompatibilityName(expr, "count")) {
-      return false;
     }
     return it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector ||
            it->second.kind == LocalInfo::Kind::Buffer || it->second.isSoaVector ||
@@ -286,9 +279,6 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
     }
     std::string collection;
     if (!getBuiltinCollectionName(target, collection)) {
-      return false;
-    }
-    if (collection == "soa_vector" && isExplicitVectorCompatibilityName(expr, "count")) {
       return false;
     }
     if (collection == "array" || collection == "vector" || collection == "soa_vector") {

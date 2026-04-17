@@ -256,6 +256,8 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   countEntry.name = "count";
   countEntry.args = {entryName};
   CHECK(isArrayCountCall(countEntry, locals));
+  countEntry.name = "/std/collections/vector/count";
+  CHECK(isArrayCountCall(countEntry, locals));
   countEntry.name = "/vector/count";
   CHECK_FALSE(isArrayCountCall(countEntry, locals));
   countEntry.name = "/soa_vector/count";
@@ -320,6 +322,8 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   CHECK(classifiers.isArrayCountCall(countEntry, locals));
   countEntry.name = "/std/collections/vector/count";
   CHECK(classifiers.isArrayCountCall(countEntry, locals));
+  countEntry.name = "/vector/count";
+  CHECK_FALSE(classifiers.isArrayCountCall(countEntry, locals));
   countEntry.name = "/soa_vector/count";
   CHECK_FALSE(classifiers.isArrayCountCall(countEntry, locals));
 

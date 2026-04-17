@@ -125,17 +125,6 @@ bool isExplicitArrayCountName(const Expr &expr) {
   return normalized == "array/count";
 }
 
-bool isExplicitVectorCompatibilityName(const Expr &expr, std::string_view helperName) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  std::string normalized = expr.name;
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(normalized.begin());
-  }
-  return normalized == "vector/" + std::string(helperName);
-}
-
 bool isVectorCountTarget(const Expr &target, const LocalMap &localsIn) {
   return isVectorTargetImpl(target, localsIn);
 }
@@ -162,9 +151,6 @@ bool isDereferencedCollectionCountTarget(const Expr &countExpr, const Expr &targ
         (kind == LocalInfo::Kind::Pointer && info.pointerToMap) ||
         hasInferredTypedWrappedMap(info, kind);
     if (!isArrayTarget && !isVectorTarget && !isBufferTarget && !isMapTarget) {
-      return false;
-    }
-    if (isVectorTarget && info.isSoaVector && isExplicitVectorCompatibilityName(countExpr, "count")) {
       return false;
     }
     return true;
@@ -194,7 +180,6 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(0, 1);
   }
-  const std::string vectorPrefix = "vector/";
   const std::string arrayPrefix = "array/";
   const std::string stdVectorPrefix = "std/collections/vector/";
   const std::string stdSoaVectorPrefix = "std/collections/soa_vector/";
@@ -219,13 +204,6 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
     }
     return false;
   };
-  if (normalized.rfind(vectorPrefix, 0) == 0) {
-    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(vectorPrefix.size()));
-    if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
-      return false;
-    }
-    return true;
-  }
   if (normalized.rfind(arrayPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(normalized.substr(arrayPrefix.size()));
     if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
