@@ -287,7 +287,9 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("template arguments are only supported on templated definitions") !=
+        std::string::npos);
+  CHECK(error.find("/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("vector capacity compatibility alias rejects block arguments") {
@@ -300,7 +302,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("block arguments require a definition target") != std::string::npos);
 }
 
 TEST_CASE("vector capacity compatibility alias rejects wrong argument count") {
@@ -313,7 +315,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("argument count mismatch for /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("capacity method on vector binding requires imported stdlib helper") {
