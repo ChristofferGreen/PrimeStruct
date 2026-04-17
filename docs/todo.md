@@ -55,11 +55,10 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-1. TODO-0407
-2. TODO-0408
-3. TODO-0401
-4. TODO-0402
-5. TODO-0405
+1. TODO-0408
+2. TODO-0401
+3. TODO-0402
+4. TODO-0405
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -69,36 +68,31 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- P0 Test implementation locality cleanup (no `TEST_CASE` in include chunks): TODO-0407
 - P1 Collection stdlib ownership cutover (`vector`, `map`, `soa_vector`): TODO-0408, TODO-0409
 - P2 SoA canonicalization + semantic memory/perf + multithread substrate + semantic-product boundary hardening: TODO-0401, TODO-0402, TODO-0405, TODO-0406
 - P3 Queue/snapshot governance: TODO-0403
 
 ### Execution Queue (Recommended)
 
-Wave A (test implementation locality cleanup):
-1. TODO-0407
-
-Wave B (collection stdlib ownership cutover):
+Wave A (collection stdlib ownership cutover):
 1. TODO-0408
 2. TODO-0409
 
-Wave C (SoA completion):
+Wave B (SoA completion):
 1. TODO-0401
 
-Wave D (semantic memory/perf):
+Wave C (semantic memory/perf):
 1. TODO-0402
 2. TODO-0405
 3. TODO-0406
 
-Wave E (queue hygiene):
+Wave D (queue hygiene):
 1. TODO-0403
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Test implementation locality and include-chunk retirement | TODO-0407 |
 | Collection stdlib ownership cutover (`vector`, `map`, `soa_vector`) | TODO-0408, TODO-0409 |
 | SoA bring-up and stdlib-authoritative `soa_vector` end-state cleanup | TODO-0401 |
 | Semantic memory footprint and multithread compile substrate | TODO-0402 |
@@ -109,8 +103,7 @@ Wave E (queue hygiene):
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0401, TODO-0402, TODO-0405, TODO-0406, TODO-0407, TODO-0408, TODO-0409 |
-| Test source locality and include-layer guardrail verification | TODO-0407 |
+| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0401, TODO-0402, TODO-0405, TODO-0406, TODO-0408, TODO-0409 |
 | Collection conformance and alias-deletion checks (`vector`/`map`/`soa_vector`) | TODO-0408, TODO-0409 |
 | Benchmark/runtime regression checks (`./scripts/benchmark.sh`) | TODO-0402 |
 | Semantic-product contract/index and deterministic conformance checks | TODO-0405, TODO-0406 |
@@ -181,41 +174,6 @@ Wave E (queue hygiene):
   - progress: Removed another semantics+emitter vector-mutator compatibility family by deleting explicit `/vector/*` mutator call/method path handling and std-namespaced-to-alias fallback from statement helper validation, restricting emitter explicit-request filtering to canonical `/std/collections/vector/*` helper paths, tightening emitter method-call count/capacity compatibility checks to canonical vector helpers, and pruning pre-dispatch normalization branches that still treated bare `vector/*` helper tokens as compatibility candidates.
   - progress: Removed another vector helper rewrite/classification compatibility subsystem by pruning `/vector/*` visibility preference branches from semantics vector helper rewrite + builtin-name checks (`preferredBareVectorHelperTarget`, bare-vector helper rewrites, and vector helper visibility guards) and deleting emitter method-resolution parsing/classification branches that still treated rooted `vector/*` method names as a removed-collection alias family.
   - progress: Removed another infer+monomorph rooted-vector compatibility family by dropping `vector/*` removed-helper parsing in collection compatibility resolution (`getVectorStatementHelperName`/`getDirectVectorHelperCompatibilityPath`) and template-monomorph alias normalization (`isExplicitRemovedCollectionMethodAlias`, `preferVectorStdlibTemplatePath`, `isExplicitCollectionCompatibilityAliasPath`), while aligning statement helper user-target filtering to canonical `/std/collections/vector/*` paths.
-
-- [ ] TODO-0407: Move test implementations from include chunks into `.cpp`
-  - owner: ai
-  - created_at: 2026-04-13
-  - phase: Test architecture cleanup
-  - scope: Execute file-by-file migration from include-defined tests to `.cpp`-defined tests, keeping headers for shared helpers only.
-  - file_todos:
-    - [x] `TODO-0407-F01` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_validation.cpp`; fix: replace the `test_ir_pipeline_validation_chunks/*.h` fanout with topic-named `.cpp` files and move all `TEST_CASE` bodies out of chunk/fragment headers.
-    - [x] `TODO-0407-F02` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_semantics_calls_and_flow_collections.cpp`; fix: remove `test_semantics_calls_and_flow_collections_chunks/*.h` includes by moving those tests into topic `.cpp` files that share `test_semantics_helpers.h`.
-    - [x] `TODO-0407-F03` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_emitters.cpp`; fix: keep cache/helper utilities local, but migrate `test_compile_run_emitters_chunks/*.h` test implementations into emitter-topic `.cpp` files.
-    - [x] `TODO-0407-F04` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_vm_outputs.cpp`; fix: move `test_compile_run_vm_outputs_*.h` `TEST_CASE` bodies into `.cpp` files and keep any remaining headers helper-only.
-    - [x] `TODO-0407-F05` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_vm_collections.cpp`; fix: migrate `test_compile_run_vm_collections_*.h` test implementations into `.cpp` files; retain only shared helper declarations in headers.
-    - [x] `TODO-0407-F06` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_bindings_and_examples.cpp`; fix: move included example/docs test implementation headers into dedicated `.cpp` files by topic while keeping shared harness helpers reusable.
-    - [x] `TODO-0407-F07` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends_registry.cpp`; fix: inline/move all test implementation currently housed in `test_ir_pipeline_backends_registry.h` into this `.cpp` and convert the header to helper declarations only (or delete it if no helpers remain).
-    - [x] `TODO-0407-F08` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_vm_core.cpp`; fix: replace the `test_compile_run_vm_core_*.h` include fanout with dedicated topic `.cpp` tests and keep shared helpers in helper headers only.
-    - [x] `TODO-0407-F09` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_native_backend_collections.cpp`; fix: move test implementation out of `test_compile_run_native_backend_collections_*.h` into topic `.cpp` files and keep Apple gating centralized.
-    - [x] `TODO-0407-F10` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_native_backend_core.cpp`; fix: move test implementation out of `test_compile_run_native_backend_core_*.h` into topic `.cpp` files and keep Apple gating centralized.
-    - [x] `TODO-0407-F11` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_imports.cpp`; fix: move tests from `test_compile_run_imports_operations.h` and sibling headers into `test_compile_run_imports_*.cpp` files while leaving helper-only headers.
-    - [x] `TODO-0407-F12` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_semantics_calls_and_flow_effects.cpp`; fix: move tests from `test_semantics_calls_and_flow_effects_*.h` into topic `.cpp` files and keep only shared helper declarations in headers.
-    - [x] `TODO-0407-F13` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_semantics_capabilities.cpp`; fix: move tests from `test_semantics_capabilities_*.h` into `.cpp` units and keep headers helper-only.
-    - [x] `TODO-0407-F14` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_semantics_result_helpers.cpp`; fix: move tests from `test_semantics_result_helpers_*.h` into `.cpp` units and keep headers helper-only.
-    - [x] `TODO-0407-F15` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_smoke.cpp`; fix: move tests from `test_compile_run_smoke_*.h` into `.cpp` units and keep headers helper-only.
-    - [x] `TODO-0407-F16` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_math_conformance.cpp`; fix: move tests from `test_compile_run_math_conformance_*.h` into `.cpp` units grouped by topic and keep headers helper-only.
-    - [x] `TODO-0407-F17` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_glsl.cpp`; fix: move tests from `test_compile_run_glsl_*.h` into `.cpp` units and keep headers helper-only.
-    - [x] `TODO-0407-F18` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_compile_run_text_filters.cpp`; fix: move tests from `test_compile_run_text_filters_*.h` into `.cpp` units and keep headers helper-only.
-    - [x] `TODO-0407-F19` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_to_glsl.cpp`; fix: move tests from `test_ir_pipeline_to_glsl_*.h` into `.cpp` units and keep headers helper-only.
-    - [x] `TODO-0407-F20` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_semantics_imports.cpp`; fix: move tests from `test_semantics_imports.h` into `.cpp` and keep header content helper-only.
-    - [x] `TODO-0407-F21` file: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_semantics_bindings_pointers.cpp`; fix: move tests from `test_semantics_bindings_pointer_types.h` into `.cpp` and keep header content helper-only.
-  - acceptance:
-    - Every entry in `file_todos` is completed for migration in scope.
-    - In migrated areas, test headers contain no doctest `TEST_CASE`/`TEST_SUITE` definitions; test logic lives in `.cpp` files.
-    - Current wrapper hotspots (`test_ir_pipeline_validation`, `test_semantics_calls_and_flow_collections`, and `test_compile_run_emitters`) are converted to direct `.cpp` test implementations with helper-only includes.
-    - Include-layer checks and release-mode test binaries pass without adding new `tests -> src` allowlist entries.
-  - stop_rule: If one hotspot is too large for a safe commit, split by thematic slices (IR validation, semantics flow, emitter compile-run) and keep each slice independently verifiable.
-  - notes: Baseline audit found `6667` header-defined test cases across `347` headers and `31` wrapper `.cpp` files with zero local `TEST_CASE` bodies.
 
 - [ ] TODO-0406: Split production semantics APIs from testing snapshots
   - owner: ai
