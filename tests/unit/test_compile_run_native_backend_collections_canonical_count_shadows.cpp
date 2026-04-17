@@ -740,6 +740,62 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("compiles and runs native canonical slash vector count same-path helper on string receiver") {
+  const std::string source = R"(
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+/std/collections/vector/count([string] values) {
+  return(89i32)
+}
+
+[return<int>]
+main() {
+  return(wrapText()./std/collections/vector/count())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_canonical_slash_vector_count_string_same_path_helper.prime", source);
+  const std::string exePath =
+      (testScratchPath("") /
+       "primec_native_canonical_slash_vector_count_string_same_path_helper_exe")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 89);
+}
+
+TEST_CASE("rejects native wrapper-returned canonical vector count slash-method on string receiver") {
+  const std::string source = R"(
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+main() {
+  return(wrapText()./std/collections/vector/count())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_canonical_slash_vector_count_string_no_helper.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_native_canonical_slash_vector_count_string_no_helper.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") !=
+        std::string::npos);
+}
+
 TEST_CASE("rejects native wrapper-returned canonical vector capacity slash-method on array receiver") {
   const std::string source = R"(
 [return<array<i32>>]

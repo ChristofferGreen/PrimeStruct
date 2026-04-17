@@ -27,7 +27,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects local canonical slash-method vector count same-path helper on string receiver") {
+TEST_CASE("C++ emitter keeps local canonical slash-method vector count same-path helper on string receiver") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([string] values) {
@@ -43,18 +43,18 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_local_canonical_slash_vector_count_string_same_path_helper.prime",
                 source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_local_canonical_slash_vector_count_string_same_path_helper.err")
+       "primec_cpp_local_canonical_slash_vector_count_string_same_path_helper_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /string/count") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 81);
 }
 
-TEST_CASE("C++ emitter rejects local canonical slash-method vector count same-path helper on map receiver") {
+TEST_CASE("C++ emitter keeps local canonical slash-method vector count same-path helper on map receiver") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([map<i32, i32>] values) {
@@ -70,18 +70,18 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_local_canonical_slash_vector_count_map_same_path_helper.prime",
                 source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_local_canonical_slash_vector_count_map_same_path_helper.err")
+       "primec_cpp_local_canonical_slash_vector_count_map_same_path_helper_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /map/count") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 82);
 }
 
-TEST_CASE("C++ emitter rejects local canonical slash-method vector count same-path helper on array receiver") {
+TEST_CASE("C++ emitter keeps local canonical slash-method vector count same-path helper on array receiver") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([array<i32>] values) {
@@ -97,15 +97,15 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_local_canonical_slash_vector_count_array_same_path_helper.prime",
                 source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_local_canonical_slash_vector_count_array_same_path_helper.err")
+       "primec_cpp_local_canonical_slash_vector_count_array_same_path_helper_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /array/count") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 83);
 }
 
 TEST_CASE("rejects local alias slash-method vector count on string receiver in C++ emitter") {
@@ -338,7 +338,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /map/count") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects canonical slash-method vector count same-path helper on map receiver") {
+TEST_CASE("C++ emitter keeps canonical slash-method vector count same-path helper on map receiver") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -357,15 +357,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_slash_vector_count_map_same_path_helper.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_canonical_slash_vector_count_map_same_path_helper.err")
+       "primec_cpp_canonical_slash_vector_count_map_same_path_helper_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /map/count") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 87);
 }
 
 TEST_CASE("rejects wrapper-returned canonical vector capacity slash-method on map receiver in C++ emitter") {
@@ -474,7 +474,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /array/count") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects canonical slash-method vector count same-path helper on array receiver") {
+TEST_CASE("C++ emitter keeps canonical slash-method vector count same-path helper on array receiver") {
   const std::string source = R"(
 [return<array<i32>>]
 wrapArray() {
@@ -493,19 +493,18 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_slash_vector_count_array_same_path_helper.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_canonical_slash_vector_count_array_same_path_helper.err")
+       "primec_cpp_canonical_slash_vector_count_array_same_path_helper_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /array/count") !=
-        std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 88);
 }
 
-TEST_CASE("C++ emitter rejects canonical slash-method vector count same-path helper on string receiver") {
+TEST_CASE("C++ emitter keeps canonical slash-method vector count same-path helper on string receiver") {
   const std::string source = R"(
 [return<string>]
 wrapText() {
@@ -524,16 +523,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_slash_vector_count_string_same_path_helper.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_canonical_slash_vector_count_string_same_path_helper.err")
+       "primec_cpp_canonical_slash_vector_count_string_same_path_helper_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /string/count") !=
-        std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 89);
 }
 
 TEST_CASE("rejects wrapper-returned canonical vector capacity slash-method on array receiver in C++ emitter") {

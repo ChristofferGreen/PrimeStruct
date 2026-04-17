@@ -2106,12 +2106,14 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   if (!explicitVectorHelperPath.empty() &&
       explicitVectorHelperPath.rfind("/std/collections/vector/", 0) == 0 &&
       normalizedMethodName == "count") {
-    const bool usesBuiltinVectorMethodSemantics =
-        explicitVectorReceiverFamily == "string" || explicitVectorReceiverFamily == "array" ||
-        explicitVectorReceiverFamily == "map";
-    if (usesBuiltinVectorMethodSemantics) {
-      return failMethodTargetResolutionDiagnostic("unknown method: /" +
-                                                  explicitVectorReceiverFamily + "/count");
+    if (explicitVectorReceiverFamily == "string" || explicitVectorReceiverFamily == "array" ||
+        explicitVectorReceiverFamily == "map") {
+      if (hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {
+        resolvedOut = explicitVectorHelperPath;
+        isBuiltinOut = false;
+        return true;
+      }
+      return failMethodTargetResolutionDiagnostic("unknown method: " + explicitVectorHelperPath);
     }
   }
   const bool usesBuiltinVectorMethodSemantics =

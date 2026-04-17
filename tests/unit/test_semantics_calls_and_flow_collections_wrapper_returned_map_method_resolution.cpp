@@ -644,7 +644,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /map/count") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector count method rejects array receiver without helper") {
@@ -657,7 +657,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /array/count") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector count method rejects string receiver without helper") {
@@ -670,10 +670,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /string/count") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced vector count method rejects local string same-path helper") {
+TEST_CASE("stdlib namespaced vector count method keeps local string same-path helper") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([string] values) {
@@ -687,11 +687,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /string/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("stdlib namespaced vector count method rejects local array same-path helper") {
+TEST_CASE("stdlib namespaced vector count method keeps local array same-path helper") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([array<i32>] values) {
@@ -705,11 +705,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /array/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("stdlib namespaced vector count method rejects local map same-path helper") {
+TEST_CASE("stdlib namespaced vector count method keeps local map same-path helper") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([map<i32, i32>] values) {
@@ -723,8 +723,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector namespaced count method rejects local string receiver without helper") {
@@ -834,10 +834,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /map/count") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced vector count method rejects wrapper map same-path helper") {
+TEST_CASE("stdlib namespaced vector count method keeps wrapper map same-path helper") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -855,11 +855,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("stdlib namespaced vector count method rejects wrapper array same-path helper") {
+TEST_CASE("stdlib namespaced vector count method keeps wrapper array same-path helper") {
   const std::string source = R"(
 [return<array<i32>>]
 wrapArray() {
@@ -877,11 +877,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /array/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("stdlib namespaced vector count method rejects wrapper string same-path helper") {
+TEST_CASE("stdlib namespaced vector count method keeps wrapper string same-path helper") {
   const std::string source = R"(
 [return<string>]
 wrapText() {
@@ -899,8 +899,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /string/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib namespaced vector count method rejects wrapper array receiver without helper") {
@@ -917,7 +917,24 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /array/count") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
+}
+
+TEST_CASE("stdlib namespaced vector count method rejects wrapper string receiver without helper") {
+  const std::string source = R"(
+[return<string>]
+wrapText() {
+  return("abc"raw_utf8)
+}
+
+[return<int>]
+main() {
+  return(wrapText()./std/collections/vector/count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count method on builtin vector receiver requires same-path helper" * doctest::skip(true)) {

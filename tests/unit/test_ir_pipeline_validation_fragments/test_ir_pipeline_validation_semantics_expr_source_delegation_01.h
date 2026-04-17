@@ -352,6 +352,9 @@
             "       isMapCollectionTypeName(normalizedTypeName))") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "explicitVectorReceiverFamily + \"/count\"") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
             "explicitVectorHelperPath == \"/vector/capacity\" &&") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
