@@ -526,13 +526,12 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   }
 
   size_t resolvedReceiverIndex = 0;
-  const bool shouldProbeVectorHelperReceiver =
-      (!isStdNamespacedVectorCanonicalHelperCall ||
+  if ((!isStdNamespacedVectorCanonicalHelperCall ||
        (isStdNamespacedVectorCanonicalHelperCall &&
         (namespacedHelper == "count" || namespacedHelper == "capacity") &&
         hasNamedArgs)) &&
-      defMap_.find(resolved) == defMap_.end();
-  if (shouldProbeVectorHelperReceiver && !expr.args.empty()) {
+      defMap_.find(resolved) == defMap_.end() &&
+      !expr.args.empty()) {
     auto tryResolveReceiverIndex = [&](size_t receiverIndex) {
       if (receiverIndex >= expr.args.size()) {
         return false;
