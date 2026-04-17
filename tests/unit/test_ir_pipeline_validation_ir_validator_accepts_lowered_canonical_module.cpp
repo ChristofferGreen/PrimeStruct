@@ -238,6 +238,46 @@ TEST_CASE("shared simple-call helpers reject removed array count alias") {
   CHECK_FALSE(primec::emitter::isSimpleCallName(removedAliasCall, "count"));
 }
 
+TEST_CASE("semantics namespaced vector helper detection rejects removed rooted aliases") {
+  primec::Expr canonicalCountCall;
+  canonicalCountCall.kind = primec::Expr::Kind::Call;
+  canonicalCountCall.name = "/std/collections/vector/count";
+
+  std::string collectionName;
+  std::string helperName;
+  CHECK(primec::semantics::getNamespacedCollectionHelperName(
+      canonicalCountCall, collectionName, helperName));
+  CHECK(collectionName == "vector");
+  CHECK(helperName == "count");
+
+  primec::Expr removedAliasCall = canonicalCountCall;
+  removedAliasCall.name = "/vector/count";
+  collectionName.clear();
+  helperName.clear();
+  CHECK_FALSE(primec::semantics::getNamespacedCollectionHelperName(
+      removedAliasCall, collectionName, helperName));
+  CHECK(collectionName.empty());
+  CHECK(helperName.empty());
+}
+
+TEST_CASE("ir lowerer access helper rejects removed rooted vector access aliases") {
+  primec::Expr canonicalAccessCall;
+  canonicalAccessCall.kind = primec::Expr::Kind::Call;
+  canonicalAccessCall.name = "/std/collections/vector/at";
+
+  std::string helperName;
+  CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
+      canonicalAccessCall, helperName));
+  CHECK(helperName == "at");
+
+  primec::Expr removedAliasCall = canonicalAccessCall;
+  removedAliasCall.name = "/vector/at";
+  helperName.clear();
+  CHECK_FALSE(primec::ir_lowerer::getBuiltinArrayAccessName(
+      removedAliasCall, helperName));
+  CHECK(helperName.empty());
+}
+
 TEST_CASE("emitter cpp keeps canonical vector count builtin fallback") {
   const std::string source = R"(
 import /std/collections/*

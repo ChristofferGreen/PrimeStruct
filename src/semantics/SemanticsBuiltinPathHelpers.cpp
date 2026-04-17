@@ -755,14 +755,6 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     }
     return false;
   }
-  if (name.rfind("vector/", 0) == 0) {
-    std::string alias = stripTemplateSpecializationSuffix(name.substr(std::string("vector/").size()));
-    if (alias == "at" || alias == "at_unsafe") {
-      out = alias;
-      return true;
-    }
-    return false;
-  }
   if (name.rfind("array/", 0) == 0) {
     return false;
   }
@@ -820,9 +812,6 @@ bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collection
     return !helperOut.empty();
   };
 
-  if (extractHelper("vector/", "vector")) {
-    return true;
-  }
   if (extractHelper("std/collections/vector/", "vector") || extractHelper("map/", "map") ||
       extractHelper("std/collections/map/", "map")) {
     return true;

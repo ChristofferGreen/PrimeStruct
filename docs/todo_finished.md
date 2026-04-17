@@ -7,6 +7,11 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 
 **Todo Cleanup (April 13, 2026)**
 
+**Todo Cleanup (April 17, 2026)**
+
+**Group 14 - SoA bring-up and end-state cleanup**
+- ✓ TODO-0412: Remove rooted `/vector/*` helper classification from shared recognizers. Completed: `SemanticsBuiltinPathHelpers.cpp` no longer reports removed rooted `/vector/*` spellings through `getNamespacedCollectionHelperName(...)` or `getBuiltinArrayAccessName(...)`, `IrLowererBuiltinNameHelpers.cpp` and emitter builtin access helpers no longer classify `/vector/at(_unsafe)` as builtin access spellings, and focused helper coverage now locks canonical `/std/collections/vector/*` acceptance alongside rooted `/vector/*` rejection.
+
 **Group 14 - SoA bring-up and end-state cleanup**
 - ✓ [S4-01a1] Enforced canonical helper authority for read helper `count` and split the remaining read-helper leaf. Completed: old-surface explicit `/soa_vector/count` call and slash-method forms now reject with deterministic unknown-method diagnostics unless a same-path `/soa_vector/count` helper is actually visible, canonical paths remain accepted, and semantics coverage in `test_semantics_calls_and_flow_collections_02` now locks old-surface reject behavior.
 - ✓ [S4-01a2] Enforced canonical helper authority for read helpers `get` and `get_ref`. Completed: explicit old-surface `/soa_vector/get|get_ref` call and slash-method forms now reject with deterministic unknown-method diagnostics unless same-path helper definitions are visible, canonical helper forms remain accepted, and semantics/source-lock coverage now asserts both helper gates.
