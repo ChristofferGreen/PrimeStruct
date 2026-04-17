@@ -280,6 +280,18 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferMethodResolutionSource.find(
             "normalizedMethodPath == \"vector/at_unsafe\"") ==
         std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "normalizedMethodPath == \"vector/count\"") ==
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "normalizedMethodPath == \"vector/capacity\"") ==
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "normalizedMethodPath == \"vector/at\"") ==
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "auto isExplicitRootedVectorMethod = [&]() {") ==
+        std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = \"/soa_vector/ref\";") ==
         std::string::npos);
   CHECK((semanticsInferMethodResolutionSource.find(

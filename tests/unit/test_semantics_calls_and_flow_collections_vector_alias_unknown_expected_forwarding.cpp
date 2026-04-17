@@ -692,6 +692,49 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector method explicit count alias namespace keeps auto inference on same-path helper") {
+  const std::string source = R"(
+[return<bool>]
+/vector/count([vector<i32>] values) {
+  return(false)
+}
+
+[return<int>]
+/std/collections/vector/count<T>([vector<T>] values) {
+  return(33i32)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [auto] inferred{values./vector/count()}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector method explicit count alias namespace auto inference still rejects canonical-only helper path") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/vector/count<T>([vector<T>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [auto] inferred{values./vector/count()}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+}
+
 TEST_CASE("vector method bare capacity rejects canonical-only helper path") {
   const std::string source = R"(
 [return<int>]
@@ -751,6 +794,49 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector method explicit capacity alias namespace keeps auto inference on same-path helper") {
+  const std::string source = R"(
+[return<bool>]
+/vector/capacity([vector<i32>] values) {
+  return(false)
+}
+
+[return<int>]
+/std/collections/vector/capacity<T>([vector<T>] values) {
+  return(44i32)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [auto] inferred{values./vector/capacity()}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector method explicit capacity alias namespace auto inference still rejects canonical-only helper path") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/vector/capacity<T>([vector<T>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [auto] inferred{values./vector/capacity()}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/capacity") != std::string::npos);
+}
+
 TEST_CASE("vector method bare at rejects canonical-only helper path") {
   const std::string source = R"(
 [return<int>]
@@ -808,6 +894,49 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("vector method explicit at alias namespace keeps auto inference on same-path helper") {
+  const std::string source = R"(
+[return<bool>]
+/vector/at([vector<i32>] values, [i32] index) {
+  return(false)
+}
+
+[return<int>]
+/std/collections/vector/at<T>([vector<T>] values, [i32] index) {
+  return(plus(index, 55i32))
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [auto] inferred{values./vector/at(1i32)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector method explicit at alias namespace auto inference still rejects canonical-only helper path") {
+  const std::string source = R"(
+[return<bool>]
+/std/collections/vector/at<T>([vector<T>] values, [i32] index) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  [auto] inferred{values./vector/at(1i32)}
+  return(inferred)
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("vector method bare at_unsafe rejects canonical-only helper path") {
