@@ -818,7 +818,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/capacity") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /string/capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects native local alias slash-method vector capacity on array receiver") {
@@ -838,7 +838,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/capacity") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /array/capacity") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native stdlib collection shim helpers") {

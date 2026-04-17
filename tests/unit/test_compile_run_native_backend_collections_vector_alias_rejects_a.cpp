@@ -717,7 +717,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /string/count") != std::string::npos);
 }
 
 TEST_CASE("rejects native local alias slash-method vector count on array receiver") {
@@ -738,7 +738,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /array/count") != std::string::npos);
 }
 
 TEST_SUITE_END();
