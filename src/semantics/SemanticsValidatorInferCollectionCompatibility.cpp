@@ -688,6 +688,31 @@ std::string SemanticsValidator::getDirectVectorHelperCompatibilityPath(const Exp
   return hasDefinitionPath(removedPath) ? "" : removedPath;
 }
 
+std::string SemanticsValidator::getRemovedRootedVectorDirectCallPath(
+    const Expr &candidate) const {
+  if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
+      candidate.name.empty()) {
+    return "";
+  }
+
+  const std::string explicitPath = explicitCallPathForCandidate(candidate);
+  if (explicitPath.rfind("/vector/", 0) != 0) {
+    return "";
+  }
+
+  std::string removedPath =
+      explicitRemovedCollectionMethodPath(candidate.name, candidate.namespacePrefix);
+  if (removedPath.empty()) {
+    removedPath = explicitRemovedCollectionMethodPath(explicitPath, "");
+  }
+  if (removedPath.rfind("/vector/", 0) != 0) {
+    return "";
+  }
+  return (hasDefinitionPath(removedPath) || hasImportedDefinitionPath(removedPath))
+             ? ""
+             : removedPath;
+}
+
 bool SemanticsValidator::shouldPreserveRemovedCollectionHelperPath(const std::string &path) const {
   RemovedCollectionHelperFamily family = RemovedCollectionHelperFamily::VectorLike;
   std::string_view helperName;

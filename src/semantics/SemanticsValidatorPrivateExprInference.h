@@ -85,6 +85,8 @@
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
       const BuiltinCollectionDispatchResolverAdapters &adapters = {});
+  std::string getRemovedRootedVectorDirectCallPath(
+      const Expr &candidate) const;
   std::string explicitRemovedCollectionMethodPath(std::string_view rawMethodName,
                                                   std::string_view namespacePrefix) const;
   bool shouldPreserveRemovedCollectionHelperPath(const std::string &path) const;

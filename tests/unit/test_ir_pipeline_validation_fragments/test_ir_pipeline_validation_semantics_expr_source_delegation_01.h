@@ -353,7 +353,11 @@
             "auto rejectsRootedVectorBuiltinAlias =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "auto rejectsRemovedRootedVectorDirectCall =") !=
+            "auto rejectsRemovedRootedVectorDirectCall =") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const std::string removedRootedVectorDirectCallPath =\n"
+            "      getRemovedRootedVectorDirectCallPath(expr);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "context.isNamespacedVectorCountCall &&\n"
@@ -366,9 +370,7 @@
             "        !hasDeclaredDefinitionPath(\"/vector/count\") &&") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "rejectsRemovedRootedVectorDirectCall(\"count\",\n"
-            "                                             context.isNamespacedVectorCountCall,\n"
-            "                                             methodResolved)") !=
+            "removedRootedVectorDirectCallPath == \"/vector/count\"") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "context.isNamespacedVectorCapacityCall &&\n"
@@ -376,9 +378,13 @@
             "        !hasDeclaredDefinitionPath(\"/vector/capacity\") &&") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "rejectsRemovedRootedVectorDirectCall(\"capacity\",\n"
-            "                                             context.isNamespacedVectorCapacityCall,\n"
-            "                                             methodResolved)") !=
+            "removedRootedVectorDirectCallPath == \"/vector/capacity\"") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "getRemovedRootedVectorDirectCallPath(expr)") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "getRemovedRootedVectorDirectCallPath(") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "(normalizedMethodName == \"count\" || normalizedMethodName == \"capacity\") &&\n"
