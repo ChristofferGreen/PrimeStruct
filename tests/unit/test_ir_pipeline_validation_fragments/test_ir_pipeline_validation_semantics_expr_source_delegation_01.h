@@ -353,6 +353,9 @@
             "auto rejectsRootedVectorBuiltinAlias =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "auto rejectsRemovedRootedVectorDirectCall =") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "context.isNamespacedVectorCountCall &&\n"
             "        expr.args.size() == 1 &&\n"
             "        expr.args.front().kind == Expr::Kind::Call &&") ==
@@ -360,12 +363,22 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "context.isNamespacedVectorCountCall &&\n"
             "        expr.args.size() == 1 &&\n"
-            "        !hasDeclaredDefinitionPath(\"/vector/count\") &&") !=
+            "        !hasDeclaredDefinitionPath(\"/vector/count\") &&") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "rejectsRemovedRootedVectorDirectCall(\"count\",\n"
+            "                                             context.isNamespacedVectorCountCall,\n"
+            "                                             methodResolved)") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "context.isNamespacedVectorCapacityCall &&\n"
             "        expr.args.size() == 1 &&\n"
-            "        !hasDeclaredDefinitionPath(\"/vector/capacity\") &&") !=
+            "        !hasDeclaredDefinitionPath(\"/vector/capacity\") &&") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "rejectsRemovedRootedVectorDirectCall(\"capacity\",\n"
+            "                                             context.isNamespacedVectorCapacityCall,\n"
+            "                                             methodResolved)") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "(normalizedMethodName == \"count\" || normalizedMethodName == \"capacity\") &&\n"

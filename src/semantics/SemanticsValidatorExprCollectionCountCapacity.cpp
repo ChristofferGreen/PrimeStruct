@@ -25,6 +25,18 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   auto hasResolvableDefinitionPath = [&](const std::string &path) {
     return hasDeclaredDefinitionPath(path) || hasImportedDefinitionPath(path);
   };
+  auto rejectsRemovedRootedVectorDirectCall =
+      [&](std::string_view helperName,
+          bool isNamespacedVectorCall,
+          const std::string &methodResolved) {
+        if (expr.isMethodCall || !isNamespacedVectorCall || expr.args.size() != 1) {
+          return false;
+        }
+        const std::string helperPath = "/vector/" + std::string(helperName);
+        return !hasDeclaredDefinitionPath(helperPath) &&
+               !hasImportedDefinitionPath(helperPath) &&
+               methodResolved != helperPath;
+      };
   auto isConcreteCountCapacityInstantiation = [&](const std::string &path) {
     if (defMap_.find(path) == defMap_.end()) {
       return false;
@@ -206,12 +218,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         resolved.rfind(methodResolved + "__t", 0) == 0) {
       methodResolved = resolved;
     }
-    if (!expr.isMethodCall &&
-        context.isNamespacedVectorCountCall &&
-        expr.args.size() == 1 &&
-        !hasDeclaredDefinitionPath("/vector/count") &&
-        !hasImportedDefinitionPath("/vector/count") &&
-        methodResolved != "/vector/count") {
+    if (rejectsRemovedRootedVectorDirectCall("count",
+                                             context.isNamespacedVectorCountCall,
+                                             methodResolved)) {
       return failCollectionCountCapacityDiagnostic("unknown call target: /vector/count");
     }
     if (!expr.isMethodCall &&
@@ -295,12 +304,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         resolved.rfind(methodResolved + "__t", 0) == 0) {
       methodResolved = resolved;
     }
-    if (!expr.isMethodCall &&
-        context.isNamespacedVectorCapacityCall &&
-        expr.args.size() == 1 &&
-        !hasDeclaredDefinitionPath("/vector/capacity") &&
-        !hasImportedDefinitionPath("/vector/capacity") &&
-        methodResolved != "/vector/capacity") {
+    if (rejectsRemovedRootedVectorDirectCall("capacity",
+                                             context.isNamespacedVectorCapacityCall,
+                                             methodResolved)) {
       return failCollectionCountCapacityDiagnostic("unknown call target: /vector/capacity");
     }
     if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {
