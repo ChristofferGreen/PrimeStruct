@@ -285,7 +285,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs native user map constructor block shadow") {
