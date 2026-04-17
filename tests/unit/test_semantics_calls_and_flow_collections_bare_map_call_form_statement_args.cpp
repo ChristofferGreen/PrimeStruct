@@ -531,6 +531,28 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("canonical vector constructor auto binding infers same-path helper return kind") {
+  const std::string source = R"(
+Box<T>() {
+  [T] value{0i32}
+}
+
+[return<Box<T>>]
+/std/collections/vector/vector<T>([T] seed) {
+  return(Box<T>(seed))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto] boxed{/std/collections/vector/vector<i32>(9i32)}
+  return(boxed.value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector constructor alias call keeps removed-alias diagnostics") {
   const std::string source = R"(
 Marker {

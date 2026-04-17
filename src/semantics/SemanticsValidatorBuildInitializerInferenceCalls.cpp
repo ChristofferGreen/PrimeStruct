@@ -41,25 +41,6 @@ bool SemanticsValidator::inferCollectionBindingFromExpr(const Expr &expr,
       return true;
     }
   }
-  std::string resolvedCollectionPath = resolveCalleePath(expr);
-  const size_t collectionSuffix = resolvedCollectionPath.find("__t");
-  if (collectionSuffix != std::string::npos) resolvedCollectionPath.erase(collectionSuffix);
-  if (resolvedCollectionPath == "/std/collections/vector/vector" &&
-      expr.templateArgs.size() == 1) {
-    bindingOut.typeName = "vector";
-    bindingOut.typeTemplateArg = expr.templateArgs.front();
-    return true;
-  }
-  std::string namespacedCollection;
-  std::string namespacedHelper;
-  if (getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper) &&
-      namespacedCollection == "vector" &&
-      namespacedHelper == "vector" &&
-      expr.templateArgs.size() == 1) {
-    bindingOut.typeName = "vector";
-    bindingOut.typeTemplateArg = expr.templateArgs.front();
-    return true;
-  }
   auto defIt = defMap_.find(resolveCalleePath(expr));
   if (defIt == defMap_.end() || defIt->second == nullptr) {
     return false;

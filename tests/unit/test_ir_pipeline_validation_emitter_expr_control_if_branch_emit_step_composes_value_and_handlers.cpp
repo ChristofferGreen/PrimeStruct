@@ -623,6 +623,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
       repoRoot / "src" / "semantics" / "SemanticsHelpers.h";
   const std::filesystem::path buildInitializerInferencePath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorBuildInitializerInference.cpp";
+  const std::filesystem::path buildInitializerInferenceCallsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorBuildInitializerInferenceCalls.cpp";
   const std::filesystem::path exprArgumentValidationCollectionsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprArgumentValidationCollections.cpp";
   const std::filesystem::path exprMapSoaBuiltinsPath =
@@ -662,6 +664,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
   REQUIRE(std::filesystem::exists(builtinPathHelpersPath));
   REQUIRE(std::filesystem::exists(semanticsHelpersPath));
   REQUIRE(std::filesystem::exists(buildInitializerInferencePath));
+  REQUIRE(std::filesystem::exists(buildInitializerInferenceCallsPath));
   REQUIRE(std::filesystem::exists(exprArgumentValidationCollectionsPath));
   REQUIRE(std::filesystem::exists(exprMapSoaBuiltinsPath));
   REQUIRE(std::filesystem::exists(exprPath));
@@ -684,6 +687,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
   const std::string builtinPathHelpersSource = readText(builtinPathHelpersPath);
   const std::string semanticsHelpersSource = readText(semanticsHelpersPath);
   const std::string buildInitializerInferenceSource = readText(buildInitializerInferencePath);
+  const std::string buildInitializerInferenceCallsSource = readText(buildInitializerInferenceCallsPath);
   const std::string exprArgumentValidationCollectionsSource =
       readText(exprArgumentValidationCollectionsPath);
   const std::string exprMapSoaBuiltinsSource = readText(exprMapSoaBuiltinsPath);
@@ -940,6 +944,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
             "normalizedPrefix == \"vector\" && normalizedName == \"vector\"") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "resolvedCollectionPath == \"/std/collections/vector/vector\"") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "namespacedCollection == \"vector\"") ==
         std::string::npos);
   CHECK(buildCallResolutionSource.find("auto vectorConstructorHelperPath = [&]() -> std::string {") ==
         std::string::npos);
