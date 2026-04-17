@@ -546,6 +546,9 @@
             "const bool hasNamedValuesReceiver = [&]() {") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
+            "auto tryResolveNamedFallbackReceivers = [&]() {") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
             "expr.isMethodCall &&\n"
             "      isStdNamespacedVectorCanonicalCompatibilityHelperPath(") ==
         std::string::npos);
@@ -562,6 +565,9 @@
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "bool hasValuesNamedReceiver = false;") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "if (!hasNamedValuesReceiver && !resolvedReceiver)") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "const bool probePositionalReorderedReceiver =") ==

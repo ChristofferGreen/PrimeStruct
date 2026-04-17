@@ -621,20 +621,25 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
 
     bool resolvedReceiver = false;
     if (hasNamedArgs) {
-      if (hasNamedValuesReceiver) {
-        resolvedReceiver = tryResolveReceiverIndex(namedValuesReceiverIndex);
-      }
-      if (!hasNamedValuesReceiver && !resolvedReceiver) {
+      auto tryResolveNamedFallbackReceivers = [&]() {
+        if (hasNamedValuesReceiver || resolvedReceiver) {
+          return;
+        }
         resolvedReceiver = tryResolveReceiverIndex(0);
-      }
-      if (!hasNamedValuesReceiver && !resolvedReceiver) {
+        if (resolvedReceiver) {
+          return;
+        }
         for (size_t i = 1; i < expr.args.size(); ++i) {
           if (tryResolveReceiverIndex(i)) {
             resolvedReceiver = true;
-            break;
+            return;
           }
         }
+      };
+      if (hasNamedValuesReceiver) {
+        resolvedReceiver = tryResolveReceiverIndex(namedValuesReceiverIndex);
       }
+      tryResolveNamedFallbackReceivers();
     } else {
       resolvedReceiver = tryResolveReceiverIndex(0);
     }
