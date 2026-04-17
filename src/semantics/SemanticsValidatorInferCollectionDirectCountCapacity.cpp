@@ -22,6 +22,7 @@ ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKi
     (void)failExprDiagnostic(expr, std::move(message));
     return ReturnKind::Unknown;
   };
+  const std::string directCallPath = resolveCalleePath(expr);
   const auto inferHelperReturnKind = [&](const std::string &helperName,
                                          const Expr &receiverExpr,
                                          bool allowBuiltinFallback) -> ReturnKind {
@@ -43,8 +44,22 @@ ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKi
       std::string elemType;
       return context.resolveVectorTarget(receiverExpr, elemType);
     };
+    auto rejectsRootedVectorCountNonVectorAlias = [&](const std::string &methodPath) {
+      if (helperName != "count" ||
+          directCallPath != "/vector/count" ||
+          hasImportedDefinitionPath("/vector/count") ||
+          defMap_.find("/vector/count") != defMap_.end()) {
+        return false;
+      }
+      return methodPath != "/vector/count";
+    };
     std::string methodResolved;
-    if (!context.resolveMethodCallPath(helperName, methodResolved)) {
+    const std::string rootedHelperPath = "/vector/" + helperName;
+    if (directCallPath == rootedHelperPath &&
+        (hasImportedDefinitionPath(rootedHelperPath) ||
+         defMap_.find(rootedHelperPath) != defMap_.end())) {
+      methodResolved = rootedHelperPath;
+    } else if (!context.resolveMethodCallPath(helperName, methodResolved)) {
       return ReturnKind::Unknown;
     }
     methodResolved = context.preferVectorStdlibHelperPath(methodResolved);
@@ -57,6 +72,10 @@ ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKi
     if (rejectsRootedVectorBuiltinAlias(methodResolved)) {
       return failInferDirectCountCapacityDiagnostic(
           "unknown call target: " + methodResolved);
+    }
+    if (rejectsRootedVectorCountNonVectorAlias(methodResolved)) {
+      return failInferDirectCountCapacityDiagnostic(
+          "unknown call target: /vector/count");
     }
     if (allowBuiltinFallback && context.dispatchResolvers != nullptr &&
         defMap_.find(methodResolved) == defMap_.end()) {

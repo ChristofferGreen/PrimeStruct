@@ -101,7 +101,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced capacity auto inference rejects map target without helper") {
@@ -116,6 +116,67 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK_FALSE(error.empty());
+}
+
+TEST_CASE("vector namespaced count auto inference rejects string target without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [string] values{"abc"raw_utf8}
+  [auto] inferred{/vector/count(values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced count auto inference rejects array target without helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  [auto] inferred{/vector/count(values)}
+  return(inferred)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
+}
+
+TEST_CASE("vector namespaced count auto inference accepts same-path helpers on non-vector targets") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/count([map<i32, i32>] values) {
+  return(21i32)
+}
+
+[effects(heap_alloc), return<int>]
+/vector/count([string] values) {
+  return(22i32)
+}
+
+[effects(heap_alloc), return<int>]
+/vector/count([array<i32>] values) {
+  return(23i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] items{map<i32, i32>(1i32, 2i32)}
+  [string] text{"abc"raw_utf8}
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  [auto] inferredMap{/vector/count(items)}
+  [auto] inferredText{/vector/count(text)}
+  [auto] inferredArray{/vector/count(values)}
+  return(plus(plus(inferredMap, inferredText), inferredArray))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector stdlib namespaced count helper auto inference keeps canonical precedence") {
