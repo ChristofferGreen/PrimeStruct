@@ -97,7 +97,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("rejects user wrapper temporary count capacity shadow precedence in C++ emitter") {
+TEST_CASE("C++ emitter compiles user wrapper temporary count capacity shadow precedence") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -133,15 +133,14 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_user_wrapper_temp_count_capacity_shadow_precedence.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_user_wrapper_temp_count_capacity_shadow_precedence_err.txt")
+       "primec_cpp_user_wrapper_temp_count_capacity_shadow_precedence_exe")
           .string();
 
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 163);
 }
 
 TEST_CASE("rejects user wrapper temporary count capacity shadow value mismatch in C++ emitter") {
