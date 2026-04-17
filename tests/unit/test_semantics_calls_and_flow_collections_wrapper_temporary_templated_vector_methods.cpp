@@ -87,7 +87,9 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("template arguments are only supported on templated definitions") !=
+        std::string::npos);
+  CHECK(error.find("/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector count accepts named arguments through imported stdlib helper") {
