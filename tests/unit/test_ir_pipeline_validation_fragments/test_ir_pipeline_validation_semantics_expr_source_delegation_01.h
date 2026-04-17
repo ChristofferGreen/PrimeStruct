@@ -528,6 +528,9 @@
             "bool isStdNamespacedVectorCanonicalDirectCallReceiverCompatible(") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
+            "bool shouldProbePositionalReorderedVectorHelperReceiver(") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
             "const bool isStdNamespacedVectorCanonicalCompatibilityDirectCallSite =") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
@@ -559,6 +562,9 @@
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "bool hasValuesNamedReceiver = false;") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "const bool probePositionalReorderedReceiver =") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "const bool isExplicitStdNamespacedVectorCompatibilityMethod =") ==

@@ -52,6 +52,22 @@ bool isStdNamespacedVectorCanonicalDirectCallReceiverCompatible(
          isCountCapacityNamedArgException;
 }
 
+bool shouldProbePositionalReorderedVectorHelperReceiver(
+    const Expr &expr,
+    bool isStdNamespacedVectorCanonicalCompatibilityDirectCallSite,
+    bool hasNamedArgs,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals) {
+  return !isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&
+         !hasNamedArgs && expr.args.size() > 1 &&
+         (expr.args.front().kind == Expr::Kind::Literal ||
+          expr.args.front().kind == Expr::Kind::BoolLiteral ||
+          expr.args.front().kind == Expr::Kind::FloatLiteral ||
+          expr.args.front().kind == Expr::Kind::StringLiteral ||
+          (expr.args.front().kind == Expr::Kind::Name &&
+           !isVectorHelperReceiverName(expr.args.front(), params, locals)));
+}
+
 bool isVectorHelperReceiverName(const Expr &candidate,
                                 const std::vector<ParameterInfo> &params,
                                 const std::unordered_map<std::string, BindingInfo> &locals) {
@@ -623,15 +639,10 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       resolvedReceiver = tryResolveReceiverIndex(0);
     }
 
-    const bool probePositionalReorderedReceiver =
-        !isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&
-        !hasNamedArgs && expr.args.size() > 1 &&
-        (expr.args.front().kind == Expr::Kind::Literal || expr.args.front().kind == Expr::Kind::BoolLiteral ||
-         expr.args.front().kind == Expr::Kind::FloatLiteral ||
-         expr.args.front().kind == Expr::Kind::StringLiteral ||
-         (expr.args.front().kind == Expr::Kind::Name &&
-          !isVectorHelperReceiverName(expr.args.front(), params, locals)));
-    if (probePositionalReorderedReceiver && !resolvedReceiver) {
+    if (shouldProbePositionalReorderedVectorHelperReceiver(
+            expr, isStdNamespacedVectorCanonicalCompatibilityDirectCallSite,
+            hasNamedArgs, params, locals) &&
+        !resolvedReceiver) {
       for (size_t i = 1; i < expr.args.size(); ++i) {
         if (tryResolveReceiverIndex(i)) {
           break;
