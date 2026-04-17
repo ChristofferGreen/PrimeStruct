@@ -140,6 +140,7 @@ Wave D (queue hygiene):
     - Final release gate passes with `./scripts/compile.sh --release`.
   - stop_rule: If shared classifier rewrites destabilize `map`/`soa_vector`, isolate the generic mechanism in this leaf and defer remaining shared deletions to TODO-0409.
   - notes: This leaf should leave a reusable generic path that TODO-0409 can apply to `map` and `soa_vector`.
+  - progress: Completed `TODO-0508` by hoisting the surviving named `values` receiver scan in `SemanticsValidatorExprVectorHelpers.cpp` into one shared local index/flag pair, deleting the last inline `hasValuesNamedReceiver` scan branch in that helper-routing path.
   - progress: Completed `TODO-0507` by hoisting the surviving canonical vector helper-resolution `defMap_.find(resolved) == defMap_.end()` gate in `SemanticsValidatorExprVectorHelpers.cpp` into one shared local, deleting the last repeated inline resolution-missing check in that helper-routing path.
   - progress: Completed `TODO-0506` by folding the surviving canonical direct-call receiver-family branch in `SemanticsValidatorExprVectorHelpers.cpp` into one shared receiver-compatibility predicate, deleting the last open-coded `vector`/`experimental_vector` receiver check in that helper-routing path.
   - progress: Completed `TODO-0505` by hoisting the surviving canonical count/capacity named-argument exception in `SemanticsValidatorExprVectorHelpers.cpp` into one shared local gate, deleting the last repeated inline named-argument exception cluster in that vector helper-routing path.

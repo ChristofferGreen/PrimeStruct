@@ -537,6 +537,12 @@
             "const bool resolvedVectorHelperDefinitionMissing =") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
+            "size_t namedValuesReceiverIndex = expr.args.size();") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "const bool hasNamedValuesReceiver = [&]() {") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
             "expr.isMethodCall &&\n"
             "      isStdNamespacedVectorCanonicalCompatibilityHelperPath(") ==
         std::string::npos);
@@ -550,6 +556,9 @@
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "defMap_.find(resolved) == defMap_.end()") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "bool hasValuesNamedReceiver = false;") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "const bool isExplicitStdNamespacedVectorCompatibilityMethod =") ==

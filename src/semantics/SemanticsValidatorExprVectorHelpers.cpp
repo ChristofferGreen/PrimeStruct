@@ -565,6 +565,20 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
 
   const bool resolvedVectorHelperDefinitionMissing =
       defMap_.find(resolved) == defMap_.end();
+  size_t namedValuesReceiverIndex = expr.args.size();
+  const bool hasNamedValuesReceiver = [&]() {
+    if (!hasNamedArgs) {
+      return false;
+    }
+    for (size_t i = 0; i < expr.args.size(); ++i) {
+      if (i < expr.argNames.size() && expr.argNames[i].has_value() &&
+          *expr.argNames[i] == "values") {
+        namedValuesReceiverIndex = i;
+        return true;
+      }
+    }
+    return false;
+  }();
   size_t resolvedReceiverIndex = 0;
   if ((!isStdNamespacedVectorCanonicalCompatibilityDirectCallSite ||
        isStdNamespacedVectorCanonicalCountCapacityNamedArgException) &&
@@ -591,20 +605,13 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
 
     bool resolvedReceiver = false;
     if (hasNamedArgs) {
-      bool hasValuesNamedReceiver = false;
-      for (size_t i = 0; i < expr.args.size(); ++i) {
-        if (i < expr.argNames.size() && expr.argNames[i].has_value() && *expr.argNames[i] == "values") {
-          hasValuesNamedReceiver = true;
-          if (tryResolveReceiverIndex(i)) {
-            resolvedReceiver = true;
-            break;
-          }
-        }
+      if (hasNamedValuesReceiver) {
+        resolvedReceiver = tryResolveReceiverIndex(namedValuesReceiverIndex);
       }
-      if (!hasValuesNamedReceiver && !resolvedReceiver) {
+      if (!hasNamedValuesReceiver && !resolvedReceiver) {
         resolvedReceiver = tryResolveReceiverIndex(0);
       }
-      if (!hasValuesNamedReceiver && !resolvedReceiver) {
+      if (!hasNamedValuesReceiver && !resolvedReceiver) {
         for (size_t i = 1; i < expr.args.size(); ++i) {
           if (tryResolveReceiverIndex(i)) {
             resolvedReceiver = true;
