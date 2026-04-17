@@ -524,6 +524,12 @@
   CHECK(semanticsExprVectorHelpersSource.find(
             "const bool hasVisibleStdNamespacedVectorCanonicalHelper =") ==
         std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "const bool builtinCompatibleReceiver =") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "const bool hasCompatibleDeclaredHelper =") ==
+        std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "if (resolved == \"/std/collections/vector/count\" &&\n"
             "        hasImportedDefinitionPath(\"/std/collections/vector/count\") &&\n"

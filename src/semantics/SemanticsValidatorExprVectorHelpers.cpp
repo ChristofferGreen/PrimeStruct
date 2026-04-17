@@ -519,13 +519,9 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       expr.bodyArguments.empty()) {
     const Expr &receiverExpr = expr.args.front();
     const std::string receiverFamily = classifyReceiverFamily(receiverExpr);
-    const bool builtinCompatibleReceiver =
-        receiverFamily == "vector" || receiverFamily == "experimental_vector";
-    const bool hasCompatibleDeclaredHelper =
-        defMap_.count(resolved) > 0 &&
-        hasReceiverCompatibleVisibleDefinitionPath(resolved, receiverExpr);
-    if (!builtinCompatibleReceiver &&
-        !hasCompatibleDeclaredHelper &&
+    if (!(receiverFamily == "vector" || receiverFamily == "experimental_vector") &&
+        !(defMap_.count(resolved) > 0 &&
+          hasReceiverCompatibleVisibleDefinitionPath(resolved, receiverExpr)) &&
         !allowStdNamespacedUserReceiverProbe) {
       return failVectorHelperDiagnostic("unknown call target: " + resolved);
     }
