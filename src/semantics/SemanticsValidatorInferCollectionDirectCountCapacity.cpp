@@ -34,16 +34,6 @@ ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKi
              (context.hasDeclaredDefinitionPath != nullptr &&
               context.hasDeclaredDefinitionPath("/std/collections/map/count"));
     };
-    auto rejectsRootedVectorBuiltinAlias = [&](const std::string &methodPath) {
-      if (context.resolveVectorTarget == nullptr ||
-          methodPath != "/vector/" + helperName ||
-          hasImportedDefinitionPath(methodPath) ||
-          defMap_.find(methodPath) != defMap_.end()) {
-        return false;
-      }
-      std::string elemType;
-      return context.resolveVectorTarget(receiverExpr, elemType);
-    };
     auto rejectsRootedVectorCountNonVectorAlias = [&](const std::string &methodPath) {
       if (helperName != "count" ||
           directCallPath != "/vector/count" ||
@@ -68,10 +58,6 @@ ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKi
         !context.shouldInferBuiltinBareMapCountCall) {
       return failInferDirectCountCapacityDiagnostic(
           "unknown call target: /std/collections/map/count");
-    }
-    if (rejectsRootedVectorBuiltinAlias(methodResolved)) {
-      return failInferDirectCountCapacityDiagnostic(
-          "unknown call target: " + methodResolved);
     }
     if (rejectsRootedVectorCountNonVectorAlias(methodResolved)) {
       return failInferDirectCountCapacityDiagnostic(
