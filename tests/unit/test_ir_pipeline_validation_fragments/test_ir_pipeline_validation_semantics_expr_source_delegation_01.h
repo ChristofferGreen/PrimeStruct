@@ -567,6 +567,9 @@
             "auto tryResolvePositionalInitialReceiver = [&]() {") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
+            "auto tryResolveInitialReceiverForCallShape = [&]() {") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
             "auto tryResolveReorderedReceiver = [&]() {") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
@@ -612,6 +615,13 @@
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "} else {\n      tryResolvePrimaryReceiver();") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "if (hasNamedArgs) {\n"
+            "      tryResolveNamedInitialReceivers();\n"
+            "    } else {\n"
+            "      tryResolvePositionalInitialReceiver();\n"
+            "    }") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "if (shouldProbePositionalReorderedVectorHelperReceiver(\n"
