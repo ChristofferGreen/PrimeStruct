@@ -1532,9 +1532,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return true;
     }
     resolvedOut = preferVectorStdlibHelperPath(path);
-    if (resolvedOut == "/std/collections/vector/count" ||
-        resolvedOut == "/std/collections/vector/capacity" ||
-        resolvedOut == "/std/collections/vector/at" ||
+    if (resolvedOut == "/std/collections/vector/at" ||
         resolvedOut == "/std/collections/vector/at_unsafe") {
       std::string ignoredElemType;
       if (resolveVectorTarget(receiver, ignoredElemType) ||
@@ -1543,9 +1541,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         return true;
       }
     }
-    if ((resolvedOut == "/std/collections/vector/count" ||
-         resolvedOut == "/std/collections/vector/capacity" ||
-         resolvedOut == "/std/collections/vector/at" ||
+    if ((resolvedOut == "/std/collections/vector/at" ||
          resolvedOut == "/std/collections/vector/at_unsafe") &&
         hasImportedDefinitionPath(resolvedOut) &&
         defMap_.count(resolvedOut) == 0) {

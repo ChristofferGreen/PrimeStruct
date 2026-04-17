@@ -302,6 +302,14 @@
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "rememberedMethodTargetTraceFailure = std::move(message);") !=
         std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "if (resolvedOut == \"/std/collections/vector/count\" ||\n"
+            "        resolvedOut == \"/std/collections/vector/capacity\" ||") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "if (resolvedOut == \"/std/collections/vector/at\" ||\n"
+            "        resolvedOut == \"/std/collections/vector/at_unsafe\")") !=
+        std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "auto isExplicitVectorCompatibilityMethodWithTemplateArgs = [&]() {") ==
         std::string::npos);
