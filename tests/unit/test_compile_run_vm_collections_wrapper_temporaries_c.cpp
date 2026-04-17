@@ -104,7 +104,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " +
                              quoteShellArg(errPath) + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/at parameter key") !=
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/mapAt__") !=
         std::string::npos);
 }
 
@@ -151,7 +151,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " +
                              quoteShellArg(errPath) + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/at_unsafe parameter key") !=
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/mapAtUnsafe__") !=
         std::string::npos);
 }
 
@@ -452,7 +452,7 @@ main() {
   const std::string srcPath =
       writeTemp("vm_stdlib_collection_shim_templated_return_vector_temp_call_index_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 3);
 }
 
 TEST_CASE("rejects vm templated stdlib vector wrapper temporary call arity mismatch") {
@@ -532,7 +532,7 @@ main() {
   const std::string srcPath =
       writeTemp("vm_stdlib_collection_shim_templated_return_vector_temp_unsafe_call_index_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 3);
 }
 
 TEST_CASE("rejects vm templated stdlib vector wrapper temporary unsafe call arity mismatch") {
