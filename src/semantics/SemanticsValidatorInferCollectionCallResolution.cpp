@@ -110,8 +110,7 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
            explicitTarget == basePath ||
            explicitTarget.rfind(specializedPrefix, 0) == 0;
   };
-  if (matchesCollectionCtorPath("/std/collections/vector/vector") ||
-      matchesCollectionCtorPath("/std/collections/vectorNew") ||
+  if (matchesCollectionCtorPath("/std/collections/vectorNew") ||
       matchesCollectionCtorPath("/std/collections/vectorSingle") ||
       matchesCollectionCtorPath("/std/collections/vectorPair") ||
       matchesCollectionCtorPath("/std/collections/vectorTriple") ||
@@ -304,8 +303,7 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
   }
 
   if (expectedBase == "vector" &&
-      (matchesCollectionCtorPath("/std/collections/vector/vector") ||
-       matchesCollectionCtorPath("/std/collections/vectorNew") ||
+      (matchesCollectionCtorPath("/std/collections/vectorNew") ||
        matchesCollectionCtorPath("/std/collections/vectorSingle") ||
        matchesCollectionCtorPath("/std/collections/vectorPair") ||
        matchesCollectionCtorPath("/std/collections/vectorTriple") ||
