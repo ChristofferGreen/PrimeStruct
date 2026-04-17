@@ -19,7 +19,7 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
   }
 
   const std::string removedRootedVectorDirectCallDiagnostic =
-      getRemovedRootedVectorDirectCallDiagnostic(expr, "at", "at_unsafe");
+      getRemovedRootedVectorDirectCallDiagnostic(expr);
   if (!removedRootedVectorDirectCallDiagnostic.empty()) {
     return failDirectCollectionFallbackDiagnostic(
         removedRootedVectorDirectCallDiagnostic);

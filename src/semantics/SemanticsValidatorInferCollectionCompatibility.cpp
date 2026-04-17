@@ -714,19 +714,9 @@ std::string SemanticsValidator::getRemovedRootedVectorDirectCallPath(
 }
 
 std::string SemanticsValidator::getRemovedRootedVectorDirectCallDiagnostic(
-    const Expr &candidate,
-    const std::string &primaryHelperName,
-    const std::string &secondaryHelperName) const {
+    const Expr &candidate) const {
   const std::string removedPath = getRemovedRootedVectorDirectCallPath(candidate);
   if (removedPath.empty()) {
-    return "";
-  }
-
-  auto matchesHelperName = [&](const std::string &helperName) {
-    return !helperName.empty() && removedPath == "/vector/" + helperName;
-  };
-  if (!matchesHelperName(primaryHelperName) &&
-      !matchesHelperName(secondaryHelperName)) {
     return "";
   }
   return "unknown call target: " + removedPath;

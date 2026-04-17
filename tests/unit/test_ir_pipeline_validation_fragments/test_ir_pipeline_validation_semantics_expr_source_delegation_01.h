@@ -357,7 +357,7 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const std::string removedRootedVectorDirectCallDiagnostic =\n"
-            "      getRemovedRootedVectorDirectCallDiagnostic(expr, \"count\", \"capacity\");") !=
+            "      getRemovedRootedVectorDirectCallDiagnostic(expr);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "context.isNamespacedVectorCountCall &&\n"
@@ -380,11 +380,11 @@
             "          removedRootedVectorDirectCallDiagnostic);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "getRemovedRootedVectorDirectCallDiagnostic(expr, \"count\", \"capacity\")") !=
+            "getRemovedRootedVectorDirectCallDiagnostic(expr)") !=
         std::string::npos);
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
             "const std::string removedRootedVectorDirectCallDiagnostic =\n"
-            "      getRemovedRootedVectorDirectCallDiagnostic(expr, \"at\", \"at_unsafe\");") !=
+            "      getRemovedRootedVectorDirectCallDiagnostic(expr);") !=
         std::string::npos);
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
             "explicitPath == \"/vector/at\" || explicitPath == \"/vector/at_unsafe\"") ==
@@ -396,7 +396,13 @@
             "  }") !=
         std::string::npos);
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
-            "getRemovedRootedVectorDirectCallDiagnostic(expr, \"at\", \"at_unsafe\")") !=
+            "getRemovedRootedVectorDirectCallDiagnostic(expr)") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "getRemovedRootedVectorDirectCallDiagnostic(expr, \"count\", \"capacity\")") ==
+        std::string::npos);
+  CHECK(semanticsExprDirectCollectionFallbacksSource.find(
+            "getRemovedRootedVectorDirectCallDiagnostic(expr, \"at\", \"at_unsafe\")") ==
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
             "getRemovedRootedVectorDirectCallPath(") ==

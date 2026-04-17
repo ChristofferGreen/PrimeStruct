@@ -26,7 +26,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     return hasDeclaredDefinitionPath(path) || hasImportedDefinitionPath(path);
   };
   const std::string removedRootedVectorDirectCallDiagnostic =
-      getRemovedRootedVectorDirectCallDiagnostic(expr, "count", "capacity");
+      getRemovedRootedVectorDirectCallDiagnostic(expr);
   auto isConcreteCountCapacityInstantiation = [&](const std::string &path) {
     if (defMap_.find(path) == defMap_.end()) {
       return false;
