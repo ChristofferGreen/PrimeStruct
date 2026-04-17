@@ -620,13 +620,16 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     };
 
     bool resolvedReceiver = false;
+    auto tryResolvePrimaryReceiver = [&]() {
+      resolvedReceiver = tryResolveReceiverIndex(0);
+      return resolvedReceiver;
+    };
     if (hasNamedArgs) {
       auto tryResolveNamedFallbackReceivers = [&]() {
         if (hasNamedValuesReceiver || resolvedReceiver) {
           return;
         }
-        resolvedReceiver = tryResolveReceiverIndex(0);
-        if (resolvedReceiver) {
+        if (tryResolvePrimaryReceiver()) {
           return;
         }
         for (size_t i = 1; i < expr.args.size(); ++i) {
@@ -641,7 +644,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       }
       tryResolveNamedFallbackReceivers();
     } else {
-      resolvedReceiver = tryResolveReceiverIndex(0);
+      tryResolvePrimaryReceiver();
     }
 
     if (shouldProbePositionalReorderedVectorHelperReceiver(
