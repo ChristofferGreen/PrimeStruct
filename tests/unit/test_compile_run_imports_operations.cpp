@@ -436,15 +436,11 @@ main() {
       writeTemp("compile_graph_direct_local_auto_vector_helper_shadows_exe.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_graph_direct_local_auto_vector_helper_shadows_exe").string();
-  const std::string errPath =
-      (testScratchPath("") / "primec_graph_direct_local_auto_vector_helper_shadows_exe.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  const std::string err = readFile(errPath);
-  CHECK(err.find("validateExprMethodCallTarget failed") != std::string::npos);
-  CHECK(err.find("/vector/count") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 34);
 }
 
 TEST_CASE(
