@@ -459,7 +459,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects native vector namespaced access slash methods without alias helper on vector receiver") {
