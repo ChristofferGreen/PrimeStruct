@@ -48,7 +48,7 @@ import /std/collections/*
 
 [effects(heap_alloc), int]
 sumValues() {
-  [vector<int> mut] values{vector<int>{4, 8, 15}}
+  [vector<int> mut] values{4, 8, 15}
   [int mut] total{0}
   [int] count{values.count()}
 
@@ -61,9 +61,10 @@ sumValues() {
 ```
 
 Current note: the verified vector example shape today uses
-`import /std/collections/*` plus explicit `vector<T>{...}` construction. The
-shorter target surface is intended, but it is still tracked as follow-up work
-in `docs/todo.md` (`TODO-0476`).
+`import /std/collections/*` with concise `[vector<T>] values{...}` bindings for
+bare helper names and method sugar. Exact `import /std/collections/vector` is
+also supported for bare `vector(...)` construction plus canonical
+`/std/collections/vector/*` helpers.
 
 ## Quick Start
 

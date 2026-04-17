@@ -68,7 +68,7 @@ TEST_CASE("collection docs snippets stay c++ style and executable" * doctest::sk
       "value.at(index)", "value[index]", "Structural mutation boundaries are `push`, `reserve`, `to_soa`, and `to_aos`."};
   const std::vector<std::string> requiredGuidelinesSnippets = {
       "value.push(x)", "value.at(i)", "value[i]", "value.count()",
-      "[vector<i32> mut] values{vector<i32>{1, 2}}"};
+      "[vector<i32> mut] values{1, 2}"};
 
   for (const std::string &snippet : requiredPrimeStructSnippets) {
     CAPTURE(snippet);
@@ -125,7 +125,7 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [array<i32>] baseline{array<i32>{1, 2, 3}}
-  [vector<i32> mut] values{vector<i32>{1, 2}}
+  [vector<i32> mut] values{1, 2}
   [map<i32, i32>] pairs{map<i32, i32>{7=10}}
   values.push(3)
   values.reserve(8)

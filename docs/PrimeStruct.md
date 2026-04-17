@@ -2986,11 +2986,12 @@ bad_use_after_take() {
     `value.pop()`, `value.reserve(capacity)`, `value.capacity()`, `value.clear()`, `value.remove_at(index)`,
     `value.remove_swap(index)` (canonical helper equivalents remain `count(value)`, `at(value, index)`, `push(value,
     item)`, etc.). Import `/std/collections/*` before using bare helper names or method-sugar examples.
-    Exact `import /std/collections/vector` is part of the verified runnable surface for the explicit
-    constructor plus canonical `/std/collections/vector/*` helper forms. Concise binding initializers
-    such as `[vector<T>] values{1, 2, 3}` are still an intended user-facing direction but are not yet
-    a verified portable contract; use explicit `vector<T>{...}` construction in examples for now.
-    Follow-up work is tracked in `TODO-0476`.
+    Exact `import /std/collections/vector` is part of the verified runnable surface for bare
+    `vector(...)` construction plus canonical `/std/collections/vector/*` helper forms. Concise
+    binding initializers such as `[vector<T>] values{1, 2, 3}` are now also part of the verified
+    wildcard-import surface for readable vector examples and loop/index code, while explicit
+    `vector<T>{...}` construction remains available when examples want to emphasize constructor
+    spelling.
   - Map helpers: `count(value)`, `contains(value, key)`, `value.at(key)`, `value[key]`, `value.at_unsafe(key)` plus
     stdlib wrapper imports such as `mapCount`, `mapContains`, `mapTryAt`, `mapAt`, and `mapAtUnsafe`. `mapTryAt` routes
     misses to `Result<ContainerError>` / `Result<T, ContainerError>` instead of the checked missing-key abort path and,

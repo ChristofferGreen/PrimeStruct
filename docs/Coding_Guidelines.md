@@ -118,7 +118,7 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32> mut] values{vector<i32>{1, 2}}
+  [vector<i32> mut] values{1, 2}
   [map<i32, i32>] pairs{map<i32, i32>{7=10}}
   values.push(3)
   values.reserve(8)
@@ -127,12 +127,12 @@ main() {
 ```
 
 Use the wildcard collections import when an example depends on bare helper
-names or method sugar, and use the explicit `vector<T>{...}` constructor form
-for current docs/examples. Exact `import /std/collections/vector` is acceptable
-for the explicit constructor plus canonical `/std/collections/vector/*` helper
-surface. The shorter target shape (`import /std/collections/vector` plus
-`[vector<T>] values{...}` bindings) is tracked separately and is not yet a
-verified portable example shape.
+names or method sugar. Concise vector bindings such as
+`[vector<T>] values{1, 2}` are now part of the verified example surface, and
+the explicit `vector<T>{...}` constructor form remains available when an
+example wants to emphasize constructor spelling. Exact `import
+/std/collections/vector` is acceptable for bare `vector(...)` construction plus
+canonical `/std/collections/vector/*` helpers.
 
 ## Gold-Standard Surface Example (Pure PrimeStruct)
 

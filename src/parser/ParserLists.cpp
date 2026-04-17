@@ -29,6 +29,14 @@ bool isSimpleSpreadMarker(const std::vector<Token> &tokens, size_t index) {
 bool isIgnorableToken(TokenKind kind) {
   return kind == TokenKind::Comment;
 }
+
+bool isVectorBindingTypeName(std::string name) {
+  if (!name.empty() && name.front() == '/') {
+    name.erase(0, 1);
+  }
+  return name == "vector" || name == "std/collections/vector" ||
+         name == "std/collections/vector/vector";
+}
 } // namespace
 
 bool Parser::parseCallArgumentList(std::vector<Expr> &out,
@@ -282,17 +290,6 @@ bool Parser::parseBindingInitializerList(std::vector<Expr> &out,
 }
 
 bool Parser::finalizeBindingInitializer(Expr &binding) {
-  bool hasNamed = false;
-  for (const auto &name : binding.argNames) {
-    if (name.has_value()) {
-      hasNamed = true;
-      break;
-    }
-  }
-  if (!hasNamed && binding.args.size() <= 1) {
-    return true;
-  }
-
   std::string typeName;
   std::vector<std::string> templateArgs;
   for (const auto &transform : binding.transforms) {
@@ -311,6 +308,22 @@ bool Parser::finalizeBindingInitializer(Expr &binding) {
   }
   if (typeName.empty()) {
     return fail("binding initializer requires explicit type");
+  }
+
+  bool hasNamed = false;
+  for (const auto &name : binding.argNames) {
+    if (name.has_value()) {
+      hasNamed = true;
+      break;
+    }
+  }
+  const bool conciseVectorInitializer = !hasNamed && binding.args.size() == 1 &&
+                                        isVectorBindingTypeName(typeName) &&
+                                        binding.args.front().kind == Expr::Kind::Call &&
+                                        binding.args.front().name == "block" &&
+                                        binding.args.front().hasBodyArguments;
+  if (!hasNamed && binding.args.size() <= 1 && !conciseVectorInitializer) {
+    return true;
   }
   if (hasNamed) {
     std::string normalized = typeName;

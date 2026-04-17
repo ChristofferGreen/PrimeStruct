@@ -791,6 +791,33 @@ main() {
   CHECK(error.find("duplicate definition: /std/collections/vector/vector") != std::string::npos);
 }
 
+TEST_CASE("wildcard vector import supports concise vector binding example") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+sumValues() {
+  [vector<int> mut] values{4, 8, 15}
+  [int mut] total{0}
+  [int] count{values.count()}
+
+  for([int mut] index{0}; index < count; ++index) {
+    total = total + values[index]
+  }
+
+  return(total)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(sumValues())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector method alias access rejects canonical struct-return forwarding") {
   const std::string source = R"(
 Marker {

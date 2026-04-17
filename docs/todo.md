@@ -55,11 +55,10 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-1. TODO-0476
-2. TODO-0408
-3. TODO-0401
-4. TODO-0402
-5. TODO-0405
+1. TODO-0408
+2. TODO-0401
+3. TODO-0402
+4. TODO-0405
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -69,16 +68,15 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- P1 Collection stdlib ownership cutover (`vector`, `map`, `soa_vector`): TODO-0476, TODO-0408, TODO-0409
+- P1 Collection stdlib ownership cutover (`vector`, `map`, `soa_vector`): TODO-0408, TODO-0409
 - P2 SoA canonicalization + semantic memory/perf + multithread substrate + semantic-product boundary hardening: TODO-0401, TODO-0402, TODO-0405, TODO-0406
 - P3 Queue/snapshot governance: TODO-0403
 
 ### Execution Queue (Recommended)
 
 Wave A (collection stdlib ownership cutover):
-1. TODO-0476
-2. TODO-0408
-3. TODO-0409
+1. TODO-0408
+2. TODO-0409
 
 Wave B (SoA completion):
 1. TODO-0401
@@ -95,7 +93,7 @@ Wave D (queue hygiene):
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Collection stdlib ownership cutover (`vector`, `map`, `soa_vector`) | TODO-0476, TODO-0408, TODO-0409 |
+| Collection stdlib ownership cutover (`vector`, `map`, `soa_vector`) | TODO-0408, TODO-0409 |
 | SoA bring-up and stdlib-authoritative `soa_vector` end-state cleanup | TODO-0401 |
 | Semantic memory footprint and multithread compile substrate | TODO-0402 |
 | Semantic-product contract/index boundary hardening | TODO-0405, TODO-0406 |
@@ -105,28 +103,13 @@ Wave D (queue hygiene):
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0401, TODO-0402, TODO-0405, TODO-0406, TODO-0408, TODO-0409, TODO-0476 |
-| Collection conformance and alias-deletion checks (`vector`/`map`/`soa_vector`) | TODO-0476, TODO-0408, TODO-0409 |
+| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0401, TODO-0402, TODO-0405, TODO-0406, TODO-0408, TODO-0409 |
+| Collection conformance and alias-deletion checks (`vector`/`map`/`soa_vector`) | TODO-0408, TODO-0409 |
 | Benchmark/runtime regression checks (`./scripts/benchmark.sh`) | TODO-0402 |
 | Semantic-product contract/index and deterministic conformance checks | TODO-0405, TODO-0406 |
 | TODO/open-vs-finished hygiene (`docs/todo.md` vs `docs/todo_finished.md`) | TODO-0403 |
 
 ### Task Blocks
-
-- [ ] TODO-0476: Make the concise vector example work end to end
-  - owner: ai
-  - created_at: 2026-04-17
-  - phase: Group 14
-  - scope: Make the user-facing concise vector example surface work consistently through semantics, IR lowering, VM, and native emission, specifically the combination of a stdlib vector import plus a brace-form vector binding/loop example that should evaluate to `27` without requiring the more explicit `vector<int>{...}` fallback spelling.
-  - acceptance:
-    - A focused compile-run regression locks a concise vector example equivalent to `sumValues()` with a `for` loop and `values[index]` access, and that example returns `27` under both `build-release/primevm` and native `build-release/primec --emit=exe`.
-    - The short vector binding form used by the example (for example `[vector<int>] values{4, 8, 15}` or the final supported concise equivalent after text transforms) no longer reaches the current `unaligned indirect address in IR` failure on either backend path.
-    - Import behavior for the example is made explicit and deterministic: either exact `import /std/collections/vector` is supported for this stdlib surface or the compiler/docs are aligned on a different required import form with focused diagnostics/tests that cover the chosen contract.
-    - `docs/PrimeStruct.md` and `docs/CodeQuality.md` are updated together so the documented vector example surface matches the verified runnable contract.
-    - Focused release-mode suites pass for the affected surface: `./build-release/PrimeStruct_semantics_tests --test-suite=primestruct.semantics.calls_flow.collections`, `./build-release/PrimeStruct_backend_tests --test-suite=primestruct.ir.pipeline.validation`, `./build-release/PrimeStruct_backend_tests --test-suite=primestruct.compile.run.vm.collections`, and `./build-release/PrimeStruct_backend_tests --test-suite=primestruct.compile.run.native_backend.collections`.
-  - stop_rule: If exact-import resolution and short-literal lowering turn out to be separate changes with different ownership/risk, split this into one import-surface leaf and one vector-literal/lowering leaf before continuing.
-  - notes: Current behavior in the local release toolchain is still inconsistent with the intended concise-example direction: exact `import /std/collections/vector` now works for the explicit constructor plus canonical `/std/collections/vector/*` helper surface, but wildcard-import plus short vector binding still gets past semantics and fails at runtime with `unaligned indirect address in IR`; the more explicit wildcard-import + `vector<int>{4, 8, 15}` spelling succeeds and returns `27`.
-  - progress: Completed child slice `TODO-0477` (archived in `docs/todo_finished.md`): exact `import /std/collections/vector` now aliases bare `vector(...)` to the canonical stdlib constructor path and is documented/tested as a supported surface for explicit constructor plus canonical `/std/collections/vector/*` helper calls, while the shorter `[vector<T>] values{...}` binding/lowering half remains follow-up work under `TODO-0476`.
 
 - [ ] TODO-0409: Remove C++ name routing for `map` + `soa_vector`
   - owner: ai

@@ -118,6 +118,64 @@ main() {
   CHECK(runCommand(exePath) == 22);
 }
 
+TEST_CASE("concise vector binding example runs in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+sumValues() {
+  [vector<int> mut] values{4, 8, 15}
+  [int mut] total{0}
+  [int] count{values.count()}
+
+  for([int mut] index{0}; index < count; ++index) {
+    total = total + values[index]
+  }
+
+  return(total)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(sumValues())
+}
+)";
+  const std::string srcPath = writeTemp("compile_concise_vector_example_exe.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "compile_concise_vector_example_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 27);
+}
+
+TEST_CASE("concise vector binding example runs in VM") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+sumValues() {
+  [vector<int> mut] values{4, 8, 15}
+  [int mut] total{0}
+  [int] count{values.count()}
+
+  for([int mut] index{0}; index < count; ++index) {
+    total = total + values[index]
+  }
+
+  return(total)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(sumValues())
+}
+)";
+  const std::string srcPath = writeTemp("run_concise_vector_example_vm.prime", source);
+  const std::string runCmd = "./primevm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 27);
+}
+
 TEST_CASE("compiles and runs experimental soa_vector stdlib helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
