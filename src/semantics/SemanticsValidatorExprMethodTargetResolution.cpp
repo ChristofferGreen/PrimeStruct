@@ -1532,15 +1532,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return true;
     }
     resolvedOut = preferVectorStdlibHelperPath(path);
-    if (resolvedOut == "/std/collections/vector/at" ||
-        resolvedOut == "/std/collections/vector/at_unsafe") {
-      std::string ignoredElemType;
-      if (resolveVectorTarget(receiver, ignoredElemType) ||
-          resolveSoaVectorTarget(receiver, ignoredElemType)) {
-        isBuiltinOut = true;
-        return true;
-      }
-    }
     if ((resolvedOut == "/std/collections/vector/at" ||
          resolvedOut == "/std/collections/vector/at_unsafe") &&
         hasImportedDefinitionPath(resolvedOut) &&
