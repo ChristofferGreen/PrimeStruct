@@ -642,22 +642,21 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       return markResolvedReceiver(
           tryResolveReceiverIndex(namedValuesReceiverIndex));
     };
+    auto tryResolveNamedFallbackReceivers = [&]() {
+      if (hasNamedValuesReceiver || resolvedReceiver) {
+        return false;
+      }
+      if (tryResolvePrimaryReceiver()) {
+        return true;
+      }
+      return tryResolveRemainingReceivers(1);
+    };
     auto tryResolveInitialReceiver = [&]() {
       if (!hasNamedArgs) {
         return tryResolvePrimaryReceiver();
       }
-      auto tryResolveNamedFallbackReceivers = [&]() {
-        if (hasNamedValuesReceiver || resolvedReceiver) {
-          return;
-        }
-        if (tryResolvePrimaryReceiver()) {
-          return;
-        }
-        tryResolveRemainingReceivers(1);
-      };
       tryResolveNamedValuesReceiver();
-      tryResolveNamedFallbackReceivers();
-      return resolvedReceiver;
+      return tryResolveNamedFallbackReceivers();
     };
     auto tryResolveReorderedReceiver = [&]() {
       if (resolvedReceiver) {
