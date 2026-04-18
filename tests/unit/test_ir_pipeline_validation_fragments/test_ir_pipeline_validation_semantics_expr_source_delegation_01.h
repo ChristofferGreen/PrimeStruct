@@ -1106,6 +1106,7 @@
             "const std::string stdNamespacedVectorCountTargetDiagnosticMessage =\n"
             "          stdNamespacedVectorCountHelperState\n"
             "              .classifyNonVectorCountTargetDiagnosticMessage(\n"
+            "                  false,\n"
             "                  resolvesMapAfterValidation,\n"
             "                  resolvesNonVectorCountTarget);") !=
         std::string::npos);
@@ -1252,9 +1253,14 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const std::string stdNamespacedVectorCountTargetDiagnosticMessage =\n"
-            "      stdNamespacedVectorCountHelperState.classifyCountTargetDiagnosticMessage(\n"
-            "          false, context.isDirectStdNamespacedVectorCountWrapperMapTarget,\n"
+            "      stdNamespacedVectorCountHelperState.classifyNonVectorCountTargetDiagnosticMessage(\n"
+            "          context.isDirectStdNamespacedVectorCountWrapperMapTarget,\n"
             "          resolvesStdNamespacedVectorCountMapTarget, false);") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "classifyCountTargetDiagnosticMessage(\n"
+            "          false, context.isDirectStdNamespacedVectorCountWrapperMapTarget,\n"
+            "          resolvesStdNamespacedVectorCountMapTarget, false);") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "classifyStdNamespacedVectorCountMapTargetDiagnosticMessage(") ==
