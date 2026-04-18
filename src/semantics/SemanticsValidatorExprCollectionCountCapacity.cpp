@@ -65,9 +65,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     return true;
   }
 
+  const bool lacksDeclaredStdNamespacedVectorCountHelper =
+      !hasDeclaredDefinitionPath("/std/collections/vector/count");
   const bool rejectsStdNamespacedVectorCountWrapperMapTargetWithoutDeclaredHelper =
       context.isDirectStdNamespacedVectorCountWrapperMapTarget &&
-      !hasDeclaredDefinitionPath("/std/collections/vector/count");
+      lacksDeclaredStdNamespacedVectorCountHelper;
   if (rejectsStdNamespacedVectorCountWrapperMapTargetWithoutDeclaredHelper) {
     handledOut = true;
     return failCollectionCountCapacityDiagnostic("unknown call target: /std/collections/vector/count");
@@ -88,7 +90,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       context.resolveMapTarget(expr.args.front());
   const bool rejectsStdNamespacedVectorCountMapTargetAsNonVector =
       resolvesStdNamespacedVectorCountMapTarget &&
-      (defMap_.find("/std/collections/vector/count") == defMap_.end() ||
+      (lacksDeclaredStdNamespacedVectorCountHelper ||
        hasImportedDefinitionPath("/std/collections/vector/count"));
   if (rejectsStdNamespacedVectorCountMapTargetAsNonVector) {
     handledOut = true;

@@ -1121,9 +1121,17 @@
             "vectorCompatibilityRequiresVectorTargetDiagnostic(\"count\")") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool lacksDeclaredStdNamespacedVectorCountHelper =\n"
+            "      !hasDeclaredDefinitionPath(\"/std/collections/vector/count\");") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool rejectsStdNamespacedVectorCountWrapperMapTargetWithoutDeclaredHelper =\n"
             "      context.isDirectStdNamespacedVectorCountWrapperMapTarget &&\n"
-            "      !hasDeclaredDefinitionPath(\"/std/collections/vector/count\");") !=
+            "      lacksDeclaredStdNamespacedVectorCountHelper;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "context.isDirectStdNamespacedVectorCountWrapperMapTarget &&\n"
+            "      !hasDeclaredDefinitionPath(\"/std/collections/vector/count\");") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (context.isDirectStdNamespacedVectorCountWrapperMapTarget &&\n"
@@ -1141,8 +1149,12 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool rejectsStdNamespacedVectorCountMapTargetAsNonVector =\n"
             "      resolvesStdNamespacedVectorCountMapTarget &&\n"
-            "      (defMap_.find(\"/std/collections/vector/count\") == defMap_.end() ||\n"
+            "      (lacksDeclaredStdNamespacedVectorCountHelper ||\n"
             "       hasImportedDefinitionPath(\"/std/collections/vector/count\"));") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "(defMap_.find(\"/std/collections/vector/count\") == defMap_.end() ||\n"
+            "       hasImportedDefinitionPath(\"/std/collections/vector/count\"));") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (resolvesStdNamespacedVectorCountMapTarget &&\n"
