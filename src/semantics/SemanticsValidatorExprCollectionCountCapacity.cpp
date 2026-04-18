@@ -285,24 +285,22 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                                                    methodResolved);
         });
   };
-  const bool routesThroughVectorCountMethodSurface =
-      !(hasNamedArguments(expr.argNames) ||
-        isUnimportedStdNamespacedVectorCompatibilityDirectCall(
-            expr.isMethodCall,
-            resolveCalleePath(expr),
-            "count",
-            hasImportedDefinitionPath("/std/collections/vector/count")) ||
-        expr.args.empty()) &&
-      !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
-        context.isArrayNamespacedVectorCountCompatibilityCall(expr)) &&
-      (isVectorBuiltinName(expr, "count") ||
-       context.isStdNamespacedMapCountCall ||
-       context.isNamespacedMapCountCall ||
-       context.isUnnamespacedMapCountFallbackCall ||
-       context.isResolvedMapCountCall);
   if (std::optional<bool> resolvedCountMethod =
           tryResolveCollectionMethodFromSurfaceRoutes(
-              routesThroughVectorCountMethodSurface,
+              !(hasNamedArguments(expr.argNames) ||
+                isUnimportedStdNamespacedVectorCompatibilityDirectCall(
+                    expr.isMethodCall,
+                    resolveCalleePath(expr),
+                    "count",
+                    hasImportedDefinitionPath("/std/collections/vector/count")) ||
+                expr.args.empty()) &&
+                  !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
+                    context.isArrayNamespacedVectorCountCompatibilityCall(expr)) &&
+                  (isVectorBuiltinName(expr, "count") ||
+                   context.isStdNamespacedMapCountCall ||
+                   context.isNamespacedMapCountCall ||
+                   context.isUnnamespacedMapCountFallbackCall ||
+                   context.isResolvedMapCountCall),
               expr.args.size() == 1 &&
                   ((defMap_.find(resolved) == defMap_.end() &&
                     !context.isStdNamespacedMapCountCall) ||
