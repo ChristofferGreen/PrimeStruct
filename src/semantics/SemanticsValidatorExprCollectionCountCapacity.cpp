@@ -69,15 +69,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       makeStdNamespacedVectorCompatibilityHelperState(
           hasDeclaredDefinitionPath("/std/collections/vector/count"),
           hasImportedDefinitionPath("/std/collections/vector/count"));
-  const std::string stdNamespacedVectorCountWrapperTargetDiagnosticMessage =
-      stdNamespacedVectorCountHelperState.classifyCountTargetDiagnosticMessage(
-          false, context.isDirectStdNamespacedVectorCountWrapperMapTarget,
-          false, false);
-  if (!stdNamespacedVectorCountWrapperTargetDiagnosticMessage.empty()) {
-    handledOut = true;
-    return failCollectionCountCapacityDiagnostic(
-        std::move(stdNamespacedVectorCountWrapperTargetDiagnosticMessage));
-  }
 
   Expr rewrittenVectorHelperCall;
   if (context.tryRewriteBareVectorHelperCall != nullptr &&
@@ -94,7 +85,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       context.resolveMapTarget(expr.args.front());
   const std::string stdNamespacedVectorCountTargetDiagnosticMessage =
       stdNamespacedVectorCountHelperState.classifyCountTargetDiagnosticMessage(
-          false, false, resolvesStdNamespacedVectorCountMapTarget, false);
+          false, context.isDirectStdNamespacedVectorCountWrapperMapTarget,
+          resolvesStdNamespacedVectorCountMapTarget, false);
   if (!stdNamespacedVectorCountTargetDiagnosticMessage.empty()) {
     handledOut = true;
     return failCollectionCountCapacityDiagnostic(
