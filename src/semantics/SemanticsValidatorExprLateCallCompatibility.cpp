@@ -149,7 +149,7 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
                                                      mapValueType);
       if (resolvesNonVectorCollectionLikeTarget) {
         return failLateCallCompatibilityDiagnostic(
-            "unknown call target: /std/collections/vector/capacity");
+            vectorCompatibilityUnknownCallTargetDiagnostic("capacity"));
       }
       return failLateCallCompatibilityDiagnostic(
           vectorCompatibilityRequiresVectorTargetDiagnostic("capacity"));

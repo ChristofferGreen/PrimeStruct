@@ -216,7 +216,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       !hasVisibleCanonicalVectorHelperPath("/std/collections/vector/capacity") &&
       !allowStdNamespacedVectorUserReceiverProbe) {
     return failCollectionDispatchDiagnostic(
-        "unknown call target: /std/collections/vector/capacity");
+        vectorCompatibilityUnknownCallTargetDiagnostic("capacity"));
   }
   if (!expr.isMethodCall && expr.args.size() > 1 && !hasNamedArguments(expr.argNames) &&
       (isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_ref") ||

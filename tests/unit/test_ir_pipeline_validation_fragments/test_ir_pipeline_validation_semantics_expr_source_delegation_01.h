@@ -1207,6 +1207,9 @@
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "vectorCompatibilityRequiresVectorTargetDiagnostic(\"capacity\")") !=
         std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "vectorCompatibilityUnknownCallTargetDiagnostic(\"capacity\")") !=
+        std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "vectorCompatibilityRequiresVectorTargetDiagnostic(\"capacity\")") !=
         std::string::npos);
@@ -1218,6 +1221,9 @@
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "\"capacity requires vector target\"") ==
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "\"unknown call target: /std/collections/vector/capacity\"") ==
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "\"capacity requires vector target\"") ==
@@ -1238,8 +1244,11 @@
             "      !hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/capacity\") &&\n"
             "      !allowStdNamespacedVectorUserReceiverProbe) {\n"
             "    return failCollectionDispatchDiagnostic(\n"
-            "        \"unknown call target: /std/collections/vector/capacity\");\n"
+            "        vectorCompatibilityUnknownCallTargetDiagnostic(\"capacity\"));\n"
             "  }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "\"unknown call target: /std/collections/vector/capacity\"") ==
         std::string::npos);
   CHECK(semanticsExprMethodCompatibilitySetupSource.find(
             "return soaUnavailableMethodDiagnostic(resolvedPath);") !=
