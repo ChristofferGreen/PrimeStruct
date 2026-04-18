@@ -2682,13 +2682,11 @@
             "                const bool rejectsDirectBareMapCountTarget =\n"
             "                    isDirectNamedCountReceiverCall &&\n"
             "                    rejectsDirectBareMapCountValidation;\n"
-            "                const bool targetsBuiltinStdlibMapCountMethod =\n"
-            "                    isBuiltinMethod && targetsStdlibMapCountMethod;\n"
             "                const bool rejectsBuiltinStdlibMapCountValidation =\n"
             "                    lacksVisibleStdlibMapCountDefinition &&\n"
             "                    !context.shouldBuiltinValidateBareMapCountCall;\n"
             "                const bool rejectsBuiltinStdlibMapCountTarget =\n"
-            "                    targetsBuiltinStdlibMapCountMethod &&\n"
+            "                    isBuiltinMethod && targetsStdlibMapCountMethod &&\n"
             "                    rejectsBuiltinStdlibMapCountValidation;\n"
             "                if (rejectsDirectBareMapCountTarget ||\n"
             "                    rejectsBuiltinStdlibMapCountTarget) {\n"
@@ -2724,6 +2722,10 @@
             "                    targetsBareMapCountMethod &&\n"
             "                    lacksVisibleBareCountDefinition &&\n"
             "                    lacksVisibleStdlibMapCountDefinition;\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "                const bool targetsBuiltinStdlibMapCountMethod =\n"
+            "                    isBuiltinMethod && targetsStdlibMapCountMethod;\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "                const bool rejectsBuiltinStdlibMapCountTarget =\n"
