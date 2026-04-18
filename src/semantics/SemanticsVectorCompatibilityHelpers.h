@@ -12,11 +12,6 @@ inline bool isVectorCompatibilityHelperName(std::string_view helperName) {
          helperName == "remove_swap";
 }
 
-struct StdNamespacedVectorCompatibilityHelperState {
-  bool hasDeclaredHelper = false;
-  bool hasImportedHelper = false;
-};
-
 inline std::string vectorCompatibilityRequiresVectorTargetDiagnostic(
     std::string_view helperName) {
   return std::string(helperName) + " requires vector target";
