@@ -3352,12 +3352,15 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool capacityMethodSurfaceHasNamedArguments =\n"
             "    hasNamedArguments(expr.argNames);\n"
+            "const bool\n"
+            "    routesThroughUnimportedStdNamespacedVectorCapacityCompatibilityDirectCall =\n"
+            "        isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
+            "            expr.isMethodCall,\n"
+            "            resolveCalleePath(expr),\n"
+            "            \"capacity\",\n"
+            "            hasImportedDefinitionPath(\"/std/collections/vector/capacity\"));\n"
             "if (!(capacityMethodSurfaceHasNamedArguments ||\n"
-            "      isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
-            "          expr.isMethodCall,\n"
-            "          resolveCalleePath(expr),\n"
-            "          \"capacity\",\n"
-            "          hasImportedDefinitionPath(\"/std/collections/vector/capacity\")) ||\n"
+            "      routesThroughUnimportedStdNamespacedVectorCapacityCompatibilityDirectCall ||\n"
             "      !isVectorBuiltinName(expr, \"capacity\")) &&\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -3368,6 +3371,15 @@
             "          \"capacity\",\n"
             "          hasImportedDefinitionPath(\"/std/collections/vector/capacity\")) ||\n"
             "      !isVectorBuiltinName(expr, \"capacity\")) &&\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool\n"
+            "    routesThroughUnimportedStdNamespacedVectorCapacityCompatibilityDirectCall =\n"
+            "        isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
+            "            expr.isMethodCall,\n"
+            "            resolveCalleePath(expr),\n"
+            "            \"capacity\",\n"
+            "            hasImportedDefinitionPath(\"/std/collections/vector/capacity\"));\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (std::optional<bool> resolvedCapacityMethod =\n"
