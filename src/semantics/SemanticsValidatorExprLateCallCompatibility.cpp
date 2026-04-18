@@ -108,9 +108,11 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
       return failLateCallCompatibilityDiagnostic(
           vectorCompatibilityRequiresVectorTargetDiagnostic("count"));
     }
-    if (!hasDeclaredDefinitionPath("/std/collections/vector/count") &&
+    const bool rejectsVectorCountTargetWithoutVisibleHelper =
+        !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
         !hasImportedDefinitionPath("/std/collections/vector/count") &&
-        (resolvesVector || resolvesExperimentalVector)) {
+        (resolvesVector || resolvesExperimentalVector);
+    if (rejectsVectorCountTargetWithoutVisibleHelper) {
       return failLateCallCompatibilityDiagnostic(
           "unknown call target: /std/collections/vector/count");
     }
