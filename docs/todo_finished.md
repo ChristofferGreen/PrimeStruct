@@ -10,6 +10,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 17, 2026)**
 
 **Group 14 - SoA bring-up and end-state cleanup**
+- ✓ TODO-0821: Inline capacity helper-path gate. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` no longer carries the one-use `routesThroughStdNamespacedVectorCapacityHelper` local, and focused expr source-lock coverage now keeps the inline stdlib helper-path probe present while the deleted local stays absent.
 - ✓ TODO-0820: Inline capacity stdlib-target assignment helper. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` no longer carries the one-use `assignStdNamespacedVectorCapacityMethodTarget` local, and focused expr source-lock coverage now keeps the inline capacity stdlib-target assignment present while the deleted helper stays absent.
 - ✓ TODO-0819: Inline count finalizer helper. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` no longer carries the one-use `finalizeCountMethodTarget` local, and focused expr source-lock coverage now keeps the inline count finalization logic present while the deleted helper stays absent.
 - ✓ TODO-0818: Inline capacity finalizer helper. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` no longer carries the one-use `finalizeCapacityMethodTarget` local, and focused expr source-lock coverage now keeps the inline capacity finalization lambda present while the deleted helper stays absent.
