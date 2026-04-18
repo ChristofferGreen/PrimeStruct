@@ -2389,6 +2389,10 @@
             "  const bool isMultiArgCountCall = !isSingleArgCountCall;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool routesThroughVectorBuiltinCountSurface =\n"
+            "      isVectorBuiltinName(expr, \"count\");") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool isArrayNamespacedVectorCountCompatibilityActive =\n"
             "      context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
             "      context.isArrayNamespacedVectorCountCompatibilityCall(expr);") !=
@@ -2399,7 +2403,7 @@
             "          expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
             "      context.isNamespacedVectorHelperCall &&\n"
             "      context.namespacedHelper == \"count\" &&\n"
-            "      isVectorBuiltinName(expr, \"count\") && isSingleArgCountCall &&\n"
+            "      routesThroughVectorBuiltinCountSurface && isSingleArgCountCall &&\n"
             "      !hasDefinitionPath(resolved) &&\n"
             "      !isArrayNamespacedVectorCountCompatibilityActive;") !=
         std::string::npos);
@@ -2432,7 +2436,8 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool routesThroughCountMethodSurface =\n"
-            "      isVectorBuiltinName(expr, \"count\") || routesThroughMapCountCallSurface;") !=
+            "      routesThroughVectorBuiltinCountSurface ||\n"
+            "      routesThroughMapCountCallSurface;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool violatesCountMethodSurfacePreconditions =\n"
@@ -2790,6 +2795,10 @@
             "      isVectorBuiltinName(expr, \"count\") && expr.args.size() == 1 &&\n"
             "      !hasDefinitionPath(resolved) &&\n"
             "      !isArrayNamespacedVectorCountCompatibilityActive;") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool routesThroughCountMethodSurface =\n"
+            "      isVectorBuiltinName(expr, \"count\") || routesThroughMapCountCallSurface;") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "                const bool rejectsDirectBareMapCountTarget =\n"

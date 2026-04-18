@@ -104,6 +104,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       routesThroughResolvedMapCountSurface;
   const bool isSingleArgCountCall = expr.args.size() == 1;
   const bool isMultiArgCountCall = !isSingleArgCountCall;
+  const bool routesThroughVectorBuiltinCountSurface =
+      isVectorBuiltinName(expr, "count");
   const bool isArrayNamespacedVectorCountCompatibilityActive =
       context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
       context.isArrayNamespacedVectorCountCompatibilityCall(expr);
@@ -112,7 +114,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           expr.isMethodCall, resolveCalleePath(expr), "count") &&
       context.isNamespacedVectorHelperCall &&
       context.namespacedHelper == "count" &&
-      isVectorBuiltinName(expr, "count") && isSingleArgCountCall &&
+      routesThroughVectorBuiltinCountSurface && isSingleArgCountCall &&
       !hasDefinitionPath(resolved) &&
       !isArrayNamespacedVectorCountCompatibilityActive;
   const bool hasResolvedCountDefinitionTarget =
@@ -133,7 +135,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       matchesSingleArgCountRouteShape ||
       matchesMultiArgCountRouteShape;
   const bool routesThroughCountMethodSurface =
-      isVectorBuiltinName(expr, "count") || routesThroughMapCountCallSurface;
+      routesThroughVectorBuiltinCountSurface ||
+      routesThroughMapCountCallSurface;
   const bool violatesCountMethodSurfacePreconditions =
       hasNamedArguments(expr.argNames) ||
       isUnimportedStdNamespacedVectorCompatibilityDirectCall(
