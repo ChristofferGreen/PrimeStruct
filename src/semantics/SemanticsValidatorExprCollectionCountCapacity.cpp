@@ -364,13 +364,15 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     }
     return true;
   };
-  if (!(hasNamedArguments(expr.argNames) ||
+  const bool routesThroughVectorCapacityMethodSurface =
+      !(hasNamedArguments(expr.argNames) ||
         isUnimportedStdNamespacedVectorCompatibilityDirectCall(
             expr.isMethodCall,
             resolveCalleePath(expr),
             "capacity",
             hasImportedDefinitionPath("/std/collections/vector/capacity")) ||
-        !isVectorBuiltinName(expr, "capacity"))) {
+        !isVectorBuiltinName(expr, "capacity"));
+  if (routesThroughVectorCapacityMethodSurface) {
     if (!(expr.args.empty() || expr.args.size() == 1 ||
           defMap_.find(resolved) == defMap_.end()) &&
         context.isNamespacedVectorHelperCall) {
@@ -381,13 +383,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   if (handledOut) {
     return false;
   }
-  if (!(hasNamedArguments(expr.argNames) ||
-        isUnimportedStdNamespacedVectorCompatibilityDirectCall(
-            expr.isMethodCall,
-            resolveCalleePath(expr),
-            "capacity",
-            hasImportedDefinitionPath("/std/collections/vector/capacity")) ||
-        !isVectorBuiltinName(expr, "capacity"))) {
+  if (routesThroughVectorCapacityMethodSurface) {
     if (expr.args.size() == 1 &&
         (defMap_.find(resolved) == defMap_.end() ||
          context.isNamespacedVectorCapacityCall)) {
