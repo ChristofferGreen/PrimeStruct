@@ -15,24 +15,6 @@ inline bool isVectorCompatibilityHelperName(std::string_view helperName) {
 struct StdNamespacedVectorCompatibilityHelperState {
   bool hasDeclaredHelper = false;
   bool hasImportedHelper = false;
-
-  [[nodiscard]] std::string classifyNonVectorCountTargetDiagnosticMessage(
-      bool wrapperMapTarget,
-      bool mapTargetDetected,
-      bool preferUnknownCallTarget) const {
-    if (wrapperMapTarget && !hasDeclaredHelper) {
-      return vectorCompatibilityUnknownCallTargetDiagnostic("count");
-    }
-    if (mapTargetDetected) {
-      if (preferUnknownCallTarget) {
-        return vectorCompatibilityUnknownCallTargetDiagnostic("count");
-      }
-      if (!hasDeclaredHelper || hasImportedHelper) {
-        return vectorCompatibilityRequiresVectorTargetDiagnostic("count");
-      }
-    }
-    return vectorCompatibilityRequiresVectorTargetDiagnostic("count");
-  }
 };
 
 inline std::string vectorCompatibilityRequiresVectorTargetDiagnostic(

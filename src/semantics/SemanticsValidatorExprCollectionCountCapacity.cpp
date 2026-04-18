@@ -84,9 +84,17 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       context.resolveMapTarget != nullptr &&
       context.resolveMapTarget(expr.args.front());
   const std::string stdNamespacedVectorCountTargetDiagnosticMessage =
-      stdNamespacedVectorCountHelperState.classifyNonVectorCountTargetDiagnosticMessage(
-          context.isDirectStdNamespacedVectorCountWrapperMapTarget,
-          resolvesStdNamespacedVectorCountMapTarget, false);
+      context.isDirectStdNamespacedVectorCountWrapperMapTarget &&
+              !stdNamespacedVectorCountHelperState.hasDeclaredHelper
+          ? vectorCompatibilityUnknownCallTargetDiagnostic("count")
+          : (resolvesStdNamespacedVectorCountMapTarget &&
+                     (!stdNamespacedVectorCountHelperState.hasDeclaredHelper ||
+                      stdNamespacedVectorCountHelperState.hasImportedHelper))
+                ? vectorCompatibilityRequiresVectorTargetDiagnostic("count")
+                : (resolvesStdNamespacedVectorCountMapTarget
+                       ? ""
+                       : vectorCompatibilityRequiresVectorTargetDiagnostic(
+                             "count"));
   if (!stdNamespacedVectorCountTargetDiagnosticMessage.empty()) {
     handledOut = true;
     return failCollectionCountCapacityDiagnostic(

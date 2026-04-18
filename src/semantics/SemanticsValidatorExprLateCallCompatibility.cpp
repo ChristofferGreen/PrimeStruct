@@ -108,11 +108,9 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
                                                       mapKeyType,
                                                       mapValueType);
       const std::string stdNamespacedVectorCountTargetDiagnosticMessage =
-          stdNamespacedVectorCountHelperState
-              .classifyNonVectorCountTargetDiagnosticMessage(
-                  false,
-                  resolvesMapAfterValidation,
-                  resolvesNonVectorCountTarget);
+          resolvesMapAfterValidation
+              ? vectorCompatibilityUnknownCallTargetDiagnostic("count")
+              : vectorCompatibilityRequiresVectorTargetDiagnostic("count");
       return failLateCallCompatibilityDiagnostic(
           std::move(stdNamespacedVectorCountTargetDiagnosticMessage));
     }
