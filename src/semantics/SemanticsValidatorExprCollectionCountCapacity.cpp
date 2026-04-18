@@ -316,12 +316,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 const bool rejectsBuiltinStdlibMapCountTarget =
                     targetsBuiltinStdlibMapCountMethod &&
                     rejectsBuiltinStdlibMapCountValidation;
-                const std::string stdlibMapCountUnknownTargetDiagnostic =
-                    "unknown call target: " + stdlibMapCountTargetPath;
                 if (rejectsDirectBareMapCountTarget ||
                     rejectsBuiltinStdlibMapCountTarget) {
                   return failExprDiagnostic(
-                      expr, stdlibMapCountUnknownTargetDiagnostic);
+                      expr, "unknown call target: " + stdlibMapCountTargetPath);
                 }
                 const std::string removedRootedVectorDirectCallDiagnostic =
                     getRemovedRootedVectorDirectCallDiagnostic(expr);

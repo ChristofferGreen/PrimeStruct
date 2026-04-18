@@ -2690,13 +2690,10 @@
             "                const bool rejectsBuiltinStdlibMapCountTarget =\n"
             "                    targetsBuiltinStdlibMapCountMethod &&\n"
             "                    rejectsBuiltinStdlibMapCountValidation;\n"
-            "                const std::string stdlibMapCountUnknownTargetDiagnostic =\n"
-            "                    \"unknown call target: \" +\n"
-            "                    stdlibMapCountTargetPath;\n"
             "                if (rejectsDirectBareMapCountTarget ||\n"
             "                    rejectsBuiltinStdlibMapCountTarget) {\n"
             "                  return failExprDiagnostic(\n"
-            "                      expr, stdlibMapCountUnknownTargetDiagnostic);\n"
+            "                      expr, \"unknown call target: \" + stdlibMapCountTargetPath);\n"
             "                }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -2753,7 +2750,8 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "                const std::string stdlibMapCountUnknownTargetDiagnostic =\n"
-            "                    \"unknown call target: /std/collections/map/count\";\n") ==
+            "                    \"unknown call target: \" +\n"
+            "                    stdlibMapCountTargetPath;\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "                if (!(isBuiltinMethod ||\n"
