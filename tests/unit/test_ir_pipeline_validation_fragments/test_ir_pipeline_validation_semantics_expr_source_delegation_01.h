@@ -2374,6 +2374,16 @@
             "      context.isArrayNamespacedVectorCountCompatibilityCall(expr);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool routesThroughNamespacedVectorCountFallback =\n"
+            "      !isStdNamespacedVectorCompatibilityDirectCall(\n"
+            "          expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
+            "      context.isNamespacedVectorHelperCall &&\n"
+            "      context.namespacedHelper == \"count\" &&\n"
+            "      isVectorBuiltinName(expr, \"count\") && expr.args.size() == 1 &&\n"
+            "      !hasDefinitionPath(resolved) &&\n"
+            "      !isArrayNamespacedVectorCountCompatibilityActive;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "bool needsCountMethodResolveOrFallback =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -2693,13 +2703,7 @@
             "    ((expr.args.size() == 1 &&\n"
             "      ((defMap_.find(resolved) == defMap_.end() &&\n"
             "        !context.isStdNamespacedMapCountCall) ||\n"
-            "       (!isStdNamespacedVectorCompatibilityDirectCall(\n"
-            "            expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
-            "        context.isNamespacedVectorHelperCall &&\n"
-            "        context.namespacedHelper == \"count\" &&\n"
-            "        isVectorBuiltinName(expr, \"count\") && expr.args.size() == 1 &&\n"
-            "        !hasDefinitionPath(resolved) &&\n"
-            "        !isArrayNamespacedVectorCountCompatibilityActive) ||\n"
+            "       routesThroughNamespacedVectorCountFallback ||\n"
             "       routesThroughMapCountCallSurface)) ||\n"
             "     (expr.args.size() != 1 &&\n"
             "      (defMap_.find(resolved) != defMap_.end() ||\n"
