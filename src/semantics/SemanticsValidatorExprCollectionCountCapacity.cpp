@@ -98,15 +98,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     (void)failExprDiagnostic(expr, removedRootedVectorDirectCallDiagnostic);
     return true;
   };
-  const auto failUnknownCollectionMethodTarget =
-      [&](bool isBuiltinMethod, const std::string &methodResolved) {
-    if (isBuiltinMethod || hasDeclaredDefinitionPath(methodResolved) ||
-        hasImportedDefinitionPath(methodResolved)) {
-      return false;
-    }
-    (void)failExprDiagnostic(expr, "unknown method: " + methodResolved);
-    return true;
-  };
   const auto tryResolveCollectionMethodTargetOrElse =
       [&](const Expr &receiver, const char *methodName,
           std::string &methodResolved, bool &isBuiltinMethod,
@@ -324,8 +315,15 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     },
                     [&](const std::string &methodResolved,
                         bool isBuiltinMethod) {
-                      return failUnknownCollectionMethodTarget(isBuiltinMethod,
-                                                               methodResolved);
+                      if (isBuiltinMethod ||
+                          hasDeclaredDefinitionPath(methodResolved) ||
+                          hasImportedDefinitionPath(methodResolved)) {
+                        return false;
+                      }
+                      (void)failExprDiagnostic(expr,
+                                               "unknown method: " +
+                                                   methodResolved);
+                      return true;
                     });
               })) {
     return *resolvedCountMethod;
@@ -395,8 +393,15 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                           },
                           [&](const std::string &methodResolved,
                               bool isBuiltinMethod) {
-                            return failUnknownCollectionMethodTarget(
-                                isBuiltinMethod, methodResolved);
+                            if (isBuiltinMethod ||
+                                hasDeclaredDefinitionPath(methodResolved) ||
+                                hasImportedDefinitionPath(methodResolved)) {
+                              return false;
+                            }
+                            (void)failExprDiagnostic(expr,
+                                                     "unknown method: " +
+                                                         methodResolved);
+                            return true;
                           },
                           [&](const std::string &, bool) {
                             return failRemovedRootedVectorDirectCall();

@@ -1408,7 +1408,7 @@
             "    }\n"
             "    (void)failExprDiagnostic(expr, \"unknown method: \" + methodResolved);\n"
             "    return true;\n"
-            "  };") !=
+            "  };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto promoteUnknownCapacityMethodTargetIfNeeded =\n"
@@ -1537,19 +1537,15 @@
             "    }") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (failUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {\n"
+            "if (isBuiltinMethod || hasDeclaredDefinitionPath(methodResolved) ||\n"
+            "        hasImportedDefinitionPath(methodResolved)) {\n"
             "      return false;\n"
-            "    }") !=
+            "    }\n"
+            "    (void)failExprDiagnostic(expr, \"unknown method: \" + methodResolved);\n"
+            "    return true;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (failRemovedRootedVectorDirectCall()) {\n"
-            "      return false;\n"
-            "    }\n"
-            "    if (failUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {\n"
-            "      return false;\n"
-            "    }\n"
-            "    return true;\n"
-            "  };") ==
+            "failUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else if (resolveVectorHelperMethodTarget(params, locals, receiver, \"count\",\n"
@@ -1852,8 +1848,15 @@
             "          return failRemovedRootedVectorDirectCall();\n"
             "        },\n"
             "        [&](const std::string &methodResolved, bool isBuiltinMethod) {\n"
-            "          return failUnknownCollectionMethodTarget(isBuiltinMethod,\n"
-            "                                                   methodResolved);\n"
+            "          if (isBuiltinMethod ||\n"
+            "              hasDeclaredDefinitionPath(methodResolved) ||\n"
+            "              hasImportedDefinitionPath(methodResolved)) {\n"
+            "            return false;\n"
+            "          }\n"
+            "          (void)failExprDiagnostic(expr,\n"
+            "                                   \"unknown method: \" +\n"
+            "                                       methodResolved);\n"
+            "          return true;\n"
             "        });") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -3799,8 +3802,15 @@
             "                return true;\n"
             "              },\n"
             "              [&](const std::string &methodResolved, bool isBuiltinMethod) {\n"
-            "                return failUnknownCollectionMethodTarget(isBuiltinMethod,\n"
-            "                                                         methodResolved);\n"
+            "                if (isBuiltinMethod ||\n"
+            "                    hasDeclaredDefinitionPath(methodResolved) ||\n"
+            "                    hasImportedDefinitionPath(methodResolved)) {\n"
+            "                  return false;\n"
+            "                }\n"
+            "                (void)failExprDiagnostic(expr,\n"
+            "                                         \"unknown method: \" +\n"
+            "                                             methodResolved);\n"
+            "                return true;\n"
             "              },\n"
             "              [&](const std::string &, bool) {\n"
             "                return failRemovedRootedVectorDirectCall();\n"
