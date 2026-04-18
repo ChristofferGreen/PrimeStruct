@@ -192,6 +192,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     const bool routesThroughStdlibMapCountFallback =
         routesThroughUnnamespacedMapCountFallbackSurface &&
         allowsStdlibMapCountFallbackRoute;
+    const bool countResolveMissLacksBodyArguments =
+        !(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||
+        expr.args.empty();
     bool isBuiltinMethod = false;
     std::string methodResolved;
     {
@@ -212,9 +215,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                             "count", methodResolved, isBuiltinMethod)) {
                       // Method target resolved directly.
                     } else {
-                      if (!(expr.hasBodyArguments ||
-                            !expr.bodyArguments.empty()) ||
-                          expr.args.empty()) {
+                      if (countResolveMissLacksBodyArguments) {
                         (void)validateExpr(params, locals, receiver);
                         return false;
                       }
