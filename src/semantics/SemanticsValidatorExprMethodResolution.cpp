@@ -86,11 +86,9 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         const bool targetsExperimentalVectorCompatibilityPath =
             target.rfind("/std/collections/experimental_vector/", 0) == 0 ||
             target.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
-        const bool hasVisibleCanonicalVectorCompatibilityTarget =
-            hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||
-            defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0;
         return targetsExperimentalVectorCompatibilityPath &&
-               hasVisibleCanonicalVectorCompatibilityTarget;
+               (hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||
+                defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0);
       };
   if (expr.namespacePrefix.empty() &&
       !expr.args.empty() &&
