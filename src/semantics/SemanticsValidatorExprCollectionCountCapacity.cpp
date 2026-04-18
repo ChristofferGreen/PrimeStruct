@@ -307,25 +307,31 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       methodResolved = "/std/collections/vector/capacity";
       isBuiltinMethod = true;
     };
+    const auto tryResolveCapacityMethodTargetWithValidation =
+        [&](const Expr &receiver, bool &isBuiltinMethod,
+            std::string &methodResolved) -> bool {
+      if (resolveMethodTarget(params, locals, expr.namespacePrefix, receiver,
+                              "capacity", methodResolved, isBuiltinMethod)) {
+        return true;
+      }
+      (void)validateExpr(params, locals, receiver);
+      return false;
+    };
     if (resolveVectorHelperMethodTarget(params, locals, receiver, "capacity",
                                         methodResolved)) {
       if (!preferVisibleVectorHelperMethodTarget(methodResolved,
                                                  isBuiltinMethod)) {
         if (routesThroughStdNamespacedVectorCapacityHelper) {
           assignStdNamespacedVectorCapacityMethodTarget();
-        } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix,
-                                        receiver, "capacity", methodResolved,
-                                        isBuiltinMethod)) {
-          (void)validateExpr(params, locals, receiver);
+        } else if (!tryResolveCapacityMethodTargetWithValidation(
+                       receiver, isBuiltinMethod, methodResolved)) {
           return false;
         }
       }
     } else if (routesThroughStdNamespacedVectorCapacityHelper) {
       assignStdNamespacedVectorCapacityMethodTarget();
-    } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix,
-                                    receiver, "capacity", methodResolved,
-                                    isBuiltinMethod)) {
-      (void)validateExpr(params, locals, receiver);
+    } else if (!tryResolveCapacityMethodTargetWithValidation(
+                   receiver, isBuiltinMethod, methodResolved)) {
       return false;
     }
     normalizeInstantiatedCollectionMethodTarget(methodResolved, isBuiltinMethod);
