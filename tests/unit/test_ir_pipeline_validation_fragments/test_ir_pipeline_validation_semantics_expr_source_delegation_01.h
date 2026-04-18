@@ -2445,10 +2445,12 @@
             "                    isBuiltinMethod && targetsStdlibMapCountMethod &&\n"
             "                    lacksVisibleStdlibMapCountDefinition &&\n"
             "                    !context.shouldBuiltinValidateBareMapCountCall;\n"
+            "                const std::string stdlibMapCountUnknownTargetDiagnostic =\n"
+            "                    \"unknown call target: /std/collections/map/count\";\n"
             "                if (rejectsDirectBareMapCountTarget ||\n"
             "                    rejectsBuiltinStdlibMapCountTarget) {\n"
             "                  return failExprDiagnostic(\n"
-                      "                      expr, \"unknown call target: /std/collections/map/count\");\n"
+                      "                      expr, stdlibMapCountUnknownTargetDiagnostic);\n"
                 "                }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(

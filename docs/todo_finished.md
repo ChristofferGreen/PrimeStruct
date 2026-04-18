@@ -6,6 +6,7 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 13, 2026)**
+- ✓ TODO-0857: Share map-count unknown-target diagnostic. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the remaining count-side unknown-target diagnostic string behind shared `stdlibMapCountUnknownTargetDiagnostic`, and focused expr source-lock coverage now keeps that shared local present while the old inline diagnostic string stays absent.
 - ✓ TODO-0856: Share map-count visibility paths. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now routes the count-side stdlib/bare map visibility and fallback checks through shared `bareMapCountTargetPath` and `stdlibMapCountTargetPath`, and focused expr source-lock coverage now keeps those shared path locals wired through the visibility/fallback checks.
 - ✓ TODO-0855: Share bare map-count target path. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the count-side bare map target path behind shared `bareMapCountTargetPath`, and focused expr source-lock coverage now keeps that shared local present while the old inline bare-map path handling stays absent.
 - ✓ TODO-0854: Share stdlib map-count target path. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the count-side stdlib map-count target path behind shared `stdlibMapCountTargetPath`, and focused expr source-lock coverage now keeps that shared local present while the old inline path handling stays absent.
