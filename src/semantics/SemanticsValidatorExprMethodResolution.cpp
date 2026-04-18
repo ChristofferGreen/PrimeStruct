@@ -187,22 +187,15 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       hasImportedDefinitionPath(canonicalVectorMethodTarget) ||
       defMap_.count(canonicalVectorMethodTarget) > 0;
   std::string vectorMethodTarget;
-  auto preferVisibleCanonicalVectorMethodTarget =
-      [&](const std::string &methodTarget) {
-        if (isExperimentalVectorCompatibilityMethodTarget(methodTarget) &&
-            hasVisibleCanonicalVectorMethodTarget) {
-          return canonicalVectorMethodTarget;
-        }
-        return methodTarget;
-      };
   if (isVectorCompatibilityMethodName(expr.name) &&
       !hasExplicitVectorCompatibilityNamespace(normalizedMethodNamespace) &&
       resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
                                       vectorMethodTarget)) {
     if (!hasImportedDefinitionPath(vectorMethodTarget) &&
-        defMap_.count(vectorMethodTarget) == 0) {
-      vectorMethodTarget =
-          preferVisibleCanonicalVectorMethodTarget(vectorMethodTarget);
+        defMap_.count(vectorMethodTarget) == 0 &&
+        isExperimentalVectorCompatibilityMethodTarget(vectorMethodTarget) &&
+        hasVisibleCanonicalVectorMethodTarget) {
+      vectorMethodTarget = canonicalVectorMethodTarget;
     }
     if (hasImportedDefinitionPath(vectorMethodTarget) ||
         defMap_.count(vectorMethodTarget) > 0) {
@@ -271,9 +264,9 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     }
   }
   if (!isBuiltinMethod && isVectorCompatibilityMethodName(expr.name) &&
-      isExperimentalVectorCompatibilityResolvedMethodTarget(resolved)) {
-    resolved = preferVectorStdlibHelperPath(
-        preferVisibleCanonicalVectorMethodTarget(resolved));
+      isExperimentalVectorCompatibilityResolvedMethodTarget(resolved) &&
+      hasVisibleCanonicalVectorMethodTarget) {
+    resolved = preferVectorStdlibHelperPath(canonicalVectorMethodTarget);
   }
   bool keepBuiltinIndexedArgsPackMapMethod = false;
   keepBuiltinIndexedArgsPackMapMethod = resolveMapTarget(expr.args.front());
