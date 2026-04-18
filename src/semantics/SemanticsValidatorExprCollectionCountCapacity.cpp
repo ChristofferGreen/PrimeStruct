@@ -170,6 +170,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     const bool resolvesMapCountMethodTarget =
         context.resolveMapTarget != nullptr &&
         context.resolveMapTarget(receiver);
+    const auto assignBuiltinStdlibMapCountMethodTarget = [&]() {
+      methodResolved = "/std/collections/map/count";
+      isBuiltinMethod = true;
+    };
     const auto assignResolvedStdlibMapCountMethodTarget = [&]() {
       methodResolved = "/std/collections/map/count";
       error_.clear();
@@ -209,8 +213,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         !hasDeclaredDefinitionPath("/map/count") &&
         lacksVisibleStdlibMapCountDefinition &&
         resolvesMapCountMethodTarget) {
-      methodResolved = "/std/collections/map/count";
-      isBuiltinMethod = true;
+      assignBuiltinStdlibMapCountMethodTarget();
     } else if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
                                                "count", methodResolved)) {
       methodResolved = preferVectorStdlibHelperPath(methodResolved);
