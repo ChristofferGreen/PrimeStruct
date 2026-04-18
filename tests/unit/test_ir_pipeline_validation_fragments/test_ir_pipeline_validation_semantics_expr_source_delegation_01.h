@@ -1486,14 +1486,6 @@
             "    };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "bool needsCountMethodResolveOrFallback = true;\n"
-            "    if (context.isUnnamespacedMapCountFallbackCall &&\n"
-            "        !hasDeclaredDefinitionPath(\"/map/count\") &&\n"
-            "        lacksVisibleStdlibMapCountDefinition &&\n"
-            "        context.resolveMapTarget != nullptr &&\n"
-            "        context.resolveMapTarget(receiver)) {") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto tryAssignCountMethodFallbackTarget = [&]() -> bool {\n"
             "      if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
             "          expr.args.empty()) {") ==
@@ -1519,9 +1511,62 @@
             "      isBuiltinMethod = true;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (needsCountMethodResolveOrFallback &&\n"
-            "        !resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
-            "                             \"count\", methodResolved, isBuiltinMethod)) {\n"
+            "} else if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(),\n"
+            "                                               \"count\", methodResolved)) {\n"
+            "      methodResolved = preferVectorStdlibHelperPath(methodResolved);\n"
+            "      if (hasResolvableDefinitionPath(methodResolved)) {\n"
+            "        isBuiltinMethod = false;\n"
+            "      } else if (!resolveMethodTarget(\n"
+            "                     params,\n"
+            "                     locals,\n"
+            "                     expr.namespacePrefix,\n"
+            "                     expr.args.front(),\n"
+            "                     \"count\",\n"
+            "                     methodResolved,\n"
+            "                     isBuiltinMethod)) {\n"
+            "        if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
+            "            expr.args.empty()) {\n"
+            "          (void)validateExpr(params, locals, expr.args.front());\n"
+            "          return false;\n"
+            "        }\n"
+            "        if (context.resolveMapTarget != nullptr &&\n"
+            "            context.resolveMapTarget(receiver)) {\n"
+            "          methodResolved = stdlibMapCountMethodTarget;\n"
+            "          error_.clear();\n"
+            "          isBuiltinMethod = false;\n"
+            "        } else {\n"
+            "          std::string typeName;\n"
+            "          if (receiver.kind == Expr::Kind::Name) {\n"
+            "            if (const BindingInfo *paramBinding =\n"
+            "                    findParamBinding(params, receiver.name)) {\n"
+            "              typeName = paramBinding->typeName;\n"
+            "            } else if (auto it = locals.find(receiver.name);\n"
+            "                       it != locals.end()) {\n"
+            "              typeName = it->second.typeName;\n"
+            "            }\n"
+            "          }\n"
+            "          if (typeName.empty()) {\n"
+            "            typeName = inferPointerLikeCallReturnType(receiver, params, locals);\n"
+            "          }\n"
+            "          if (typeName.empty()) {\n"
+            "            if (isPointerExpr(receiver, params, locals)) {\n"
+            "              typeName = \"Pointer\";\n"
+            "            } else if (isPointerLikeExpr(receiver, params, locals)) {\n"
+            "              typeName = \"Reference\";\n"
+            "            }\n"
+            "          }\n"
+            "          if (typeName != \"Pointer\" && typeName != \"Reference\") {\n"
+            "            (void)validateExpr(params, locals, expr.args.front());\n"
+            "            return false;\n"
+            "          }\n"
+            "          methodResolved = \"/\" + typeName + \"/count\";\n"
+            "          error_.clear();\n"
+            "          isBuiltinMethod = false;\n"
+            "        }\n"
+            "      }\n"
+            "    } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix,\n"
+            "                                    expr.args.front(), \"count\", methodResolved,\n"
+            "                                    isBuiltinMethod)) {\n"
             "      if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
             "          expr.args.empty()) {\n"
             "        (void)validateExpr(params, locals, expr.args.front());\n"
@@ -1529,7 +1574,7 @@
             "      }\n"
             "      if (context.resolveMapTarget != nullptr &&\n"
             "          context.resolveMapTarget(receiver)) {\n"
-            "        methodResolved = \"/std/collections/map/count\";\n"
+            "        methodResolved = stdlibMapCountMethodTarget;\n"
             "        error_.clear();\n"
             "        isBuiltinMethod = false;\n"
             "      } else {\n"
@@ -1972,6 +2017,9 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool routesThroughMapCountCompatibility =") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "bool needsCountMethodResolveOrFallback =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
