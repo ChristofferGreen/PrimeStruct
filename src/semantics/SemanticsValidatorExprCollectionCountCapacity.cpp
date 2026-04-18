@@ -26,6 +26,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         return !hasDeclaredDefinitionPath(methodTargetPath) &&
                !hasImportedDefinitionPath(methodTargetPath);
       };
+  const auto lacksVisibleResolvedMethodTarget =
+      [&](const std::string &methodTargetPath, bool isBuiltinMethod) {
+        return !isBuiltinMethod &&
+               lacksVisibleMethodTargetPath(methodTargetPath);
+      };
   const auto failUnknownMethodTarget =
       [&](const std::string &methodTargetPath) {
         return failExprDiagnostic(expr, "unknown method: " + methodTargetPath);
@@ -341,8 +346,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                   return failUnknownCallTarget(stdlibMapCountTargetPath);
                 }
                 const bool lacksVisibleCountMethodTarget =
-                    !isBuiltinMethod &&
-                    lacksVisibleMethodTargetPath(methodResolved);
+                    lacksVisibleResolvedMethodTarget(methodResolved,
+                                                    isBuiltinMethod);
                 if (lacksVisibleCountMethodTarget) {
                   return failUnknownMethodTarget(methodResolved);
                 }
@@ -444,8 +449,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                   methodResolved = resolved;
                 }
                 const bool lacksVisibleCapacityMethodTargetBeforePromotion =
-                    !isBuiltinMethod &&
-                    lacksVisibleMethodTargetPath(methodResolved);
+                    lacksVisibleResolvedMethodTarget(methodResolved,
+                                                    isBuiltinMethod);
                 const bool allowsCapacityBuiltinValidationPromotion =
                     (context.isNonCollectionStructCapacityTarget == nullptr ||
                      !context.isNonCollectionStructCapacityTarget(
@@ -463,8 +468,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                       receiver, methodResolved, isBuiltinMethod, false);
                 }
                 const bool lacksVisibleCapacityMethodTarget =
-                    !isBuiltinMethod &&
-                    lacksVisibleMethodTargetPath(methodResolved);
+                    lacksVisibleResolvedMethodTarget(methodResolved,
+                                                    isBuiltinMethod);
                 if (lacksVisibleCapacityMethodTarget) {
                   return failUnknownMethodTarget(methodResolved);
                 }

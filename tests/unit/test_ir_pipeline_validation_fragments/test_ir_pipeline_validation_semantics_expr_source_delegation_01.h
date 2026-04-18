@@ -1781,6 +1781,13 @@
             "    };\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto lacksVisibleResolvedMethodTarget =\n"
+            "    [&](const std::string &methodTargetPath, bool isBuiltinMethod) {\n"
+            "      return !isBuiltinMethod &&\n"
+            "             lacksVisibleMethodTargetPath(methodTargetPath);\n"
+            "    };\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto failRemovedRootedVectorDirectCall =\n"
             "    [&]() {\n"
             "      if (const std::string removedRootedVectorDirectCallDiagnostic =\n"
@@ -4714,8 +4721,8 @@
             "  methodResolved = resolved;\n"
             "}\n"
             "const bool lacksVisibleCapacityMethodTargetBeforePromotion =\n"
-            "    !isBuiltinMethod &&\n"
-            "    lacksVisibleMethodTargetPath(methodResolved);\n"
+            "    lacksVisibleResolvedMethodTarget(methodResolved,\n"
+            "                                     isBuiltinMethod);\n"
             "const bool allowsCapacityBuiltinValidationPromotion =\n"
             "    (context.isNonCollectionStructCapacityTarget == nullptr ||\n"
             "     !context.isNonCollectionStructCapacityTarget(\n"
@@ -4733,8 +4740,8 @@
             "      receiver, methodResolved, isBuiltinMethod, false);\n"
             "}\n"
             "const bool lacksVisibleCapacityMethodTarget =\n"
-            "    !isBuiltinMethod &&\n"
-            "    lacksVisibleMethodTargetPath(methodResolved);\n"
+            "    lacksVisibleResolvedMethodTarget(methodResolved,\n"
+            "                                     isBuiltinMethod);\n"
             "if (lacksVisibleCapacityMethodTarget) {\n"
             "  return failUnknownMethodTarget(methodResolved);\n"
             "}\n"
@@ -4886,13 +4893,13 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool lacksVisibleCapacityMethodTarget =\n"
-            "    !isBuiltinMethod &&\n"
-            "    lacksVisibleMethodTargetPath(methodResolved);\n") ==
+            "    lacksVisibleResolvedMethodTarget(methodResolved,\n"
+            "                                     isBuiltinMethod);\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool lacksVisibleCapacityMethodTargetBeforePromotion =\n"
-            "    !isBuiltinMethod &&\n"
-            "    lacksVisibleMethodTargetPath(methodResolved);\n") !=
+            "    lacksVisibleResolvedMethodTarget(methodResolved,\n"
+            "                                     isBuiltinMethod);\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!isBuiltinMethod &&\n"
@@ -4909,8 +4916,8 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool lacksVisibleCapacityMethodTarget =\n"
-            "    !isBuiltinMethod &&\n"
-            "    lacksVisibleMethodTargetPath(methodResolved);\n") !=
+            "    lacksVisibleResolvedMethodTarget(methodResolved,\n"
+            "                                     isBuiltinMethod);\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool allowsCapacityBuiltinValidationPromotion =\n"
@@ -4943,8 +4950,8 @@
             "      receiver, methodResolved, isBuiltinMethod, false);\n"
             "}\n"
             "const bool lacksVisibleCapacityMethodTarget =\n"
-            "    !isBuiltinMethod &&\n"
-            "    lacksVisibleMethodTargetPath(methodResolved);\n"
+            "    lacksVisibleResolvedMethodTarget(methodResolved,\n"
+            "                                     isBuiltinMethod);\n"
             "if (lacksVisibleCapacityMethodTarget) {\n"
             "  return failUnknownMethodTarget(methodResolved);\n"
             "}\n") !=
@@ -5243,8 +5250,8 @@
             "      return false;\n"
             "    }\n"
             "    const bool lacksVisibleCountMethodTarget =\n"
-            "        !isBuiltinMethod &&\n"
-            "        lacksVisibleMethodTargetPath(methodResolved);\n"
+            "        lacksVisibleResolvedMethodTarget(methodResolved,\n"
+            "                                         isBuiltinMethod);\n"
             "    if (lacksVisibleCountMethodTarget) {\n"
             "      return failUnknownMethodTarget(methodResolved);\n"
             "    }\n"
@@ -5254,8 +5261,8 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool lacksVisibleCountMethodTarget =\n"
-            "    !isBuiltinMethod &&\n"
-            "    lacksVisibleMethodTargetPath(methodResolved);\n") !=
+            "    lacksVisibleResolvedMethodTarget(methodResolved,\n"
+            "                                     isBuiltinMethod);\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const std::string removedRootedVectorDirectCallDiagnostic =\n"
