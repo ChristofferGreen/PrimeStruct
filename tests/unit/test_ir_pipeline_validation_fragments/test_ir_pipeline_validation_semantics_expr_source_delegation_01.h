@@ -1847,18 +1847,22 @@
             "        context.isResolvedMapCountCall;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool usesNamespacedVectorCountFallbackShape =\n"
+            "        !isStdNamespacedVectorCompatibilityDirectCall(\n"
+            "            expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
+            "        context.isNamespacedVectorHelperCall &&\n"
+            "        context.namespacedHelper == \"count\" &&\n"
+            "        isVectorBuiltinName(expr, \"count\") &&\n"
+            "        expr.args.size() == 1 &&\n"
+            "        !hasDefinitionPath(resolved) &&\n"
+            "        !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
+            "          context.isArrayNamespacedVectorCountCompatibilityCall(expr));") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (requireSingleArg) {\n"
             "      if (!((defMap_.find(resolved) == defMap_.end() &&\n"
              "             !context.isStdNamespacedMapCountCall) ||\n"
-            "            (!isStdNamespacedVectorCompatibilityDirectCall(\n"
-             "                 expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
-            "             context.isNamespacedVectorHelperCall &&\n"
-             "             context.namespacedHelper == \"count\" &&\n"
-             "             isVectorBuiltinName(expr, \"count\") &&\n"
-             "             expr.args.size() == 1 &&\n"
-             "             !hasDefinitionPath(resolved) &&\n"
-             "             !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
-             "               context.isArrayNamespacedVectorCountCompatibilityCall(expr))) ||\n"
+            "            usesNamespacedVectorCountFallbackShape ||\n"
             "            routesThroughMapCountCompatibility)) {\n"
             "        return false;\n"
             "      }\n"
@@ -1879,17 +1883,21 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (requireSingleArg) {\n"
             "      if (!((defMap_.find(resolved) == defMap_.end() && !context.isStdNamespacedMapCountCall) ||\n"
-            "            (context.isNamespacedVectorCountCall && !context.isStdNamespacedVectorCountCall) ||\n"
-            "            context.isStdNamespacedMapCountCall || context.isNamespacedMapCountCall ||\n"
-            "            context.isUnnamespacedMapCountFallbackCall || context.isResolvedMapCountCall)) {\n"
+            "            (!isStdNamespacedVectorCompatibilityDirectCall(\n"
+            "                 expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
+            "             context.isNamespacedVectorHelperCall &&\n"
+            "             context.namespacedHelper == \"count\" &&\n"
+            "             isVectorBuiltinName(expr, \"count\") &&\n"
+            "             expr.args.size() == 1 &&\n"
+            "             !hasDefinitionPath(resolved) &&\n"
+            "             !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
+            "               context.isArrayNamespacedVectorCountCompatibilityCall(expr))) ||\n"
+            "            routesThroughMapCountCompatibility)) {\n"
             "        return false;\n"
             "      }\n"
-            "    } else {\n"
-            "      if (!(defMap_.find(resolved) != defMap_.end() || context.isStdNamespacedMapCountCall ||\n"
-            "            context.isNamespacedMapCountCall || context.isUnnamespacedMapCountFallbackCall ||\n"
-            "            context.isResolvedMapCountCall)) {\n"
-            "        return false;\n"
-            "      }\n"
+            "    } else if (!(defMap_.find(resolved) != defMap_.end() ||\n"
+            "                 routesThroughMapCountCompatibility)) {\n"
+            "      return false;\n"
             "    }") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
