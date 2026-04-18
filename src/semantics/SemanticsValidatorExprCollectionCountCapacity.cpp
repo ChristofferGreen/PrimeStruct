@@ -89,6 +89,14 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                                 stdNamespacedVectorCountDiagnosticMessage);
     }
   }
+  const auto failRemovedRootedVectorDirectCall = [&]() -> bool {
+    const std::string removedRootedVectorDirectCallDiagnostic =
+        getRemovedRootedVectorDirectCallDiagnostic(expr);
+    if (removedRootedVectorDirectCallDiagnostic.empty()) {
+      return false;
+    }
+    return failExprDiagnostic(expr, removedRootedVectorDirectCallDiagnostic);
+  };
   const auto resolveCountMethodTargetFromReceiver =
       [&](const Expr &receiver, bool &isBuiltinMethod,
           std::string &methodResolved) -> bool {
@@ -215,11 +223,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                                 "unknown call target: " +
                                     stdlibMapCountMethodTarget);
     }
-    const std::string removedRootedVectorDirectCallDiagnostic =
-        getRemovedRootedVectorDirectCallDiagnostic(expr);
-    if (!removedRootedVectorDirectCallDiagnostic.empty()) {
-      return failExprDiagnostic(expr,
-                                removedRootedVectorDirectCallDiagnostic);
+    if (failRemovedRootedVectorDirectCall()) {
+      return false;
     }
     if (!isBuiltinMethod && !hasDeclaredDefinitionPath(methodResolved) &&
         !hasImportedDefinitionPath(methodResolved)) {
@@ -362,11 +367,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       return failExprDiagnostic(expr,
                                 "unknown method: " + methodResolved);
     }
-    const std::string removedRootedVectorDirectCallDiagnostic =
-        getRemovedRootedVectorDirectCallDiagnostic(expr);
-    if (!removedRootedVectorDirectCallDiagnostic.empty()) {
-      return failExprDiagnostic(expr,
-                                removedRootedVectorDirectCallDiagnostic);
+    if (failRemovedRootedVectorDirectCall()) {
+      return false;
     }
     return true;
   };

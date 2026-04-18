@@ -2278,6 +2278,24 @@
             "  auto resolveCountMethod = [&](bool requireSingleArg) -> bool {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto failRemovedRootedVectorDirectCall = [&]() -> bool {\n"
+            "    const std::string removedRootedVectorDirectCallDiagnostic =\n"
+            "        getRemovedRootedVectorDirectCallDiagnostic(expr);\n"
+            "    if (removedRootedVectorDirectCallDiagnostic.empty()) {\n"
+            "      return false;\n"
+            "    }\n"
+            "    return failExprDiagnostic(expr, removedRootedVectorDirectCallDiagnostic);\n"
+            "  };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const std::string removedRootedVectorDirectCallDiagnostic =\n"
+            "        getRemovedRootedVectorDirectCallDiagnostic(expr);\n"
+            "    if (!removedRootedVectorDirectCallDiagnostic.empty()) {\n"
+            "      return failExprDiagnostic(expr,\n"
+            "                                removedRootedVectorDirectCallDiagnostic);\n"
+            "    }") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto resolveCountMethodTargetFromReceiver =\n"
             "      [&](const Expr &receiver, bool &isBuiltinMethod,\n"
             "          std::string &methodResolved) -> bool {\n"
