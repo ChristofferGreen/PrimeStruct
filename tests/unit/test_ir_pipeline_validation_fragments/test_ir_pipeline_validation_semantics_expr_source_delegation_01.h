@@ -1553,19 +1553,15 @@
             "      expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call &&") !=
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "const bool callsInvisibleStdNamespacedVectorCountHelper =\n"
-            "      isInvisibleStdNamespacedVectorCompatibilityDirectCall(\n"
-            "          expr.isMethodCall,\n"
-            "          resolveCalleePath(expr),\n"
-            "          \"count\",\n"
-            "          hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/count\"));") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "const std::string stdNamespacedVectorCountDiagnosticMessage =\n"
             "      allowStdNamespacedVectorUserReceiverProbe\n"
             "          ? \"\"\n"
             "          : classifyStdNamespacedVectorCountDiagnosticMessage(\n"
-            "                callsInvisibleStdNamespacedVectorCountHelper,\n"
+            "                isInvisibleStdNamespacedVectorCompatibilityDirectCall(\n"
+            "                    expr.isMethodCall,\n"
+            "                    resolveCalleePath(expr),\n"
+            "                    \"count\",\n"
+            "                    hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/count\")),\n"
             "                false,\n"
             "                false,\n"
             "                false,\n"
@@ -1580,6 +1576,9 @@
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "if (callsInvisibleStdNamespacedVectorCountHelper &&\n"
             "      !allowStdNamespacedVectorUserReceiverProbe) {") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "const bool callsInvisibleStdNamespacedVectorCountHelper =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "const bool isStdNamespacedVectorCountCall =\n"
