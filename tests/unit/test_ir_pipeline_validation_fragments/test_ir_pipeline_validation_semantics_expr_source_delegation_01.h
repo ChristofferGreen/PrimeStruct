@@ -3350,6 +3350,26 @@
             "                        methodResolved) &&\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool capacityMethodSurfaceHasNamedArguments =\n"
+            "    hasNamedArguments(expr.argNames);\n"
+            "if (!(capacityMethodSurfaceHasNamedArguments ||\n"
+            "      isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
+            "          expr.isMethodCall,\n"
+            "          resolveCalleePath(expr),\n"
+            "          \"capacity\",\n"
+            "          hasImportedDefinitionPath(\"/std/collections/vector/capacity\")) ||\n"
+            "      !isVectorBuiltinName(expr, \"capacity\")) &&\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (!(hasNamedArguments(expr.argNames) ||\n"
+            "      isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
+            "          expr.isMethodCall,\n"
+            "          resolveCalleePath(expr),\n"
+            "          \"capacity\",\n"
+            "          hasImportedDefinitionPath(\"/std/collections/vector/capacity\")) ||\n"
+            "      !isVectorBuiltinName(expr, \"capacity\")) &&\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (std::optional<bool> resolvedCapacityMethod =\n"
             "          tryResolveCapacityMethodFromSurfaceRoute(\n"
             "              !(expr.args.empty() || expr.args.size() == 1 ||\n"

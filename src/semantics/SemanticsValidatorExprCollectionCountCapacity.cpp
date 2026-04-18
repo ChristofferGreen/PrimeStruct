@@ -324,7 +324,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     return true;
   }
 
-  if (!(hasNamedArguments(expr.argNames) ||
+  const bool capacityMethodSurfaceHasNamedArguments =
+      hasNamedArguments(expr.argNames);
+  if (!(capacityMethodSurfaceHasNamedArguments ||
         isUnimportedStdNamespacedVectorCompatibilityDirectCall(
             expr.isMethodCall,
             resolveCalleePath(expr),
