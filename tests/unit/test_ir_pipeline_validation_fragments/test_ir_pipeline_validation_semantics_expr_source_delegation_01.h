@@ -1127,6 +1127,15 @@
             "                  resolvesNonVectorCountTarget);") ==
         std::string::npos);
   CHECK(semanticsVectorCompatibilityHelpersSource.find(
+            "[[nodiscard]] std::string classifyCountMapTargetDiagnosticMessage(") !=
+        std::string::npos);
+  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+            "enum class VectorCompatibilityCountMapTargetDiagnostic") ==
+        std::string::npos);
+  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+            "vectorCompatibilityCountMapTargetDiagnosticMessage(") ==
+        std::string::npos);
+  CHECK(semanticsVectorCompatibilityHelpersSource.find(
             "classifyCountTargetDiagnosticMessage(") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(

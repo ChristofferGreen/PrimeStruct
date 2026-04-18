@@ -12,15 +12,6 @@ inline bool isVectorCompatibilityHelperName(std::string_view helperName) {
          helperName == "remove_swap";
 }
 
-enum class VectorCompatibilityCountMapTargetDiagnostic {
-  None,
-  UnknownCallTarget,
-  RequiresVectorTarget,
-};
-
-inline std::string vectorCompatibilityCountMapTargetDiagnosticMessage(
-    VectorCompatibilityCountMapTargetDiagnostic diagnostic);
-
 struct StdNamespacedVectorCompatibilityHelperState {
   bool hasDeclaredHelper = false;
   bool hasImportedHelper = false;
@@ -43,27 +34,19 @@ struct StdNamespacedVectorCompatibilityHelperState {
     return wrapperMapTarget && lacksDeclaredHelper();
   }
 
-  [[nodiscard]] VectorCompatibilityCountMapTargetDiagnostic
-  classifyCountMapTargetDiagnostic(bool mapTargetDetected,
-                                   bool preferUnknownCallTarget) const {
-    if (!mapTargetDetected) {
-      return VectorCompatibilityCountMapTargetDiagnostic::None;
-    }
-    if (preferUnknownCallTarget) {
-      return VectorCompatibilityCountMapTargetDiagnostic::UnknownCallTarget;
-    }
-    if (lacksDeclaredHelper() || hasImportedHelper) {
-      return VectorCompatibilityCountMapTargetDiagnostic::RequiresVectorTarget;
-    }
-    return VectorCompatibilityCountMapTargetDiagnostic::None;
-  }
-
   [[nodiscard]] std::string classifyCountMapTargetDiagnosticMessage(
       bool mapTargetDetected,
       bool preferUnknownCallTarget) const {
-    return vectorCompatibilityCountMapTargetDiagnosticMessage(
-        classifyCountMapTargetDiagnostic(mapTargetDetected,
-                                         preferUnknownCallTarget));
+    if (!mapTargetDetected) {
+      return "";
+    }
+    if (preferUnknownCallTarget) {
+      return vectorCompatibilityUnknownCallTargetDiagnostic("count");
+    }
+    if (lacksDeclaredHelper() || hasImportedHelper) {
+      return vectorCompatibilityRequiresVectorTargetDiagnostic("count");
+    }
+    return "";
   }
 
   [[nodiscard]] std::string classifyNonVectorCountTargetDiagnosticMessage(
@@ -107,19 +90,6 @@ inline std::string vectorCompatibilityUnknownCallTargetDiagnostic(
     std::string_view helperName) {
   return "unknown call target: /std/collections/vector/" +
          std::string(helperName);
-}
-
-inline std::string vectorCompatibilityCountMapTargetDiagnosticMessage(
-    VectorCompatibilityCountMapTargetDiagnostic diagnostic) {
-  switch (diagnostic) {
-  case VectorCompatibilityCountMapTargetDiagnostic::UnknownCallTarget:
-    return vectorCompatibilityUnknownCallTargetDiagnostic("count");
-  case VectorCompatibilityCountMapTargetDiagnostic::RequiresVectorTarget:
-    return vectorCompatibilityRequiresVectorTargetDiagnostic("count");
-  case VectorCompatibilityCountMapTargetDiagnostic::None:
-    return "";
-  }
-  return "";
 }
 
 } // namespace primec::semantics
