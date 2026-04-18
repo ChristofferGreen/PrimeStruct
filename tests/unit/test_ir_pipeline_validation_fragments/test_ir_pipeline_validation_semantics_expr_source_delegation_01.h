@@ -2457,10 +2457,13 @@
             "              hasImportedDefinitionPath(\"/std/collections/vector/count\"));") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool countMethodSurfaceHasNoArguments = expr.args.empty();") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool violatesCountMethodSurfacePreconditions =\n"
             "      countMethodSurfaceHasNamedArguments ||\n"
             "      routesThroughUnimportedStdNamespacedVectorCountCompatibilityDirectCall ||\n"
-            "      expr.args.empty();") !=
+            "      countMethodSurfaceHasNoArguments;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool matchesCountMethodSurfaceRoute =\n"
@@ -2486,6 +2489,12 @@
             "          resolveCalleePath(expr),\n"
             "          \"count\",\n"
             "          hasImportedDefinitionPath(\"/std/collections/vector/count\")) ||\n"
+            "      expr.args.empty();") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool violatesCountMethodSurfacePreconditions =\n"
+            "      countMethodSurfaceHasNamedArguments ||\n"
+            "      routesThroughUnimportedStdNamespacedVectorCountCompatibilityDirectCall ||\n"
             "      expr.args.empty();") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(

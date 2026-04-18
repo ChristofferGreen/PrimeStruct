@@ -148,10 +148,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
               resolveCalleePath(expr),
               "count",
               hasImportedDefinitionPath("/std/collections/vector/count"));
+  const bool countMethodSurfaceHasNoArguments = expr.args.empty();
   const bool violatesCountMethodSurfacePreconditions =
       countMethodSurfaceHasNamedArguments ||
       routesThroughUnimportedStdNamespacedVectorCountCompatibilityDirectCall ||
-      expr.args.empty();
+      countMethodSurfaceHasNoArguments;
   const bool matchesCountMethodSurfaceRoute =
       !violatesCountMethodSurfacePreconditions &&
       !isArrayNamespacedVectorCountCompatibilityActive &&
