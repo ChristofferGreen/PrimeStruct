@@ -116,14 +116,16 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   const bool routesThroughNamespacedCountOrCapacityHelperSurface =
       context.isNamespacedVectorHelperCall &&
       isCountOrCapacityHelperName(context.namespacedHelper);
+  const bool matchesNamedArgumentCountOrCapacityHelperFastPath =
+      hasNamedArguments(expr.argNames) &&
+      expr.args.size() == 1 &&
+      defMap_.find(resolved) == defMap_.end() &&
+      routesThroughNamespacedCountOrCapacityHelperSurface;
   if (isResolvedCountOrCapacityHelperInstantiation()) {
     return true;
   }
 
-  if (hasNamedArguments(expr.argNames) &&
-      expr.args.size() == 1 &&
-      defMap_.find(resolved) == defMap_.end() &&
-      routesThroughNamespacedCountOrCapacityHelperSurface) {
+  if (matchesNamedArgumentCountOrCapacityHelperFastPath) {
     handledOut = true;
     bool isBuiltinMethod = false;
     std::string methodResolved;

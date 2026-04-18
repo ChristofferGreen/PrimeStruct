@@ -1887,6 +1887,13 @@
             "      isCountOrCapacityHelperName(context.namespacedHelper);\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool matchesNamedArgumentCountOrCapacityHelperFastPath =\n"
+            "      hasNamedArguments(expr.argNames) &&\n"
+            "      expr.args.size() == 1 &&\n"
+            "      defMap_.find(resolved) == defMap_.end() &&\n"
+            "      routesThroughNamespacedCountOrCapacityHelperSurface;\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto tryRewriteBareVectorCountOrCapacityHelperCall =\n"
             "      [&]() {\n"
             "        return context.tryRewriteBareVectorHelperCall != nullptr &&\n"
@@ -1920,6 +1927,12 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "      context.isNamespacedVectorHelperCall &&\n"
             "      isCountOrCapacityHelperName(context.namespacedHelper)) {\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "  if (hasNamedArguments(expr.argNames) &&\n"
+            "      expr.args.size() == 1 &&\n"
+            "      defMap_.find(resolved) == defMap_.end() &&\n"
+            "      routesThroughNamespacedCountOrCapacityHelperSurface) {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "  if (context.tryRewriteBareVectorHelperCall != nullptr &&\n"
