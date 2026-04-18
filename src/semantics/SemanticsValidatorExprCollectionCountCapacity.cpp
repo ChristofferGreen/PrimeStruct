@@ -29,6 +29,14 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   };
   const std::string removedRootedVectorDirectCallDiagnostic =
       getRemovedRootedVectorDirectCallDiagnostic(expr);
+  const auto failRemovedRootedVectorDirectCallIfPresent =
+      [&]() -> std::optional<bool> {
+    if (removedRootedVectorDirectCallDiagnostic.empty()) {
+      return std::nullopt;
+    }
+    return failCollectionCountCapacityDiagnostic(
+        removedRootedVectorDirectCallDiagnostic);
+  };
   auto isConcreteCountCapacityInstantiation = [&](const std::string &path) {
     if (defMap_.find(path) == defMap_.end()) {
       return false;
@@ -228,9 +236,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         resolved.rfind(methodResolved + "__t", 0) == 0) {
       methodResolved = resolved;
     }
-    if (!removedRootedVectorDirectCallDiagnostic.empty()) {
-      return failCollectionCountCapacityDiagnostic(
-          removedRootedVectorDirectCallDiagnostic);
+    if (const auto removedRootedVectorDirectCallFailure =
+            failRemovedRootedVectorDirectCallIfPresent();
+        removedRootedVectorDirectCallFailure.has_value()) {
+      return *removedRootedVectorDirectCallFailure;
     }
     if (!expr.isMethodCall &&
         expr.args.size() == 1 &&
@@ -322,9 +331,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         resolved.rfind(methodResolved + "__t", 0) == 0) {
       methodResolved = resolved;
     }
-    if (!removedRootedVectorDirectCallDiagnostic.empty()) {
-      return failCollectionCountCapacityDiagnostic(
-          removedRootedVectorDirectCallDiagnostic);
+    if (const auto removedRootedVectorDirectCallFailure =
+            failRemovedRootedVectorDirectCallIfPresent();
+        removedRootedVectorDirectCallFailure.has_value()) {
+      return *removedRootedVectorDirectCallFailure;
     }
     bool methodResolvedMissing =
         !isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved);

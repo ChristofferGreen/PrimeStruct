@@ -370,6 +370,16 @@
             "      getRemovedRootedVectorDirectCallDiagnostic(expr);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto failRemovedRootedVectorDirectCallIfPresent =\n"
+            "      [&]() -> std::optional<bool> {\n"
+            "    if (removedRootedVectorDirectCallDiagnostic.empty()) {\n"
+            "      return std::nullopt;\n"
+            "    }\n"
+            "    return failCollectionCountCapacityDiagnostic(\n"
+            "        removedRootedVectorDirectCallDiagnostic);\n"
+            "  };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "context.isNamespacedVectorCountCall &&\n"
             "        expr.args.size() == 1 &&\n"
             "        expr.args.front().kind == Expr::Kind::Call &&") ==
@@ -387,7 +397,14 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!removedRootedVectorDirectCallDiagnostic.empty()) {\n"
             "      return failCollectionCountCapacityDiagnostic(\n"
-            "          removedRootedVectorDirectCallDiagnostic);") !=
+            "          removedRootedVectorDirectCallDiagnostic);") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (const auto removedRootedVectorDirectCallFailure =\n"
+            "            failRemovedRootedVectorDirectCallIfPresent();\n"
+            "        removedRootedVectorDirectCallFailure.has_value()) {\n"
+            "      return *removedRootedVectorDirectCallFailure;\n"
+            "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "getRemovedRootedVectorDirectCallDiagnostic(expr)") !=
