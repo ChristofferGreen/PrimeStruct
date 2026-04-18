@@ -10,6 +10,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 17, 2026)**
 
 **Group 14 - SoA bring-up and end-state cleanup**
+- ✓ TODO-0721: Share count resolve/fallback gate. Completed: the duplicated count resolve-or-fallback tail in `SemanticsValidatorExprCollectionCountCapacity.cpp` now lives behind one shared `needsCountMethodResolveOrFallback` gate, and focused expr source-lock coverage keeps that shared gate present while the old split branches stay absent.
 - ✓ TODO-0720: Share count/capacity normalization. Completed: the duplicated monomorphized method-target normalization in `SemanticsValidatorExprCollectionCountCapacity.cpp` now lives behind `normalizeResolvedCollectionMethodTarget`, and focused expr source-lock coverage keeps the shared normalizer present while the old inline rewrite stays absent.
 - ✓ TODO-0719: Remove count reject local. Completed: the one-use `rejectsStdlibMapCountTargetAsUnknownCallTarget` local was deleted from `SemanticsValidatorExprCollectionCountCapacity.cpp`, and focused expr source-lock coverage now keeps the combined inline `/map/count` reject present while the old local stays absent.
 - ✓ TODO-0718: Share count fallback body. Completed: the duplicated inline count fallback body in `SemanticsValidatorExprCollectionCountCapacity.cpp` now lives behind `tryAssignCountMethodFallbackAfterResolveMiss`, and focused expr source-lock coverage keeps the shared fallback helper present while the old repeated inline fallback blocks stay absent.

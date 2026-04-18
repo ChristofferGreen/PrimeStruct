@@ -226,24 +226,26 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       }
       return true;
     };
+    bool needsCountMethodResolveOrFallback = true;
     if (context.isUnnamespacedMapCountFallbackCall &&
         !hasDeclaredDefinitionPath("/map/count") &&
         lacksVisibleStdlibMapCountDefinition &&
         resolvesMapCountMethodTarget) {
       methodResolved = "/std/collections/map/count";
       isBuiltinMethod = true;
+      needsCountMethodResolveOrFallback = false;
     } else if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
                                                "count", methodResolved)) {
       methodResolved = preferVectorStdlibHelperPath(methodResolved);
       if (hasResolvableDefinitionPath(methodResolved)) {
         isBuiltinMethod = false;
-      } else if (!tryResolveCountMethod() &&
-                 !tryAssignCountMethodFallbackAfterResolveMiss()) {
-        return false;
+        needsCountMethodResolveOrFallback = false;
       }
-    } else if (!tryResolveCountMethod() &&
-               !tryAssignCountMethodFallbackAfterResolveMiss()) {
-        return false;
+    }
+    if (needsCountMethodResolveOrFallback &&
+        !tryResolveCountMethod() &&
+        !tryAssignCountMethodFallbackAfterResolveMiss()) {
+      return false;
     }
     normalizeResolvedCollectionMethodTarget(methodResolved, isBuiltinMethod);
     if (const auto removedRootedVectorDirectCallFailure =

@@ -1484,6 +1484,13 @@
             "    };") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "bool needsCountMethodResolveOrFallback = true;\n"
+            "    if (context.isUnnamespacedMapCountFallbackCall &&\n"
+            "        !hasDeclaredDefinitionPath(\"/map/count\") &&\n"
+            "        lacksVisibleStdlibMapCountDefinition &&\n"
+            "        resolvesMapCountMethodTarget) {") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto tryAssignCountMethodFallbackTarget = [&]() -> bool {\n"
             "      if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
             "          expr.args.empty()) {") ==
@@ -1508,16 +1515,23 @@
             "      isBuiltinMethod = true;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (needsCountMethodResolveOrFallback &&\n"
+            "        !tryResolveCountMethod() &&\n"
+            "        !tryAssignCountMethodFallbackAfterResolveMiss()) {\n"
+            "      return false;\n"
+            "    }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else if (!tryResolveCountMethod() &&\n"
             "                 !tryAssignCountMethodFallbackAfterResolveMiss()) {\n"
             "        return false;\n"
-            "      }") !=
+            "      }") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else if (!tryResolveCountMethod() &&\n"
             "               !tryAssignCountMethodFallbackAfterResolveMiss()) {\n"
             "        return false;\n"
-            "    }") !=
+            "    }") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else if (!tryResolveCountMethod()) {\n"
