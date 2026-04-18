@@ -200,6 +200,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       isBuiltinMethod = false;
       return true;
     };
+    const auto tryResolveCountMethod = [&]() -> bool {
+      return resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
+                                 "count", methodResolved, isBuiltinMethod);
+    };
     if (context.isUnnamespacedMapCountFallbackCall &&
         !hasDeclaredDefinitionPath("/map/count") &&
         lacksVisibleStdlibMapCountDefinition &&
@@ -211,8 +215,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       methodResolved = preferVectorStdlibHelperPath(methodResolved);
       if (hasResolvableDefinitionPath(methodResolved)) {
         isBuiltinMethod = false;
-      } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
-                                      "count", methodResolved, isBuiltinMethod)) {
+      } else if (!tryResolveCountMethod()) {
         if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||
             expr.args.empty()) {
           (void)validateExpr(params, locals, expr.args.front());
@@ -226,8 +229,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           return false;
         }
       }
-    } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
-                                    "count", methodResolved, isBuiltinMethod)) {
+    } else if (!tryResolveCountMethod()) {
       if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||
           expr.args.empty()) {
         (void)validateExpr(params, locals, expr.args.front());

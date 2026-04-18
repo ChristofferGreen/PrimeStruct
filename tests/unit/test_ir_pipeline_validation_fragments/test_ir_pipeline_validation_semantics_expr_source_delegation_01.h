@@ -1446,6 +1446,12 @@
             "      if (receiver.kind == Expr::Kind::Name) {") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto tryResolveCountMethod = [&]() -> bool {\n"
+            "      return resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
+            "                                 \"count\", methodResolved, isBuiltinMethod);\n"
+            "    };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto tryAssignCountMethodFallbackTarget = [&]() -> bool {\n"
             "      if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
             "          expr.args.empty()) {") ==
@@ -1481,8 +1487,7 @@
             "    };") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "} else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
-            "                                      \"count\", methodResolved, isBuiltinMethod)) {\n"
+            "} else if (!tryResolveCountMethod()) {\n"
             "        if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
             "            expr.args.empty()) {\n"
             "          (void)validateExpr(params, locals, expr.args.front());\n"
@@ -1498,8 +1503,7 @@
             "      }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "} else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
-            "                                    \"count\", methodResolved, isBuiltinMethod)) {\n"
+            "} else if (!tryResolveCountMethod()) {\n"
             "      if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
             "          expr.args.empty()) {\n"
             "        (void)validateExpr(params, locals, expr.args.front());\n"
@@ -1513,6 +1517,18 @@
             "        return false;\n"
             "      }\n"
             "    }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "} else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
+            "                                      \"count\", methodResolved, isBuiltinMethod)) {\n"
+            "        if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
+            "            expr.args.empty()) {") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "} else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
+            "                                    \"count\", methodResolved, isBuiltinMethod)) {\n"
+            "      if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
+            "          expr.args.empty()) {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (context.isUnnamespacedMapCountFallbackCall &&\n"
