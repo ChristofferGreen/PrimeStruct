@@ -10,6 +10,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 17, 2026)**
 
 **Group 14 - SoA bring-up and end-state cleanup**
+ - ✓ TODO-0690: Remove stale dispatch capacity gate reference. Completed: the last stale `allowStdNamespacedVectorUserReceiverProbe` reference was deleted from the capacity-side branch in `SemanticsValidatorExprCollectionDispatchSetup.cpp`, and focused expr source-lock coverage now keeps the inline user-receiver probe present at that capacity branch while the deleted local stays absent.
 - ✓ TODO-0692: Remove count method-shape local. Completed: the one-use `matchesCountMethodCallShape` local was deleted from `SemanticsValidatorExprCollectionCountCapacity.cpp`, and focused expr source-lock coverage now keeps the inline single-arg and non-single-arg count gate present while the old local stays absent.
 - ✓ TODO-0691: Remove dispatch user-receiver gate local. Completed: the one-use `allowStdNamespacedVectorUserReceiverProbe` local was deleted from `SemanticsValidatorExprCollectionDispatchSetup.cpp`, and focused expr source-lock coverage now keeps the inline user-receiver probe present while the old local stays absent.
 - ✓ TODO-0689: Remove count-capacity diagnostic local. Completed: the still-present one-use `stdNamespacedVectorCountTargetDiagnosticMessage` local was deleted from `SemanticsValidatorExprCollectionCountCapacity.cpp`, and focused expr source-lock coverage now keeps the direct in-block shared selector form present while the old local stays absent.

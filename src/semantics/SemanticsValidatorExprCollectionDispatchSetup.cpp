@@ -219,7 +219,10 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
     }
   }
   if (callsInvisibleStdNamespacedVectorCapacityHelper &&
-      !allowStdNamespacedVectorUserReceiverProbe) {
+      !(!expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&
+        setupOut.isNamespacedVectorHelperCall &&
+        (setupOut.namespacedHelper == "count" ||
+         setupOut.namespacedHelper == "capacity"))) {
     return failCollectionDispatchDiagnostic(
         vectorCompatibilityUnknownCallTargetDiagnostic("capacity"));
   }

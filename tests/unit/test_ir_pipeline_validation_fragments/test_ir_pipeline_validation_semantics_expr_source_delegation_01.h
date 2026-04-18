@@ -1678,7 +1678,10 @@
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "if (callsInvisibleStdNamespacedVectorCapacityHelper &&\n"
-            "      !allowStdNamespacedVectorUserReceiverProbe) {\n"
+            "      !(!expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&\n"
+            "        setupOut.isNamespacedVectorHelperCall &&\n"
+            "        (setupOut.namespacedHelper == \"count\" ||\n"
+            "         setupOut.namespacedHelper == \"capacity\"))) {\n"
             "    return failCollectionDispatchDiagnostic(\n"
             "        vectorCompatibilityUnknownCallTargetDiagnostic(\"capacity\"));\n"
             "  }") !=
