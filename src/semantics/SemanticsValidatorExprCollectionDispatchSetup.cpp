@@ -132,10 +132,10 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       !expr.isMethodCall && resolved == "/map/count" &&
       !isMapNamespacedCountCompatibilityCall &&
       !setupOut.isUnnamespacedMapCountFallbackCall;
-  setupOut.isStdNamespacedVectorCapacityCall =
+  const bool isStdNamespacedVectorCapacityCall =
       !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/capacity", 0) == 0;
   setupOut.isNamespacedVectorCapacityCall =
-      !expr.isMethodCall && !setupOut.isStdNamespacedVectorCapacityCall &&
+      !expr.isMethodCall && !isStdNamespacedVectorCapacityCall &&
       setupOut.isNamespacedVectorHelperCall && setupOut.namespacedHelper == "capacity" &&
       isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
       !hasDefinitionPath(resolved);
@@ -203,7 +203,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
     return failCollectionDispatchDiagnostic(
         vectorCompatibilityUnknownCallTargetDiagnostic("count"));
   }
-  if (!expr.isMethodCall && setupOut.isStdNamespacedVectorCapacityCall &&
+  if (!expr.isMethodCall && isStdNamespacedVectorCapacityCall &&
       !hasVisibleCanonicalVectorHelperPath("/std/collections/vector/capacity") &&
       !allowStdNamespacedVectorUserReceiverProbe) {
     return failCollectionDispatchDiagnostic(

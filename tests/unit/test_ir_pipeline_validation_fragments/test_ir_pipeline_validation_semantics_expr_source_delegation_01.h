@@ -1407,7 +1407,20 @@
             "\"unknown call target: /std/collections/vector/count\"") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "const bool isStdNamespacedVectorCapacityCall =\n"
+            "      !expr.isMethodCall &&\n"
+            "      resolveCalleePath(expr).rfind(\"/std/collections/vector/capacity\", 0) == 0;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "if (!expr.isMethodCall && setupOut.isStdNamespacedVectorCapacityCall &&\n"
+            "      !hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/capacity\") &&\n"
+            "      !allowStdNamespacedVectorUserReceiverProbe) {\n"
+            "    return failCollectionDispatchDiagnostic(\n"
+            "        vectorCompatibilityUnknownCallTargetDiagnostic(\"capacity\"));\n"
+            "  }") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "if (!expr.isMethodCall && isStdNamespacedVectorCapacityCall &&\n"
             "      !hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/capacity\") &&\n"
             "      !allowStdNamespacedVectorUserReceiverProbe) {\n"
             "    return failCollectionDispatchDiagnostic(\n"
