@@ -225,6 +225,21 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     return normalizedNamespacePrefix == "/soa_vector" &&
            expr.name == "count";
   };
+  const auto validateVectorCountBuiltinCall = [&]() -> bool {
+    handledOut = true;
+    if (!expr.templateArgs.empty()) {
+      return failCountCapacityMapBuiltin(
+          "count does not accept template arguments");
+    }
+    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+      return failCountCapacityMapBuiltin("count does not accept block arguments");
+    }
+    if (expr.args.size() != 1) {
+      return failCountCapacityMapBuiltin(
+          "argument count mismatch for builtin count");
+    }
+    return validateExpr(params, locals, expr.args.front());
+  };
   const bool isExplicitCanonicalMapCountCall =
       !expr.isMethodCall &&
       (logicalResolvedMethod == "/std/collections/map/count" ||
@@ -233,8 +248,12 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
        expr.namespacePrefix == "/std/collections/map" ||
        expr.namespacePrefix == "std/collections/map");
 
+  if (resolvedMethod &&
+      logicalResolvedMethod == "/std/collections/vector/count") {
+    return validateVectorCountBuiltinCall();
+  }
+
   if (resolvedMethod && (logicalResolvedMethod == "/array/count" ||
-                         logicalResolvedMethod == "/std/collections/vector/count" ||
                          isLegacyOrCanonicalSoaHelperPath(
                              logicalSoaCountCanonical,
                              "count") ||
@@ -496,17 +515,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
         return validateExpr(params, locals, rewrittenMapHelperCall);
       }
     }
-    if (!expr.templateArgs.empty()) {
-      return failCountCapacityMapBuiltin(
-          "count does not accept template arguments");
-    }
-    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      return failCountCapacityMapBuiltin("count does not accept block arguments");
-    }
-    if (expr.args.size() != 1) {
-      return failCountCapacityMapBuiltin("argument count mismatch for builtin count");
-    }
-    return validateExpr(params, locals, expr.args.front());
+    return validateVectorCountBuiltinCall();
   }
 
   const auto validateVectorCapacityBuiltinCall = [&]() -> bool {

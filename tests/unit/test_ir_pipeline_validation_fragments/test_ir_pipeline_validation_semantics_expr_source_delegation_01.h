@@ -1610,6 +1610,48 @@
             "          expr.args.size(),\n"
             "          resolved))") != std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "const auto validateVectorCountBuiltinCall = [&]() -> bool {\n"
+            "    handledOut = true;\n"
+            "    if (!expr.templateArgs.empty()) {\n"
+            "      return failCountCapacityMapBuiltin(\n"
+            "          \"count does not accept template arguments\");\n"
+            "    }\n"
+            "    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {\n"
+            "      return failCountCapacityMapBuiltin(\"count does not accept block arguments\");\n"
+            "    }\n"
+            "    if (expr.args.size() != 1) {\n"
+            "      return failCountCapacityMapBuiltin(\n"
+            "          \"argument count mismatch for builtin count\");\n"
+            "    }\n"
+            "    return validateExpr(params, locals, expr.args.front());\n"
+            "  };") != std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "if (resolvedMethod &&\n"
+            "      logicalResolvedMethod == \"/std/collections/vector/count\") {\n"
+            "    handledOut = true;\n"
+            "    if (!expr.templateArgs.empty()) {") ==
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "if (!resolvedMethod && isVectorBuiltinName(expr, \"count\") &&\n"
+            "      !isArrayNamespacedVectorCountCompatibilityCall(expr, *dispatchResolvers) &&\n"
+            "      !isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,\n"
+            "                                                    resolveCalleePath(expr),\n"
+            "                                                    \"count\") &&\n"
+            "      !context.isNamespacedMapCountCall && !context.isResolvedMapCountCall &&\n"
+            "      !isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals,\n"
+            "                                                 *dispatchResolverAdapters) &&\n"
+            "      it == defMap_.end()) {\n"
+            "    handledOut = true;\n"
+            "    if (!context.shouldBuiltinValidateBareMapCountCall) {\n"
+            "      Expr rewrittenMapHelperCall;\n"
+            "      if (tryRewriteBareMapHelperCall(expr, \"count\", *dispatchResolvers,\n"
+            "                                      rewrittenMapHelperCall)) {\n"
+            "        return validateExpr(params, locals, rewrittenMapHelperCall);\n"
+            "      }\n"
+            "    }\n"
+            "    if (!expr.templateArgs.empty()) {") ==
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "!isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,\n"
             "                                                    resolveCalleePath(expr),\n"
             "                                                    \"count\") &&") !=
