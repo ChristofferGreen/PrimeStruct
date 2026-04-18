@@ -3449,15 +3449,25 @@
             "    defMap_.find(resolved) == defMap_.end();\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const bool matchesHelperCapacityMethodSurfaceRouteInputs =\n"
+            "const bool matchesHelperCapacityMethodSurfaceArgumentShape =\n"
             "    !(capacityMethodSurfaceHasNoArguments ||\n"
-            "      capacityMethodSurfaceUsesSingleArgument ||\n"
-            "      capacityMethodSurfaceLacksResolvedDefinitionTarget);\n") !=
+            "      capacityMethodSurfaceUsesSingleArgument);\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool matchesHelperCapacityMethodSurfaceRouteInputs =\n"
+            "    matchesHelperCapacityMethodSurfaceArgumentShape &&\n"
+            "    !capacityMethodSurfaceLacksResolvedDefinitionTarget;\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool matchesHelperCapacityMethodSurfaceRouteShape =\n"
             "    matchesHelperCapacityMethodSurfaceRouteInputs &&\n"
             "    routesThroughNamespacedVectorCapacityHelperSurface;\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool matchesHelperCapacityMethodSurfaceRouteInputs =\n"
+            "    !(capacityMethodSurfaceHasNoArguments ||\n"
+            "      capacityMethodSurfaceUsesSingleArgument ||\n"
+            "      capacityMethodSurfaceLacksResolvedDefinitionTarget);\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool matchesSingleArgCapacityMethodSurfaceRouteInputs =\n"
