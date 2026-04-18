@@ -1998,18 +1998,17 @@
             "        !context.shouldBuiltinValidateBareMapCountCall;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const bool rejectsResolvedMapCountCallTarget =\n"
-            "        rejectsUnimportedBareMapCountCallTarget ||\n"
-            "        rejectsBuiltinStdlibMapCountCallTarget;") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (rejectsResolvedMapCountCallTarget) {\n"
+            "if (rejectsUnimportedBareMapCountCallTarget ||\n"
+            "        rejectsBuiltinStdlibMapCountCallTarget) {\n"
             "      return failCollectionCountCapacityDiagnostic(\"unknown call target: \" +\n"
             "                                                  stdlibMapCountMethodTarget);\n"
             "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "return failCollectionCountCapacityDiagnostic(\"unknown call target: /std/collections/map/count\");") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool rejectsResolvedMapCountCallTarget =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto matchesCountMethodCallShape =") ==
