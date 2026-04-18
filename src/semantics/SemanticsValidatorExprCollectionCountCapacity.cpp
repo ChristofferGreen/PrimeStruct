@@ -211,50 +211,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           std::string &methodResolved) -> bool {
     const std::string stdlibMapCountMethodTarget =
         "/std/collections/map/count";
-    const auto assignCountMethodTargetAfterResolveMiss =
-        [&](const Expr &receiver, bool &isBuiltinMethod,
-            std::string &methodResolved) -> bool {
-      if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||
-          expr.args.empty()) {
-        (void)validateExpr(params, locals, receiver);
-        return false;
-      }
-      if (context.resolveMapTarget != nullptr &&
-          context.resolveMapTarget(receiver)) {
-        methodResolved = stdlibMapCountMethodTarget;
-        error_.clear();
-        isBuiltinMethod = false;
-      } else {
-        std::string typeName;
-        if (receiver.kind == Expr::Kind::Name) {
-          if (const BindingInfo *paramBinding =
-                  findParamBinding(params, receiver.name)) {
-            typeName = paramBinding->typeName;
-          } else if (auto it = locals.find(receiver.name);
-                     it != locals.end()) {
-            typeName = it->second.typeName;
-          }
-        }
-        if (typeName.empty()) {
-          typeName = inferPointerLikeCallReturnType(receiver, params, locals);
-        }
-        if (typeName.empty()) {
-          if (isPointerExpr(receiver, params, locals)) {
-            typeName = "Pointer";
-          } else if (isPointerLikeExpr(receiver, params, locals)) {
-            typeName = "Reference";
-          }
-        }
-        if (typeName != "Pointer" && typeName != "Reference") {
-          (void)validateExpr(params, locals, receiver);
-          return false;
-        }
-        methodResolved = "/" + typeName + "/count";
-        error_.clear();
-        isBuiltinMethod = false;
-      }
-      return true;
-    };
     const auto finalizeCountMethodTarget =
         [&](std::string &methodResolved, bool &isBuiltinMethod) {
           return finalizeCollectionMethodTarget(
@@ -307,8 +263,47 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 receiver, "count", methodResolved, isBuiltinMethod,
                 [&](const Expr &receiver, bool &isBuiltinMethod,
                     std::string &methodResolved) {
-                  return assignCountMethodTargetAfterResolveMiss(
-                      receiver, isBuiltinMethod, methodResolved);
+                  if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||
+                      expr.args.empty()) {
+                    (void)validateExpr(params, locals, receiver);
+                    return false;
+                  }
+                  if (context.resolveMapTarget != nullptr &&
+                      context.resolveMapTarget(receiver)) {
+                    methodResolved = stdlibMapCountMethodTarget;
+                    error_.clear();
+                    isBuiltinMethod = false;
+                  } else {
+                    std::string typeName;
+                    if (receiver.kind == Expr::Kind::Name) {
+                      if (const BindingInfo *paramBinding =
+                              findParamBinding(params, receiver.name)) {
+                        typeName = paramBinding->typeName;
+                      } else if (auto it = locals.find(receiver.name);
+                                 it != locals.end()) {
+                        typeName = it->second.typeName;
+                      }
+                    }
+                    if (typeName.empty()) {
+                      typeName =
+                          inferPointerLikeCallReturnType(receiver, params, locals);
+                    }
+                    if (typeName.empty()) {
+                      if (isPointerExpr(receiver, params, locals)) {
+                        typeName = "Pointer";
+                      } else if (isPointerLikeExpr(receiver, params, locals)) {
+                        typeName = "Reference";
+                      }
+                    }
+                    if (typeName != "Pointer" && typeName != "Reference") {
+                      (void)validateExpr(params, locals, receiver);
+                      return false;
+                    }
+                    methodResolved = "/" + typeName + "/count";
+                    error_.clear();
+                    isBuiltinMethod = false;
+                  }
+                  return true;
                 });
           },
           finalizeCountMethodTarget);

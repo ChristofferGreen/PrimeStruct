@@ -10,6 +10,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 17, 2026)**
 
 **Group 14 - SoA bring-up and end-state cleanup**
+- ✓ TODO-0817: Inline count resolve-miss helper. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` no longer carries the one-use `assignCountMethodTargetAfterResolveMiss` local, and focused expr source-lock coverage now keeps the inline count resolve-miss fallback body present while the deleted helper stays absent.
 - ✓ TODO-0816: Inline capacity promotion helper. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` no longer carries the one-use `promoteUnknownCapacityMethodTargetIfNeeded` local, and focused expr source-lock coverage now keeps the inline unknown-target promotion pre-check present while the deleted helper stays absent.
 - ✓ TODO-0815: Inline capacity validation helper. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` no longer carries the one-use `tryResolveCapacityMethodTargetWithValidation` local, and focused expr source-lock coverage now keeps the inline `tryResolveCollectionMethodTargetOrElse(...)` capacity validation path present while the deleted helper stays absent.
 - ✓ TODO-0814: Inline count resolve-or-fallback helper. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` no longer carries the one-use `tryResolveCountMethodTargetWithFallback` local, and focused expr source-lock coverage now keeps the inline `tryResolveCollectionMethodTargetOrElse(...)` count fallback path present while the deleted helper stays absent.
