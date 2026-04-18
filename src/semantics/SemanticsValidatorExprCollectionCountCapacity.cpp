@@ -389,9 +389,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                         receiver, methodResolved, isBuiltinMethod, false);
                   }
                 }
-                if (!(isBuiltinMethod ||
-                      hasDeclaredDefinitionPath(methodResolved) ||
-                      hasImportedDefinitionPath(methodResolved))) {
+                if (!isBuiltinMethod &&
+                    !hasDeclaredDefinitionPath(methodResolved) &&
+                    !hasImportedDefinitionPath(methodResolved)) {
                   (void)failExprDiagnostic(expr,
                                            "unknown method: " + methodResolved);
                   return false;
