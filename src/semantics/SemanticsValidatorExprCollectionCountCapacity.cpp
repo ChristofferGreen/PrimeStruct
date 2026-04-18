@@ -129,9 +129,20 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     handledOut = true;
     bool isBuiltinMethod = false;
     std::string methodResolved;
-    if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
-                            context.namespacedHelper, methodResolved, isBuiltinMethod) &&
-        !isBuiltinMethod && defMap_.find(methodResolved) != defMap_.end()) {
+    const auto resolvesNamedArgumentCountOrCapacityHelperTarget =
+        [&](std::string &resolvedMethodTarget, bool &resolvedBuiltinMethod) {
+          return resolveMethodTarget(params,
+                                     locals,
+                                     expr.namespacePrefix,
+                                     expr.args.front(),
+                                     context.namespacedHelper,
+                                     resolvedMethodTarget,
+                                     resolvedBuiltinMethod) &&
+                 !resolvedBuiltinMethod &&
+                 defMap_.find(resolvedMethodTarget) != defMap_.end();
+        };
+    if (resolvesNamedArgumentCountOrCapacityHelperTarget(methodResolved,
+                                                         isBuiltinMethod)) {
       usedMethodTarget = true;
       hasMethodReceiverIndex = true;
       methodReceiverIndex = 0;
