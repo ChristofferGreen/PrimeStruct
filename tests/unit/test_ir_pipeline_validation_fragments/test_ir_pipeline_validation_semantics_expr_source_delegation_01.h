@@ -1712,6 +1712,17 @@
             "            hasImportedDefinitionPath(\"/std/collections/vector/capacity\")) ||") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool methodResolvedMissing =\n"
+            "        !isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved);") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {\n"
+            "      if (requireSingleArg &&") == std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {\n"
+            "      return failCollectionCountCapacityDiagnostic(\"unknown method: \" + methodResolved);\n"
+            "    }") == std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "(isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,\n"
             "                                                      resolveCalleePath(expr),\n"
             "                                                      \"capacity\") &&\n"
