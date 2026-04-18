@@ -141,13 +141,16 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       routesThroughMapCountCallSurface;
   const bool countMethodSurfaceHasNamedArguments =
       hasNamedArguments(expr.argNames);
+  const bool
+      routesThroughUnimportedStdNamespacedVectorCountCompatibilityDirectCall =
+          isUnimportedStdNamespacedVectorCompatibilityDirectCall(
+              expr.isMethodCall,
+              resolveCalleePath(expr),
+              "count",
+              hasImportedDefinitionPath("/std/collections/vector/count"));
   const bool violatesCountMethodSurfacePreconditions =
       countMethodSurfaceHasNamedArguments ||
-      isUnimportedStdNamespacedVectorCompatibilityDirectCall(
-          expr.isMethodCall,
-          resolveCalleePath(expr),
-          "count",
-          hasImportedDefinitionPath("/std/collections/vector/count")) ||
+      routesThroughUnimportedStdNamespacedVectorCountCompatibilityDirectCall ||
       expr.args.empty();
   const bool matchesCountMethodSurfaceRoute =
       !violatesCountMethodSurfacePreconditions &&

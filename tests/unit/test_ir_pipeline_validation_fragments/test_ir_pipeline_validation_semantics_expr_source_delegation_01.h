@@ -2448,13 +2448,18 @@
             "      hasNamedArguments(expr.argNames);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool\n"
+            "      routesThroughUnimportedStdNamespacedVectorCountCompatibilityDirectCall =\n"
+            "          isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
+            "              expr.isMethodCall,\n"
+            "              resolveCalleePath(expr),\n"
+            "              \"count\",\n"
+            "              hasImportedDefinitionPath(\"/std/collections/vector/count\"));") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool violatesCountMethodSurfacePreconditions =\n"
             "      countMethodSurfaceHasNamedArguments ||\n"
-            "      isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
-            "          expr.isMethodCall,\n"
-            "          resolveCalleePath(expr),\n"
-            "          \"count\",\n"
-            "          hasImportedDefinitionPath(\"/std/collections/vector/count\")) ||\n"
+            "      routesThroughUnimportedStdNamespacedVectorCountCompatibilityDirectCall ||\n"
             "      expr.args.empty();") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -2466,6 +2471,16 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool violatesCountMethodSurfacePreconditions =\n"
             "      hasNamedArguments(expr.argNames) ||\n"
+            "      isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
+            "          expr.isMethodCall,\n"
+            "          resolveCalleePath(expr),\n"
+            "          \"count\",\n"
+            "          hasImportedDefinitionPath(\"/std/collections/vector/count\")) ||\n"
+            "      expr.args.empty();") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool violatesCountMethodSurfacePreconditions =\n"
+            "      countMethodSurfaceHasNamedArguments ||\n"
             "      isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
             "          expr.isMethodCall,\n"
             "          resolveCalleePath(expr),\n"
