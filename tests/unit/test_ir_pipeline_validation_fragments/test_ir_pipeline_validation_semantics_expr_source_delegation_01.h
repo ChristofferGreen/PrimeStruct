@@ -3641,7 +3641,7 @@
             "            (void)validateExpr(params, locals, receiver);\n"
             "            return false;\n"
             "          });\n"
-            "    };") !=
+            "    };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "    const auto tryResolveCapacityMethodTargetWithValidation =\n"
@@ -3765,8 +3765,12 @@
             "            assignStdNamespacedVectorCapacityMethodTarget();\n"
             "            return true;\n"
             "          }\n"
-            "          return tryResolveCapacityMethodTargetWithValidation(\n"
-            "              receiver, isBuiltinMethod, methodResolved);\n"
+            "          return tryResolveCollectionMethodTargetOrElse(\n"
+            "              receiver, \"capacity\", methodResolved, isBuiltinMethod,\n"
+            "              [&](const Expr &receiver, bool &, std::string &) {\n"
+            "                (void)validateExpr(params, locals, receiver);\n"
+            "                return false;\n"
+            "              });\n"
             "        },\n"
             "        finalizeCapacityMethodTarget);") !=
         std::string::npos);
