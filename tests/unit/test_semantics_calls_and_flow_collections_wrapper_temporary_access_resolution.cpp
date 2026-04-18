@@ -500,6 +500,82 @@ main() {
   CHECK(error.find("capacity requires vector target") != std::string::npos);
 }
 
+TEST_CASE("count method keeps unknown method on non-collection receiver") {
+  const std::string source = R"(
+Counter {
+  [i32] value{0i32}
+}
+
+[return<int>]
+main() {
+  [Counter] counter{Counter()}
+  return(counter.count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /Counter/count") != std::string::npos);
+}
+
+TEST_CASE("count method keeps unknown method on non-collection wrapper temporary") {
+  const std::string source = R"(
+Counter {
+  [i32] value{0i32}
+}
+
+makeCounter() {
+  [Counter] counter{Counter()}
+  return(counter)
+}
+
+[return<int>]
+main() {
+  return(makeCounter().count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /Counter/count") != std::string::npos);
+}
+
+TEST_CASE("count call keeps unknown method on non-collection receiver") {
+  const std::string source = R"(
+Counter {
+  [i32] value{0i32}
+}
+
+[return<int>]
+main() {
+  [Counter] counter{Counter()}
+  return(count(counter))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /Counter/count") != std::string::npos);
+}
+
+TEST_CASE("count call keeps unknown method on non-collection wrapper temporary") {
+  const std::string source = R"(
+Counter {
+  [i32] value{0i32}
+}
+
+makeCounter() {
+  [Counter] counter{Counter()}
+  return(counter)
+}
+
+[return<int>]
+main() {
+  return(count(makeCounter()))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /Counter/count") != std::string::npos);
+}
+
 TEST_CASE("capacity method keeps unknown method on non-collection receiver") {
   const std::string source = R"(
 Counter {
