@@ -1443,7 +1443,15 @@
             "      if (requireSingleArg) {\n"
             "        return (!resolvesExplicitCountMethodTarget &&\n"
             "                !context.isStdNamespacedMapCountCall) ||\n"
-            "               context.isNamespacedVectorCountCall ||\n"
+            "               (!isStdNamespacedVectorCompatibilityDirectCall(\n"
+            "                    expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
+            "                context.isNamespacedVectorHelperCall &&\n"
+            "                context.namespacedHelper == \"count\" &&\n"
+            "                isVectorBuiltinName(expr, \"count\") &&\n"
+            "                expr.args.size() == 1 &&\n"
+            "                !hasDefinitionPath(resolved) &&\n"
+            "                !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
+            "                  context.isArrayNamespacedVectorCountCompatibilityCall(expr))) ||\n"
             "               resolvesMapCountSurface;\n"
             "      }\n"
             "      return resolvesExplicitCountMethodTarget || resolvesMapCountSurface;\n"
@@ -2022,11 +2030,22 @@
             "const bool callsUnimportedStdNamespacedVectorCountHelper =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool isNamespacedVectorCountCall =") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "(context.isNamespacedVectorCountCall &&\n"
             "                !callsStdNamespacedVectorCountHelper) ||") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "isNamespacedVectorCountCall ||\n"
+            "(!isStdNamespacedVectorCompatibilityDirectCall(\n"
+            "                    expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
+            "                context.isNamespacedVectorHelperCall &&\n"
+            "                context.namespacedHelper == \"count\" &&\n"
+            "                isVectorBuiltinName(expr, \"count\") &&\n"
+            "                expr.args.size() == 1 &&\n"
+            "                !hasDefinitionPath(resolved) &&\n"
+            "                !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
+            "                  context.isArrayNamespacedVectorCountCompatibilityCall(expr))) ||\n"
             "               resolvesMapCountSurface;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(

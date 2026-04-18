@@ -125,16 +125,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     if (!isCountLike) {
       return false;
     }
-    const bool isNamespacedVectorCountCall =
-        !isStdNamespacedVectorCompatibilityDirectCall(
-            expr.isMethodCall, resolveCalleePath(expr), "count") &&
-        context.isNamespacedVectorHelperCall &&
-        context.namespacedHelper == "count" &&
-        isVectorBuiltinName(expr, "count") &&
-        expr.args.size() == 1 &&
-        !hasDefinitionPath(resolved) &&
-        !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
-          context.isArrayNamespacedVectorCountCompatibilityCall(expr));
     const auto matchesCountMethodCallShape = [&](bool requireSingleArg) {
       const bool resolvesExplicitCountMethodTarget =
           defMap_.find(resolved) != defMap_.end();
@@ -144,7 +134,15 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       if (requireSingleArg) {
         return (!resolvesExplicitCountMethodTarget &&
                 !context.isStdNamespacedMapCountCall) ||
-               isNamespacedVectorCountCall ||
+               (!isStdNamespacedVectorCompatibilityDirectCall(
+                    expr.isMethodCall, resolveCalleePath(expr), "count") &&
+                context.isNamespacedVectorHelperCall &&
+                context.namespacedHelper == "count" &&
+                isVectorBuiltinName(expr, "count") &&
+                expr.args.size() == 1 &&
+                !hasDefinitionPath(resolved) &&
+                !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
+                  context.isArrayNamespacedVectorCountCompatibilityCall(expr))) ||
                resolvesMapCountSurface;
       }
       return resolvesExplicitCountMethodTarget || resolvesMapCountSurface;

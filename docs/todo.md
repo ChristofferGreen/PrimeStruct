@@ -140,6 +140,7 @@ Wave D (queue hygiene):
     - Final release gate passes with `./scripts/compile.sh --release`.
   - stop_rule: If shared classifier rewrites destabilize `map`/`soa_vector`, isolate the generic mechanism in this leaf and defer remaining shared deletions to TODO-0409.
   - notes: This leaf should leave a reusable generic path that TODO-0409 can apply to `map` and `soa_vector`.
+  - progress: Completed `TODO-0679` by deleting the one-use `isNamespacedVectorCountCall` local from `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the collection-side count method-shape gate now keeps that canonical namespaced-count condition inline inside `matchesCountMethodCallShape(...)`.
   - progress: Completed `TODO-0678` by deleting the now-dead `isNamespacedVectorCountCall` bit from `ExprCollectionDispatchSetup`, so the dispatch-setup path no longer stores a canonical count call-shape that nothing consumes.
   - progress: Completed `TODO-0677` by deleting the still-threaded `isNamespacedVectorCountCall` bit from `ExprCollectionCountCapacityDispatchContext`, so the collection-side count method-shape gate now recomputes that canonical namespaced-count condition locally instead of depending on private context handoff from `SemanticsValidatorExpr.cpp`.
   - progress: Completed `TODO-0676` by deleting the redundant `!expr.isMethodCall` recheck from the dispatch-side `setupOut.isNamespacedVectorCountCall` assignment in `SemanticsValidatorExprCollectionDispatchSetup.cpp`, so that count call-shape gate now relies directly on `!callsStdNamespacedVectorCountHelper`.
