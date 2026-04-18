@@ -65,8 +65,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     return true;
   }
 
-  if (context.isDirectStdNamespacedVectorCountWrapperMapTarget &&
-      !hasDeclaredDefinitionPath("/std/collections/vector/count")) {
+  const bool rejectsStdNamespacedVectorCountWrapperMapTargetWithoutDeclaredHelper =
+      context.isDirectStdNamespacedVectorCountWrapperMapTarget &&
+      !hasDeclaredDefinitionPath("/std/collections/vector/count");
+  if (rejectsStdNamespacedVectorCountWrapperMapTargetWithoutDeclaredHelper) {
     handledOut = true;
     return failCollectionCountCapacityDiagnostic("unknown call target: /std/collections/vector/count");
   }

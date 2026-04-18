@@ -1113,6 +1113,18 @@
             "vectorCompatibilityRequiresVectorTargetDiagnostic(\"count\")") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool rejectsStdNamespacedVectorCountWrapperMapTargetWithoutDeclaredHelper =\n"
+            "      context.isDirectStdNamespacedVectorCountWrapperMapTarget &&\n"
+            "      !hasDeclaredDefinitionPath(\"/std/collections/vector/count\");") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (context.isDirectStdNamespacedVectorCountWrapperMapTarget &&\n"
+            "      !hasDeclaredDefinitionPath(\"/std/collections/vector/count\"))") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (rejectsStdNamespacedVectorCountWrapperMapTargetWithoutDeclaredHelper)") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool resolvesStdNamespacedVectorCountMapTarget =\n"
             "      context.isStdNamespacedVectorCountCall && expr.args.size() == 1 &&\n"
             "      context.resolveMapTarget != nullptr &&\n"
