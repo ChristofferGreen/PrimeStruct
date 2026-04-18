@@ -97,8 +97,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     }
     return failExprDiagnostic(expr, removedRootedVectorDirectCallDiagnostic);
   };
-  const auto resolveCollectionMethodTargetFromReceiver =
-      [&](auto &&resolveMethodTarget) -> bool {
+  const auto tryResolveCollectionMethodFromSurface =
+      [&](bool routesThroughMethodSurface, bool matchesSurfaceRoute,
+          auto &&resolveMethodTarget) -> std::optional<bool> {
+    if (!routesThroughMethodSurface || !matchesSurfaceRoute) {
+      return std::nullopt;
+    }
     handledOut = true;
     usedMethodTarget = true;
     hasMethodReceiverIndex = true;
@@ -112,14 +116,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     resolved = methodResolved;
     resolvedMethod = isBuiltinMethod;
     return true;
-  };
-  const auto tryResolveCollectionMethodFromSurface =
-      [&](bool routesThroughMethodSurface, bool matchesSurfaceRoute,
-          auto &&resolveMethodTarget) -> std::optional<bool> {
-    if (!routesThroughMethodSurface || !matchesSurfaceRoute) {
-      return std::nullopt;
-    }
-    return resolveCollectionMethodTargetFromReceiver(resolveMethodTarget);
   };
   const auto resolveCountMethodTargetFromReceiver =
       [&](const Expr &receiver, bool &isBuiltinMethod,
