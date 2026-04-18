@@ -161,9 +161,16 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 context.tryRewriteBareVectorHelperCall("capacity",
                                                       rewrittenVectorHelperCall));
       };
-  if (tryRewriteBareVectorCountOrCapacityHelperCall()) {
-    handledOut = true;
-    rewrittenExprOut = std::move(rewrittenVectorHelperCall);
+  const auto applyBareVectorCountOrCapacityHelperRewrite =
+      [&]() {
+        if (!tryRewriteBareVectorCountOrCapacityHelperCall()) {
+          return false;
+        }
+        handledOut = true;
+        rewrittenExprOut = std::move(rewrittenVectorHelperCall);
+        return true;
+      };
+  if (applyBareVectorCountOrCapacityHelperRewrite()) {
     return true;
   }
   {

@@ -1904,6 +1904,17 @@
             "      };\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto applyBareVectorCountOrCapacityHelperRewrite =\n"
+            "      [&]() {\n"
+            "        if (!tryRewriteBareVectorCountOrCapacityHelperCall()) {\n"
+            "          return false;\n"
+            "        }\n"
+            "        handledOut = true;\n"
+            "        rewrittenExprOut = std::move(rewrittenVectorHelperCall);\n"
+            "        return true;\n"
+            "      };\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "    const auto resolvesNamedArgumentCountOrCapacityHelperTarget =\n"
             "        [&](std::string &resolvedMethodTarget, bool &resolvedBuiltinMethod) {\n"
             "          return resolveMethodTarget(params,\n"
@@ -1957,6 +1968,13 @@
             "  if (context.tryRewriteBareVectorHelperCall != nullptr &&\n"
             "      (context.tryRewriteBareVectorHelperCall(\"count\", rewrittenVectorHelperCall) ||\n"
             "       context.tryRewriteBareVectorHelperCall(\"capacity\", rewrittenVectorHelperCall))) {\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "  if (tryRewriteBareVectorCountOrCapacityHelperCall()) {\n"
+            "    handledOut = true;\n"
+            "    rewrittenExprOut = std::move(rewrittenVectorHelperCall);\n"
+            "    return true;\n"
+            "  }\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else {\n"
