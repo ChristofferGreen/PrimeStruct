@@ -1576,15 +1576,19 @@
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "const bool isStdNamespacedVectorCapacityCall =\n"
             "      !expr.isMethodCall &&\n"
-            "      resolveCalleePath(expr).rfind(\"/std/collections/vector/capacity\", 0) == 0;") !=
+            "      resolveCalleePath(expr).rfind(\"/std/collections/vector/capacity\", 0) == 0;") ==
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
-            "(!shouldBuiltinValidateStdNamespacedVectorCapacityCall &&\n"
-            "       !isStdNamespacedVectorCapacityCall) &&") !=
+            "!(!expr.isMethodCall &&\n"
+            "        resolveCalleePath(expr).rfind(\"/std/collections/vector/capacity\", 0) == 0) &&") !=
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "(!shouldBuiltinValidateStdNamespacedVectorCapacityCall &&\n"
             "       !context.isStdNamespacedVectorCapacityCall) &&") ==
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "(!shouldBuiltinValidateStdNamespacedVectorCapacityCall &&\n"
+            "       !isStdNamespacedVectorCapacityCall) &&") ==
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "context.shouldBuiltinValidateStdNamespacedVectorCapacityCall") ==
