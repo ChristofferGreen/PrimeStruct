@@ -40,6 +40,25 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("map wrapper temporary count method validates target classification") {
+  const std::string source = R"(
+import /std/collections/*
+
+wrapMapAuto() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values)
+}
+
+[return<int>]
+main() {
+  return(wrapMapAuto().count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib namespaced vector count validates on wrapper temporary vector target") {
   const std::string source = R"(
 import /std/collections/*
@@ -114,6 +133,25 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
+}
+
+TEST_CASE("wrapper temporary canonical vector count slash-method rejects map receiver") {
+  const std::string source = R"(
+[effects(heap_alloc)]
+wrapMapAuto() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values)
+}
+
+[return<int>]
+main() {
+  return(wrapMapAuto()./std/collections/vector/count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("map wrapper temporary access call validates map target classification") {
