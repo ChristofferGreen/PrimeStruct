@@ -6,6 +6,7 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 13, 2026)**
+- ✓ TODO-0875: Share count named-arguments probe. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the remaining count-surface named-arguments probe behind shared `countMethodSurfaceHasNamedArguments`, and focused expr source-lock coverage now keeps that shared local present while the old inline call stays absent.
 - ✓ TODO-0874: Share namespaced vector-helper count gate. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the repeated namespaced vector-helper pair behind shared `routesThroughNamespacedVectorCountHelperSurface`, and focused expr source-lock coverage now keeps that shared local present while the old inline helper/context pair stays absent.
 - ✓ TODO-0873: Share builtin vector-count surface probe. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the repeated builtin vector-count surface probe behind shared `routesThroughVectorBuiltinCountSurface`, and focused expr source-lock coverage now keeps that shared local present while the old inline builtin-name checks stay absent.
 - ✓ TODO-0872: Share resolved map-count flag. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the repeated resolved map-count flag behind shared `routesThroughResolvedMapCountSurface`, and focused expr source-lock coverage now keeps that shared local present while the old inline raw-context use stays absent.

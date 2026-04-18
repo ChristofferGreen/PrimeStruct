@@ -139,8 +139,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   const bool routesThroughCountMethodSurface =
       routesThroughVectorBuiltinCountSurface ||
       routesThroughMapCountCallSurface;
+  const bool countMethodSurfaceHasNamedArguments =
+      hasNamedArguments(expr.argNames);
   const bool violatesCountMethodSurfacePreconditions =
-      hasNamedArguments(expr.argNames) ||
+      countMethodSurfaceHasNamedArguments ||
       isUnimportedStdNamespacedVectorCompatibilityDirectCall(
           expr.isMethodCall,
           resolveCalleePath(expr),

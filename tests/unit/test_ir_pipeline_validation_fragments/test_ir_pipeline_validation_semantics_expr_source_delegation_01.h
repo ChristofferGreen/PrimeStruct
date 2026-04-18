@@ -2444,8 +2444,12 @@
             "      routesThroughMapCountCallSurface;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool countMethodSurfaceHasNamedArguments =\n"
+            "      hasNamedArguments(expr.argNames);") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool violatesCountMethodSurfacePreconditions =\n"
-            "      hasNamedArguments(expr.argNames) ||\n"
+            "      countMethodSurfaceHasNamedArguments ||\n"
             "      isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
             "          expr.isMethodCall,\n"
             "          resolveCalleePath(expr),\n"
@@ -2458,6 +2462,16 @@
             "      !violatesCountMethodSurfacePreconditions &&\n"
             "      !isArrayNamespacedVectorCountCompatibilityActive &&\n"
             "      routesThroughCountMethodSurface && matchesCountRouteArgShape;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool violatesCountMethodSurfacePreconditions =\n"
+            "      hasNamedArguments(expr.argNames) ||\n"
+            "      isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
+            "          expr.isMethodCall,\n"
+            "          resolveCalleePath(expr),\n"
+            "          \"count\",\n"
+            "          hasImportedDefinitionPath(\"/std/collections/vector/count\")) ||\n"
+            "      expr.args.empty();") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "bool needsCountMethodResolveOrFallback =") ==
