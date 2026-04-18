@@ -1940,10 +1940,8 @@
             "                    resolved.rfind(methodResolved + \"__t\", 0) == 0) {\n"
             "                  methodResolved = resolved;\n"
             "                }\n"
-            "                const bool targetsBareMapCountMethod =\n"
-            "                    methodResolved == bareMapCountTargetPath;\n"
             "                if ((isDirectNamedCountReceiverCall &&\n"
-            "                     targetsBareMapCountMethod &&\n"
+            "                     methodResolved == bareMapCountTargetPath &&\n"
             "                     lacksVisibleBareCountDefinition &&\n"
             "                     lacksVisibleStdlibMapCountDefinition) ||\n"
             "                    (isBuiltinMethod &&\n"
@@ -1990,6 +1988,10 @@
             "                    targetsBareMapCountMethod &&\n"
             "                    lacksVisibleBareCountDefinition &&\n"
             "                    lacksVisibleStdlibMapCountDefinition;\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "                const bool targetsBareMapCountMethod =\n"
+            "                    methodResolved == bareMapCountTargetPath;\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto finalizeCountMethodTarget =\n") ==

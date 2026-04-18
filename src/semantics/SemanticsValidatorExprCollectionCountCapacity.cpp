@@ -295,10 +295,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 if (reusesResolvedCountMonomorphizedTarget) {
                   methodResolved = resolved;
                 }
-                const bool targetsBareMapCountMethod =
-                    methodResolved == bareMapCountTargetPath;
                 if ((isDirectNamedCountReceiverCall &&
-                     targetsBareMapCountMethod &&
+                     methodResolved == bareMapCountTargetPath &&
                      lacksVisibleBareCountDefinition &&
                      lacksVisibleStdlibMapCountDefinition) ||
                     (isBuiltinMethod &&
