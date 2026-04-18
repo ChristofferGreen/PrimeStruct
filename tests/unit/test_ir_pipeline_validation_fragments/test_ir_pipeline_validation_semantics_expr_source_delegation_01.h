@@ -611,9 +611,6 @@
             "auto shouldPreferCanonicalVectorCompatibilityMethodTarget =") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
-            "const bool targetsExperimentalVectorCompatibilityPath =") !=
-        std::string::npos);
-  CHECK(semanticsExprMethodResolutionSource.find(
             "[&](const std::string &target)") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
@@ -650,9 +647,13 @@
             "            defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
-            "return targetsExperimentalVectorCompatibilityPath &&\n"
+            "return (target.rfind(\"/std/collections/experimental_vector/\", 0) == 0 ||\n"
+            "                target.rfind(\"/std/collections/experimental_vector/Vector__\", 0) == 0) &&\n"
             "               (hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||\n"
             "                defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0);") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "const bool targetsExperimentalVectorCompatibilityPath =") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (targetsExperimentalVectorCompatibilityPath &&\n"

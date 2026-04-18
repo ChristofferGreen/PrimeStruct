@@ -83,10 +83,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       "/std/collections/vector/" + expr.name;
   auto shouldPreferCanonicalVectorCompatibilityMethodTarget =
       [&](const std::string &target) {
-        const bool targetsExperimentalVectorCompatibilityPath =
-            target.rfind("/std/collections/experimental_vector/", 0) == 0 ||
-            target.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
-        return targetsExperimentalVectorCompatibilityPath &&
+        return (target.rfind("/std/collections/experimental_vector/", 0) == 0 ||
+                target.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) &&
                (hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||
                 defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0);
       };
