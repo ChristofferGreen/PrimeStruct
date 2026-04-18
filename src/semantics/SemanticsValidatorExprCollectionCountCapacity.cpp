@@ -295,14 +295,14 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                   return failExprDiagnostic(
                       expr, stdlibMapCountUnknownTargetDiagnostic);
                 }
-                {
-                  const std::string removedRootedVectorDirectCallDiagnostic =
-                      getRemovedRootedVectorDirectCallDiagnostic(expr);
-                  if (!removedRootedVectorDirectCallDiagnostic.empty()) {
-                    (void)failExprDiagnostic(
-                        expr, removedRootedVectorDirectCallDiagnostic);
-                    return false;
-                  }
+                const std::string removedRootedVectorDirectCallDiagnostic =
+                    getRemovedRootedVectorDirectCallDiagnostic(expr);
+                const bool rejectsRemovedRootedVectorDirectCall =
+                    !removedRootedVectorDirectCallDiagnostic.empty();
+                if (rejectsRemovedRootedVectorDirectCall) {
+                  (void)failExprDiagnostic(
+                      expr, removedRootedVectorDirectCallDiagnostic);
+                  return false;
                 }
                 const bool hasVisibleCountMethodTarget =
                     isBuiltinMethod ||

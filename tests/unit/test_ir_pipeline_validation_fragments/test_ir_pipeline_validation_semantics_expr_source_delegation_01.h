@@ -1860,14 +1860,14 @@
             "                      expr,\n"
             "                      \"unknown call target: /std/collections/map/count\");\n"
             "                }\n"
-            "                {\n"
-            "                  const std::string removedRootedVectorDirectCallDiagnostic =\n"
-            "                      getRemovedRootedVectorDirectCallDiagnostic(expr);\n"
-            "                  if (!removedRootedVectorDirectCallDiagnostic.empty()) {\n"
-            "                    (void)failExprDiagnostic(\n"
-            "                        expr, removedRootedVectorDirectCallDiagnostic);\n"
-            "                    return false;\n"
-            "                  }\n"
+            "                const std::string removedRootedVectorDirectCallDiagnostic =\n"
+            "                    getRemovedRootedVectorDirectCallDiagnostic(expr);\n"
+            "                const bool rejectsRemovedRootedVectorDirectCall =\n"
+            "                    !removedRootedVectorDirectCallDiagnostic.empty();\n"
+            "                if (rejectsRemovedRootedVectorDirectCall) {\n"
+            "                  (void)failExprDiagnostic(\n"
+            "                      expr, removedRootedVectorDirectCallDiagnostic);\n"
+            "                  return false;\n"
             "                }\n"
             "                if (!(isBuiltinMethod ||\n"
             "                      hasDeclaredDefinitionPath(methodResolved) ||\n"
@@ -1877,6 +1877,17 @@
             "                  return false;\n"
             "                }\n"
             "                return true;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "                {\n"
+            "                  const std::string removedRootedVectorDirectCallDiagnostic =\n"
+            "                      getRemovedRootedVectorDirectCallDiagnostic(expr);\n"
+            "                  if (!removedRootedVectorDirectCallDiagnostic.empty()) {\n"
+            "                    (void)failExprDiagnostic(\n"
+            "                        expr, removedRootedVectorDirectCallDiagnostic);\n"
+            "                    return false;\n"
+            "                  }\n"
+            "                }\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto finalizeCountMethodTarget =\n") ==
