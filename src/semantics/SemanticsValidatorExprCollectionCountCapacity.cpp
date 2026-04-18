@@ -205,14 +205,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     const bool lacksVisibleStdlibMapCountDefinition =
         !hasDeclaredDefinitionPath("/std/collections/map/count") &&
         !hasImportedDefinitionPath("/std/collections/map/count");
-    const bool resolvesMapCountMethodTarget =
-        context.resolveMapTarget != nullptr &&
-        context.resolveMapTarget(receiver);
     bool needsCountMethodResolveOrFallback = true;
     if (context.isUnnamespacedMapCountFallbackCall &&
         !hasDeclaredDefinitionPath(bareMapCountMethodTarget) &&
         lacksVisibleStdlibMapCountDefinition &&
-        resolvesMapCountMethodTarget) {
+        context.resolveMapTarget != nullptr &&
+        context.resolveMapTarget(receiver)) {
       methodResolved = stdlibMapCountMethodTarget;
       isBuiltinMethod = true;
       needsCountMethodResolveOrFallback = false;
@@ -232,7 +230,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         (void)validateExpr(params, locals, expr.args.front());
         return false;
       }
-      if (resolvesMapCountMethodTarget) {
+      if (context.resolveMapTarget != nullptr &&
+          context.resolveMapTarget(receiver)) {
         methodResolved = stdlibMapCountMethodTarget;
         error_.clear();
         isBuiltinMethod = false;

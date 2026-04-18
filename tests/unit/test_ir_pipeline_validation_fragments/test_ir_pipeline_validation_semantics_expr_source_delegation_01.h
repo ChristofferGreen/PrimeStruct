@@ -1450,11 +1450,6 @@
             "        !hasImportedDefinitionPath(\"/std/collections/map/count\");") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const bool resolvesMapCountMethodTarget =\n"
-            "        context.resolveMapTarget != nullptr &&\n"
-            "        context.resolveMapTarget(receiver);") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto assignBuiltinStdlibMapCountMethodTarget = [&]() {\n"
             "      methodResolved = \"/std/collections/map/count\";\n"
             "      isBuiltinMethod = true;\n"
@@ -1495,7 +1490,8 @@
             "    if (context.isUnnamespacedMapCountFallbackCall &&\n"
             "        !hasDeclaredDefinitionPath(\"/map/count\") &&\n"
             "        lacksVisibleStdlibMapCountDefinition &&\n"
-            "        resolvesMapCountMethodTarget) {") !=
+            "        context.resolveMapTarget != nullptr &&\n"
+            "        context.resolveMapTarget(receiver)) {") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto tryAssignCountMethodFallbackTarget = [&]() -> bool {\n"
@@ -1515,7 +1511,8 @@
             "if (context.isUnnamespacedMapCountFallbackCall &&\n"
             "        !hasDeclaredDefinitionPath(\"/map/count\") &&\n"
             "        lacksVisibleStdlibMapCountDefinition &&\n"
-            "        resolvesMapCountMethodTarget) {") !=
+            "        context.resolveMapTarget != nullptr &&\n"
+            "        context.resolveMapTarget(receiver)) {") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "      methodResolved = \"/std/collections/map/count\";\n"
@@ -1530,7 +1527,8 @@
             "        (void)validateExpr(params, locals, expr.args.front());\n"
             "        return false;\n"
             "      }\n"
-            "      if (resolvesMapCountMethodTarget) {\n"
+            "      if (context.resolveMapTarget != nullptr &&\n"
+            "          context.resolveMapTarget(receiver)) {\n"
             "        methodResolved = \"/std/collections/map/count\";\n"
             "        error_.clear();\n"
             "        isBuiltinMethod = false;\n"
@@ -1899,7 +1897,8 @@
             "if (context.isUnnamespacedMapCountFallbackCall &&\n"
             "        !hasDeclaredDefinitionPath(bareMapCountMethodTarget) &&\n"
             "        lacksVisibleStdlibMapCountDefinition &&\n"
-            "        resolvesMapCountMethodTarget) {\n"
+            "        context.resolveMapTarget != nullptr &&\n"
+            "        context.resolveMapTarget(receiver)) {\n"
             "      methodResolved = stdlibMapCountMethodTarget;\n"
             "      isBuiltinMethod = true;\n"
             "      needsCountMethodResolveOrFallback = false;\n"
@@ -1934,7 +1933,8 @@
             "if (context.isUnnamespacedMapCountFallbackCall &&\n"
             "        !hasDeclaredDefinitionPath(\"/map/count\") &&\n"
             "        lacksVisibleStdlibMapCountDefinition &&\n"
-            "        resolvesMapCountMethodTarget) {\n"
+            "        context.resolveMapTarget != nullptr &&\n"
+            "        context.resolveMapTarget(receiver)) {\n"
             "      methodResolved = stdlibMapCountMethodTarget;\n"
             "      isBuiltinMethod = true;\n"
             "      needsCountMethodResolveOrFallback = false;\n"
@@ -1967,6 +1967,9 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool resolvesExistingCountMethodTarget =") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool resolvesMapCountMethodTarget =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
