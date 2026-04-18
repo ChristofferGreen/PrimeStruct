@@ -423,11 +423,13 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     !isBuiltinMethod &&
                     !hasDeclaredDefinitionPath(methodResolved) &&
                     !hasImportedDefinitionPath(methodResolved);
+                const bool allowsCapacityBuiltinValidationPromotion =
+                    (context.isNonCollectionStructCapacityTarget == nullptr ||
+                     !context.isNonCollectionStructCapacityTarget(
+                         methodResolved)) &&
+                    context.promoteCapacityToBuiltinValidation != nullptr;
                 if (lacksVisibleCapacityMethodTarget) {
-                  if ((context.isNonCollectionStructCapacityTarget == nullptr ||
-                       !context.isNonCollectionStructCapacityTarget(
-                           methodResolved)) &&
-                      context.promoteCapacityToBuiltinValidation != nullptr) {
+                  if (allowsCapacityBuiltinValidationPromotion) {
                     context.promoteCapacityToBuiltinValidation(
                         receiver, methodResolved, isBuiltinMethod, false);
                   }

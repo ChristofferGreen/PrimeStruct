@@ -4754,7 +4754,39 @@
             "    !hasImportedDefinitionPath(methodResolved);\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool allowsCapacityBuiltinValidationPromotion =\n"
+            "    (context.isNonCollectionStructCapacityTarget == nullptr ||\n"
+            "     !context.isNonCollectionStructCapacityTarget(\n"
+            "         methodResolved)) &&\n"
+            "    context.promoteCapacityToBuiltinValidation != nullptr;\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto finalizeCapacityMethodTarget =\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (lacksVisibleCapacityMethodTarget) {\n"
+            "  if (allowsCapacityBuiltinValidationPromotion) {\n"
+            "    context.promoteCapacityToBuiltinValidation(\n"
+            "        receiver, methodResolved, isBuiltinMethod, false);\n"
+            "  }\n"
+            "  (void)failExprDiagnostic(expr,\n"
+            "                           \"unknown method: \" + methodResolved);\n"
+            "  return false;\n"
+            "}\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (lacksVisibleCapacityMethodTarget) {\n"
+            "  if ((context.isNonCollectionStructCapacityTarget == nullptr ||\n"
+            "       !context.isNonCollectionStructCapacityTarget(\n"
+            "           methodResolved)) &&\n"
+            "      context.promoteCapacityToBuiltinValidation != nullptr) {\n"
+            "    context.promoteCapacityToBuiltinValidation(\n"
+            "        receiver, methodResolved, isBuiltinMethod, false);\n"
+            "  }\n"
+            "  (void)failExprDiagnostic(expr,\n"
+            "                           \"unknown method: \" + methodResolved);\n"
+            "  return false;\n"
+            "}\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!tryResolveCollectionMethodTargetFromHelperRoute(\n"
