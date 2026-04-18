@@ -338,13 +338,15 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     methodReceiverIndex = 0;
     bool isBuiltinMethod = false;
     std::string methodResolved;
+    const bool routesThroughStdNamespacedVectorCapacityHelper =
+        isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
+                                                     "capacity");
     if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), "capacity",
                                         methodResolved)) {
       methodResolved = preferVectorStdlibHelperPath(methodResolved);
       if (hasResolvableDefinitionPath(methodResolved)) {
         isBuiltinMethod = false;
-      } else if (isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
-                                                              "capacity")) {
+      } else if (routesThroughStdNamespacedVectorCapacityHelper) {
         methodResolved = "/std/collections/vector/capacity";
         isBuiltinMethod = true;
       } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
@@ -352,8 +354,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         (void)validateExpr(params, locals, expr.args.front());
         return false;
       }
-    } else if (isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
-                                                            "capacity")) {
+    } else if (routesThroughStdNamespacedVectorCapacityHelper) {
       methodResolved = "/std/collections/vector/capacity";
       isBuiltinMethod = true;
     } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),

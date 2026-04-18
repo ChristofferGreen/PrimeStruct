@@ -10,6 +10,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 17, 2026)**
 
 **Group 14 - SoA bring-up and end-state cleanup**
+- ✓ TODO-0759: Share capacity helper-path probe. Completed: the duplicated capacity stdlib-helper-path probe in `SemanticsValidatorExprCollectionCountCapacity.cpp` now routes through shared `routesThroughStdNamespacedVectorCapacityHelper`, and focused expr source-lock coverage now requires that helper while the old repeated inline compatibility-path checks stay absent.
 - ✓ TODO-0758: Share capacity missing-target predicate. Completed: the duplicated capacity missing-target predicate in `SemanticsValidatorExprCollectionCountCapacity.cpp` now routes through shared `isCapacityMethodTargetMissing`, and focused expr source-lock coverage now requires that helper while keeping the old inline predicate checks absent.
 - ✓ TODO-0757: Remove capacity missing-target flag. Completed: the one-use `methodResolvedMissing` control variable in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the inline missing-target promotion and reject checks present while the deleted control variable stays absent.
 - ✓ TODO-0756: Remove capacity target wrapper. Completed: the one-use `resolveCapacityMethodTarget` wrapper in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now requires the inline capacity helper/direct compatibility routing while the deleted wrapper stays absent.
