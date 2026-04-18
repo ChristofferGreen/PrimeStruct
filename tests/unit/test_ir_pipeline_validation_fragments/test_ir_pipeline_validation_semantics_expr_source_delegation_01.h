@@ -2690,13 +2690,11 @@
             "                const bool rejectsBuiltinStdlibMapCountTarget =\n"
             "                    targetsBuiltinStdlibMapCountMethod &&\n"
             "                    rejectsBuiltinStdlibMapCountValidation;\n"
-            "                const bool rejectsMapCountUnknownTarget =\n"
-            "                    rejectsDirectBareMapCountTarget ||\n"
-            "                    rejectsBuiltinStdlibMapCountTarget;\n"
             "                const std::string stdlibMapCountUnknownTargetDiagnostic =\n"
             "                    \"unknown call target: \" +\n"
             "                    stdlibMapCountTargetPath;\n"
-            "                if (rejectsMapCountUnknownTarget) {\n"
+            "                if (rejectsDirectBareMapCountTarget ||\n"
+            "                    rejectsBuiltinStdlibMapCountTarget) {\n"
             "                  return failExprDiagnostic(\n"
             "                      expr, stdlibMapCountUnknownTargetDiagnostic);\n"
             "                }") !=
@@ -2747,6 +2745,11 @@
             "                  return failExprDiagnostic(\n"
             "                      expr, stdlibMapCountUnknownTargetDiagnostic);\n"
             "                }") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "                const bool rejectsMapCountUnknownTarget =\n"
+            "                    rejectsDirectBareMapCountTarget ||\n"
+            "                    rejectsBuiltinStdlibMapCountTarget;\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "                const std::string stdlibMapCountUnknownTargetDiagnostic =\n"

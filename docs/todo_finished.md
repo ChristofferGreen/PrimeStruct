@@ -6,6 +6,7 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 13, 2026)**
+- ✓ TODO-0901: Inline count unknown-target join. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now inlines the count-side unknown-target join at its only site, and focused expr source-lock coverage now keeps that inline rejection branch present while the deleted `rejectsMapCountUnknownTarget` local stays absent.
 - ✓ TODO-0900: Inline count target visibility gate. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now inlines the count-side method-target visibility gate at its only site, and focused expr source-lock coverage now keeps that inline visibility check present while the deleted `hasVisibleCountMethodTarget` local stays absent.
 - ✓ TODO-0899: Share map-count unknown-target path. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now routes the count-side unknown-target diagnostic through shared `stdlibMapCountTargetPath`, and focused expr source-lock coverage now keeps that shared path usage present while the old direct `/std/collections/map/count` literal assignment stays absent.
 - ✓ TODO-0898: Inline count resolve-miss name gate. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now inlines the count resolve-miss name-kind gate at its only site, and focused expr source-lock coverage now keeps that inline receiver-kind check present while the deleted `resolvesCountReceiverTypeFromNameBinding` local stays absent.
