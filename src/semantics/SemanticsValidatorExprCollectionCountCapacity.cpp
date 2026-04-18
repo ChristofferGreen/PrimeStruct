@@ -132,15 +132,13 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     bool isBuiltinMethod = false;
     std::string methodResolved;
     {
-                const std::string stdlibMapCountMethodTarget =
-                    "/std/collections/map/count";
                 if (context.isUnnamespacedMapCountFallbackCall &&
                     !hasDeclaredDefinitionPath("/map/count") &&
                     !hasDeclaredDefinitionPath("/std/collections/map/count") &&
                     !hasImportedDefinitionPath("/std/collections/map/count") &&
                     context.resolveMapTarget != nullptr &&
                     context.resolveMapTarget(receiver)) {
-                  methodResolved = stdlibMapCountMethodTarget;
+                  methodResolved = "/std/collections/map/count";
                   isBuiltinMethod = true;
                 } else {
                   if (resolveVectorHelperMethodTarget(
@@ -164,7 +162,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                       }
                       if (context.resolveMapTarget != nullptr &&
                           context.resolveMapTarget(receiver)) {
-                        methodResolved = stdlibMapCountMethodTarget;
+                        methodResolved = "/std/collections/map/count";
                         error_.clear();
                         isBuiltinMethod = false;
                       } else {
@@ -218,15 +216,14 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                      !hasImportedDefinitionPath(
                          "/std/collections/map/count")) ||
                     (isBuiltinMethod &&
-                     methodResolved == stdlibMapCountMethodTarget &&
+                     methodResolved == "/std/collections/map/count" &&
                      !hasDeclaredDefinitionPath(
                          "/std/collections/map/count") &&
                      !hasImportedDefinitionPath(
                          "/std/collections/map/count") &&
                      !context.shouldBuiltinValidateBareMapCountCall)) {
                   return failExprDiagnostic(
-                      expr,
-                      "unknown call target: " + stdlibMapCountMethodTarget);
+                      expr, "unknown call target: /std/collections/map/count");
                 }
                 {
                   const std::string removedRootedVectorDirectCallDiagnostic =

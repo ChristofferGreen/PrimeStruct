@@ -1638,7 +1638,7 @@
             "      }\n"
             "      if (context.resolveMapTarget != nullptr &&\n"
             "          context.resolveMapTarget(receiver)) {\n"
-            "        methodResolved = stdlibMapCountMethodTarget;\n"
+            "        methodResolved = \"/std/collections/map/count\";\n"
             "        error_.clear();\n"
             "        isBuiltinMethod = false;\n"
             "      } else {\n"
@@ -1794,7 +1794,7 @@
             "          }\n"
             "          if (context.resolveMapTarget != nullptr &&\n"
             "              context.resolveMapTarget(receiver)) {\n"
-            "            methodResolved = stdlibMapCountMethodTarget;\n"
+            "            methodResolved = \"/std/collections/map/count\";\n"
             "            error_.clear();\n"
             "            isBuiltinMethod = false;\n"
             "          } else {\n"
@@ -1850,7 +1850,7 @@
             "                     !hasImportedDefinitionPath(\n"
             "                         \"/std/collections/map/count\")) ||\n"
             "                    (isBuiltinMethod &&\n"
-            "                     methodResolved == stdlibMapCountMethodTarget &&\n"
+            "                     methodResolved == \"/std/collections/map/count\" &&\n"
             "                     !hasDeclaredDefinitionPath(\n"
             "                         \"/std/collections/map/count\") &&\n"
             "                     !hasImportedDefinitionPath(\n"
@@ -1858,7 +1858,7 @@
             "                     !context.shouldBuiltinValidateBareMapCountCall)) {\n"
             "                  return failExprDiagnostic(\n"
             "                      expr,\n"
-            "                      \"unknown call target: \" + stdlibMapCountMethodTarget);\n"
+            "                      \"unknown call target: /std/collections/map/count\");\n"
             "                }\n"
             "                {\n"
             "                  const std::string removedRootedVectorDirectCallDiagnostic =\n"
@@ -1947,7 +1947,7 @@
             "      }\n"
             "      if (context.resolveMapTarget != nullptr &&\n"
             "          context.resolveMapTarget(receiver)) {\n"
-            "        methodResolved = stdlibMapCountMethodTarget;\n"
+            "        methodResolved = \"/std/collections/map/count\";\n"
             "        error_.clear();\n"
             "        isBuiltinMethod = false;\n"
             "      } else {\n"
@@ -2278,7 +2278,7 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const std::string stdlibMapCountMethodTarget =\n"
-            "        \"/std/collections/map/count\";") !=
+            "        \"/std/collections/map/count\";") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (context.isUnnamespacedMapCountFallbackCall &&\n"
@@ -2286,7 +2286,7 @@
             "        lacksVisibleStdlibMapCountDefinition &&\n"
             "        context.resolveMapTarget != nullptr &&\n"
             "        context.resolveMapTarget(receiver)) {\n"
-            "      methodResolved = stdlibMapCountMethodTarget;\n"
+            "      methodResolved = \"/std/collections/map/count\";\n"
             "      isBuiltinMethod = true;\n"
             "      needsCountMethodResolveOrFallback = false;\n"
             "    }") !=
@@ -2297,7 +2297,7 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool resolvesStdlibMapCountMethodTarget =\n"
-            "        methodResolved == stdlibMapCountMethodTarget;") !=
+            "        methodResolved == \"/std/collections/map/count\";") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool targetsDirectNamedBareMapCountCall =\n"
@@ -2314,7 +2314,7 @@
             "        methodResolved == \"/std/collections/map/count\";") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "methodResolved = \"/std/collections/map/count\";") ==
+            "methodResolved = \"/std/collections/map/count\";") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (context.isUnnamespacedMapCountFallbackCall &&\n"
@@ -2322,7 +2322,7 @@
             "        lacksVisibleStdlibMapCountDefinition &&\n"
             "        context.resolveMapTarget != nullptr &&\n"
             "        context.resolveMapTarget(receiver)) {\n"
-            "      methodResolved = stdlibMapCountMethodTarget;\n"
+            "      methodResolved = \"/std/collections/map/count\";\n"
             "      isBuiltinMethod = true;\n"
             "      needsCountMethodResolveOrFallback = false;\n"
             "    }") ==
@@ -2389,12 +2389,11 @@
             "         !hasDeclaredDefinitionPath(\"/count\") &&\n"
             "         lacksVisibleStdlibMapCountDefinition) ||\n"
             "        (isBuiltinMethod &&\n"
-            "         methodResolved == stdlibMapCountMethodTarget &&\n"
+            "         methodResolved == \"/std/collections/map/count\" &&\n"
             "         lacksVisibleStdlibMapCountDefinition &&\n"
             "         !context.shouldBuiltinValidateBareMapCountCall)) {\n"
-            "      return failExprDiagnostic(expr,\n"
-            "                                \"unknown call target: \" +\n"
-            "                                    stdlibMapCountMethodTarget);\n"
+            "      return failExprDiagnostic(\n"
+            "          expr, \"unknown call target: /std/collections/map/count\");\n"
             "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -2692,8 +2691,13 @@
             "  bool isBuiltinMethod = false;\n"
             "  std::string methodResolved;\n"
             "  {\n"
-            "                const std::string stdlibMapCountMethodTarget =\n"
-            "                    \"/std/collections/map/count\";") !=
+            "                if (context.isUnnamespacedMapCountFallbackCall &&\n"
+            "                    !hasDeclaredDefinitionPath(\"/map/count\") &&\n"
+            "                    !hasDeclaredDefinitionPath(\"/std/collections/map/count\") &&\n"
+            "                    !hasImportedDefinitionPath(\"/std/collections/map/count\") &&\n"
+            "                    context.resolveMapTarget != nullptr &&\n"
+            "                    context.resolveMapTarget(receiver)) {\n"
+            "                  methodResolved = \"/std/collections/map/count\";") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (std::optional<bool> resolvedCountMethod =\n"
