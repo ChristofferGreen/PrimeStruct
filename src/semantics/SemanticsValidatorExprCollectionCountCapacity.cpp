@@ -118,16 +118,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     (void)failExprDiagnostic(expr, "unknown method: " + methodResolved);
     return true;
   };
-  const auto preferVisibleVectorHelperMethodTarget =
-      [&](std::string &methodResolved, bool &isBuiltinMethod) {
-    methodResolved = preferVectorStdlibHelperPath(methodResolved);
-    if (hasDeclaredDefinitionPath(methodResolved) ||
-        hasImportedDefinitionPath(methodResolved)) {
-      isBuiltinMethod = false;
-      return true;
-    }
-    return false;
-  };
   const auto tryResolveCollectionMethodTargetOrElse =
       [&](const Expr &receiver, const char *methodName,
           std::string &methodResolved, bool &isBuiltinMethod,
@@ -163,8 +153,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           auto &&finalizeMethodTarget) -> bool {
     if (resolveVectorHelperMethodTarget(params, locals, receiver, methodName,
                                         methodResolved) &&
-        preferVisibleVectorHelperMethodTarget(methodResolved,
-                                             isBuiltinMethod)) {
+        ((methodResolved = preferVectorStdlibHelperPath(methodResolved)),
+         (hasDeclaredDefinitionPath(methodResolved) ||
+          hasImportedDefinitionPath(methodResolved)))) {
+      isBuiltinMethod = false;
       if (!handleVisibleHelperHit(receiver, methodResolved, isBuiltinMethod)) {
         return false;
       }

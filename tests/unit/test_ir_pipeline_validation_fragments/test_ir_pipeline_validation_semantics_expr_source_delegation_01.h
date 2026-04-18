@@ -1434,15 +1434,7 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto preferVisibleVectorHelperMethodTarget =\n"
-            "      [&](std::string &methodResolved, bool &isBuiltinMethod) {\n"
-            "    methodResolved = preferVectorStdlibHelperPath(methodResolved);\n"
-            "    if (hasDeclaredDefinitionPath(methodResolved) ||\n"
-            "        hasImportedDefinitionPath(methodResolved)) {\n"
-            "      isBuiltinMethod = false;\n"
-            "      return true;\n"
-            "    }\n"
-            "    return false;\n"
-            "  };") !=
+            "      [&](std::string &methodResolved, bool &isBuiltinMethod) {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto tryResolveVisibleVectorHelperMethodTarget =\n"
@@ -1492,8 +1484,10 @@
             "          auto &&finalizeMethodTarget) -> bool {\n"
             "    if (resolveVectorHelperMethodTarget(params, locals, receiver, methodName,\n"
             "                                        methodResolved) &&\n"
-            "        preferVisibleVectorHelperMethodTarget(methodResolved,\n"
-            "                                             isBuiltinMethod)) {\n"
+            "        ((methodResolved = preferVectorStdlibHelperPath(methodResolved)),\n"
+            "         (hasDeclaredDefinitionPath(methodResolved) ||\n"
+            "          hasImportedDefinitionPath(methodResolved)))) {\n"
+            "      isBuiltinMethod = false;\n"
             "      if (!handleVisibleHelperHit(receiver, methodResolved, isBuiltinMethod)) {\n"
             "        return false;\n"
             "      }\n"
