@@ -1074,10 +1074,22 @@
             "          \"unknown call target: /std/collections/vector/count\");") !=
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "vectorCompatibilityRequiresVectorTargetDiagnostic(\"count\")") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "vectorCompatibilityRequiresVectorTargetDiagnostic(\"count\")") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
             "vectorCompatibilityRequiresVectorTargetDiagnostic(\"capacity\")") !=
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "vectorCompatibilityRequiresVectorTargetDiagnostic(\"capacity\")") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "\"count requires vector target\"") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "\"count requires vector target\"") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "\"capacity requires vector target\"") ==

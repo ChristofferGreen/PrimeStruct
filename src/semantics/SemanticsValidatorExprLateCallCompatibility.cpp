@@ -102,7 +102,7 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
             "unknown call target: /std/collections/vector/count");
       }
       return failLateCallCompatibilityDiagnostic(
-          "count requires vector target");
+          vectorCompatibilityRequiresVectorTargetDiagnostic("count"));
     }
     if (!hasDeclaredDefinitionPath("/std/collections/vector/count") &&
         !hasImportedDefinitionPath("/std/collections/vector/count") &&

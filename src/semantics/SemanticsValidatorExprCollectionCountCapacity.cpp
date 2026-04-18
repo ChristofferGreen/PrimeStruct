@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsVectorCompatibilityHelpers.h"
 
 #include <string>
 #include <utility>
@@ -84,7 +85,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       (defMap_.find("/std/collections/vector/count") == defMap_.end() ||
        hasImportedDefinitionPath("/std/collections/vector/count"))) {
     handledOut = true;
-    return failCollectionCountCapacityDiagnostic("count requires vector target");
+    return failCollectionCountCapacityDiagnostic(
+        vectorCompatibilityRequiresVectorTargetDiagnostic("count"));
   }
 
   auto resolveCountMethod = [&](bool requireSingleArg) -> bool {
