@@ -109,6 +109,16 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     return !isBuiltinMethod && !hasDeclaredDefinitionPath(methodResolved) &&
            !hasImportedDefinitionPath(methodResolved);
   };
+  const auto preferVisibleVectorHelperMethodTarget =
+      [&](std::string &methodResolved, bool &isBuiltinMethod) {
+    methodResolved = preferVectorStdlibHelperPath(methodResolved);
+    if (hasDeclaredDefinitionPath(methodResolved) ||
+        hasImportedDefinitionPath(methodResolved)) {
+      isBuiltinMethod = false;
+      return true;
+    }
+    return false;
+  };
   const auto tryResolveCollectionMethodFromSurface =
       [&](bool routesThroughMethodSurface, bool matchesSurfaceRoute,
           auto &&resolveMethodTarget) -> std::optional<bool> {
@@ -188,13 +198,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       isBuiltinMethod = true;
     } else if (resolveVectorHelperMethodTarget(params, locals, receiver, "count",
                                                methodResolved)) {
-      methodResolved = preferVectorStdlibHelperPath(methodResolved);
-      if (hasDeclaredDefinitionPath(methodResolved) ||
-          hasImportedDefinitionPath(methodResolved)) {
-        isBuiltinMethod = false;
-      } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix,
-                                      receiver, "count", methodResolved,
-                                      isBuiltinMethod)) {
+      if (!preferVisibleVectorHelperMethodTarget(methodResolved,
+                                                 isBuiltinMethod) &&
+          !resolveMethodTarget(params, locals, expr.namespacePrefix, receiver,
+                              "count", methodResolved, isBuiltinMethod)) {
         if (!assignCountMethodTargetAfterResolveMiss(receiver, isBuiltinMethod,
                                                      methodResolved)) {
           return false;
@@ -292,19 +299,18 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           std::string &methodResolved) -> bool {
     if (resolveVectorHelperMethodTarget(params, locals, receiver, "capacity",
                                         methodResolved)) {
-      methodResolved = preferVectorStdlibHelperPath(methodResolved);
-      if (hasDeclaredDefinitionPath(methodResolved) ||
-          hasImportedDefinitionPath(methodResolved)) {
-        isBuiltinMethod = false;
-      } else if (isStdNamespacedVectorCompatibilityHelperPath(
-                     resolveCalleePath(expr), "capacity")) {
-        methodResolved = "/std/collections/vector/capacity";
-        isBuiltinMethod = true;
-      } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix,
-                                      receiver, "capacity", methodResolved,
-                                      isBuiltinMethod)) {
-        (void)validateExpr(params, locals, receiver);
-        return false;
+      if (!preferVisibleVectorHelperMethodTarget(methodResolved,
+                                                 isBuiltinMethod)) {
+        if (isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
+                                                         "capacity")) {
+          methodResolved = "/std/collections/vector/capacity";
+          isBuiltinMethod = true;
+        } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix,
+                                        receiver, "capacity", methodResolved,
+                                        isBuiltinMethod)) {
+          (void)validateExpr(params, locals, receiver);
+          return false;
+        }
       }
     } else if (isStdNamespacedVectorCompatibilityHelperPath(
                    resolveCalleePath(expr), "capacity")) {

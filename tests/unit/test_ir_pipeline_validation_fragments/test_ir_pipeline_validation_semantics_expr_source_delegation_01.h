@@ -1408,6 +1408,18 @@
             "  };") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto preferVisibleVectorHelperMethodTarget =\n"
+            "      [&](std::string &methodResolved, bool &isBuiltinMethod) {\n"
+            "    methodResolved = preferVectorStdlibHelperPath(methodResolved);\n"
+            "    if (hasDeclaredDefinitionPath(methodResolved) ||\n"
+            "        hasImportedDefinitionPath(methodResolved)) {\n"
+            "      isBuiltinMethod = false;\n"
+            "      return true;\n"
+            "    }\n"
+            "    return false;\n"
+            "  };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "  auto isConcreteCountCapacityInstantiation = [&](const std::string &path) {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -1440,6 +1452,23 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "} else if (resolveVectorHelperMethodTarget(params, locals, receiver, \"count\",\n"
+            "                                               methodResolved)) {\n"
+            "      methodResolved = preferVectorStdlibHelperPath(methodResolved);\n"
+            "      if (hasDeclaredDefinitionPath(methodResolved) ||\n"
+            "          hasImportedDefinitionPath(methodResolved)) {\n"
+            "        isBuiltinMethod = false;\n"
+            "      } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix,\n"
+            "                                      receiver, \"count\", methodResolved,\n"
+            "                                      isBuiltinMethod)) {\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (!preferVisibleVectorHelperMethodTarget(methodResolved,\n"
+            "                                                 isBuiltinMethod) &&\n"
+            "          !resolveMethodTarget(params, locals, expr.namespacePrefix, receiver,\n"
+            "                              \"count\", methodResolved, isBuiltinMethod)) {\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const std::string stdNamespacedVectorCountTargetDiagnosticMessage =\n"
@@ -3450,7 +3479,23 @@
             "                                    methodResolved, isBuiltinMethod)) {\n"
             "      (void)validateExpr(params, locals, expr.args.front());\n"
             "      return false;\n"
-            "    }") != std::string::npos);
+            "    }") == std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (resolveVectorHelperMethodTarget(params, locals, receiver, \"capacity\",\n"
+            "                                        methodResolved)) {\n"
+            "      methodResolved = preferVectorStdlibHelperPath(methodResolved);\n"
+            "      if (hasDeclaredDefinitionPath(methodResolved) ||\n"
+            "          hasImportedDefinitionPath(methodResolved)) {\n"
+            "        isBuiltinMethod = false;\n"
+            "      } else if (isStdNamespacedVectorCompatibilityHelperPath(\n"
+            "                     resolveCalleePath(expr), \"capacity\")) {\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (resolveVectorHelperMethodTarget(params, locals, receiver, \"capacity\",\n"
+            "                                        methodResolved)) {\n"
+            "      if (!preferVisibleVectorHelperMethodTarget(methodResolved,\n"
+            "                                                 isBuiltinMethod)) {\n") !=
+        std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!tryResolveCapacityMethodFromHelperRouting()) {\n"
             "      return false;\n"
