@@ -122,6 +122,15 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
           resolveCalleePath(expr),
           "count",
           hasVisibleCanonicalVectorHelperPath("/std/collections/vector/count"));
+  const bool callsStdNamespacedVectorCapacityHelper =
+      isStdNamespacedVectorCompatibilityDirectCall(
+          expr.isMethodCall, resolveCalleePath(expr), "capacity");
+  const bool callsUnavailableStdNamespacedVectorCapacityHelper =
+      isUnavailableStdNamespacedVectorCompatibilityDirectCall(
+          expr.isMethodCall,
+          resolveCalleePath(expr),
+          "capacity",
+          hasVisibleCanonicalVectorHelperPath("/std/collections/vector/capacity"));
 
   setupOut.isNamespacedVectorCountCall =
       !expr.isMethodCall && !callsStdNamespacedVectorCountHelper &&
@@ -136,10 +145,8 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       !expr.isMethodCall && resolved == "/map/count" &&
       !isMapNamespacedCountCompatibilityCall &&
       !setupOut.isUnnamespacedMapCountFallbackCall;
-  const bool isStdNamespacedVectorCapacityCall =
-      !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/capacity", 0) == 0;
   setupOut.isNamespacedVectorCapacityCall =
-      !expr.isMethodCall && !isStdNamespacedVectorCapacityCall &&
+      !expr.isMethodCall && !callsStdNamespacedVectorCapacityHelper &&
       setupOut.isNamespacedVectorHelperCall && setupOut.namespacedHelper == "capacity" &&
       isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
       !hasDefinitionPath(resolved);
@@ -206,8 +213,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
     return failCollectionDispatchDiagnostic(
         vectorCompatibilityUnknownCallTargetDiagnostic("count"));
   }
-  if (!expr.isMethodCall && isStdNamespacedVectorCapacityCall &&
-      !hasVisibleCanonicalVectorHelperPath("/std/collections/vector/capacity") &&
+  if (callsUnavailableStdNamespacedVectorCapacityHelper &&
       !allowStdNamespacedVectorUserReceiverProbe) {
     return failCollectionDispatchDiagnostic(
         vectorCompatibilityUnknownCallTargetDiagnostic("capacity"));

@@ -1608,17 +1608,35 @@
             "\"unknown call target: /std/collections/vector/count\"") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "const bool isStdNamespacedVectorCapacityCall =\n"
-            "      !expr.isMethodCall &&\n"
-            "      resolveCalleePath(expr).rfind(\"/std/collections/vector/capacity\", 0) == 0;") !=
+            "const bool callsStdNamespacedVectorCapacityHelper =\n"
+            "      isStdNamespacedVectorCompatibilityDirectCall(\n"
+            "          expr.isMethodCall, resolveCalleePath(expr), \"capacity\");") !=
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "if (!expr.isMethodCall && setupOut.isStdNamespacedVectorCapacityCall &&\n"
-            "      !hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/capacity\") &&\n"
+            "const bool callsUnavailableStdNamespacedVectorCapacityHelper =\n"
+            "      isUnavailableStdNamespacedVectorCompatibilityDirectCall(\n"
+            "          expr.isMethodCall,\n"
+            "          resolveCalleePath(expr),\n"
+            "          \"capacity\",\n"
+            "          hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/capacity\"));") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "!expr.isMethodCall && !callsStdNamespacedVectorCapacityHelper &&\n"
+            "      setupOut.isNamespacedVectorHelperCall && setupOut.namespacedHelper == \"capacity\" &&\n"
+            "      isVectorBuiltinName(expr, \"capacity\") && expr.args.size() == 1 &&\n"
+            "      !hasDefinitionPath(resolved);") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "const bool isStdNamespacedVectorCapacityCall =\n"
+            "      !expr.isMethodCall &&\n"
+            "      resolveCalleePath(expr).rfind(\"/std/collections/vector/capacity\", 0) == 0;") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "if (callsUnavailableStdNamespacedVectorCapacityHelper &&\n"
             "      !allowStdNamespacedVectorUserReceiverProbe) {\n"
             "    return failCollectionDispatchDiagnostic(\n"
             "        vectorCompatibilityUnknownCallTargetDiagnostic(\"capacity\"));\n"
-            "  }") ==
+            "  }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "if (!expr.isMethodCall && isStdNamespacedVectorCapacityCall &&\n"
@@ -1626,7 +1644,7 @@
             "      !allowStdNamespacedVectorUserReceiverProbe) {\n"
             "    return failCollectionDispatchDiagnostic(\n"
             "        vectorCompatibilityUnknownCallTargetDiagnostic(\"capacity\"));\n"
-            "  }") !=
+            "  }") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "\"unknown call target: /std/collections/vector/capacity\"") ==
