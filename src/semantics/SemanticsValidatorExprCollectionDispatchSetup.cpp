@@ -194,22 +194,22 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       !expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&
       setupOut.isNamespacedVectorHelperCall &&
       (setupOut.namespacedHelper == "count" || setupOut.namespacedHelper == "capacity");
-  const std::string stdNamespacedVectorCountDiagnosticMessage =
-      allowStdNamespacedVectorUserReceiverProbe
-          ? ""
-          : classifyStdNamespacedVectorCountDiagnosticMessage(
-                isInvisibleStdNamespacedVectorCompatibilityDirectCall(
-                    expr.isMethodCall,
-                    resolveCalleePath(expr),
-                    "count",
-                    hasVisibleCanonicalVectorHelperPath("/std/collections/vector/count")),
-                false,
-                false,
-                false,
-                false);
-  if (!stdNamespacedVectorCountDiagnosticMessage.empty()) {
-    return failCollectionDispatchDiagnostic(
-        std::move(stdNamespacedVectorCountDiagnosticMessage));
+  if (!allowStdNamespacedVectorUserReceiverProbe) {
+    std::string stdNamespacedVectorCountDiagnosticMessage =
+        classifyStdNamespacedVectorCountDiagnosticMessage(
+            isInvisibleStdNamespacedVectorCompatibilityDirectCall(
+                expr.isMethodCall,
+                resolveCalleePath(expr),
+                "count",
+                hasVisibleCanonicalVectorHelperPath("/std/collections/vector/count")),
+            false,
+            false,
+            false,
+            false);
+    if (!stdNamespacedVectorCountDiagnosticMessage.empty()) {
+      return failCollectionDispatchDiagnostic(
+          std::move(stdNamespacedVectorCountDiagnosticMessage));
+    }
   }
   if (callsInvisibleStdNamespacedVectorCapacityHelper &&
       !allowStdNamespacedVectorUserReceiverProbe) {

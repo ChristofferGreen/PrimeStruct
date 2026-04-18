@@ -1557,24 +1557,25 @@
             "      expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call &&") !=
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "const std::string stdNamespacedVectorCountDiagnosticMessage =\n"
-            "      allowStdNamespacedVectorUserReceiverProbe\n"
-            "          ? \"\"\n"
-            "          : classifyStdNamespacedVectorCountDiagnosticMessage(\n"
-            "                isInvisibleStdNamespacedVectorCompatibilityDirectCall(\n"
-            "                    expr.isMethodCall,\n"
-            "                    resolveCalleePath(expr),\n"
-            "                    \"count\",\n"
-            "                    hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/count\")),\n"
-            "                false,\n"
-            "                false,\n"
-            "                false,\n"
-            "                false);") !=
+            "const std::string stdNamespacedVectorCountDiagnosticMessage =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "if (!stdNamespacedVectorCountDiagnosticMessage.empty()) {\n"
-            "    return failCollectionDispatchDiagnostic(\n"
-            "        std::move(stdNamespacedVectorCountDiagnosticMessage));\n"
+            "if (!allowStdNamespacedVectorUserReceiverProbe) {\n"
+            "    std::string stdNamespacedVectorCountDiagnosticMessage =\n"
+            "        classifyStdNamespacedVectorCountDiagnosticMessage(\n"
+            "            isInvisibleStdNamespacedVectorCompatibilityDirectCall(\n"
+            "                expr.isMethodCall,\n"
+            "                resolveCalleePath(expr),\n"
+            "                \"count\",\n"
+            "                hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/count\")),\n"
+            "            false,\n"
+            "            false,\n"
+            "            false,\n"
+            "            false);\n"
+            "    if (!stdNamespacedVectorCountDiagnosticMessage.empty()) {\n"
+            "      return failCollectionDispatchDiagnostic(\n"
+            "          std::move(stdNamespacedVectorCountDiagnosticMessage));\n"
+            "    }\n"
             "  }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
