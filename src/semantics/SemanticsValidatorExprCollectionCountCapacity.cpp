@@ -396,14 +396,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                                            "unknown method: " + methodResolved);
                   return false;
                 }
-                {
-                  const std::string removedRootedVectorDirectCallDiagnostic =
-                      getRemovedRootedVectorDirectCallDiagnostic(expr);
-                  if (!removedRootedVectorDirectCallDiagnostic.empty()) {
-                    (void)failExprDiagnostic(
-                        expr, removedRootedVectorDirectCallDiagnostic);
-                    return false;
-                  }
+                if (const std::string removedRootedVectorDirectCallDiagnostic =
+                        getRemovedRootedVectorDirectCallDiagnostic(expr);
+                    !removedRootedVectorDirectCallDiagnostic.empty()) {
+                  (void)failExprDiagnostic(
+                      expr, removedRootedVectorDirectCallDiagnostic);
+                  return false;
                 }
     }
     resolved = methodResolved;

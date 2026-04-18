@@ -140,6 +140,7 @@ Wave D (queue hygiene):
     - Final release gate passes with `./scripts/compile.sh --release`.
   - stop_rule: If shared classifier rewrites destabilize `map`/`soa_vector`, isolate the generic mechanism in this leaf and defer remaining shared deletions to TODO-0409.
   - notes: This leaf should leave a reusable generic path that TODO-0409 can apply to `map` and `soa_vector`.
+  - progress: Completed `TODO-0916` by collapsing the capacity-side removed-rooted-vector diagnostic temporary into an `if` initializer in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so that the mirrored capacity branch no longer carries the standalone `removedRootedVectorDirectCallDiagnostic` local.
   - progress: Completed `TODO-0915` by rewriting the capacity-side unknown-method guard in `SemanticsValidatorExprCollectionCountCapacity.cpp` to the direct conjunction form, so that the mirrored capacity branch no longer carries the negated OR scaffold at that site.
   - progress: Completed `TODO-0914` by rewriting the count-side unknown-method guard in `SemanticsValidatorExprCollectionCountCapacity.cpp` to the direct conjunction form, so that the count branch no longer carries the negated OR scaffold at that site.
   - progress: Completed `TODO-0913` by collapsing the count-side removed-rooted-vector diagnostic temporary into an `if` initializer in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so that the count branch no longer carries the separate `removedRootedVectorDirectCallDiagnostic` local.

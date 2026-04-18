@@ -2020,9 +2020,8 @@
             "                                           \"unknown method: \" + methodResolved);\n"
             "                  return false;\n"
             "                }\n"
-            "                {\n"
-            "                  const std::string removedRootedVectorDirectCallDiagnostic =\n"
-            "                      getRemovedRootedVectorDirectCallDiagnostic(expr);\n") ==
+            "                const std::string removedRootedVectorDirectCallDiagnostic =\n"
+            "                    getRemovedRootedVectorDirectCallDiagnostic(expr);\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto finalizeCountMethodTarget =\n") ==
@@ -4372,21 +4371,19 @@
             "        receiver, methodResolved, isBuiltinMethod, false);\n"
             "  }\n"
             "}\n"
-            "if (!(isBuiltinMethod ||\n"
-            "      hasDeclaredDefinitionPath(methodResolved) ||\n"
-            "      hasImportedDefinitionPath(methodResolved))) {\n"
+            "if (!isBuiltinMethod &&\n"
+            "    !hasDeclaredDefinitionPath(methodResolved) &&\n"
+            "    !hasImportedDefinitionPath(methodResolved)) {\n"
             "  (void)failExprDiagnostic(expr,\n"
             "                           \"unknown method: \" + methodResolved);\n"
             "  return false;\n"
             "}\n"
-            "{\n"
-            "  const std::string removedRootedVectorDirectCallDiagnostic =\n"
-            "      getRemovedRootedVectorDirectCallDiagnostic(expr);\n"
-            "  if (!removedRootedVectorDirectCallDiagnostic.empty()) {\n"
+            "if (const std::string removedRootedVectorDirectCallDiagnostic =\n"
+            "        getRemovedRootedVectorDirectCallDiagnostic(expr);\n"
+            "    !removedRootedVectorDirectCallDiagnostic.empty()) {\n"
             "    (void)failExprDiagnostic(\n"
             "        expr, removedRootedVectorDirectCallDiagnostic);\n"
             "    return false;\n"
-            "  }\n"
             "}\n"
             "return true;") !=
         std::string::npos);
