@@ -1568,7 +1568,13 @@
             "const std::string stdNamespacedVectorCountDiagnosticMessage =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "if (!allowStdNamespacedVectorUserReceiverProbe) {\n"
+            "const bool allowStdNamespacedVectorUserReceiverProbe =") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "if (!(!expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&\n"
+            "        setupOut.isNamespacedVectorHelperCall &&\n"
+            "        (setupOut.namespacedHelper == \"count\" ||\n"
+            "         setupOut.namespacedHelper == \"capacity\"))) {\n"
             "    if (!classifyStdNamespacedVectorCountDiagnosticMessage(\n"
             "             isInvisibleStdNamespacedVectorCompatibilityDirectCall(\n"
             "                 expr.isMethodCall,\n"

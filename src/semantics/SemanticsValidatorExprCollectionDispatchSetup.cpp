@@ -190,11 +190,10 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call &&
       resolveMapTarget(expr.args.front());
 
-  const bool allowStdNamespacedVectorUserReceiverProbe =
-      !expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&
-      setupOut.isNamespacedVectorHelperCall &&
-      (setupOut.namespacedHelper == "count" || setupOut.namespacedHelper == "capacity");
-  if (!allowStdNamespacedVectorUserReceiverProbe) {
+  if (!(!expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&
+        setupOut.isNamespacedVectorHelperCall &&
+        (setupOut.namespacedHelper == "count" ||
+         setupOut.namespacedHelper == "capacity"))) {
     if (!classifyStdNamespacedVectorCountDiagnosticMessage(
              isInvisibleStdNamespacedVectorCompatibilityDirectCall(
                  expr.isMethodCall,
