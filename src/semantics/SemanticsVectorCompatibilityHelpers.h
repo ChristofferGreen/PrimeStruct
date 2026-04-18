@@ -49,6 +49,23 @@ inline bool isUnimportedStdNamespacedVectorCompatibilityDirectCall(
                                                       helperName);
 }
 
+inline bool isImportedResolvedStdNamespacedVectorCompatibilityDirectCall(
+    bool isMethodCall,
+    std::string_view path,
+    std::string_view helperName,
+    bool hasImportedHelper,
+    bool resolvedMethod,
+    size_t argCount,
+    std::string_view resolvedPath) {
+  return !resolvedMethod &&
+         argCount == 1 &&
+         isImportedStdNamespacedVectorCompatibilityDirectCall(isMethodCall,
+                                                              path,
+                                                              helperName,
+                                                              hasImportedHelper) &&
+         isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, helperName);
+}
+
 inline std::string vectorCompatibilityRequiresVectorTargetDiagnostic(
     std::string_view helperName) {
   return std::string(helperName) + " requires vector target";

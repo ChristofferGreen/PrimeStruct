@@ -35,18 +35,6 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
   const bool isDirectExperimentalVectorCapacityCall =
       !expr.isMethodCall && !resolvedMethod &&
       resolved.rfind("/std/collections/experimental_vector/vectorCapacity", 0) == 0;
-  const bool shouldBuiltinValidateStdNamespacedVectorCountCall =
-      !expr.isMethodCall &&
-      hasImportedDefinitionPath("/std/collections/vector/count") &&
-      resolveCalleePath(expr).rfind("/std/collections/vector/count", 0) == 0;
-  const bool isDirectStdNamespacedVectorCountBuiltinCall =
-      !expr.isMethodCall && !resolvedMethod &&
-      shouldBuiltinValidateStdNamespacedVectorCountCall &&
-      expr.args.size() == 1 &&
-      resolved.rfind("/std/collections/vector/count", 0) == 0;
-  const bool isStdNamespacedVectorCountCall =
-      !expr.isMethodCall &&
-      resolveCalleePath(expr).rfind("/std/collections/vector/count", 0) == 0;
   auto canonicalizeSoaCountHelperPath = [](std::string canonicalPath) {
     const size_t specializationSuffix = canonicalPath.find("__");
     if (specializationSuffix != std::string::npos) {
@@ -167,17 +155,24 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     return validateDirectVectorCountCapacityCall(
         "capacity", "/std/collections/experimental_vector/vectorCapacity");
   }
-  if (isDirectStdNamespacedVectorCountBuiltinCall) {
+  if (isImportedResolvedStdNamespacedVectorCompatibilityDirectCall(
+          expr.isMethodCall,
+          resolveCalleePath(expr),
+          "count",
+          hasImportedDefinitionPath("/std/collections/vector/count"),
+          resolvedMethod,
+          expr.args.size(),
+          resolved)) {
     return validateDirectVectorCountCapacityCall("count", "/std/collections/vector/count");
   }
-  if (isImportedStdNamespacedVectorCompatibilityDirectCall(
+  if (isImportedResolvedStdNamespacedVectorCompatibilityDirectCall(
           expr.isMethodCall,
           resolveCalleePath(expr),
           "capacity",
-          hasImportedDefinitionPath("/std/collections/vector/capacity")) &&
-      !resolvedMethod &&
-      expr.args.size() == 1 &&
-      resolved.rfind("/std/collections/vector/capacity", 0) == 0) {
+          hasImportedDefinitionPath("/std/collections/vector/capacity"),
+          resolvedMethod,
+          expr.args.size(),
+          resolved)) {
     return validateDirectVectorCountCapacityCall("capacity", "/std/collections/vector/capacity");
   }
   if (isDirectStdNamespacedSoaCountBuiltinCall) {
@@ -486,8 +481,9 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
 
   if (!resolvedMethod && isVectorBuiltinName(expr, "count") &&
       !isArrayNamespacedVectorCountCompatibilityCall(expr, *dispatchResolvers) &&
-      (!shouldBuiltinValidateStdNamespacedVectorCountCall &&
-       !isStdNamespacedVectorCountCall) &&
+      !isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,
+                                                    resolveCalleePath(expr),
+                                                    "count") &&
       !context.isNamespacedMapCountCall && !context.isResolvedMapCountCall &&
       !isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals,
                                                  *dispatchResolverAdapters) &&
