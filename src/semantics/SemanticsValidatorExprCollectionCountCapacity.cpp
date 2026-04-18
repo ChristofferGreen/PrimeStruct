@@ -104,6 +104,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       methodResolved = resolved;
     }
   };
+  const auto isUnknownCollectionMethodTarget =
+      [&](bool isBuiltinMethod, const std::string &methodResolved) {
+    return !isBuiltinMethod && !hasDeclaredDefinitionPath(methodResolved) &&
+           !hasImportedDefinitionPath(methodResolved);
+  };
   const auto tryResolveCollectionMethodFromSurface =
       [&](bool routesThroughMethodSurface, bool matchesSurfaceRoute,
           auto &&resolveMethodTarget) -> std::optional<bool> {
@@ -224,8 +229,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     if (failRemovedRootedVectorDirectCall()) {
       return false;
     }
-    if (!isBuiltinMethod && !hasDeclaredDefinitionPath(methodResolved) &&
-        !hasImportedDefinitionPath(methodResolved)) {
+    if (isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {
       return failExprDiagnostic(expr,
                                 "unknown method: " + methodResolved);
     }
@@ -313,8 +317,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       return false;
     }
     normalizeInstantiatedCollectionMethodTarget(methodResolved, isBuiltinMethod);
-    if (!isBuiltinMethod && !hasDeclaredDefinitionPath(methodResolved) &&
-        !hasImportedDefinitionPath(methodResolved)) {
+    if (isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {
       if ((context.isNonCollectionStructCapacityTarget == nullptr ||
            !context.isNonCollectionStructCapacityTarget(methodResolved)) &&
           context.promoteCapacityToBuiltinValidation != nullptr) {
@@ -322,8 +325,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                                                    isBuiltinMethod, false);
       }
     }
-    if (!isBuiltinMethod && !hasDeclaredDefinitionPath(methodResolved) &&
-        !hasImportedDefinitionPath(methodResolved)) {
+    if (isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {
       return failExprDiagnostic(expr,
                                 "unknown method: " + methodResolved);
     }

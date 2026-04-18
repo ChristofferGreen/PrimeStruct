@@ -1401,6 +1401,13 @@
             "  };") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto isUnknownCollectionMethodTarget =\n"
+            "      [&](bool isBuiltinMethod, const std::string &methodResolved) {\n"
+            "    return !isBuiltinMethod && !hasDeclaredDefinitionPath(methodResolved) &&\n"
+            "           !hasImportedDefinitionPath(methodResolved);\n"
+            "  };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "  auto isConcreteCountCapacityInstantiation = [&](const std::string &path) {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -1426,6 +1433,13 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "normalizeInstantiatedCollectionMethodTarget(methodResolved, isBuiltinMethod);") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (!isBuiltinMethod && !hasDeclaredDefinitionPath(methodResolved) &&\n"
+            "        !hasImportedDefinitionPath(methodResolved)) {") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const std::string stdNamespacedVectorCountTargetDiagnosticMessage =\n"
