@@ -283,8 +283,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       }
     }
     normalizeResolvedCollectionMethodTarget(methodResolved, isBuiltinMethod);
-    const bool resolvesStdlibMapCountMethodTarget =
-        methodResolved == stdlibMapCountMethodTarget;
     if ((!expr.isMethodCall &&
          expr.args.size() == 1 &&
          expr.args.front().kind == Expr::Kind::Name &&
@@ -293,7 +291,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
          !hasDeclaredDefinitionPath("/count") &&
          lacksVisibleStdlibMapCountDefinition) ||
         (isBuiltinMethod &&
-         resolvesStdlibMapCountMethodTarget &&
+         methodResolved == stdlibMapCountMethodTarget &&
          lacksVisibleStdlibMapCountDefinition &&
          !context.shouldBuiltinValidateBareMapCountCall)) {
       return failCollectionCountCapacityDiagnostic("unknown call target: " +

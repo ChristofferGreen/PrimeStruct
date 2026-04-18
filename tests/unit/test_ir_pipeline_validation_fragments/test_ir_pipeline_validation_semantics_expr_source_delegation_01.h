@@ -1981,7 +1981,7 @@
             "         !hasDeclaredDefinitionPath(\"/count\") &&\n"
             "         lacksVisibleStdlibMapCountDefinition) ||\n"
             "        (isBuiltinMethod &&\n"
-            "         resolvesStdlibMapCountMethodTarget &&\n"
+            "         methodResolved == stdlibMapCountMethodTarget &&\n"
             "         lacksVisibleStdlibMapCountDefinition &&\n"
             "         !context.shouldBuiltinValidateBareMapCountCall)) {\n"
             "      return failCollectionCountCapacityDiagnostic(\"unknown call target: \" +\n"
@@ -2005,6 +2005,9 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool resolvesBareMapCountMethodTarget =") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool resolvesStdlibMapCountMethodTarget =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto matchesCountMethodCallShape =") ==
