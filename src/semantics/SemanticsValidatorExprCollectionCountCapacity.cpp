@@ -116,6 +116,19 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     }
     return failExprDiagnostic(expr, "unknown method: " + methodResolved);
   };
+  const auto promoteUnknownCapacityMethodTargetIfNeeded =
+      [&](const Expr &receiver, std::string &methodResolved,
+          bool &isBuiltinMethod) {
+    if (!isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {
+      return;
+    }
+    if ((context.isNonCollectionStructCapacityTarget == nullptr ||
+         !context.isNonCollectionStructCapacityTarget(methodResolved)) &&
+        context.promoteCapacityToBuiltinValidation != nullptr) {
+      context.promoteCapacityToBuiltinValidation(
+          receiver, methodResolved, isBuiltinMethod, false);
+    }
+  };
   const auto preferVisibleVectorHelperMethodTarget =
       [&](std::string &methodResolved, bool &isBuiltinMethod) {
     methodResolved = preferVectorStdlibHelperPath(methodResolved);
@@ -374,14 +387,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     return finalizeCollectionMethodTarget(
         methodResolved, isBuiltinMethod,
         [&](std::string &methodResolved, bool &isBuiltinMethod) {
-          if (isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {
-            if ((context.isNonCollectionStructCapacityTarget == nullptr ||
-                 !context.isNonCollectionStructCapacityTarget(methodResolved)) &&
-                context.promoteCapacityToBuiltinValidation != nullptr) {
-              context.promoteCapacityToBuiltinValidation(
-                  receiver, methodResolved, isBuiltinMethod, false);
-            }
-          }
+          promoteUnknownCapacityMethodTargetIfNeeded(receiver, methodResolved,
+                                                     isBuiltinMethod);
           return true;
         },
         [&](const std::string &methodResolved, bool isBuiltinMethod) {

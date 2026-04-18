@@ -1417,6 +1417,21 @@
             "  };") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto promoteUnknownCapacityMethodTargetIfNeeded =\n"
+            "      [&](const Expr &receiver, std::string &methodResolved,\n"
+            "          bool &isBuiltinMethod) {\n"
+            "    if (!isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {\n"
+            "      return;\n"
+            "    }\n"
+            "    if ((context.isNonCollectionStructCapacityTarget == nullptr ||\n"
+            "         !context.isNonCollectionStructCapacityTarget(methodResolved)) &&\n"
+            "        context.promoteCapacityToBuiltinValidation != nullptr) {\n"
+            "      context.promoteCapacityToBuiltinValidation(\n"
+            "          receiver, methodResolved, isBuiltinMethod, false);\n"
+            "    }\n"
+            "  };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto preferVisibleVectorHelperMethodTarget =\n"
             "      [&](std::string &methodResolved, bool &isBuiltinMethod) {\n"
             "    methodResolved = preferVectorStdlibHelperPath(methodResolved);\n"
@@ -3828,6 +3843,24 @@
             "                                                   isBuiltinMethod, false);\n"
             "      }\n"
             "    }") != std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "          promoteUnknownCapacityMethodTargetIfNeeded(receiver, methodResolved,\n"
+            "                                                     isBuiltinMethod);\n"
+            "          return true;\n"
+            "        },") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "          if (isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {\n"
+            "            if ((context.isNonCollectionStructCapacityTarget == nullptr ||\n"
+            "                 !context.isNonCollectionStructCapacityTarget(methodResolved)) &&\n"
+            "                context.promoteCapacityToBuiltinValidation != nullptr) {\n"
+            "              context.promoteCapacityToBuiltinValidation(\n"
+            "                  receiver, methodResolved, isBuiltinMethod, false);\n"
+            "            }\n"
+            "          }\n"
+            "          return true;\n"
+            "        },") ==
+        std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {\n"
             "      return failCollectionCountCapacityDiagnostic(\"unknown method: \" + methodResolved);\n"
