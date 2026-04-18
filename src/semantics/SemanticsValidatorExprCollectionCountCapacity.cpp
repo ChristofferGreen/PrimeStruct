@@ -384,17 +384,15 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
               });
         });
   };
-  const bool routesThroughVectorCapacityMethodSurface =
-      !(hasNamedArguments(expr.argNames) ||
-        isUnimportedStdNamespacedVectorCompatibilityDirectCall(
-            expr.isMethodCall,
-            resolveCalleePath(expr),
-            "capacity",
-            hasImportedDefinitionPath("/std/collections/vector/capacity")) ||
-        !isVectorBuiltinName(expr, "capacity"));
   if (std::optional<bool> resolvedCapacityMethod =
           tryResolveCollectionMethodFromSurfaceRoutes(
-              routesThroughVectorCapacityMethodSurface,
+              !(hasNamedArguments(expr.argNames) ||
+                isUnimportedStdNamespacedVectorCompatibilityDirectCall(
+                    expr.isMethodCall,
+                    resolveCalleePath(expr),
+                    "capacity",
+                    hasImportedDefinitionPath("/std/collections/vector/capacity")) ||
+                !isVectorBuiltinName(expr, "capacity")),
               !(expr.args.empty() || expr.args.size() == 1 ||
                 defMap_.find(resolved) == defMap_.end()) &&
                   context.isNamespacedVectorHelperCall,
