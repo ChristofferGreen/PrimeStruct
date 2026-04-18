@@ -1203,8 +1203,7 @@
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "if (resolvesVectorLikeCountTarget &&\n"
-            "        !hasDeclaredDefinitionPath(\"/std/collections/vector/count\") &&\n"
-            "        !hasImportedDefinitionPath(\"/std/collections/vector/count\")) {\n"
+            "        !hasVisibleDefinitionPath(\"/std/collections/vector/count\")) {\n"
             "      return failLateCallCompatibilityDiagnostic(\n"
             "          vectorCompatibilityUnknownCallTargetDiagnostic(\"count\"));\n"
             "    }") !=
@@ -1229,6 +1228,10 @@
             "if (!hasDeclaredDefinitionPath(\"/std/collections/vector/count\") &&\n"
             "        !hasImportedDefinitionPath(\"/std/collections/vector/count\") &&\n"
             "        resolvesVectorLikeCountTarget)") ==
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "!hasVisibleDefinitionPath(\"/std/collections/vector/count\") &&\n"
+            "        resolvesVectorLikeCountTarget;") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "(resolvesVector || resolvesExperimentalVector);") ==
