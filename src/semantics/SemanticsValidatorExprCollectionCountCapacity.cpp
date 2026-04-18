@@ -174,11 +174,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       methodResolved = "/std/collections/map/count";
       isBuiltinMethod = true;
     };
-    const auto assignResolvedStdlibMapCountMethodTarget = [&]() {
-      methodResolved = "/std/collections/map/count";
-      error_.clear();
-      isBuiltinMethod = false;
-    };
     const auto tryAssignPointerLikeCountMethodTarget = [&]() -> bool {
       std::string typeName;
       if (receiver.kind == Expr::Kind::Name) {
@@ -216,7 +211,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         return false;
       }
       if (resolvesMapCountMethodTarget) {
-        assignResolvedStdlibMapCountMethodTarget();
+        methodResolved = "/std/collections/map/count";
+        error_.clear();
+        isBuiltinMethod = false;
       } else if (!tryAssignPointerLikeCountMethodTarget()) {
         return false;
       }

@@ -1438,7 +1438,7 @@
             "      methodResolved = \"/std/collections/map/count\";\n"
             "      error_.clear();\n"
             "      isBuiltinMethod = false;\n"
-            "    };") !=
+            "    };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto tryAssignPointerLikeCountMethodTarget = [&]() -> bool {\n"
@@ -1466,7 +1466,9 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (resolvesMapCountMethodTarget) {\n"
-            "        assignResolvedStdlibMapCountMethodTarget();\n"
+            "        methodResolved = \"/std/collections/map/count\";\n"
+            "        error_.clear();\n"
+            "        isBuiltinMethod = false;\n"
             "      } else if (!tryAssignPointerLikeCountMethodTarget()) {\n"
             "        return false;\n"
             "      }\n"
