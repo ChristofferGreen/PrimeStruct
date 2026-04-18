@@ -89,8 +89,10 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
     std::string mapValueType;
     const bool resolvesMap = context.dispatchResolvers->resolveMapTarget(
         expr.args.front(), mapKeyType, mapValueType);
-    if (!resolvesVector && !resolvesExperimentalVector && !resolvesArray &&
-        !resolvesString) {
+    const bool resolvesNonVectorCountTarget =
+        !resolvesVector && !resolvesExperimentalVector && !resolvesArray &&
+        !resolvesString;
+    if (resolvesNonVectorCountTarget) {
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
       }
