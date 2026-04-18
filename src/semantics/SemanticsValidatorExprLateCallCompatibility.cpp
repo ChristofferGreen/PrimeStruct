@@ -110,9 +110,11 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
       return failLateCallCompatibilityDiagnostic(
           vectorCompatibilityRequiresVectorTargetDiagnostic("count"));
     }
-    const bool rejectsVectorCountTargetWithoutVisibleHelper =
+    const bool lacksVisibleStdNamespacedVectorCountHelper =
         !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
-        !hasImportedDefinitionPath("/std/collections/vector/count") &&
+        !hasImportedDefinitionPath("/std/collections/vector/count");
+    const bool rejectsVectorCountTargetWithoutVisibleHelper =
+        lacksVisibleStdNamespacedVectorCountHelper &&
         resolvesVectorLikeCountTarget;
     if (rejectsVectorCountTargetWithoutVisibleHelper) {
       return failLateCallCompatibilityDiagnostic(

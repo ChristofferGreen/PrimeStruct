@@ -1101,10 +1101,19 @@
             "                                                      mapValueType))") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
-            "const bool rejectsVectorCountTargetWithoutVisibleHelper =\n"
+            "const bool lacksVisibleStdNamespacedVectorCountHelper =\n"
             "          !hasDeclaredDefinitionPath(\"/std/collections/vector/count\") &&\n"
-            "          !hasImportedDefinitionPath(\"/std/collections/vector/count\") &&\n"
+            "          !hasImportedDefinitionPath(\"/std/collections/vector/count\");") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "const bool rejectsVectorCountTargetWithoutVisibleHelper =\n"
+            "          lacksVisibleStdNamespacedVectorCountHelper &&\n"
             "          resolvesVectorLikeCountTarget;") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "!hasDeclaredDefinitionPath(\"/std/collections/vector/count\") &&\n"
+            "          !hasImportedDefinitionPath(\"/std/collections/vector/count\") &&\n"
+            "          resolvesVectorLikeCountTarget;") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "if (!hasDeclaredDefinitionPath(\"/std/collections/vector/count\") &&\n"
