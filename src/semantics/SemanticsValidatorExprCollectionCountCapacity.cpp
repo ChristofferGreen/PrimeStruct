@@ -308,12 +308,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 const bool rejectsDirectBareMapCountTarget =
                     isDirectNamedCountReceiverCall &&
                     rejectsDirectBareMapCountValidation;
-                const bool rejectsBuiltinStdlibMapCountValidation =
-                    lacksVisibleStdlibMapCountDefinition &&
-                    !context.shouldBuiltinValidateBareMapCountCall;
                 const bool rejectsBuiltinStdlibMapCountTarget =
                     isBuiltinMethod && targetsStdlibMapCountMethod &&
-                    rejectsBuiltinStdlibMapCountValidation;
+                    lacksVisibleStdlibMapCountDefinition &&
+                    !context.shouldBuiltinValidateBareMapCountCall;
                 if (rejectsDirectBareMapCountTarget ||
                     rejectsBuiltinStdlibMapCountTarget) {
                   return failExprDiagnostic(
