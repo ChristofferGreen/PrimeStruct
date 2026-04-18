@@ -3359,9 +3359,17 @@
             "            resolveCalleePath(expr),\n"
             "            \"capacity\",\n"
             "            hasImportedDefinitionPath(\"/std/collections/vector/capacity\"));\n"
+            "const bool matchesCapacityMethodSurfaceRouteShape =\n"
+            "    ((!(expr.args.empty() || expr.args.size() == 1 ||\n"
+            "        defMap_.find(resolved) == defMap_.end()) &&\n"
+            "      context.isNamespacedVectorHelperCall) ||\n"
+            "     (expr.args.size() == 1 &&\n"
+            "      (defMap_.find(resolved) == defMap_.end() ||\n"
+            "       context.isNamespacedVectorCapacityCall)));\n"
             "if (!(capacityMethodSurfaceHasNamedArguments ||\n"
             "      routesThroughUnimportedStdNamespacedVectorCapacityCompatibilityDirectCall ||\n"
-            "      !isVectorBuiltinName(expr, \"capacity\")) &&\n") !=
+            "      !isVectorBuiltinName(expr, \"capacity\")) &&\n"
+            "    matchesCapacityMethodSurfaceRouteShape) {\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!(hasNamedArguments(expr.argNames) ||\n"
@@ -3380,6 +3388,26 @@
             "            resolveCalleePath(expr),\n"
             "            \"capacity\",\n"
             "            hasImportedDefinitionPath(\"/std/collections/vector/capacity\"));\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool matchesCapacityMethodSurfaceRouteShape =\n"
+            "    ((!(expr.args.empty() || expr.args.size() == 1 ||\n"
+            "        defMap_.find(resolved) == defMap_.end()) &&\n"
+            "      context.isNamespacedVectorHelperCall) ||\n"
+            "     (expr.args.size() == 1 &&\n"
+            "      (defMap_.find(resolved) == defMap_.end() ||\n"
+            "       context.isNamespacedVectorCapacityCall)));\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (!(capacityMethodSurfaceHasNamedArguments ||\n"
+            "      routesThroughUnimportedStdNamespacedVectorCapacityCompatibilityDirectCall ||\n"
+            "      !isVectorBuiltinName(expr, \"capacity\")) &&\n"
+            "    ((!(expr.args.empty() || expr.args.size() == 1 ||\n"
+            "        defMap_.find(resolved) == defMap_.end()) &&\n"
+            "      context.isNamespacedVectorHelperCall) ||\n"
+            "     (expr.args.size() == 1 &&\n"
+            "      (defMap_.find(resolved) == defMap_.end() ||\n"
+            "       context.isNamespacedVectorCapacityCall)))) {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (std::optional<bool> resolvedCapacityMethod =\n"

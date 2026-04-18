@@ -140,6 +140,7 @@ Wave D (queue hygiene):
     - Final release gate passes with `./scripts/compile.sh --release`.
   - stop_rule: If shared classifier rewrites destabilize `map`/`soa_vector`, isolate the generic mechanism in this leaf and defer remaining shared deletions to TODO-0409.
   - notes: This leaf should leave a reusable generic path that TODO-0409 can apply to `map` and `soa_vector`.
+  - progress: Completed `TODO-0927` by hoisting the mirrored capacity route-shape bundle behind `matchesCapacityMethodSurfaceRouteShape` in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so that the capacity route gate no longer carries that long inline helper-or-capacity predicate.
   - progress: Completed `TODO-0926` by hoisting the capacity-side unimported std-namespaced compatibility probe behind `routesThroughUnimportedStdNamespacedVectorCapacityCompatibilityDirectCall` in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so that the mirrored capacity route gate no longer spells that long compatibility predicate inline.
   - progress: Completed `TODO-0925` by hoisting the capacity-side named-arguments probe behind `capacityMethodSurfaceHasNamedArguments` in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so that the mirrored capacity route gate no longer spells that entry predicate inline.
   - progress: Completed `TODO-0924` by inlining the one-use capacity-side visibility predicate in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so that the mirrored capacity unknown-method tail no longer carries the temporary `lacksVisibleCapacityMethodTarget` local.

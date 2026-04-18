@@ -333,15 +333,17 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
               resolveCalleePath(expr),
               "capacity",
               hasImportedDefinitionPath("/std/collections/vector/capacity"));
-  if (!(capacityMethodSurfaceHasNamedArguments ||
-        routesThroughUnimportedStdNamespacedVectorCapacityCompatibilityDirectCall ||
-        !isVectorBuiltinName(expr, "capacity")) &&
+  const bool matchesCapacityMethodSurfaceRouteShape =
       ((!(expr.args.empty() || expr.args.size() == 1 ||
           defMap_.find(resolved) == defMap_.end()) &&
         context.isNamespacedVectorHelperCall) ||
        (expr.args.size() == 1 &&
         (defMap_.find(resolved) == defMap_.end() ||
-         context.isNamespacedVectorCapacityCall)))) {
+         context.isNamespacedVectorCapacityCall)));
+  if (!(capacityMethodSurfaceHasNamedArguments ||
+        routesThroughUnimportedStdNamespacedVectorCapacityCompatibilityDirectCall ||
+        !isVectorBuiltinName(expr, "capacity")) &&
+      matchesCapacityMethodSurfaceRouteShape) {
     handledOut = true;
     usedMethodTarget = true;
     hasMethodReceiverIndex = true;
