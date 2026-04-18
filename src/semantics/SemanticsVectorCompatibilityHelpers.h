@@ -56,13 +56,6 @@ struct StdNamespacedVectorCompatibilityHelperState {
   }
 };
 
-inline StdNamespacedVectorCompatibilityHelperState
-makeStdNamespacedVectorCompatibilityHelperState(bool hasDeclaredHelper,
-                                                bool hasImportedHelper) {
-  return StdNamespacedVectorCompatibilityHelperState{
-      hasDeclaredHelper, hasImportedHelper};
-}
-
 inline std::string vectorCompatibilityRequiresVectorTargetDiagnostic(
     std::string_view helperName) {
   return std::string(helperName) + " requires vector target";

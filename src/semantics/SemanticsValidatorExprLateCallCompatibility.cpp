@@ -94,10 +94,10 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
     const bool resolvesNonVectorCountTarget =
         !resolvesVectorLikeCountTarget && !resolvesArray &&
         !resolvesString;
-    const auto stdNamespacedVectorCountHelperState =
-        makeStdNamespacedVectorCompatibilityHelperState(
+    const StdNamespacedVectorCompatibilityHelperState
+        stdNamespacedVectorCountHelperState{
             hasDeclaredDefinitionPath("/std/collections/vector/count"),
-            hasImportedDefinitionPath("/std/collections/vector/count"));
+            hasImportedDefinitionPath("/std/collections/vector/count")};
     if (resolvesNonVectorCountTarget) {
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;

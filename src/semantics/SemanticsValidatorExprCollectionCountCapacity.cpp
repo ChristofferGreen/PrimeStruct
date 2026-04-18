@@ -65,10 +65,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     return true;
   }
 
-  const auto stdNamespacedVectorCountHelperState =
-      makeStdNamespacedVectorCompatibilityHelperState(
+  const StdNamespacedVectorCompatibilityHelperState
+      stdNamespacedVectorCountHelperState{
           hasDeclaredDefinitionPath("/std/collections/vector/count"),
-          hasImportedDefinitionPath("/std/collections/vector/count"));
+          hasImportedDefinitionPath("/std/collections/vector/count")};
 
   Expr rewrittenVectorHelperCall;
   if (context.tryRewriteBareVectorHelperCall != nullptr &&
