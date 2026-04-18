@@ -1863,6 +1863,25 @@
             "      };\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto isResolvedCountOrCapacityHelperInstantiation =\n"
+            "      [&]() {\n"
+            "        if (expr.isMethodCall || defMap_.find(resolved) == defMap_.end()) {\n"
+            "          return false;\n"
+            "        }\n"
+            "        const size_t lastSlash = resolved.find_last_of('/');\n"
+            "        const size_t instantiationPos =\n"
+            "            resolved.find(\"__t\",\n"
+            "                          lastSlash == std::string::npos ? 0 : lastSlash + 1);\n"
+            "        if (instantiationPos == std::string::npos) {\n"
+            "          return false;\n"
+            "        }\n"
+            "        const std::string helperName =\n"
+            "            resolved.substr(lastSlash == std::string::npos ? 0 : lastSlash + 1,\n"
+            "                            instantiationPos - lastSlash - 1);\n"
+            "        return isCountOrCapacityHelperName(helperName);\n"
+            "      };\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool routesThroughNamespacedCountOrCapacityHelperSurface =\n"
             "      context.isNamespacedVectorHelperCall &&\n"
             "      isCountOrCapacityHelperName(context.namespacedHelper);\n") !=
@@ -1879,6 +1898,21 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "      if (helperName == \"count\" || helperName == \"capacity\") {\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "  if (!expr.isMethodCall && defMap_.find(resolved) != defMap_.end()) {\n"
+            "    const size_t lastSlash = resolved.find_last_of('/');\n"
+            "    const size_t instantiationPos =\n"
+            "        resolved.find(\"__t\", lastSlash == std::string::npos ? 0 : lastSlash + 1);\n"
+            "    if (instantiationPos != std::string::npos) {\n"
+            "      const std::string helperName =\n"
+            "          resolved.substr(lastSlash == std::string::npos ? 0 : lastSlash + 1,\n"
+            "                          instantiationPos - lastSlash - 1);\n"
+            "      if (isCountOrCapacityHelperName(helperName)) {\n"
+            "        return true;\n"
+            "      }\n"
+            "    }\n"
+            "  }\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "      (context.namespacedHelper == \"count\" || context.namespacedHelper == \"capacity\")) {\n") ==

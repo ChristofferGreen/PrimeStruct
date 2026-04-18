@@ -96,21 +96,28 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       [](const std::string &helperName) {
         return helperName == "count" || helperName == "capacity";
       };
+  const auto isResolvedCountOrCapacityHelperInstantiation =
+      [&]() {
+        if (expr.isMethodCall || defMap_.find(resolved) == defMap_.end()) {
+          return false;
+        }
+        const size_t lastSlash = resolved.find_last_of('/');
+        const size_t instantiationPos =
+            resolved.find("__t",
+                          lastSlash == std::string::npos ? 0 : lastSlash + 1);
+        if (instantiationPos == std::string::npos) {
+          return false;
+        }
+        const std::string helperName =
+            resolved.substr(lastSlash == std::string::npos ? 0 : lastSlash + 1,
+                            instantiationPos - lastSlash - 1);
+        return isCountOrCapacityHelperName(helperName);
+      };
   const bool routesThroughNamespacedCountOrCapacityHelperSurface =
       context.isNamespacedVectorHelperCall &&
       isCountOrCapacityHelperName(context.namespacedHelper);
-  if (!expr.isMethodCall && defMap_.find(resolved) != defMap_.end()) {
-    const size_t lastSlash = resolved.find_last_of('/');
-    const size_t instantiationPos =
-        resolved.find("__t", lastSlash == std::string::npos ? 0 : lastSlash + 1);
-    if (instantiationPos != std::string::npos) {
-      const std::string helperName =
-          resolved.substr(lastSlash == std::string::npos ? 0 : lastSlash + 1,
-                          instantiationPos - lastSlash - 1);
-      if (isCountOrCapacityHelperName(helperName)) {
-        return true;
-      }
-    }
+  if (isResolvedCountOrCapacityHelperInstantiation()) {
+    return true;
   }
 
   if (hasNamedArguments(expr.argNames) &&
