@@ -335,12 +335,15 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
               hasImportedDefinitionPath("/std/collections/vector/capacity"));
   const bool capacityMethodSurfaceUsesNonVectorBuiltinName =
       !isVectorBuiltinName(expr, "capacity");
+  const bool capacityMethodSurfaceHasNoArguments =
+      expr.args.empty();
   const bool capacityMethodSurfaceUsesSingleArgument =
       expr.args.size() == 1;
   const bool capacityMethodSurfaceLacksResolvedDefinitionTarget =
       defMap_.find(resolved) == defMap_.end();
   const bool matchesCapacityMethodSurfaceRouteShape =
-      ((!(expr.args.empty() || capacityMethodSurfaceUsesSingleArgument ||
+      ((!(capacityMethodSurfaceHasNoArguments ||
+          capacityMethodSurfaceUsesSingleArgument ||
           capacityMethodSurfaceLacksResolvedDefinitionTarget) &&
         context.isNamespacedVectorHelperCall) ||
        (capacityMethodSurfaceUsesSingleArgument &&
