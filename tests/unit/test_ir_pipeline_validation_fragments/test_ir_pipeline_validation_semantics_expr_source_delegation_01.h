@@ -525,7 +525,7 @@
             "bool isVectorCompatibilityMethodName(std::string_view helperName)") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
-            "bool isExperimentalVectorCompatibilityMethodTarget(std::string_view methodTarget)") !=
+            "bool isExperimentalVectorCompatibilityMethodTarget(std::string_view methodTarget)") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "bool isExperimentalVectorCompatibilityResolvedMethodTarget(std::string_view methodTarget)") ==
@@ -561,7 +561,7 @@
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (!hasImportedDefinitionPath(vectorMethodTarget) &&\n"
             "        defMap_.count(vectorMethodTarget) == 0 &&\n"
-            "        isExperimentalVectorCompatibilityMethodTarget(vectorMethodTarget) &&\n"
+            "        vectorMethodTarget.rfind(\"/std/collections/experimental_vector/\", 0) == 0 &&\n"
             "        hasVisibleCanonicalVectorMethodTarget) {\n"
             "      vectorMethodTarget = canonicalVectorMethodTarget;") !=
         std::string::npos);

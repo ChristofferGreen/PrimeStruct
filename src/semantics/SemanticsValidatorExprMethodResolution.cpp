@@ -18,11 +18,6 @@ bool hasExplicitVectorCompatibilityNamespace(std::string_view normalizedMethodNa
          normalizedMethodNamespace == "std/collections/vector";
 }
 
-bool isExperimentalVectorCompatibilityMethodTarget(std::string_view methodTarget) {
-  return methodTarget.rfind("/std/collections/experimental_vector/", 0) == 0 ||
-         methodTarget.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
-}
-
 } // namespace
 
 bool SemanticsValidator::validateExprMethodCallTarget(
@@ -189,7 +184,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
                                       vectorMethodTarget)) {
     if (!hasImportedDefinitionPath(vectorMethodTarget) &&
         defMap_.count(vectorMethodTarget) == 0 &&
-        isExperimentalVectorCompatibilityMethodTarget(vectorMethodTarget) &&
+        vectorMethodTarget.rfind("/std/collections/experimental_vector/", 0) == 0 &&
         hasVisibleCanonicalVectorMethodTarget) {
       vectorMethodTarget = canonicalVectorMethodTarget;
     }
