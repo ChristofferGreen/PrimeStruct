@@ -74,8 +74,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     rewrittenExprOut = std::move(rewrittenVectorHelperCall);
     return true;
   }
-  if (isStdNamespacedVectorCompatibilityDirectCall(
-          expr.isMethodCall, resolveCalleePath(expr), "count")) {
+  const bool callsStdNamespacedVectorCountHelper =
+      isStdNamespacedVectorCompatibilityDirectCall(
+          expr.isMethodCall, resolveCalleePath(expr), "count");
+  if (callsStdNamespacedVectorCountHelper) {
     const bool resolvesStdNamespacedVectorCountMapTarget =
         expr.args.size() == 1 &&
         context.resolveMapTarget != nullptr &&
@@ -131,8 +133,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         return (!resolvesExplicitCountMethodTarget &&
                 !context.isStdNamespacedMapCountCall) ||
                (context.isNamespacedVectorCountCall &&
-                !isStdNamespacedVectorCompatibilityDirectCall(
-                    expr.isMethodCall, resolveCalleePath(expr), "count")) ||
+                !callsStdNamespacedVectorCountHelper) ||
                resolvesMapCountSurface;
       }
       return resolvesExplicitCountMethodTarget || resolvesMapCountSurface;
