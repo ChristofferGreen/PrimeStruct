@@ -161,16 +161,19 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     usedMethodTarget = true;
     hasMethodReceiverIndex = true;
     methodReceiverIndex = 0;
+    const Expr &receiver = expr.args.front();
     bool isBuiltinMethod = false;
     std::string methodResolved;
     const bool lacksVisibleStdlibMapCountDefinition =
         !hasDeclaredDefinitionPath("/std/collections/map/count") &&
         !hasImportedDefinitionPath("/std/collections/map/count");
+    const bool resolvesMapCountMethodTarget =
+        context.resolveMapTarget != nullptr &&
+        context.resolveMapTarget(receiver);
     if (context.isUnnamespacedMapCountFallbackCall &&
         !hasDeclaredDefinitionPath("/map/count") &&
         lacksVisibleStdlibMapCountDefinition &&
-        context.resolveMapTarget != nullptr &&
-        context.resolveMapTarget(expr.args.front())) {
+        resolvesMapCountMethodTarget) {
       methodResolved = "/std/collections/map/count";
       isBuiltinMethod = true;
     } else if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
@@ -181,14 +184,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       } else if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
                                      "count", methodResolved, isBuiltinMethod)) {
       } else {
-        const Expr &receiver = expr.args.front();
         if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||
             expr.args.empty()) {
           (void)validateExpr(params, locals, expr.args.front());
           return false;
         }
-        if (context.resolveMapTarget != nullptr &&
-            context.resolveMapTarget(receiver)) {
+        if (resolvesMapCountMethodTarget) {
           methodResolved = "/std/collections/map/count";
           error_.clear();
           isBuiltinMethod = false;
@@ -224,14 +225,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       }
     } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
                                     "count", methodResolved, isBuiltinMethod)) {
-      const Expr &receiver = expr.args.front();
       if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||
           expr.args.empty()) {
         (void)validateExpr(params, locals, expr.args.front());
         return false;
       }
-      if (context.resolveMapTarget != nullptr &&
-          context.resolveMapTarget(receiver)) {
+      if (resolvesMapCountMethodTarget) {
         methodResolved = "/std/collections/map/count";
       } else {
         std::string typeName;

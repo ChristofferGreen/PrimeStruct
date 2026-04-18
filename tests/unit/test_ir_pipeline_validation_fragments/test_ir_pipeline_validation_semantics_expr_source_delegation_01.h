@@ -1415,16 +1415,23 @@
             "    };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const Expr &receiver = expr.args.front();") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool lacksVisibleStdlibMapCountDefinition =\n"
             "        !hasDeclaredDefinitionPath(\"/std/collections/map/count\") &&\n"
             "        !hasImportedDefinitionPath(\"/std/collections/map/count\");") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool resolvesMapCountMethodTarget =\n"
+            "        context.resolveMapTarget != nullptr &&\n"
+            "        context.resolveMapTarget(receiver);") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (context.isUnnamespacedMapCountFallbackCall &&\n"
             "        !hasDeclaredDefinitionPath(\"/map/count\") &&\n"
             "        lacksVisibleStdlibMapCountDefinition &&\n"
-            "        context.resolveMapTarget != nullptr &&\n"
-            "        context.resolveMapTarget(expr.args.front())) {") !=
+            "        resolvesMapCountMethodTarget) {") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (context.isUnnamespacedMapCountFallbackCall &&\n"
@@ -1432,6 +1439,14 @@
             "        !hasDeclaredDefinitionPath(\"/map/count\") &&\n"
             "        !(hasDeclaredDefinitionPath(\"/std/collections/map/count\") ||\n"
             "          hasImportedDefinitionPath(\"/std/collections/map/count\")) &&") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (context.resolveMapTarget != nullptr &&\n"
+            "            context.resolveMapTarget(receiver)) {") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (context.resolveMapTarget != nullptr &&\n"
+            "          context.resolveMapTarget(receiver)) {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool rejectsStdlibMapCountTargetAsUnknownCallTarget =\n"
