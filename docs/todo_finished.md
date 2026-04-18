@@ -10,6 +10,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 17, 2026)**
 
 **Group 14 - SoA bring-up and end-state cleanup**
+- ✓ TODO-0740: Remove bare-map count reject local. Completed: the one-use `rejectsUnimportedBareMapCountCallTarget` local in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the inline unimported bare-map reject predicate present while the deleted local stays absent.
 - ✓ TODO-0739: Remove builtin count reject local. Completed: the one-use `rejectsBuiltinStdlibMapCountCallTarget` local in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the inline builtin stdlib map-count reject predicate present while the deleted local stays absent.
 - ✓ TODO-0738: Remove count reject wrapper. Completed: the one-use `rejectsResolvedMapCountCallTarget` wrapper in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the direct shared reject-branch form present while the deleted wrapper local stays absent.
 - ✓ TODO-0737: Share count reject diagnostic path. Completed: the remaining count `/std/collections/map/count` reject diagnostic in `SemanticsValidatorExprCollectionCountCapacity.cpp` now routes through shared `stdlibMapCountMethodTarget`, and focused expr source-lock coverage keeps that shared-path diagnostic form present while the old raw canonical-path literal stays absent.
