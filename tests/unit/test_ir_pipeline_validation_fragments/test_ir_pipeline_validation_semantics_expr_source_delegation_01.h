@@ -1360,6 +1360,21 @@
             "  };") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "  const auto normalizeResolvedCollectionMethodTarget =\n"
+            "      [&](std::string &methodResolved, bool isBuiltinMethod) {\n"
+            "        if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&\n"
+            "            resolved.rfind(methodResolved + \"__t\", 0) == 0) {\n"
+            "          methodResolved = resolved;\n"
+            "        }\n"
+            "      };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&\n"
+            "        resolved.rfind(methodResolved + \"__t\", 0) == 0) {\n"
+            "      methodResolved = resolved;\n"
+            "    }") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const std::string stdNamespacedVectorCountTargetDiagnosticMessage =\n"
             "      context.isDirectStdNamespacedVectorCountWrapperMapTarget &&\n"
             "              !hasDeclaredDefinitionPath(\"/std/collections/vector/count\")\n"
