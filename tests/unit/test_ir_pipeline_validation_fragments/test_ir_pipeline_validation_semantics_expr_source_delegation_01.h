@@ -1974,6 +1974,9 @@
             "const std::string stdNamespacedVectorCountTargetDiagnosticMessage =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool resolvesStdNamespacedVectorCountMapTarget =") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "{\n"
             "    std::string stdNamespacedVectorCountTargetDiagnosticMessage =\n"
             "        classifyStdNamespacedVectorCountDiagnosticMessage(\n"
@@ -1984,7 +1987,9 @@
             "                resolveCalleePath(expr),\n"
             "                \"count\",\n"
             "                hasDeclaredDefinitionPath(\"/std/collections/vector/count\")),\n"
-            "            resolvesStdNamespacedVectorCountMapTarget,\n"
+            "            expr.args.size() == 1 &&\n"
+            "                context.resolveMapTarget != nullptr &&\n"
+            "                context.resolveMapTarget(expr.args.front()),\n"
             "            isUnresolvableStdNamespacedVectorCompatibilityDirectCall(\n"
             "                expr.isMethodCall,\n"
             "                resolveCalleePath(expr),\n"
