@@ -519,6 +519,11 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "      isNamespacedVectorCapacityCall;") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
+            "const bool isDirectBuiltinSingleArgCountCapacityCapacityCall =\n"
+            "      isInferBuiltinSingleArgCapacityLike &&\n"
+            "      inferBuiltinCapacityCallTargetsDirectReceiver;") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSetupSource.find(
             "const bool shouldBuiltinValidateStdNamespacedVectorCapacityCall =") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
@@ -539,8 +544,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "      isInferBuiltinSingleArgCapacityLike;") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
-            "isInferBuiltinSingleArgCapacityLike &&\n"
-            "      inferBuiltinCapacityCallTargetsDirectReceiver;") !=
+            "isDirectBuiltinSingleArgCountCapacityCapacityCall;") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
             "(!callsStdNamespacedVectorCapacityHelper ||\n"
@@ -552,6 +556,10 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
             "isDirectBuiltinCountCapacityCapacityCall && expr.args.size() == 1;") ==
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSetupSource.find(
+            "isInferBuiltinSingleArgCapacityLike &&\n"
+            "      inferBuiltinCapacityCallTargetsDirectReceiver;") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
             "defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCapacityCall") ==

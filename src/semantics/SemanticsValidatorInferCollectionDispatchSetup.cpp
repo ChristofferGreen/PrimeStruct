@@ -315,6 +315,9 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       isInferBuiltinCapacityLike &&
       !expr.args.empty() &&
       inferBuiltinCapacityCallTargetsDirectReceiver;
+  const bool isDirectBuiltinSingleArgCountCapacityCapacityCall =
+      isInferBuiltinSingleArgCapacityLike &&
+      inferBuiltinCapacityCallTargetsDirectReceiver;
   setupOut.builtinCollectionDirectCountCapacityContext.isDirectCountCall =
       isDirectBuiltinCountCapacityCountCall;
   setupOut.builtinCollectionDirectCountCapacityContext.isDirectCountSingleArg =
@@ -323,8 +326,7 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       isDirectBuiltinCountCapacityCapacityCall;
   setupOut.builtinCollectionDirectCountCapacityContext
       .isDirectCapacitySingleArg =
-      isInferBuiltinSingleArgCapacityLike &&
-      inferBuiltinCapacityCallTargetsDirectReceiver;
+      isDirectBuiltinSingleArgCountCapacityCapacityCall;
   setupOut.builtinCollectionDirectCountCapacityContext
       .shouldInferBuiltinBareMapCountCall = shouldInferBuiltinBareMapCountCall;
   setupOut.builtinCollectionDirectCountCapacityContext.resolveMethodCallPath =
