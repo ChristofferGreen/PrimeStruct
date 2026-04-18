@@ -205,15 +205,19 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     resolved.rfind(methodResolved + "__t", 0) == 0) {
                   methodResolved = resolved;
                 }
+                const bool targetsBareMapCountMethod =
+                    methodResolved == "/map/count";
+                const bool targetsStdlibMapCountMethod =
+                    methodResolved == "/std/collections/map/count";
                 if ((!expr.isMethodCall &&
                      expr.args.size() == 1 &&
                      receiver.kind == Expr::Kind::Name &&
-                     methodResolved == "/map/count" &&
+                     targetsBareMapCountMethod &&
                      !hasImportedDefinitionPath("/count") &&
                      !hasDeclaredDefinitionPath("/count") &&
                      lacksVisibleStdlibMapCountDefinition) ||
                     (isBuiltinMethod &&
-                     methodResolved == "/std/collections/map/count" &&
+                     targetsStdlibMapCountMethod &&
                      lacksVisibleStdlibMapCountDefinition &&
                      !context.shouldBuiltinValidateBareMapCountCall)) {
                   return failExprDiagnostic(

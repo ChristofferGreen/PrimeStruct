@@ -2393,6 +2393,26 @@
             "const auto tryAssignPointerLikeCountMethodTarget =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool targetsBareMapCountMethod =\n"
+            "                    methodResolved == \"/map/count\";\n"
+            "                const bool targetsStdlibMapCountMethod =\n"
+            "                    methodResolved == \"/std/collections/map/count\";\n"
+            "                if ((!expr.isMethodCall &&\n"
+            "                     expr.args.size() == 1 &&\n"
+            "                     receiver.kind == Expr::Kind::Name &&\n"
+            "                     targetsBareMapCountMethod &&\n"
+            "                     !hasImportedDefinitionPath(\"/count\") &&\n"
+            "                     !hasDeclaredDefinitionPath(\"/count\") &&\n"
+            "                     lacksVisibleStdlibMapCountDefinition) ||\n"
+            "                    (isBuiltinMethod &&\n"
+            "                     targetsStdlibMapCountMethod &&\n"
+            "                     lacksVisibleStdlibMapCountDefinition &&\n"
+            "                     !context.shouldBuiltinValidateBareMapCountCall)) {\n"
+            "                  return failExprDiagnostic(\n"
+            "                      expr, \"unknown call target: /std/collections/map/count\");\n"
+            "                }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if ((!expr.isMethodCall &&\n"
             "         expr.args.size() == 1 &&\n"
             "         expr.args.front().kind == Expr::Kind::Name &&\n"
@@ -2406,7 +2426,7 @@
             "         !context.shouldBuiltinValidateBareMapCountCall)) {\n"
             "      return failExprDiagnostic(\n"
             "          expr, \"unknown call target: /std/collections/map/count\");\n"
-            "    }") !=
+            "    }") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "return failCollectionCountCapacityDiagnostic(\"unknown call target: /std/collections/map/count\");") ==
