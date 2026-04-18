@@ -183,13 +183,15 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   const bool isArrayNamespacedVectorCountCompatibilityActive =
       context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
       context.isArrayNamespacedVectorCountCompatibilityCall(expr);
-  const bool routesThroughNamespacedVectorCountFallback =
-      !isStdNamespacedVectorCompatibilityDirectCall(
-          expr.isMethodCall, resolveCalleePath(expr), "count") &&
+  const bool matchesNamespacedVectorCountFallbackRouteShape =
       routesThroughNamespacedVectorCountHelperSurface &&
       routesThroughVectorBuiltinCountSurface && isSingleArgCountCall &&
       !hasDefinitionPath(resolved) &&
       !isArrayNamespacedVectorCountCompatibilityActive;
+  const bool routesThroughNamespacedVectorCountFallback =
+      !isStdNamespacedVectorCompatibilityDirectCall(
+          expr.isMethodCall, resolveCalleePath(expr), "count") &&
+      matchesNamespacedVectorCountFallbackRouteShape;
   const bool hasResolvedCountDefinitionTarget =
       defMap_.find(resolved) != defMap_.end();
   const bool allowsUnresolvedSingleArgCountRoute =

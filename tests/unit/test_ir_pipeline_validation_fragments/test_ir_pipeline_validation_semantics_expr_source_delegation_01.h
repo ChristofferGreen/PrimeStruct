@@ -2673,13 +2673,17 @@
             "      context.isArrayNamespacedVectorCountCompatibilityCall(expr);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const bool routesThroughNamespacedVectorCountFallback =\n"
-            "      !isStdNamespacedVectorCompatibilityDirectCall(\n"
-            "          expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
+            "const bool matchesNamespacedVectorCountFallbackRouteShape =\n"
             "      routesThroughNamespacedVectorCountHelperSurface &&\n"
             "      routesThroughVectorBuiltinCountSurface && isSingleArgCountCall &&\n"
             "      !hasDefinitionPath(resolved) &&\n"
             "      !isArrayNamespacedVectorCountCompatibilityActive;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool routesThroughNamespacedVectorCountFallback =\n"
+            "      !isStdNamespacedVectorCompatibilityDirectCall(\n"
+            "          expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
+            "      matchesNamespacedVectorCountFallbackRouteShape;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool hasResolvedCountDefinitionTarget =\n"
@@ -3238,6 +3242,15 @@
  	        std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "      isVectorBuiltinName(expr, \"count\") && expr.args.size() == 1 &&\n"
+            "      !hasDefinitionPath(resolved) &&\n"
+            "      !isArrayNamespacedVectorCountCompatibilityActive;") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool routesThroughNamespacedVectorCountFallback =\n"
+            "      !isStdNamespacedVectorCompatibilityDirectCall(\n"
+            "          expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
+            "      routesThroughNamespacedVectorCountHelperSurface &&\n"
+            "      routesThroughVectorBuiltinCountSurface && isSingleArgCountCall &&\n"
             "      !hasDefinitionPath(resolved) &&\n"
             "      !isArrayNamespacedVectorCountCompatibilityActive;") ==
         std::string::npos);
