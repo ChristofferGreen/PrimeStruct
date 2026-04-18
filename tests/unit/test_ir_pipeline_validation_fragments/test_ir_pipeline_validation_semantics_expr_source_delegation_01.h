@@ -1105,8 +1105,8 @@
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "const std::string stdNamespacedVectorCountTargetDiagnosticMessage =\n"
             "          stdNamespacedVectorCountHelperState\n"
-            "              .classifyCountTargetDiagnosticMessage(\n"
-            "                  false, false, resolvesMapAfterValidation,\n"
+            "              .classifyNonVectorCountTargetDiagnosticMessage(\n"
+            "                  resolvesMapAfterValidation,\n"
             "                  resolvesNonVectorCountTarget);") !=
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
@@ -1114,6 +1114,11 @@
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "classifyCountMapTargetDiagnosticMessage(") ==
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "classifyCountTargetDiagnosticMessage(\n"
+            "                  false, false, resolvesMapAfterValidation,\n"
+            "                  resolvesNonVectorCountTarget);") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "if (resolvesMap ||\n"
@@ -1133,6 +1138,14 @@
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "if (!stdNamespacedVectorCountTargetDiagnosticMessage.empty())") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "if (!stdNamespacedVectorCountTargetDiagnosticMessage.empty()) {\n"
+            "        return failLateCallCompatibilityDiagnostic(\n"
+            "            std::move(stdNamespacedVectorCountTargetDiagnosticMessage));\n"
+            "      }\n"
+            "      return failLateCallCompatibilityDiagnostic(\n"
+            "          vectorCompatibilityRequiresVectorTargetDiagnostic(\"count\"));") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "if (stdNamespacedVectorCountMapTargetDiagnostic ==\n"
