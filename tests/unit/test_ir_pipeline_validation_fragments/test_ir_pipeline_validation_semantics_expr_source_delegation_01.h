@@ -1951,9 +1951,9 @@
             "                  return failExprDiagnostic(\n"
             "                      expr, \"unknown call target: \" + stdlibMapCountTargetPath);\n"
             "                }\n"
-            "                const std::string removedRootedVectorDirectCallDiagnostic =\n"
-            "                    getRemovedRootedVectorDirectCallDiagnostic(expr);\n"
-            "                if (!removedRootedVectorDirectCallDiagnostic.empty()) {\n"
+            "                if (const std::string removedRootedVectorDirectCallDiagnostic =\n"
+            "                        getRemovedRootedVectorDirectCallDiagnostic(expr);\n"
+            "                    !removedRootedVectorDirectCallDiagnostic.empty()) {\n"
             "                  (void)failExprDiagnostic(\n"
             "                      expr, removedRootedVectorDirectCallDiagnostic);\n"
             "                  return false;\n"
@@ -1998,6 +1998,10 @@
             "                    !isBuiltinMethod &&\n"
             "                    defMap_.find(methodResolved) == defMap_.end() &&\n"
             "                    resolved.rfind(methodResolved + \"__t\", 0) == 0;\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "                const std::string removedRootedVectorDirectCallDiagnostic =\n"
+            "                    getRemovedRootedVectorDirectCallDiagnostic(expr);\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto finalizeCountMethodTarget =\n") ==

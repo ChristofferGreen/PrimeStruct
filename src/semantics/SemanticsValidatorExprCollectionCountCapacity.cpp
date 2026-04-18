@@ -304,9 +304,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                   return failExprDiagnostic(
                       expr, "unknown call target: " + stdlibMapCountTargetPath);
                 }
-                const std::string removedRootedVectorDirectCallDiagnostic =
-                    getRemovedRootedVectorDirectCallDiagnostic(expr);
-                if (!removedRootedVectorDirectCallDiagnostic.empty()) {
+                if (const std::string removedRootedVectorDirectCallDiagnostic =
+                        getRemovedRootedVectorDirectCallDiagnostic(expr);
+                    !removedRootedVectorDirectCallDiagnostic.empty()) {
                   (void)failExprDiagnostic(
                       expr, removedRootedVectorDirectCallDiagnostic);
                   return false;
