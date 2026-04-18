@@ -2671,8 +2671,6 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool targetsBareMapCountMethod =\n"
             "                    methodResolved == bareMapCountTargetPath;\n"
-            "                const bool targetsStdlibMapCountMethod =\n"
-            "                    methodResolved == stdlibMapCountTargetPath;\n"
             "                const bool lacksVisibleMapCountDefinitions =\n"
             "                    lacksVisibleBareCountDefinition &&\n"
             "                    lacksVisibleStdlibMapCountDefinition;\n"
@@ -2681,7 +2679,8 @@
             "                    targetsBareMapCountMethod &&\n"
             "                    lacksVisibleMapCountDefinitions;\n"
             "                const bool rejectsBuiltinStdlibMapCountTarget =\n"
-            "                    isBuiltinMethod && targetsStdlibMapCountMethod &&\n"
+            "                    isBuiltinMethod &&\n"
+            "                    methodResolved == stdlibMapCountTargetPath &&\n"
             "                    lacksVisibleStdlibMapCountDefinition &&\n"
             "                    !context.shouldBuiltinValidateBareMapCountCall;\n"
             "                if (rejectsDirectBareMapCountTarget ||\n"
@@ -2719,6 +2718,10 @@
             "                    lacksVisibleMapCountDefinitions;\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "                const bool targetsStdlibMapCountMethod =\n"
+            "                    methodResolved == stdlibMapCountTargetPath;\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "                const bool targetsBuiltinStdlibMapCountMethod =\n"
             "                    isBuiltinMethod && targetsStdlibMapCountMethod;\n") ==
         std::string::npos);
@@ -2729,7 +2732,8 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "                const bool rejectsBuiltinStdlibMapCountTarget =\n"
-            "                    isBuiltinMethod && targetsStdlibMapCountMethod &&\n"
+            "                    isBuiltinMethod &&\n"
+            "                    methodResolved == stdlibMapCountTargetPath &&\n"
             "                    lacksVisibleStdlibMapCountDefinition &&\n"
             "                    !context.shouldBuiltinValidateBareMapCountCall;\n") ==
         std::string::npos);

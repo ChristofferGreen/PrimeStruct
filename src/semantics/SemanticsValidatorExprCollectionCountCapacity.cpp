@@ -297,8 +297,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 }
                 const bool targetsBareMapCountMethod =
                     methodResolved == bareMapCountTargetPath;
-                const bool targetsStdlibMapCountMethod =
-                    methodResolved == stdlibMapCountTargetPath;
                 const bool lacksVisibleMapCountDefinitions =
                     lacksVisibleBareCountDefinition &&
                     lacksVisibleStdlibMapCountDefinition;
@@ -307,7 +305,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     targetsBareMapCountMethod &&
                     lacksVisibleMapCountDefinitions;
                 const bool rejectsBuiltinStdlibMapCountTarget =
-                    isBuiltinMethod && targetsStdlibMapCountMethod &&
+                    isBuiltinMethod &&
+                    methodResolved == stdlibMapCountTargetPath &&
                     lacksVisibleStdlibMapCountDefinition &&
                     !context.shouldBuiltinValidateBareMapCountCall;
                 if (rejectsDirectBareMapCountTarget ||
