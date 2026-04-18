@@ -2459,11 +2459,13 @@
             "                    targetsBareMapCountMethod &&\n"
             "                    lacksVisibleBareCountDefinition &&\n"
             "                    lacksVisibleStdlibMapCountDefinition;\n"
+            "                const bool targetsBuiltinStdlibMapCountMethod =\n"
+            "                    isBuiltinMethod && targetsStdlibMapCountMethod;\n"
             "                const bool rejectsBuiltinStdlibMapCountValidation =\n"
             "                    lacksVisibleStdlibMapCountDefinition &&\n"
             "                    !context.shouldBuiltinValidateBareMapCountCall;\n"
             "                const bool rejectsBuiltinStdlibMapCountTarget =\n"
-            "                    isBuiltinMethod && targetsStdlibMapCountMethod &&\n"
+            "                    targetsBuiltinStdlibMapCountMethod &&\n"
             "                    rejectsBuiltinStdlibMapCountValidation;\n"
             "                const std::string stdlibMapCountUnknownTargetDiagnostic =\n"
             "                    \"unknown call target: /std/collections/map/count\";\n"
@@ -2494,6 +2496,11 @@
             "                    isBuiltinMethod && targetsStdlibMapCountMethod &&\n"
             "                    lacksVisibleStdlibMapCountDefinition &&\n"
             "                    !context.shouldBuiltinValidateBareMapCountCall;\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "                const bool rejectsBuiltinStdlibMapCountTarget =\n"
+            "                    isBuiltinMethod && targetsStdlibMapCountMethod &&\n"
+            "                    rejectsBuiltinStdlibMapCountValidation;\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "!hasImportedDefinitionPath(\"/count\") &&\n"

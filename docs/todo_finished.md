@@ -6,6 +6,7 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 13, 2026)**
+- ✓ TODO-0865: Share builtin map-count target gate. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the remaining builtin stdlib map-count target gate behind shared `targetsBuiltinStdlibMapCountMethod`, and focused expr source-lock coverage now keeps that shared local present while the old inline conjunction stays absent.
 - ✓ TODO-0864: Share builtin map-count rejection bundle. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the remaining builtin stdlib map-count rejection bundle behind shared `rejectsBuiltinStdlibMapCountValidation`, and focused expr source-lock coverage now keeps that shared local present while the old inline validation check stays absent.
 - ✓ TODO-0863: Share direct count-call gate. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the remaining direct named count-call gate behind shared `isDirectNamedCountReceiverCall`, and focused expr source-lock coverage now keeps that shared local present while the old inline branch stays absent.
 - ✓ TODO-0862: Share count arg-count flags. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the remaining count-side arg-count probes behind shared `isSingleArgCountCall` and `isMultiArgCountCall`, and focused expr source-lock coverage now keeps those shared locals present while the old inline size checks stay absent.

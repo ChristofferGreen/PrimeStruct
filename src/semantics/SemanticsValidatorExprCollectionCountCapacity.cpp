@@ -242,11 +242,13 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     targetsBareMapCountMethod &&
                     lacksVisibleBareCountDefinition &&
                     lacksVisibleStdlibMapCountDefinition;
+                const bool targetsBuiltinStdlibMapCountMethod =
+                    isBuiltinMethod && targetsStdlibMapCountMethod;
                 const bool rejectsBuiltinStdlibMapCountValidation =
                     lacksVisibleStdlibMapCountDefinition &&
                     !context.shouldBuiltinValidateBareMapCountCall;
                 const bool rejectsBuiltinStdlibMapCountTarget =
-                    isBuiltinMethod && targetsStdlibMapCountMethod &&
+                    targetsBuiltinStdlibMapCountMethod &&
                     rejectsBuiltinStdlibMapCountValidation;
                 const std::string stdlibMapCountUnknownTargetDiagnostic =
                     "unknown call target: /std/collections/map/count";

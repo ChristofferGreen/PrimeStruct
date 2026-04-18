@@ -140,6 +140,7 @@ Wave D (queue hygiene):
     - Final release gate passes with `./scripts/compile.sh --release`.
   - stop_rule: If shared classifier rewrites destabilize `map`/`soa_vector`, isolate the generic mechanism in this leaf and defer remaining shared deletions to TODO-0409.
   - notes: This leaf should leave a reusable generic path that TODO-0409 can apply to `map` and `soa_vector`.
+  - progress: Completed `TODO-0865` by hoisting the remaining builtin stdlib map-count target gate in `SemanticsValidatorExprCollectionCountCapacity.cpp` behind shared `targetsBuiltinStdlibMapCountMethod`, so that the builtin rejection predicate no longer repeats that inline conjunction.
   - progress: Completed `TODO-0864` by hoisting the remaining builtin stdlib map-count rejection bundle in `SemanticsValidatorExprCollectionCountCapacity.cpp` behind shared `rejectsBuiltinStdlibMapCountValidation`, so that the builtin rejection tail no longer repeats that inline validation check.
   - progress: Completed `TODO-0863` by hoisting the remaining direct named count-call gate in `SemanticsValidatorExprCollectionCountCapacity.cpp` behind shared `isDirectNamedCountReceiverCall`, so that the bare-map rejection tail no longer repeats that inline branch.
   - progress: Completed `TODO-0862` by hoisting the remaining count-side arg-count probes in `SemanticsValidatorExprCollectionCountCapacity.cpp` behind shared `isSingleArgCountCall` and `isMultiArgCountCall`, so that the count route and bare-map rejection path no longer repeat those inline size checks.
