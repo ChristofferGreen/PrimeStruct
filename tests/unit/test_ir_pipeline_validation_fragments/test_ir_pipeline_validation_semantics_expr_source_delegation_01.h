@@ -1466,6 +1466,20 @@
             "  };") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto tryResolveCollectionMethodTargetFromHelperRoute =\n"
+            "      [&](const Expr &receiver, const char *methodName,\n"
+            "          std::string &methodResolved, bool &isBuiltinMethod,\n"
+            "          auto &&handleVisibleHelperHit,\n"
+            "          auto &&handleHelperMiss) -> bool {\n"
+            "    if (tryResolveVisibleVectorHelperMethodTarget(receiver, methodName,\n"
+            "                                                  methodResolved,\n"
+            "                                                  isBuiltinMethod)) {\n"
+            "      return handleVisibleHelperHit(receiver, methodResolved, isBuiltinMethod);\n"
+            "    }\n"
+            "    return handleHelperMiss(receiver, methodResolved, isBuiltinMethod);\n"
+            "  };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto finalizeCollectionMethodTarget =\n"
             "      [&](std::string &methodResolved, bool &isBuiltinMethod,\n"
             "          auto &&beforeFailureChecks,\n"
@@ -1757,11 +1771,14 @@
             "      isBuiltinMethod = true;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "} else if (!tryResolveVisibleVectorHelperMethodTarget(\n"
-            "                   receiver, \"count\", methodResolved, isBuiltinMethod) &&\n"
-            "               !tryResolveCountMethodTargetWithFallback(receiver,\n"
-            "                                                       isBuiltinMethod,\n"
-            "                                                       methodResolved)) {\n"
+            "} else if (!tryResolveCollectionMethodTargetFromHelperRoute(\n"
+            "                   receiver, \"count\", methodResolved, isBuiltinMethod,\n"
+            "                   [&](const Expr &, std::string &, bool &) { return true; },\n"
+            "                   [&](const Expr &receiver, std::string &methodResolved,\n"
+            "                       bool &isBuiltinMethod) {\n"
+            "                     return tryResolveCountMethodTargetWithFallback(\n"
+            "                         receiver, isBuiltinMethod, methodResolved);\n"
+            "                   })) {\n"
             "      return false;\n"
             "    }") !=
         std::string::npos);
@@ -3701,17 +3718,24 @@
             "                                      isBuiltinMethod)) {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (!tryResolveVisibleVectorHelperMethodTarget(receiver, \"capacity\",\n"
-            "                                                   methodResolved,\n"
-            "                                                   isBuiltinMethod)) {\n"
-            "      if (routesThroughStdNamespacedVectorCapacityHelper) {\n"
-            "        assignStdNamespacedVectorCapacityMethodTarget();\n"
-            "      } else if (!tryResolveCapacityMethodTargetWithValidation(\n"
-            "                     receiver, isBuiltinMethod, methodResolved)) {\n"
-            "        return false;\n"
-            "      }\n"
-            "    } else if (routesThroughStdNamespacedVectorCapacityHelper) {\n"
-            "      assignStdNamespacedVectorCapacityMethodTarget();\n"
+            "if (!tryResolveCollectionMethodTargetFromHelperRoute(\n"
+            "            receiver, \"capacity\", methodResolved, isBuiltinMethod,\n"
+            "            [&](const Expr &, std::string &, bool &) {\n"
+            "              if (routesThroughStdNamespacedVectorCapacityHelper) {\n"
+            "                assignStdNamespacedVectorCapacityMethodTarget();\n"
+            "              }\n"
+            "              return true;\n"
+            "            },\n"
+            "            [&](const Expr &receiver, std::string &methodResolved,\n"
+            "                bool &isBuiltinMethod) {\n"
+            "              if (routesThroughStdNamespacedVectorCapacityHelper) {\n"
+            "                assignStdNamespacedVectorCapacityMethodTarget();\n"
+            "                return true;\n"
+            "              }\n"
+            "              return tryResolveCapacityMethodTargetWithValidation(\n"
+            "                  receiver, isBuiltinMethod, methodResolved);\n"
+            "            })) {\n"
+            "      return false;\n"
             "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(

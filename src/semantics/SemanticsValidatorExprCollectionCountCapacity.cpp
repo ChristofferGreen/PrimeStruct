@@ -157,6 +157,18 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     }
     return handleResolveMiss(receiver, isBuiltinMethod, methodResolved);
   };
+  const auto tryResolveCollectionMethodTargetFromHelperRoute =
+      [&](const Expr &receiver, const char *methodName,
+          std::string &methodResolved, bool &isBuiltinMethod,
+          auto &&handleVisibleHelperHit,
+          auto &&handleHelperMiss) -> bool {
+    if (tryResolveVisibleVectorHelperMethodTarget(receiver, methodName,
+                                                  methodResolved,
+                                                  isBuiltinMethod)) {
+      return handleVisibleHelperHit(receiver, methodResolved, isBuiltinMethod);
+    }
+    return handleHelperMiss(receiver, methodResolved, isBuiltinMethod);
+  };
   const auto finalizeCollectionMethodTarget =
       [&](std::string &methodResolved, bool &isBuiltinMethod,
           auto &&beforeFailureChecks,
@@ -263,11 +275,14 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         context.resolveMapTarget(receiver)) {
       methodResolved = stdlibMapCountMethodTarget;
       isBuiltinMethod = true;
-    } else if (!tryResolveVisibleVectorHelperMethodTarget(
-                   receiver, "count", methodResolved, isBuiltinMethod) &&
-               !tryResolveCountMethodTargetWithFallback(receiver,
-                                                       isBuiltinMethod,
-                                                       methodResolved)) {
+    } else if (!tryResolveCollectionMethodTargetFromHelperRoute(
+                   receiver, "count", methodResolved, isBuiltinMethod,
+                   [&](const Expr &, std::string &, bool &) { return true; },
+                   [&](const Expr &receiver, std::string &methodResolved,
+                       bool &isBuiltinMethod) {
+                     return tryResolveCountMethodTargetWithFallback(
+                         receiver, isBuiltinMethod, methodResolved);
+                   })) {
       return false;
     }
     return finalizeCollectionMethodTarget(
@@ -372,17 +387,24 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
             return false;
           });
     };
-    if (!tryResolveVisibleVectorHelperMethodTarget(receiver, "capacity",
-                                                   methodResolved,
-                                                   isBuiltinMethod)) {
-      if (routesThroughStdNamespacedVectorCapacityHelper) {
-        assignStdNamespacedVectorCapacityMethodTarget();
-      } else if (!tryResolveCapacityMethodTargetWithValidation(
-                     receiver, isBuiltinMethod, methodResolved)) {
-        return false;
-      }
-    } else if (routesThroughStdNamespacedVectorCapacityHelper) {
-      assignStdNamespacedVectorCapacityMethodTarget();
+    if (!tryResolveCollectionMethodTargetFromHelperRoute(
+            receiver, "capacity", methodResolved, isBuiltinMethod,
+            [&](const Expr &, std::string &, bool &) {
+              if (routesThroughStdNamespacedVectorCapacityHelper) {
+                assignStdNamespacedVectorCapacityMethodTarget();
+              }
+              return true;
+            },
+            [&](const Expr &receiver, std::string &methodResolved,
+                bool &isBuiltinMethod) {
+              if (routesThroughStdNamespacedVectorCapacityHelper) {
+                assignStdNamespacedVectorCapacityMethodTarget();
+                return true;
+              }
+              return tryResolveCapacityMethodTargetWithValidation(
+                  receiver, isBuiltinMethod, methodResolved);
+            })) {
+      return false;
     }
     return finalizeCollectionMethodTarget(
         methodResolved, isBuiltinMethod,
