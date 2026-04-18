@@ -531,6 +531,10 @@
             "bool isExperimentalVectorCompatibilityResolvedMethodTarget(std::string_view methodTarget)") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
+            "const std::string canonicalVectorMethodTarget =\n"
+            "      \"/std/collections/vector/\" + expr.name;") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
             "auto preferVisibleCanonicalVectorMethodTarget =") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
@@ -552,9 +556,9 @@
   CHECK(semanticsExprMethodResolutionSource.find(
             "const std::string canonicalVectorMethodTarget =\n"
             "        \"/std/collections/vector/\" + expr.name;\n"
-            "    if (hasImportedDefinitionPath(canonicalVectorMethodTarget) ||\n"
-            "        defMap_.count(canonicalVectorMethodTarget) > 0) {\n"
-            "      resolved = canonicalVectorMethodTarget;") ==
+            "        if (hasImportedDefinitionPath(canonicalVectorMethodTarget) ||\n"
+            "            defMap_.count(canonicalVectorMethodTarget) > 0) {\n"
+            "          return canonicalVectorMethodTarget;") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "preferVisibleCanonicalVectorMethodTarget(methodTarget, false)") ==
