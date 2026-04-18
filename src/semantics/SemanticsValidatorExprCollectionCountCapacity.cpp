@@ -188,9 +188,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     std::string methodResolved;
     const std::string stdlibMapCountMethodTarget =
         "/std/collections/map/count";
-    const bool lacksVisibleStdlibMapCountDefinition =
-        !hasDeclaredDefinitionPath("/std/collections/map/count") &&
-        !hasImportedDefinitionPath("/std/collections/map/count");
     const auto assignCountMethodTargetAfterResolveMiss = [&]() -> bool {
       if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||
           expr.args.empty()) {
@@ -235,7 +232,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     };
     if (context.isUnnamespacedMapCountFallbackCall &&
         !hasDeclaredDefinitionPath("/map/count") &&
-        lacksVisibleStdlibMapCountDefinition &&
+        !hasDeclaredDefinitionPath("/std/collections/map/count") &&
+        !hasImportedDefinitionPath("/std/collections/map/count") &&
         context.resolveMapTarget != nullptr &&
         context.resolveMapTarget(receiver)) {
       methodResolved = stdlibMapCountMethodTarget;
@@ -271,10 +269,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
          methodResolved == "/map/count" &&
          !hasImportedDefinitionPath("/count") &&
          !hasDeclaredDefinitionPath("/count") &&
-         lacksVisibleStdlibMapCountDefinition) ||
+         !hasDeclaredDefinitionPath("/std/collections/map/count") &&
+         !hasImportedDefinitionPath("/std/collections/map/count")) ||
         (isBuiltinMethod &&
          methodResolved == stdlibMapCountMethodTarget &&
-         lacksVisibleStdlibMapCountDefinition &&
+         !hasDeclaredDefinitionPath("/std/collections/map/count") &&
+         !hasImportedDefinitionPath("/std/collections/map/count") &&
          !context.shouldBuiltinValidateBareMapCountCall)) {
       return failCollectionCountCapacityDiagnostic("unknown call target: " +
                                                   stdlibMapCountMethodTarget);
