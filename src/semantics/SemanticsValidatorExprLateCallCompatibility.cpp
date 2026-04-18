@@ -94,10 +94,6 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
     const bool resolvesNonVectorCountTarget =
         !resolvesVectorLikeCountTarget && !resolvesArray &&
         !resolvesString;
-    const bool hasDeclaredStdNamespacedVectorCountHelper =
-        hasDeclaredDefinitionPath("/std/collections/vector/count");
-    const bool hasImportedStdNamespacedVectorCountHelper =
-        hasImportedDefinitionPath("/std/collections/vector/count");
     if (resolvesNonVectorCountTarget) {
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
@@ -115,8 +111,8 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
           std::move(stdNamespacedVectorCountTargetDiagnosticMessage));
     }
     if (resolvesVectorLikeCountTarget &&
-        !hasDeclaredStdNamespacedVectorCountHelper &&
-        !hasImportedStdNamespacedVectorCountHelper) {
+        !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
+        !hasImportedDefinitionPath("/std/collections/vector/count")) {
       return failLateCallCompatibilityDiagnostic(
           vectorCompatibilityUnknownCallTargetDiagnostic("count"));
     }
