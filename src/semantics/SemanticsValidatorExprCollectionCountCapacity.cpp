@@ -94,6 +94,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       context.isNamespacedMapCountCall ||
       context.isUnnamespacedMapCountFallbackCall ||
       context.isResolvedMapCountCall;
+  const bool isSingleArgCountCall = expr.args.size() == 1;
+  const bool isMultiArgCountCall = !isSingleArgCountCall;
   const bool isArrayNamespacedVectorCountCompatibilityActive =
       context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
       context.isArrayNamespacedVectorCountCompatibilityCall(expr);
@@ -102,19 +104,19 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           expr.isMethodCall, resolveCalleePath(expr), "count") &&
       context.isNamespacedVectorHelperCall &&
       context.namespacedHelper == "count" &&
-      isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
+      isVectorBuiltinName(expr, "count") && isSingleArgCountCall &&
       !hasDefinitionPath(resolved) &&
       !isArrayNamespacedVectorCountCompatibilityActive;
   const bool hasResolvedCountDefinitionTarget =
       defMap_.find(resolved) != defMap_.end();
   const bool matchesSingleArgCountRouteShape =
-      expr.args.size() == 1 &&
+      isSingleArgCountCall &&
       ((!hasResolvedCountDefinitionTarget &&
         !context.isStdNamespacedMapCountCall) ||
        routesThroughNamespacedVectorCountFallback ||
        routesThroughMapCountCallSurface);
   const bool matchesMultiArgCountRouteShape =
-      expr.args.size() != 1 &&
+      isMultiArgCountCall &&
       (hasResolvedCountDefinitionTarget ||
        routesThroughMapCountCallSurface);
   const bool matchesCountRouteArgShape =
@@ -233,7 +235,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 const bool targetsStdlibMapCountMethod =
                     methodResolved == stdlibMapCountTargetPath;
                 const bool rejectsDirectBareMapCountTarget =
-                    !expr.isMethodCall && expr.args.size() == 1 &&
+                    !expr.isMethodCall && isSingleArgCountCall &&
                     receiver.kind == Expr::Kind::Name &&
                     targetsBareMapCountMethod &&
                     lacksVisibleBareCountDefinition &&

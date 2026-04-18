@@ -2369,6 +2369,10 @@
             "      context.isResolvedMapCountCall;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool isSingleArgCountCall = expr.args.size() == 1;\n"
+            "  const bool isMultiArgCountCall = !isSingleArgCountCall;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool isArrayNamespacedVectorCountCompatibilityActive =\n"
             "      context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
             "      context.isArrayNamespacedVectorCountCompatibilityCall(expr);") !=
@@ -2379,7 +2383,7 @@
             "          expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
             "      context.isNamespacedVectorHelperCall &&\n"
             "      context.namespacedHelper == \"count\" &&\n"
-            "      isVectorBuiltinName(expr, \"count\") && expr.args.size() == 1 &&\n"
+            "      isVectorBuiltinName(expr, \"count\") && isSingleArgCountCall &&\n"
             "      !hasDefinitionPath(resolved) &&\n"
             "      !isArrayNamespacedVectorCountCompatibilityActive;") !=
         std::string::npos);
@@ -2389,7 +2393,7 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool matchesSingleArgCountRouteShape =\n"
-            "      expr.args.size() == 1 &&\n"
+            "      isSingleArgCountCall &&\n"
             "      ((!hasResolvedCountDefinitionTarget &&\n"
             "        !context.isStdNamespacedMapCountCall) ||\n"
             "       routesThroughNamespacedVectorCountFallback ||\n"
@@ -2397,7 +2401,7 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool matchesMultiArgCountRouteShape =\n"
-            "      expr.args.size() != 1 &&\n"
+            "      isMultiArgCountCall &&\n"
             "      (hasResolvedCountDefinitionTarget ||\n"
             "       routesThroughMapCountCallSurface);") !=
         std::string::npos);
@@ -2451,7 +2455,7 @@
             "                const bool targetsStdlibMapCountMethod =\n"
             "                    methodResolved == stdlibMapCountTargetPath;\n"
             "                const bool rejectsDirectBareMapCountTarget =\n"
-            "                    !expr.isMethodCall && expr.args.size() == 1 &&\n"
+            "                    !expr.isMethodCall && isSingleArgCountCall &&\n"
             "                    receiver.kind == Expr::Kind::Name &&\n"
             "                    targetsBareMapCountMethod &&\n"
             "                    lacksVisibleBareCountDefinition &&\n"
@@ -2740,6 +2744,19 @@
  	            "        context.isArrayNamespacedVectorCountCompatibilityCall(expr)) &&") ==
  	        std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "      isVectorBuiltinName(expr, \"count\") && expr.args.size() == 1 &&\n"
+            "      !hasDefinitionPath(resolved) &&\n"
+            "      !isArrayNamespacedVectorCountCompatibilityActive;") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "                const bool rejectsDirectBareMapCountTarget =\n"
+            "                    !expr.isMethodCall && expr.args.size() == 1 &&\n"
+            "                    receiver.kind == Expr::Kind::Name &&\n"
+            "                    targetsBareMapCountMethod &&\n"
+            "                    lacksVisibleBareCountDefinition &&\n"
+            "                    lacksVisibleStdlibMapCountDefinition;") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool matchesCountMethodSurfaceRoute =\n"
             "      !(hasNamedArguments(expr.argNames) ||\n"
             "        isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
@@ -2761,6 +2778,8 @@
             "  const bool resolvesMapCountReceiver =\n"
             "      context.resolveMapTarget != nullptr &&\n"
             "      context.resolveMapTarget(receiver);\n"
+            "  const bool isSingleArgCountCall = expr.args.size() == 1;\n"
+            "  const bool isMultiArgCountCall = !isSingleArgCountCall;\n"
             "  const std::string bareCountTargetPath = \"/count\";\n"
             "  const bool lacksVisibleBareCountDefinition =\n"
             "      !hasImportedDefinitionPath(bareCountTargetPath) &&\n"
