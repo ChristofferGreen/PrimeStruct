@@ -57,6 +57,22 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         }
         return true;
       };
+  const auto promoteUnknownCapacityMethodToBuiltinValidation =
+      [&](const Expr &receiverExpr,
+          const std::string &methodTargetPath,
+          bool isBuiltinMethod) {
+        const bool lacksVisibleCapacityMethodTargetBeforePromotion =
+            lacksVisibleResolvedMethodTarget(methodTargetPath, isBuiltinMethod);
+        const bool allowsCapacityBuiltinValidationPromotion =
+            (context.isNonCollectionStructCapacityTarget == nullptr ||
+             !context.isNonCollectionStructCapacityTarget(methodTargetPath)) &&
+            context.promoteCapacityToBuiltinValidation != nullptr;
+        if (lacksVisibleCapacityMethodTargetBeforePromotion &&
+            allowsCapacityBuiltinValidationPromotion) {
+          context.promoteCapacityToBuiltinValidation(
+              receiverExpr, methodTargetPath, isBuiltinMethod, false);
+        }
+      };
   const auto reusesResolvedMethodMonomorphizedTarget =
       [&](const std::string &methodTargetPath, bool isBuiltinMethod) {
         return !isBuiltinMethod &&
@@ -454,25 +470,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                                                             isBuiltinMethod)) {
                   methodResolved = resolved;
                 }
-                const bool lacksVisibleCapacityMethodTargetBeforePromotion =
-                    lacksVisibleResolvedMethodTarget(methodResolved,
-                                                    isBuiltinMethod);
-                const bool allowsCapacityBuiltinValidationPromotion =
-                    (context.isNonCollectionStructCapacityTarget == nullptr ||
-                     !context.isNonCollectionStructCapacityTarget(
-                         methodResolved)) &&
-                    context.promoteCapacityToBuiltinValidation != nullptr;
-                const bool
-                    promotesBuiltinValidationForUnknownCapacityMethod =
-                        lacksVisibleCapacityMethodTargetBeforePromotion &&
-                        allowsCapacityBuiltinValidationPromotion;
                 if (!failRemovedRootedVectorDirectCall()) {
                   return false;
                 }
-                if (promotesBuiltinValidationForUnknownCapacityMethod) {
-                  context.promoteCapacityToBuiltinValidation(
-                      receiver, methodResolved, isBuiltinMethod, false);
-                }
+                promoteUnknownCapacityMethodToBuiltinValidation(
+                    receiver, methodResolved, isBuiltinMethod);
                 if (!failInvisibleResolvedMethodTarget(methodResolved,
                                                       isBuiltinMethod)) {
                   return false;
