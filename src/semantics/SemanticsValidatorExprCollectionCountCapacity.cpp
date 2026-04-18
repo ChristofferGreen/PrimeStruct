@@ -35,6 +35,14 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       [&](const std::string &methodTargetPath) {
         return failExprDiagnostic(expr, "unknown method: " + methodTargetPath);
       };
+  const auto failInvisibleResolvedMethodTarget =
+      [&](const std::string &methodTargetPath, bool isBuiltinMethod) {
+        if (lacksVisibleResolvedMethodTarget(methodTargetPath,
+                                             isBuiltinMethod)) {
+          return failUnknownMethodTarget(methodTargetPath);
+        }
+        return true;
+      };
   const auto failUnknownCallTarget =
       [&](const std::string &callTargetPath) {
         return failExprDiagnostic(expr, "unknown call target: " + callTargetPath);
@@ -345,11 +353,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 if (failsCountUnknownTargetValidation) {
                   return failUnknownCallTarget(stdlibMapCountTargetPath);
                 }
-                const bool lacksVisibleCountMethodTarget =
-                    lacksVisibleResolvedMethodTarget(methodResolved,
-                                                    isBuiltinMethod);
-                if (lacksVisibleCountMethodTarget) {
-                  return failUnknownMethodTarget(methodResolved);
+                if (!failInvisibleResolvedMethodTarget(methodResolved,
+                                                      isBuiltinMethod)) {
+                  return false;
                 }
     }
     resolved = methodResolved;
@@ -467,11 +473,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                   context.promoteCapacityToBuiltinValidation(
                       receiver, methodResolved, isBuiltinMethod, false);
                 }
-                const bool lacksVisibleCapacityMethodTarget =
-                    lacksVisibleResolvedMethodTarget(methodResolved,
-                                                    isBuiltinMethod);
-                if (lacksVisibleCapacityMethodTarget) {
-                  return failUnknownMethodTarget(methodResolved);
+                if (!failInvisibleResolvedMethodTarget(methodResolved,
+                                                      isBuiltinMethod)) {
+                  return false;
                 }
     }
     resolved = methodResolved;
