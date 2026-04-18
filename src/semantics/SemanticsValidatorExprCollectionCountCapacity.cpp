@@ -217,17 +217,19 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     methodResolved == "/map/count";
                 const bool targetsStdlibMapCountMethod =
                     methodResolved == "/std/collections/map/count";
-                if ((!expr.isMethodCall &&
-                     expr.args.size() == 1 &&
-                     receiver.kind == Expr::Kind::Name &&
-                     targetsBareMapCountMethod &&
-                     !hasImportedDefinitionPath("/count") &&
-                     !hasDeclaredDefinitionPath("/count") &&
-                     lacksVisibleStdlibMapCountDefinition) ||
-                    (isBuiltinMethod &&
-                     targetsStdlibMapCountMethod &&
-                     lacksVisibleStdlibMapCountDefinition &&
-                     !context.shouldBuiltinValidateBareMapCountCall)) {
+                const bool rejectsDirectBareMapCountTarget =
+                    !expr.isMethodCall && expr.args.size() == 1 &&
+                    receiver.kind == Expr::Kind::Name &&
+                    targetsBareMapCountMethod &&
+                    !hasImportedDefinitionPath("/count") &&
+                    !hasDeclaredDefinitionPath("/count") &&
+                    lacksVisibleStdlibMapCountDefinition;
+                const bool rejectsBuiltinStdlibMapCountTarget =
+                    isBuiltinMethod && targetsStdlibMapCountMethod &&
+                    lacksVisibleStdlibMapCountDefinition &&
+                    !context.shouldBuiltinValidateBareMapCountCall;
+                if (rejectsDirectBareMapCountTarget ||
+                    rejectsBuiltinStdlibMapCountTarget) {
                   return failExprDiagnostic(
                       expr, "unknown call target: /std/collections/map/count");
                 }
