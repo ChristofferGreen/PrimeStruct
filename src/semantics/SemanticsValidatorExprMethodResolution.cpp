@@ -85,15 +85,16 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   const bool isVectorCompatibilityMethod =
       isVectorCompatibilityHelperName(expr.name);
   auto rewriteEligibleExperimentalVectorCompatibilityMethodTargetToCanonical =
-      [&](std::string &methodTarget, bool methodTargetEligible) {
+      [&](std::string methodTarget, bool methodTargetEligible) {
         const std::string canonicalVectorCompatibilityMethodTarget =
             "/std/collections/vector/" + expr.name;
         if (methodTargetEligible &&
             isExperimentalVectorCompatibilityMethodTarget(methodTarget) &&
             (hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||
              defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0)) {
-          methodTarget = canonicalVectorCompatibilityMethodTarget;
+          return canonicalVectorCompatibilityMethodTarget;
         }
+        return methodTarget;
       };
   if (expr.namespacePrefix.empty() &&
       !expr.args.empty() &&
@@ -178,7 +179,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       expr.namespacePrefix != "/std/collections/vector" &&
       resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
                                       vectorMethodTarget)) {
-    rewriteEligibleExperimentalVectorCompatibilityMethodTargetToCanonical(
+    vectorMethodTarget = rewriteEligibleExperimentalVectorCompatibilityMethodTargetToCanonical(
         vectorMethodTarget,
         !hasImportedDefinitionPath(vectorMethodTarget) &&
             defMap_.count(vectorMethodTarget) == 0);
@@ -248,7 +249,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       isBuiltinMethod = false;
     }
   }
-  rewriteEligibleExperimentalVectorCompatibilityMethodTargetToCanonical(
+  resolved = rewriteEligibleExperimentalVectorCompatibilityMethodTargetToCanonical(
       resolved,
       !isBuiltinMethod && isVectorCompatibilityMethod && !resolved.empty());
   bool keepBuiltinIndexedArgsPackMapMethod = false;
