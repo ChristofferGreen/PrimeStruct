@@ -1452,6 +1452,23 @@
             "    };") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto tryAssignCountMethodFallbackAfterResolveMiss = [&]() -> bool {\n"
+            "      if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
+            "          expr.args.empty()) {\n"
+            "        (void)validateExpr(params, locals, expr.args.front());\n"
+            "        return false;\n"
+            "      }\n"
+            "      if (resolvesMapCountMethodTarget) {\n"
+            "        methodResolved = \"/std/collections/map/count\";\n"
+            "        error_.clear();\n"
+            "        isBuiltinMethod = false;\n"
+            "      } else if (!tryAssignPointerLikeCountMethodTarget()) {\n"
+            "        return false;\n"
+            "      }\n"
+            "      return true;\n"
+            "    };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto tryAssignCountMethodFallbackTarget = [&]() -> bool {\n"
             "      if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
             "          expr.args.empty()) {") ==
@@ -1476,47 +1493,26 @@
             "      isBuiltinMethod = true;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "      if (resolvesMapCountMethodTarget) {\n"
-            "        methodResolved = \"/std/collections/map/count\";\n"
-            "        error_.clear();\n"
-            "        isBuiltinMethod = false;\n"
-            "      } else if (!tryAssignPointerLikeCountMethodTarget()) {\n"
+            "} else if (!tryResolveCountMethod() &&\n"
+            "                 !tryAssignCountMethodFallbackAfterResolveMiss()) {\n"
             "        return false;\n"
-            "      }\n"
-            "      return true;\n"
-            "    };") !=
+            "      }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "} else if (!tryResolveCountMethod() &&\n"
+            "               !tryAssignCountMethodFallbackAfterResolveMiss()) {\n"
+            "        return false;\n"
+            "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else if (!tryResolveCountMethod()) {\n"
             "        if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
-            "            expr.args.empty()) {\n"
-            "          (void)validateExpr(params, locals, expr.args.front());\n"
-            "          return false;\n"
-            "        }\n"
-            "        if (resolvesMapCountMethodTarget) {\n"
-            "          methodResolved = \"/std/collections/map/count\";\n"
-            "          error_.clear();\n"
-            "          isBuiltinMethod = false;\n"
-            "        } else if (!tryAssignPointerLikeCountMethodTarget()) {\n"
-            "          return false;\n"
-            "        }\n"
-            "      }") !=
+            "            expr.args.empty()) {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else if (!tryResolveCountMethod()) {\n"
             "      if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
-            "          expr.args.empty()) {\n"
-            "        (void)validateExpr(params, locals, expr.args.front());\n"
-            "        return false;\n"
-            "      }\n"
-            "      if (resolvesMapCountMethodTarget) {\n"
-            "        methodResolved = \"/std/collections/map/count\";\n"
-            "        error_.clear();\n"
-            "        isBuiltinMethod = false;\n"
-            "      } else if (!tryAssignPointerLikeCountMethodTarget()) {\n"
-            "        return false;\n"
-            "      }\n"
-            "    }") !=
+            "          expr.args.empty()) {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"

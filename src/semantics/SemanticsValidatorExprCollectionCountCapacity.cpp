@@ -204,32 +204,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       return resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
                                  "count", methodResolved, isBuiltinMethod);
     };
-    if (context.isUnnamespacedMapCountFallbackCall &&
-        !hasDeclaredDefinitionPath("/map/count") &&
-        lacksVisibleStdlibMapCountDefinition &&
-        resolvesMapCountMethodTarget) {
-      methodResolved = "/std/collections/map/count";
-      isBuiltinMethod = true;
-    } else if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
-                                               "count", methodResolved)) {
-      methodResolved = preferVectorStdlibHelperPath(methodResolved);
-      if (hasResolvableDefinitionPath(methodResolved)) {
-        isBuiltinMethod = false;
-      } else if (!tryResolveCountMethod()) {
-        if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||
-            expr.args.empty()) {
-          (void)validateExpr(params, locals, expr.args.front());
-          return false;
-        }
-        if (resolvesMapCountMethodTarget) {
-          methodResolved = "/std/collections/map/count";
-          error_.clear();
-          isBuiltinMethod = false;
-        } else if (!tryAssignPointerLikeCountMethodTarget()) {
-          return false;
-        }
-      }
-    } else if (!tryResolveCountMethod()) {
+    const auto tryAssignCountMethodFallbackAfterResolveMiss = [&]() -> bool {
       if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||
           expr.args.empty()) {
         (void)validateExpr(params, locals, expr.args.front());
@@ -242,6 +217,26 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       } else if (!tryAssignPointerLikeCountMethodTarget()) {
         return false;
       }
+      return true;
+    };
+    if (context.isUnnamespacedMapCountFallbackCall &&
+        !hasDeclaredDefinitionPath("/map/count") &&
+        lacksVisibleStdlibMapCountDefinition &&
+        resolvesMapCountMethodTarget) {
+      methodResolved = "/std/collections/map/count";
+      isBuiltinMethod = true;
+    } else if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
+                                               "count", methodResolved)) {
+      methodResolved = preferVectorStdlibHelperPath(methodResolved);
+      if (hasResolvableDefinitionPath(methodResolved)) {
+        isBuiltinMethod = false;
+      } else if (!tryResolveCountMethod() &&
+                 !tryAssignCountMethodFallbackAfterResolveMiss()) {
+        return false;
+      }
+    } else if (!tryResolveCountMethod() &&
+               !tryAssignCountMethodFallbackAfterResolveMiss()) {
+        return false;
     }
     if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&
         resolved.rfind(methodResolved + "__t", 0) == 0) {
