@@ -54,6 +54,16 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     }
     return std::nullopt;
   };
+  const auto finalizeResolvedCollectionMethodTarget =
+      [&](const std::string &methodResolved, bool isBuiltinMethod) -> bool {
+    if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {
+      return failCollectionCountCapacityDiagnostic("unknown method: " +
+                                                   methodResolved);
+    }
+    resolved = methodResolved;
+    resolvedMethod = isBuiltinMethod;
+    return true;
+  };
   auto isConcreteCountCapacityInstantiation = [&](const std::string &path) {
     if (defMap_.find(path) == defMap_.end()) {
       return false;
@@ -268,12 +278,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
          !context.shouldBuiltinValidateBareMapCountCall)) {
       return failCollectionCountCapacityDiagnostic("unknown call target: /std/collections/map/count");
     }
-    if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {
-      return failCollectionCountCapacityDiagnostic("unknown method: " + methodResolved);
-    }
-    resolved = methodResolved;
-    resolvedMethod = isBuiltinMethod;
-    return true;
+    return finalizeResolvedCollectionMethodTarget(methodResolved, isBuiltinMethod);
   };
   if (std::optional<bool> resolvedCountMethod =
           tryResolveCollectionMethodAttempt(resolveCountMethod, true)) {
@@ -359,9 +364,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     if (methodResolvedMissing) {
       return failCollectionCountCapacityDiagnostic("unknown method: " + methodResolved);
     }
-    resolved = methodResolved;
-    resolvedMethod = isBuiltinMethod;
-    return true;
+    return finalizeResolvedCollectionMethodTarget(methodResolved, isBuiltinMethod);
   };
 
   if (std::optional<bool> resolvedCapacityMethod =
