@@ -1396,6 +1396,14 @@
             "setupOut.hasStdNamespacedVectorCountAliasDefinition =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "const bool hasStdNamespacedVectorCountDefinition =") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "setupOut.shouldBuiltinValidateStdNamespacedVectorCountCall =\n"
+            "      setupOut.isStdNamespacedVectorCountCall &&\n"
+            "      hasImportedDefinitionPath(\"/std/collections/vector/count\");") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "\"unknown call target: /std/collections/vector/count\"") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
