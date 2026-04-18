@@ -1417,6 +1417,9 @@
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "\"unknown call target: /std/collections/vector/capacity\"") ==
         std::string::npos);
+  CHECK(semanticsExprSource.find(
+            ".shouldBuiltinValidateStdNamespacedVectorCapacityCall =") ==
+        std::string::npos);
   CHECK(semanticsExprMethodCompatibilitySetupSource.find(
             "return soaUnavailableMethodDiagnostic(resolvedPath);") !=
         std::string::npos);
@@ -1490,7 +1493,8 @@
   CHECK(semanticsExprPrivateValidationSource.find(
             "    bool isResolvedMapCountCall = false;\n"
             "    bool isStdNamespacedVectorCapacityCall = false;\n"
-            "    std::function<bool(const Expr &, std::string &)> resolveVectorTarget;") ==
+            "    bool isNamespacedVectorCapacityCall = false;\n"
+            "    bool isDirectStdNamespacedVectorCountWrapperMapTarget = false;") !=
         std::string::npos);
   CHECK(semanticsExprBuiltinContextSetupSource.find(
             "contextOut.isStdNamespacedVectorCountCall = isStdNamespacedVectorCountCall;") ==
@@ -1553,6 +1557,19 @@
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "context.isStdNamespacedVectorCapacityCall") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool shouldBuiltinValidateStdNamespacedVectorCapacityCall =\n"
+            "        context.isStdNamespacedVectorCapacityCall &&\n"
+            "        hasImportedDefinitionPath(\"/std/collections/vector/capacity\");") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "(context.isStdNamespacedVectorCapacityCall &&\n"
+            "         !shouldBuiltinValidateStdNamespacedVectorCapacityCall) ||") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "(context.isStdNamespacedVectorCapacityCall &&\n"
+            "         !context.shouldBuiltinValidateStdNamespacedVectorCapacityCall) ||") ==
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "prepareExprLateMapSoaBuiltinContext(\n"

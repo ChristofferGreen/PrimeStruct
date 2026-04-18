@@ -784,10 +784,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     collectionCountCapacityDispatchContext
         .isStdNamespacedVectorCapacityCall =
         collectionDispatchSetup.isStdNamespacedVectorCapacityCall;
-    collectionCountCapacityDispatchContext
-        .shouldBuiltinValidateStdNamespacedVectorCapacityCall =
-        collectionDispatchSetup
-            .shouldBuiltinValidateStdNamespacedVectorCapacityCall;
     collectionCountCapacityDispatchContext.isNamespacedVectorCapacityCall =
         collectionDispatchSetup.isNamespacedVectorCapacityCall;
     collectionCountCapacityDispatchContext
