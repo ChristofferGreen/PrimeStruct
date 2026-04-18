@@ -113,9 +113,6 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
     }
     return true;
   };
-  const bool callsStdNamespacedVectorCountHelper =
-      isStdNamespacedVectorCompatibilityDirectCall(
-          expr.isMethodCall, resolveCalleePath(expr), "count");
   const bool callsStdNamespacedVectorCapacityHelper =
       isStdNamespacedVectorCompatibilityDirectCall(
           expr.isMethodCall, resolveCalleePath(expr), "capacity");
@@ -188,7 +185,8 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
     }
   }
   setupOut.isDirectStdNamespacedVectorCountWrapperMapTarget =
-      callsStdNamespacedVectorCountHelper &&
+      isStdNamespacedVectorCompatibilityDirectCall(
+          expr.isMethodCall, resolveCalleePath(expr), "count") &&
       expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call &&
       resolveMapTarget(expr.args.front());
 
