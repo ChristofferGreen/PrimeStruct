@@ -1397,15 +1397,13 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto isUnknownCollectionMethodTarget =\n"
-            "      [&](bool isBuiltinMethod, const std::string &methodResolved) {\n"
-            "    return !isBuiltinMethod && !hasDeclaredDefinitionPath(methodResolved) &&\n"
-            "           !hasImportedDefinitionPath(methodResolved);\n"
-            "  };") !=
+            "      [&](bool isBuiltinMethod, const std::string &methodResolved) {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto failUnknownCollectionMethodTarget =\n"
             "      [&](bool isBuiltinMethod, const std::string &methodResolved) {\n"
-            "    if (!isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {\n"
+            "    if (isBuiltinMethod || hasDeclaredDefinitionPath(methodResolved) ||\n"
+            "        hasImportedDefinitionPath(methodResolved)) {\n"
             "      return false;\n"
             "    }\n"
             "    (void)failExprDiagnostic(expr, \"unknown method: \" + methodResolved);\n"
@@ -1527,10 +1525,10 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!isBuiltinMethod && !hasDeclaredDefinitionPath(methodResolved) &&\n"
-            "        !hasImportedDefinitionPath(methodResolved)) {") ==
+            "        !hasImportedDefinitionPath(methodResolved)) {") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)") !=
+            "isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {\n"
@@ -3834,8 +3832,9 @@
             "          return finalizeCollectionMethodTarget(\n"
             "              methodResolved, isBuiltinMethod,\n"
             "              [&](std::string &methodResolved, bool &isBuiltinMethod) {\n"
-            "                if (isUnknownCollectionMethodTarget(isBuiltinMethod,\n"
-            "                                                    methodResolved)) {\n"
+            "                if (!isBuiltinMethod &&\n"
+            "                    !hasDeclaredDefinitionPath(methodResolved) &&\n"
+            "                    !hasImportedDefinitionPath(methodResolved)) {\n"
             "                  if ((context.isNonCollectionStructCapacityTarget ==\n"
             "                           nullptr ||\n"
             "                       !context.isNonCollectionStructCapacityTarget(\n"

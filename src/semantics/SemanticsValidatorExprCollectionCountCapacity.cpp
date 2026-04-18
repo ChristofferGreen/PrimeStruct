@@ -98,14 +98,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     (void)failExprDiagnostic(expr, removedRootedVectorDirectCallDiagnostic);
     return true;
   };
-  const auto isUnknownCollectionMethodTarget =
-      [&](bool isBuiltinMethod, const std::string &methodResolved) {
-    return !isBuiltinMethod && !hasDeclaredDefinitionPath(methodResolved) &&
-           !hasImportedDefinitionPath(methodResolved);
-  };
   const auto failUnknownCollectionMethodTarget =
       [&](bool isBuiltinMethod, const std::string &methodResolved) {
-    if (!isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {
+    if (isBuiltinMethod || hasDeclaredDefinitionPath(methodResolved) ||
+        hasImportedDefinitionPath(methodResolved)) {
       return false;
     }
     (void)failExprDiagnostic(expr, "unknown method: " + methodResolved);
@@ -396,8 +392,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           return finalizeCollectionMethodTarget(
               methodResolved, isBuiltinMethod,
               [&](std::string &methodResolved, bool &isBuiltinMethod) {
-                if (isUnknownCollectionMethodTarget(isBuiltinMethod,
-                                                    methodResolved)) {
+                if (!isBuiltinMethod &&
+                    !hasDeclaredDefinitionPath(methodResolved) &&
+                    !hasImportedDefinitionPath(methodResolved)) {
                   if ((context.isNonCollectionStructCapacityTarget ==
                            nullptr ||
                        !context.isNonCollectionStructCapacityTarget(
