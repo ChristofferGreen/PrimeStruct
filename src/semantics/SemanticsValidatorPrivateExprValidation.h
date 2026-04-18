@@ -510,7 +510,6 @@
   struct ExprCollectionDispatchSetup {
     bool isNamespacedVectorHelperCall = false;
     bool isStdNamespacedVectorCountCall = false;
-    bool shouldBuiltinValidateStdNamespacedVectorCountCall = false;
     bool isStdNamespacedMapCountCall = false;
     bool isNamespacedMapHelperCall = false;
     std::string namespacedHelper;
@@ -587,7 +586,6 @@
     bool isNamespacedVectorHelperCall = false;
     std::string namespacedHelper;
     bool isStdNamespacedVectorCountCall = false;
-    bool shouldBuiltinValidateStdNamespacedVectorCountCall = false;
     bool isStdNamespacedMapCountCall = false;
     bool isNamespacedVectorCountCall = false;
     bool isNamespacedMapCountCall = false;

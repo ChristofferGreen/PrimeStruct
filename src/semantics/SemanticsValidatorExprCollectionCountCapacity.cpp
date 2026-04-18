@@ -94,11 +94,14 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           std::move(stdNamespacedVectorCountTargetDiagnosticMessage));
     }
   }
+  const bool shouldBuiltinValidateStdNamespacedVectorCountCall =
+      context.isStdNamespacedVectorCountCall &&
+      hasImportedDefinitionPath("/std/collections/vector/count");
 
   auto resolveCountMethod = [&](bool requireSingleArg) -> bool {
     if (hasNamedArguments(expr.argNames) ||
         (context.isStdNamespacedVectorCountCall &&
-         !context.shouldBuiltinValidateStdNamespacedVectorCountCall) ||
+         !shouldBuiltinValidateStdNamespacedVectorCountCall) ||
         expr.args.empty()) {
       return false;
     }
