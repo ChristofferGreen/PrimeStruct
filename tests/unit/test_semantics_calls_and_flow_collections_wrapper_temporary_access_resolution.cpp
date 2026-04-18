@@ -154,6 +154,25 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("wrapper temporary canonical vector capacity slash-method rejects map receiver") {
+  const std::string source = R"(
+[effects(heap_alloc)]
+wrapMapAuto() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values)
+}
+
+[return<int>]
+main() {
+  return(wrapMapAuto()./std/collections/vector/capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/vector/capacity") !=
+        std::string::npos);
+}
+
 TEST_CASE("map wrapper temporary access call validates map target classification") {
   const std::string source = R"(
 import /std/collections/*
