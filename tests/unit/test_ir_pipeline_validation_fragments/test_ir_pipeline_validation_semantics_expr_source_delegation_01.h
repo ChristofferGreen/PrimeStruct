@@ -1429,7 +1429,7 @@
             "      context.promoteCapacityToBuiltinValidation(\n"
             "          receiver, methodResolved, isBuiltinMethod, false);\n"
             "    }\n"
-            "  };") !=
+            "  };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto preferVisibleVectorHelperMethodTarget =\n"
@@ -3925,20 +3925,23 @@
             "      }\n"
             "    }") != std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "          promoteUnknownCapacityMethodTargetIfNeeded(receiver, methodResolved,\n"
-            "                                                     isBuiltinMethod);\n"
-            "          return true;\n"
-            "        },") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "          if (isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {\n"
-            "            if ((context.isNonCollectionStructCapacityTarget == nullptr ||\n"
-            "                 !context.isNonCollectionStructCapacityTarget(methodResolved)) &&\n"
+            "          if (isUnknownCollectionMethodTarget(isBuiltinMethod,\n"
+            "                                              methodResolved)) {\n"
+            "            if ((context.isNonCollectionStructCapacityTarget ==\n"
+            "                     nullptr ||\n"
+            "                 !context.isNonCollectionStructCapacityTarget(\n"
+            "                     methodResolved)) &&\n"
             "                context.promoteCapacityToBuiltinValidation != nullptr) {\n"
             "              context.promoteCapacityToBuiltinValidation(\n"
             "                  receiver, methodResolved, isBuiltinMethod, false);\n"
             "            }\n"
             "          }\n"
+            "          return true;\n"
+            "        },") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "          promoteUnknownCapacityMethodTargetIfNeeded(receiver, methodResolved,\n"
+            "                                                     isBuiltinMethod);\n"
             "          return true;\n"
             "        },") ==
         std::string::npos);
