@@ -34,16 +34,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           methodResolved = resolved;
         }
       };
-  const auto failRemovedRootedVectorDirectCallIfPresent =
-      [&]() -> std::optional<bool> {
-    const std::string removedRootedVectorDirectCallDiagnostic =
-        getRemovedRootedVectorDirectCallDiagnostic(expr);
-    if (removedRootedVectorDirectCallDiagnostic.empty()) {
-      return std::nullopt;
-    }
-    return failCollectionCountCapacityDiagnostic(
-        removedRootedVectorDirectCallDiagnostic);
-  };
   const auto tryResolveCollectionMethodAttempt =
       [&](auto &&resolveMethod, bool requireSingleArg) -> std::optional<bool> {
     if (resolveMethod(requireSingleArg)) {
@@ -66,10 +56,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   };
   const auto finalizeResolvedCollectionMethodTargetAfterRemovedRootedVectorCheck =
       [&](const std::string &methodResolved, bool isBuiltinMethod) -> bool {
-    if (const auto removedRootedVectorDirectCallFailure =
-            failRemovedRootedVectorDirectCallIfPresent();
-        removedRootedVectorDirectCallFailure.has_value()) {
-      return *removedRootedVectorDirectCallFailure;
+    const std::string removedRootedVectorDirectCallDiagnostic =
+        getRemovedRootedVectorDirectCallDiagnostic(expr);
+    if (!removedRootedVectorDirectCallDiagnostic.empty()) {
+      return failCollectionCountCapacityDiagnostic(
+          removedRootedVectorDirectCallDiagnostic);
     }
     return finalizeResolvedCollectionMethodTarget(methodResolved,
                                                   isBuiltinMethod);

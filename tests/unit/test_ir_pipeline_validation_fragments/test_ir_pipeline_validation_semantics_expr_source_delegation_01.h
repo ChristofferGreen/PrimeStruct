@@ -379,7 +379,7 @@
             "    }\n"
             "    return failCollectionCountCapacityDiagnostic(\n"
             "        removedRootedVectorDirectCallDiagnostic);\n"
-            "  };") !=
+            "  };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "context.isNamespacedVectorCountCall &&\n"
@@ -411,10 +411,11 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto finalizeResolvedCollectionMethodTargetAfterRemovedRootedVectorCheck =\n"
             "      [&](const std::string &methodResolved, bool isBuiltinMethod) -> bool {\n"
-            "    if (const auto removedRootedVectorDirectCallFailure =\n"
-            "            failRemovedRootedVectorDirectCallIfPresent();\n"
-            "        removedRootedVectorDirectCallFailure.has_value()) {\n"
-            "      return *removedRootedVectorDirectCallFailure;\n"
+            "    const std::string removedRootedVectorDirectCallDiagnostic =\n"
+            "        getRemovedRootedVectorDirectCallDiagnostic(expr);\n"
+            "    if (!removedRootedVectorDirectCallDiagnostic.empty()) {\n"
+            "      return failCollectionCountCapacityDiagnostic(\n"
+            "          removedRootedVectorDirectCallDiagnostic);\n"
             "    }\n"
             "    return finalizeResolvedCollectionMethodTarget(methodResolved,\n"
             "                                                  isBuiltinMethod);\n"
