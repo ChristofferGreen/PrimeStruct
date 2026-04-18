@@ -1623,11 +1623,11 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool shouldBuiltinValidateStdNamespacedVectorCapacityCall =\n"
             "        isStdNamespacedVectorCapacityCall &&\n"
-            "        hasImportedDefinitionPath(\"/std/collections/vector/capacity\");") !=
+            "        hasImportedDefinitionPath(\"/std/collections/vector/capacity\");") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "(isStdNamespacedVectorCapacityCall &&\n"
-            "         !shouldBuiltinValidateStdNamespacedVectorCapacityCall) ||") !=
+            "         !hasImportedDefinitionPath(\"/std/collections/vector/capacity\")) ||") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "(context.isStdNamespacedVectorCapacityCall &&\n"

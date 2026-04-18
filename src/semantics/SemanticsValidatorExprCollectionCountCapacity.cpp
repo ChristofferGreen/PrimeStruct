@@ -259,12 +259,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         !expr.isMethodCall &&
         isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
                                                      "capacity");
-    const bool shouldBuiltinValidateStdNamespacedVectorCapacityCall =
-        isStdNamespacedVectorCapacityCall &&
-        hasImportedDefinitionPath("/std/collections/vector/capacity");
     if (hasNamedArguments(expr.argNames) ||
         (isStdNamespacedVectorCapacityCall &&
-         !shouldBuiltinValidateStdNamespacedVectorCapacityCall) ||
+         !hasImportedDefinitionPath("/std/collections/vector/capacity")) ||
         !isVectorBuiltinName(expr, "capacity")) {
       return false;
     }
