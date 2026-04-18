@@ -2676,12 +2676,10 @@
             "                const bool lacksVisibleMapCountDefinitions =\n"
             "                    lacksVisibleBareCountDefinition &&\n"
             "                    lacksVisibleStdlibMapCountDefinition;\n"
-            "                const bool rejectsDirectBareMapCountValidation =\n"
-            "                    targetsBareMapCountMethod &&\n"
-            "                    lacksVisibleMapCountDefinitions;\n"
             "                const bool rejectsDirectBareMapCountTarget =\n"
             "                    isDirectNamedCountReceiverCall &&\n"
-            "                    rejectsDirectBareMapCountValidation;\n"
+            "                    targetsBareMapCountMethod &&\n"
+            "                    lacksVisibleMapCountDefinitions;\n"
             "                const bool rejectsBuiltinStdlibMapCountTarget =\n"
             "                    isBuiltinMethod && targetsStdlibMapCountMethod &&\n"
             "                    lacksVisibleStdlibMapCountDefinition &&\n"
@@ -2718,8 +2716,7 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "                const bool rejectsDirectBareMapCountValidation =\n"
             "                    targetsBareMapCountMethod &&\n"
-            "                    lacksVisibleBareCountDefinition &&\n"
-            "                    lacksVisibleStdlibMapCountDefinition;\n") ==
+            "                    lacksVisibleMapCountDefinitions;\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "                const bool targetsBuiltinStdlibMapCountMethod =\n"
