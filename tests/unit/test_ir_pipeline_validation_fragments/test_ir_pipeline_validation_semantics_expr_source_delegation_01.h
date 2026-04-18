@@ -405,20 +405,26 @@
             "getRemovedRootedVectorDirectCallDiagnostic(expr)") !=
         std::string::npos);
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
+            "resolveCalleePath(expr).rfind(\"/std/collections/vector/count\", 0) == 0") ==
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
             "if (!expr.isMethodCall &&\n"
-            "      resolveCalleePath(expr).rfind(\"/std/collections/vector/count\", 0) == 0 &&\n"
-            "      expr.args.size() == 1 &&\n"
-            "      !hasDeclaredDefinitionPath(\"/std/collections/vector/count\") &&\n"
-            "      !hasImportedDefinitionPath(\"/std/collections/vector/count\")) {\n"
+            "      resolved == \"/std/collections/vector/count\" &&\n"
+            "      expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {\n"
             "    std::string elemType;\n"
-            "    if (dispatchResolvers.resolveStringTarget(expr.args.front()) ||\n"
-            "        dispatchResolvers.resolveArrayTarget(expr.args.front(), elemType) ||\n"
-            "        dispatchResolvers.resolveExperimentalVectorTarget(\n"
-            "            expr.args.front(), elemType)) {\n"
-            "      return failDirectCollectionFallbackDiagnostic(\n"
-            "          \"unknown call target: /std/collections/vector/count\");\n"
-            "    }\n"
-            "  }") !=
+            "    std::string arrayElemType;\n"
+            "    const bool resolvesVector =\n"
+            "        context.dispatchResolvers->resolveVectorTarget(expr.args.front(),\n"
+            "                                                       elemType);\n"
+            "    std::string experimentalElemType;\n"
+            "    const bool resolvesExperimentalVector =\n"
+            "        context.dispatchResolvers->resolveExperimentalVectorTarget(\n"
+            "            expr.args.front(), experimentalElemType);\n"
+            "    const bool resolvesArray =\n"
+            "        context.dispatchResolvers->resolveArrayTarget(expr.args.front(),\n"
+            "                                                      arrayElemType);\n"
+            "    const bool resolvesString =\n"
+            "        context.dispatchResolvers->resolveStringTarget(expr.args.front());") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "bool isStdNamespacedVectorCountCall = false;") !=
@@ -1040,6 +1046,10 @@
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "if (resolved == \"/std/collections/vector/capacity\" &&\n"
             "        hasImportedDefinitionPath(\"/std/collections/vector/capacity\"))") ==
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "return failLateCallCompatibilityDiagnostic(\n"
+            "          \"unknown call target: /std/collections/vector/count\");") !=
         std::string::npos);
   CHECK(semanticsExprMethodCompatibilitySetupSource.find(
             "return soaUnavailableMethodDiagnostic(resolvedPath);") !=

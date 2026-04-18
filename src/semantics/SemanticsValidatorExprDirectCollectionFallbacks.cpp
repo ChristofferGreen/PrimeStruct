@@ -22,21 +22,6 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
         removedRootedVectorDirectCallDiagnostic);
   }
 
-  if (!expr.isMethodCall &&
-      resolveCalleePath(expr).rfind("/std/collections/vector/count", 0) == 0 &&
-      expr.args.size() == 1 &&
-      !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
-      !hasImportedDefinitionPath("/std/collections/vector/count")) {
-    std::string elemType;
-    if (dispatchResolvers.resolveStringTarget(expr.args.front()) ||
-        dispatchResolvers.resolveArrayTarget(expr.args.front(), elemType) ||
-        dispatchResolvers.resolveExperimentalVectorTarget(
-            expr.args.front(), elemType)) {
-      return failDirectCollectionFallbackDiagnostic(
-          "unknown call target: /std/collections/vector/count");
-    }
-  }
-
   Expr rewrittenVectorHelperCall;
   const bool isBareVectorAccessHelperCall =
       expr.namespacePrefix.empty() &&
