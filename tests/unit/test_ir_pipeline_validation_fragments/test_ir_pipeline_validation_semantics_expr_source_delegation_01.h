@@ -4362,14 +4362,13 @@
             "}\n"
             "if (!isBuiltinMethod &&\n"
             "    !hasDeclaredDefinitionPath(methodResolved) &&\n"
-            "    !hasImportedDefinitionPath(methodResolved)) {\n"
-            "  if ((context.isNonCollectionStructCapacityTarget == nullptr ||\n"
-            "       !context.isNonCollectionStructCapacityTarget(\n"
-            "           methodResolved)) &&\n"
-            "      context.promoteCapacityToBuiltinValidation != nullptr) {\n"
-            "    context.promoteCapacityToBuiltinValidation(\n"
-            "        receiver, methodResolved, isBuiltinMethod, false);\n"
-            "  }\n"
+            "    !hasImportedDefinitionPath(methodResolved) &&\n"
+            "    (context.isNonCollectionStructCapacityTarget == nullptr ||\n"
+            "     !context.isNonCollectionStructCapacityTarget(\n"
+            "         methodResolved)) &&\n"
+            "    context.promoteCapacityToBuiltinValidation != nullptr) {\n"
+            "  context.promoteCapacityToBuiltinValidation(\n"
+            "      receiver, methodResolved, isBuiltinMethod, false);\n"
             "}\n"
             "if (!isBuiltinMethod &&\n"
             "    !hasDeclaredDefinitionPath(methodResolved) &&\n"
@@ -4386,6 +4385,19 @@
             "    return false;\n"
             "}\n"
             "return true;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (!isBuiltinMethod &&\n"
+            "    !hasDeclaredDefinitionPath(methodResolved) &&\n"
+            "    !hasImportedDefinitionPath(methodResolved)) {\n"
+            "  if ((context.isNonCollectionStructCapacityTarget == nullptr ||\n"
+            "       !context.isNonCollectionStructCapacityTarget(\n"
+            "           methodResolved)) &&\n"
+            "      context.promoteCapacityToBuiltinValidation != nullptr) {\n"
+            "    context.promoteCapacityToBuiltinValidation(\n"
+            "        receiver, methodResolved, isBuiltinMethod, false);\n"
+            "  }\n"
+            "}\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto finalizeCapacityMethodTarget =\n") ==

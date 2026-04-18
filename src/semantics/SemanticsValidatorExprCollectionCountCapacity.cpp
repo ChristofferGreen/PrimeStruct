@@ -380,14 +380,13 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 }
                 if (!isBuiltinMethod &&
                     !hasDeclaredDefinitionPath(methodResolved) &&
-                    !hasImportedDefinitionPath(methodResolved)) {
-                  if ((context.isNonCollectionStructCapacityTarget == nullptr ||
-                       !context.isNonCollectionStructCapacityTarget(
-                           methodResolved)) &&
-                      context.promoteCapacityToBuiltinValidation != nullptr) {
-                    context.promoteCapacityToBuiltinValidation(
-                        receiver, methodResolved, isBuiltinMethod, false);
-                  }
+                    !hasImportedDefinitionPath(methodResolved) &&
+                    (context.isNonCollectionStructCapacityTarget == nullptr ||
+                     !context.isNonCollectionStructCapacityTarget(
+                         methodResolved)) &&
+                    context.promoteCapacityToBuiltinValidation != nullptr) {
+                  context.promoteCapacityToBuiltinValidation(
+                      receiver, methodResolved, isBuiltinMethod, false);
                 }
                 if (!isBuiltinMethod &&
                     !hasDeclaredDefinitionPath(methodResolved) &&
