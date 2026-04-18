@@ -1384,7 +1384,7 @@
             "            resolved.rfind(methodResolved + \"__t\", 0) == 0) {\n"
             "          methodResolved = resolved;\n"
             "        }\n"
-            "      };") !=
+            "      };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "  auto isConcreteCountCapacityInstantiation = [&](const std::string &path) {\n") ==
@@ -1408,7 +1408,7 @@
             "if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&\n"
             "        resolved.rfind(methodResolved + \"__t\", 0) == 0) {\n"
             "      methodResolved = resolved;\n"
-            "    }") ==
+            "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const std::string stdNamespacedVectorCountTargetDiagnosticMessage =\n"
