@@ -140,6 +140,7 @@ Wave D (queue hygiene):
     - Final release gate passes with `./scripts/compile.sh --release`.
   - stop_rule: If shared classifier rewrites destabilize `map`/`soa_vector`, isolate the generic mechanism in this leaf and defer remaining shared deletions to TODO-0409.
   - notes: This leaf should leave a reusable generic path that TODO-0409 can apply to `map` and `soa_vector`.
+  - progress: Completed `TODO-0880` by hoisting the remaining count-surface precondition admission check in `SemanticsValidatorExprCollectionCountCapacity.cpp` behind shared `allowsCountMethodSurfacePreconditions`, so that the outer count route gate no longer repeats that inline negation.
   - progress: Completed `TODO-0879` by hoisting the remaining count-surface route-shape conjunction in `SemanticsValidatorExprCollectionCountCapacity.cpp` behind shared `allowsCountMethodSurfaceRouteShape`, so that the count route gate no longer repeats that inline eligibility pair.
   - progress: Completed `TODO-0878` by hoisting the remaining count-surface compatibility exclusion in `SemanticsValidatorExprCollectionCountCapacity.cpp` behind shared `allowsCountMethodSurfaceCompatibility`, so that the count route gate no longer repeats that inline negation.
   - progress: Completed `TODO-0877` by hoisting the remaining empty-argument probe in `SemanticsValidatorExprCollectionCountCapacity.cpp` behind shared `countMethodSurfaceHasNoArguments`, so that the count precondition gate no longer repeats that inline size check.

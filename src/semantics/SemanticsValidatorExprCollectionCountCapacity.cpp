@@ -153,12 +153,14 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       countMethodSurfaceHasNamedArguments ||
       routesThroughUnimportedStdNamespacedVectorCountCompatibilityDirectCall ||
       countMethodSurfaceHasNoArguments;
+  const bool allowsCountMethodSurfacePreconditions =
+      !violatesCountMethodSurfacePreconditions;
   const bool allowsCountMethodSurfaceCompatibility =
       !isArrayNamespacedVectorCountCompatibilityActive;
   const bool allowsCountMethodSurfaceRouteShape =
       routesThroughCountMethodSurface && matchesCountRouteArgShape;
   const bool matchesCountMethodSurfaceRoute =
-      !violatesCountMethodSurfacePreconditions &&
+      allowsCountMethodSurfacePreconditions &&
       allowsCountMethodSurfaceCompatibility &&
       allowsCountMethodSurfaceRouteShape;
   if (matchesCountMethodSurfaceRoute) {
