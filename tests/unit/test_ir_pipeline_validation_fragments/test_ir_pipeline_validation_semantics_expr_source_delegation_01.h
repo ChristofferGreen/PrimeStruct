@@ -3029,21 +3029,21 @@
             "      return tryResolveCapacityMethodAfterHelperMiss();\n"
             "    };") != std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), \"capacity\",\n"
-            "                                        methodResolved)) {\n"
-            "      if (!tryResolveCapacityMethodAfterHelperHit()) {\n"
-            "        return false;\n"
+            "const auto tryResolveCapacityMethodFromHelperRouting = [&]() -> bool {\n"
+            "      if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), \"capacity\",\n"
+            "                                          methodResolved)) {\n"
+            "        return tryResolveCapacityMethodAfterHelperHit();\n"
             "      }\n"
-            "    } else if (!tryResolveCapacityMethodAfterHelperMiss()) {\n"
+            "      return tryResolveCapacityMethodAfterHelperMiss();\n"
+            "    };") != std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (!tryResolveCapacityMethodFromHelperRouting()) {\n"
             "      return false;\n"
             "    }") != std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), \"capacity\",\n"
             "                                        methodResolved)) {\n"
-            "      methodResolved = preferVectorStdlibHelperPath(methodResolved);\n"
-            "      if (hasResolvableDefinitionPath(methodResolved)) {\n"
-            "        isBuiltinMethod = false;\n"
-            "      } else if (!tryResolveCapacityMethodAfterHelperMiss()) {\n"
+            "      if (!tryResolveCapacityMethodAfterHelperHit()) {\n"
             "        return false;\n"
             "      }\n"
             "    } else if (!tryResolveCapacityMethodAfterHelperMiss()) {\n"

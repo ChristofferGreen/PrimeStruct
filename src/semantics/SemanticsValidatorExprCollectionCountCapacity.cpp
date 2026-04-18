@@ -368,12 +368,14 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       }
       return tryResolveCapacityMethodAfterHelperMiss();
     };
-    if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), "capacity",
-                                        methodResolved)) {
-      if (!tryResolveCapacityMethodAfterHelperHit()) {
-        return false;
+    const auto tryResolveCapacityMethodFromHelperRouting = [&]() -> bool {
+      if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), "capacity",
+                                          methodResolved)) {
+        return tryResolveCapacityMethodAfterHelperHit();
       }
-    } else if (!tryResolveCapacityMethodAfterHelperMiss()) {
+      return tryResolveCapacityMethodAfterHelperMiss();
+    };
+    if (!tryResolveCapacityMethodFromHelperRouting()) {
       return false;
     }
     normalizeResolvedCollectionMethodTarget(methodResolved, isBuiltinMethod);
