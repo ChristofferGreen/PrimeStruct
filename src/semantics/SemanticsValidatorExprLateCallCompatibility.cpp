@@ -112,10 +112,12 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
               resolvesMapAfterValidation, resolvesNonVectorCountTarget,
               stdNamespacedVectorCountHelperState.hasDeclaredHelper,
               stdNamespacedVectorCountHelperState.hasImportedHelper);
-      if (stdNamespacedVectorCountMapTargetDiagnostic ==
-          VectorCompatibilityCountMapTargetDiagnostic::UnknownCallTarget) {
+      const std::string stdNamespacedVectorCountMapTargetDiagnosticMessage =
+          vectorCompatibilityCountMapTargetDiagnosticMessage(
+              stdNamespacedVectorCountMapTargetDiagnostic);
+      if (!stdNamespacedVectorCountMapTargetDiagnosticMessage.empty()) {
         return failLateCallCompatibilityDiagnostic(
-            vectorCompatibilityUnknownCallTargetDiagnostic("count"));
+            std::move(stdNamespacedVectorCountMapTargetDiagnosticMessage));
       }
       return failLateCallCompatibilityDiagnostic(
           vectorCompatibilityRequiresVectorTargetDiagnostic("count"));

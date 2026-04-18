@@ -67,4 +67,17 @@ inline std::string vectorCompatibilityUnknownCallTargetDiagnostic(
          std::string(helperName);
 }
 
+inline std::string vectorCompatibilityCountMapTargetDiagnosticMessage(
+    VectorCompatibilityCountMapTargetDiagnostic diagnostic) {
+  switch (diagnostic) {
+  case VectorCompatibilityCountMapTargetDiagnostic::UnknownCallTarget:
+    return vectorCompatibilityUnknownCallTargetDiagnostic("count");
+  case VectorCompatibilityCountMapTargetDiagnostic::RequiresVectorTarget:
+    return vectorCompatibilityRequiresVectorTargetDiagnostic("count");
+  case VectorCompatibilityCountMapTargetDiagnostic::None:
+    return "";
+  }
+  return "";
+}
+
 } // namespace primec::semantics
