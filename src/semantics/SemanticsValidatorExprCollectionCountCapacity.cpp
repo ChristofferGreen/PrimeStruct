@@ -74,9 +74,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     rewrittenExprOut = std::move(rewrittenVectorHelperCall);
     return true;
   }
-  const bool callsStdNamespacedVectorCountHelper =
-      isStdNamespacedVectorCompatibilityDirectCall(
-          expr.isMethodCall, resolveCalleePath(expr), "count");
   const bool resolvesStdNamespacedVectorCountMapTarget =
       expr.args.size() == 1 &&
       context.resolveMapTarget != nullptr &&
