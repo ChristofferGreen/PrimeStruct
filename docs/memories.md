@@ -72,6 +72,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
   of carrying duplicated helper-name lists.
   Evidence: `TODO-0544` moved the shared predicate into the new header and
   the full release gate passed afterward.
+- `vector-compatibility-helper-path-shared-header`:
+  canonical stdlib `vector/*` call-shape probes should reuse
+  `isStdNamespacedVectorCompatibilityHelperPath(...)` from
+  `src/semantics/SemanticsVectorCompatibilityHelpers.h` instead of spelling
+  raw `resolveCalleePath(expr).rfind("/std/collections/vector/<helper>", 0)`
+  checks inline in expr-side routing code.
+  Evidence: `TODO-0637` added the shared helper and switched the remaining
+  expr-side `vector/capacity` probes in
+  `SemanticsValidatorExprCountCapacityMapBuiltins.cpp` and
+  `SemanticsValidatorExprCollectionCountCapacity.cpp` to use it; the full
+  release gate passed afterward.
 - `vector-canonical-helper-gate-shared-predicates`:
   `SemanticsValidatorExprVectorHelpers.cpp` now owns the surviving canonical
   `/std/collections/vector/*` direct-call gate through shared

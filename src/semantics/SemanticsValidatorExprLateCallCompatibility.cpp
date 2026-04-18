@@ -111,7 +111,8 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
           std::move(stdNamespacedVectorCountTargetDiagnosticMessage));
     }
     if (resolvesVectorLikeCountTarget &&
-        !hasVisibleDefinitionPath("/std/collections/vector/count")) {
+        !hasVisibleDefinitionPathForCurrentImports(
+            "/std/collections/vector/count")) {
       return failLateCallCompatibilityDiagnostic(
           vectorCompatibilityUnknownCallTargetDiagnostic("count"));
     }

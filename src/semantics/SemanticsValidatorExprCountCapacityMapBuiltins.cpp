@@ -50,7 +50,8 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
   const bool isDirectStdNamespacedVectorCapacityBuiltinCall =
       !expr.isMethodCall && !resolvedMethod &&
       hasImportedDefinitionPath("/std/collections/vector/capacity") &&
-      resolveCalleePath(expr).rfind("/std/collections/vector/capacity", 0) == 0 &&
+      isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
+                                                   "capacity") &&
       expr.args.size() == 1 &&
       resolved.rfind("/std/collections/vector/capacity", 0) == 0;
   auto canonicalizeSoaCountHelperPath = [](std::string canonicalPath) {
@@ -537,7 +538,8 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
 
   if (!resolvedMethod && isVectorBuiltinName(expr, "capacity") &&
       !(!expr.isMethodCall &&
-        resolveCalleePath(expr).rfind("/std/collections/vector/capacity", 0) == 0) &&
+        isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
+                                                     "capacity")) &&
       it == defMap_.end()) {
     handledOut = true;
     if (!expr.templateArgs.empty()) {

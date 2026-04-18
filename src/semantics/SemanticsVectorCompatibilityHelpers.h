@@ -12,6 +12,13 @@ inline bool isVectorCompatibilityHelperName(std::string_view helperName) {
          helperName == "remove_swap";
 }
 
+inline bool isStdNamespacedVectorCompatibilityHelperPath(
+    std::string_view path,
+    std::string_view helperName) {
+  return path.rfind("/std/collections/vector/" + std::string(helperName), 0) ==
+         0;
+}
+
 inline std::string vectorCompatibilityRequiresVectorTargetDiagnostic(
     std::string_view helperName) {
   return std::string(helperName) + " requires vector target";

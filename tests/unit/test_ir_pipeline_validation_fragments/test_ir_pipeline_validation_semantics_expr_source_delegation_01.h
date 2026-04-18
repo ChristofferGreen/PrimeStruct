@@ -1157,6 +1157,13 @@
   CHECK(semanticsVectorCompatibilityHelpersSource.find(
             "classifyNonVectorCountTargetDiagnosticMessage(") ==
         std::string::npos);
+  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+            "inline bool isStdNamespacedVectorCompatibilityHelperPath(") !=
+        std::string::npos);
+  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+            "return path.rfind(\"/std/collections/vector/\" + std::string(helperName), 0) ==\n"
+            "         0;") !=
+        std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "if (resolvesMap ||\n"
             "          context.dispatchResolvers->resolveMapTarget(expr.args.front(),\n"
@@ -1575,7 +1582,8 @@
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "hasImportedDefinitionPath(\"/std/collections/vector/capacity\") &&\n"
-            "      resolveCalleePath(expr).rfind(\"/std/collections/vector/capacity\", 0) == 0 &&\n"
+            "      isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),\n"
+            "                                                   \"capacity\") &&\n"
             "      expr.args.size() == 1 &&\n"
             "      resolved.rfind(\"/std/collections/vector/capacity\", 0) == 0;") !=
         std::string::npos);
@@ -1589,7 +1597,8 @@
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "!(!expr.isMethodCall &&\n"
-            "        resolveCalleePath(expr).rfind(\"/std/collections/vector/capacity\", 0) == 0) &&") !=
+            "        isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),\n"
+            "                                                     \"capacity\")) &&") !=
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "(!shouldBuiltinValidateStdNamespacedVectorCapacityCall &&\n"
@@ -1608,7 +1617,8 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool isStdNamespacedVectorCapacityCall =\n"
             "        !expr.isMethodCall &&\n"
-            "        resolveCalleePath(expr).rfind(\"/std/collections/vector/capacity\", 0) == 0;") !=
+            "        isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),\n"
+            "                                                     \"capacity\");") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool shouldBuiltinValidateStdNamespacedVectorCapacityCall =\n"
