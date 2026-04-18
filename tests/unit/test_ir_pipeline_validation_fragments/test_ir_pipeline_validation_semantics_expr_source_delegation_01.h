@@ -2399,6 +2399,18 @@
             "      isVectorBuiltinName(expr, \"count\") || routesThroughMapCountCallSurface;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool matchesCountMethodSurfaceRoute =\n"
+            "      !(hasNamedArguments(expr.argNames) ||\n"
+            "        isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
+            "            expr.isMethodCall,\n"
+            "            resolveCalleePath(expr),\n"
+            "            \"count\",\n"
+            "            hasImportedDefinitionPath(\"/std/collections/vector/count\")) ||\n"
+            "        expr.args.empty()) &&\n"
+            "      !isArrayNamespacedVectorCountCompatibilityActive &&\n"
+            "      routesThroughCountMethodSurface && matchesCountRouteArgShape;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "bool needsCountMethodResolveOrFallback =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -2705,16 +2717,7 @@
  	            "        context.isArrayNamespacedVectorCountCompatibilityCall(expr)) &&") ==
  	        std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (!(hasNamedArguments(expr.argNames) ||\n"
-            "      isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
-            "          expr.isMethodCall,\n"
-            "          resolveCalleePath(expr),\n"
-            "          \"count\",\n"
-            "          hasImportedDefinitionPath(\"/std/collections/vector/count\")) ||\n"
-            "      expr.args.empty()) &&\n"
-            "    !isArrayNamespacedVectorCountCompatibilityActive &&\n"
-            "    routesThroughCountMethodSurface &&\n"
-            "    matchesCountRouteArgShape) {\n"
+            "if (matchesCountMethodSurfaceRoute) {\n"
             "  handledOut = true;\n"
             "  usedMethodTarget = true;\n"
             "  hasMethodReceiverIndex = true;\n"

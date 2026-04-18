@@ -116,7 +116,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         routesThroughMapCountCallSurface));
   const bool routesThroughCountMethodSurface =
       isVectorBuiltinName(expr, "count") || routesThroughMapCountCallSurface;
-  if (!(hasNamedArguments(expr.argNames) ||
+  const bool matchesCountMethodSurfaceRoute =
+      !(hasNamedArguments(expr.argNames) ||
         isUnimportedStdNamespacedVectorCompatibilityDirectCall(
             expr.isMethodCall,
             resolveCalleePath(expr),
@@ -124,8 +125,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
             hasImportedDefinitionPath("/std/collections/vector/count")) ||
         expr.args.empty()) &&
       !isArrayNamespacedVectorCountCompatibilityActive &&
-      routesThroughCountMethodSurface &&
-      matchesCountRouteArgShape) {
+      routesThroughCountMethodSurface && matchesCountRouteArgShape;
+  if (matchesCountMethodSurfaceRoute) {
     handledOut = true;
     usedMethodTarget = true;
     hasMethodReceiverIndex = true;

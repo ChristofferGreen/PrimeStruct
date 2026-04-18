@@ -140,6 +140,7 @@ Wave D (queue hygiene):
     - Final release gate passes with `./scripts/compile.sh --release`.
   - stop_rule: If shared classifier rewrites destabilize `map`/`soa_vector`, isolate the generic mechanism in this leaf and defer remaining shared deletions to TODO-0409.
   - notes: This leaf should leave a reusable generic path that TODO-0409 can apply to `map` and `soa_vector`.
+  - progress: Completed `TODO-0852` by hoisting the remaining outer count-route gate in `SemanticsValidatorExprCollectionCountCapacity.cpp` behind shared `matchesCountMethodSurfaceRoute`, so the active count path no longer spells that gate inline.
   - progress: Completed `TODO-0851` by hoisting the remaining count-side surface selector in `SemanticsValidatorExprCollectionCountCapacity.cpp` behind shared `routesThroughCountMethodSurface`, so the active count gate no longer spells that route selector inline.
   - progress: Completed `TODO-0850` by hoisting the remaining inline stdlib map-count fallback gate in `SemanticsValidatorExprCollectionCountCapacity.cpp` behind shared `routesThroughStdlibMapCountFallback`, so the count resolver no longer spells that fallback predicate inline.
   - progress: Completed `TODO-0849` by hoisting the remaining inline count-route arg-shape bundle in `SemanticsValidatorExprCollectionCountCapacity.cpp` behind shared `matchesCountRouteArgShape`, so the active count gate now carries one named route-shape check instead of spelling that branch inline.
