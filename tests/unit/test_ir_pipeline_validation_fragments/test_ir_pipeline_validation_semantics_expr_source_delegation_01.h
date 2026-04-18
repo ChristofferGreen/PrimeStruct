@@ -1876,9 +1876,13 @@
             "context.shouldBuiltinValidateStdNamespacedVectorCountCall") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (isStdNamespacedVectorCompatibilityDirectCall(\n"
+            "          expr.isMethodCall, resolveCalleePath(expr), \"count\")) {") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool isStdNamespacedVectorCountCall =\n"
             "      isStdNamespacedVectorCompatibilityDirectCall(\n"
-            "          expr.isMethodCall, resolveCalleePath(expr), \"count\");") !=
+            "          expr.isMethodCall, resolveCalleePath(expr), \"count\");") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
