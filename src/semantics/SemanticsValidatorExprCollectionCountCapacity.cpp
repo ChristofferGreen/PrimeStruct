@@ -157,40 +157,35 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     }
     return finalizeMethodTarget(methodResolved, isBuiltinMethod);
   };
-  const auto tryResolveCollectionMethodFromSurface =
-      [&](bool routesThroughMethodSurface, bool matchesSurfaceRoute,
-          auto &&resolveMethodTarget) -> std::optional<bool> {
-    if (!routesThroughMethodSurface || !matchesSurfaceRoute) {
-      return std::nullopt;
-    }
-    handledOut = true;
-    usedMethodTarget = true;
-    hasMethodReceiverIndex = true;
-    methodReceiverIndex = 0;
-    const Expr &receiver = expr.args.front();
-    bool isBuiltinMethod = false;
-    std::string methodResolved;
-    if (!resolveMethodTarget(receiver, isBuiltinMethod, methodResolved)) {
-      return false;
-    }
-    resolved = methodResolved;
-    resolvedMethod = isBuiltinMethod;
-    return true;
-  };
   const auto tryResolveCollectionMethodFromSurfaceRoutes =
       [&](bool routesThroughMethodSurface,
           bool matchesPrimarySurfaceRoute,
           bool matchesSecondarySurfaceRoute,
           auto &&resolveMethodTarget) -> std::optional<bool> {
+    const auto tryResolveMatchingSurfaceRoute =
+        [&](bool matchesSurfaceRoute) -> std::optional<bool> {
+      if (!routesThroughMethodSurface || !matchesSurfaceRoute) {
+        return std::nullopt;
+      }
+      handledOut = true;
+      usedMethodTarget = true;
+      hasMethodReceiverIndex = true;
+      methodReceiverIndex = 0;
+      const Expr &receiver = expr.args.front();
+      bool isBuiltinMethod = false;
+      std::string methodResolved;
+      if (!resolveMethodTarget(receiver, isBuiltinMethod, methodResolved)) {
+        return false;
+      }
+      resolved = methodResolved;
+      resolvedMethod = isBuiltinMethod;
+      return true;
+    };
     if (std::optional<bool> resolvedMethod =
-            tryResolveCollectionMethodFromSurface(routesThroughMethodSurface,
-                                                 matchesPrimarySurfaceRoute,
-                                                 resolveMethodTarget)) {
+            tryResolveMatchingSurfaceRoute(matchesPrimarySurfaceRoute)) {
       return resolvedMethod;
     }
-    return tryResolveCollectionMethodFromSurface(routesThroughMethodSurface,
-                                                 matchesSecondarySurfaceRoute,
-                                                 resolveMethodTarget);
+    return tryResolveMatchingSurfaceRoute(matchesSecondarySurfaceRoute);
   };
   const auto resolveCountMethodTargetFromReceiver =
       [&](const Expr &receiver, bool &isBuiltinMethod,
