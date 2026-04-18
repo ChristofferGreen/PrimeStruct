@@ -398,6 +398,30 @@
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
             "getRemovedRootedVectorDirectCallDiagnostic(expr)") !=
         std::string::npos);
+  CHECK(semanticsExprDirectCollectionFallbacksSource.find(
+            "auto resolvesExperimentalVectorValueReceiverForBareAccess =") ==
+        std::string::npos);
+  CHECK(semanticsExprDirectCollectionFallbacksSource.find(
+            "std::string experimentalElemType;\n"
+            "    std::string receiverTypeText;\n"
+            "    if (inferQueryExprTypeText(expr.args.front(), params, locals, receiverTypeText)) {\n"
+            "      BindingInfo inferredBinding;\n"
+            "      const std::string normalizedType =\n"
+            "          normalizeBindingTypeName(receiverTypeText);\n"
+            "      std::string base;\n"
+            "      std::string argText;\n"
+            "      if (splitTemplateTypeName(normalizedType, base, argText)) {\n"
+            "        inferredBinding.typeName = normalizeBindingTypeName(base);\n"
+            "        inferredBinding.typeTemplateArg = argText;\n"
+            "      } else {\n"
+            "        inferredBinding.typeName = normalizedType;\n"
+            "        inferredBinding.typeTemplateArg.clear();\n"
+            "      }\n"
+            "      const std::string normalizedBase =\n"
+            "          normalizeBindingTypeName(inferredBinding.typeName);\n"
+            "      if (normalizedBase != \"Reference\" && normalizedBase != \"Pointer\" &&\n"
+            "          extractExperimentalVectorElementType(inferredBinding, experimentalElemType)) {") !=
+        std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "getRemovedRootedVectorDirectCallDiagnostic(expr, \"count\", \"capacity\")") ==
         std::string::npos);

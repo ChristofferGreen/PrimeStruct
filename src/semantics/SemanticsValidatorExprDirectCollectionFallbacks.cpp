@@ -59,13 +59,9 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
         expr.name == "at_unsafe" ||
         resolved == "/std/collections/vector/at_unsafe";
     const std::string helperName = isUnsafeHelper ? "at_unsafe" : "at";
-    auto resolvesExperimentalVectorValueReceiverForBareAccess =
-        [&](const Expr &receiverExpr, std::string &elemTypeOut) -> bool {
-      elemTypeOut.clear();
-      std::string receiverTypeText;
-      if (!inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText)) {
-        return false;
-      }
+    std::string experimentalElemType;
+    std::string receiverTypeText;
+    if (inferQueryExprTypeText(expr.args.front(), params, locals, receiverTypeText)) {
       BindingInfo inferredBinding;
       const std::string normalizedType =
           normalizeBindingTypeName(receiverTypeText);
@@ -80,22 +76,17 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
       }
       const std::string normalizedBase =
           normalizeBindingTypeName(inferredBinding.typeName);
-      if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
-        return false;
-      }
-      return extractExperimentalVectorElementType(inferredBinding, elemTypeOut);
-    };
-    std::string experimentalElemType;
-    if (resolvesExperimentalVectorValueReceiverForBareAccess(
-            expr.args.front(), experimentalElemType)) {
-      if (isBareVectorAccessHelperCall) {
-        rewrittenExprOut = expr;
-        rewrittenExprOut->isMethodCall = true;
-        rewrittenExprOut->name = helperName;
-        rewrittenExprOut->namespacePrefix.clear();
+      if (normalizedBase != "Reference" && normalizedBase != "Pointer" &&
+          extractExperimentalVectorElementType(inferredBinding, experimentalElemType)) {
+        if (isBareVectorAccessHelperCall) {
+          rewrittenExprOut = expr;
+          rewrittenExprOut->isMethodCall = true;
+          rewrittenExprOut->name = helperName;
+          rewrittenExprOut->namespacePrefix.clear();
+          return true;
+        }
         return true;
       }
-      return true;
     }
     std::string builtinVectorElemType;
     const bool resolvesBuiltinVectorReceiver =
