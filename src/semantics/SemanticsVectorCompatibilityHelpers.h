@@ -16,21 +16,6 @@ struct StdNamespacedVectorCompatibilityHelperState {
   bool hasDeclaredHelper = false;
   bool hasImportedHelper = false;
 
-  [[nodiscard]] std::string classifyCountMapTargetDiagnosticMessage(
-      bool mapTargetDetected,
-      bool preferUnknownCallTarget) const {
-    if (!mapTargetDetected) {
-      return "";
-    }
-    if (preferUnknownCallTarget) {
-      return vectorCompatibilityUnknownCallTargetDiagnostic("count");
-    }
-    if (!hasDeclaredHelper || hasImportedHelper) {
-      return vectorCompatibilityRequiresVectorTargetDiagnostic("count");
-    }
-    return "";
-  }
-
   [[nodiscard]] std::string classifyNonVectorCountTargetDiagnosticMessage(
       bool wrapperMapTarget,
       bool mapTargetDetected,
@@ -38,11 +23,13 @@ struct StdNamespacedVectorCompatibilityHelperState {
     if (wrapperMapTarget && !hasDeclaredHelper) {
       return vectorCompatibilityUnknownCallTargetDiagnostic("count");
     }
-    const std::string mapTargetDiagnosticMessage =
-        classifyCountMapTargetDiagnosticMessage(mapTargetDetected,
-                                                preferUnknownCallTarget);
-    if (!mapTargetDiagnosticMessage.empty()) {
-      return mapTargetDiagnosticMessage;
+    if (mapTargetDetected) {
+      if (preferUnknownCallTarget) {
+        return vectorCompatibilityUnknownCallTargetDiagnostic("count");
+      }
+      if (!hasDeclaredHelper || hasImportedHelper) {
+        return vectorCompatibilityRequiresVectorTargetDiagnostic("count");
+      }
     }
     return vectorCompatibilityRequiresVectorTargetDiagnostic("count");
   }

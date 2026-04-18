@@ -1127,9 +1127,6 @@
             "                  resolvesNonVectorCountTarget);") ==
         std::string::npos);
   CHECK(semanticsVectorCompatibilityHelpersSource.find(
-            "[[nodiscard]] std::string classifyCountMapTargetDiagnosticMessage(") !=
-        std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
             "rejectsVectorLikeTargetWithoutVisibleHelper(") ==
         std::string::npos);
   CHECK(semanticsVectorCompatibilityHelpersSource.find(
@@ -1155,6 +1152,20 @@
         std::string::npos);
   CHECK(semanticsVectorCompatibilityHelpersSource.find(
             "classifyVectorLikeCountTargetDiagnosticMessage(") ==
+        std::string::npos);
+  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+            "classifyCountMapTargetDiagnosticMessage(") ==
+        std::string::npos);
+  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+            "if (mapTargetDetected) {\n"
+            "      if (preferUnknownCallTarget) {\n"
+            "        return vectorCompatibilityUnknownCallTargetDiagnostic(\"count\");\n"
+            "      }\n"
+            "      if (!hasDeclaredHelper || hasImportedHelper) {\n"
+            "        return vectorCompatibilityRequiresVectorTargetDiagnostic(\"count\");\n"
+            "      }\n"
+            "    }\n"
+            "    return vectorCompatibilityRequiresVectorTargetDiagnostic(\"count\");") !=
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "if (resolvesMap ||\n"
