@@ -414,9 +414,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                   (void)validateExpr(params, locals, receiver);
                   return false;
                 }
-                if (!isBuiltinMethod &&
+                const bool reusesResolvedCapacityMonomorphizedTarget =
+                    !isBuiltinMethod &&
                     defMap_.find(methodResolved) == defMap_.end() &&
-                    resolved.rfind(methodResolved + "__t", 0) == 0) {
+                    resolved.rfind(methodResolved + "__t", 0) == 0;
+                if (reusesResolvedCapacityMonomorphizedTarget) {
                   methodResolved = resolved;
                 }
                 const bool lacksVisibleCapacityMethodTarget =

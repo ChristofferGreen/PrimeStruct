@@ -4598,9 +4598,11 @@
             "  (void)validateExpr(params, locals, receiver);\n"
             "  return false;\n"
             "}\n"
-            "if (!isBuiltinMethod &&\n"
+            "const bool reusesResolvedCapacityMonomorphizedTarget =\n"
+            "    !isBuiltinMethod &&\n"
             "    defMap_.find(methodResolved) == defMap_.end() &&\n"
-            "    resolved.rfind(methodResolved + \"__t\", 0) == 0) {\n"
+            "    resolved.rfind(methodResolved + \"__t\", 0) == 0;\n"
+            "if (reusesResolvedCapacityMonomorphizedTarget) {\n"
             "  methodResolved = resolved;\n"
             "}\n"
             "if (!isBuiltinMethod &&\n"
@@ -4625,6 +4627,13 @@
             "    return false;\n"
             "}\n"
             "return true;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (!isBuiltinMethod &&\n"
+            "    defMap_.find(methodResolved) == defMap_.end() &&\n"
+            "    resolved.rfind(methodResolved + \"__t\", 0) == 0) {\n"
+            "  methodResolved = resolved;\n"
+            "}\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "  if (isStdNamespacedVectorCompatibilityHelperPath(\n"
