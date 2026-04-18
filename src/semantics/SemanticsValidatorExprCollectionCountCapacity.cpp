@@ -254,10 +254,17 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                         const bool needsCountReceiverTypeFromPointerFallback =
                             typeName.empty();
                         if (needsCountReceiverTypeFromPointerFallback) {
-                          if (isPointerExpr(receiver, params, locals)) {
+                          const bool
+                              resolvesCountReceiverTypeFromPointerExpr =
+                                  isPointerExpr(receiver, params, locals);
+                          const bool
+                              resolvesCountReceiverTypeFromPointerLikeExpr =
+                                  !resolvesCountReceiverTypeFromPointerExpr &&
+                                  isPointerLikeExpr(receiver, params, locals);
+                          if (resolvesCountReceiverTypeFromPointerExpr) {
                             typeName = "Pointer";
-                          } else if (isPointerLikeExpr(receiver, params,
-                                                        locals)) {
+                          } else if (
+                              resolvesCountReceiverTypeFromPointerLikeExpr) {
                             typeName = "Reference";
                           }
                         }
