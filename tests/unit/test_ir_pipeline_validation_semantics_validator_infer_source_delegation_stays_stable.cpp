@@ -510,6 +510,10 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "      stdNamespacedVectorCapacityHelperAvailableForInfer;") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
+            "const bool isInferBuiltinSingleArgCapacityLike =\n"
+            "      isInferBuiltinCapacityLike && expr.args.size() == 1;") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSetupSource.find(
             "const bool shouldBuiltinValidateStdNamespacedVectorCapacityCall =") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
@@ -519,11 +523,15 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "stdNamespacedVectorCapacityHelperAvailableForInfer;") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
-            "isInferBuiltinCapacityLike && expr.args.size() == 1;") !=
+            "isInferBuiltinSingleArgCapacityLike;") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
             "isInferBuiltinCapacityLike &&\n"
             "      !expr.args.empty() &&") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSetupSource.find(
+            "isDirectBuiltinCountCapacityCapacityCall &&\n"
+            "      isInferBuiltinSingleArgCapacityLike;") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
             "(!callsStdNamespacedVectorCapacityHelper ||\n"
@@ -532,6 +540,9 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
             "!expr.isMethodCall && isVectorBuiltinName(expr, \"capacity\") &&\n"
             "      stdNamespacedVectorCapacityHelperAvailableForInfer") ==
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSetupSource.find(
+            "isDirectBuiltinCountCapacityCapacityCall && expr.args.size() == 1;") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
             "(!(!expr.isMethodCall &&\n"
