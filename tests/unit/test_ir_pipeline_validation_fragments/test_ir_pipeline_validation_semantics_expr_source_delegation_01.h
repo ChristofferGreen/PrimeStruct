@@ -1407,6 +1407,31 @@
             "       hasImportedDefinitionPath(\"/std/collections/vector/count\"));") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "    auto hasVisibleStdlibMapCountDefinition = [&]() {\n"
+            "      return hasDeclaredDefinitionPath(\"/std/collections/map/count\") ||\n"
+            "             hasImportedDefinitionPath(\"/std/collections/map/count\");\n"
+            "    };") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "!hasDeclaredDefinitionPath(\"/std/collections/map/count\") &&\n"
+            "        !hasDeclaredDefinitionPath(\"/map/count\") &&\n"
+            "        !(hasDeclaredDefinitionPath(\"/std/collections/map/count\") ||\n"
+            "          hasImportedDefinitionPath(\"/std/collections/map/count\")) &&") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "methodResolved == \"/map/count\" &&\n"
+            "        !hasImportedDefinitionPath(\"/count\") &&\n"
+            "        !hasDeclaredDefinitionPath(\"/count\") &&\n"
+            "        !(hasDeclaredDefinitionPath(\"/std/collections/map/count\") ||\n"
+            "          hasImportedDefinitionPath(\"/std/collections/map/count\")))") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (isBuiltinMethod && methodResolved == \"/std/collections/map/count\" &&\n"
+            "        !(hasDeclaredDefinitionPath(\"/std/collections/map/count\") ||\n"
+            "          hasImportedDefinitionPath(\"/std/collections/map/count\")) &&\n"
+            "        !context.shouldBuiltinValidateBareMapCountCall) {") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (resolvesStdNamespacedVectorCountMapTarget &&\n"
             "      (defMap_.find(\"/std/collections/vector/count\") == defMap_.end() ||\n"
             "       hasImportedDefinitionPath(\"/std/collections/vector/count\")))") ==

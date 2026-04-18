@@ -10,6 +10,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 17, 2026)**
 
 **Group 14 - SoA bring-up and end-state cleanup**
+- ✓ TODO-0702: Remove map-count visibility helper. Completed: the trivial `hasVisibleStdlibMapCountDefinition` helper was deleted from `SemanticsValidatorExprCollectionCountCapacity.cpp`, and focused expr source-lock coverage now keeps the direct declared/imported visibility checks present while the old helper stays absent.
 - ✓ TODO-0701: Remove count body-argument wrapper. Completed: the `resolveBodyArgumentCountTarget` wrapper was deleted from `SemanticsValidatorExprCollectionCountCapacity.cpp`, and focused expr source-lock coverage now keeps the inline count body-argument fallback present while the old wrapper stays absent.
 - ✓ TODO-0700: Remove count method-target wrapper. Completed: the one-use `resolveCountMethodTarget` wrapper was deleted from `SemanticsValidatorExprCollectionCountCapacity.cpp`, and focused expr source-lock coverage now keeps the inline count fallback chain present while the old wrapper stays absent.
 - ✓ TODO-0699: Remove collection count diagnostic local. Completed: the one-use collection-side `stdNamespacedVectorCountDiagnosticMessage` local was deleted from `SemanticsValidatorExprCollectionCountCapacity.cpp`, and focused expr source-lock coverage now keeps the direct in-branch shared selector form present while the old local stays absent.
