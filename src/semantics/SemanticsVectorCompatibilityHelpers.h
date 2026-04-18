@@ -24,16 +24,6 @@ struct StdNamespacedVectorCompatibilityHelperState {
     return !hasDeclaredHelper && !hasImportedHelper;
   }
 
-  [[nodiscard]] bool rejectsVectorLikeTargetWithoutVisibleHelper(
-      bool vectorLikeTarget) const {
-    return vectorLikeTarget && lacksVisibleHelper();
-  }
-
-  [[nodiscard]] bool rejectsWrapperMapTargetWithoutDeclaredHelper(
-      bool wrapperMapTarget) const {
-    return wrapperMapTarget && lacksDeclaredHelper();
-  }
-
   [[nodiscard]] std::string classifyCountMapTargetDiagnosticMessage(
       bool mapTargetDetected,
       bool preferUnknownCallTarget) const {
@@ -53,7 +43,7 @@ struct StdNamespacedVectorCompatibilityHelperState {
       bool wrapperMapTarget,
       bool mapTargetDetected,
       bool preferUnknownCallTarget) const {
-    if (rejectsWrapperMapTargetWithoutDeclaredHelper(wrapperMapTarget)) {
+    if (wrapperMapTarget && lacksDeclaredHelper()) {
       return vectorCompatibilityUnknownCallTargetDiagnostic("count");
     }
     const std::string mapTargetDiagnosticMessage =
@@ -67,7 +57,7 @@ struct StdNamespacedVectorCompatibilityHelperState {
 
   [[nodiscard]] std::string classifyVectorLikeCountTargetDiagnosticMessage(
       bool vectorLikeTarget) const {
-    if (rejectsVectorLikeTargetWithoutVisibleHelper(vectorLikeTarget)) {
+    if (vectorLikeTarget && lacksVisibleHelper()) {
       return vectorCompatibilityUnknownCallTargetDiagnostic("count");
     }
     return "";

@@ -1130,6 +1130,12 @@
             "[[nodiscard]] std::string classifyCountMapTargetDiagnosticMessage(") !=
         std::string::npos);
   CHECK(semanticsVectorCompatibilityHelpersSource.find(
+            "rejectsVectorLikeTargetWithoutVisibleHelper(") ==
+        std::string::npos);
+  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+            "rejectsWrapperMapTargetWithoutDeclaredHelper(") ==
+        std::string::npos);
+  CHECK(semanticsVectorCompatibilityHelpersSource.find(
             "enum class VectorCompatibilityCountMapTargetDiagnostic") ==
         std::string::npos);
   CHECK(semanticsVectorCompatibilityHelpersSource.find(
