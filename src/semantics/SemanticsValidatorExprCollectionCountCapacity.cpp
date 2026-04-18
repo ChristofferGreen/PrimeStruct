@@ -333,6 +333,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
               resolveCalleePath(expr),
               "capacity",
               hasImportedDefinitionPath("/std/collections/vector/capacity"));
+  const bool capacityMethodSurfaceUsesNonVectorBuiltinName =
+      !isVectorBuiltinName(expr, "capacity");
   const bool matchesCapacityMethodSurfaceRouteShape =
       ((!(expr.args.empty() || expr.args.size() == 1 ||
           defMap_.find(resolved) == defMap_.end()) &&
@@ -342,7 +344,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
          context.isNamespacedVectorCapacityCall)));
   if (!(capacityMethodSurfaceHasNamedArguments ||
         routesThroughUnimportedStdNamespacedVectorCapacityCompatibilityDirectCall ||
-        !isVectorBuiltinName(expr, "capacity")) &&
+        capacityMethodSurfaceUsesNonVectorBuiltinName) &&
       matchesCapacityMethodSurfaceRouteShape) {
     handledOut = true;
     usedMethodTarget = true;
