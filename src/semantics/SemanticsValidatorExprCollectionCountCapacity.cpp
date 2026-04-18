@@ -89,6 +89,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                                 stdNamespacedVectorCountDiagnosticMessage);
     }
   }
+  const bool routesThroughMapCountCallSurface =
+      context.isStdNamespacedMapCountCall ||
+      context.isNamespacedMapCountCall ||
+      context.isUnnamespacedMapCountFallbackCall ||
+      context.isResolvedMapCountCall;
   if (!(hasNamedArguments(expr.argNames) ||
         isUnimportedStdNamespacedVectorCompatibilityDirectCall(
             expr.isMethodCall,
@@ -99,10 +104,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
         context.isArrayNamespacedVectorCountCompatibilityCall(expr)) &&
       (isVectorBuiltinName(expr, "count") ||
-       context.isStdNamespacedMapCountCall ||
-       context.isNamespacedMapCountCall ||
-       context.isUnnamespacedMapCountFallbackCall ||
-       context.isResolvedMapCountCall) &&
+       routesThroughMapCountCallSurface) &&
       ((expr.args.size() == 1 &&
         ((defMap_.find(resolved) == defMap_.end() &&
           !context.isStdNamespacedMapCountCall) ||
@@ -114,16 +116,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           !hasDefinitionPath(resolved) &&
           !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
             context.isArrayNamespacedVectorCountCompatibilityCall(expr))) ||
-         context.isStdNamespacedMapCountCall ||
-         context.isNamespacedMapCountCall ||
-         context.isUnnamespacedMapCountFallbackCall ||
-         context.isResolvedMapCountCall)) ||
+         routesThroughMapCountCallSurface)) ||
        (expr.args.size() != 1 &&
         (defMap_.find(resolved) != defMap_.end() ||
-         context.isStdNamespacedMapCountCall ||
-         context.isNamespacedMapCountCall ||
-         context.isUnnamespacedMapCountFallbackCall ||
-         context.isResolvedMapCountCall)))) {
+         routesThroughMapCountCallSurface)))) {
     handledOut = true;
     usedMethodTarget = true;
     hasMethodReceiverIndex = true;
