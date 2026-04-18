@@ -2002,11 +2002,23 @@
             "                       !hasResolvableDefinitionPath(\"/std/collections/vector/count\")") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool callsUnimportedStdNamespacedVectorCountHelper =\n"
+            "      isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
+            "          expr.isMethodCall,\n"
+            "          resolveCalleePath(expr),\n"
+            "          \"count\",\n"
+            "          hasImportedDefinitionPath(\"/std/collections/vector/count\"));") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
             "            expr.isMethodCall,\n"
             "            resolveCalleePath(expr),\n"
             "            \"count\",\n"
-            "            hasImportedDefinitionPath(\"/std/collections/vector/count\")) ||") !=
+            "            hasImportedDefinitionPath(\"/std/collections/vector/count\")) ||") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "hasNamedArguments(expr.argNames) ||\n"
+            "        callsUnimportedStdNamespacedVectorCountHelper || expr.args.empty()) {") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "(context.isNamespacedVectorCountCall &&\n"
