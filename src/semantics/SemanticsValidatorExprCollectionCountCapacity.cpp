@@ -237,11 +237,13 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     methodResolved == bareMapCountTargetPath;
                 const bool targetsStdlibMapCountMethod =
                     methodResolved == stdlibMapCountTargetPath;
-                const bool rejectsDirectBareMapCountTarget =
-                    isDirectNamedCountReceiverCall &&
+                const bool rejectsDirectBareMapCountValidation =
                     targetsBareMapCountMethod &&
                     lacksVisibleBareCountDefinition &&
                     lacksVisibleStdlibMapCountDefinition;
+                const bool rejectsDirectBareMapCountTarget =
+                    isDirectNamedCountReceiverCall &&
+                    rejectsDirectBareMapCountValidation;
                 const bool targetsBuiltinStdlibMapCountMethod =
                     isBuiltinMethod && targetsStdlibMapCountMethod;
                 const bool rejectsBuiltinStdlibMapCountValidation =
