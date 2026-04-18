@@ -183,14 +183,14 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   }();
   const std::string canonicalVectorMethodTarget =
       "/std/collections/vector/" + expr.name;
+  const bool hasVisibleCanonicalVectorMethodTarget =
+      hasImportedDefinitionPath(canonicalVectorMethodTarget) ||
+      defMap_.count(canonicalVectorMethodTarget) > 0;
   std::string vectorMethodTarget;
   auto preferVisibleCanonicalVectorMethodTarget =
       [&](const std::string &methodTarget) {
-        if (!isExperimentalVectorCompatibilityMethodTarget(methodTarget)) {
-          return methodTarget;
-        }
-        if (hasImportedDefinitionPath(canonicalVectorMethodTarget) ||
-            defMap_.count(canonicalVectorMethodTarget) > 0) {
+        if (isExperimentalVectorCompatibilityMethodTarget(methodTarget) &&
+            hasVisibleCanonicalVectorMethodTarget) {
           return canonicalVectorMethodTarget;
         }
         return methodTarget;
