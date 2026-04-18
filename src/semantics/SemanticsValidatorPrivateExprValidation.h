@@ -526,7 +526,6 @@
     bool isNamespacedMapCountCall = false;
     bool isUnnamespacedMapCountFallbackCall = false;
     bool isResolvedMapCountCall = false;
-    bool prefersCanonicalVectorCountAliasDefinition = false;
     bool isStdNamespacedVectorCapacityCall = false;
     bool shouldBuiltinValidateStdNamespacedVectorCapacityCall = false;
     bool isNamespacedVectorCapacityCall = false;
@@ -604,7 +603,6 @@
     bool isNamespacedMapCountCall = false;
     bool isUnnamespacedMapCountFallbackCall = false;
     bool isResolvedMapCountCall = false;
-    bool prefersCanonicalVectorCountAliasDefinition = false;
     bool isStdNamespacedVectorCapacityCall = false;
     bool shouldBuiltinValidateStdNamespacedVectorCapacityCall = false;
     bool isNamespacedVectorCapacityCall = false;

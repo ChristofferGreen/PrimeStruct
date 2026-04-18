@@ -1267,6 +1267,9 @@
             ".hasStdNamespacedVectorCountAliasDefinition =") ==
         std::string::npos);
   CHECK(semanticsExprSource.find(
+            ".prefersCanonicalVectorCountAliasDefinition =") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
             "validateExprDirectCollectionFallbacks(\n"
             "            params,\n"
             "            locals,\n"
