@@ -1481,7 +1481,7 @@
             "        return false;\n"
             "      }\n"
             "      return true;\n"
-            "    };") !=
+            "    };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "bool needsCountMethodResolveOrFallback = true;\n"
@@ -1517,14 +1517,32 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (needsCountMethodResolveOrFallback &&\n"
             "        !resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
-            "                             \"count\", methodResolved, isBuiltinMethod) &&\n"
-            "        !tryAssignCountMethodFallbackAfterResolveMiss()) {\n"
-            "      return false;\n"
+            "                             \"count\", methodResolved, isBuiltinMethod)) {\n"
+            "      if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
+            "          expr.args.empty()) {\n"
+            "        (void)validateExpr(params, locals, expr.args.front());\n"
+            "        return false;\n"
+            "      }\n"
+            "      if (resolvesMapCountMethodTarget) {\n"
+            "        methodResolved = \"/std/collections/map/count\";\n"
+            "        error_.clear();\n"
+            "        isBuiltinMethod = false;\n"
+            "      } else if (!tryAssignPointerLikeCountMethodTarget()) {\n"
+            "        return false;\n"
+            "      }\n"
             "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (needsCountMethodResolveOrFallback &&\n"
             "        !tryResolveCountMethod() &&\n"
+            "        !tryAssignCountMethodFallbackAfterResolveMiss()) {\n"
+            "      return false;\n"
+            "    }") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (needsCountMethodResolveOrFallback &&\n"
+            "        !resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
+            "                             \"count\", methodResolved, isBuiltinMethod) &&\n"
             "        !tryAssignCountMethodFallbackAfterResolveMiss()) {\n"
             "      return false;\n"
             "    }") ==
