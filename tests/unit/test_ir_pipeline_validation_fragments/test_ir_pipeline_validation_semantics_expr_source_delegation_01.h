@@ -1894,6 +1894,20 @@
             "      routesThroughNamespacedCountOrCapacityHelperSurface;\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto resolvesNamedArgumentCountOrCapacityHelperTarget =\n"
+            "      [&](std::string &resolvedMethodTarget, bool &resolvedBuiltinMethod) {\n"
+            "        return resolveMethodTarget(params,\n"
+            "                                   locals,\n"
+            "                                   expr.namespacePrefix,\n"
+            "                                   expr.args.front(),\n"
+            "                                   context.namespacedHelper,\n"
+            "                                   resolvedMethodTarget,\n"
+            "                                   resolvedBuiltinMethod) &&\n"
+            "               !resolvedBuiltinMethod &&\n"
+            "               defMap_.find(resolvedMethodTarget) != defMap_.end();\n"
+            "      };\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto tryRewriteBareNamedVectorHelperCall =\n"
             "      [&](const char *helperName) {\n"
             "        return context.tryRewriteBareVectorHelperCall != nullptr &&\n"
@@ -1952,20 +1966,6 @@
             "      };\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "    const auto resolvesNamedArgumentCountOrCapacityHelperTarget =\n"
-            "        [&](std::string &resolvedMethodTarget, bool &resolvedBuiltinMethod) {\n"
-            "          return resolveMethodTarget(params,\n"
-            "                                     locals,\n"
-            "                                     expr.namespacePrefix,\n"
-            "                                     expr.args.front(),\n"
-            "                                     context.namespacedHelper,\n"
-            "                                     resolvedMethodTarget,\n"
-            "                                     resolvedBuiltinMethod) &&\n"
-            "                 !resolvedBuiltinMethod &&\n"
-            "                 defMap_.find(resolvedMethodTarget) != defMap_.end();\n"
-            "        };\n") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "      if (helperName == \"count\" || helperName == \"capacity\") {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -2001,6 +2001,10 @@
             "    handledOut = true;\n"
             "    bool isBuiltinMethod = false;\n"
             "    std::string methodResolved;\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "        const auto resolvesNamedArgumentCountOrCapacityHelperTarget =\n"
+            "            [&](std::string &resolvedMethodTarget, bool &resolvedBuiltinMethod) {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "    if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"

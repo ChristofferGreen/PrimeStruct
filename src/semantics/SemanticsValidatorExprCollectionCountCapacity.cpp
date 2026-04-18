@@ -121,6 +121,18 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       expr.args.size() == 1 &&
       defMap_.find(resolved) == defMap_.end() &&
       routesThroughNamespacedCountOrCapacityHelperSurface;
+  const auto resolvesNamedArgumentCountOrCapacityHelperTarget =
+      [&](std::string &resolvedMethodTarget, bool &resolvedBuiltinMethod) {
+        return resolveMethodTarget(params,
+                                   locals,
+                                   expr.namespacePrefix,
+                                   expr.args.front(),
+                                   context.namespacedHelper,
+                                   resolvedMethodTarget,
+                                   resolvedBuiltinMethod) &&
+               !resolvedBuiltinMethod &&
+               defMap_.find(resolvedMethodTarget) != defMap_.end();
+      };
   if (isResolvedCountOrCapacityHelperInstantiation()) {
     return true;
   }
@@ -133,18 +145,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         handledOut = true;
         bool isBuiltinMethod = false;
         std::string methodResolved;
-        const auto resolvesNamedArgumentCountOrCapacityHelperTarget =
-            [&](std::string &resolvedMethodTarget, bool &resolvedBuiltinMethod) {
-              return resolveMethodTarget(params,
-                                         locals,
-                                         expr.namespacePrefix,
-                                         expr.args.front(),
-                                         context.namespacedHelper,
-                                         resolvedMethodTarget,
-                                         resolvedBuiltinMethod) &&
-                     !resolvedBuiltinMethod &&
-                     defMap_.find(resolvedMethodTarget) != defMap_.end();
-            };
         if (resolvesNamedArgumentCountOrCapacityHelperTarget(methodResolved,
                                                              isBuiltinMethod)) {
           usedMethodTarget = true;
