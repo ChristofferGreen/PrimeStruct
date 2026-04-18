@@ -222,6 +222,13 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       }
       return true;
     };
+    const auto tryResolveCountMethodOrFallback = [&]() -> bool {
+      if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
+                              "count", methodResolved, isBuiltinMethod)) {
+        return true;
+      }
+      return tryAssignCountMethodFallbackTarget();
+    };
     if (context.isUnnamespacedMapCountFallbackCall &&
         !hasDeclaredDefinitionPath("/map/count") &&
         lacksVisibleStdlibMapCountDefinition &&
@@ -232,18 +239,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       methodResolved = preferVectorStdlibHelperPath(methodResolved);
       if (hasResolvableDefinitionPath(methodResolved)) {
         isBuiltinMethod = false;
-      } else if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
-                                     "count", methodResolved, isBuiltinMethod)) {
-      } else {
-        if (!tryAssignCountMethodFallbackTarget()) {
-          return false;
-        }
-      }
-    } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
-                                    "count", methodResolved, isBuiltinMethod)) {
-      if (!tryAssignCountMethodFallbackTarget()) {
+      } else if (!tryResolveCountMethodOrFallback()) {
         return false;
       }
+    } else if (!tryResolveCountMethodOrFallback()) {
+        return false;
     }
     if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&
         resolved.rfind(methodResolved + "__t", 0) == 0) {

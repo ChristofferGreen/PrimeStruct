@@ -1451,6 +1451,11 @@
             "          expr.args.empty()) {") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto tryResolveCountMethodOrFallback = [&]() -> bool {\n"
+            "      if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
+            "                              \"count\", methodResolved, isBuiltinMethod)) {") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (context.isUnnamespacedMapCountFallbackCall &&\n"
             "        !hasDeclaredDefinitionPath(\"/map/count\") &&\n"
             "        lacksVisibleStdlibMapCountDefinition &&\n"
@@ -1469,18 +1474,13 @@
             "    };") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "} else {\n"
-            "        if (!tryAssignCountMethodFallbackTarget()) {\n"
-            "          return false;\n"
-            "        }\n"
+            "} else if (!tryResolveCountMethodOrFallback()) {\n"
+            "        return false;\n"
             "      }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "} else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
-            "                                    \"count\", methodResolved, isBuiltinMethod)) {\n"
-            "      if (!tryAssignCountMethodFallbackTarget()) {\n"
-            "        return false;\n"
-            "      }\n"
+            "} else if (!tryResolveCountMethodOrFallback()) {\n"
+            "      return false;\n"
             "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -1517,6 +1517,16 @@
             "        return false;\n"
             "      }\n"
             "      if (resolvesMapCountMethodTarget) {") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "} else if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
+            "                                     \"count\", methodResolved, isBuiltinMethod)) {\n"
+            "      } else {") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "} else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
+            "                                    \"count\", methodResolved, isBuiltinMethod)) {\n"
+            "      if (!tryAssignCountMethodFallbackTarget()) {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else {\n"
