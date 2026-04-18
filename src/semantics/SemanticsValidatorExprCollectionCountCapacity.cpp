@@ -360,12 +360,17 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       }
       return tryResolveCapacityMethodWithValidation();
     };
-    if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), "capacity",
-                                        methodResolved)) {
+    const auto tryResolveCapacityMethodAfterHelperHit = [&]() -> bool {
       methodResolved = preferVectorStdlibHelperPath(methodResolved);
       if (hasResolvableDefinitionPath(methodResolved)) {
         isBuiltinMethod = false;
-      } else if (!tryResolveCapacityMethodAfterHelperMiss()) {
+        return true;
+      }
+      return tryResolveCapacityMethodAfterHelperMiss();
+    };
+    if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), "capacity",
+                                        methodResolved)) {
+      if (!tryResolveCapacityMethodAfterHelperHit()) {
         return false;
       }
     } else if (!tryResolveCapacityMethodAfterHelperMiss()) {

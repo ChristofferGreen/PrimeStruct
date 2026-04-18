@@ -3020,6 +3020,24 @@
             "      return tryResolveCapacityMethodWithValidation();\n"
             "    };") != std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto tryResolveCapacityMethodAfterHelperHit = [&]() -> bool {\n"
+            "      methodResolved = preferVectorStdlibHelperPath(methodResolved);\n"
+            "      if (hasResolvableDefinitionPath(methodResolved)) {\n"
+            "        isBuiltinMethod = false;\n"
+            "        return true;\n"
+            "      }\n"
+            "      return tryResolveCapacityMethodAfterHelperMiss();\n"
+            "    };") != std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), \"capacity\",\n"
+            "                                        methodResolved)) {\n"
+            "      if (!tryResolveCapacityMethodAfterHelperHit()) {\n"
+            "        return false;\n"
+            "      }\n"
+            "    } else if (!tryResolveCapacityMethodAfterHelperMiss()) {\n"
+            "      return false;\n"
+            "    }") != std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), \"capacity\",\n"
             "                                        methodResolved)) {\n"
             "      methodResolved = preferVectorStdlibHelperPath(methodResolved);\n"
@@ -3030,7 +3048,7 @@
             "      }\n"
             "    } else if (!tryResolveCapacityMethodAfterHelperMiss()) {\n"
             "      return false;\n"
-            "    }") != std::string::npos);
+            "    }") == std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "      } else if (routesThroughStdNamespacedVectorCapacityHelper) {\n"
             "        assignStdNamespacedVectorCapacityMethodTarget();\n"
@@ -3064,6 +3082,15 @@
             "      (void)validateExpr(params, locals, expr.args.front());\n"
             "      return false;\n"
             "    }") == std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto tryResolveCapacityMethodAfterHelperHit = [&]() -> bool {\n"
+            "      if (hasResolvableDefinitionPath(preferVectorStdlibHelperPath(methodResolved))) {\n"
+            "        methodResolved = preferVectorStdlibHelperPath(methodResolved);\n"
+            "        isBuiltinMethod = false;\n"
+            "        return true;\n"
+            "      }\n"
+            "      return tryResolveCapacityMethodAfterHelperMiss();\n"
+            "    };") == std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "else if (isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),\n"
             "                                                            \"capacity\")) {") ==
