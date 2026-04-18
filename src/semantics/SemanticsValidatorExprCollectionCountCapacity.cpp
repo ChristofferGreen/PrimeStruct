@@ -217,9 +217,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                         resolveMethodTarget(
                             params, locals, expr.namespacePrefix, receiver,
                             "count", methodResolved, isBuiltinMethod);
-                    if (resolvedCountMethodTargetDirectly) {
-                      // Method target resolved directly.
-                    } else {
+                    const bool failsCountMethodTargetResolution =
+                        !resolvedCountMethodTargetDirectly;
+                    if (failsCountMethodTargetResolution) {
                       if (countResolveMissLacksBodyArguments) {
                         (void)validateExpr(params, locals, receiver);
                         return false;

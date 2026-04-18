@@ -1790,9 +1790,9 @@
             "            resolveMethodTarget(\n"
             "                params, locals, expr.namespacePrefix, receiver, \"count\",\n"
             "                methodResolved, isBuiltinMethod);\n"
-            "        if (resolvedCountMethodTargetDirectly) {\n"
-            "          // Method target resolved directly.\n"
-            "        } else {\n"
+            "        const bool failsCountMethodTargetResolution =\n"
+            "            !resolvedCountMethodTargetDirectly;\n"
+            "        if (failsCountMethodTargetResolution) {\n"
             "          if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
             "              expr.args.empty()) {\n"
             "            (void)validateExpr(params, locals, receiver);\n"
@@ -1859,6 +1859,11 @@
             "        }\n"
             "      }\n"
             "    }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "        if (resolvedCountMethodTargetDirectly) {\n"
+            "          // Method target resolved directly.\n"
+            "        } else {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "      if (hasVisibleCountHelperMethodTarget) {\n"
