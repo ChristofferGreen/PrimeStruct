@@ -537,7 +537,7 @@
   CHECK(semanticsExprMethodResolutionSource.find(
             "const bool hasVisibleCanonicalVectorMethodTarget =\n"
             "      hasImportedDefinitionPath(canonicalVectorMethodTarget) ||\n"
-            "      defMap_.count(canonicalVectorMethodTarget) > 0;") !=
+            "      defMap_.count(canonicalVectorMethodTarget) > 0;") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "auto preferVisibleCanonicalVectorMethodTarget =") ==
@@ -562,7 +562,8 @@
             "if (!hasImportedDefinitionPath(vectorMethodTarget) &&\n"
             "        defMap_.count(vectorMethodTarget) == 0 &&\n"
             "        vectorMethodTarget.rfind(\"/std/collections/experimental_vector/\", 0) == 0 &&\n"
-            "        hasVisibleCanonicalVectorMethodTarget) {\n"
+            "        (hasImportedDefinitionPath(canonicalVectorMethodTarget) ||\n"
+            "         defMap_.count(canonicalVectorMethodTarget) > 0)) {\n"
             "      vectorMethodTarget = canonicalVectorMethodTarget;") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
@@ -574,7 +575,8 @@
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (!isBuiltinMethod && isVectorCompatibilityMethodName(expr.name) &&\n"
             "      resolved.rfind(\"/std/collections/experimental_vector/Vector__\", 0) == 0 &&\n"
-            "      hasVisibleCanonicalVectorMethodTarget) {\n"
+            "      (hasImportedDefinitionPath(canonicalVectorMethodTarget) ||\n"
+            "       defMap_.count(canonicalVectorMethodTarget) > 0)) {\n"
             "    resolved = preferVectorStdlibHelperPath(canonicalVectorMethodTarget);") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
