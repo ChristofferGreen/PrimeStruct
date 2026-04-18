@@ -274,17 +274,23 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       }
     }
     normalizeResolvedCollectionMethodTarget(methodResolved, isBuiltinMethod);
-    if ((!expr.isMethodCall &&
-         expr.args.size() == 1 &&
-         expr.args.front().kind == Expr::Kind::Name &&
-         methodResolved == "/map/count" &&
-         !hasImportedDefinitionPath("/count") &&
-         !hasDeclaredDefinitionPath("/count") &&
-         lacksVisibleStdlibMapCountDefinition) ||
-        (isBuiltinMethod &&
-         methodResolved == "/std/collections/map/count" &&
-         lacksVisibleStdlibMapCountDefinition &&
-         !context.shouldBuiltinValidateBareMapCountCall)) {
+    const bool rejectsUnimportedBareMapCountCallTarget =
+        !expr.isMethodCall &&
+        expr.args.size() == 1 &&
+        expr.args.front().kind == Expr::Kind::Name &&
+        methodResolved == "/map/count" &&
+        !hasImportedDefinitionPath("/count") &&
+        !hasDeclaredDefinitionPath("/count") &&
+        lacksVisibleStdlibMapCountDefinition;
+    const bool rejectsBuiltinStdlibMapCountCallTarget =
+        isBuiltinMethod &&
+        methodResolved == "/std/collections/map/count" &&
+        lacksVisibleStdlibMapCountDefinition &&
+        !context.shouldBuiltinValidateBareMapCountCall;
+    const bool rejectsResolvedMapCountCallTarget =
+        rejectsUnimportedBareMapCountCallTarget ||
+        rejectsBuiltinStdlibMapCountCallTarget;
+    if (rejectsResolvedMapCountCallTarget) {
       return failCollectionCountCapacityDiagnostic("unknown call target: /std/collections/map/count");
     }
     return finalizeResolvedCollectionMethodTargetAfterRemovedRootedVectorCheck(
