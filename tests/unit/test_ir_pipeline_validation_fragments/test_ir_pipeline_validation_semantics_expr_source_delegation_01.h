@@ -1413,7 +1413,8 @@
             "    if (!isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {\n"
             "      return false;\n"
             "    }\n"
-            "    return failExprDiagnostic(expr, \"unknown method: \" + methodResolved);\n"
+            "    (void)failExprDiagnostic(expr, \"unknown method: \" + methodResolved);\n"
+            "    return true;\n"
             "  };") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -2534,7 +2535,8 @@
             "    if (removedRootedVectorDirectCallDiagnostic.empty()) {\n"
             "      return false;\n"
             "    }\n"
-            "    return failExprDiagnostic(expr, removedRootedVectorDirectCallDiagnostic);\n"
+            "    (void)failExprDiagnostic(expr, removedRootedVectorDirectCallDiagnostic);\n"
+            "    return true;\n"
             "  };") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(

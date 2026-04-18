@@ -95,7 +95,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     if (removedRootedVectorDirectCallDiagnostic.empty()) {
       return false;
     }
-    return failExprDiagnostic(expr, removedRootedVectorDirectCallDiagnostic);
+    (void)failExprDiagnostic(expr, removedRootedVectorDirectCallDiagnostic);
+    return true;
   };
   const auto normalizeInstantiatedCollectionMethodTarget =
       [&](std::string &methodResolved, bool isBuiltinMethod) {
@@ -114,7 +115,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     if (!isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {
       return false;
     }
-    return failExprDiagnostic(expr, "unknown method: " + methodResolved);
+    (void)failExprDiagnostic(expr, "unknown method: " + methodResolved);
+    return true;
   };
   const auto preferVisibleVectorHelperMethodTarget =
       [&](std::string &methodResolved, bool &isBuiltinMethod) {
