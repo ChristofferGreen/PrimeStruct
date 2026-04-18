@@ -109,10 +109,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       !isArrayNamespacedVectorCountCompatibilityActive;
   const bool hasResolvedCountDefinitionTarget =
       defMap_.find(resolved) != defMap_.end();
+  const bool allowsUnresolvedSingleArgCountRoute =
+      !hasResolvedCountDefinitionTarget &&
+      !context.isStdNamespacedMapCountCall;
   const bool matchesSingleArgCountRouteShape =
       isSingleArgCountCall &&
-      ((!hasResolvedCountDefinitionTarget &&
-        !context.isStdNamespacedMapCountCall) ||
+      (allowsUnresolvedSingleArgCountRoute ||
        routesThroughNamespacedVectorCountFallback ||
        routesThroughMapCountCallSurface);
   const bool matchesMultiArgCountRouteShape =

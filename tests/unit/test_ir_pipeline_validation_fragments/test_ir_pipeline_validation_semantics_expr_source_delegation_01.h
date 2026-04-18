@@ -2392,10 +2392,14 @@
             "      defMap_.find(resolved) != defMap_.end();") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool allowsUnresolvedSingleArgCountRoute =\n"
+            "      !hasResolvedCountDefinitionTarget &&\n"
+            "      !context.isStdNamespacedMapCountCall;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool matchesSingleArgCountRouteShape =\n"
             "      isSingleArgCountCall &&\n"
-            "      ((!hasResolvedCountDefinitionTarget &&\n"
-            "        !context.isStdNamespacedMapCountCall) ||\n"
+            "      (allowsUnresolvedSingleArgCountRoute ||\n"
             "       routesThroughNamespacedVectorCountFallback ||\n"
             "       routesThroughMapCountCallSurface);") !=
         std::string::npos);
@@ -2839,12 +2843,20 @@
             "const bool matchesCountRouteArgShape =\n"
             "      (expr.args.size() == 1 &&\n"
             "       ((!hasResolvedCountDefinitionTarget &&\n"
-            "         !context.isStdNamespacedMapCountCall) ||\n"
+             "         !context.isStdNamespacedMapCountCall) ||\n"
             "        routesThroughNamespacedVectorCountFallback ||\n"
             "        routesThroughMapCountCallSurface)) ||\n"
             "      (expr.args.size() != 1 &&\n"
             "       (hasResolvedCountDefinitionTarget ||\n"
             "        routesThroughMapCountCallSurface));") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool matchesSingleArgCountRouteShape =\n"
+            "      isSingleArgCountCall &&\n"
+            "      ((!hasResolvedCountDefinitionTarget &&\n"
+            "        !context.isStdNamespacedMapCountCall) ||\n"
+            "       routesThroughNamespacedVectorCountFallback ||\n"
+            "       routesThroughMapCountCallSurface);") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (std::optional<bool> resolvedCountMethod =\n"
