@@ -338,25 +338,26 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     methodReceiverIndex = 0;
     bool isBuiltinMethod = false;
     std::string methodResolved;
-    const auto resolveCapacityMethodTarget = [&]() -> bool {
-      if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), "capacity",
-                                          methodResolved)) {
-        methodResolved = preferVectorStdlibHelperPath(methodResolved);
-        if (hasResolvableDefinitionPath(methodResolved)) {
-          isBuiltinMethod = false;
-          return true;
-        }
-      }
-      if (isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
-                                                       "capacity")) {
+    if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), "capacity",
+                                        methodResolved)) {
+      methodResolved = preferVectorStdlibHelperPath(methodResolved);
+      if (hasResolvableDefinitionPath(methodResolved)) {
+        isBuiltinMethod = false;
+      } else if (isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
+                                                              "capacity")) {
         methodResolved = "/std/collections/vector/capacity";
         isBuiltinMethod = true;
-        return true;
+      } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
+                                      "capacity", methodResolved, isBuiltinMethod)) {
+        (void)validateExpr(params, locals, expr.args.front());
+        return false;
       }
-      return resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), "capacity",
-                                 methodResolved, isBuiltinMethod);
-    };
-    if (!resolveCapacityMethodTarget()) {
+    } else if (isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
+                                                            "capacity")) {
+      methodResolved = "/std/collections/vector/capacity";
+      isBuiltinMethod = true;
+    } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
+                                    "capacity", methodResolved, isBuiltinMethod)) {
       (void)validateExpr(params, locals, expr.args.front());
       return false;
     }
