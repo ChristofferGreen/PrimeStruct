@@ -1420,15 +1420,36 @@
             "        !hasImportedDefinitionPath(\"/std/collections/map/count\");") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "methodResolved == \"/map/count\" &&\n"
+            "const bool rejectsStdlibMapCountTargetAsUnknownCallTarget =\n"
+            "        (!expr.isMethodCall &&\n"
+            "         expr.args.size() == 1 &&\n"
+            "         expr.args.front().kind == Expr::Kind::Name &&\n"
+            "         methodResolved == \"/map/count\" &&\n"
+            "         !hasImportedDefinitionPath(\"/count\") &&\n"
+            "         !hasDeclaredDefinitionPath(\"/count\") &&\n"
+            "         lacksVisibleStdlibMapCountDefinition) ||") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "         methodResolved == \"/std/collections/map/count\" &&\n"
+            "         lacksVisibleStdlibMapCountDefinition &&\n"
+            "         !context.shouldBuiltinValidateBareMapCountCall);") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (rejectsStdlibMapCountTargetAsUnknownCallTarget) {") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (!expr.isMethodCall &&\n"
+            "        expr.args.size() == 1 &&\n"
+            "        expr.args.front().kind == Expr::Kind::Name &&\n"
+            "        methodResolved == \"/map/count\" &&\n"
             "        !hasImportedDefinitionPath(\"/count\") &&\n"
             "        !hasDeclaredDefinitionPath(\"/count\") &&\n"
-            "        lacksVisibleStdlibMapCountDefinition)") !=
+            "        lacksVisibleStdlibMapCountDefinition) {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (isBuiltinMethod && methodResolved == \"/std/collections/map/count\" &&\n"
             "        lacksVisibleStdlibMapCountDefinition &&\n"
-            "        !context.shouldBuiltinValidateBareMapCountCall) {") !=
+            "        !context.shouldBuiltinValidateBareMapCountCall) {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (resolvesStdNamespacedVectorCountMapTarget &&\n"
