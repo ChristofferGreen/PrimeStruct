@@ -151,23 +151,23 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         context.isResolvedMapCountCall;
     const bool resolvesExistingCountMethodTarget =
         defMap_.find(resolved) != defMap_.end();
-    const bool usesNamespacedVectorCountFallbackShape =
-        !isStdNamespacedVectorCompatibilityDirectCall(
-            expr.isMethodCall, resolveCalleePath(expr), "count") &&
-        context.isNamespacedVectorHelperCall &&
-        context.namespacedHelper == "count" &&
-        isVectorBuiltinName(expr, "count") &&
-        expr.args.size() == 1 &&
-        !hasDefinitionPath(resolved) &&
-        !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
-          context.isArrayNamespacedVectorCountCompatibilityCall(expr));
     const bool allowsSingleArgUnresolvedCountMethodTarget =
         !resolvesExistingCountMethodTarget &&
         !context.isStdNamespacedMapCountCall;
     const bool matchesResolvedCountMethodTargetShape =
         requireSingleArg
             ? (allowsSingleArgUnresolvedCountMethodTarget ||
-               usesNamespacedVectorCountFallbackShape ||
+               (!isStdNamespacedVectorCompatibilityDirectCall(
+                    expr.isMethodCall, resolveCalleePath(expr), "count") &&
+                context.isNamespacedVectorHelperCall &&
+                context.namespacedHelper == "count" &&
+                isVectorBuiltinName(expr, "count") &&
+                expr.args.size() == 1 &&
+                !hasDefinitionPath(resolved) &&
+                !(context.isArrayNamespacedVectorCountCompatibilityCall !=
+                      nullptr &&
+                  context.isArrayNamespacedVectorCountCompatibilityCall(
+                      expr))) ||
                routesThroughMapCountCompatibility)
             : (resolvesExistingCountMethodTarget ||
                routesThroughMapCountCompatibility);
