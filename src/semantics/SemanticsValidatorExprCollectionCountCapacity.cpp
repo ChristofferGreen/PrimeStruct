@@ -129,13 +129,15 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     const bool resolvesMapCountReceiver =
         context.resolveMapTarget != nullptr &&
         context.resolveMapTarget(receiver);
+    const bool lacksVisibleStdlibMapCountDefinition =
+        !hasDeclaredDefinitionPath("/std/collections/map/count") &&
+        !hasImportedDefinitionPath("/std/collections/map/count");
     bool isBuiltinMethod = false;
     std::string methodResolved;
     {
                 if (context.isUnnamespacedMapCountFallbackCall &&
                     !hasDeclaredDefinitionPath("/map/count") &&
-                    !hasDeclaredDefinitionPath("/std/collections/map/count") &&
-                    !hasImportedDefinitionPath("/std/collections/map/count") &&
+                    lacksVisibleStdlibMapCountDefinition &&
                     resolvesMapCountReceiver) {
                   methodResolved = "/std/collections/map/count";
                   isBuiltinMethod = true;
@@ -209,16 +211,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                      methodResolved == "/map/count" &&
                      !hasImportedDefinitionPath("/count") &&
                      !hasDeclaredDefinitionPath("/count") &&
-                     !hasDeclaredDefinitionPath(
-                         "/std/collections/map/count") &&
-                     !hasImportedDefinitionPath(
-                         "/std/collections/map/count")) ||
+                     lacksVisibleStdlibMapCountDefinition) ||
                     (isBuiltinMethod &&
                      methodResolved == "/std/collections/map/count" &&
-                     !hasDeclaredDefinitionPath(
-                         "/std/collections/map/count") &&
-                     !hasImportedDefinitionPath(
-                         "/std/collections/map/count") &&
+                     lacksVisibleStdlibMapCountDefinition &&
                      !context.shouldBuiltinValidateBareMapCountCall)) {
                   return failExprDiagnostic(
                       expr, "unknown call target: /std/collections/map/count");

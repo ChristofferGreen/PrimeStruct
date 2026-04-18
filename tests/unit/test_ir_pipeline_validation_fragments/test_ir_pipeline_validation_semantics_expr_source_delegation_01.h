@@ -1625,7 +1625,7 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool lacksVisibleStdlibMapCountDefinition =\n"
             "        !hasDeclaredDefinitionPath(\"/std/collections/map/count\") &&\n"
-            "        !hasImportedDefinitionPath(\"/std/collections/map/count\");") ==
+            "        !hasImportedDefinitionPath(\"/std/collections/map/count\");") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "    const auto assignCountMethodTargetAfterResolveMiss =\n"
@@ -2697,8 +2697,7 @@
             "  {\n"
             "                if (context.isUnnamespacedMapCountFallbackCall &&\n"
             "                    !hasDeclaredDefinitionPath(\"/map/count\") &&\n"
-            "                    !hasDeclaredDefinitionPath(\"/std/collections/map/count\") &&\n"
-            "                    !hasImportedDefinitionPath(\"/std/collections/map/count\") &&\n"
+            "                    lacksVisibleStdlibMapCountDefinition &&\n"
             "                    resolvesMapCountReceiver) {\n"
             "                  methodResolved = \"/std/collections/map/count\";") !=
         std::string::npos);
