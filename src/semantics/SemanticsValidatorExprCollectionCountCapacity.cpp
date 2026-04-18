@@ -329,61 +329,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     return *resolvedCountMethod;
   }
 
-  const auto resolveCapacityMethodTargetFromReceiver =
-      [&](const Expr &receiver, bool &isBuiltinMethod,
-          std::string &methodResolved) -> bool {
-    return tryResolveCollectionMethodTargetFromHelperRouteOrFinalize(
-        receiver, "capacity", methodResolved, isBuiltinMethod,
-        [&](const Expr &, std::string &, bool &) {
-          if (isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
-                                                           "capacity")) {
-            methodResolved = "/std/collections/vector/capacity";
-            isBuiltinMethod = true;
-          }
-          return true;
-        },
-        [&](const Expr &receiver, std::string &methodResolved,
-            bool &isBuiltinMethod) {
-          if (isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
-                                                           "capacity")) {
-            methodResolved = "/std/collections/vector/capacity";
-            isBuiltinMethod = true;
-            return true;
-          }
-          return tryResolveCollectionMethodTargetOrElse(
-              receiver, "capacity", methodResolved, isBuiltinMethod,
-              [&](const Expr &receiver, bool &, std::string &) {
-                (void)validateExpr(params, locals, receiver);
-                return false;
-              });
-        },
-        [&](std::string &methodResolved, bool &isBuiltinMethod) {
-          return finalizeCollectionMethodTarget(
-              methodResolved, isBuiltinMethod,
-              [&](std::string &methodResolved, bool &isBuiltinMethod) {
-                if (!isBuiltinMethod &&
-                    !hasDeclaredDefinitionPath(methodResolved) &&
-                    !hasImportedDefinitionPath(methodResolved)) {
-                  if ((context.isNonCollectionStructCapacityTarget ==
-                           nullptr ||
-                       !context.isNonCollectionStructCapacityTarget(
-                           methodResolved)) &&
-                      context.promoteCapacityToBuiltinValidation != nullptr) {
-                    context.promoteCapacityToBuiltinValidation(
-                        receiver, methodResolved, isBuiltinMethod, false);
-                  }
-                }
-                return true;
-              },
-              [&](const std::string &methodResolved, bool isBuiltinMethod) {
-                return failUnknownCollectionMethodTarget(isBuiltinMethod,
-                                                         methodResolved);
-              },
-              [&](const std::string &, bool) {
-                return failRemovedRootedVectorDirectCall();
-              });
-        });
-  };
   if (std::optional<bool> resolvedCapacityMethod =
           tryResolveCollectionMethodFromSurfaceRoutes(
               !(hasNamedArguments(expr.argNames) ||
@@ -399,7 +344,63 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
               expr.args.size() == 1 &&
                   (defMap_.find(resolved) == defMap_.end() ||
                    context.isNamespacedVectorCapacityCall),
-              resolveCapacityMethodTargetFromReceiver)) {
+              [&](const Expr &receiver, bool &isBuiltinMethod,
+                  std::string &methodResolved) -> bool {
+                return tryResolveCollectionMethodTargetFromHelperRouteOrFinalize(
+                    receiver, "capacity", methodResolved, isBuiltinMethod,
+                    [&](const Expr &, std::string &, bool &) {
+                      if (isStdNamespacedVectorCompatibilityHelperPath(
+                              resolveCalleePath(expr), "capacity")) {
+                        methodResolved = "/std/collections/vector/capacity";
+                        isBuiltinMethod = true;
+                      }
+                      return true;
+                    },
+                    [&](const Expr &receiver, std::string &methodResolved,
+                        bool &isBuiltinMethod) {
+                      if (isStdNamespacedVectorCompatibilityHelperPath(
+                              resolveCalleePath(expr), "capacity")) {
+                        methodResolved = "/std/collections/vector/capacity";
+                        isBuiltinMethod = true;
+                        return true;
+                      }
+                      return tryResolveCollectionMethodTargetOrElse(
+                          receiver, "capacity", methodResolved, isBuiltinMethod,
+                          [&](const Expr &receiver, bool &, std::string &) {
+                            (void)validateExpr(params, locals, receiver);
+                            return false;
+                          });
+                    },
+                    [&](std::string &methodResolved, bool &isBuiltinMethod) {
+                      return finalizeCollectionMethodTarget(
+                          methodResolved, isBuiltinMethod,
+                          [&](std::string &methodResolved, bool &isBuiltinMethod) {
+                            if (!isBuiltinMethod &&
+                                !hasDeclaredDefinitionPath(methodResolved) &&
+                                !hasImportedDefinitionPath(methodResolved)) {
+                              if ((context.isNonCollectionStructCapacityTarget ==
+                                       nullptr ||
+                                   !context.isNonCollectionStructCapacityTarget(
+                                       methodResolved)) &&
+                                  context.promoteCapacityToBuiltinValidation !=
+                                      nullptr) {
+                                context.promoteCapacityToBuiltinValidation(
+                                    receiver, methodResolved, isBuiltinMethod,
+                                    false);
+                              }
+                            }
+                            return true;
+                          },
+                          [&](const std::string &methodResolved,
+                              bool isBuiltinMethod) {
+                            return failUnknownCollectionMethodTarget(
+                                isBuiltinMethod, methodResolved);
+                          },
+                          [&](const std::string &, bool) {
+                            return failRemovedRootedVectorDirectCall();
+                          });
+                    });
+              })) {
     return *resolvedCapacityMethod;
   }
 

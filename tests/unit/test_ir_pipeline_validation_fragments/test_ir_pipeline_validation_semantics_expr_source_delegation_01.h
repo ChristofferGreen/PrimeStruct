@@ -2708,11 +2708,7 @@
             "  auto resolveCapacityMethod = [&](bool requireSingleArg) -> bool {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const auto resolveCapacityMethodTargetFromReceiver =\n"
-            "      [&](const Expr &receiver, bool &isBuiltinMethod,\n"
-            "          std::string &methodResolved) -> bool {\n"
-            "    if (resolveVectorHelperMethodTarget(params, locals, receiver, \"capacity\",\n"
-            "                                        methodResolved)) {") !=
+            "const auto resolveCapacityMethodTargetFromReceiver =\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "methodReceiverIndex = 0;\n"
@@ -2722,33 +2718,25 @@
             "                                          \"capacity\", methodResolved)) {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "methodReceiverIndex = 0;\n"
-            "      const Expr &receiver = expr.args.front();\n"
-            "      bool isBuiltinMethod = false;\n"
-            "      std::string methodResolved;\n"
-            "      if (!resolveCapacityMethodTargetFromReceiver(receiver, isBuiltinMethod,\n"
-            "                                                   methodResolved)) {\n"
-            "        return false;\n"
-            "      }\n"
-            "      resolved = methodResolved;\n"
-            "      resolvedMethod = isBuiltinMethod;\n"
-            "      return true;") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "handledOut = true;\n"
-            "      usedMethodTarget = true;\n"
-            "      hasMethodReceiverIndex = true;\n"
-            "      methodReceiverIndex = 0;\n"
-            "      const Expr &receiver = expr.args.front();\n"
-            "      bool isBuiltinMethod = false;\n"
-            "      std::string methodResolved;\n"
-            "      if (!resolveCapacityMethodTargetFromReceiver(receiver, isBuiltinMethod,\n"
-            "                                                   methodResolved)) {\n"
-            "        return false;\n"
-            "      }\n"
-            "      resolved = methodResolved;\n"
-            "      resolvedMethod = isBuiltinMethod;\n"
-            "      return true;") ==
+            "if (std::optional<bool> resolvedCapacityMethod =\n"
+            "          tryResolveCollectionMethodFromSurfaceRoutes(\n"
+            "              !(hasNamedArguments(expr.argNames) ||\n"
+            "                isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
+            "                    expr.isMethodCall,\n"
+            "                    resolveCalleePath(expr),\n"
+            "                    \"capacity\",\n"
+            "                    hasImportedDefinitionPath(\"/std/collections/vector/capacity\")) ||\n"
+            "                !isVectorBuiltinName(expr, \"capacity\")),\n"
+            "              !(expr.args.empty() || expr.args.size() == 1 ||\n"
+            "                defMap_.find(resolved) == defMap_.end()) &&\n"
+            "                  context.isNamespacedVectorHelperCall,\n"
+            "              expr.args.size() == 1 &&\n"
+            "                  (defMap_.find(resolved) == defMap_.end() ||\n"
+            "                   context.isNamespacedVectorCapacityCall),\n"
+            "              [&](const Expr &receiver, bool &isBuiltinMethod,\n"
+            "                  std::string &methodResolved) -> bool {\n"
+            "                return tryResolveCollectionMethodTargetFromHelperRouteOrFinalize(\n"
+            "                    receiver, \"capacity\", methodResolved, isBuiltinMethod,\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "return resolveCollectionMethodTargetFromReceiver(\n"
@@ -2798,7 +2786,14 @@
             "                !isVectorBuiltinName(expr, \"capacity\")),\n"
             "              !(expr.args.empty() || expr.args.size() == 1 ||\n"
                 "                defMap_.find(resolved) == defMap_.end()) &&\n"
-                  "                  context.isNamespacedVectorHelperCall,") !=
+                  "                  context.isNamespacedVectorHelperCall,\n"
+            "              expr.args.size() == 1 &&\n"
+            "                  (defMap_.find(resolved) == defMap_.end() ||\n"
+            "                   context.isNamespacedVectorCapacityCall),\n"
+            "              [&](const Expr &receiver, bool &isBuiltinMethod,\n"
+            "                  std::string &methodResolved) -> bool {\n"
+            "                return tryResolveCollectionMethodTargetFromHelperRouteOrFinalize(\n"
+            "                    receiver, \"capacity\", methodResolved, isBuiltinMethod,\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (std::optional<bool> resolvedCapacityMethod =\n"
