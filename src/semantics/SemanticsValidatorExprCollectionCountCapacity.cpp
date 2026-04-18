@@ -362,21 +362,16 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       return false;
     }
     normalizeResolvedCollectionMethodTarget(methodResolved, isBuiltinMethod);
-    bool methodResolvedMissing =
-        !isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved);
-    if (methodResolvedMissing) {
+    if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {
       if (requireSingleArg &&
           (context.isNonCollectionStructCapacityTarget == nullptr ||
-           !context.isNonCollectionStructCapacityTarget(methodResolved))) {
-        if (context.promoteCapacityToBuiltinValidation != nullptr) {
-          context.promoteCapacityToBuiltinValidation(expr.args.front(), methodResolved,
-                                                     isBuiltinMethod, false);
-          methodResolvedMissing =
-              !isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved);
-        }
+           !context.isNonCollectionStructCapacityTarget(methodResolved)) &&
+          context.promoteCapacityToBuiltinValidation != nullptr) {
+        context.promoteCapacityToBuiltinValidation(expr.args.front(), methodResolved,
+                                                   isBuiltinMethod, false);
       }
     }
-    if (methodResolvedMissing) {
+    if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {
       return failCollectionCountCapacityDiagnostic("unknown method: " + methodResolved);
     }
     return finalizeResolvedCollectionMethodTargetAfterRemovedRootedVectorCheck(
