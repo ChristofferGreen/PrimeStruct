@@ -202,10 +202,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   const bool matchesSingleArgCountRouteShape =
       isSingleArgCountCall &&
       matchesSingleArgCountRouteInputs;
+  const bool matchesMultiArgCountRouteInputs =
+      hasResolvedCountDefinitionTarget ||
+      routesThroughMapCountCallSurface;
   const bool matchesMultiArgCountRouteShape =
       isMultiArgCountCall &&
-      (hasResolvedCountDefinitionTarget ||
-       routesThroughMapCountCallSurface);
+      matchesMultiArgCountRouteInputs;
   const bool matchesCountRouteArgShape =
       matchesSingleArgCountRouteShape ||
       matchesMultiArgCountRouteShape;
