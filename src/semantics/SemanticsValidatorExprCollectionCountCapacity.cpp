@@ -135,17 +135,17 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     const bool resolvesMapCountReceiver =
         context.resolveMapTarget != nullptr &&
         context.resolveMapTarget(receiver);
-    const bool lacksVisibleStdlibMapCountDefinition =
-        !hasDeclaredDefinitionPath("/std/collections/map/count") &&
-        !hasImportedDefinitionPath("/std/collections/map/count");
-    const bool routesThroughStdlibMapCountFallback =
-        context.isUnnamespacedMapCountFallbackCall &&
-        !hasDeclaredDefinitionPath("/map/count") &&
-        lacksVisibleStdlibMapCountDefinition &&
-        resolvesMapCountReceiver;
     const std::string bareMapCountTargetPath = "/map/count";
     const std::string stdlibMapCountTargetPath =
         "/std/collections/map/count";
+    const bool lacksVisibleStdlibMapCountDefinition =
+        !hasDeclaredDefinitionPath(stdlibMapCountTargetPath) &&
+        !hasImportedDefinitionPath(stdlibMapCountTargetPath);
+    const bool routesThroughStdlibMapCountFallback =
+        context.isUnnamespacedMapCountFallbackCall &&
+        !hasDeclaredDefinitionPath(bareMapCountTargetPath) &&
+        lacksVisibleStdlibMapCountDefinition &&
+        resolvesMapCountReceiver;
     bool isBuiltinMethod = false;
     std::string methodResolved;
     {
