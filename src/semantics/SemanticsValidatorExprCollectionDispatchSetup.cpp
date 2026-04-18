@@ -134,16 +134,11 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       !setupOut.isUnnamespacedMapCountFallbackCall;
   setupOut.isStdNamespacedVectorCapacityCall =
       !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/capacity", 0) == 0;
-  const bool hasStdNamespacedVectorCapacityDefinition =
-      hasImportedDefinitionPath("/std/collections/vector/capacity");
   setupOut.isNamespacedVectorCapacityCall =
       !expr.isMethodCall && !setupOut.isStdNamespacedVectorCapacityCall &&
       setupOut.isNamespacedVectorHelperCall && setupOut.namespacedHelper == "capacity" &&
       isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
       !hasDefinitionPath(resolved);
-  setupOut.shouldBuiltinValidateStdNamespacedVectorCapacityCall =
-      setupOut.isStdNamespacedVectorCapacityCall &&
-      hasStdNamespacedVectorCapacityDefinition;
   const bool hasBuiltinAccessSpelling =
       !expr.isMethodCall && getBuiltinArrayAccessName(expr, accessHelperName);
   setupOut.isStdNamespacedVectorAccessCall =

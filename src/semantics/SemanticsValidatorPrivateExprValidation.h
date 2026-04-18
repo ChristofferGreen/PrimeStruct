@@ -519,7 +519,6 @@
     bool isUnnamespacedMapCountFallbackCall = false;
     bool isResolvedMapCountCall = false;
     bool isStdNamespacedVectorCapacityCall = false;
-    bool shouldBuiltinValidateStdNamespacedVectorCapacityCall = false;
     bool isNamespacedVectorCapacityCall = false;
     bool isDirectStdNamespacedVectorCountWrapperMapTarget = false;
     bool isStdNamespacedVectorAccessCall = false;

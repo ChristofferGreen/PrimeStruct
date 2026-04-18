@@ -1417,6 +1417,12 @@
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "\"unknown call target: /std/collections/vector/capacity\"") ==
         std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "setupOut.shouldBuiltinValidateStdNamespacedVectorCapacityCall =") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "const bool hasStdNamespacedVectorCapacityDefinition =") ==
+        std::string::npos);
   CHECK(semanticsExprSource.find(
             ".shouldBuiltinValidateStdNamespacedVectorCapacityCall =") ==
         std::string::npos);
@@ -1489,6 +1495,12 @@
             "    bool isResolvedMapCountCall = false;\n"
             "    bool shouldBuiltinValidateStdNamespacedVectorCapacityCall = false;\n"
             "    bool isStdNamespacedVectorCapacityCall = false;") ==
+        std::string::npos);
+  CHECK(semanticsExprPrivateValidationSource.find(
+            "    bool isResolvedMapCountCall = false;\n"
+            "    bool isStdNamespacedVectorCapacityCall = false;\n"
+            "    bool shouldBuiltinValidateStdNamespacedVectorCapacityCall = false;\n"
+            "    bool isNamespacedVectorCapacityCall = false;") ==
         std::string::npos);
   CHECK(semanticsExprPrivateValidationSource.find(
             "    bool isResolvedMapCountCall = false;\n"
