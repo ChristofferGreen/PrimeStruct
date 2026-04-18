@@ -4676,6 +4676,13 @@
             "    !hasVisibleCapacityHelperMethodTarget;\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool resolvedCapacityMethodTargetDirectly =\n"
+            "    needsDirectCapacityMethodTargetResolution &&\n"
+            "    resolveMethodTarget(\n"
+            "        params, locals, expr.namespacePrefix, receiver,\n"
+            "        \"capacity\", methodResolved, isBuiltinMethod);\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool resolvedVisibleCapacityHelperMethodTarget =\n"
             "    resolveVectorHelperMethodTarget(\n"
             "        params, locals, receiver, \"capacity\",\n"
@@ -4725,8 +4732,18 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else if (!resolvedVisibleCapacityHelperMethodTarget &&\n"
             "           !resolveMethodTarget(\n"
-            "               params, locals, expr.namespacePrefix, receiver,\n"
+                "               params, locals, expr.namespacePrefix, receiver,\n"
             "               \"capacity\", methodResolved, isBuiltinMethod)) {\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "  } else if (needsDirectCapacityMethodTargetResolution &&\n"
+            "             !resolvedCapacityMethodTargetDirectly) {\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "  } else if (needsDirectCapacityMethodTargetResolution &&\n"
+            "             !resolveMethodTarget(\n"
+            "                 params, locals, expr.namespacePrefix, receiver,\n"
+            "                 \"capacity\", methodResolved, isBuiltinMethod)) {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!isBuiltinMethod &&\n"
