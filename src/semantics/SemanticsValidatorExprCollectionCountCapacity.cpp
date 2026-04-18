@@ -233,11 +233,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                         countResolveMissTargetPath = stdlibMapCountTargetPath;
                       } else {
                         std::string typeName;
-                        const bool resolvesCountReceiverTypeFromNameBinding =
-                            receiver.kind == Expr::Kind::Name;
                         const BindingInfo *countResolveMissReceiverBinding =
                             nullptr;
-                        if (resolvesCountReceiverTypeFromNameBinding) {
+                        if (receiver.kind == Expr::Kind::Name) {
                           if (const BindingInfo *paramBinding =
                                   findParamBinding(params, receiver.name)) {
                             countResolveMissReceiverBinding = paramBinding;

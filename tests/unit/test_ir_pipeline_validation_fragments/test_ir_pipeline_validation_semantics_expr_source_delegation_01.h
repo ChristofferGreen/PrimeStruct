@@ -1808,11 +1808,9 @@
             "            countResolveMissTargetPath = \"/std/collections/map/count\";\n"
             "          } else {\n"
             "            std::string typeName;\n"
-            "            const bool resolvesCountReceiverTypeFromNameBinding =\n"
-            "                receiver.kind == Expr::Kind::Name;\n"
             "            const BindingInfo *countResolveMissReceiverBinding =\n"
             "                nullptr;\n"
-            "            if (resolvesCountReceiverTypeFromNameBinding) {\n"
+            "            if (receiver.kind == Expr::Kind::Name) {\n"
             "              if (const BindingInfo *paramBinding =\n"
             "                      findParamBinding(params, receiver.name)) {\n"
             "                countResolveMissReceiverBinding = paramBinding;\n"
@@ -1879,9 +1877,6 @@
             "            }\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "            if (receiver.kind == Expr::Kind::Name) {\n") ==
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "            if (resolvesCountReceiverTypeFromNameBinding) {\n"
             "              if (const BindingInfo *paramBinding =\n"
             "                      findParamBinding(params, receiver.name)) {\n"
@@ -1891,6 +1886,10 @@
             "                typeName = it->second.typeName;\n"
             "              }\n"
             "            }\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "            const bool resolvesCountReceiverTypeFromNameBinding =\n"
+            "                receiver.kind == Expr::Kind::Name;\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "            if (typeName != \"Pointer\" && typeName != \"Reference\") {\n") ==
