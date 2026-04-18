@@ -116,13 +116,11 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
       return failLateCallCompatibilityDiagnostic(
           std::move(stdNamespacedVectorCountTargetDiagnosticMessage));
     }
-    const std::string stdNamespacedVectorCountTargetDiagnosticMessage =
-        stdNamespacedVectorCountHelperState
-            .classifyVectorLikeCountTargetDiagnosticMessage(
-                resolvesVectorLikeCountTarget);
-    if (!stdNamespacedVectorCountTargetDiagnosticMessage.empty()) {
+    if (resolvesVectorLikeCountTarget &&
+        !stdNamespacedVectorCountHelperState.hasDeclaredHelper &&
+        !stdNamespacedVectorCountHelperState.hasImportedHelper) {
       return failLateCallCompatibilityDiagnostic(
-          std::move(stdNamespacedVectorCountTargetDiagnosticMessage));
+          vectorCompatibilityUnknownCallTargetDiagnostic("count"));
     }
   }
 

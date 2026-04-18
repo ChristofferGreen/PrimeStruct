@@ -46,14 +46,6 @@ struct StdNamespacedVectorCompatibilityHelperState {
     }
     return vectorCompatibilityRequiresVectorTargetDiagnostic("count");
   }
-
-  [[nodiscard]] std::string classifyVectorLikeCountTargetDiagnosticMessage(
-      bool vectorLikeTarget) const {
-    if (vectorLikeTarget && !hasDeclaredHelper && !hasImportedHelper) {
-      return vectorCompatibilityUnknownCallTargetDiagnostic("count");
-    }
-    return "";
-  }
 };
 
 inline std::string vectorCompatibilityRequiresVectorTargetDiagnostic(

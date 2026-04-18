@@ -1153,6 +1153,9 @@
   CHECK(semanticsVectorCompatibilityHelpersSource.find(
             "makeStdNamespacedVectorCompatibilityHelperState(") ==
         std::string::npos);
+  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+            "classifyVectorLikeCountTargetDiagnosticMessage(") ==
+        std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "if (resolvesMap ||\n"
             "          context.dispatchResolvers->resolveMapTarget(expr.args.front(),\n"
@@ -1204,14 +1207,19 @@
             "        !hasImportedStdNamespacedVectorCountHelper;") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
-            "const std::string stdNamespacedVectorCountTargetDiagnosticMessage =\n"
-            "        stdNamespacedVectorCountHelperState\n"
-            "            .classifyVectorLikeCountTargetDiagnosticMessage(\n"
-            "                resolvesVectorLikeCountTarget);") !=
+            "if (resolvesVectorLikeCountTarget &&\n"
+            "        !stdNamespacedVectorCountHelperState.hasDeclaredHelper &&\n"
+            "        !stdNamespacedVectorCountHelperState.hasImportedHelper) {\n"
+            "      return failLateCallCompatibilityDiagnostic(\n"
+            "          vectorCompatibilityUnknownCallTargetDiagnostic(\"count\"));\n"
+            "    }") !=
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "classifyCountTargetDiagnosticMessage(\n"
             "                resolvesVectorLikeCountTarget, false, false, false);") ==
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "classifyVectorLikeCountTargetDiagnosticMessage(") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "stdNamespacedVectorCountHelperState.lacksVisibleHelper() &&\n"
