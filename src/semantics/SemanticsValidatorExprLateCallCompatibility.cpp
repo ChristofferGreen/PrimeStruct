@@ -94,10 +94,12 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
       }
-      if (resolvesMap ||
+      const bool resolvesMapAfterValidation =
+          resolvesMap ||
           context.dispatchResolvers->resolveMapTarget(expr.args.front(),
                                                       mapKeyType,
-                                                      mapValueType)) {
+                                                      mapValueType);
+      if (resolvesMapAfterValidation) {
         return failLateCallCompatibilityDiagnostic(
             "unknown call target: /std/collections/vector/count");
       }

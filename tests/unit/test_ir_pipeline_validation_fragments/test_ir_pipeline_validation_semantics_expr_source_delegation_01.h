@@ -1074,6 +1074,19 @@
             "          \"unknown call target: /std/collections/vector/count\");") !=
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "const bool resolvesMapAfterValidation =\n"
+            "          resolvesMap ||\n"
+            "          context.dispatchResolvers->resolveMapTarget(expr.args.front(),\n"
+            "                                                      mapKeyType,\n"
+            "                                                      mapValueType);") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "if (resolvesMap ||\n"
+            "          context.dispatchResolvers->resolveMapTarget(expr.args.front(),\n"
+            "                                                      mapKeyType,\n"
+            "                                                      mapValueType))") ==
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
             "vectorCompatibilityRequiresVectorTargetDiagnostic(\"count\")") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
