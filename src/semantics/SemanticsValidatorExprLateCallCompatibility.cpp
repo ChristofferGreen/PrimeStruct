@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsVectorCompatibilityHelpers.h"
 
 #include <string>
 #include <unordered_map>
@@ -139,7 +140,7 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
             "unknown call target: /std/collections/vector/capacity");
       }
       return failLateCallCompatibilityDiagnostic(
-          "capacity requires vector target");
+          vectorCompatibilityRequiresVectorTargetDiagnostic("capacity"));
     }
   }
 

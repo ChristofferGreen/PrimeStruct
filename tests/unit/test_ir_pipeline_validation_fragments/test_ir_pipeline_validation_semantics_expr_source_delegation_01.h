@@ -1073,6 +1073,18 @@
             "return failLateCallCompatibilityDiagnostic(\n"
             "          \"unknown call target: /std/collections/vector/count\");") !=
         std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "vectorCompatibilityRequiresVectorTargetDiagnostic(\"capacity\")") !=
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "vectorCompatibilityRequiresVectorTargetDiagnostic(\"capacity\")") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "\"capacity requires vector target\"") ==
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "\"capacity requires vector target\"") ==
+        std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "if (!expr.isMethodCall && setupOut.isStdNamespacedVectorCapacityCall &&\n"
             "      !hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/capacity\") &&\n"

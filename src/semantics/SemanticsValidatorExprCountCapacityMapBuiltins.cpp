@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsVectorCompatibilityHelpers.h"
 
 #include <string>
 #include <utility>
@@ -520,7 +521,8 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     }
     std::string elemType;
     if (!context.resolveVectorTarget(expr.args.front(), elemType)) {
-      return failCountCapacityMapBuiltin("capacity requires vector target");
+      return failCountCapacityMapBuiltin(
+          vectorCompatibilityRequiresVectorTargetDiagnostic("capacity"));
     }
     return validateExpr(params, locals, expr.args.front());
   }
@@ -544,7 +546,8 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     }
     std::string elemType;
     if (!context.resolveVectorTarget(expr.args.front(), elemType)) {
-      return failCountCapacityMapBuiltin("capacity requires vector target");
+      return failCountCapacityMapBuiltin(
+          vectorCompatibilityRequiresVectorTargetDiagnostic("capacity"));
     }
     return validateExpr(params, locals, expr.args.front());
   }
