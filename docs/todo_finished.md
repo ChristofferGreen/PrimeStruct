@@ -10,6 +10,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 17, 2026)**
 
 **Group 14 - SoA bring-up and end-state cleanup**
+- ✓ TODO-0794: Share collection surface postlude. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now routes the duplicated post-surface `handledOut` tail through shared `tryResolveCollectionMethodFromSurfaceOrReturn`, and focused expr source-lock coverage keeps that shared helper present while the old repeated inline tails stay absent.
 - ✓ TODO-0793: Inline collection method target scaffold. Completed: the shared `resolveCollectionMethodTargetFromReceiver` helper in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the handled/receiver setup inside `tryResolveCollectionMethodFromSurface` while the deleted scaffold stays absent.
 - ✓ TODO-0792: Share collection surface branch body. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now routes the duplicated count/capacity surface-checked branch body through shared `tryResolveCollectionMethodFromSurface`, and focused expr source-lock coverage keeps that shared helper present while the old repeated inline branch bodies stay absent.
 - ✓ TODO-0791: Share count method surface gate. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now routes the duplicated count entry gate through shared `routesThroughVectorCountMethodSurface`, and focused expr source-lock coverage keeps that shared gate present while the old repeated inline gate stays absent.

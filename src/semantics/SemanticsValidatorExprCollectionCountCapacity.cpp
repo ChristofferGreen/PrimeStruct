@@ -117,6 +117,20 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     resolvedMethod = isBuiltinMethod;
     return true;
   };
+  const auto tryResolveCollectionMethodFromSurfaceOrReturn =
+      [&](bool routesThroughMethodSurface, bool matchesSurfaceRoute,
+          auto &&resolveMethodTarget) -> std::optional<bool> {
+    if (std::optional<bool> resolvedCollectionMethod =
+            tryResolveCollectionMethodFromSurface(
+                routesThroughMethodSurface, matchesSurfaceRoute,
+                resolveMethodTarget)) {
+      return *resolvedCollectionMethod;
+    }
+    if (handledOut) {
+      return false;
+    }
+    return std::nullopt;
+  };
   const auto resolveCountMethodTargetFromReceiver =
       [&](const Expr &receiver, bool &isBuiltinMethod,
           std::string &methodResolved) -> bool {
@@ -269,7 +283,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
        context.isUnnamespacedMapCountFallbackCall ||
        context.isResolvedMapCountCall);
   if (std::optional<bool> resolvedCountMethod =
-          tryResolveCollectionMethodFromSurface(
+          tryResolveCollectionMethodFromSurfaceOrReturn(
               routesThroughVectorCountMethodSurface,
               expr.args.size() == 1 &&
                   ((defMap_.find(resolved) == defMap_.end() &&
@@ -292,11 +306,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
               resolveCountMethodTargetFromReceiver)) {
     return *resolvedCountMethod;
   }
-  if (handledOut) {
-    return false;
-  }
   if (std::optional<bool> resolvedCountMethod =
-          tryResolveCollectionMethodFromSurface(
+          tryResolveCollectionMethodFromSurfaceOrReturn(
               routesThroughVectorCountMethodSurface,
               expr.args.size() != 1 &&
                   (defMap_.find(resolved) != defMap_.end() ||
@@ -306,9 +317,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                    context.isResolvedMapCountCall),
               resolveCountMethodTargetFromReceiver)) {
     return *resolvedCountMethod;
-  }
-  if (handledOut) {
-    return false;
   }
 
   const auto resolveCapacityMethodTargetFromReceiver =
@@ -372,7 +380,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
             hasImportedDefinitionPath("/std/collections/vector/capacity")) ||
         !isVectorBuiltinName(expr, "capacity"));
   if (std::optional<bool> resolvedCapacityMethod =
-          tryResolveCollectionMethodFromSurface(
+          tryResolveCollectionMethodFromSurfaceOrReturn(
               routesThroughVectorCapacityMethodSurface,
               !(expr.args.empty() || expr.args.size() == 1 ||
                 defMap_.find(resolved) == defMap_.end()) &&
@@ -380,20 +388,14 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
               resolveCapacityMethodTargetFromReceiver)) {
     return *resolvedCapacityMethod;
   }
-  if (handledOut) {
-    return false;
-  }
   if (std::optional<bool> resolvedCapacityMethod =
-          tryResolveCollectionMethodFromSurface(
+          tryResolveCollectionMethodFromSurfaceOrReturn(
               routesThroughVectorCapacityMethodSurface,
               expr.args.size() == 1 &&
                   (defMap_.find(resolved) == defMap_.end() ||
                    context.isNamespacedVectorCapacityCall),
               resolveCapacityMethodTargetFromReceiver)) {
     return *resolvedCapacityMethod;
-  }
-  if (handledOut) {
-    return false;
   }
 
   return true;
