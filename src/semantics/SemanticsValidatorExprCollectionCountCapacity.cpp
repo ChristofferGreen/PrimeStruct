@@ -89,16 +89,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                                 stdNamespacedVectorCountDiagnosticMessage);
     }
   }
-  const auto tryResolveCollectionMethodTargetOrElse =
-      [&](const Expr &receiver, const char *methodName,
-          std::string &methodResolved, bool &isBuiltinMethod,
-          auto &&handleResolveMiss) -> bool {
-    if (resolveMethodTarget(params, locals, expr.namespacePrefix, receiver,
-                            methodName, methodResolved, isBuiltinMethod)) {
-      return true;
-    }
-    return handleResolveMiss(receiver, isBuiltinMethod, methodResolved);
-  };
   const auto finalizeCollectionMethodTarget =
       [&](std::string &methodResolved, bool &isBuiltinMethod,
           auto &&beforeFailureChecks,
@@ -220,56 +210,55 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                       [&](const Expr &, std::string &, bool &) { return true; },
                       [&](const Expr &receiver, std::string &methodResolved,
                           bool &isBuiltinMethod) {
-                        return tryResolveCollectionMethodTargetOrElse(
-                            receiver, "count", methodResolved, isBuiltinMethod,
-                            [&](const Expr &receiver, bool &isBuiltinMethod,
-                                std::string &methodResolved) {
-                              if (!(expr.hasBodyArguments ||
-                                    !expr.bodyArguments.empty()) ||
-                                  expr.args.empty()) {
-                                (void)validateExpr(params, locals, receiver);
-                                return false;
-                              }
-                              if (context.resolveMapTarget != nullptr &&
-                                  context.resolveMapTarget(receiver)) {
-                                methodResolved = stdlibMapCountMethodTarget;
-                                error_.clear();
-                                isBuiltinMethod = false;
-                              } else {
-                                std::string typeName;
-                                if (receiver.kind == Expr::Kind::Name) {
-                                  if (const BindingInfo *paramBinding =
-                                          findParamBinding(params,
-                                                           receiver.name)) {
-                                    typeName = paramBinding->typeName;
-                                  } else if (auto it = locals.find(receiver.name);
-                                             it != locals.end()) {
-                                    typeName = it->second.typeName;
-                                  }
-                                }
-                                if (typeName.empty()) {
-                                  typeName = inferPointerLikeCallReturnType(
-                                      receiver, params, locals);
-                                }
-                                if (typeName.empty()) {
-                                  if (isPointerExpr(receiver, params, locals)) {
-                                    typeName = "Pointer";
-                                  } else if (isPointerLikeExpr(receiver, params,
-                                                                locals)) {
-                                    typeName = "Reference";
-                                  }
-                                }
-                                if (typeName != "Pointer" &&
-                                    typeName != "Reference") {
-                                  (void)validateExpr(params, locals, receiver);
-                                  return false;
-                                }
-                                methodResolved = "/" + typeName + "/count";
-                                error_.clear();
-                                isBuiltinMethod = false;
-                              }
-                              return true;
-                            });
+                        if (resolveMethodTarget(
+                                params, locals, expr.namespacePrefix, receiver,
+                                "count", methodResolved, isBuiltinMethod)) {
+                          return true;
+                        }
+                        if (!(expr.hasBodyArguments ||
+                              !expr.bodyArguments.empty()) ||
+                            expr.args.empty()) {
+                          (void)validateExpr(params, locals, receiver);
+                          return false;
+                        }
+                        if (context.resolveMapTarget != nullptr &&
+                            context.resolveMapTarget(receiver)) {
+                          methodResolved = stdlibMapCountMethodTarget;
+                          error_.clear();
+                          isBuiltinMethod = false;
+                        } else {
+                          std::string typeName;
+                          if (receiver.kind == Expr::Kind::Name) {
+                            if (const BindingInfo *paramBinding =
+                                    findParamBinding(params, receiver.name)) {
+                              typeName = paramBinding->typeName;
+                            } else if (auto it = locals.find(receiver.name);
+                                       it != locals.end()) {
+                              typeName = it->second.typeName;
+                            }
+                          }
+                          if (typeName.empty()) {
+                            typeName = inferPointerLikeCallReturnType(
+                                receiver, params, locals);
+                          }
+                          if (typeName.empty()) {
+                            if (isPointerExpr(receiver, params, locals)) {
+                              typeName = "Pointer";
+                            } else if (isPointerLikeExpr(receiver, params,
+                                                          locals)) {
+                              typeName = "Reference";
+                            }
+                          }
+                          if (typeName != "Pointer" &&
+                              typeName != "Reference") {
+                            (void)validateExpr(params, locals, receiver);
+                            return false;
+                          }
+                          methodResolved = "/" + typeName + "/count";
+                          error_.clear();
+                          isBuiltinMethod = false;
+                        }
+                        return true;
                       },
                       [&](std::string &, bool &) { return true; });
                 }
@@ -362,12 +351,13 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                         isBuiltinMethod = true;
                         return true;
                       }
-                      return tryResolveCollectionMethodTargetOrElse(
-                          receiver, "capacity", methodResolved, isBuiltinMethod,
-                          [&](const Expr &receiver, bool &, std::string &) {
-                            (void)validateExpr(params, locals, receiver);
-                            return false;
-                          });
+                      if (resolveMethodTarget(
+                              params, locals, expr.namespacePrefix, receiver,
+                              "capacity", methodResolved, isBuiltinMethod)) {
+                        return true;
+                      }
+                      (void)validateExpr(params, locals, receiver);
+                      return false;
                     },
                     [&](std::string &methodResolved, bool &isBuiltinMethod) {
                       return finalizeCollectionMethodTarget(
