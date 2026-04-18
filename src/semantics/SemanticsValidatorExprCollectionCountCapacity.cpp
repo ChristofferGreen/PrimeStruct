@@ -214,6 +214,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     const bool resolvesMapCountMethodTarget =
         context.resolveMapTarget != nullptr &&
         context.resolveMapTarget(receiver);
+    const bool routesThroughBuiltinStdlibMapCountFallback =
+        context.isUnnamespacedMapCountFallbackCall &&
+        !hasDeclaredDefinitionPath(bareMapCountMethodTarget) &&
+        lacksVisibleStdlibMapCountDefinition &&
+        resolvesMapCountMethodTarget;
     const auto tryAssignPointerLikeCountMethodTarget = [&]() -> bool {
       std::string typeName;
       if (receiver.kind == Expr::Kind::Name) {
@@ -245,10 +250,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       return true;
     };
     bool needsCountMethodResolveOrFallback = true;
-    if (context.isUnnamespacedMapCountFallbackCall &&
-        !hasDeclaredDefinitionPath("/map/count") &&
-        lacksVisibleStdlibMapCountDefinition &&
-        resolvesMapCountMethodTarget) {
+    if (routesThroughBuiltinStdlibMapCountFallback) {
       methodResolved = stdlibMapCountMethodTarget;
       isBuiltinMethod = true;
       needsCountMethodResolveOrFallback = false;
