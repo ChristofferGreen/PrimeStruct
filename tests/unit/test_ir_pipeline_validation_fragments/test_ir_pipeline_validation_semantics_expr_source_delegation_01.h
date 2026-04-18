@@ -1785,14 +1785,17 @@
             "          resolvedCountHelperMethodTarget &&\n"
             "          (hasDeclaredDefinitionPath(methodResolved) ||\n"
             "           hasImportedDefinitionPath(methodResolved));\n"
-            "      if (!hasVisibleCountHelperMethodTarget) {\n"
-            "        const bool resolvedCountMethodTargetDirectly =\n"
-            "            resolveMethodTarget(\n"
-            "                params, locals, expr.namespacePrefix, receiver, \"count\",\n"
-            "                methodResolved, isBuiltinMethod);\n"
-            "        const bool failsCountMethodTargetResolution =\n"
-            "            !resolvedCountMethodTargetDirectly;\n"
-            "        if (failsCountMethodTargetResolution) {\n"
+            "      const bool needsDirectCountMethodTargetResolution =\n"
+            "          !hasVisibleCountHelperMethodTarget;\n"
+            "      const bool resolvedCountMethodTargetDirectly =\n"
+            "          needsDirectCountMethodTargetResolution &&\n"
+            "          resolveMethodTarget(\n"
+            "              params, locals, expr.namespacePrefix, receiver, \"count\",\n"
+            "              methodResolved, isBuiltinMethod);\n"
+            "      const bool failsCountMethodTargetResolution =\n"
+            "          needsDirectCountMethodTargetResolution &&\n"
+            "          !resolvedCountMethodTargetDirectly;\n"
+            "      if (failsCountMethodTargetResolution) {\n"
             "          if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
             "              expr.args.empty()) {\n"
             "            (void)validateExpr(params, locals, receiver);\n"
@@ -1856,9 +1859,12 @@
             "          methodResolved = countResolveMissTargetPath;\n"
             "          error_.clear();\n"
             "          isBuiltinMethod = false;\n"
-            "        }\n"
             "      }\n"
             "    }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "      const bool needsDirectCountMethodTargetResolution =\n"
+            "          !hasVisibleCountHelperMethodTarget;\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "        if (resolvedCountMethodTargetDirectly) {\n"
@@ -1869,6 +1875,15 @@
             "      if (hasVisibleCountHelperMethodTarget) {\n"
             "        isBuiltinMethod = false;\n"
             "      } else {\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "      if (!hasVisibleCountHelperMethodTarget) {\n"
+            "        const bool resolvedCountMethodTargetDirectly =\n"
+            "            resolveMethodTarget(\n"
+            "                params, locals, expr.namespacePrefix, receiver, \"count\",\n"
+            "                methodResolved, isBuiltinMethod);\n"
+            "        const bool failsCountMethodTargetResolution =\n"
+            "            !resolvedCountMethodTargetDirectly;\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "            if (typeName.empty()) {\n"

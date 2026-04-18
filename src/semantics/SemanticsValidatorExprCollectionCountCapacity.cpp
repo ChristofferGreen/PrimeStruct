@@ -212,78 +212,78 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                       resolvedCountHelperMethodTarget &&
                       (hasDeclaredDefinitionPath(methodResolved) ||
                        hasImportedDefinitionPath(methodResolved));
-                  if (!hasVisibleCountHelperMethodTarget) {
-                    const bool resolvedCountMethodTargetDirectly =
-                        resolveMethodTarget(
-                            params, locals, expr.namespacePrefix, receiver,
-                            "count", methodResolved, isBuiltinMethod);
-                    const bool failsCountMethodTargetResolution =
-                        !resolvedCountMethodTargetDirectly;
-                    if (failsCountMethodTargetResolution) {
-                      if (countResolveMissLacksBodyArguments) {
+                  const bool needsDirectCountMethodTargetResolution =
+                      !hasVisibleCountHelperMethodTarget;
+                  const bool resolvedCountMethodTargetDirectly =
+                      needsDirectCountMethodTargetResolution &&
+                      resolveMethodTarget(
+                          params, locals, expr.namespacePrefix, receiver,
+                          "count", methodResolved, isBuiltinMethod);
+                  const bool failsCountMethodTargetResolution =
+                      needsDirectCountMethodTargetResolution &&
+                      !resolvedCountMethodTargetDirectly;
+                  if (failsCountMethodTargetResolution) {
+                    if (countResolveMissLacksBodyArguments) {
+                      (void)validateExpr(params, locals, receiver);
+                      return false;
+                    }
+                    const bool usesCountResolveMissMapFallback =
+                        resolvesMapCountReceiver;
+                    std::string countResolveMissTargetPath;
+                    if (usesCountResolveMissMapFallback) {
+                      countResolveMissTargetPath = stdlibMapCountTargetPath;
+                    } else {
+                      std::string typeName;
+                      const BindingInfo *countResolveMissReceiverBinding =
+                          nullptr;
+                      if (receiver.kind == Expr::Kind::Name) {
+                        if (const BindingInfo *paramBinding =
+                                findParamBinding(params, receiver.name)) {
+                          countResolveMissReceiverBinding = paramBinding;
+                        } else if (auto it = locals.find(receiver.name);
+                                   it != locals.end()) {
+                          countResolveMissReceiverBinding = &it->second;
+                        }
+                      }
+                      if (countResolveMissReceiverBinding != nullptr) {
+                        typeName = countResolveMissReceiverBinding->typeName;
+                      }
+                      const bool needsCountReceiverTypeFromCallReturn =
+                          typeName.empty();
+                      if (needsCountReceiverTypeFromCallReturn) {
+                        typeName = inferPointerLikeCallReturnType(
+                            receiver, params, locals);
+                      }
+                      const bool needsCountReceiverTypeFromPointerFallback =
+                          typeName.empty();
+                      if (needsCountReceiverTypeFromPointerFallback) {
+                        const bool resolvesCountReceiverTypeFromPointerExpr =
+                            isPointerExpr(receiver, params, locals);
+                        const bool resolvesCountReceiverTypeFromPointerLikeExpr =
+                            !resolvesCountReceiverTypeFromPointerExpr &&
+                            isPointerLikeExpr(receiver, params, locals);
+                        const char *countResolveMissPointerTypeName =
+                            resolvesCountReceiverTypeFromPointerExpr
+                                ? "Pointer"
+                                : (resolvesCountReceiverTypeFromPointerLikeExpr
+                                       ? "Reference"
+                                       : nullptr);
+                        if (countResolveMissPointerTypeName != nullptr) {
+                          typeName = countResolveMissPointerTypeName;
+                        }
+                      }
+                      const bool resolvesPointerLikeCountReceiverType =
+                          typeName == "Pointer" || typeName == "Reference";
+                      if (!resolvesPointerLikeCountReceiverType) {
                         (void)validateExpr(params, locals, receiver);
                         return false;
                       }
-                      const bool usesCountResolveMissMapFallback =
-                          resolvesMapCountReceiver;
-                      std::string countResolveMissTargetPath;
-                      if (usesCountResolveMissMapFallback) {
-                        countResolveMissTargetPath = stdlibMapCountTargetPath;
-                      } else {
-                        std::string typeName;
-                        const BindingInfo *countResolveMissReceiverBinding =
-                            nullptr;
-                        if (receiver.kind == Expr::Kind::Name) {
-                          if (const BindingInfo *paramBinding =
-                                  findParamBinding(params, receiver.name)) {
-                            countResolveMissReceiverBinding = paramBinding;
-                          } else if (auto it = locals.find(receiver.name);
-                                     it != locals.end()) {
-                            countResolveMissReceiverBinding = &it->second;
-                          }
-                        }
-                        if (countResolveMissReceiverBinding != nullptr) {
-                          typeName = countResolveMissReceiverBinding->typeName;
-                        }
-                        const bool needsCountReceiverTypeFromCallReturn =
-                            typeName.empty();
-                        if (needsCountReceiverTypeFromCallReturn) {
-                          typeName = inferPointerLikeCallReturnType(
-                              receiver, params, locals);
-                        }
-                        const bool needsCountReceiverTypeFromPointerFallback =
-                            typeName.empty();
-                        if (needsCountReceiverTypeFromPointerFallback) {
-                          const bool
-                              resolvesCountReceiverTypeFromPointerExpr =
-                                  isPointerExpr(receiver, params, locals);
-                          const bool
-                              resolvesCountReceiverTypeFromPointerLikeExpr =
-                                  !resolvesCountReceiverTypeFromPointerExpr &&
-                                  isPointerLikeExpr(receiver, params, locals);
-                          const char *countResolveMissPointerTypeName =
-                              resolvesCountReceiverTypeFromPointerExpr
-                                  ? "Pointer"
-                                  : (resolvesCountReceiverTypeFromPointerLikeExpr
-                                         ? "Reference"
-                                         : nullptr);
-                          if (countResolveMissPointerTypeName != nullptr) {
-                            typeName = countResolveMissPointerTypeName;
-                          }
-                        }
-                        const bool resolvesPointerLikeCountReceiverType =
-                            typeName == "Pointer" || typeName == "Reference";
-                        if (!resolvesPointerLikeCountReceiverType) {
-                          (void)validateExpr(params, locals, receiver);
-                          return false;
-                        }
-                        countResolveMissTargetPath =
-                            "/" + typeName + "/count";
-                      }
-                      methodResolved = countResolveMissTargetPath;
-                      error_.clear();
-                      isBuiltinMethod = false;
+                      countResolveMissTargetPath =
+                          "/" + typeName + "/count";
                     }
+                    methodResolved = countResolveMissTargetPath;
+                    error_.clear();
+                    isBuiltinMethod = false;
                   }
                 }
                 if (!isBuiltinMethod &&
