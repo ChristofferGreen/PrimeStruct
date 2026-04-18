@@ -149,8 +149,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         context.isNamespacedMapCountCall ||
         context.isUnnamespacedMapCountFallbackCall ||
         context.isResolvedMapCountCall;
-    const bool resolvesExistingCountMethodTarget =
-        defMap_.find(resolved) != defMap_.end();
     if (hasNamedArguments(expr.argNames) ||
         isUnimportedStdNamespacedVectorCompatibilityDirectCall(
             expr.isMethodCall,
@@ -175,7 +173,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       return false;
     }
     if (!(requireSingleArg
-              ? ((!resolvesExistingCountMethodTarget &&
+              ? ((defMap_.find(resolved) == defMap_.end() &&
                   !context.isStdNamespacedMapCountCall) ||
                  (!isStdNamespacedVectorCompatibilityDirectCall(
                       expr.isMethodCall, resolveCalleePath(expr), "count") &&
@@ -189,7 +187,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     context.isArrayNamespacedVectorCountCompatibilityCall(
                         expr))) ||
                  routesThroughMapCountCompatibility)
-              : (resolvesExistingCountMethodTarget ||
+              : (defMap_.find(resolved) != defMap_.end() ||
                  routesThroughMapCountCompatibility))) {
       return false;
     }
