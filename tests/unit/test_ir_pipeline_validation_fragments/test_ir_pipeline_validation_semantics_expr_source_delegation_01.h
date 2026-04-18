@@ -1793,6 +1793,12 @@
             "    };\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto failUnknownCallTarget =\n"
+            "    [&](const std::string &callTargetPath) {\n"
+            "      return failExprDiagnostic(expr, \"unknown call target: \" + callTargetPath);\n"
+            "    };\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto reusesResolvedMethodMonomorphizedTarget =\n"
             "    [&](const std::string &methodTargetPath, bool isBuiltinMethod) {\n"
             "      return !isBuiltinMethod &&\n"
@@ -5234,8 +5240,7 @@
             "         lacksVisibleStdlibMapCountDefinition &&\n"
             "         !context.shouldBuiltinValidateBareMapCountCall);\n"
             "    if (failsCountUnknownTargetValidation) {\n"
-            "      return failExprDiagnostic(expr,\n"
-            "                                \"unknown call target: \" + stdlibMapCountTargetPath);\n"
+            "      return failUnknownCallTarget(stdlibMapCountTargetPath);\n"
             "    }\n"
             "    if (!failRemovedRootedVectorDirectCall()) {\n"
             "      return false;\n"

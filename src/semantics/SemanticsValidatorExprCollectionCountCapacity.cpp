@@ -30,6 +30,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       [&](const std::string &methodTargetPath) {
         return failExprDiagnostic(expr, "unknown method: " + methodTargetPath);
       };
+  const auto failUnknownCallTarget =
+      [&](const std::string &callTargetPath) {
+        return failExprDiagnostic(expr, "unknown call target: " + callTargetPath);
+      };
   const auto failRemovedRootedVectorDirectCall =
       [&]() {
         if (const std::string removedRootedVectorDirectCallDiagnostic =
@@ -327,8 +331,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                      lacksVisibleStdlibMapCountDefinition &&
                      !context.shouldBuiltinValidateBareMapCountCall);
                 if (failsCountUnknownTargetValidation) {
-                  return failExprDiagnostic(
-                      expr, "unknown call target: " + stdlibMapCountTargetPath);
+                  return failUnknownCallTarget(stdlibMapCountTargetPath);
                 }
                 const bool lacksVisibleCountMethodTarget =
                     !isBuiltinMethod &&
