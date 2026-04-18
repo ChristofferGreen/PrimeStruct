@@ -1071,7 +1071,10 @@
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "return failLateCallCompatibilityDiagnostic(\n"
-            "          \"unknown call target: /std/collections/vector/count\");") !=
+            "            vectorCompatibilityUnknownCallTargetDiagnostic(\"count\"));") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "\"unknown call target: /std/collections/vector/count\"") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "const bool resolvesVectorLikeCountTarget =\n"
@@ -1160,6 +1163,13 @@
             "if (rejectsStdNamespacedVectorCountWrapperMapTargetWithoutDeclaredHelper)") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "return failCollectionCountCapacityDiagnostic(\n"
+            "        vectorCompatibilityUnknownCallTargetDiagnostic(\"count\"));") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "\"unknown call target: /std/collections/vector/count\"") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool resolvesStdNamespacedVectorCountMapTarget =\n"
             "      context.isStdNamespacedVectorCountCall && expr.args.size() == 1 &&\n"
             "      context.resolveMapTarget != nullptr &&\n"
@@ -1211,6 +1221,17 @@
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "\"capacity requires vector target\"") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "if (!expr.isMethodCall && setupOut.isStdNamespacedVectorCountCall &&\n"
+            "      !hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/count\") &&\n"
+            "      !allowStdNamespacedVectorUserReceiverProbe) {\n"
+            "    return failCollectionDispatchDiagnostic(\n"
+            "        vectorCompatibilityUnknownCallTargetDiagnostic(\"count\"));\n"
+            "  }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "\"unknown call target: /std/collections/vector/count\"") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "if (!expr.isMethodCall && setupOut.isStdNamespacedVectorCapacityCall &&\n"

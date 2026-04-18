@@ -72,7 +72,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       lacksDeclaredStdNamespacedVectorCountHelper;
   if (rejectsStdNamespacedVectorCountWrapperMapTargetWithoutDeclaredHelper) {
     handledOut = true;
-    return failCollectionCountCapacityDiagnostic("unknown call target: /std/collections/vector/count");
+    return failCollectionCountCapacityDiagnostic(
+        vectorCompatibilityUnknownCallTargetDiagnostic("count"));
   }
 
   Expr rewrittenVectorHelperCall;

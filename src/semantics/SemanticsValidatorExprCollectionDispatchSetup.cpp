@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsVectorCompatibilityHelpers.h"
 
 namespace primec::semantics {
 
@@ -209,7 +210,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       !hasVisibleCanonicalVectorHelperPath("/std/collections/vector/count") &&
       !allowStdNamespacedVectorUserReceiverProbe) {
     return failCollectionDispatchDiagnostic(
-        "unknown call target: /std/collections/vector/count");
+        vectorCompatibilityUnknownCallTargetDiagnostic("count"));
   }
   if (!expr.isMethodCall && setupOut.isStdNamespacedVectorCapacityCall &&
       !hasVisibleCanonicalVectorHelperPath("/std/collections/vector/capacity") &&

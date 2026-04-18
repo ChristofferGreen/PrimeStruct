@@ -107,7 +107,7 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
           resolvesNonVectorCountTarget && resolvesMapAfterValidation;
       if (rejectsStdNamespacedVectorCountMapTargetAsUnknownCallTarget) {
         return failLateCallCompatibilityDiagnostic(
-            "unknown call target: /std/collections/vector/count");
+            vectorCompatibilityUnknownCallTargetDiagnostic("count"));
       }
       return failLateCallCompatibilityDiagnostic(
           vectorCompatibilityRequiresVectorTargetDiagnostic("count"));
@@ -120,7 +120,7 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
         resolvesVectorLikeCountTarget;
     if (rejectsVectorCountTargetWithoutVisibleHelper) {
       return failLateCallCompatibilityDiagnostic(
-          "unknown call target: /std/collections/vector/count");
+          vectorCompatibilityUnknownCallTargetDiagnostic("count"));
     }
   }
 

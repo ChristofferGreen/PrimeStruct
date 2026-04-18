@@ -17,4 +17,10 @@ inline std::string vectorCompatibilityRequiresVectorTargetDiagnostic(
   return std::string(helperName) + " requires vector target";
 }
 
+inline std::string vectorCompatibilityUnknownCallTargetDiagnostic(
+    std::string_view helperName) {
+  return "unknown call target: /std/collections/vector/" +
+         std::string(helperName);
+}
+
 } // namespace primec::semantics
