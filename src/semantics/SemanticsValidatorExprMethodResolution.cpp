@@ -84,16 +84,14 @@ bool SemanticsValidator::validateExprMethodCallTarget(
 
   const bool isVectorCompatibilityMethod =
       isVectorCompatibilityHelperName(expr.name);
-  const std::string canonicalVectorCompatibilityMethodTarget =
-      "/std/collections/vector/" + expr.name;
-  const bool hasVisibleCanonicalVectorCompatibilityMethodTarget =
-      hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||
-      defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0;
   auto rewriteEligibleExperimentalVectorCompatibilityMethodTargetToCanonical =
       [&](std::string &methodTarget, bool methodTargetEligible) {
+        const std::string canonicalVectorCompatibilityMethodTarget =
+            "/std/collections/vector/" + expr.name;
         if (methodTargetEligible &&
             isExperimentalVectorCompatibilityMethodTarget(methodTarget) &&
-            hasVisibleCanonicalVectorCompatibilityMethodTarget) {
+            (hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||
+             defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0)) {
           methodTarget = canonicalVectorCompatibilityMethodTarget;
         }
       };
