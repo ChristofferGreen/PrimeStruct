@@ -89,59 +89,36 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                                 stdNamespacedVectorCountDiagnosticMessage);
     }
   }
-  auto resolveCountMethod = [&](bool requireSingleArg) -> bool {
-    if (hasNamedArguments(expr.argNames) ||
+  if (!(hasNamedArguments(expr.argNames) ||
         isUnimportedStdNamespacedVectorCompatibilityDirectCall(
             expr.isMethodCall,
             resolveCalleePath(expr),
             "count",
             hasImportedDefinitionPath("/std/collections/vector/count")) ||
-        expr.args.empty()) {
-      return false;
-    }
-    if (requireSingleArg && expr.args.size() != 1) {
-      return false;
-    }
-    if (!requireSingleArg && expr.args.size() == 1) {
-      return false;
-    }
-    if ((context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
-         context.isArrayNamespacedVectorCountCompatibilityCall(expr))) {
-      return false;
-    }
-    if (!(isVectorBuiltinName(expr, "count") ||
-          context.isStdNamespacedMapCountCall ||
-          context.isNamespacedMapCountCall ||
-          context.isUnnamespacedMapCountFallbackCall ||
-          context.isResolvedMapCountCall)) {
-      return false;
-    }
-    if (!(requireSingleArg
-              ? ((defMap_.find(resolved) == defMap_.end() &&
-                  !context.isStdNamespacedMapCountCall) ||
-                 (!isStdNamespacedVectorCompatibilityDirectCall(
-                      expr.isMethodCall, resolveCalleePath(expr), "count") &&
-                  context.isNamespacedVectorHelperCall &&
-                  context.namespacedHelper == "count" &&
-                  isVectorBuiltinName(expr, "count") &&
-                  expr.args.size() == 1 &&
-                  !hasDefinitionPath(resolved) &&
-                  !(context.isArrayNamespacedVectorCountCompatibilityCall !=
-                        nullptr &&
-                    context.isArrayNamespacedVectorCountCompatibilityCall(
-                        expr))) ||
-                 context.isStdNamespacedMapCountCall ||
-                 context.isNamespacedMapCountCall ||
-                 context.isUnnamespacedMapCountFallbackCall ||
-                 context.isResolvedMapCountCall)
-              : (defMap_.find(resolved) != defMap_.end() ||
-                 context.isStdNamespacedMapCountCall ||
-                 context.isNamespacedMapCountCall ||
-                 context.isUnnamespacedMapCountFallbackCall ||
-                 context.isResolvedMapCountCall))) {
-      return false;
-    }
-
+        expr.args.empty()) &&
+      expr.args.size() == 1 &&
+      !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
+        context.isArrayNamespacedVectorCountCompatibilityCall(expr)) &&
+      (isVectorBuiltinName(expr, "count") ||
+       context.isStdNamespacedMapCountCall ||
+       context.isNamespacedMapCountCall ||
+       context.isUnnamespacedMapCountFallbackCall ||
+       context.isResolvedMapCountCall) &&
+      ((defMap_.find(resolved) == defMap_.end() &&
+        !context.isStdNamespacedMapCountCall) ||
+       (!isStdNamespacedVectorCompatibilityDirectCall(
+            expr.isMethodCall, resolveCalleePath(expr), "count") &&
+        context.isNamespacedVectorHelperCall &&
+        context.namespacedHelper == "count" &&
+        isVectorBuiltinName(expr, "count") &&
+        expr.args.size() == 1 &&
+        !hasDefinitionPath(resolved) &&
+        !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
+          context.isArrayNamespacedVectorCountCompatibilityCall(expr))) ||
+       context.isStdNamespacedMapCountCall ||
+       context.isNamespacedMapCountCall ||
+       context.isUnnamespacedMapCountFallbackCall ||
+       context.isResolvedMapCountCall)) {
     handledOut = true;
     usedMethodTarget = true;
     hasMethodReceiverIndex = true;
@@ -291,14 +268,178 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     resolved = methodResolved;
     resolvedMethod = isBuiltinMethod;
     return true;
-  };
-  if (resolveCountMethod(true)) {
-    return true;
   }
   if (handledOut) {
     return false;
   }
-  if (resolveCountMethod(false)) {
+  if (!(hasNamedArguments(expr.argNames) ||
+        isUnimportedStdNamespacedVectorCompatibilityDirectCall(
+            expr.isMethodCall,
+            resolveCalleePath(expr),
+            "count",
+            hasImportedDefinitionPath("/std/collections/vector/count")) ||
+        expr.args.empty()) &&
+      expr.args.size() != 1 &&
+      !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
+        context.isArrayNamespacedVectorCountCompatibilityCall(expr)) &&
+      (isVectorBuiltinName(expr, "count") ||
+       context.isStdNamespacedMapCountCall ||
+       context.isNamespacedMapCountCall ||
+       context.isUnnamespacedMapCountFallbackCall ||
+       context.isResolvedMapCountCall) &&
+      (defMap_.find(resolved) != defMap_.end() ||
+       context.isStdNamespacedMapCountCall ||
+       context.isNamespacedMapCountCall ||
+       context.isUnnamespacedMapCountFallbackCall ||
+       context.isResolvedMapCountCall)) {
+    handledOut = true;
+    usedMethodTarget = true;
+    hasMethodReceiverIndex = true;
+    methodReceiverIndex = 0;
+    const Expr &receiver = expr.args.front();
+    bool isBuiltinMethod = false;
+    std::string methodResolved;
+    const std::string stdlibMapCountMethodTarget =
+        "/std/collections/map/count";
+    if (context.isUnnamespacedMapCountFallbackCall &&
+        !hasDeclaredDefinitionPath("/map/count") &&
+        !hasDeclaredDefinitionPath("/std/collections/map/count") &&
+        !hasImportedDefinitionPath("/std/collections/map/count") &&
+        context.resolveMapTarget != nullptr &&
+        context.resolveMapTarget(receiver)) {
+      methodResolved = stdlibMapCountMethodTarget;
+      isBuiltinMethod = true;
+    } else if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
+                                               "count", methodResolved)) {
+      methodResolved = preferVectorStdlibHelperPath(methodResolved);
+      if (hasDeclaredDefinitionPath(methodResolved) ||
+          hasImportedDefinitionPath(methodResolved)) {
+        isBuiltinMethod = false;
+      } else if (!resolveMethodTarget(
+                     params,
+                     locals,
+                     expr.namespacePrefix,
+                     expr.args.front(),
+                     "count",
+                     methodResolved,
+                     isBuiltinMethod)) {
+        if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||
+            expr.args.empty()) {
+          (void)validateExpr(params, locals, expr.args.front());
+          return false;
+        }
+        if (context.resolveMapTarget != nullptr &&
+            context.resolveMapTarget(receiver)) {
+          methodResolved = stdlibMapCountMethodTarget;
+          error_.clear();
+          isBuiltinMethod = false;
+        } else {
+          std::string typeName;
+          if (receiver.kind == Expr::Kind::Name) {
+            if (const BindingInfo *paramBinding =
+                    findParamBinding(params, receiver.name)) {
+              typeName = paramBinding->typeName;
+            } else if (auto it = locals.find(receiver.name);
+                       it != locals.end()) {
+              typeName = it->second.typeName;
+            }
+          }
+          if (typeName.empty()) {
+            typeName = inferPointerLikeCallReturnType(receiver, params, locals);
+          }
+          if (typeName.empty()) {
+            if (isPointerExpr(receiver, params, locals)) {
+              typeName = "Pointer";
+            } else if (isPointerLikeExpr(receiver, params, locals)) {
+              typeName = "Reference";
+            }
+          }
+          if (typeName != "Pointer" && typeName != "Reference") {
+            (void)validateExpr(params, locals, expr.args.front());
+            return false;
+          }
+          methodResolved = "/" + typeName + "/count";
+          error_.clear();
+          isBuiltinMethod = false;
+        }
+      }
+    } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix,
+                                    expr.args.front(), "count", methodResolved,
+                                    isBuiltinMethod)) {
+      if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||
+          expr.args.empty()) {
+        (void)validateExpr(params, locals, expr.args.front());
+        return false;
+      }
+      if (context.resolveMapTarget != nullptr &&
+          context.resolveMapTarget(receiver)) {
+        methodResolved = stdlibMapCountMethodTarget;
+        error_.clear();
+        isBuiltinMethod = false;
+      } else {
+        std::string typeName;
+        if (receiver.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding =
+                  findParamBinding(params, receiver.name)) {
+            typeName = paramBinding->typeName;
+          } else if (auto it = locals.find(receiver.name);
+                     it != locals.end()) {
+            typeName = it->second.typeName;
+          }
+        }
+        if (typeName.empty()) {
+          typeName = inferPointerLikeCallReturnType(receiver, params, locals);
+        }
+        if (typeName.empty()) {
+          if (isPointerExpr(receiver, params, locals)) {
+            typeName = "Pointer";
+          } else if (isPointerLikeExpr(receiver, params, locals)) {
+            typeName = "Reference";
+          }
+        }
+        if (typeName != "Pointer" && typeName != "Reference") {
+          (void)validateExpr(params, locals, expr.args.front());
+          return false;
+        }
+        methodResolved = "/" + typeName + "/count";
+        error_.clear();
+        isBuiltinMethod = false;
+      }
+    }
+    if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&
+        resolved.rfind(methodResolved + "__t", 0) == 0) {
+      methodResolved = resolved;
+    }
+    if ((!expr.isMethodCall &&
+         expr.args.size() == 1 &&
+         expr.args.front().kind == Expr::Kind::Name &&
+         methodResolved == "/map/count" &&
+         !hasImportedDefinitionPath("/count") &&
+         !hasDeclaredDefinitionPath("/count") &&
+         !hasDeclaredDefinitionPath("/std/collections/map/count") &&
+         !hasImportedDefinitionPath("/std/collections/map/count")) ||
+        (isBuiltinMethod &&
+         methodResolved == stdlibMapCountMethodTarget &&
+         !hasDeclaredDefinitionPath("/std/collections/map/count") &&
+         !hasImportedDefinitionPath("/std/collections/map/count") &&
+         !context.shouldBuiltinValidateBareMapCountCall)) {
+      return failExprDiagnostic(expr,
+                                "unknown call target: " +
+                                    stdlibMapCountMethodTarget);
+    }
+    const std::string removedRootedVectorDirectCallDiagnostic =
+        getRemovedRootedVectorDirectCallDiagnostic(expr);
+    if (!removedRootedVectorDirectCallDiagnostic.empty()) {
+      return failExprDiagnostic(expr,
+                                removedRootedVectorDirectCallDiagnostic);
+    }
+    if (!isBuiltinMethod && !hasDeclaredDefinitionPath(methodResolved) &&
+        !hasImportedDefinitionPath(methodResolved)) {
+      return failExprDiagnostic(expr,
+                                "unknown method: " + methodResolved);
+    }
+    resolved = methodResolved;
+    resolvedMethod = isBuiltinMethod;
     return true;
   }
   if (handledOut) {

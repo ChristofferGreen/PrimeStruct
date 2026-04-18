@@ -10,6 +10,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 17, 2026)**
 
 **Group 14 - SoA bring-up and end-state cleanup**
+- ✓ TODO-0785: Remove count resolver wrapper. Completed: the shared `resolveCountMethod` wrapper in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the inline single-arg and multi-arg count routing branches present while the deleted wrapper stays absent.
 - ✓ TODO-0784: Remove capacity resolver wrapper. Completed: the shared `resolveCapacityMethod` wrapper in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the inline helper/direct capacity routing present while the deleted wrapper stays absent.
 - ✓ TODO-0783: Remove shared resolvable-path helper. Completed: the shared `hasResolvableDefinitionPath` helper in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the inline declared/imported path predicates present while the deleted helper stays absent.
 - ✓ TODO-0782: Remove shared count/capacity diagnostic helper. Completed: the shared `failCollectionCountCapacityDiagnostic` helper in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the direct `failExprDiagnostic(expr, ...)` branches present while the deleted helper stays absent.
