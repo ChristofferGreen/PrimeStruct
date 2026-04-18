@@ -1785,9 +1785,7 @@
             "          resolvedCountHelperMethodTarget &&\n"
             "          (hasDeclaredDefinitionPath(methodResolved) ||\n"
             "           hasImportedDefinitionPath(methodResolved));\n"
-            "      if (hasVisibleCountHelperMethodTarget) {\n"
-            "        isBuiltinMethod = false;\n"
-            "      } else {\n"
+            "      if (!hasVisibleCountHelperMethodTarget) {\n"
             "        const bool resolvedCountMethodTargetDirectly =\n"
             "            resolveMethodTarget(\n"
             "                params, locals, expr.namespacePrefix, receiver, \"count\",\n"
@@ -1861,6 +1859,11 @@
             "        }\n"
             "      }\n"
             "    }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "      if (hasVisibleCountHelperMethodTarget) {\n"
+            "        isBuiltinMethod = false;\n"
+            "      } else {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "            if (typeName.empty()) {\n"

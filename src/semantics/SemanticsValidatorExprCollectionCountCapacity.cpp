@@ -212,9 +212,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                       resolvedCountHelperMethodTarget &&
                       (hasDeclaredDefinitionPath(methodResolved) ||
                        hasImportedDefinitionPath(methodResolved));
-                  if (hasVisibleCountHelperMethodTarget) {
-                    isBuiltinMethod = false;
-                  } else {
+                  if (!hasVisibleCountHelperMethodTarget) {
                     const bool resolvedCountMethodTargetDirectly =
                         resolveMethodTarget(
                             params, locals, expr.namespacePrefix, receiver,
