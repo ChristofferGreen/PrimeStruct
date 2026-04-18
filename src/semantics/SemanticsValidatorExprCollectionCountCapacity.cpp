@@ -125,9 +125,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       return false;
     }
     const auto matchesCountMethodCallShape = [&](bool requireSingleArg) {
-      const bool resolvesMapCountSurface =
-          context.isStdNamespacedMapCountCall || context.isNamespacedMapCountCall ||
-          context.isUnnamespacedMapCountFallbackCall || context.isResolvedMapCountCall;
       if (requireSingleArg) {
         return (defMap_.find(resolved) == defMap_.end() &&
                 !context.isStdNamespacedMapCountCall) ||
@@ -140,9 +137,16 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 !hasDefinitionPath(resolved) &&
                 !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
                   context.isArrayNamespacedVectorCountCompatibilityCall(expr))) ||
-               resolvesMapCountSurface;
+               context.isStdNamespacedMapCountCall ||
+               context.isNamespacedMapCountCall ||
+               context.isUnnamespacedMapCountFallbackCall ||
+               context.isResolvedMapCountCall;
       }
-      return defMap_.find(resolved) != defMap_.end() || resolvesMapCountSurface;
+      return defMap_.find(resolved) != defMap_.end() ||
+             context.isStdNamespacedMapCountCall ||
+             context.isNamespacedMapCountCall ||
+             context.isUnnamespacedMapCountFallbackCall ||
+             context.isResolvedMapCountCall;
     };
     if (!matchesCountMethodCallShape(requireSingleArg)) {
       return false;

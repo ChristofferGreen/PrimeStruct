@@ -1435,9 +1435,6 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto matchesCountMethodCallShape = [&](bool requireSingleArg) {\n"
-            "      const bool resolvesMapCountSurface =\n"
-            "          context.isStdNamespacedMapCountCall || context.isNamespacedMapCountCall ||\n"
-            "          context.isUnnamespacedMapCountFallbackCall || context.isResolvedMapCountCall;\n"
             "      if (requireSingleArg) {\n"
             "        return (defMap_.find(resolved) == defMap_.end() &&\n"
             "                !context.isStdNamespacedMapCountCall) ||\n"
@@ -1450,10 +1447,20 @@
             "                !hasDefinitionPath(resolved) &&\n"
             "                !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
             "                  context.isArrayNamespacedVectorCountCompatibilityCall(expr))) ||\n"
-            "               resolvesMapCountSurface;\n"
+            "               context.isStdNamespacedMapCountCall ||\n"
+            "               context.isNamespacedMapCountCall ||\n"
+            "               context.isUnnamespacedMapCountFallbackCall ||\n"
+            "               context.isResolvedMapCountCall;\n"
             "      }\n"
-            "      return defMap_.find(resolved) != defMap_.end() || resolvesMapCountSurface;\n"
+            "      return defMap_.find(resolved) != defMap_.end() ||\n"
+            "             context.isStdNamespacedMapCountCall ||\n"
+            "             context.isNamespacedMapCountCall ||\n"
+            "             context.isUnnamespacedMapCountFallbackCall ||\n"
+            "             context.isResolvedMapCountCall;\n"
             "    };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool resolvesMapCountSurface =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool resolvesExplicitCountMethodTarget =") ==
@@ -1562,20 +1569,28 @@
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "if (!allowStdNamespacedVectorUserReceiverProbe) {\n"
-            "    std::string stdNamespacedVectorCountDiagnosticMessage =\n"
-            "        classifyStdNamespacedVectorCountDiagnosticMessage(\n"
-            "            isInvisibleStdNamespacedVectorCompatibilityDirectCall(\n"
-            "                expr.isMethodCall,\n"
-            "                resolveCalleePath(expr),\n"
-            "                \"count\",\n"
-            "                hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/count\")),\n"
-            "            false,\n"
-            "            false,\n"
-            "            false,\n"
-            "            false);\n"
-            "    if (!stdNamespacedVectorCountDiagnosticMessage.empty()) {\n"
+            "    if (!classifyStdNamespacedVectorCountDiagnosticMessage(\n"
+            "             isInvisibleStdNamespacedVectorCompatibilityDirectCall(\n"
+            "                 expr.isMethodCall,\n"
+            "                 resolveCalleePath(expr),\n"
+            "                 \"count\",\n"
+            "                 hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/count\")),\n"
+            "             false,\n"
+            "             false,\n"
+            "             false,\n"
+            "             false)\n"
+            "             .empty()) {\n"
             "      return failCollectionDispatchDiagnostic(\n"
-            "          std::move(stdNamespacedVectorCountDiagnosticMessage));\n"
+            "          classifyStdNamespacedVectorCountDiagnosticMessage(\n"
+            "              isInvisibleStdNamespacedVectorCompatibilityDirectCall(\n"
+            "                  expr.isMethodCall,\n"
+            "                  resolveCalleePath(expr),\n"
+            "                  \"count\",\n"
+            "                  hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/count\")),\n"
+            "              false,\n"
+            "              false,\n"
+            "              false,\n"
+            "              false));\n"
             "    }\n"
             "  }") !=
         std::string::npos);

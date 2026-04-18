@@ -195,20 +195,28 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       setupOut.isNamespacedVectorHelperCall &&
       (setupOut.namespacedHelper == "count" || setupOut.namespacedHelper == "capacity");
   if (!allowStdNamespacedVectorUserReceiverProbe) {
-    std::string stdNamespacedVectorCountDiagnosticMessage =
-        classifyStdNamespacedVectorCountDiagnosticMessage(
-            isInvisibleStdNamespacedVectorCompatibilityDirectCall(
-                expr.isMethodCall,
-                resolveCalleePath(expr),
-                "count",
-                hasVisibleCanonicalVectorHelperPath("/std/collections/vector/count")),
-            false,
-            false,
-            false,
-            false);
-    if (!stdNamespacedVectorCountDiagnosticMessage.empty()) {
+    if (!classifyStdNamespacedVectorCountDiagnosticMessage(
+             isInvisibleStdNamespacedVectorCompatibilityDirectCall(
+                 expr.isMethodCall,
+                 resolveCalleePath(expr),
+                 "count",
+                 hasVisibleCanonicalVectorHelperPath("/std/collections/vector/count")),
+             false,
+             false,
+             false,
+             false)
+             .empty()) {
       return failCollectionDispatchDiagnostic(
-          std::move(stdNamespacedVectorCountDiagnosticMessage));
+          classifyStdNamespacedVectorCountDiagnosticMessage(
+              isInvisibleStdNamespacedVectorCompatibilityDirectCall(
+                  expr.isMethodCall,
+                  resolveCalleePath(expr),
+                  "count",
+                  hasVisibleCanonicalVectorHelperPath("/std/collections/vector/count")),
+              false,
+              false,
+              false,
+              false));
     }
   }
   if (callsInvisibleStdNamespacedVectorCapacityHelper &&
