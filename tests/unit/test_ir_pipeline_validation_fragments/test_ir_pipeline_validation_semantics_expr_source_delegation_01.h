@@ -1540,7 +1540,12 @@
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "const bool isStdNamespacedVectorCountCall =\n"
-            "      !expr.isMethodCall && resolveCalleePath(expr).rfind(\"/std/collections/vector/count\", 0) == 0;") !=
+            "      isStdNamespacedVectorCompatibilityDirectCall(\n"
+            "          expr.isMethodCall, resolveCalleePath(expr), \"count\");") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "const bool isStdNamespacedVectorCountCall =\n"
+            "      !expr.isMethodCall && resolveCalleePath(expr).rfind(\"/std/collections/vector/count\", 0) == 0;") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "if (!expr.isMethodCall && setupOut.isStdNamespacedVectorCountCall &&\n"

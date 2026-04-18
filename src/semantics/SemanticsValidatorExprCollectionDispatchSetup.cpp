@@ -39,7 +39,8 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
   setupOut.isNamespacedVectorHelperCall =
       isNamespacedCollectionHelperCall && namespacedCollection == "vector";
   const bool isStdNamespacedVectorCountCall =
-      !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/count", 0) == 0;
+      isStdNamespacedVectorCompatibilityDirectCall(
+          expr.isMethodCall, resolveCalleePath(expr), "count");
   setupOut.isStdNamespacedMapCountCall =
       !expr.isMethodCall &&
       (resolveCalleePath(expr) == "/std/collections/map/count" ||
