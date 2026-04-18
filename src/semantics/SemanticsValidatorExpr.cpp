@@ -796,9 +796,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     collectionCountCapacityDispatchContext
         .isDirectStdNamespacedVectorCountWrapperMapTarget =
         collectionDispatchSetup.isDirectStdNamespacedVectorCountWrapperMapTarget;
-    collectionCountCapacityDispatchContext
-        .hasStdNamespacedVectorCountAliasDefinition =
-        collectionDispatchSetup.hasStdNamespacedVectorCountAliasDefinition;
     collectionCountCapacityDispatchContext.shouldBuiltinValidateBareMapCountCall =
         shouldBuiltinValidateBareMapCountCall;
     collectionCountCapacityDispatchContext.resolveMapTarget =

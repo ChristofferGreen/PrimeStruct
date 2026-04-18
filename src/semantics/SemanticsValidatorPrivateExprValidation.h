@@ -531,7 +531,6 @@
     bool shouldBuiltinValidateStdNamespacedVectorCapacityCall = false;
     bool isNamespacedVectorCapacityCall = false;
     bool isDirectStdNamespacedVectorCountWrapperMapTarget = false;
-    bool hasStdNamespacedVectorCountAliasDefinition = false;
     bool isStdNamespacedVectorAccessCall = false;
     bool hasStdNamespacedVectorAccessDefinition = false;
     bool isStdNamespacedMapAccessCall = false;
@@ -610,7 +609,6 @@
     bool shouldBuiltinValidateStdNamespacedVectorCapacityCall = false;
     bool isNamespacedVectorCapacityCall = false;
     bool isDirectStdNamespacedVectorCountWrapperMapTarget = false;
-    bool hasStdNamespacedVectorCountAliasDefinition = false;
     bool shouldBuiltinValidateBareMapCountCall = false;
     std::function<bool(const Expr &)> resolveMapTarget;
     std::function<bool(const Expr &)> isArrayNamespacedVectorCountCompatibilityCall;

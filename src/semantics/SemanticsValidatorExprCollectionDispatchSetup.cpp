@@ -198,9 +198,6 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       !expr.isMethodCall && setupOut.isStdNamespacedVectorCountCall &&
       expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call &&
       resolveMapTarget(expr.args.front());
-  setupOut.hasStdNamespacedVectorCountAliasDefinition =
-      hasDefinitionPath("/std/collections/vector/count") ||
-      hasImportedDefinitionPath("/std/collections/vector/count");
 
   const bool allowStdNamespacedVectorUserReceiverProbe =
       !expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&

@@ -1237,6 +1237,9 @@
             "  }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "setupOut.hasStdNamespacedVectorCountAliasDefinition =") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "\"unknown call target: /std/collections/vector/count\"") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
@@ -1259,6 +1262,9 @@
             "            locals,\n"
             "            expr,\n"
             "            dispatchBootstrap.dispatchResolvers,") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            ".hasStdNamespacedVectorCountAliasDefinition =") ==
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "validateExprDirectCollectionFallbacks(\n"
