@@ -1095,10 +1095,20 @@
             "                                                      mapValueType);") !=
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "const bool rejectsStdNamespacedVectorCountMapTargetAsUnknownCallTarget =\n"
+            "          resolvesNonVectorCountTarget && resolvesMapAfterValidation;") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
             "if (resolvesMap ||\n"
             "          context.dispatchResolvers->resolveMapTarget(expr.args.front(),\n"
             "                                                      mapKeyType,\n"
             "                                                      mapValueType))") ==
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "if (resolvesMapAfterValidation)") ==
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "if (rejectsStdNamespacedVectorCountMapTargetAsUnknownCallTarget)") !=
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "const bool lacksVisibleStdNamespacedVectorCountHelper =\n"

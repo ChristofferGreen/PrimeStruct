@@ -103,7 +103,9 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
           context.dispatchResolvers->resolveMapTarget(expr.args.front(),
                                                       mapKeyType,
                                                       mapValueType);
-      if (resolvesMapAfterValidation) {
+      const bool rejectsStdNamespacedVectorCountMapTargetAsUnknownCallTarget =
+          resolvesNonVectorCountTarget && resolvesMapAfterValidation;
+      if (rejectsStdNamespacedVectorCountMapTargetAsUnknownCallTarget) {
         return failLateCallCompatibilityDiagnostic(
             "unknown call target: /std/collections/vector/count");
       }
