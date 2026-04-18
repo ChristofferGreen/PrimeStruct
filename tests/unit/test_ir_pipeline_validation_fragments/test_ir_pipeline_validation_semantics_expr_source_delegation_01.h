@@ -513,6 +513,14 @@
             "const bool hasVisiblePreferredVectorMethodTarget =") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
+            "const bool hasCanonicalOnlyVectorHelper =") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "if (isVectorReceiver &&\n"
+            "        hasDeclaredDefinitionPath(\"/std/collections/vector/\" + expr.name) &&\n"
+            "        !hasImportedDefinitionPath(\"/std/collections/vector/\" + expr.name)) {") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
             "const bool hasExplicitVectorCompatibilityNamespace =") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(

@@ -140,6 +140,7 @@ Wave D (queue hygiene):
     - Final release gate passes with `./scripts/compile.sh --release`.
   - stop_rule: If shared classifier rewrites destabilize `map`/`soa_vector`, isolate the generic mechanism in this leaf and defer remaining shared deletions to TODO-0409.
   - notes: This leaf should leave a reusable generic path that TODO-0409 can apply to `map` and `soa_vector`.
+  - progress: Completed `TODO-0542` by deleting the single-use `hasCanonicalOnlyVectorHelper` local from `SemanticsValidatorExprMethodResolution.cpp`, so the builtin vector receiver check now uses its canonical-only helper visibility condition inline.
   - progress: Completed `TODO-0541` by deleting the single-use `normalizedMethodNamespace` local from `SemanticsValidatorExprMethodResolution.cpp`, so the surviving vector-compatible method gate now uses direct explicit namespace comparisons instead of normalized namespace state.
   - progress: Completed `TODO-0540` by hoisting the repeated canonical stdlib vector visibility check in `SemanticsValidatorExprMethodResolution.cpp` into shared local `hasVisibleCanonicalVectorHelperForMethod`, so the two remaining experimental-vector fallback sites now reuse one visibility condition instead of duplicating the same inline check.
   - progress: Completed `TODO-0539` by deleting the file-scope `isVectorCompatibilityMethodName(...)` helper from `SemanticsValidatorExprMethodResolution.cpp`, so the surviving vector-compatible method branches now share one local `isVectorCompatibilityMethod` state inside `validateExprMethodCallTarget(...)`.

@@ -82,10 +82,9 @@ bool SemanticsValidator::validateExprMethodCallTarget(
        expr.name == "at" || expr.name == "at_unsafe")) {
     std::string elemType;
     const bool isVectorReceiver = resolveVectorTarget(expr.args.front(), elemType);
-    const bool hasCanonicalOnlyVectorHelper =
+    if (isVectorReceiver &&
         hasDeclaredDefinitionPath("/std/collections/vector/" + expr.name) &&
-        !hasImportedDefinitionPath("/std/collections/vector/" + expr.name);
-    if (isVectorReceiver && hasCanonicalOnlyVectorHelper) {
+        !hasImportedDefinitionPath("/std/collections/vector/" + expr.name)) {
       if (expr.name == "count" && expr.args.size() != 1) {
         return failMethodResolutionDiagnostic("argument count mismatch for builtin count");
       }
