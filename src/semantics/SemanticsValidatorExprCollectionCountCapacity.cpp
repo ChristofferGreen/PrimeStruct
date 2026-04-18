@@ -358,10 +358,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   const bool matchesHelperCapacityMethodSurfaceRouteShape =
       matchesHelperCapacityMethodSurfaceRouteInputs &&
       routesThroughNamespacedVectorCapacityHelperSurface;
+  const bool matchesSingleArgCapacityMethodSurfaceRouteInputs =
+      capacityMethodSurfaceLacksResolvedDefinitionTarget ||
+      routesThroughNamespacedVectorCapacityCallSurface;
   const bool matchesSingleArgCapacityMethodSurfaceRouteShape =
       capacityMethodSurfaceUsesSingleArgument &&
-      (capacityMethodSurfaceLacksResolvedDefinitionTarget ||
-       routesThroughNamespacedVectorCapacityCallSurface);
+      matchesSingleArgCapacityMethodSurfaceRouteInputs;
   const bool matchesCapacityMethodSurfaceRouteShape =
       matchesHelperCapacityMethodSurfaceRouteShape ||
       matchesSingleArgCapacityMethodSurfaceRouteShape;

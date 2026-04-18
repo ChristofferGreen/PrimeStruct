@@ -3460,10 +3460,20 @@
             "    routesThroughNamespacedVectorCapacityHelperSurface;\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool matchesSingleArgCapacityMethodSurfaceRouteInputs =\n"
+            "    capacityMethodSurfaceLacksResolvedDefinitionTarget ||\n"
+            "    routesThroughNamespacedVectorCapacityCallSurface;\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool matchesSingleArgCapacityMethodSurfaceRouteShape =\n"
+            "    capacityMethodSurfaceUsesSingleArgument &&\n"
+            "    matchesSingleArgCapacityMethodSurfaceRouteInputs;\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool matchesSingleArgCapacityMethodSurfaceRouteShape =\n"
             "    capacityMethodSurfaceUsesSingleArgument &&\n"
             "    (capacityMethodSurfaceLacksResolvedDefinitionTarget ||\n"
-            "     routesThroughNamespacedVectorCapacityCallSurface);\n") !=
+            "     routesThroughNamespacedVectorCapacityCallSurface);\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!(capacityMethodSurfaceHasNamedArguments ||\n"
