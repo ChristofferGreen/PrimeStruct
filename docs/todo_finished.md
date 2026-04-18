@@ -10,6 +10,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 17, 2026)**
 
 **Group 14 - SoA bring-up and end-state cleanup**
+- ✓ TODO-0745: Remove count helper-route local. Completed: the one-use `routesThroughResolvableVectorCountHelperFallback` local in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the inline vector-helper fallback probe present while the deleted local stays absent.
 - ✓ TODO-0744: Remove count fallback-route local. Completed: the one-use `routesThroughBuiltinStdlibMapCountFallback` local in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the inline builtin stdlib map-count fallback route present while the deleted local stays absent.
 - ✓ TODO-0743: Remove stdlib count target local. Completed: the one-use `resolvesStdlibMapCountMethodTarget` local in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the inline stdlib map-count target comparison present while the deleted local stays absent.
 - ✓ TODO-0742: Remove bare-map count target local. Completed: the one-use `resolvesBareMapCountMethodTarget` local in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the inline bare-map target comparison present while the deleted local stays absent.

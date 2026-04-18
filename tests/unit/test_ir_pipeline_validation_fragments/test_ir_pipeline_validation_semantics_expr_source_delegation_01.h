@@ -1899,11 +1899,6 @@
             "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const bool routesThroughResolvableVectorCountHelperFallback =\n"
-            "        resolveVectorHelperMethodTarget(params, locals, expr.args.front(),\n"
-            "                                        \"count\", methodResolved);") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool canUseCountResolveMissFallback =\n"
             "        (expr.hasBodyArguments || !expr.bodyArguments.empty()) &&\n"
             "        !expr.args.empty();") !=
@@ -1954,16 +1949,10 @@
             "    }") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "} else if (routesThroughResolvableVectorCountHelperFallback) {\n"
-            "      methodResolved = preferVectorStdlibHelperPath(methodResolved);\n"
-            "      if (hasResolvableDefinitionPath(methodResolved)) {\n"
-            "        isBuiltinMethod = false;\n"
-            "        needsCountMethodResolveOrFallback = false;\n"
-            "      }\n"
-            "    }") !=
+            "const bool routesThroughBuiltinStdlibMapCountFallback =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const bool routesThroughBuiltinStdlibMapCountFallback =") ==
+            "const bool routesThroughResolvableVectorCountHelperFallback =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
