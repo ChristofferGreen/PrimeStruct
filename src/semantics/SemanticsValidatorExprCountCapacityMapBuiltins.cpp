@@ -158,6 +158,14 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     }
     return rewrittenMapHelperCall;
   };
+  const auto validateVectorCountBuiltinFallback = [&]() -> bool {
+    handledOut = true;
+    if (std::optional<Expr> rewrittenMapHelperCall =
+            tryRewriteBareMapCountBuiltinFallback()) {
+      return validateExpr(params, locals, *rewrittenMapHelperCall);
+    }
+    return validateVectorCountBuiltinCall();
+  };
   if (isDirectExperimentalVectorCountCall) {
     return validateDirectVectorCountCapacityCall(
         "count", "/std/collections/experimental_vector/vectorCount");
@@ -521,12 +529,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
   }
 
   if (shouldValidateVectorCountBuiltinFallback) {
-    handledOut = true;
-    if (std::optional<Expr> rewrittenMapHelperCall =
-            tryRewriteBareMapCountBuiltinFallback()) {
-      return validateExpr(params, locals, *rewrittenMapHelperCall);
-    }
-    return validateVectorCountBuiltinCall();
+    return validateVectorCountBuiltinFallback();
   }
 
   const auto validateVectorCapacityBuiltinCall = [&]() -> bool {

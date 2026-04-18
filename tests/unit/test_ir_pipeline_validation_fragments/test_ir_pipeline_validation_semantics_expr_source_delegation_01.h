@@ -1655,6 +1655,15 @@
             "    return rewrittenMapHelperCall;\n"
             "  };") != std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "const auto validateVectorCountBuiltinFallback = [&]() -> bool {\n"
+            "    handledOut = true;\n"
+            "    if (std::optional<Expr> rewrittenMapHelperCall =\n"
+            "            tryRewriteBareMapCountBuiltinFallback()) {\n"
+            "      return validateExpr(params, locals, *rewrittenMapHelperCall);\n"
+            "    }\n"
+            "    return validateVectorCountBuiltinCall();\n"
+            "  };") != std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "if (!resolvedMethod && isVectorBuiltinName(expr, \"count\") &&\n"
             "      !isArrayNamespacedVectorCountCompatibilityCall(expr, *dispatchResolvers) &&\n"
             "      !isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,\n"
@@ -1669,11 +1678,19 @@
             "      Expr rewrittenMapHelperCall;") ==
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
-            "if (std::optional<Expr> rewrittenMapHelperCall =\n"
+            "if (shouldValidateVectorCountBuiltinFallback) {\n"
+            "    handledOut = true;\n"
+            "    if (std::optional<Expr> rewrittenMapHelperCall =\n"
             "            tryRewriteBareMapCountBuiltinFallback()) {\n"
             "      return validateExpr(params, locals, *rewrittenMapHelperCall);\n"
             "    }\n"
-            "    return validateVectorCountBuiltinCall();") !=
+            "    return validateVectorCountBuiltinCall();\n"
+            "  }") ==
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "if (shouldValidateVectorCountBuiltinFallback) {\n"
+            "    return validateVectorCountBuiltinFallback();\n"
+            "  }") !=
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "!isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,\n"
