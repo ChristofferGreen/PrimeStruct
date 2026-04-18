@@ -2676,13 +2676,11 @@
             "                    targetsBareMapCountMethod &&\n"
             "                    lacksVisibleBareCountDefinition &&\n"
             "                    lacksVisibleStdlibMapCountDefinition;\n"
-            "                const bool rejectsBuiltinStdlibMapCountTarget =\n"
-            "                    isBuiltinMethod &&\n"
-            "                    methodResolved == stdlibMapCountTargetPath &&\n"
-            "                    lacksVisibleStdlibMapCountDefinition &&\n"
-            "                    !context.shouldBuiltinValidateBareMapCountCall;\n"
             "                if (rejectsDirectBareMapCountTarget ||\n"
-            "                    rejectsBuiltinStdlibMapCountTarget) {\n"
+            "                    (isBuiltinMethod &&\n"
+            "                     methodResolved == stdlibMapCountTargetPath &&\n"
+            "                     lacksVisibleStdlibMapCountDefinition &&\n"
+            "                     !context.shouldBuiltinValidateBareMapCountCall)) {\n"
             "                  return failExprDiagnostic(\n"
             "                      expr, \"unknown call target: \" + stdlibMapCountTargetPath);\n"
             "                }") !=
@@ -2747,9 +2745,12 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "                if (rejectsDirectBareMapCountTarget ||\n"
-            "                    rejectsBuiltinStdlibMapCountTarget) {\n"
+            "                    (isBuiltinMethod &&\n"
+            "                     methodResolved == stdlibMapCountTargetPath &&\n"
+            "                     lacksVisibleStdlibMapCountDefinition &&\n"
+            "                     !context.shouldBuiltinValidateBareMapCountCall)) {\n"
             "                  return failExprDiagnostic(\n"
-            "                      expr, stdlibMapCountUnknownTargetDiagnostic);\n"
+            "                      expr, \"unknown call target: \" + stdlibMapCountTargetPath);\n"
             "                }") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(

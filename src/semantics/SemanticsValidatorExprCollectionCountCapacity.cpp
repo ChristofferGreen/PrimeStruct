@@ -302,13 +302,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     targetsBareMapCountMethod &&
                     lacksVisibleBareCountDefinition &&
                     lacksVisibleStdlibMapCountDefinition;
-                const bool rejectsBuiltinStdlibMapCountTarget =
-                    isBuiltinMethod &&
-                    methodResolved == stdlibMapCountTargetPath &&
-                    lacksVisibleStdlibMapCountDefinition &&
-                    !context.shouldBuiltinValidateBareMapCountCall;
                 if (rejectsDirectBareMapCountTarget ||
-                    rejectsBuiltinStdlibMapCountTarget) {
+                    (isBuiltinMethod &&
+                     methodResolved == stdlibMapCountTargetPath &&
+                     lacksVisibleStdlibMapCountDefinition &&
+                     !context.shouldBuiltinValidateBareMapCountCall)) {
                   return failExprDiagnostic(
                       expr, "unknown call target: " + stdlibMapCountTargetPath);
                 }
