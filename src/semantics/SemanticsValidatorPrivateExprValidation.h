@@ -149,7 +149,6 @@
                                 const ExprLateBuiltinContext &context,
                                 bool &handledOut);
   struct ExprCountCapacityMapBuiltinContext {
-    bool shouldBuiltinValidateStdNamespacedVectorCountCall = false;
     bool shouldBuiltinValidateBareMapCountCall = false;
     bool isNamespacedMapCountCall = false;
     bool isResolvedMapCountCall = false;
@@ -169,7 +168,6 @@
       const ExprCountCapacityMapBuiltinContext &context,
       bool &handledOut);
   void prepareExprCountCapacityMapBuiltinContext(
-      bool shouldBuiltinValidateStdNamespacedVectorCountCall,
       bool shouldBuiltinValidateBareMapCountCall,
       bool isNamespacedMapCountCall,
       bool isResolvedMapCountCall,
