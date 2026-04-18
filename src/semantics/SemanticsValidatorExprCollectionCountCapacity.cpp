@@ -346,6 +346,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       }
       return true;
     };
+    const auto assignStdNamespacedVectorCapacityMethodTarget = [&]() {
+      methodResolved = "/std/collections/vector/capacity";
+      isBuiltinMethod = true;
+    };
     const bool routesThroughStdNamespacedVectorCapacityHelper =
         isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
                                                      "capacity");
@@ -355,14 +359,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       if (hasResolvableDefinitionPath(methodResolved)) {
         isBuiltinMethod = false;
       } else if (routesThroughStdNamespacedVectorCapacityHelper) {
-        methodResolved = "/std/collections/vector/capacity";
-        isBuiltinMethod = true;
+        assignStdNamespacedVectorCapacityMethodTarget();
       } else if (!tryResolveCapacityMethodWithValidation()) {
         return false;
       }
     } else if (routesThroughStdNamespacedVectorCapacityHelper) {
-      methodResolved = "/std/collections/vector/capacity";
-      isBuiltinMethod = true;
+      assignStdNamespacedVectorCapacityMethodTarget();
     } else if (!tryResolveCapacityMethodWithValidation()) {
       return false;
     }
