@@ -1793,6 +1793,14 @@
             "    };\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto reusesResolvedMethodMonomorphizedTarget =\n"
+            "    [&](const std::string &methodTargetPath, bool isBuiltinMethod) {\n"
+            "      return !isBuiltinMethod &&\n"
+            "             defMap_.find(methodTargetPath) == defMap_.end() &&\n"
+            "             resolved.rfind(methodTargetPath + \"__t\", 0) == 0;\n"
+            "    };\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else {\n"
             "      const bool resolvedCountHelperMethodTarget =\n"
             "          resolveVectorHelperMethodTarget(\n"
@@ -2903,11 +2911,8 @@
             "                    hasImportedDefinitionPath(methodResolved);\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "                const bool reusesResolvedCountMonomorphizedTarget =\n"
-            "                    !isBuiltinMethod &&\n"
-            "                    defMap_.find(methodResolved) == defMap_.end() &&\n"
-            "                    resolved.rfind(methodResolved + \"__t\", 0) == 0;\n"
-            "                if (reusesResolvedCountMonomorphizedTarget) {\n"
+            "                if (reusesResolvedMethodMonomorphizedTarget(methodResolved,\n"
+            "                                                            isBuiltinMethod)) {\n"
             "                  methodResolved = resolved;\n"
             "                }") !=
         std::string::npos);
@@ -4689,11 +4694,8 @@
             "  (void)validateExpr(params, locals, receiver);\n"
             "  return false;\n"
             "}\n"
-            "const bool reusesResolvedCapacityMonomorphizedTarget =\n"
-            "    !isBuiltinMethod &&\n"
-            "    defMap_.find(methodResolved) == defMap_.end() &&\n"
-            "    resolved.rfind(methodResolved + \"__t\", 0) == 0;\n"
-            "if (reusesResolvedCapacityMonomorphizedTarget) {\n"
+            "if (reusesResolvedMethodMonomorphizedTarget(methodResolved,\n"
+            "                                            isBuiltinMethod)) {\n"
             "  methodResolved = resolved;\n"
             "}\n"
             "const bool lacksVisibleCapacityMethodTargetBeforePromotion =\n"

@@ -40,6 +40,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         }
         return true;
       };
+  const auto reusesResolvedMethodMonomorphizedTarget =
+      [&](const std::string &methodTargetPath, bool isBuiltinMethod) {
+        return !isBuiltinMethod &&
+               defMap_.find(methodTargetPath) == defMap_.end() &&
+               resolved.rfind(methodTargetPath + "__t", 0) == 0;
+      };
   if (!expr.isMethodCall && defMap_.find(resolved) != defMap_.end()) {
     const size_t lastSlash = resolved.find_last_of('/');
     const size_t instantiationPos =
@@ -304,9 +310,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     isBuiltinMethod = false;
                   }
                 }
-                if (!isBuiltinMethod &&
-                    defMap_.find(methodResolved) == defMap_.end() &&
-                    resolved.rfind(methodResolved + "__t", 0) == 0) {
+                if (reusesResolvedMethodMonomorphizedTarget(methodResolved,
+                                                            isBuiltinMethod)) {
                   methodResolved = resolved;
                 }
                 if (!failRemovedRootedVectorDirectCall()) {
@@ -432,11 +437,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                   (void)validateExpr(params, locals, receiver);
                   return false;
                 }
-                const bool reusesResolvedCapacityMonomorphizedTarget =
-                    !isBuiltinMethod &&
-                    defMap_.find(methodResolved) == defMap_.end() &&
-                    resolved.rfind(methodResolved + "__t", 0) == 0;
-                if (reusesResolvedCapacityMonomorphizedTarget) {
+                if (reusesResolvedMethodMonomorphizedTarget(methodResolved,
+                                                            isBuiltinMethod)) {
                   methodResolved = resolved;
                 }
                 const bool lacksVisibleCapacityMethodTargetBeforePromotion =
