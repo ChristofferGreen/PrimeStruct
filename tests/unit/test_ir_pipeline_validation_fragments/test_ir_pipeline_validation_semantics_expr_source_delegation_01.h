@@ -2431,7 +2431,7 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool targetsBareMapCountMethod =\n"
-            "                    methodResolved == \"/map/count\";\n"
+            "                    methodResolved == bareMapCountTargetPath;\n"
             "                const bool targetsStdlibMapCountMethod =\n"
             "                    methodResolved == stdlibMapCountTargetPath;\n"
             "                const bool rejectsDirectBareMapCountTarget =\n"
@@ -2733,6 +2733,7 @@
             "      !hasDeclaredDefinitionPath(\"/map/count\") &&\n"
             "      lacksVisibleStdlibMapCountDefinition &&\n"
             "      resolvesMapCountReceiver;\n"
+            "  const std::string bareMapCountTargetPath = \"/map/count\";\n"
             "  const std::string stdlibMapCountTargetPath =\n"
             "      \"/std/collections/map/count\";\n"
             "  bool isBuiltinMethod = false;\n"
