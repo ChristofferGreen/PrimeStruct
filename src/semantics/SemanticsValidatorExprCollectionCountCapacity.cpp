@@ -247,8 +247,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         removedRootedVectorDirectCallFailure.has_value()) {
       return *removedRootedVectorDirectCallFailure;
     }
-    const bool rejectsStdlibMapCountTargetAsUnknownCallTarget =
-        (!expr.isMethodCall &&
+    if ((!expr.isMethodCall &&
          expr.args.size() == 1 &&
          expr.args.front().kind == Expr::Kind::Name &&
          methodResolved == "/map/count" &&
@@ -258,8 +257,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         (isBuiltinMethod &&
          methodResolved == "/std/collections/map/count" &&
          lacksVisibleStdlibMapCountDefinition &&
-         !context.shouldBuiltinValidateBareMapCountCall);
-    if (rejectsStdlibMapCountTargetAsUnknownCallTarget) {
+         !context.shouldBuiltinValidateBareMapCountCall)) {
       return failCollectionCountCapacityDiagnostic("unknown call target: /std/collections/map/count");
     }
     if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {
