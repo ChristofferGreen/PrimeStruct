@@ -3017,7 +3017,25 @@
             "      return false;\n"
             "    }") != std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto isCapacityMethodTargetMissing = [&]() {\n"
+            "      return !isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved);\n"
+            "    };") != std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {\n"
+            "      if (requireSingleArg &&\n"
+            "          (context.isNonCollectionStructCapacityTarget == nullptr ||\n"
+            "           !context.isNonCollectionStructCapacityTarget(methodResolved)) &&\n"
+            "          context.promoteCapacityToBuiltinValidation != nullptr) {\n"
+            "        context.promoteCapacityToBuiltinValidation(expr.args.front(), methodResolved,\n"
+            "                                                   isBuiltinMethod, false);\n"
+            "      }\n"
+            "    }") == std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {\n"
+            "      return failCollectionCountCapacityDiagnostic(\"unknown method: \" + methodResolved);\n"
+            "    }") == std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (isCapacityMethodTargetMissing()) {\n"
             "      if (requireSingleArg &&\n"
             "          (context.isNonCollectionStructCapacityTarget == nullptr ||\n"
             "           !context.isNonCollectionStructCapacityTarget(methodResolved)) &&\n"
@@ -3027,7 +3045,7 @@
             "      }\n"
             "    }") != std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {\n"
+            "if (isCapacityMethodTargetMissing()) {\n"
             "      return failCollectionCountCapacityDiagnostic(\"unknown method: \" + methodResolved);\n"
             "    }") != std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(

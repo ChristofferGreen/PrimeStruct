@@ -362,7 +362,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       return false;
     }
     normalizeResolvedCollectionMethodTarget(methodResolved, isBuiltinMethod);
-    if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {
+    const auto isCapacityMethodTargetMissing = [&]() {
+      return !isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved);
+    };
+    if (isCapacityMethodTargetMissing()) {
       if (requireSingleArg &&
           (context.isNonCollectionStructCapacityTarget == nullptr ||
            !context.isNonCollectionStructCapacityTarget(methodResolved)) &&
@@ -371,7 +374,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                                                    isBuiltinMethod, false);
       }
     }
-    if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {
+    if (isCapacityMethodTargetMissing()) {
       return failCollectionCountCapacityDiagnostic("unknown method: " + methodResolved);
     }
     return finalizeResolvedCollectionMethodTargetAfterRemovedRootedVectorCheck(
