@@ -180,6 +180,26 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       methodResolved = "/" + typeName + "/count";
       return true;
     };
+    const auto resolveCountMethodTarget = [&]() -> bool {
+      if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), "count",
+                                          methodResolved)) {
+        methodResolved = preferVectorStdlibHelperPath(methodResolved);
+        if (hasResolvableDefinitionPath(methodResolved)) {
+          isBuiltinMethod = false;
+          return true;
+        }
+      }
+      if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), "count",
+                              methodResolved, isBuiltinMethod)) {
+        return true;
+      }
+      if (!resolveBodyArgumentCountTarget()) {
+        return false;
+      }
+      error_.clear();
+      isBuiltinMethod = false;
+      return true;
+    };
     if (context.isUnnamespacedMapCountFallbackCall &&
         !hasDeclaredDefinitionPath("/std/collections/map/count") &&
         !hasDeclaredDefinitionPath("/map/count") &&
@@ -188,28 +208,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         context.resolveMapTarget(expr.args.front())) {
       methodResolved = "/std/collections/map/count";
       isBuiltinMethod = true;
-    } else if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), "count",
-                                               methodResolved)) {
-      methodResolved = preferVectorStdlibHelperPath(methodResolved);
-      if (hasResolvableDefinitionPath(methodResolved)) {
-        isBuiltinMethod = false;
-      } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), "count",
-                                      methodResolved, isBuiltinMethod)) {
-        if (!resolveBodyArgumentCountTarget()) {
-          (void)validateExpr(params, locals, expr.args.front());
-          return false;
-        }
-        error_.clear();
-        isBuiltinMethod = false;
-      }
-    } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), "count",
-                                    methodResolved, isBuiltinMethod)) {
-      if (!resolveBodyArgumentCountTarget()) {
-        (void)validateExpr(params, locals, expr.args.front());
-        return false;
-      }
-      error_.clear();
-      isBuiltinMethod = false;
+    } else if (!resolveCountMethodTarget()) {
+      (void)validateExpr(params, locals, expr.args.front());
+      return false;
     }
     if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&
         resolved.rfind(methodResolved + "__t", 0) == 0) {

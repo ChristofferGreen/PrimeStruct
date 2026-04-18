@@ -1398,6 +1398,42 @@
             "if (!stdNamespacedVectorCountTargetDiagnosticMessage.empty())") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto resolveCountMethodTarget = [&]() -> bool {\n"
+            "      if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), \"count\",\n"
+            "                                          methodResolved)) {\n"
+            "        methodResolved = preferVectorStdlibHelperPath(methodResolved);\n"
+            "        if (hasResolvableDefinitionPath(methodResolved)) {\n"
+            "          isBuiltinMethod = false;\n"
+            "          return true;\n"
+            "        }\n"
+            "      }\n"
+            "      if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), \"count\",\n"
+            "                              methodResolved, isBuiltinMethod)) {\n"
+            "        return true;\n"
+            "      }\n"
+            "      if (!resolveBodyArgumentCountTarget()) {\n"
+            "        return false;\n"
+            "      }\n"
+            "      error_.clear();\n"
+            "      isBuiltinMethod = false;\n"
+            "      return true;\n"
+            "    };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "} else if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), \"count\",\n"
+            "                                               methodResolved)) {") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "} else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), \"count\",\n"
+            "                                    methodResolved, isBuiltinMethod)) {") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "} else if (!resolveCountMethodTarget()) {\n"
+            "      (void)validateExpr(params, locals, expr.args.front());\n"
+            "      return false;\n"
+            "    }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (stdNamespacedVectorCountMapTargetDiagnostic ==\n"
             "      VectorCompatibilityCountMapTargetDiagnostic::RequiresVectorTarget)") ==
         std::string::npos);
