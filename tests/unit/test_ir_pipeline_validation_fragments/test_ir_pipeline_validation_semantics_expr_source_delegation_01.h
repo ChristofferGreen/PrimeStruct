@@ -1809,7 +1809,9 @@
             "            isBuiltinMethod = false;\n"
             "          } else {\n"
             "            std::string typeName;\n"
-            "            if (receiver.kind == Expr::Kind::Name) {\n"
+            "            const bool resolvesCountReceiverTypeFromNameBinding =\n"
+            "                receiver.kind == Expr::Kind::Name;\n"
+            "            if (resolvesCountReceiverTypeFromNameBinding) {\n"
             "              if (const BindingInfo *paramBinding =\n"
             "                      findParamBinding(params, receiver.name)) {\n"
             "                typeName = paramBinding->typeName;\n"
@@ -1841,6 +1843,9 @@
             "        }\n"
             "      }\n"
             "    }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "            if (receiver.kind == Expr::Kind::Name) {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "            if (typeName != \"Pointer\" && typeName != \"Reference\") {\n") ==

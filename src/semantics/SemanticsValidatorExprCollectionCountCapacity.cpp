@@ -234,7 +234,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                         isBuiltinMethod = false;
                       } else {
                         std::string typeName;
-                        if (receiver.kind == Expr::Kind::Name) {
+                        const bool resolvesCountReceiverTypeFromNameBinding =
+                            receiver.kind == Expr::Kind::Name;
+                        if (resolvesCountReceiverTypeFromNameBinding) {
                           if (const BindingInfo *paramBinding =
                                   findParamBinding(params, receiver.name)) {
                             typeName = paramBinding->typeName;
