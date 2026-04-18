@@ -251,8 +251,9 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       isBuiltinMethod = false;
     }
   }
-  if (!isBuiltinMethod && isVectorCompatibilityMethod &&
-      !resolved.empty()) {
+  const bool resolvedVectorCompatibilityMethodTargetEligible =
+      !isBuiltinMethod && isVectorCompatibilityMethod && !resolved.empty();
+  if (resolvedVectorCompatibilityMethodTargetEligible) {
     rewriteExperimentalVectorCompatibilityMethodTargetToCanonical(resolved);
   }
   bool keepBuiltinIndexedArgsPackMapMethod = false;
