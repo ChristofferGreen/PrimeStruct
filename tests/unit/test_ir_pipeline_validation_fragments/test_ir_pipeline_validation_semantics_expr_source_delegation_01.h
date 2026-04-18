@@ -631,8 +631,12 @@
             "expr.name == \"count\" || expr.name == \"capacity\" || expr.name == \"at\" ||") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
-            "if (!hasImportedDefinitionPath(vectorMethodTarget) &&\n"
-            "        defMap_.count(vectorMethodTarget) == 0) {\n"
+            "const bool vectorMethodTargetMissing =\n"
+            "        !hasImportedDefinitionPath(vectorMethodTarget) &&\n"
+            "        defMap_.count(vectorMethodTarget) == 0;") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "if (vectorMethodTargetMissing) {\n"
             "      rewriteExperimentalVectorCompatibilityMethodTargetToCanonical(vectorMethodTarget);") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
@@ -719,6 +723,11 @@
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "rewriteExperimentalVectorCompatibilityMethodTargetToCanonical(vectorMethodTarget)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "!hasImportedDefinitionPath(vectorMethodTarget) &&\n"
+            "        defMap_.count(vectorMethodTarget) == 0) {\n"
+            "      rewriteExperimentalVectorCompatibilityMethodTargetToCanonical(vectorMethodTarget);") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "rewriteExperimentalVectorCompatibilityMethodTargetToCanonical(resolved)") !=

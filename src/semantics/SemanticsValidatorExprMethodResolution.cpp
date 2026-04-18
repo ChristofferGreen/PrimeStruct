@@ -179,8 +179,10 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       expr.namespacePrefix != "/std/collections/vector" &&
       resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
                                       vectorMethodTarget)) {
-    if (!hasImportedDefinitionPath(vectorMethodTarget) &&
-        defMap_.count(vectorMethodTarget) == 0) {
+    const bool vectorMethodTargetMissing =
+        !hasImportedDefinitionPath(vectorMethodTarget) &&
+        defMap_.count(vectorMethodTarget) == 0;
+    if (vectorMethodTargetMissing) {
       rewriteExperimentalVectorCompatibilityMethodTargetToCanonical(vectorMethodTarget);
     }
     if (hasImportedDefinitionPath(vectorMethodTarget) ||
