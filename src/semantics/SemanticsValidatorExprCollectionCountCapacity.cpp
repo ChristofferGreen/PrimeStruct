@@ -77,12 +77,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   const bool callsStdNamespacedVectorCountHelper =
       isStdNamespacedVectorCompatibilityDirectCall(
           expr.isMethodCall, resolveCalleePath(expr), "count");
-  const bool callsUnimportedStdNamespacedVectorCountHelper =
-      isUnimportedStdNamespacedVectorCompatibilityDirectCall(
-          expr.isMethodCall,
-          resolveCalleePath(expr),
-          "count",
-          hasImportedDefinitionPath("/std/collections/vector/count"));
   const bool resolvesStdNamespacedVectorCountMapTarget =
       expr.args.size() == 1 &&
       context.resolveMapTarget != nullptr &&
@@ -109,7 +103,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   }
   auto resolveCountMethod = [&](bool requireSingleArg) -> bool {
     if (hasNamedArguments(expr.argNames) ||
-        callsUnimportedStdNamespacedVectorCountHelper || expr.args.empty()) {
+        isUnimportedStdNamespacedVectorCompatibilityDirectCall(
+            expr.isMethodCall,
+            resolveCalleePath(expr),
+            "count",
+            hasImportedDefinitionPath("/std/collections/vector/count")) ||
+        expr.args.empty()) {
       return false;
     }
     if (requireSingleArg && expr.args.size() != 1) {
