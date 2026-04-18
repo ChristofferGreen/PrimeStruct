@@ -245,7 +245,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                             typeName = it->second.typeName;
                           }
                         }
-                        if (typeName.empty()) {
+                        const bool needsCountReceiverTypeFromCallReturn =
+                            typeName.empty();
+                        if (needsCountReceiverTypeFromCallReturn) {
                           typeName = inferPointerLikeCallReturnType(
                               receiver, params, locals);
                         }

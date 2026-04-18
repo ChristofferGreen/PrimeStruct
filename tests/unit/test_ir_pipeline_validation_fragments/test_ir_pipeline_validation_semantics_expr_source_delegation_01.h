@@ -1820,7 +1820,9 @@
             "                typeName = it->second.typeName;\n"
             "              }\n"
             "            }\n"
-            "            if (typeName.empty()) {\n"
+            "            const bool needsCountReceiverTypeFromCallReturn =\n"
+            "                typeName.empty();\n"
+            "            if (needsCountReceiverTypeFromCallReturn) {\n"
             "              typeName = inferPointerLikeCallReturnType(receiver, params, locals);\n"
             "            }\n"
             "            if (typeName.empty()) {\n"
@@ -1843,6 +1845,11 @@
             "        }\n"
             "      }\n"
             "    }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "            if (typeName.empty()) {\n"
+            "              typeName = inferPointerLikeCallReturnType(receiver, params, locals);\n"
+            "            }\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "            if (receiver.kind == Expr::Kind::Name) {\n") ==
