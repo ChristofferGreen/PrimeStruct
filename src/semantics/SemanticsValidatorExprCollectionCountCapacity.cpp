@@ -219,6 +219,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         !hasDeclaredDefinitionPath(bareMapCountMethodTarget) &&
         lacksVisibleStdlibMapCountDefinition &&
         resolvesMapCountMethodTarget;
+    const bool routesThroughResolvableVectorCountHelperFallback =
+        resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
+                                        "count", methodResolved);
     const bool canUseCountResolveMissFallback =
         (expr.hasBodyArguments || !expr.bodyArguments.empty()) &&
         !expr.args.empty();
@@ -257,8 +260,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       methodResolved = stdlibMapCountMethodTarget;
       isBuiltinMethod = true;
       needsCountMethodResolveOrFallback = false;
-    } else if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
-                                               "count", methodResolved)) {
+    } else if (routesThroughResolvableVectorCountHelperFallback) {
       methodResolved = preferVectorStdlibHelperPath(methodResolved);
       if (hasResolvableDefinitionPath(methodResolved)) {
         isBuiltinMethod = false;

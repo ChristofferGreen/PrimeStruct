@@ -1896,6 +1896,11 @@
             "        resolvesMapCountMethodTarget;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool routesThroughResolvableVectorCountHelperFallback =\n"
+            "        resolveVectorHelperMethodTarget(params, locals, expr.args.front(),\n"
+            "                                        \"count\", methodResolved);") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool canUseCountResolveMissFallback =\n"
             "        (expr.hasBodyArguments || !expr.bodyArguments.empty()) &&\n"
             "        !expr.args.empty();") !=
@@ -1928,6 +1933,25 @@
             "      isBuiltinMethod = true;\n"
             "      needsCountMethodResolveOrFallback = false;\n"
             "    }") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "} else if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(),\n"
+            "                                               \"count\", methodResolved)) {\n"
+            "      methodResolved = preferVectorStdlibHelperPath(methodResolved);\n"
+            "      if (hasResolvableDefinitionPath(methodResolved)) {\n"
+            "        isBuiltinMethod = false;\n"
+            "        needsCountMethodResolveOrFallback = false;\n"
+            "      }\n"
+            "    }") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "} else if (routesThroughResolvableVectorCountHelperFallback) {\n"
+            "      methodResolved = preferVectorStdlibHelperPath(methodResolved);\n"
+            "      if (hasResolvableDefinitionPath(methodResolved)) {\n"
+            "        isBuiltinMethod = false;\n"
+            "        needsCountMethodResolveOrFallback = false;\n"
+            "      }\n"
+            "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
