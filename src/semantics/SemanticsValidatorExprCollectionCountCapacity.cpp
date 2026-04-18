@@ -97,6 +97,13 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     }
     return failExprDiagnostic(expr, removedRootedVectorDirectCallDiagnostic);
   };
+  const auto normalizeInstantiatedCollectionMethodTarget =
+      [&](std::string &methodResolved, bool isBuiltinMethod) {
+    if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&
+        resolved.rfind(methodResolved + "__t", 0) == 0) {
+      methodResolved = resolved;
+    }
+  };
   const auto tryResolveCollectionMethodFromSurface =
       [&](bool routesThroughMethodSurface, bool matchesSurfaceRoute,
           auto &&resolveMethodTarget) -> std::optional<bool> {
@@ -222,10 +229,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         isBuiltinMethod = false;
       }
     }
-    if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&
-        resolved.rfind(methodResolved + "__t", 0) == 0) {
-      methodResolved = resolved;
-    }
+    normalizeInstantiatedCollectionMethodTarget(methodResolved, isBuiltinMethod);
     if ((!expr.isMethodCall &&
          expr.args.size() == 1 &&
          receiver.kind == Expr::Kind::Name &&
@@ -334,10 +338,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       (void)validateExpr(params, locals, receiver);
       return false;
     }
-    if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&
-        resolved.rfind(methodResolved + "__t", 0) == 0) {
-      methodResolved = resolved;
-    }
+    normalizeInstantiatedCollectionMethodTarget(methodResolved, isBuiltinMethod);
     if (!isBuiltinMethod && !hasDeclaredDefinitionPath(methodResolved) &&
         !hasImportedDefinitionPath(methodResolved)) {
       if ((context.isNonCollectionStructCapacityTarget == nullptr ||
