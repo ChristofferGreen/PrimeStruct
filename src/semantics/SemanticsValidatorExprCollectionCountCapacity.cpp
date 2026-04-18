@@ -44,6 +44,16 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     return failCollectionCountCapacityDiagnostic(
         removedRootedVectorDirectCallDiagnostic);
   };
+  const auto tryResolveCollectionMethodAttempt =
+      [&](auto &&resolveMethod, bool requireSingleArg) -> std::optional<bool> {
+    if (resolveMethod(requireSingleArg)) {
+      return true;
+    }
+    if (handledOut) {
+      return false;
+    }
+    return std::nullopt;
+  };
   auto isConcreteCountCapacityInstantiation = [&](const std::string &path) {
     if (defMap_.find(path) == defMap_.end()) {
       return false;
@@ -265,17 +275,13 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     resolvedMethod = isBuiltinMethod;
     return true;
   };
-  if (resolveCountMethod(true)) {
-    return true;
+  if (std::optional<bool> resolvedCountMethod =
+          tryResolveCollectionMethodAttempt(resolveCountMethod, true)) {
+    return *resolvedCountMethod;
   }
-  if (handledOut) {
-    return false;
-  }
-  if (resolveCountMethod(false)) {
-    return true;
-  }
-  if (handledOut) {
-    return false;
+  if (std::optional<bool> resolvedCountMethod =
+          tryResolveCollectionMethodAttempt(resolveCountMethod, false)) {
+    return *resolvedCountMethod;
   }
 
   auto resolveCapacityMethod = [&](bool requireSingleArg) -> bool {
@@ -358,17 +364,13 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     return true;
   };
 
-  if (resolveCapacityMethod(false)) {
-    return true;
+  if (std::optional<bool> resolvedCapacityMethod =
+          tryResolveCollectionMethodAttempt(resolveCapacityMethod, false)) {
+    return *resolvedCapacityMethod;
   }
-  if (handledOut) {
-    return false;
-  }
-  if (resolveCapacityMethod(true)) {
-    return true;
-  }
-  if (handledOut) {
-    return false;
+  if (std::optional<bool> resolvedCapacityMethod =
+          tryResolveCollectionMethodAttempt(resolveCapacityMethod, true)) {
+    return *resolvedCapacityMethod;
   }
 
   return true;
