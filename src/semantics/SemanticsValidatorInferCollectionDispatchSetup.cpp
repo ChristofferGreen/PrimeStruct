@@ -311,10 +311,6 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
   const bool inferBuiltinCapacityCallTargetsDirectReceiver =
       defMap_.find(resolved) == defMap_.end() ||
       isNamespacedVectorCapacityCall;
-  const bool isDirectBuiltinCountCapacityCapacityCall =
-      isInferBuiltinCapacityLike &&
-      !expr.args.empty() &&
-      inferBuiltinCapacityCallTargetsDirectReceiver;
   const bool isDirectBuiltinSingleArgCountCapacityCapacityCall =
       isInferBuiltinSingleArgCapacityLike &&
       inferBuiltinCapacityCallTargetsDirectReceiver;
@@ -323,7 +319,9 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
   setupOut.builtinCollectionDirectCountCapacityContext.isDirectCountSingleArg =
       isDirectBuiltinCountCapacityCountCall && expr.args.size() == 1;
   setupOut.builtinCollectionDirectCountCapacityContext.isDirectCapacityCall =
-      isDirectBuiltinCountCapacityCapacityCall;
+      isInferBuiltinCapacityLike &&
+      !expr.args.empty() &&
+      inferBuiltinCapacityCallTargetsDirectReceiver;
   setupOut.builtinCollectionDirectCountCapacityContext
       .isDirectCapacitySingleArg =
       isDirectBuiltinSingleArgCountCapacityCapacityCall;
