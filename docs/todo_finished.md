@@ -10,6 +10,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 17, 2026)**
 
 **Group 14 - SoA bring-up and end-state cleanup**
+- ✓ TODO-0787: Share capacity target routing body. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now routes the duplicated capacity target-resolution body through shared `resolveCapacityMethodTargetFromReceiver`, and focused expr source-lock coverage keeps that shared helper present while the old duplicated inline branch body stays absent.
 - ✓ TODO-0786: Share count target routing body. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now routes the duplicated count target-resolution body through shared `resolveCountMethodTargetFromReceiver`, and focused expr source-lock coverage keeps that shared helper present while the old duplicated inline branch body stays absent.
 - ✓ TODO-0785: Remove count resolver wrapper. Completed: the shared `resolveCountMethod` wrapper in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the inline single-arg and multi-arg count routing branches present while the deleted wrapper stays absent.
 - ✓ TODO-0784: Remove capacity resolver wrapper. Completed: the shared `resolveCapacityMethod` wrapper in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the inline helper/direct capacity routing present while the deleted wrapper stays absent.

@@ -2360,6 +2360,33 @@
             "  auto resolveCapacityMethod = [&](bool requireSingleArg) -> bool {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto resolveCapacityMethodTargetFromReceiver =\n"
+            "      [&](const Expr &receiver, bool &isBuiltinMethod,\n"
+            "          std::string &methodResolved) -> bool {\n"
+            "    if (resolveVectorHelperMethodTarget(params, locals, receiver, \"capacity\",\n"
+            "                                        methodResolved)) {") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "methodReceiverIndex = 0;\n"
+            "      bool isBuiltinMethod = false;\n"
+            "      std::string methodResolved;\n"
+            "      if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(),\n"
+            "                                          \"capacity\", methodResolved)) {") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "methodReceiverIndex = 0;\n"
+            "      const Expr &receiver = expr.args.front();\n"
+            "      bool isBuiltinMethod = false;\n"
+            "      std::string methodResolved;\n"
+            "      if (!resolveCapacityMethodTargetFromReceiver(receiver, isBuiltinMethod,\n"
+            "                                                   methodResolved)) {\n"
+            "        return false;\n"
+            "      }\n"
+            "      resolved = methodResolved;\n"
+            "      resolvedMethod = isBuiltinMethod;\n"
+            "      return true;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (resolveCapacityMethod(false)) {\n"
             "    return true;\n"
             "  }\n"
