@@ -89,17 +89,12 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   const bool hasVisibleCanonicalVectorCompatibilityMethodTarget =
       hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||
       defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0;
-  auto rewriteExperimentalVectorCompatibilityMethodTargetToCanonical =
-      [&](std::string &methodTarget) {
-        if (isExperimentalVectorCompatibilityMethodTarget(methodTarget) &&
-            hasVisibleCanonicalVectorCompatibilityMethodTarget) {
-          methodTarget = canonicalVectorCompatibilityMethodTarget;
-        }
-      };
   auto rewriteEligibleExperimentalVectorCompatibilityMethodTargetToCanonical =
       [&](std::string &methodTarget, bool methodTargetEligible) {
-        if (methodTargetEligible) {
-          rewriteExperimentalVectorCompatibilityMethodTargetToCanonical(methodTarget);
+        if (methodTargetEligible &&
+            isExperimentalVectorCompatibilityMethodTarget(methodTarget) &&
+            hasVisibleCanonicalVectorCompatibilityMethodTarget) {
+          methodTarget = canonicalVectorCompatibilityMethodTarget;
         }
       };
   if (expr.namespacePrefix.empty() &&
