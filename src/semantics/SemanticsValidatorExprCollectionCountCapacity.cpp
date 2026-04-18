@@ -188,6 +188,16 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       }
       return true;
     };
+    const auto tryResolveCountMethodTargetWithFallback =
+        [&](const Expr &receiver, bool &isBuiltinMethod,
+            std::string &methodResolved) -> bool {
+      if (resolveMethodTarget(params, locals, expr.namespacePrefix, receiver,
+                              "count", methodResolved, isBuiltinMethod)) {
+        return true;
+      }
+      return assignCountMethodTargetAfterResolveMiss(receiver, isBuiltinMethod,
+                                                     methodResolved);
+    };
     if (context.isUnnamespacedMapCountFallbackCall &&
         !hasDeclaredDefinitionPath("/map/count") &&
         !hasDeclaredDefinitionPath("/std/collections/map/count") &&
@@ -200,20 +210,13 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                                                methodResolved)) {
       if (!preferVisibleVectorHelperMethodTarget(methodResolved,
                                                  isBuiltinMethod) &&
-          !resolveMethodTarget(params, locals, expr.namespacePrefix, receiver,
-                              "count", methodResolved, isBuiltinMethod)) {
-        if (!assignCountMethodTargetAfterResolveMiss(receiver, isBuiltinMethod,
-                                                     methodResolved)) {
-          return false;
-        }
-      }
-    } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix,
-                                    receiver, "count", methodResolved,
-                                    isBuiltinMethod)) {
-      if (!assignCountMethodTargetAfterResolveMiss(receiver, isBuiltinMethod,
-                                                   methodResolved)) {
+          !tryResolveCountMethodTargetWithFallback(receiver, isBuiltinMethod,
+                                                  methodResolved)) {
         return false;
       }
+    } else if (!tryResolveCountMethodTargetWithFallback(receiver, isBuiltinMethod,
+                                                        methodResolved)) {
+      return false;
     }
     normalizeInstantiatedCollectionMethodTarget(methodResolved, isBuiltinMethod);
     if ((!expr.isMethodCall &&
