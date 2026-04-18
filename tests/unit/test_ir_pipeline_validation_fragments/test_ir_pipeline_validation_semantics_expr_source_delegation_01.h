@@ -2425,6 +2425,14 @@
             "       context.isResolvedMapCountCall);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto tryResolveCountMethodFromSurfaceRoute =\n"
+            "      [&](bool matchesSurfaceRoute) -> std::optional<bool> {\n"
+            "    return tryResolveCollectionMethodFromSurfaceOrReturn(\n"
+            "        routesThroughVectorCountMethodSurface, matchesSurfaceRoute,\n"
+            "        resolveCountMethodTargetFromReceiver);\n"
+            "  };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
  	            "if (!(hasNamedArguments(expr.argNames) ||\n"
  	            "        isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
  	            "            expr.isMethodCall,\n"
@@ -2438,21 +2446,31 @@
  	        std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (std::optional<bool> resolvedCountMethod =\n"
-            "          tryResolveCollectionMethodFromSurfaceOrReturn(\n"
-            "              routesThroughVectorCountMethodSurface,\n"
+            "          tryResolveCountMethodFromSurfaceRoute(\n"
             "              expr.args.size() == 1 &&") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "  if (std::optional<bool> resolvedCountMethod =\n"
+            "          tryResolveCountMethodFromSurfaceRoute(\n"
+            "              expr.args.size() != 1 &&") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (std::optional<bool> resolvedCountMethod =\n"
             "          tryResolveCollectionMethodFromSurfaceOrReturn(\n"
             "              routesThroughVectorCountMethodSurface,\n"
-            "              expr.args.size() != 1 &&") !=
+            "              expr.args.size() == 1 &&") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (std::optional<bool> resolvedCountMethod =\n"
             "          tryResolveCollectionMethodFromSurface(\n"
             "              routesThroughVectorCountMethodSurface,\n"
             "              expr.args.size() == 1 &&") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "  if (std::optional<bool> resolvedCountMethod =\n"
+            "          tryResolveCollectionMethodFromSurfaceOrReturn(\n"
+            "              routesThroughVectorCountMethodSurface,\n"
+            "              expr.args.size() != 1 &&") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "  if (handledOut) {\n"

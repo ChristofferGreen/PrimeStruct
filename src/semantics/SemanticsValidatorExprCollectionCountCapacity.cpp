@@ -282,9 +282,14 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
        context.isNamespacedMapCountCall ||
        context.isUnnamespacedMapCountFallbackCall ||
        context.isResolvedMapCountCall);
+  const auto tryResolveCountMethodFromSurfaceRoute =
+      [&](bool matchesSurfaceRoute) -> std::optional<bool> {
+    return tryResolveCollectionMethodFromSurfaceOrReturn(
+        routesThroughVectorCountMethodSurface, matchesSurfaceRoute,
+        resolveCountMethodTargetFromReceiver);
+  };
   if (std::optional<bool> resolvedCountMethod =
-          tryResolveCollectionMethodFromSurfaceOrReturn(
-              routesThroughVectorCountMethodSurface,
+          tryResolveCountMethodFromSurfaceRoute(
               expr.args.size() == 1 &&
                   ((defMap_.find(resolved) == defMap_.end() &&
                     !context.isStdNamespacedMapCountCall) ||
@@ -302,20 +307,17 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                    context.isStdNamespacedMapCountCall ||
                    context.isNamespacedMapCountCall ||
                    context.isUnnamespacedMapCountFallbackCall ||
-                   context.isResolvedMapCountCall),
-              resolveCountMethodTargetFromReceiver)) {
+                   context.isResolvedMapCountCall))) {
     return *resolvedCountMethod;
   }
   if (std::optional<bool> resolvedCountMethod =
-          tryResolveCollectionMethodFromSurfaceOrReturn(
-              routesThroughVectorCountMethodSurface,
+          tryResolveCountMethodFromSurfaceRoute(
               expr.args.size() != 1 &&
                   (defMap_.find(resolved) != defMap_.end() ||
                    context.isStdNamespacedMapCountCall ||
                    context.isNamespacedMapCountCall ||
                    context.isUnnamespacedMapCountFallbackCall ||
-                   context.isResolvedMapCountCall),
-              resolveCountMethodTargetFromReceiver)) {
+                   context.isResolvedMapCountCall))) {
     return *resolvedCountMethod;
   }
 
