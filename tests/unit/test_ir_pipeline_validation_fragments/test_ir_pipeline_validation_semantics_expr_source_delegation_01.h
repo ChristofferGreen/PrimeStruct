@@ -2366,6 +2366,11 @@
             "      context.isResolvedMapCountCall;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool isArrayNamespacedVectorCountCompatibilityActive =\n"
+            "      context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
+            "      context.isArrayNamespacedVectorCountCompatibilityCall(expr);") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "bool needsCountMethodResolveOrFallback =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -2659,8 +2664,7 @@
             "          \"count\",\n"
             "          hasImportedDefinitionPath(\"/std/collections/vector/count\")) ||\n"
             "      expr.args.empty()) &&\n"
-            "    !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
-            "      context.isArrayNamespacedVectorCountCompatibilityCall(expr)) &&\n"
+            "    !isArrayNamespacedVectorCountCompatibilityActive &&\n"
             "    (isVectorBuiltinName(expr, \"count\") ||\n"
             "     routesThroughMapCountCallSurface) &&\n"
             "    ((expr.args.size() == 1 &&\n"
@@ -2672,8 +2676,7 @@
             "        context.namespacedHelper == \"count\" &&\n"
             "        isVectorBuiltinName(expr, \"count\") && expr.args.size() == 1 &&\n"
             "        !hasDefinitionPath(resolved) &&\n"
-            "        !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
-            "          context.isArrayNamespacedVectorCountCompatibilityCall(expr))) ||\n"
+            "        !isArrayNamespacedVectorCountCompatibilityActive) ||\n"
             "       routesThroughMapCountCallSurface)) ||\n"
             "     (expr.args.size() != 1 &&\n"
             "      (defMap_.find(resolved) != defMap_.end() ||\n"
@@ -3320,6 +3323,14 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool callsStdNamespacedVectorCountHelper =") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "!(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
+            "      context.isArrayNamespacedVectorCountCompatibilityCall(expr)) &&\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "!(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
+            "          context.isArrayNamespacedVectorCountCompatibilityCall(expr))) ||\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool isNamespacedVectorCountCall =\n"
