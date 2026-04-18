@@ -118,11 +118,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
          context.isArrayNamespacedVectorCountCompatibilityCall(expr))) {
       return false;
     }
-    const bool isCountLike =
-        isVectorBuiltinName(expr, "count") || context.isStdNamespacedMapCountCall ||
-        context.isNamespacedMapCountCall || context.isUnnamespacedMapCountFallbackCall ||
-        context.isResolvedMapCountCall;
-    if (!isCountLike) {
+    if (!(isVectorBuiltinName(expr, "count") || context.isStdNamespacedMapCountCall ||
+          context.isNamespacedMapCountCall ||
+          context.isUnnamespacedMapCountFallbackCall ||
+          context.isResolvedMapCountCall)) {
       return false;
     }
     const auto matchesCountMethodCallShape = [&](bool requireSingleArg) {

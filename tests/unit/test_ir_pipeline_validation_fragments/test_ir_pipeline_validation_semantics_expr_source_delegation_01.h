@@ -1977,6 +1977,17 @@
             "const bool resolvesStdNamespacedVectorCountMapTarget =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool isCountLike =") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (!(isVectorBuiltinName(expr, \"count\") || context.isStdNamespacedMapCountCall ||\n"
+            "          context.isNamespacedMapCountCall ||\n"
+            "          context.isUnnamespacedMapCountFallbackCall ||\n"
+            "          context.isResolvedMapCountCall)) {\n"
+            "      return false;\n"
+            "    }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "{\n"
             "    std::string stdNamespacedVectorCountTargetDiagnosticMessage =\n"
             "        classifyStdNamespacedVectorCountDiagnosticMessage(\n"
