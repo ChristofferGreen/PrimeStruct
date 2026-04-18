@@ -2137,6 +2137,15 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "context.shouldBuiltinValidateStdNamespacedVectorCountCall") ==
         std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (defMap_.count(\"/std/collections/map/count\") > 0) {") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (context.resolveMapTarget != nullptr && context.resolveMapTarget(receiver)) {\n"
+            "        methodResolved = \"/std/collections/map/count\";\n"
+            "        return true;\n"
+            "      }") !=
+        std::string::npos);
   CHECK(semanticsVectorCompatibilityHelpersSource.find(
             "inline bool isUnavailableStdNamespacedVectorCompatibilityDirectCall(") !=
         std::string::npos);

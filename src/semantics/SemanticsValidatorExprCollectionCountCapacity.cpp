@@ -165,11 +165,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       }
       const Expr &receiver = expr.args.front();
       if (context.resolveMapTarget != nullptr && context.resolveMapTarget(receiver)) {
-        if (defMap_.count("/std/collections/map/count") > 0) {
-          methodResolved = "/std/collections/map/count";
-        } else {
-          methodResolved = "/std/collections/map/count";
-        }
+        methodResolved = "/std/collections/map/count";
         return true;
       }
       std::string typeName;
