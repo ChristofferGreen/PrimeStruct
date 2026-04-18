@@ -170,6 +170,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     const bool resolvesMapCountMethodTarget =
         context.resolveMapTarget != nullptr &&
         context.resolveMapTarget(receiver);
+    const auto assignResolvedStdlibMapCountMethodTarget = [&]() {
+      methodResolved = "/std/collections/map/count";
+      error_.clear();
+      isBuiltinMethod = false;
+    };
     if (context.isUnnamespacedMapCountFallbackCall &&
         !hasDeclaredDefinitionPath("/map/count") &&
         lacksVisibleStdlibMapCountDefinition &&
@@ -190,9 +195,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           return false;
         }
         if (resolvesMapCountMethodTarget) {
-          methodResolved = "/std/collections/map/count";
-          error_.clear();
-          isBuiltinMethod = false;
+          assignResolvedStdlibMapCountMethodTarget();
         } else {
           std::string typeName;
           if (receiver.kind == Expr::Kind::Name) {
@@ -231,7 +234,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         return false;
       }
       if (resolvesMapCountMethodTarget) {
-        methodResolved = "/std/collections/map/count";
+        assignResolvedStdlibMapCountMethodTarget();
       } else {
         std::string typeName;
         if (receiver.kind == Expr::Kind::Name) {
@@ -258,9 +261,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           return false;
         }
         methodResolved = "/" + typeName + "/count";
+        error_.clear();
+        isBuiltinMethod = false;
       }
-      error_.clear();
-      isBuiltinMethod = false;
     }
     if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&
         resolved.rfind(methodResolved + "__t", 0) == 0) {

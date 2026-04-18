@@ -1428,10 +1428,27 @@
             "        context.resolveMapTarget(receiver);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto assignResolvedStdlibMapCountMethodTarget = [&]() {\n"
+            "      methodResolved = \"/std/collections/map/count\";\n"
+            "      error_.clear();\n"
+            "      isBuiltinMethod = false;\n"
+            "    };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (context.isUnnamespacedMapCountFallbackCall &&\n"
             "        !hasDeclaredDefinitionPath(\"/map/count\") &&\n"
             "        lacksVisibleStdlibMapCountDefinition &&\n"
             "        resolvesMapCountMethodTarget) {") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (resolvesMapCountMethodTarget) {\n"
+            "          assignResolvedStdlibMapCountMethodTarget();\n"
+            "        } else {") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (resolvesMapCountMethodTarget) {\n"
+            "        assignResolvedStdlibMapCountMethodTarget();\n"
+            "      } else {") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (context.isUnnamespacedMapCountFallbackCall &&\n"
@@ -1447,6 +1464,18 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (context.resolveMapTarget != nullptr &&\n"
             "          context.resolveMapTarget(receiver)) {") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (resolvesMapCountMethodTarget) {\n"
+            "          methodResolved = \"/std/collections/map/count\";\n"
+            "          error_.clear();\n"
+            "          isBuiltinMethod = false;\n"
+            "        } else {") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (resolvesMapCountMethodTarget) {\n"
+            "        methodResolved = \"/std/collections/map/count\";\n"
+            "      } else {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool rejectsStdlibMapCountTargetAsUnknownCallTarget =\n"
