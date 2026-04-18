@@ -6,13 +6,6 @@
 namespace primec::semantics {
 namespace {
 
-bool isVectorCompatibilityMethodName(std::string_view helperName) {
-  return helperName == "count" || helperName == "capacity" || helperName == "at" ||
-         helperName == "at_unsafe" || helperName == "push" || helperName == "pop" ||
-         helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
-         helperName == "remove_swap";
-}
-
 } // namespace
 
 bool SemanticsValidator::validateExprMethodCallTarget(
@@ -167,8 +160,13 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     }
     return normalized;
   }();
+  const bool isVectorCompatibilityMethod =
+      expr.name == "count" || expr.name == "capacity" || expr.name == "at" ||
+      expr.name == "at_unsafe" || expr.name == "push" || expr.name == "pop" ||
+      expr.name == "reserve" || expr.name == "clear" || expr.name == "remove_at" ||
+      expr.name == "remove_swap";
   std::string vectorMethodTarget;
-  if (isVectorCompatibilityMethodName(expr.name) &&
+  if (isVectorCompatibilityMethod &&
       normalizedMethodNamespace != "vector" &&
       normalizedMethodNamespace != "std/collections/vector" &&
       resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
@@ -246,7 +244,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       isBuiltinMethod = false;
     }
   }
-  if (!isBuiltinMethod && isVectorCompatibilityMethodName(expr.name) &&
+  if (!isBuiltinMethod && isVectorCompatibilityMethod &&
       resolved.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 &&
       (hasImportedDefinitionPath("/std/collections/vector/" + expr.name) ||
        defMap_.count("/std/collections/vector/" + expr.name) > 0)) {
