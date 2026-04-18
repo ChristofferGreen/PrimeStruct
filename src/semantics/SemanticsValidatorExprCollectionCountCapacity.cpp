@@ -122,14 +122,16 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       matchesMultiArgCountRouteShape;
   const bool routesThroughCountMethodSurface =
       isVectorBuiltinName(expr, "count") || routesThroughMapCountCallSurface;
+  const bool violatesCountMethodSurfacePreconditions =
+      hasNamedArguments(expr.argNames) ||
+      isUnimportedStdNamespacedVectorCompatibilityDirectCall(
+          expr.isMethodCall,
+          resolveCalleePath(expr),
+          "count",
+          hasImportedDefinitionPath("/std/collections/vector/count")) ||
+      expr.args.empty();
   const bool matchesCountMethodSurfaceRoute =
-      !(hasNamedArguments(expr.argNames) ||
-        isUnimportedStdNamespacedVectorCompatibilityDirectCall(
-            expr.isMethodCall,
-            resolveCalleePath(expr),
-            "count",
-            hasImportedDefinitionPath("/std/collections/vector/count")) ||
-        expr.args.empty()) &&
+      !violatesCountMethodSurfacePreconditions &&
       !isArrayNamespacedVectorCountCompatibilityActive &&
       routesThroughCountMethodSurface && matchesCountRouteArgShape;
   if (matchesCountMethodSurfaceRoute) {
