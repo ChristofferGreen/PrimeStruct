@@ -439,11 +439,15 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                      !context.isNonCollectionStructCapacityTarget(
                          methodResolved)) &&
                     context.promoteCapacityToBuiltinValidation != nullptr;
+                const bool
+                    promotesBuiltinValidationForUnknownCapacityMethod =
+                        lacksVisibleCapacityMethodTarget &&
+                        allowsCapacityBuiltinValidationPromotion;
+                if (promotesBuiltinValidationForUnknownCapacityMethod) {
+                  context.promoteCapacityToBuiltinValidation(
+                      receiver, methodResolved, isBuiltinMethod, false);
+                }
                 if (lacksVisibleCapacityMethodTarget) {
-                  if (allowsCapacityBuiltinValidationPromotion) {
-                    context.promoteCapacityToBuiltinValidation(
-                        receiver, methodResolved, isBuiltinMethod, false);
-                  }
                   (void)failExprDiagnostic(expr,
                                            "unknown method: " + methodResolved);
                   return false;

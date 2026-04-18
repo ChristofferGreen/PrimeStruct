@@ -4813,7 +4813,24 @@
             "    context.promoteCapacityToBuiltinValidation != nullptr;\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool\n"
+            "    promotesBuiltinValidationForUnknownCapacityMethod =\n"
+            "        lacksVisibleCapacityMethodTarget &&\n"
+            "        allowsCapacityBuiltinValidationPromotion;\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto finalizeCapacityMethodTarget =\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (promotesBuiltinValidationForUnknownCapacityMethod) {\n"
+            "  context.promoteCapacityToBuiltinValidation(\n"
+            "      receiver, methodResolved, isBuiltinMethod, false);\n"
+            "}\n"
+            "if (lacksVisibleCapacityMethodTarget) {\n"
+            "  (void)failExprDiagnostic(expr,\n"
+            "                           \"unknown method: \" + methodResolved);\n"
+            "  return false;\n"
+            "}\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (lacksVisibleCapacityMethodTarget) {\n"
@@ -4824,7 +4841,7 @@
             "  (void)failExprDiagnostic(expr,\n"
             "                           \"unknown method: \" + methodResolved);\n"
             "  return false;\n"
-            "}\n") !=
+            "}\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (lacksVisibleCapacityMethodTarget) {\n"
