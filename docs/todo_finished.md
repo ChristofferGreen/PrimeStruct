@@ -6,6 +6,7 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 13, 2026)**
+- ✓ TODO-0885: Share count monomorphized-target reuse guard. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the count-side monomorphized-target reuse guard behind shared `reusesResolvedCountMonomorphizedTarget`, and focused expr source-lock coverage now keeps that shared local present while the old inline monomorphized-target conjunction stays absent.
 - ✓ TODO-0884: Share bare-map count visibility bundle. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the count-side bare-map visibility bundle behind shared `lacksVisibleMapCountDefinitions`, and focused expr source-lock coverage now keeps that shared local present while the old inline bare+stdlib visibility pair stays absent.
 - ✓ TODO-0883: Share count target visibility gate. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the count-side method-target visibility check behind shared `hasVisibleCountMethodTarget`, and focused expr source-lock coverage now keeps that shared local present while the old inline visibility OR branch stays absent.
 - ✓ TODO-0882: Share map-count unknown-target gate. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the count-side map-count unknown-target join behind shared `rejectsMapCountUnknownTarget`, and focused expr source-lock coverage now keeps that shared local present while the old inline OR branch stays absent.

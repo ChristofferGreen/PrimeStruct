@@ -2656,6 +2656,22 @@
             "                }") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "                const bool reusesResolvedCountMonomorphizedTarget =\n"
+            "                    !isBuiltinMethod &&\n"
+            "                    defMap_.find(methodResolved) == defMap_.end() &&\n"
+            "                    resolved.rfind(methodResolved + \"__t\", 0) == 0;\n"
+            "                if (reusesResolvedCountMonomorphizedTarget) {\n"
+            "                  methodResolved = resolved;\n"
+            "                }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "                if (!isBuiltinMethod &&\n"
+            "                    defMap_.find(methodResolved) == defMap_.end() &&\n"
+            "                    resolved.rfind(methodResolved + \"__t\", 0) == 0) {\n"
+            "                  methodResolved = resolved;\n"
+            "                }") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "!hasImportedDefinitionPath(\"/count\") &&\n"
             "                    !hasDeclaredDefinitionPath(\"/count\")") ==
         std::string::npos);

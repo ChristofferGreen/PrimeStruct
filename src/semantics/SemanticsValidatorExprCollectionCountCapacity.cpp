@@ -258,9 +258,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     }
                   }
                 }
-                if (!isBuiltinMethod &&
+                const bool reusesResolvedCountMonomorphizedTarget =
+                    !isBuiltinMethod &&
                     defMap_.find(methodResolved) == defMap_.end() &&
-                    resolved.rfind(methodResolved + "__t", 0) == 0) {
+                    resolved.rfind(methodResolved + "__t", 0) == 0;
+                if (reusesResolvedCountMonomorphizedTarget) {
                   methodResolved = resolved;
                 }
                 const bool targetsBareMapCountMethod =

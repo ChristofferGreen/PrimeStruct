@@ -140,6 +140,7 @@ Wave D (queue hygiene):
     - Final release gate passes with `./scripts/compile.sh --release`.
   - stop_rule: If shared classifier rewrites destabilize `map`/`soa_vector`, isolate the generic mechanism in this leaf and defer remaining shared deletions to TODO-0409.
   - notes: This leaf should leave a reusable generic path that TODO-0409 can apply to `map` and `soa_vector`.
+  - progress: Completed `TODO-0885` by hoisting the count-side monomorphized-target reuse guard in `SemanticsValidatorExprCollectionCountCapacity.cpp` behind shared `reusesResolvedCountMonomorphizedTarget`, so that the count branch no longer repeats that inline monomorphized-target conjunction.
   - progress: Completed `TODO-0884` by hoisting the count-side bare-map visibility bundle in `SemanticsValidatorExprCollectionCountCapacity.cpp` behind shared `lacksVisibleMapCountDefinitions`, so that the direct bare-map rejection no longer repeats that inline bare+stdlib visibility pair.
   - progress: Completed `TODO-0883` by hoisting the count-side method-target visibility check in `SemanticsValidatorExprCollectionCountCapacity.cpp` behind shared `hasVisibleCountMethodTarget`, so that the count unknown-method tail no longer repeats that inline visibility OR branch.
   - progress: Completed `TODO-0882` by hoisting the count-side map-count unknown-target join in `SemanticsValidatorExprCollectionCountCapacity.cpp` behind shared `rejectsMapCountUnknownTarget`, so that the rejection tail no longer repeats that inline OR branch.
