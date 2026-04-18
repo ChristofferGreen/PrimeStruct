@@ -195,11 +195,13 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   const bool allowsUnresolvedSingleArgCountRoute =
       !hasResolvedCountDefinitionTarget &&
       !routesThroughStdNamespacedMapCountSurface;
+  const bool matchesSingleArgCountRouteInputs =
+      allowsUnresolvedSingleArgCountRoute ||
+      routesThroughNamespacedVectorCountFallback ||
+      routesThroughMapCountCallSurface;
   const bool matchesSingleArgCountRouteShape =
       isSingleArgCountCall &&
-      (allowsUnresolvedSingleArgCountRoute ||
-       routesThroughNamespacedVectorCountFallback ||
-       routesThroughMapCountCallSurface);
+      matchesSingleArgCountRouteInputs;
   const bool matchesMultiArgCountRouteShape =
       isMultiArgCountCall &&
       (hasResolvedCountDefinitionTarget ||

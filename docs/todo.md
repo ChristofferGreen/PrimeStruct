@@ -140,6 +140,7 @@ Wave D (queue hygiene):
     - Final release gate passes with `./scripts/compile.sh --release`.
   - stop_rule: If shared classifier rewrites destabilize `map`/`soa_vector`, isolate the generic mechanism in this leaf and defer remaining shared deletions to TODO-0409.
   - notes: This leaf should leave a reusable generic path that TODO-0409 can apply to `map` and `soa_vector`.
+  - progress: Completed `TODO-0969` by hoisting the count-side single-argument route OR bundle behind `matchesSingleArgCountRouteInputs` in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the count route-shape scaffolding no longer repeats that inline input composition.
   - progress: Completed `TODO-0968` by hoisting the mirrored capacity-side builtin-validation promotion callback behind `promoteUnknownCapacityMethodToBuiltinValidation` in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the capacity resolver tail no longer repeats that promotion gate/callback inline.
   - progress: Completed `TODO-0967` by hoisting the mirrored count/capacity terminal invisible-method failure behind `failInvisibleResolvedMethodTarget` in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the resolver tails no longer repeat the final visibility-and-diagnostic block inline.
   - progress: Completed `TODO-0966` by hoisting the mirrored count/capacity resolved-method visibility check behind `lacksVisibleResolvedMethodTarget` in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the resolver tails no longer repeat the same non-builtin visibility gate inline.

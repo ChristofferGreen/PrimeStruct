@@ -2691,11 +2691,15 @@
             "      !routesThroughStdNamespacedMapCountSurface;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool matchesSingleArgCountRouteInputs =\n"
+            "      allowsUnresolvedSingleArgCountRoute ||\n"
+            "      routesThroughNamespacedVectorCountFallback ||\n"
+            "      routesThroughMapCountCallSurface;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool matchesSingleArgCountRouteShape =\n"
             "      isSingleArgCountCall &&\n"
-            "      (allowsUnresolvedSingleArgCountRoute ||\n"
-            "       routesThroughNamespacedVectorCountFallback ||\n"
-            "       routesThroughMapCountCallSurface);") !=
+            "      matchesSingleArgCountRouteInputs;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool matchesMultiArgCountRouteShape =\n"
@@ -3360,6 +3364,13 @@
             "      (expr.args.size() != 1 &&\n"
             "       (hasResolvedCountDefinitionTarget ||\n"
             "        routesThroughMapCountCallSurface));") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool matchesSingleArgCountRouteInputs =\n"
+            "      ((!hasResolvedCountDefinitionTarget &&\n"
+            "        !context.isStdNamespacedMapCountCall) ||\n"
+            "       routesThroughNamespacedVectorCountFallback ||\n"
+            "       routesThroughMapCountCallSurface);") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool matchesSingleArgCountRouteShape =\n"
