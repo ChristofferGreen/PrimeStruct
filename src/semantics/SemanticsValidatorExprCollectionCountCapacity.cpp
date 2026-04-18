@@ -50,6 +50,19 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                defMap_.find(methodTargetPath) == defMap_.end() &&
                resolved.rfind(methodTargetPath + "__t", 0) == 0;
       };
+  const auto resolveVisiblePreferredVectorHelperMethodTarget =
+      [&](const Expr &receiverExpr,
+          const char *helperName,
+          std::string &methodTargetPath) {
+        const bool resolvedVectorHelperMethodTarget =
+            resolveVectorHelperMethodTarget(
+                params, locals, receiverExpr, helperName, methodTargetPath);
+        if (resolvedVectorHelperMethodTarget) {
+          methodTargetPath = preferVectorStdlibHelperPath(methodTargetPath);
+        }
+        return resolvedVectorHelperMethodTarget &&
+               !lacksVisibleMethodTargetPath(methodTargetPath);
+      };
   if (!expr.isMethodCall && defMap_.find(resolved) != defMap_.end()) {
     const size_t lastSlash = resolved.find_last_of('/');
     const size_t instantiationPos =
@@ -231,15 +244,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                   methodResolved = stdlibMapCountTargetPath;
                   isBuiltinMethod = true;
                 } else {
-                  const bool resolvedCountHelperMethodTarget =
-                      resolveVectorHelperMethodTarget(
-                          params, locals, receiver, "count", methodResolved);
-                  if (resolvedCountHelperMethodTarget) {
-                    methodResolved = preferVectorStdlibHelperPath(methodResolved);
-                  }
                   const bool hasVisibleCountHelperMethodTarget =
-                      resolvedCountHelperMethodTarget &&
-                      !lacksVisibleMethodTargetPath(methodResolved);
+                      resolveVisiblePreferredVectorHelperMethodTarget(
+                          receiver, "count", methodResolved);
                   const bool needsDirectCountMethodTargetResolution =
                       !hasVisibleCountHelperMethodTarget;
                   const bool resolvedCountMethodTargetDirectly =
@@ -412,17 +419,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 const bool usesStdNamespacedCapacityCompatibilityHelper =
                     isStdNamespacedVectorCompatibilityHelperPath(
                         resolveCalleePath(expr), "capacity");
-                const bool resolvedCapacityHelperMethodTarget =
-                    resolveVectorHelperMethodTarget(
-                        params, locals, receiver, "capacity",
-                        methodResolved);
-                if (resolvedCapacityHelperMethodTarget) {
-                  methodResolved =
-                      preferVectorStdlibHelperPath(methodResolved);
-                }
                 const bool hasVisibleCapacityHelperMethodTarget =
-                    resolvedCapacityHelperMethodTarget &&
-                    !lacksVisibleMethodTargetPath(methodResolved);
+                    resolveVisiblePreferredVectorHelperMethodTarget(
+                        receiver, "capacity", methodResolved);
                 const bool needsDirectCapacityMethodTargetResolution =
                     !usesStdNamespacedCapacityCompatibilityHelper &&
                     !hasVisibleCapacityHelperMethodTarget;

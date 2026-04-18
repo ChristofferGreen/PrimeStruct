@@ -1807,16 +1807,25 @@
             "    };\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "} else {\n"
-            "      const bool resolvedCountHelperMethodTarget =\n"
+            "const auto resolveVisiblePreferredVectorHelperMethodTarget =\n"
+            "    [&](const Expr &receiverExpr,\n"
+            "        const char *helperName,\n"
+            "        std::string &methodTargetPath) {\n"
+            "      const bool resolvedVectorHelperMethodTarget =\n"
             "          resolveVectorHelperMethodTarget(\n"
-            "              params, locals, receiver, \"count\", methodResolved);\n"
-            "      if (resolvedCountHelperMethodTarget) {\n"
-            "        methodResolved = preferVectorStdlibHelperPath(methodResolved);\n"
+            "              params, locals, receiverExpr, helperName, methodTargetPath);\n"
+            "      if (resolvedVectorHelperMethodTarget) {\n"
+            "        methodTargetPath = preferVectorStdlibHelperPath(methodTargetPath);\n"
             "      }\n"
+            "      return resolvedVectorHelperMethodTarget &&\n"
+            "             !lacksVisibleMethodTargetPath(methodTargetPath);\n"
+            "    };\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "} else {\n"
             "      const bool hasVisibleCountHelperMethodTarget =\n"
-            "          resolvedCountHelperMethodTarget &&\n"
-            "          !lacksVisibleMethodTargetPath(methodResolved);\n"
+            "          resolveVisiblePreferredVectorHelperMethodTarget(\n"
+            "              receiver, \"count\", methodResolved);\n"
             "      const bool needsDirectCountMethodTargetResolution =\n"
             "          !hasVisibleCountHelperMethodTarget;\n"
             "      const bool resolvedCountMethodTargetDirectly =\n"
@@ -4756,21 +4765,9 @@
             "    \"/std/collections/vector/capacity\";\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const bool resolvedCapacityHelperMethodTarget =\n"
-            "    resolveVectorHelperMethodTarget(\n"
-            "        params, locals, receiver, \"capacity\",\n"
-            "        methodResolved);\n") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (resolvedCapacityHelperMethodTarget) {\n"
-            "  methodResolved =\n"
-            "      preferVectorStdlibHelperPath(methodResolved);\n"
-            "}\n") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool hasVisibleCapacityHelperMethodTarget =\n"
-            "    resolvedCapacityHelperMethodTarget &&\n"
-            "    !lacksVisibleMethodTargetPath(methodResolved);\n") !=
+            "    resolveVisiblePreferredVectorHelperMethodTarget(\n"
+            "        receiver, \"capacity\", methodResolved);\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (hasVisibleCapacityHelperMethodTarget) {\n"
