@@ -235,14 +235,19 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                         std::string typeName;
                         const bool resolvesCountReceiverTypeFromNameBinding =
                             receiver.kind == Expr::Kind::Name;
+                        const BindingInfo *countResolveMissReceiverBinding =
+                            nullptr;
                         if (resolvesCountReceiverTypeFromNameBinding) {
                           if (const BindingInfo *paramBinding =
                                   findParamBinding(params, receiver.name)) {
-                            typeName = paramBinding->typeName;
+                            countResolveMissReceiverBinding = paramBinding;
                           } else if (auto it = locals.find(receiver.name);
                                      it != locals.end()) {
-                            typeName = it->second.typeName;
+                            countResolveMissReceiverBinding = &it->second;
                           }
+                        }
+                        if (countResolveMissReceiverBinding != nullptr) {
+                          typeName = countResolveMissReceiverBinding->typeName;
                         }
                         const bool needsCountReceiverTypeFromCallReturn =
                             typeName.empty();

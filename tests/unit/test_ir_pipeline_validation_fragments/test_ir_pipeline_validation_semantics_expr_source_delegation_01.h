@@ -1810,14 +1810,19 @@
             "            std::string typeName;\n"
             "            const bool resolvesCountReceiverTypeFromNameBinding =\n"
             "                receiver.kind == Expr::Kind::Name;\n"
+            "            const BindingInfo *countResolveMissReceiverBinding =\n"
+            "                nullptr;\n"
             "            if (resolvesCountReceiverTypeFromNameBinding) {\n"
             "              if (const BindingInfo *paramBinding =\n"
             "                      findParamBinding(params, receiver.name)) {\n"
-            "                typeName = paramBinding->typeName;\n"
+            "                countResolveMissReceiverBinding = paramBinding;\n"
             "              } else if (auto it = locals.find(receiver.name);\n"
             "                         it != locals.end()) {\n"
-            "                typeName = it->second.typeName;\n"
+            "                countResolveMissReceiverBinding = &it->second;\n"
             "              }\n"
+            "            }\n"
+            "            if (countResolveMissReceiverBinding != nullptr) {\n"
+            "              typeName = countResolveMissReceiverBinding->typeName;\n"
             "            }\n"
             "            const bool needsCountReceiverTypeFromCallReturn =\n"
             "                typeName.empty();\n"
@@ -1875,6 +1880,17 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "            if (receiver.kind == Expr::Kind::Name) {\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "            if (resolvesCountReceiverTypeFromNameBinding) {\n"
+            "              if (const BindingInfo *paramBinding =\n"
+            "                      findParamBinding(params, receiver.name)) {\n"
+            "                typeName = paramBinding->typeName;\n"
+            "              } else if (auto it = locals.find(receiver.name);\n"
+            "                         it != locals.end()) {\n"
+            "                typeName = it->second.typeName;\n"
+            "              }\n"
+            "            }\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "            if (typeName != \"Pointer\" && typeName != \"Reference\") {\n") ==
