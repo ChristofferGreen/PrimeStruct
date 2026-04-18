@@ -345,6 +345,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     bool isBuiltinMethod = false;
     std::string methodResolved;
     {
+                const bool usesStdNamespacedCapacityCompatibilityHelper =
+                    isStdNamespacedVectorCompatibilityHelperPath(
+                        resolveCalleePath(expr), "capacity");
                 if (resolveVectorHelperMethodTarget(
                         params, locals, receiver, "capacity",
                         methodResolved) &&
@@ -353,14 +356,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                      (hasDeclaredDefinitionPath(methodResolved) ||
                       hasImportedDefinitionPath(methodResolved)))) {
                   isBuiltinMethod = false;
-                  if (isStdNamespacedVectorCompatibilityHelperPath(
-                          resolveCalleePath(expr), "capacity")) {
+                  if (usesStdNamespacedCapacityCompatibilityHelper) {
                     methodResolved = "/std/collections/vector/capacity";
                     isBuiltinMethod = true;
                   }
                 } else {
-                  if (isStdNamespacedVectorCompatibilityHelperPath(
-                          resolveCalleePath(expr), "capacity")) {
+                  if (usesStdNamespacedCapacityCompatibilityHelper) {
                     methodResolved = "/std/collections/vector/capacity";
                     isBuiltinMethod = true;
                   } else if (resolveMethodTarget(
