@@ -89,10 +89,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                                 stdNamespacedVectorCountDiagnosticMessage);
     }
   }
+  const bool routesThroughStdNamespacedMapCountSurface =
+      context.isStdNamespacedMapCountCall;
   const bool routesThroughUnnamespacedMapCountFallbackSurface =
       context.isUnnamespacedMapCountFallbackCall;
   const bool routesThroughMapCountCallSurface =
-      context.isStdNamespacedMapCountCall ||
+      routesThroughStdNamespacedMapCountSurface ||
       context.isNamespacedMapCountCall ||
       routesThroughUnnamespacedMapCountFallbackSurface ||
       context.isResolvedMapCountCall;
@@ -113,7 +115,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       defMap_.find(resolved) != defMap_.end();
   const bool allowsUnresolvedSingleArgCountRoute =
       !hasResolvedCountDefinitionTarget &&
-      !context.isStdNamespacedMapCountCall;
+      !routesThroughStdNamespacedMapCountSurface;
   const bool matchesSingleArgCountRouteShape =
       isSingleArgCountCall &&
       (allowsUnresolvedSingleArgCountRoute ||

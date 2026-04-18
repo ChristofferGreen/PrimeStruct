@@ -2362,12 +2362,16 @@
             "const bool resolvesMapCountMethodTarget =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool routesThroughStdNamespacedMapCountSurface =\n"
+            "      context.isStdNamespacedMapCountCall;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool routesThroughUnnamespacedMapCountFallbackSurface =\n"
             "      context.isUnnamespacedMapCountFallbackCall;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool routesThroughMapCountCallSurface =\n"
-            "      context.isStdNamespacedMapCountCall ||\n"
+            "      routesThroughStdNamespacedMapCountSurface ||\n"
             "      context.isNamespacedMapCountCall ||\n"
             "      routesThroughUnnamespacedMapCountFallbackSurface ||\n"
             "      context.isResolvedMapCountCall;") !=
@@ -2398,7 +2402,7 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool allowsUnresolvedSingleArgCountRoute =\n"
             "      !hasResolvedCountDefinitionTarget &&\n"
-            "      !context.isStdNamespacedMapCountCall;") !=
+            "      !routesThroughStdNamespacedMapCountSurface;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool matchesSingleArgCountRouteShape =\n"
@@ -2851,6 +2855,11 @@
             "      context.isNamespacedMapCountCall ||\n"
             "      context.isUnnamespacedMapCountFallbackCall ||\n"
             "      context.isResolvedMapCountCall;") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool allowsUnresolvedSingleArgCountRoute =\n"
+            "      !hasResolvedCountDefinitionTarget &&\n"
+            "      !context.isStdNamespacedMapCountCall;") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "  const bool routesThroughStdlibMapCountFallback =\n"
