@@ -140,6 +140,7 @@ Wave D (queue hygiene):
     - Final release gate passes with `./scripts/compile.sh --release`.
   - stop_rule: If shared classifier rewrites destabilize `map`/`soa_vector`, isolate the generic mechanism in this leaf and defer remaining shared deletions to TODO-0409.
   - notes: This leaf should leave a reusable generic path that TODO-0409 can apply to `map` and `soa_vector`.
+  - progress: Completed `TODO-0692` by deleting the one-use `matchesCountMethodCallShape` local from `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the collection-side count method-shape gate now keeps its single-arg and non-single-arg checks inline at the branch site.
   - progress: Completed `TODO-0691` by deleting the one-use `allowStdNamespacedVectorUserReceiverProbe` local from `SemanticsValidatorExprCollectionDispatchSetup.cpp`, so the dispatch-side count/capacity diagnostic gate now keeps that user-receiver probe inline at the branch head.
   - progress: Completed `TODO-0689` by deleting the still-present one-use `stdNamespacedVectorCountTargetDiagnosticMessage` local from `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the collection-side count diagnostic path now performs the shared selector call directly inside the failure block.
   - progress: Completed `TODO-0688` by deleting the still-present one-use `stdNamespacedVectorCountDiagnosticMessage` local from `SemanticsValidatorExprCollectionDispatchSetup.cpp`, so the dispatch-side count diagnostic path now performs the shared selector call directly inside the failure branch.

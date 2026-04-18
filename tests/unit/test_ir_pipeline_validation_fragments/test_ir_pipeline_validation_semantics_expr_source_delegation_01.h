@@ -1434,30 +1434,33 @@
             "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const auto matchesCountMethodCallShape = [&](bool requireSingleArg) {\n"
-            "      if (requireSingleArg) {\n"
-            "        return (defMap_.find(resolved) == defMap_.end() &&\n"
-            "                !context.isStdNamespacedMapCountCall) ||\n"
-            "               (!isStdNamespacedVectorCompatibilityDirectCall(\n"
-            "                    expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
-            "                context.isNamespacedVectorHelperCall &&\n"
-            "                context.namespacedHelper == \"count\" &&\n"
-            "                isVectorBuiltinName(expr, \"count\") &&\n"
-            "                expr.args.size() == 1 &&\n"
-            "                !hasDefinitionPath(resolved) &&\n"
-            "                !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
-            "                  context.isArrayNamespacedVectorCountCompatibilityCall(expr))) ||\n"
-            "               context.isStdNamespacedMapCountCall ||\n"
-            "               context.isNamespacedMapCountCall ||\n"
-            "               context.isUnnamespacedMapCountFallbackCall ||\n"
-            "               context.isResolvedMapCountCall;\n"
+            "if (requireSingleArg) {\n"
+            "      if (!((defMap_.find(resolved) == defMap_.end() &&\n"
+            "             !context.isStdNamespacedMapCountCall) ||\n"
+            "            (!isStdNamespacedVectorCompatibilityDirectCall(\n"
+            "                 expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
+            "             context.isNamespacedVectorHelperCall &&\n"
+            "             context.namespacedHelper == \"count\" &&\n"
+            "             isVectorBuiltinName(expr, \"count\") &&\n"
+            "             expr.args.size() == 1 &&\n"
+            "             !hasDefinitionPath(resolved) &&\n"
+            "             !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
+            "               context.isArrayNamespacedVectorCountCompatibilityCall(expr))) ||\n"
+            "            context.isStdNamespacedMapCountCall || context.isNamespacedMapCountCall ||\n"
+            "            context.isUnnamespacedMapCountFallbackCall ||\n"
+            "            context.isResolvedMapCountCall)) {\n"
+            "        return false;\n"
             "      }\n"
-            "      return defMap_.find(resolved) != defMap_.end() ||\n"
-            "             context.isStdNamespacedMapCountCall ||\n"
-            "             context.isNamespacedMapCountCall ||\n"
-            "             context.isUnnamespacedMapCountFallbackCall ||\n"
-            "             context.isResolvedMapCountCall;\n"
-            "    };") !=
+            "    } else if (!(defMap_.find(resolved) != defMap_.end() ||\n"
+            "                 context.isStdNamespacedMapCountCall ||\n"
+            "                 context.isNamespacedMapCountCall ||\n"
+            "                 context.isUnnamespacedMapCountFallbackCall ||\n"
+            "                 context.isResolvedMapCountCall)) {\n"
+            "      return false;\n"
+            "    }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto matchesCountMethodCallShape =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool resolvesMapCountSurface =") ==

@@ -138,31 +138,28 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           context.isResolvedMapCountCall)) {
       return false;
     }
-    const auto matchesCountMethodCallShape = [&](bool requireSingleArg) {
-      if (requireSingleArg) {
-        return (defMap_.find(resolved) == defMap_.end() &&
-                !context.isStdNamespacedMapCountCall) ||
-               (!isStdNamespacedVectorCompatibilityDirectCall(
-                    expr.isMethodCall, resolveCalleePath(expr), "count") &&
-                context.isNamespacedVectorHelperCall &&
-                context.namespacedHelper == "count" &&
-                isVectorBuiltinName(expr, "count") &&
-                expr.args.size() == 1 &&
-                !hasDefinitionPath(resolved) &&
-                !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
-                  context.isArrayNamespacedVectorCountCompatibilityCall(expr))) ||
-               context.isStdNamespacedMapCountCall ||
-               context.isNamespacedMapCountCall ||
-               context.isUnnamespacedMapCountFallbackCall ||
-               context.isResolvedMapCountCall;
+    if (requireSingleArg) {
+      if (!((defMap_.find(resolved) == defMap_.end() &&
+             !context.isStdNamespacedMapCountCall) ||
+            (!isStdNamespacedVectorCompatibilityDirectCall(
+                 expr.isMethodCall, resolveCalleePath(expr), "count") &&
+             context.isNamespacedVectorHelperCall &&
+             context.namespacedHelper == "count" &&
+             isVectorBuiltinName(expr, "count") &&
+             expr.args.size() == 1 &&
+             !hasDefinitionPath(resolved) &&
+             !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
+               context.isArrayNamespacedVectorCountCompatibilityCall(expr))) ||
+            context.isStdNamespacedMapCountCall || context.isNamespacedMapCountCall ||
+            context.isUnnamespacedMapCountFallbackCall ||
+            context.isResolvedMapCountCall)) {
+        return false;
       }
-      return defMap_.find(resolved) != defMap_.end() ||
-             context.isStdNamespacedMapCountCall ||
-             context.isNamespacedMapCountCall ||
-             context.isUnnamespacedMapCountFallbackCall ||
-             context.isResolvedMapCountCall;
-    };
-    if (!matchesCountMethodCallShape(requireSingleArg)) {
+    } else if (!(defMap_.find(resolved) != defMap_.end() ||
+                 context.isStdNamespacedMapCountCall ||
+                 context.isNamespacedMapCountCall ||
+                 context.isUnnamespacedMapCountFallbackCall ||
+                 context.isResolvedMapCountCall)) {
       return false;
     }
 
