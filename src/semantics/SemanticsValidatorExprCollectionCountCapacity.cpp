@@ -60,21 +60,18 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     resolvedMethod = isBuiltinMethod;
     return true;
   };
-  auto isConcreteCountCapacityInstantiation = [&](const std::string &path) {
-    if (defMap_.find(path) == defMap_.end()) {
-      return false;
+  if (!expr.isMethodCall && defMap_.find(resolved) != defMap_.end()) {
+    const size_t lastSlash = resolved.find_last_of('/');
+    const size_t instantiationPos =
+        resolved.find("__t", lastSlash == std::string::npos ? 0 : lastSlash + 1);
+    if (instantiationPos != std::string::npos) {
+      const std::string helperName =
+          resolved.substr(lastSlash == std::string::npos ? 0 : lastSlash + 1,
+                          instantiationPos - lastSlash - 1);
+      if (helperName == "count" || helperName == "capacity") {
+        return true;
+      }
     }
-    const size_t lastSlash = path.find_last_of('/');
-    const size_t instantiationPos = path.find("__t", lastSlash == std::string::npos ? 0 : lastSlash + 1);
-    if (instantiationPos == std::string::npos) {
-      return false;
-    }
-    const std::string helperName =
-        path.substr(lastSlash == std::string::npos ? 0 : lastSlash + 1, instantiationPos - lastSlash - 1);
-    return helperName == "count" || helperName == "capacity";
-  };
-  if (!expr.isMethodCall && isConcreteCountCapacityInstantiation(resolved)) {
-    return true;
   }
 
   if (hasNamedArguments(expr.argNames) &&

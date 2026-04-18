@@ -1387,6 +1387,24 @@
             "      };") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "  auto isConcreteCountCapacityInstantiation = [&](const std::string &path) {\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "  if (!expr.isMethodCall && defMap_.find(resolved) != defMap_.end()) {\n"
+            "    const size_t lastSlash = resolved.find_last_of('/');\n"
+            "    const size_t instantiationPos =\n"
+            "        resolved.find(\"__t\", lastSlash == std::string::npos ? 0 : lastSlash + 1);\n"
+            "    if (instantiationPos != std::string::npos) {\n"
+            "      const std::string helperName =\n"
+            "          resolved.substr(lastSlash == std::string::npos ? 0 : lastSlash + 1,\n"
+            "                          instantiationPos - lastSlash - 1);\n"
+            "      if (helperName == \"count\" || helperName == \"capacity\") {\n"
+            "        return true;\n"
+            "      }\n"
+            "    }\n"
+            "  }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&\n"
             "        resolved.rfind(methodResolved + \"__t\", 0) == 0) {\n"
             "      methodResolved = resolved;\n"
