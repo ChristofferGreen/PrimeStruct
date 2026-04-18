@@ -1408,6 +1408,15 @@
             "  };") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto failUnknownCollectionMethodTarget =\n"
+            "      [&](bool isBuiltinMethod, const std::string &methodResolved) {\n"
+            "    if (!isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {\n"
+            "      return false;\n"
+            "    }\n"
+            "    return failExprDiagnostic(expr, \"unknown method: \" + methodResolved);\n"
+            "  };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto preferVisibleVectorHelperMethodTarget =\n"
             "      [&](std::string &methodResolved, bool &isBuiltinMethod) {\n"
             "    methodResolved = preferVectorStdlibHelperPath(methodResolved);\n"
@@ -1462,6 +1471,17 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {\n"
+            "      return failExprDiagnostic(expr,\n"
+            "                                \"unknown method: \" + methodResolved);\n"
+            "    }") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (failUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {\n"
+            "      return false;\n"
+            "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else if (resolveVectorHelperMethodTarget(params, locals, receiver, \"count\",\n"

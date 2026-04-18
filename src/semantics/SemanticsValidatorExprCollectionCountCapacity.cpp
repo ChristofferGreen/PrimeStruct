@@ -109,6 +109,13 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     return !isBuiltinMethod && !hasDeclaredDefinitionPath(methodResolved) &&
            !hasImportedDefinitionPath(methodResolved);
   };
+  const auto failUnknownCollectionMethodTarget =
+      [&](bool isBuiltinMethod, const std::string &methodResolved) {
+    if (!isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {
+      return false;
+    }
+    return failExprDiagnostic(expr, "unknown method: " + methodResolved);
+  };
   const auto preferVisibleVectorHelperMethodTarget =
       [&](std::string &methodResolved, bool &isBuiltinMethod) {
     methodResolved = preferVectorStdlibHelperPath(methodResolved);
@@ -242,9 +249,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     if (failRemovedRootedVectorDirectCall()) {
       return false;
     }
-    if (isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {
-      return failExprDiagnostic(expr,
-                                "unknown method: " + methodResolved);
+    if (failUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {
+      return false;
     }
     return true;
   };
@@ -341,9 +347,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                                                    isBuiltinMethod, false);
       }
     }
-    if (isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {
-      return failExprDiagnostic(expr,
-                                "unknown method: " + methodResolved);
+    if (failUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {
+      return false;
     }
     if (failRemovedRootedVectorDirectCall()) {
       return false;
