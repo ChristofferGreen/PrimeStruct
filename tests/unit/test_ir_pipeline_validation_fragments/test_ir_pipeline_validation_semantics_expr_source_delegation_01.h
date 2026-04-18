@@ -1889,11 +1889,14 @@
             "        \"/std/collections/map/count\";") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const bool routesThroughBuiltinStdlibMapCountFallback =\n"
-            "        context.isUnnamespacedMapCountFallbackCall &&\n"
+            "if (context.isUnnamespacedMapCountFallbackCall &&\n"
             "        !hasDeclaredDefinitionPath(bareMapCountMethodTarget) &&\n"
             "        lacksVisibleStdlibMapCountDefinition &&\n"
-            "        resolvesMapCountMethodTarget;") !=
+            "        resolvesMapCountMethodTarget) {\n"
+            "      methodResolved = stdlibMapCountMethodTarget;\n"
+            "      isBuiltinMethod = true;\n"
+            "      needsCountMethodResolveOrFallback = false;\n"
+            "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool routesThroughResolvableVectorCountHelperFallback =\n"
@@ -1958,6 +1961,9 @@
             "        needsCountMethodResolveOrFallback = false;\n"
             "      }\n"
             "    }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool routesThroughBuiltinStdlibMapCountFallback =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
