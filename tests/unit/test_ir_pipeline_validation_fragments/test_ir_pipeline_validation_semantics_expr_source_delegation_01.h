@@ -2720,13 +2720,15 @@
             "  const bool resolvesMapCountReceiver =\n"
             "      context.resolveMapTarget != nullptr &&\n"
             "      context.resolveMapTarget(receiver);\n"
+            "  const bool routesThroughStdlibMapCountFallback =\n"
+            "      context.isUnnamespacedMapCountFallbackCall &&\n"
+            "      !hasDeclaredDefinitionPath(\"/map/count\") &&\n"
+            "      lacksVisibleStdlibMapCountDefinition &&\n"
+            "      resolvesMapCountReceiver;\n"
             "  bool isBuiltinMethod = false;\n"
             "  std::string methodResolved;\n"
             "  {\n"
-            "                if (context.isUnnamespacedMapCountFallbackCall &&\n"
-            "                    !hasDeclaredDefinitionPath(\"/map/count\") &&\n"
-            "                    lacksVisibleStdlibMapCountDefinition &&\n"
-            "                    resolvesMapCountReceiver) {\n"
+            "                if (routesThroughStdlibMapCountFallback) {\n"
             "                  methodResolved = \"/std/collections/map/count\";") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
