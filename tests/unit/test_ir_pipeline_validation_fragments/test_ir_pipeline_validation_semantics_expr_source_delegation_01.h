@@ -1716,6 +1716,35 @@
             "        !isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto resolveCapacityMethodTarget = [&]() -> bool {\n"
+            "      if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), \"capacity\",\n"
+            "                                          methodResolved)) {\n"
+            "        methodResolved = preferVectorStdlibHelperPath(methodResolved);\n"
+            "        if (hasResolvableDefinitionPath(methodResolved)) {\n"
+            "          isBuiltinMethod = false;\n"
+            "          return true;\n"
+            "        }\n"
+            "      }\n"
+            "      return resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), \"capacity\",\n"
+            "                                 methodResolved, isBuiltinMethod);\n"
+            "    };") != std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), \"capacity\",\n"
+            "                                        methodResolved)) {\n"
+            "      methodResolved = preferVectorStdlibHelperPath(methodResolved);\n"
+            "      if (hasResolvableDefinitionPath(methodResolved)) {\n"
+            "        isBuiltinMethod = false;\n"
+            "      } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), \"capacity\",\n"
+            "                                      methodResolved, isBuiltinMethod)) {\n"
+            "        (void)validateExpr(params, locals, expr.args.front());\n"
+            "        return false;\n"
+            "      }\n"
+            "    } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), \"capacity\",\n"
+            "                                    methodResolved, isBuiltinMethod)) {\n"
+            "      (void)validateExpr(params, locals, expr.args.front());\n"
+            "      return false;\n"
+            "    }") == std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {\n"
             "      if (requireSingleArg &&") == std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
