@@ -1942,12 +1942,10 @@
             "                }\n"
             "                const bool targetsBareMapCountMethod =\n"
             "                    methodResolved == bareMapCountTargetPath;\n"
-            "                const bool rejectsDirectBareMapCountTarget =\n"
-            "                    isDirectNamedCountReceiverCall &&\n"
-            "                    targetsBareMapCountMethod &&\n"
-            "                    lacksVisibleBareCountDefinition &&\n"
-            "                    lacksVisibleStdlibMapCountDefinition;\n"
-            "                if (rejectsDirectBareMapCountTarget ||\n"
+            "                if ((isDirectNamedCountReceiverCall &&\n"
+            "                     targetsBareMapCountMethod &&\n"
+            "                     lacksVisibleBareCountDefinition &&\n"
+            "                     lacksVisibleStdlibMapCountDefinition) ||\n"
             "                    (isBuiltinMethod &&\n"
             "                     methodResolved == stdlibMapCountTargetPath &&\n"
             "                     lacksVisibleStdlibMapCountDefinition &&\n"
@@ -1985,6 +1983,13 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "                const bool rejectsRemovedRootedVectorDirectCall =\n"
             "                    !removedRootedVectorDirectCallDiagnostic.empty();\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "                const bool rejectsDirectBareMapCountTarget =\n"
+            "                    isDirectNamedCountReceiverCall &&\n"
+            "                    targetsBareMapCountMethod &&\n"
+            "                    lacksVisibleBareCountDefinition &&\n"
+            "                    lacksVisibleStdlibMapCountDefinition;\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto finalizeCountMethodTarget =\n") ==
