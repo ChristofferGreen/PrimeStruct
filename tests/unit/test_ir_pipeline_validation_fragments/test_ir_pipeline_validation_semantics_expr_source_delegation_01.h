@@ -1942,18 +1942,6 @@
             "        handledOut = true;\n"
             "        bool isBuiltinMethod = false;\n"
             "        std::string methodResolved;\n"
-            "        const auto resolvesNamedArgumentCountOrCapacityHelperTarget =\n"
-            "            [&](std::string &resolvedMethodTarget, bool &resolvedBuiltinMethod) {\n"
-            "              return resolveMethodTarget(params,\n"
-            "                                         locals,\n"
-            "                                         expr.namespacePrefix,\n"
-            "                                         expr.args.front(),\n"
-            "                                         context.namespacedHelper,\n"
-            "                                         resolvedMethodTarget,\n"
-            "                                         resolvedBuiltinMethod) &&\n"
-            "                     !resolvedBuiltinMethod &&\n"
-            "                     defMap_.find(resolvedMethodTarget) != defMap_.end();\n"
-            "            };\n"
             "        if (resolvesNamedArgumentCountOrCapacityHelperTarget(methodResolved,\n"
             "                                                             isBuiltinMethod)) {\n"
             "          usedMethodTarget = true;\n"
@@ -4511,32 +4499,39 @@
             "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "{\n"
-            "    if (const std::string stdNamespacedVectorCountDiagnosticMessage =\n"
-            "            classifyStdNamespacedVectorCountDiagnosticMessage(\n"
-            "                false,\n"
-            "                context.isDirectStdNamespacedVectorCountWrapperMapTarget,\n"
-            "                isUndeclaredStdNamespacedVectorCompatibilityDirectCall(\n"
-            "                    expr.isMethodCall,\n"
-            "                    resolveCalleePath(expr),\n"
-            "                    \"count\",\n"
-            "                    hasDeclaredDefinitionPath(\"/std/collections/vector/count\")),\n"
-            "                expr.args.size() == 1 &&\n"
-            "                    context.resolveMapTarget != nullptr &&\n"
-            "                    context.resolveMapTarget(expr.args.front()),\n"
-            "                isUnresolvableStdNamespacedVectorCompatibilityDirectCall(\n"
-            "                    expr.isMethodCall,\n"
-            "                    resolveCalleePath(expr),\n"
-            "                    \"count\",\n"
-            "                    hasDeclaredDefinitionPath(\"/std/collections/vector/count\") ||\n"
-            "                        hasImportedDefinitionPath(\n"
-            "                            \"/std/collections/vector/count\")));\n"
-            "        !stdNamespacedVectorCountDiagnosticMessage.empty()) {\n"
-            "      handledOut = true;\n"
-            "      return failExprDiagnostic(expr,\n"
-            "                                stdNamespacedVectorCountDiagnosticMessage);\n"
-            "    }\n"
-            "  }") !=
+            "const auto failStdNamespacedVectorCountDiagnosticIfPresent =\n"
+            "      [&]() {\n"
+            "        if (const std::string stdNamespacedVectorCountDiagnosticMessage =\n"
+                "                classifyStdNamespacedVectorCountDiagnosticMessage(\n"
+            "                    false,\n"
+            "                    context.isDirectStdNamespacedVectorCountWrapperMapTarget,\n"
+            "                    isUndeclaredStdNamespacedVectorCompatibilityDirectCall(\n"
+            "                        expr.isMethodCall,\n"
+            "                        resolveCalleePath(expr),\n"
+            "                        \"count\",\n"
+            "                        hasDeclaredDefinitionPath(\"/std/collections/vector/count\")),\n"
+            "                    expr.args.size() == 1 &&\n"
+            "                        context.resolveMapTarget != nullptr &&\n"
+            "                        context.resolveMapTarget(expr.args.front()),\n"
+            "                    isUnresolvableStdNamespacedVectorCompatibilityDirectCall(\n"
+            "                        expr.isMethodCall,\n"
+            "                        resolveCalleePath(expr),\n"
+            "                        \"count\",\n"
+            "                        hasDeclaredDefinitionPath(\"/std/collections/vector/count\") ||\n"
+            "                            hasImportedDefinitionPath(\n"
+            "                                \"/std/collections/vector/count\")));\n"
+            "            !stdNamespacedVectorCountDiagnosticMessage.empty()) {\n"
+            "          handledOut = true;\n"
+            "          return failExprDiagnostic(expr,\n"
+            "                                    stdNamespacedVectorCountDiagnosticMessage);\n"
+            "        }\n"
+            "        return true;\n"
+            "      };\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "  if (!failStdNamespacedVectorCountDiagnosticIfPresent()) {\n"
+            "    return false;\n"
+            "  }\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool callsUndeclaredStdNamespacedVectorCountHelper =") ==
@@ -4552,6 +4547,11 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (isStdNamespacedVectorCompatibilityDirectCall(\n"
             "          expr.isMethodCall, resolveCalleePath(expr), \"count\")) {") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "{\n"
+            "    if (const std::string stdNamespacedVectorCountDiagnosticMessage =\n"
+            "            classifyStdNamespacedVectorCountDiagnosticMessage(\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "context.isDirectStdNamespacedVectorCountWrapperMapTarget &&\n"

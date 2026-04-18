@@ -183,31 +183,36 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   if (applyBareVectorCountOrCapacityHelperRewrite()) {
     return true;
   }
-  {
-    if (const std::string stdNamespacedVectorCountDiagnosticMessage =
-        classifyStdNamespacedVectorCountDiagnosticMessage(
-            false,
-            context.isDirectStdNamespacedVectorCountWrapperMapTarget,
-            isUndeclaredStdNamespacedVectorCompatibilityDirectCall(
-                expr.isMethodCall,
-                resolveCalleePath(expr),
-                "count",
-                hasDeclaredDefinitionPath("/std/collections/vector/count")),
-            expr.args.size() == 1 &&
-                context.resolveMapTarget != nullptr &&
-                context.resolveMapTarget(expr.args.front()),
-            isUnresolvableStdNamespacedVectorCompatibilityDirectCall(
-                expr.isMethodCall,
-                resolveCalleePath(expr),
-                "count",
-                hasDeclaredDefinitionPath("/std/collections/vector/count") ||
-                    hasImportedDefinitionPath(
-                        "/std/collections/vector/count")));
-        !stdNamespacedVectorCountDiagnosticMessage.empty()) {
-      handledOut = true;
-      return failExprDiagnostic(expr,
-                                stdNamespacedVectorCountDiagnosticMessage);
-    }
+  const auto failStdNamespacedVectorCountDiagnosticIfPresent =
+      [&]() {
+        if (const std::string stdNamespacedVectorCountDiagnosticMessage =
+                classifyStdNamespacedVectorCountDiagnosticMessage(
+                    false,
+                    context.isDirectStdNamespacedVectorCountWrapperMapTarget,
+                    isUndeclaredStdNamespacedVectorCompatibilityDirectCall(
+                        expr.isMethodCall,
+                        resolveCalleePath(expr),
+                        "count",
+                        hasDeclaredDefinitionPath("/std/collections/vector/count")),
+                    expr.args.size() == 1 &&
+                        context.resolveMapTarget != nullptr &&
+                        context.resolveMapTarget(expr.args.front()),
+                    isUnresolvableStdNamespacedVectorCompatibilityDirectCall(
+                        expr.isMethodCall,
+                        resolveCalleePath(expr),
+                        "count",
+                        hasDeclaredDefinitionPath("/std/collections/vector/count") ||
+                            hasImportedDefinitionPath(
+                                "/std/collections/vector/count")));
+            !stdNamespacedVectorCountDiagnosticMessage.empty()) {
+          handledOut = true;
+          return failExprDiagnostic(expr,
+                                    stdNamespacedVectorCountDiagnosticMessage);
+        }
+        return true;
+      };
+  if (!failStdNamespacedVectorCountDiagnosticIfPresent()) {
+    return false;
   }
   const bool routesThroughStdNamespacedMapCountSurface =
       context.isStdNamespacedMapCountCall;
