@@ -297,14 +297,19 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   const auto resolveCapacityMethodTargetFromReceiver =
       [&](const Expr &receiver, bool &isBuiltinMethod,
           std::string &methodResolved) -> bool {
+    const bool routesThroughStdNamespacedVectorCapacityHelper =
+        isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
+                                                     "capacity");
+    const auto assignStdNamespacedVectorCapacityMethodTarget = [&]() {
+      methodResolved = "/std/collections/vector/capacity";
+      isBuiltinMethod = true;
+    };
     if (resolveVectorHelperMethodTarget(params, locals, receiver, "capacity",
                                         methodResolved)) {
       if (!preferVisibleVectorHelperMethodTarget(methodResolved,
                                                  isBuiltinMethod)) {
-        if (isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
-                                                         "capacity")) {
-          methodResolved = "/std/collections/vector/capacity";
-          isBuiltinMethod = true;
+        if (routesThroughStdNamespacedVectorCapacityHelper) {
+          assignStdNamespacedVectorCapacityMethodTarget();
         } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix,
                                         receiver, "capacity", methodResolved,
                                         isBuiltinMethod)) {
@@ -312,10 +317,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           return false;
         }
       }
-    } else if (isStdNamespacedVectorCompatibilityHelperPath(
-                   resolveCalleePath(expr), "capacity")) {
-      methodResolved = "/std/collections/vector/capacity";
-      isBuiltinMethod = true;
+    } else if (routesThroughStdNamespacedVectorCapacityHelper) {
+      assignStdNamespacedVectorCapacityMethodTarget();
     } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix,
                                     receiver, "capacity", methodResolved,
                                     isBuiltinMethod)) {

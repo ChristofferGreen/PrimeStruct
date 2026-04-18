@@ -3447,7 +3447,7 @@
             "const auto assignStdNamespacedVectorCapacityMethodTarget = [&]() {\n"
             "      methodResolved = \"/std/collections/vector/capacity\";\n"
             "      isBuiltinMethod = true;\n"
-            "    };") == std::string::npos);
+            "    };") != std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(),\n"
             "                                        \"capacity\", methodResolved)) {\n"
@@ -3529,7 +3529,21 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool routesThroughStdNamespacedVectorCapacityHelper =\n"
             "        isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),\n"
-            "                                                     \"capacity\");") ==
+            "                                                     \"capacity\");") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "      } else if (routesThroughStdNamespacedVectorCapacityHelper) {\n"
+            "        assignStdNamespacedVectorCapacityMethodTarget();\n"
+            "      } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix,\n"
+            "                                      receiver, \"capacity\", methodResolved,\n"
+            "                                      isBuiltinMethod)) {\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "    } else if (routesThroughStdNamespacedVectorCapacityHelper) {\n"
+            "      assignStdNamespacedVectorCapacityMethodTarget();\n"
+            "    } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix,\n"
+            "                                    receiver, \"capacity\", methodResolved,\n"
+            "                                    isBuiltinMethod)) {\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "      } else if (routesThroughStdNamespacedVectorCapacityHelper) {\n"
