@@ -65,13 +65,13 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     return true;
   }
 
-  const bool lacksDeclaredStdNamespacedVectorCountHelper =
-      !hasDeclaredDefinitionPath("/std/collections/vector/count");
-  const bool hasImportedStdNamespacedVectorCountHelper =
-      hasImportedDefinitionPath("/std/collections/vector/count");
+  const auto stdNamespacedVectorCountHelperState =
+      makeStdNamespacedVectorCompatibilityHelperState(
+          hasDeclaredDefinitionPath("/std/collections/vector/count"),
+          hasImportedDefinitionPath("/std/collections/vector/count"));
   const bool rejectsStdNamespacedVectorCountWrapperMapTargetWithoutDeclaredHelper =
       context.isDirectStdNamespacedVectorCountWrapperMapTarget &&
-      lacksDeclaredStdNamespacedVectorCountHelper;
+      stdNamespacedVectorCountHelperState.lacksDeclaredHelper();
   if (rejectsStdNamespacedVectorCountWrapperMapTargetWithoutDeclaredHelper) {
     handledOut = true;
     return failCollectionCountCapacityDiagnostic(
@@ -94,8 +94,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   const auto stdNamespacedVectorCountMapTargetDiagnostic =
       classifyStdNamespacedVectorCountMapTargetDiagnostic(
           resolvesStdNamespacedVectorCountMapTarget, false,
-          !lacksDeclaredStdNamespacedVectorCountHelper,
-          hasImportedStdNamespacedVectorCountHelper);
+          stdNamespacedVectorCountHelperState.hasDeclaredHelper,
+          stdNamespacedVectorCountHelperState.hasImportedHelper);
   if (stdNamespacedVectorCountMapTargetDiagnostic ==
       VectorCompatibilityCountMapTargetDiagnostic::RequiresVectorTarget) {
     handledOut = true;

@@ -12,6 +12,26 @@ inline bool isVectorCompatibilityHelperName(std::string_view helperName) {
          helperName == "remove_swap";
 }
 
+struct StdNamespacedVectorCompatibilityHelperState {
+  bool hasDeclaredHelper = false;
+  bool hasImportedHelper = false;
+
+  [[nodiscard]] bool lacksDeclaredHelper() const {
+    return !hasDeclaredHelper;
+  }
+
+  [[nodiscard]] bool lacksVisibleHelper() const {
+    return !hasDeclaredHelper && !hasImportedHelper;
+  }
+};
+
+inline StdNamespacedVectorCompatibilityHelperState
+makeStdNamespacedVectorCompatibilityHelperState(bool hasDeclaredHelper,
+                                                bool hasImportedHelper) {
+  return StdNamespacedVectorCompatibilityHelperState{
+      hasDeclaredHelper, hasImportedHelper};
+}
+
 enum class VectorCompatibilityCountMapTargetDiagnostic {
   None,
   UnknownCallTarget,

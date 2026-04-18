@@ -94,10 +94,10 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
     const bool resolvesNonVectorCountTarget =
         !resolvesVectorLikeCountTarget && !resolvesArray &&
         !resolvesString;
-    const bool hasDeclaredStdNamespacedVectorCountHelper =
-        hasDeclaredDefinitionPath("/std/collections/vector/count");
-    const bool hasImportedStdNamespacedVectorCountHelper =
-        hasImportedDefinitionPath("/std/collections/vector/count");
+    const auto stdNamespacedVectorCountHelperState =
+        makeStdNamespacedVectorCompatibilityHelperState(
+            hasDeclaredDefinitionPath("/std/collections/vector/count"),
+            hasImportedDefinitionPath("/std/collections/vector/count"));
     if (resolvesNonVectorCountTarget) {
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
@@ -110,8 +110,8 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
       const auto stdNamespacedVectorCountMapTargetDiagnostic =
           classifyStdNamespacedVectorCountMapTargetDiagnostic(
               resolvesMapAfterValidation, resolvesNonVectorCountTarget,
-              hasDeclaredStdNamespacedVectorCountHelper,
-              hasImportedStdNamespacedVectorCountHelper);
+              stdNamespacedVectorCountHelperState.hasDeclaredHelper,
+              stdNamespacedVectorCountHelperState.hasImportedHelper);
       if (stdNamespacedVectorCountMapTargetDiagnostic ==
           VectorCompatibilityCountMapTargetDiagnostic::UnknownCallTarget) {
         return failLateCallCompatibilityDiagnostic(
@@ -120,11 +120,8 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
       return failLateCallCompatibilityDiagnostic(
           vectorCompatibilityRequiresVectorTargetDiagnostic("count"));
     }
-    const bool lacksVisibleStdNamespacedVectorCountHelper =
-        !hasDeclaredStdNamespacedVectorCountHelper &&
-        !hasImportedStdNamespacedVectorCountHelper;
     const bool rejectsVectorCountTargetWithoutVisibleHelper =
-        lacksVisibleStdNamespacedVectorCountHelper &&
+        stdNamespacedVectorCountHelperState.lacksVisibleHelper() &&
         resolvesVectorLikeCountTarget;
     if (rejectsVectorCountTargetWithoutVisibleHelper) {
       return failLateCallCompatibilityDiagnostic(
