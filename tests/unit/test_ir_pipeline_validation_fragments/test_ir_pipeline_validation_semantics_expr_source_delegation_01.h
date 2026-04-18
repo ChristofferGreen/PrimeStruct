@@ -2384,14 +2384,18 @@
             "      !isArrayNamespacedVectorCountCompatibilityActive;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool hasResolvedCountDefinitionTarget =\n"
+            "      defMap_.find(resolved) != defMap_.end();") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool matchesCountRouteArgShape =\n"
             "      (expr.args.size() == 1 &&\n"
-            "       ((defMap_.find(resolved) == defMap_.end() &&\n"
+            "       ((!hasResolvedCountDefinitionTarget &&\n"
             "         !context.isStdNamespacedMapCountCall) ||\n"
             "        routesThroughNamespacedVectorCountFallback ||\n"
             "        routesThroughMapCountCallSurface)) ||\n"
             "      (expr.args.size() != 1 &&\n"
-            "       (defMap_.find(resolved) != defMap_.end() ||\n"
+            "       (hasResolvedCountDefinitionTarget ||\n"
             "        routesThroughMapCountCallSurface));") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -2753,6 +2757,15 @@
             "  {\n"
             "                if (routesThroughStdlibMapCountFallback) {\n"
             "                  methodResolved = stdlibMapCountTargetPath;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "       ((defMap_.find(resolved) == defMap_.end() &&\n"
+            "         !context.isStdNamespacedMapCountCall) ||\n"
+            "        routesThroughNamespacedVectorCountFallback ||\n"
+            "        routesThroughMapCountCallSurface)) ||\n"
+            "      (expr.args.size() != 1 &&\n"
+            "       (defMap_.find(resolved) != defMap_.end() ||\n"
+            "        routesThroughMapCountCallSurface));") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (std::optional<bool> resolvedCountMethod =\n"

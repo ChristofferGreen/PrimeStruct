@@ -105,14 +105,16 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
       !hasDefinitionPath(resolved) &&
       !isArrayNamespacedVectorCountCompatibilityActive;
+  const bool hasResolvedCountDefinitionTarget =
+      defMap_.find(resolved) != defMap_.end();
   const bool matchesCountRouteArgShape =
       (expr.args.size() == 1 &&
-       ((defMap_.find(resolved) == defMap_.end() &&
+       ((!hasResolvedCountDefinitionTarget &&
          !context.isStdNamespacedMapCountCall) ||
         routesThroughNamespacedVectorCountFallback ||
         routesThroughMapCountCallSurface)) ||
       (expr.args.size() != 1 &&
-       (defMap_.find(resolved) != defMap_.end() ||
+       (hasResolvedCountDefinitionTarget ||
         routesThroughMapCountCallSurface));
   const bool routesThroughCountMethodSurface =
       isVectorBuiltinName(expr, "count") || routesThroughMapCountCallSurface;
