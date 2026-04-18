@@ -113,6 +113,8 @@
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprResultFile.cpp";
   const std::filesystem::path semanticsExprVectorHelpersPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprVectorHelpers.cpp";
+  const std::filesystem::path semanticsVectorCompatibilityHelpersPath =
+      repoRoot / "src" / "semantics" / "SemanticsVectorCompatibilityHelpers.h";
   const std::filesystem::path semanticsExprPrivateValidationPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorPrivateExprValidation.h";
   REQUIRE(std::filesystem::exists(semanticsExprPath));
@@ -163,6 +165,7 @@
   REQUIRE(std::filesystem::exists(semanticsExprMapSoaBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprResultFilePath));
   REQUIRE(std::filesystem::exists(semanticsExprVectorHelpersPath));
+  REQUIRE(std::filesystem::exists(semanticsVectorCompatibilityHelpersPath));
   REQUIRE(std::filesystem::exists(semanticsExprPrivateValidationPath));
   const std::string semanticsExprSource = readText(semanticsExprPath);
   const std::string semanticsExprDispatchBootstrapSource =
@@ -240,6 +243,8 @@
   const std::string semanticsExprMapSoaBuiltinsSource = readText(semanticsExprMapSoaBuiltinsPath);
   const std::string semanticsExprResultFileSource = readText(semanticsExprResultFilePath);
   const std::string semanticsExprVectorHelpersSource = readText(semanticsExprVectorHelpersPath);
+  const std::string semanticsVectorCompatibilityHelpersSource =
+      readText(semanticsVectorCompatibilityHelpersPath);
   const std::string semanticsExprPrivateValidationSource =
       readText(semanticsExprPrivateValidationPath);
   CHECK(semanticsExprSource.find("bool SemanticsValidator::validateExpr") != std::string::npos);
@@ -1120,6 +1125,9 @@
             "classifyCountTargetDiagnosticMessage(\n"
             "                  false, false, resolvesMapAfterValidation,\n"
             "                  resolvesNonVectorCountTarget);") ==
+        std::string::npos);
+  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+            "classifyCountTargetDiagnosticMessage(") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "if (resolvesMap ||\n"
