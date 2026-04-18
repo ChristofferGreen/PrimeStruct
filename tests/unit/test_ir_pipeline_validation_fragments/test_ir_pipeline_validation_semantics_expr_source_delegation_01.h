@@ -2393,6 +2393,11 @@
             "      isVectorBuiltinName(expr, \"count\");") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool routesThroughNamespacedVectorCountHelperSurface =\n"
+            "      context.isNamespacedVectorHelperCall &&\n"
+            "      context.namespacedHelper == \"count\";") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool isArrayNamespacedVectorCountCompatibilityActive =\n"
             "      context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
             "      context.isArrayNamespacedVectorCountCompatibilityCall(expr);") !=
@@ -2401,8 +2406,7 @@
             "const bool routesThroughNamespacedVectorCountFallback =\n"
             "      !isStdNamespacedVectorCompatibilityDirectCall(\n"
             "          expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
-            "      context.isNamespacedVectorHelperCall &&\n"
-            "      context.namespacedHelper == \"count\" &&\n"
+            "      routesThroughNamespacedVectorCountHelperSurface &&\n"
             "      routesThroughVectorBuiltinCountSurface && isSingleArgCountCall &&\n"
             "      !hasDefinitionPath(resolved) &&\n"
             "      !isArrayNamespacedVectorCountCompatibilityActive;") !=
@@ -2793,6 +2797,16 @@
  	        std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "      isVectorBuiltinName(expr, \"count\") && expr.args.size() == 1 &&\n"
+            "      !hasDefinitionPath(resolved) &&\n"
+            "      !isArrayNamespacedVectorCountCompatibilityActive;") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool routesThroughNamespacedVectorCountFallback =\n"
+            "      !isStdNamespacedVectorCompatibilityDirectCall(\n"
+            "          expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
+            "      context.isNamespacedVectorHelperCall &&\n"
+            "      context.namespacedHelper == \"count\" &&\n"
+            "      routesThroughVectorBuiltinCountSurface && isSingleArgCountCall &&\n"
             "      !hasDefinitionPath(resolved) &&\n"
             "      !isArrayNamespacedVectorCountCompatibilityActive;") ==
         std::string::npos);

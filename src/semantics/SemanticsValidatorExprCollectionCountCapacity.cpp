@@ -106,14 +106,16 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   const bool isMultiArgCountCall = !isSingleArgCountCall;
   const bool routesThroughVectorBuiltinCountSurface =
       isVectorBuiltinName(expr, "count");
+  const bool routesThroughNamespacedVectorCountHelperSurface =
+      context.isNamespacedVectorHelperCall &&
+      context.namespacedHelper == "count";
   const bool isArrayNamespacedVectorCountCompatibilityActive =
       context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
       context.isArrayNamespacedVectorCountCompatibilityCall(expr);
   const bool routesThroughNamespacedVectorCountFallback =
       !isStdNamespacedVectorCompatibilityDirectCall(
           expr.isMethodCall, resolveCalleePath(expr), "count") &&
-      context.isNamespacedVectorHelperCall &&
-      context.namespacedHelper == "count" &&
+      routesThroughNamespacedVectorCountHelperSurface &&
       routesThroughVectorBuiltinCountSurface && isSingleArgCountCall &&
       !hasDefinitionPath(resolved) &&
       !isArrayNamespacedVectorCountCompatibilityActive;
