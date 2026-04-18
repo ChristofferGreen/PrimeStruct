@@ -10,6 +10,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 17, 2026)**
 
 **Group 14 - SoA bring-up and end-state cleanup**
+- ✓ TODO-0835: Inline surface-route matcher. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` no longer carries the one-use `tryResolveMatchingSurfaceRoute` local, and focused expr source-lock coverage now keeps the combined shared surface-route gate present while the deleted matcher stays absent.
 - ✓ TODO-0834: Inline count target helper. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` no longer carries the one-use `resolveCountMethodTargetFromReceiver` helper, and focused expr source-lock coverage now keeps the inline count target-routing lambda at the shared surface-route call while the deleted helper stays absent.
 - ✓ TODO-0833: Inline capacity target helper. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` no longer carries the one-use `resolveCapacityMethodTargetFromReceiver` helper, and focused expr source-lock coverage now keeps the inline capacity target-routing lambda at the shared surface-route call while the deleted helper stays absent.
 - ✓ TODO-0832: Inline capacity surface gate. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` no longer carries the one-use `routesThroughVectorCapacityMethodSurface` local, and focused expr source-lock coverage now keeps the capacity-side surface gate inline at the shared route helper call while the deleted local stays absent.

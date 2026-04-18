@@ -162,30 +162,23 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           bool matchesPrimarySurfaceRoute,
           bool matchesSecondarySurfaceRoute,
           auto &&resolveMethodTarget) -> std::optional<bool> {
-    const auto tryResolveMatchingSurfaceRoute =
-        [&](bool matchesSurfaceRoute) -> std::optional<bool> {
-      if (!routesThroughMethodSurface || !matchesSurfaceRoute) {
-        return std::nullopt;
-      }
-      handledOut = true;
-      usedMethodTarget = true;
-      hasMethodReceiverIndex = true;
-      methodReceiverIndex = 0;
-      const Expr &receiver = expr.args.front();
-      bool isBuiltinMethod = false;
-      std::string methodResolved;
-      if (!resolveMethodTarget(receiver, isBuiltinMethod, methodResolved)) {
-        return false;
-      }
-      resolved = methodResolved;
-      resolvedMethod = isBuiltinMethod;
-      return true;
-    };
-    if (std::optional<bool> resolvedMethod =
-            tryResolveMatchingSurfaceRoute(matchesPrimarySurfaceRoute)) {
-      return resolvedMethod;
+    if (!routesThroughMethodSurface ||
+        (!matchesPrimarySurfaceRoute && !matchesSecondarySurfaceRoute)) {
+      return std::nullopt;
     }
-    return tryResolveMatchingSurfaceRoute(matchesSecondarySurfaceRoute);
+    handledOut = true;
+    usedMethodTarget = true;
+    hasMethodReceiverIndex = true;
+    methodReceiverIndex = 0;
+    const Expr &receiver = expr.args.front();
+    bool isBuiltinMethod = false;
+    std::string methodResolved;
+    if (!resolveMethodTarget(receiver, isBuiltinMethod, methodResolved)) {
+      return false;
+    }
+    resolved = methodResolved;
+    resolvedMethod = isBuiltinMethod;
+    return true;
   };
   if (std::optional<bool> resolvedCountMethod =
           tryResolveCollectionMethodFromSurfaceRoutes(
