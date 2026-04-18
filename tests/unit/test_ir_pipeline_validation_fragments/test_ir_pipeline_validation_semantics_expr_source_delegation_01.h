@@ -1446,6 +1446,11 @@
             "      if (receiver.kind == Expr::Kind::Name) {") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto tryAssignCountMethodFallbackTarget = [&]() -> bool {\n"
+            "      if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
+            "          expr.args.empty()) {") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (context.isUnnamespacedMapCountFallbackCall &&\n"
             "        !hasDeclaredDefinitionPath(\"/map/count\") &&\n"
             "        lacksVisibleStdlibMapCountDefinition &&\n"
@@ -1456,27 +1461,27 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (resolvesMapCountMethodTarget) {\n"
-            "          assignResolvedStdlibMapCountMethodTarget();\n"
-            "        } else {") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (resolvesMapCountMethodTarget) {\n"
             "        assignResolvedStdlibMapCountMethodTarget();\n"
-            "      } else {") !=
+            "      } else if (!tryAssignPointerLikeCountMethodTarget()) {\n"
+            "        return false;\n"
+            "      }\n"
+            "      return true;\n"
+            "    };") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else {\n"
-            "          if (!tryAssignPointerLikeCountMethodTarget()) {\n"
-            "            return false;\n"
-            "          }\n"
-            "        }") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "} else {\n"
-            "        if (!tryAssignPointerLikeCountMethodTarget()) {\n"
+            "        if (!tryAssignCountMethodFallbackTarget()) {\n"
             "          return false;\n"
             "        }\n"
             "      }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "} else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
+            "                                    \"count\", methodResolved, isBuiltinMethod)) {\n"
+            "      if (!tryAssignCountMethodFallbackTarget()) {\n"
+            "        return false;\n"
+            "      }\n"
+            "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (context.isUnnamespacedMapCountFallbackCall &&\n"
@@ -1498,16 +1503,20 @@
             "          context.resolveMapTarget(receiver)) {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (resolvesMapCountMethodTarget) {\n"
-            "          methodResolved = \"/std/collections/map/count\";\n"
-            "          error_.clear();\n"
-            "          isBuiltinMethod = false;\n"
-            "        } else {") ==
+            "if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
+            "            expr.args.empty()) {\n"
+            "          (void)validateExpr(params, locals, expr.args.front());\n"
+            "          return false;\n"
+            "        }\n"
+            "        if (resolvesMapCountMethodTarget) {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (resolvesMapCountMethodTarget) {\n"
-            "        methodResolved = \"/std/collections/map/count\";\n"
-            "      } else {") ==
+            "if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
+            "          expr.args.empty()) {\n"
+            "        (void)validateExpr(params, locals, expr.args.front());\n"
+            "        return false;\n"
+            "      }\n"
+            "      if (resolvesMapCountMethodTarget) {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else {\n"

@@ -209,6 +209,19 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       isBuiltinMethod = false;
       return true;
     };
+    const auto tryAssignCountMethodFallbackTarget = [&]() -> bool {
+      if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||
+          expr.args.empty()) {
+        (void)validateExpr(params, locals, expr.args.front());
+        return false;
+      }
+      if (resolvesMapCountMethodTarget) {
+        assignResolvedStdlibMapCountMethodTarget();
+      } else if (!tryAssignPointerLikeCountMethodTarget()) {
+        return false;
+      }
+      return true;
+    };
     if (context.isUnnamespacedMapCountFallbackCall &&
         !hasDeclaredDefinitionPath("/map/count") &&
         lacksVisibleStdlibMapCountDefinition &&
@@ -222,32 +235,14 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       } else if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
                                      "count", methodResolved, isBuiltinMethod)) {
       } else {
-        if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||
-            expr.args.empty()) {
-          (void)validateExpr(params, locals, expr.args.front());
+        if (!tryAssignCountMethodFallbackTarget()) {
           return false;
-        }
-        if (resolvesMapCountMethodTarget) {
-          assignResolvedStdlibMapCountMethodTarget();
-        } else {
-          if (!tryAssignPointerLikeCountMethodTarget()) {
-            return false;
-          }
         }
       }
     } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
                                     "count", methodResolved, isBuiltinMethod)) {
-      if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||
-          expr.args.empty()) {
-        (void)validateExpr(params, locals, expr.args.front());
+      if (!tryAssignCountMethodFallbackTarget()) {
         return false;
-      }
-      if (resolvesMapCountMethodTarget) {
-        assignResolvedStdlibMapCountMethodTarget();
-      } else {
-        if (!tryAssignPointerLikeCountMethodTarget()) {
-          return false;
-        }
       }
     }
     if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&
