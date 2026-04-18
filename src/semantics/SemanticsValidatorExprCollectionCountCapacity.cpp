@@ -144,6 +144,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     }
   }
   auto resolveCountMethod = [&](bool requireSingleArg) -> bool {
+    const bool routesThroughMapCountCompatibility =
+        context.isStdNamespacedMapCountCall ||
+        context.isNamespacedMapCountCall ||
+        context.isUnnamespacedMapCountFallbackCall ||
+        context.isResolvedMapCountCall;
     if (hasNamedArguments(expr.argNames) ||
         isUnimportedStdNamespacedVectorCompatibilityDirectCall(
             expr.isMethodCall,
@@ -163,10 +168,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
          context.isArrayNamespacedVectorCountCompatibilityCall(expr))) {
       return false;
     }
-    if (!(isVectorBuiltinName(expr, "count") || context.isStdNamespacedMapCountCall ||
-          context.isNamespacedMapCountCall ||
-          context.isUnnamespacedMapCountFallbackCall ||
-          context.isResolvedMapCountCall)) {
+    if (!(isVectorBuiltinName(expr, "count") ||
+          routesThroughMapCountCompatibility)) {
       return false;
     }
     if (requireSingleArg) {
@@ -181,16 +184,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
              !hasDefinitionPath(resolved) &&
              !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
                context.isArrayNamespacedVectorCountCompatibilityCall(expr))) ||
-            context.isStdNamespacedMapCountCall || context.isNamespacedMapCountCall ||
-            context.isUnnamespacedMapCountFallbackCall ||
-            context.isResolvedMapCountCall)) {
+            routesThroughMapCountCompatibility)) {
         return false;
       }
     } else if (!(defMap_.find(resolved) != defMap_.end() ||
-                 context.isStdNamespacedMapCountCall ||
-                 context.isNamespacedMapCountCall ||
-                 context.isUnnamespacedMapCountFallbackCall ||
-                 context.isResolvedMapCountCall)) {
+                 routesThroughMapCountCompatibility)) {
       return false;
     }
 
