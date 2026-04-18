@@ -4360,9 +4360,11 @@
             "    resolved.rfind(methodResolved + \"__t\", 0) == 0) {\n"
             "  methodResolved = resolved;\n"
             "}\n"
-            "if (!isBuiltinMethod &&\n"
+            "const bool lacksVisibleCapacityMethodTarget =\n"
+            "    !isBuiltinMethod &&\n"
             "    !hasDeclaredDefinitionPath(methodResolved) &&\n"
-            "    !hasImportedDefinitionPath(methodResolved) &&\n"
+            "    !hasImportedDefinitionPath(methodResolved);\n"
+            "if (lacksVisibleCapacityMethodTarget &&\n"
             "    (context.isNonCollectionStructCapacityTarget == nullptr ||\n"
             "     !context.isNonCollectionStructCapacityTarget(\n"
             "         methodResolved)) &&\n"
@@ -4370,9 +4372,7 @@
             "  context.promoteCapacityToBuiltinValidation(\n"
             "      receiver, methodResolved, isBuiltinMethod, false);\n"
             "}\n"
-            "if (!isBuiltinMethod &&\n"
-            "    !hasDeclaredDefinitionPath(methodResolved) &&\n"
-            "    !hasImportedDefinitionPath(methodResolved)) {\n"
+            "if (lacksVisibleCapacityMethodTarget) {\n"
             "  (void)failExprDiagnostic(expr,\n"
             "                           \"unknown method: \" + methodResolved);\n"
             "  return false;\n"
@@ -4398,6 +4398,12 @@
             "        receiver, methodResolved, isBuiltinMethod, false);\n"
             "  }\n"
             "}\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool lacksVisibleCapacityMethodTarget =\n"
+            "    !isBuiltinMethod &&\n"
+            "    !hasDeclaredDefinitionPath(methodResolved) &&\n"
+            "    !hasImportedDefinitionPath(methodResolved);\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto finalizeCapacityMethodTarget =\n") ==

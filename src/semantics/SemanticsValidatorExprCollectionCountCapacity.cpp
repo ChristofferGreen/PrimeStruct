@@ -378,9 +378,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     resolved.rfind(methodResolved + "__t", 0) == 0) {
                   methodResolved = resolved;
                 }
-                if (!isBuiltinMethod &&
+                const bool lacksVisibleCapacityMethodTarget =
+                    !isBuiltinMethod &&
                     !hasDeclaredDefinitionPath(methodResolved) &&
-                    !hasImportedDefinitionPath(methodResolved) &&
+                    !hasImportedDefinitionPath(methodResolved);
+                if (lacksVisibleCapacityMethodTarget &&
                     (context.isNonCollectionStructCapacityTarget == nullptr ||
                      !context.isNonCollectionStructCapacityTarget(
                          methodResolved)) &&
@@ -388,9 +390,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                   context.promoteCapacityToBuiltinValidation(
                       receiver, methodResolved, isBuiltinMethod, false);
                 }
-                if (!isBuiltinMethod &&
-                    !hasDeclaredDefinitionPath(methodResolved) &&
-                    !hasImportedDefinitionPath(methodResolved)) {
+                if (lacksVisibleCapacityMethodTarget) {
                   (void)failExprDiagnostic(expr,
                                            "unknown method: " + methodResolved);
                   return false;
