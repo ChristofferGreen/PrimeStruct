@@ -189,11 +189,13 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
           expr.isMethodCall, resolveCalleePath(expr), "count") &&
       expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call &&
       resolveMapTarget(expr.args.front());
+  const bool probesNamedStdNamespacedVectorUserReceiver =
+      !expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&
+      setupOut.isNamespacedVectorHelperCall &&
+      (setupOut.namespacedHelper == "count" ||
+       setupOut.namespacedHelper == "capacity");
 
-  if (!(!expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&
-        setupOut.isNamespacedVectorHelperCall &&
-        (setupOut.namespacedHelper == "count" ||
-         setupOut.namespacedHelper == "capacity"))) {
+  if (!probesNamedStdNamespacedVectorUserReceiver) {
     const std::string stdNamespacedVectorCountDiagnosticMessage =
         classifyStdNamespacedVectorCountDiagnosticMessage(
             isInvisibleStdNamespacedVectorCompatibilityDirectCall(
@@ -211,10 +213,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
     }
   }
   if (callsInvisibleStdNamespacedVectorCapacityHelper &&
-      !(!expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&
-        setupOut.isNamespacedVectorHelperCall &&
-        (setupOut.namespacedHelper == "count" ||
-         setupOut.namespacedHelper == "capacity"))) {
+      !probesNamedStdNamespacedVectorUserReceiver) {
     return failCollectionDispatchDiagnostic(
         vectorCompatibilityUnknownCallTargetDiagnostic("capacity"));
   }

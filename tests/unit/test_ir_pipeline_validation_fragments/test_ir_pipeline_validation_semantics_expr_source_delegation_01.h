@@ -1584,10 +1584,14 @@
             "const bool allowStdNamespacedVectorUserReceiverProbe =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "if (!(!expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&\n"
-            "        setupOut.isNamespacedVectorHelperCall &&\n"
-            "        (setupOut.namespacedHelper == \"count\" ||\n"
-            "         setupOut.namespacedHelper == \"capacity\"))) {\n"
+            "const bool probesNamedStdNamespacedVectorUserReceiver =\n"
+            "      !expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&\n"
+            "      setupOut.isNamespacedVectorHelperCall &&\n"
+            "      (setupOut.namespacedHelper == \"count\" ||\n"
+            "       setupOut.namespacedHelper == \"capacity\");") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "if (!probesNamedStdNamespacedVectorUserReceiver) {\n"
             "    const std::string stdNamespacedVectorCountDiagnosticMessage =\n"
             "        classifyStdNamespacedVectorCountDiagnosticMessage(\n"
             "            isInvisibleStdNamespacedVectorCompatibilityDirectCall(\n"
@@ -1604,6 +1608,12 @@
             "          stdNamespacedVectorCountDiagnosticMessage);\n"
             "    }\n"
             "  }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "if (!(!expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&\n"
+            "        setupOut.isNamespacedVectorHelperCall &&\n"
+            "        (setupOut.namespacedHelper == \"count\" ||\n"
+            "         setupOut.namespacedHelper == \"capacity\"))) {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "if (callsInvisibleStdNamespacedVectorCountHelper &&\n"
@@ -1680,10 +1690,7 @@
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "if (callsInvisibleStdNamespacedVectorCapacityHelper &&\n"
-            "      !(!expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&\n"
-            "        setupOut.isNamespacedVectorHelperCall &&\n"
-            "        (setupOut.namespacedHelper == \"count\" ||\n"
-            "         setupOut.namespacedHelper == \"capacity\"))) {\n"
+            "      !probesNamedStdNamespacedVectorUserReceiver) {\n"
             "    return failCollectionDispatchDiagnostic(\n"
             "        vectorCompatibilityUnknownCallTargetDiagnostic(\"capacity\"));\n"
             "  }") !=
