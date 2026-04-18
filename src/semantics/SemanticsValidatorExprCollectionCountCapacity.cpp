@@ -300,9 +300,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     return false;
                   }
                 }
-                if (!(isBuiltinMethod ||
-                      hasDeclaredDefinitionPath(methodResolved) ||
-                      hasImportedDefinitionPath(methodResolved))) {
+                const bool hasVisibleCountMethodTarget =
+                    isBuiltinMethod ||
+                    hasDeclaredDefinitionPath(methodResolved) ||
+                    hasImportedDefinitionPath(methodResolved);
+                if (!hasVisibleCountMethodTarget) {
                   (void)failExprDiagnostic(expr,
                                            "unknown method: " + methodResolved);
                   return false;
