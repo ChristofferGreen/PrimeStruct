@@ -1053,6 +1053,23 @@
             "        (resolvesVector || resolvesExperimentalVector))") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "const bool resolvesNonVectorCollectionLikeTarget =\n"
+            "          context.dispatchResolvers->resolveArrayTarget(expr.args.front(),\n"
+            "                                                       elemType) ||\n"
+            "          context.dispatchResolvers->resolveMapTarget(expr.args.front(),\n"
+            "                                                     mapKeyType,\n"
+            "                                                     mapValueType);") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "if (context.dispatchResolvers->resolveArrayTarget(expr.args.front(),\n"
+            "                                                       elemType))") ==
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "if (context.dispatchResolvers->resolveMapTarget(expr.args.front(),\n"
+            "                                                      mapKeyType,\n"
+            "                                                      mapValueType))") ==
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
             "return failLateCallCompatibilityDiagnostic(\n"
             "          \"unknown call target: /std/collections/vector/count\");") !=
         std::string::npos);

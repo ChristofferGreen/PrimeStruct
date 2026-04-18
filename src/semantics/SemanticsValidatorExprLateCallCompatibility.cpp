@@ -126,16 +126,15 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
       }
-      if (context.dispatchResolvers->resolveArrayTarget(expr.args.front(),
-                                                       elemType)) {
-        return failLateCallCompatibilityDiagnostic(
-            "unknown call target: /std/collections/vector/capacity");
-      }
       std::string mapKeyType;
       std::string mapValueType;
-      if (context.dispatchResolvers->resolveMapTarget(expr.args.front(),
-                                                      mapKeyType,
-                                                      mapValueType)) {
+      const bool resolvesNonVectorCollectionLikeTarget =
+          context.dispatchResolvers->resolveArrayTarget(expr.args.front(),
+                                                       elemType) ||
+          context.dispatchResolvers->resolveMapTarget(expr.args.front(),
+                                                     mapKeyType,
+                                                     mapValueType);
+      if (resolvesNonVectorCollectionLikeTarget) {
         return failLateCallCompatibilityDiagnostic(
             "unknown call target: /std/collections/vector/capacity");
       }
