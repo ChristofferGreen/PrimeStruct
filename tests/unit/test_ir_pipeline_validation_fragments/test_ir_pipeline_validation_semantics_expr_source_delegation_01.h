@@ -2671,13 +2671,11 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool targetsBareMapCountMethod =\n"
             "                    methodResolved == bareMapCountTargetPath;\n"
-            "                const bool lacksVisibleMapCountDefinitions =\n"
-            "                    lacksVisibleBareCountDefinition &&\n"
-            "                    lacksVisibleStdlibMapCountDefinition;\n"
             "                const bool rejectsDirectBareMapCountTarget =\n"
             "                    isDirectNamedCountReceiverCall &&\n"
             "                    targetsBareMapCountMethod &&\n"
-            "                    lacksVisibleMapCountDefinitions;\n"
+            "                    lacksVisibleBareCountDefinition &&\n"
+            "                    lacksVisibleStdlibMapCountDefinition;\n"
             "                const bool rejectsBuiltinStdlibMapCountTarget =\n"
             "                    isBuiltinMethod &&\n"
             "                    methodResolved == stdlibMapCountTargetPath &&\n"
@@ -2704,6 +2702,11 @@
             "      return failExprDiagnostic(\n"
             "          expr, \"unknown call target: /std/collections/map/count\");\n"
             "    }") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "                const bool lacksVisibleMapCountDefinitions =\n"
+            "                    lacksVisibleBareCountDefinition &&\n"
+            "                    lacksVisibleStdlibMapCountDefinition;\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "                const bool rejectsDirectBareMapCountTarget =\n"
