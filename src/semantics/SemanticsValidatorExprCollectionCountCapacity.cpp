@@ -202,12 +202,17 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                   methodResolved = stdlibMapCountTargetPath;
                   isBuiltinMethod = true;
                 } else {
-                  if (resolveVectorHelperMethodTarget(
-                          params, locals, receiver, "count", methodResolved) &&
-                      ((methodResolved =
-                            preferVectorStdlibHelperPath(methodResolved)),
-                       (hasDeclaredDefinitionPath(methodResolved) ||
-                        hasImportedDefinitionPath(methodResolved)))) {
+                  const bool resolvedCountHelperMethodTarget =
+                      resolveVectorHelperMethodTarget(
+                          params, locals, receiver, "count", methodResolved);
+                  if (resolvedCountHelperMethodTarget) {
+                    methodResolved = preferVectorStdlibHelperPath(methodResolved);
+                  }
+                  const bool hasVisibleCountHelperMethodTarget =
+                      resolvedCountHelperMethodTarget &&
+                      (hasDeclaredDefinitionPath(methodResolved) ||
+                       hasImportedDefinitionPath(methodResolved));
+                  if (hasVisibleCountHelperMethodTarget) {
                     isBuiltinMethod = false;
                   } else {
                     if (resolveMethodTarget(

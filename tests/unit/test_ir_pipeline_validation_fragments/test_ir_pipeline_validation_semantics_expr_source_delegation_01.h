@@ -1775,11 +1775,17 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else {\n"
-            "      if (resolveVectorHelperMethodTarget(\n"
-            "              params, locals, receiver, \"count\", methodResolved) &&\n"
-            "          ((methodResolved = preferVectorStdlibHelperPath(methodResolved)),\n"
-            "           (hasDeclaredDefinitionPath(methodResolved) ||\n"
-            "            hasImportedDefinitionPath(methodResolved)))) {\n"
+            "      const bool resolvedCountHelperMethodTarget =\n"
+            "          resolveVectorHelperMethodTarget(\n"
+            "              params, locals, receiver, \"count\", methodResolved);\n"
+            "      if (resolvedCountHelperMethodTarget) {\n"
+            "        methodResolved = preferVectorStdlibHelperPath(methodResolved);\n"
+            "      }\n"
+            "      const bool hasVisibleCountHelperMethodTarget =\n"
+            "          resolvedCountHelperMethodTarget &&\n"
+            "          (hasDeclaredDefinitionPath(methodResolved) ||\n"
+            "           hasImportedDefinitionPath(methodResolved));\n"
+            "      if (hasVisibleCountHelperMethodTarget) {\n"
             "        isBuiltinMethod = false;\n"
             "      } else {\n"
             "        if (resolveMethodTarget(\n"
@@ -1829,6 +1835,14 @@
             "        }\n"
             "      }\n"
             "    }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "} else {\n"
+            "      if (resolveVectorHelperMethodTarget(\n"
+            "              params, locals, receiver, \"count\", methodResolved) &&\n"
+            "          ((methodResolved = preferVectorStdlibHelperPath(methodResolved)),\n"
+            "           (hasDeclaredDefinitionPath(methodResolved) ||\n"
+            "            hasImportedDefinitionPath(methodResolved)))) {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto finalizeCountMethodTargetWithMapDiagnostic =") ==
