@@ -1136,6 +1136,12 @@
             "rejectsWrapperMapTargetWithoutDeclaredHelper(") ==
         std::string::npos);
   CHECK(semanticsVectorCompatibilityHelpersSource.find(
+            "lacksDeclaredHelper(") ==
+        std::string::npos);
+  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+            "lacksVisibleHelper(") ==
+        std::string::npos);
+  CHECK(semanticsVectorCompatibilityHelpersSource.find(
             "enum class VectorCompatibilityCountMapTargetDiagnostic") ==
         std::string::npos);
   CHECK(semanticsVectorCompatibilityHelpersSource.find(
