@@ -154,6 +154,15 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   methodReceiverIndex = 0;
   bool isBuiltinMethod = false;
   const bool hasBlockArgs = expr.hasBodyArguments || !expr.bodyArguments.empty();
+  auto shouldRewriteExperimentalVectorCompatibilityMethodTargetToCanonical =
+      [&](std::string_view methodTarget) {
+        const std::string canonicalVectorCompatibilityMethodTarget =
+            "/std/collections/vector/" + expr.name;
+        return (methodTarget.rfind("/std/collections/experimental_vector/", 0) == 0 ||
+                methodTarget.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) &&
+               (hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||
+                defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0);
+      };
   std::string vectorMethodTarget;
   if (isVectorCompatibilityMethod &&
       expr.namespacePrefix != "vector" &&
@@ -163,15 +172,9 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
                                       vectorMethodTarget)) {
     if (!hasImportedDefinitionPath(vectorMethodTarget) &&
-        defMap_.count(vectorMethodTarget) == 0) {
-      const std::string canonicalVectorCompatibilityMethodTarget =
-          "/std/collections/vector/" + expr.name;
-      if ((vectorMethodTarget.rfind("/std/collections/experimental_vector/", 0) == 0 ||
-           vectorMethodTarget.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) &&
-          (hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||
-           defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0)) {
-        vectorMethodTarget = canonicalVectorCompatibilityMethodTarget;
-      }
+        defMap_.count(vectorMethodTarget) == 0 &&
+        shouldRewriteExperimentalVectorCompatibilityMethodTargetToCanonical(vectorMethodTarget)) {
+      vectorMethodTarget = "/std/collections/vector/" + expr.name;
     }
     if (hasImportedDefinitionPath(vectorMethodTarget) ||
         defMap_.count(vectorMethodTarget) > 0) {
@@ -239,15 +242,9 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       isBuiltinMethod = false;
     }
   }
-  if (!isBuiltinMethod && isVectorCompatibilityMethod && !resolved.empty()) {
-    const std::string canonicalVectorCompatibilityMethodTarget =
-        "/std/collections/vector/" + expr.name;
-    if ((resolved.rfind("/std/collections/experimental_vector/", 0) == 0 ||
-         resolved.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) &&
-        (hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||
-         defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0)) {
-      resolved = canonicalVectorCompatibilityMethodTarget;
-    }
+  if (!isBuiltinMethod && isVectorCompatibilityMethod && !resolved.empty() &&
+      shouldRewriteExperimentalVectorCompatibilityMethodTargetToCanonical(resolved)) {
+    resolved = "/std/collections/vector/" + expr.name;
   }
   bool keepBuiltinIndexedArgsPackMapMethod = false;
   keepBuiltinIndexedArgsPackMapMethod = resolveMapTarget(expr.args.front());

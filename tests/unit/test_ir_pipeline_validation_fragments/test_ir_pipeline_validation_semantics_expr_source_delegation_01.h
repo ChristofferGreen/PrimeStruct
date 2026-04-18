@@ -607,16 +607,21 @@
             "auto rewriteEligibleExperimentalVectorCompatibilityMethodTargetToCanonical =") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
+            "auto shouldRewriteExperimentalVectorCompatibilityMethodTargetToCanonical =\n"
+            "      [&](std::string_view methodTarget) {\n"
+            "        const std::string canonicalVectorCompatibilityMethodTarget =\n"
+            "            \"/std/collections/vector/\" + expr.name;\n"
+            "        return (methodTarget.rfind(\"/std/collections/experimental_vector/\", 0) == 0 ||\n"
+            "                methodTarget.rfind(\"/std/collections/experimental_vector/Vector__\", 0) == 0) &&\n"
+            "               (hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||\n"
+            "                defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0);\n"
+            "      };") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
             "if (!hasImportedDefinitionPath(vectorMethodTarget) &&\n"
-            "        defMap_.count(vectorMethodTarget) == 0) {\n"
-            "      const std::string canonicalVectorCompatibilityMethodTarget =\n"
-            "          \"/std/collections/vector/\" + expr.name;\n"
-            "      if ((vectorMethodTarget.rfind(\"/std/collections/experimental_vector/\", 0) == 0 ||\n"
-            "           vectorMethodTarget.rfind(\"/std/collections/experimental_vector/Vector__\", 0) == 0) &&\n"
-            "          (hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||\n"
-            "           defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0)) {\n"
-            "        vectorMethodTarget = canonicalVectorCompatibilityMethodTarget;\n"
-            "      }\n"
+            "        defMap_.count(vectorMethodTarget) == 0 &&\n"
+            "        shouldRewriteExperimentalVectorCompatibilityMethodTargetToCanonical(vectorMethodTarget)) {\n"
+            "      vectorMethodTarget = \"/std/collections/vector/\" + expr.name;\n"
             "    }") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
@@ -638,15 +643,9 @@
             "preferVisibleCanonicalVectorMethodTarget(vectorMethodTarget)") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
-            "if (!isBuiltinMethod && isVectorCompatibilityMethod && !resolved.empty()) {\n"
-            "    const std::string canonicalVectorCompatibilityMethodTarget =\n"
-            "        \"/std/collections/vector/\" + expr.name;\n"
-            "    if ((resolved.rfind(\"/std/collections/experimental_vector/\", 0) == 0 ||\n"
-            "         resolved.rfind(\"/std/collections/experimental_vector/Vector__\", 0) == 0) &&\n"
-            "        (hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||\n"
-            "         defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0)) {\n"
-            "      resolved = canonicalVectorCompatibilityMethodTarget;\n"
-            "    }\n"
+            "if (!isBuiltinMethod && isVectorCompatibilityMethod && !resolved.empty() &&\n"
+            "      shouldRewriteExperimentalVectorCompatibilityMethodTargetToCanonical(resolved)) {\n"
+            "    resolved = \"/std/collections/vector/\" + expr.name;\n"
             "  }") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
@@ -699,6 +698,12 @@
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "resolved.rfind(\"/std/collections/experimental_vector/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "shouldRewriteExperimentalVectorCompatibilityMethodTargetToCanonical(vectorMethodTarget)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "shouldRewriteExperimentalVectorCompatibilityMethodTargetToCanonical(resolved)") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (vectorMethodTargetMissing) {\n"
