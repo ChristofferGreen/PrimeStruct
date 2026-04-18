@@ -522,6 +522,9 @@
             "bool hasExplicitVectorCompatibilityNamespace(std::string_view normalizedMethodNamespace)") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
+            "const std::string normalizedMethodNamespace = [&]() {") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
             "bool isVectorCompatibilityMethodName(std::string_view helperName)") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
@@ -538,8 +541,10 @@
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (isVectorCompatibilityMethod &&\n"
-            "      normalizedMethodNamespace != \"vector\" &&\n"
-            "      normalizedMethodNamespace != \"std/collections/vector\" &&") !=
+            "      expr.namespacePrefix != \"vector\" &&\n"
+            "      expr.namespacePrefix != \"/vector\" &&\n"
+            "      expr.namespacePrefix != \"std/collections/vector\" &&\n"
+            "      expr.namespacePrefix != \"/std/collections/vector\" &&") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "bool isExperimentalVectorCompatibilityMethodTarget(std::string_view methodTarget)") ==
