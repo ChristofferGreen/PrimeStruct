@@ -2388,15 +2388,23 @@
             "      defMap_.find(resolved) != defMap_.end();") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool matchesSingleArgCountRouteShape =\n"
+            "      expr.args.size() == 1 &&\n"
+            "      ((!hasResolvedCountDefinitionTarget &&\n"
+            "        !context.isStdNamespacedMapCountCall) ||\n"
+            "       routesThroughNamespacedVectorCountFallback ||\n"
+            "       routesThroughMapCountCallSurface);") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool matchesMultiArgCountRouteShape =\n"
+            "      expr.args.size() != 1 &&\n"
+            "      (hasResolvedCountDefinitionTarget ||\n"
+            "       routesThroughMapCountCallSurface);") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool matchesCountRouteArgShape =\n"
-            "      (expr.args.size() == 1 &&\n"
-            "       ((!hasResolvedCountDefinitionTarget &&\n"
-            "         !context.isStdNamespacedMapCountCall) ||\n"
-            "        routesThroughNamespacedVectorCountFallback ||\n"
-            "        routesThroughMapCountCallSurface)) ||\n"
-            "      (expr.args.size() != 1 &&\n"
-            "       (hasResolvedCountDefinitionTarget ||\n"
-            "        routesThroughMapCountCallSurface));") !=
+            "      matchesSingleArgCountRouteShape ||\n"
+            "      matchesMultiArgCountRouteShape;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool routesThroughCountMethodSurface =\n"
@@ -2759,12 +2767,14 @@
             "                  methodResolved = stdlibMapCountTargetPath;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "       ((defMap_.find(resolved) == defMap_.end() &&\n"
+            "const bool matchesCountRouteArgShape =\n"
+            "      (expr.args.size() == 1 &&\n"
+            "       ((!hasResolvedCountDefinitionTarget &&\n"
             "         !context.isStdNamespacedMapCountCall) ||\n"
             "        routesThroughNamespacedVectorCountFallback ||\n"
             "        routesThroughMapCountCallSurface)) ||\n"
             "      (expr.args.size() != 1 &&\n"
-            "       (defMap_.find(resolved) != defMap_.end() ||\n"
+            "       (hasResolvedCountDefinitionTarget ||\n"
             "        routesThroughMapCountCallSurface));") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
