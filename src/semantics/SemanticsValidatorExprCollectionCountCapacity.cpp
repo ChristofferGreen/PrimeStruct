@@ -83,7 +83,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     return true;
   }
   {
-    const std::string stdNamespacedVectorCountDiagnosticMessage =
+    if (const std::string stdNamespacedVectorCountDiagnosticMessage =
         classifyStdNamespacedVectorCountDiagnosticMessage(
             false,
             context.isDirectStdNamespacedVectorCountWrapperMapTarget,
@@ -100,7 +100,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 resolveCalleePath(expr),
                 "count",
                 hasResolvableDefinitionPath("/std/collections/vector/count")));
-    if (!stdNamespacedVectorCountDiagnosticMessage.empty()) {
+        !stdNamespacedVectorCountDiagnosticMessage.empty()) {
       handledOut = true;
       return failCollectionCountCapacityDiagnostic(
           stdNamespacedVectorCountDiagnosticMessage);
