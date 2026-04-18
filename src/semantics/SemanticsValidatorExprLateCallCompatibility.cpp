@@ -118,8 +118,8 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
     }
     const std::string stdNamespacedVectorCountTargetDiagnosticMessage =
         stdNamespacedVectorCountHelperState
-            .classifyCountTargetDiagnosticMessage(
-                resolvesVectorLikeCountTarget, false, false, false);
+            .classifyVectorLikeCountTargetDiagnosticMessage(
+                resolvesVectorLikeCountTarget);
     if (!stdNamespacedVectorCountTargetDiagnosticMessage.empty()) {
       return failLateCallCompatibilityDiagnostic(
           std::move(stdNamespacedVectorCountTargetDiagnosticMessage));

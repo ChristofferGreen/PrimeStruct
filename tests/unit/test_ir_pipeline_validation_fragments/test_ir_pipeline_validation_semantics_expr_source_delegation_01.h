@@ -1174,8 +1174,12 @@
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "const std::string stdNamespacedVectorCountTargetDiagnosticMessage =\n"
             "        stdNamespacedVectorCountHelperState\n"
-            "            .classifyCountTargetDiagnosticMessage(\n"
-            "                resolvesVectorLikeCountTarget, false, false, false);") !=
+            "            .classifyVectorLikeCountTargetDiagnosticMessage(\n"
+            "                resolvesVectorLikeCountTarget);") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "classifyCountTargetDiagnosticMessage(\n"
+            "                resolvesVectorLikeCountTarget, false, false, false);") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "stdNamespacedVectorCountHelperState.lacksVisibleHelper() &&\n"
