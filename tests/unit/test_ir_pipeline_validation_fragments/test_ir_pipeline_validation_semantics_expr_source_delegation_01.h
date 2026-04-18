@@ -2576,13 +2576,15 @@
             "                const bool rejectsBuiltinStdlibMapCountTarget =\n"
             "                    targetsBuiltinStdlibMapCountMethod &&\n"
             "                    rejectsBuiltinStdlibMapCountValidation;\n"
+            "                const bool rejectsMapCountUnknownTarget =\n"
+            "                    rejectsDirectBareMapCountTarget ||\n"
+            "                    rejectsBuiltinStdlibMapCountTarget;\n"
             "                const std::string stdlibMapCountUnknownTargetDiagnostic =\n"
             "                    \"unknown call target: /std/collections/map/count\";\n"
-            "                if (rejectsDirectBareMapCountTarget ||\n"
-            "                    rejectsBuiltinStdlibMapCountTarget) {\n"
+            "                if (rejectsMapCountUnknownTarget) {\n"
             "                  return failExprDiagnostic(\n"
-                      "                      expr, stdlibMapCountUnknownTargetDiagnostic);\n"
-                "                }") !=
+            "                      expr, stdlibMapCountUnknownTargetDiagnostic);\n"
+            "                }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if ((!expr.isMethodCall &&\n"
@@ -2617,6 +2619,13 @@
             "                const bool rejectsBuiltinStdlibMapCountTarget =\n"
             "                    isBuiltinMethod && targetsStdlibMapCountMethod &&\n"
             "                    rejectsBuiltinStdlibMapCountValidation;\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "                if (rejectsDirectBareMapCountTarget ||\n"
+            "                    rejectsBuiltinStdlibMapCountTarget) {\n"
+            "                  return failExprDiagnostic(\n"
+            "                      expr, stdlibMapCountUnknownTargetDiagnostic);\n"
+            "                }") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "!hasImportedDefinitionPath(\"/count\") &&\n"

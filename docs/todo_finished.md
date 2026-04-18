@@ -6,6 +6,7 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 13, 2026)**
+- ✓ TODO-0882: Share map-count unknown-target gate. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the count-side map-count unknown-target join behind shared `rejectsMapCountUnknownTarget`, and focused expr source-lock coverage now keeps that shared local present while the old inline OR branch stays absent.
 - ✓ TODO-0881: Share count resolve-miss body guard. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the count resolve-miss body/arg guard behind shared `countResolveMissLacksBodyArguments`, and focused expr source-lock coverage now keeps that shared local present while the old inline body-argument check stays absent.
 - ✓ TODO-0880: Share count precondition admission. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the remaining count-surface precondition admission check behind shared `allowsCountMethodSurfacePreconditions`, and focused expr source-lock coverage now keeps that shared local present while the old inline negation stays absent.
 - ✓ TODO-0879: Share count route-shape gate. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the remaining count-surface route-shape conjunction behind shared `allowsCountMethodSurfaceRouteShape`, and focused expr source-lock coverage now keeps that shared local present while the old inline eligibility pair stays absent.
