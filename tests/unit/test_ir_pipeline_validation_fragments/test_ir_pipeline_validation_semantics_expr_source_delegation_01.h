@@ -604,15 +604,16 @@
             "      isVectorCompatibilityHelperName(expr.name);") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
+            "auto preferCanonicalVectorCompatibilityMethodTarget =") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
             "expr.name == \"count\" || expr.name == \"capacity\" || expr.name == \"at\" ||") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (!hasImportedDefinitionPath(vectorMethodTarget) &&\n"
-            "        defMap_.count(vectorMethodTarget) == 0 &&\n"
-            "        vectorMethodTarget.rfind(\"/std/collections/experimental_vector/\", 0) == 0 &&\n"
-            "        (hasImportedDefinitionPath(\"/std/collections/vector/\" + expr.name) ||\n"
-            "         defMap_.count(\"/std/collections/vector/\" + expr.name) > 0)) {\n"
-            "      vectorMethodTarget = \"/std/collections/vector/\" + expr.name;") !=
+            "        defMap_.count(vectorMethodTarget) == 0) {\n"
+            "      preferCanonicalVectorCompatibilityMethodTarget(\n"
+            "          vectorMethodTarget, \"/std/collections/vector/\" + expr.name);") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "preferVisibleCanonicalVectorMethodTarget(resolved)") ==
@@ -621,15 +622,17 @@
             "preferVisibleCanonicalVectorMethodTarget(vectorMethodTarget)") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
-            "if (!isBuiltinMethod && isVectorCompatibilityMethod &&\n"
-            "      resolved.rfind(\"/std/collections/experimental_vector/Vector__\", 0) == 0 &&\n"
-            "      (hasImportedDefinitionPath(\"/std/collections/vector/\" + expr.name) ||\n"
-             "       defMap_.count(\"/std/collections/vector/\" + expr.name) > 0)) {\n"
-            "    resolved = preferVectorStdlibHelperPath(\"/std/collections/vector/\" + expr.name);") !=
+            "if (!isBuiltinMethod && isVectorCompatibilityMethod) {\n"
+            "    preferCanonicalVectorCompatibilityMethodTarget(\n"
+            "        resolved,\n"
+            "        preferVectorStdlibHelperPath(\"/std/collections/vector/\" + expr.name));") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (!isBuiltinMethod && isVectorCompatibilityMethod &&\n"
             "      resolved.rfind(\"/std/collections/experimental_vector/Vector__\", 0) == 0) {") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "vectorMethodTarget.rfind(\"/std/collections/experimental_vector/\", 0) == 0") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "methodTarget.rfind(\"/std/collections/experimental_vector/Vector__\", 0) != 0") ==

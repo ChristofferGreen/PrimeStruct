@@ -79,6 +79,15 @@ bool SemanticsValidator::validateExprMethodCallTarget(
 
   const bool isVectorCompatibilityMethod =
       isVectorCompatibilityHelperName(expr.name);
+  auto preferCanonicalVectorCompatibilityMethodTarget =
+      [&](std::string &target, const std::string &canonicalTarget) {
+        if ((target.rfind("/std/collections/experimental_vector/", 0) == 0 ||
+             target.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) &&
+            (hasImportedDefinitionPath("/std/collections/vector/" + expr.name) ||
+             defMap_.count("/std/collections/vector/" + expr.name) > 0)) {
+          target = canonicalTarget;
+        }
+      };
   if (expr.namespacePrefix.empty() &&
       !expr.args.empty() &&
       isVectorCompatibilityMethod) {
@@ -163,11 +172,9 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
                                       vectorMethodTarget)) {
     if (!hasImportedDefinitionPath(vectorMethodTarget) &&
-        defMap_.count(vectorMethodTarget) == 0 &&
-        vectorMethodTarget.rfind("/std/collections/experimental_vector/", 0) == 0 &&
-        (hasImportedDefinitionPath("/std/collections/vector/" + expr.name) ||
-         defMap_.count("/std/collections/vector/" + expr.name) > 0)) {
-      vectorMethodTarget = "/std/collections/vector/" + expr.name;
+        defMap_.count(vectorMethodTarget) == 0) {
+      preferCanonicalVectorCompatibilityMethodTarget(
+          vectorMethodTarget, "/std/collections/vector/" + expr.name);
     }
     if (hasImportedDefinitionPath(vectorMethodTarget) ||
         defMap_.count(vectorMethodTarget) > 0) {
@@ -235,11 +242,10 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       isBuiltinMethod = false;
     }
   }
-  if (!isBuiltinMethod && isVectorCompatibilityMethod &&
-      resolved.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 &&
-      (hasImportedDefinitionPath("/std/collections/vector/" + expr.name) ||
-       defMap_.count("/std/collections/vector/" + expr.name) > 0)) {
-    resolved = preferVectorStdlibHelperPath("/std/collections/vector/" + expr.name);
+  if (!isBuiltinMethod && isVectorCompatibilityMethod) {
+    preferCanonicalVectorCompatibilityMethodTarget(
+        resolved,
+        preferVectorStdlibHelperPath("/std/collections/vector/" + expr.name));
   }
   bool keepBuiltinIndexedArgsPackMapMethod = false;
   keepBuiltinIndexedArgsPackMapMethod = resolveMapTarget(expr.args.front());
