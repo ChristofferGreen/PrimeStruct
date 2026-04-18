@@ -2333,29 +2333,11 @@
             "    resolved = methodResolved;\n"
             "    resolvedMethod = isBuiltinMethod;\n"
             "    return true;\n"
-            "  };") ==
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const auto tryResolveCollectionMethodFromSurfaceOrReturn =\n"
-            "      [&](bool routesThroughMethodSurface, bool matchesSurfaceRoute,\n"
-            "          auto &&resolveMethodTarget) -> std::optional<bool> {\n"
-            "    if (!routesThroughMethodSurface || !matchesSurfaceRoute) {\n"
-            "      return std::nullopt;\n"
-            "    }\n"
-            "    handledOut = true;\n"
-            "    usedMethodTarget = true;\n"
-            "    hasMethodReceiverIndex = true;\n"
-            "    methodReceiverIndex = 0;\n"
-            "    const Expr &receiver = expr.args.front();\n"
-            "    bool isBuiltinMethod = false;\n"
-            "    std::string methodResolved;\n"
-            "    if (!resolveMethodTarget(receiver, isBuiltinMethod, methodResolved)) {\n"
-            "      return false;\n"
-            "    }\n"
-            "    resolved = methodResolved;\n"
-            "    resolvedMethod = isBuiltinMethod;\n"
             "    return true;\n"
             "  };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto tryResolveCollectionMethodFromSurfaceOrReturn =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto resolveCountMethodTargetFromReceiver =\n"
@@ -2447,13 +2429,13 @@
  	        std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (std::optional<bool> resolvedCountMethod =\n"
-            "          tryResolveCollectionMethodFromSurfaceOrReturn(\n"
+            "          tryResolveCollectionMethodFromSurface(\n"
             "              routesThroughVectorCountMethodSurface,\n"
             "              expr.args.size() == 1 &&") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "  if (std::optional<bool> resolvedCountMethod =\n"
-            "          tryResolveCollectionMethodFromSurfaceOrReturn(\n"
+            "          tryResolveCollectionMethodFromSurface(\n"
             "              routesThroughVectorCountMethodSurface,\n"
             "              expr.args.size() != 1 &&") !=
         std::string::npos);
@@ -2464,7 +2446,7 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (std::optional<bool> resolvedCountMethod =\n"
-            "          tryResolveCollectionMethodFromSurface(\n"
+            "          tryResolveCollectionMethodFromSurfaceOrReturn(\n"
             "              routesThroughVectorCountMethodSurface,\n"
             "              expr.args.size() == 1 &&") ==
         std::string::npos);
@@ -2591,7 +2573,7 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "  if (std::optional<bool> resolvedCapacityMethod =\n"
-            "          tryResolveCollectionMethodFromSurfaceOrReturn(\n"
+            "          tryResolveCollectionMethodFromSurface(\n"
             "              routesThroughVectorCapacityMethodSurface,\n"
             "              expr.args.size() == 1 &&\n"
                   "                  (defMap_.find(resolved) == defMap_.end() ||\n"
@@ -2599,10 +2581,10 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (std::optional<bool> resolvedCapacityMethod =\n"
-            "          tryResolveCollectionMethodFromSurfaceOrReturn(\n"
+            "          tryResolveCollectionMethodFromSurface(\n"
             "              routesThroughVectorCapacityMethodSurface,\n"
             "              !(expr.args.empty() || expr.args.size() == 1 ||\n"
-            "                defMap_.find(resolved) == defMap_.end()) &&\n"
+                "                defMap_.find(resolved) == defMap_.end()) &&\n"
                   "                  context.isNamespacedVectorHelperCall,") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -2621,10 +2603,10 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (std::optional<bool> resolvedCapacityMethod =\n"
-            "          tryResolveCollectionMethodFromSurface(\n"
+            "          tryResolveCollectionMethodFromSurfaceOrReturn(\n"
             "              routesThroughVectorCapacityMethodSurface,\n"
             "              !(expr.args.empty() || expr.args.size() == 1 ||\n"
-            "                defMap_.find(resolved) == defMap_.end()) &&\n"
+                "                defMap_.find(resolved) == defMap_.end()) &&\n"
             "                  context.isNamespacedVectorHelperCall,") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(

@@ -97,7 +97,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     }
     return failExprDiagnostic(expr, removedRootedVectorDirectCallDiagnostic);
   };
-  const auto tryResolveCollectionMethodFromSurfaceOrReturn =
+  const auto tryResolveCollectionMethodFromSurface =
       [&](bool routesThroughMethodSurface, bool matchesSurfaceRoute,
           auto &&resolveMethodTarget) -> std::optional<bool> {
     if (!routesThroughMethodSurface || !matchesSurfaceRoute) {
@@ -269,7 +269,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
        context.isUnnamespacedMapCountFallbackCall ||
        context.isResolvedMapCountCall);
   if (std::optional<bool> resolvedCountMethod =
-          tryResolveCollectionMethodFromSurfaceOrReturn(
+          tryResolveCollectionMethodFromSurface(
               routesThroughVectorCountMethodSurface,
               expr.args.size() == 1 &&
                   ((defMap_.find(resolved) == defMap_.end() &&
@@ -293,7 +293,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     return *resolvedCountMethod;
   }
   if (std::optional<bool> resolvedCountMethod =
-          tryResolveCollectionMethodFromSurfaceOrReturn(
+          tryResolveCollectionMethodFromSurface(
               routesThroughVectorCountMethodSurface,
               expr.args.size() != 1 &&
                   (defMap_.find(resolved) != defMap_.end() ||
@@ -366,7 +366,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
             hasImportedDefinitionPath("/std/collections/vector/capacity")) ||
         !isVectorBuiltinName(expr, "capacity"));
   if (std::optional<bool> resolvedCapacityMethod =
-          tryResolveCollectionMethodFromSurfaceOrReturn(
+          tryResolveCollectionMethodFromSurface(
               routesThroughVectorCapacityMethodSurface,
               !(expr.args.empty() || expr.args.size() == 1 ||
                 defMap_.find(resolved) == defMap_.end()) &&
@@ -375,7 +375,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     return *resolvedCapacityMethod;
   }
   if (std::optional<bool> resolvedCapacityMethod =
-          tryResolveCollectionMethodFromSurfaceOrReturn(
+          tryResolveCollectionMethodFromSurface(
               routesThroughVectorCapacityMethodSurface,
               expr.args.size() == 1 &&
                   (defMap_.find(resolved) == defMap_.end() ||
