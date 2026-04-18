@@ -519,10 +519,15 @@
             "const bool isVectorCompatibilityMethodName =") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
-            "bool hasExplicitVectorCompatibilityNamespace(std::string_view normalizedMethodNamespace)") !=
+            "bool hasExplicitVectorCompatibilityNamespace(std::string_view normalizedMethodNamespace)") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "bool isVectorCompatibilityMethodName(std::string_view helperName)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "if (isVectorCompatibilityMethodName(expr.name) &&\n"
+            "      normalizedMethodNamespace != \"vector\" &&\n"
+            "      normalizedMethodNamespace != \"std/collections/vector\" &&") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "bool isExperimentalVectorCompatibilityMethodTarget(std::string_view methodTarget)") ==

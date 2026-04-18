@@ -13,11 +13,6 @@ bool isVectorCompatibilityMethodName(std::string_view helperName) {
          helperName == "remove_swap";
 }
 
-bool hasExplicitVectorCompatibilityNamespace(std::string_view normalizedMethodNamespace) {
-  return normalizedMethodNamespace == "vector" ||
-         normalizedMethodNamespace == "std/collections/vector";
-}
-
 } // namespace
 
 bool SemanticsValidator::validateExprMethodCallTarget(
@@ -174,7 +169,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   }();
   std::string vectorMethodTarget;
   if (isVectorCompatibilityMethodName(expr.name) &&
-      !hasExplicitVectorCompatibilityNamespace(normalizedMethodNamespace) &&
+      normalizedMethodNamespace != "vector" &&
+      normalizedMethodNamespace != "std/collections/vector" &&
       resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
                                       vectorMethodTarget)) {
     if (!hasImportedDefinitionPath(vectorMethodTarget) &&
