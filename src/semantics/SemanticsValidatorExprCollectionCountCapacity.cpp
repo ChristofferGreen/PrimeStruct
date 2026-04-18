@@ -89,10 +89,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                                 stdNamespacedVectorCountDiagnosticMessage);
     }
   }
+  const bool routesThroughUnnamespacedMapCountFallbackSurface =
+      context.isUnnamespacedMapCountFallbackCall;
   const bool routesThroughMapCountCallSurface =
       context.isStdNamespacedMapCountCall ||
       context.isNamespacedMapCountCall ||
-      context.isUnnamespacedMapCountFallbackCall ||
+      routesThroughUnnamespacedMapCountFallbackSurface ||
       context.isResolvedMapCountCall;
   const bool isSingleArgCountCall = expr.args.size() == 1;
   const bool isMultiArgCountCall = !isSingleArgCountCall;
@@ -165,7 +167,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         lacksVisibleStdlibMapCountDefinition &&
         resolvesMapCountReceiver;
     const bool routesThroughStdlibMapCountFallback =
-        context.isUnnamespacedMapCountFallbackCall &&
+        routesThroughUnnamespacedMapCountFallbackSurface &&
         allowsStdlibMapCountFallbackRoute;
     bool isBuiltinMethod = false;
     std::string methodResolved;

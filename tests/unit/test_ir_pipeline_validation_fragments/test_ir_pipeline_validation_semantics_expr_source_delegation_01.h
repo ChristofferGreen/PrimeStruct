@@ -2362,10 +2362,14 @@
             "const bool resolvesMapCountMethodTarget =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool routesThroughUnnamespacedMapCountFallbackSurface =\n"
+            "      context.isUnnamespacedMapCountFallbackCall;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool routesThroughMapCountCallSurface =\n"
             "      context.isStdNamespacedMapCountCall ||\n"
             "      context.isNamespacedMapCountCall ||\n"
-            "      context.isUnnamespacedMapCountFallbackCall ||\n"
+            "      routesThroughUnnamespacedMapCountFallbackSurface ||\n"
             "      context.isResolvedMapCountCall;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -2833,13 +2837,25 @@
             "      lacksVisibleStdlibMapCountDefinition &&\n"
             "      resolvesMapCountReceiver;\n"
             "  const bool routesThroughStdlibMapCountFallback =\n"
-            "      context.isUnnamespacedMapCountFallbackCall &&\n"
+            "      routesThroughUnnamespacedMapCountFallbackSurface &&\n"
             "      allowsStdlibMapCountFallbackRoute;\n"
             "  bool isBuiltinMethod = false;\n"
             "  std::string methodResolved;\n"
             "  {\n"
             "                if (routesThroughStdlibMapCountFallback) {\n"
             "                  methodResolved = stdlibMapCountTargetPath;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool routesThroughMapCountCallSurface =\n"
+            "      context.isStdNamespacedMapCountCall ||\n"
+            "      context.isNamespacedMapCountCall ||\n"
+            "      context.isUnnamespacedMapCountFallbackCall ||\n"
+            "      context.isResolvedMapCountCall;") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "  const bool routesThroughStdlibMapCountFallback =\n"
+            "      context.isUnnamespacedMapCountFallbackCall &&\n"
+            "      allowsStdlibMapCountFallbackRoute;\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "  const bool routesThroughStdlibMapCountFallback =\n"
