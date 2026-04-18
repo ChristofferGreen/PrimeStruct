@@ -1959,18 +1959,20 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "                if (!isBuiltinMethod &&\n"
-            "                    defMap_.find(methodResolved) == defMap_.end() &&\n"
-            "                    resolved.rfind(methodResolved + \"__t\", 0) == 0) {\n"
-            "                  methodResolved = resolved;\n"
-            "                }\n"
-            "                if ((isDirectNamedCountReceiverCall &&\n"
+                    "                    defMap_.find(methodResolved) == defMap_.end() &&\n"
+                    "                    resolved.rfind(methodResolved + \"__t\", 0) == 0) {\n"
+                    "                  methodResolved = resolved;\n"
+                    "                }\n"
+            "                const bool failsCountUnknownTargetValidation =\n"
+            "                    (isDirectNamedCountReceiverCall &&\n"
             "                     methodResolved == bareMapCountTargetPath &&\n"
             "                     lacksVisibleBareCountDefinition &&\n"
             "                     lacksVisibleStdlibMapCountDefinition) ||\n"
             "                    (isBuiltinMethod &&\n"
             "                     methodResolved == stdlibMapCountTargetPath &&\n"
             "                     lacksVisibleStdlibMapCountDefinition &&\n"
-            "                     !context.shouldBuiltinValidateBareMapCountCall)) {\n"
+            "                     !context.shouldBuiltinValidateBareMapCountCall);\n"
+            "                if (failsCountUnknownTargetValidation) {\n"
             "                  return failExprDiagnostic(\n"
             "                      expr, \"unknown call target: \" + stdlibMapCountTargetPath);\n"
             "                }\n"
@@ -2244,17 +2246,19 @@
             "         !context.shouldBuiltinValidateBareMapCountCall);") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if ((!expr.isMethodCall &&\n"
-            "         expr.args.size() == 1 &&\n"
-            "         expr.args.front().kind == Expr::Kind::Name &&\n"
-            "         methodResolved == \"/map/count\" &&\n"
-            "         !hasImportedDefinitionPath(\"/count\") &&\n"
-            "         !hasDeclaredDefinitionPath(\"/count\") &&\n"
-            "         lacksVisibleStdlibMapCountDefinition) ||\n"
-            "        (isBuiltinMethod &&\n"
-            "         methodResolved == \"/std/collections/map/count\" &&\n"
-            "         lacksVisibleStdlibMapCountDefinition &&\n"
-            "         !context.shouldBuiltinValidateBareMapCountCall)) {") !=
+            "const bool failsCountUnknownTargetValidation =\n"
+            "    (!expr.isMethodCall &&\n"
+            "     expr.args.size() == 1 &&\n"
+            "     expr.args.front().kind == Expr::Kind::Name &&\n"
+            "     methodResolved == \"/map/count\" &&\n"
+            "     !hasImportedDefinitionPath(\"/count\") &&\n"
+            "     !hasDeclaredDefinitionPath(\"/count\") &&\n"
+            "     lacksVisibleStdlibMapCountDefinition) ||\n"
+            "    (isBuiltinMethod &&\n"
+            "     methodResolved == \"/std/collections/map/count\" &&\n"
+            "     lacksVisibleStdlibMapCountDefinition &&\n"
+            "     !context.shouldBuiltinValidateBareMapCountCall);\n"
+            "if (failsCountUnknownTargetValidation) {") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!expr.isMethodCall &&\n"
@@ -2756,6 +2760,30 @@
             "      return failExprDiagnostic(\n"
             "          expr, \"unknown call target: /std/collections/map/count\");\n"
             "    }") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "                const bool failsCountUnknownTargetValidation =\n"
+            "                    (isDirectNamedCountReceiverCall &&\n"
+            "                     methodResolved == bareMapCountTargetPath &&\n"
+            "                     lacksVisibleBareCountDefinition &&\n"
+            "                     lacksVisibleStdlibMapCountDefinition) ||\n"
+            "                    (isBuiltinMethod &&\n"
+            "                     methodResolved == stdlibMapCountTargetPath &&\n"
+            "                     lacksVisibleStdlibMapCountDefinition &&\n"
+            "                     !context.shouldBuiltinValidateBareMapCountCall);\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "                if ((isDirectNamedCountReceiverCall &&\n"
+            "                     methodResolved == bareMapCountTargetPath &&\n"
+            "                     lacksVisibleBareCountDefinition &&\n"
+            "                     lacksVisibleStdlibMapCountDefinition) ||\n"
+            "                    (isBuiltinMethod &&\n"
+            "                     methodResolved == stdlibMapCountTargetPath &&\n"
+            "                     lacksVisibleStdlibMapCountDefinition &&\n"
+            "                     !context.shouldBuiltinValidateBareMapCountCall)) {\n"
+            "                  return failExprDiagnostic(\n"
+            "                      expr, \"unknown call target: \" + stdlibMapCountTargetPath);\n"
+            "                }\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "                const bool lacksVisibleMapCountDefinitions =\n"

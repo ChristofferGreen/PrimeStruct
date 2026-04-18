@@ -6,6 +6,7 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 13, 2026)**
+- ✓ TODO-0954: Share count unknown-target branch. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now reuses `failsCountUnknownTargetValidation` for the mirrored count-side unknown-call-target branch, and focused expr source-lock coverage now keeps that shared predicate present while the deleted inline rejection block stays absent.
 - ✓ TODO-0953: Share count direct-resolution handoff. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now reuses `needsDirectCountMethodTargetResolution` for the mirrored count-side helper/direct-resolution handoff, and focused expr source-lock coverage now keeps that shared predicate present while the deleted inline handoff block stays absent.
 - ✓ TODO-0952: Share count unknown-method visibility. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now reuses `lacksVisibleCountMethodTarget` for the mirrored count-side unknown-method visibility check, and focused expr source-lock coverage now keeps that shared predicate present while the deleted inline visibility bundle stays absent.
 - ✓ TODO-0951: Share count resolution failure branch. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now reuses `failsCountMethodTargetResolution` for the mirrored count-side helper/direct-resolution failure path, and focused expr source-lock coverage now keeps that shared predicate present while the deleted empty success arm stays absent.

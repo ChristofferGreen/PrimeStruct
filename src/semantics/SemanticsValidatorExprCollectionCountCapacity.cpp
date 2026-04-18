@@ -291,14 +291,16 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     resolved.rfind(methodResolved + "__t", 0) == 0) {
                   methodResolved = resolved;
                 }
-                if ((isDirectNamedCountReceiverCall &&
+                const bool failsCountUnknownTargetValidation =
+                    (isDirectNamedCountReceiverCall &&
                      methodResolved == bareMapCountTargetPath &&
                      lacksVisibleBareCountDefinition &&
                      lacksVisibleStdlibMapCountDefinition) ||
                     (isBuiltinMethod &&
                      methodResolved == stdlibMapCountTargetPath &&
                      lacksVisibleStdlibMapCountDefinition &&
-                     !context.shouldBuiltinValidateBareMapCountCall)) {
+                     !context.shouldBuiltinValidateBareMapCountCall);
+                if (failsCountUnknownTargetValidation) {
                   return failExprDiagnostic(
                       expr, "unknown call target: " + stdlibMapCountTargetPath);
                 }
