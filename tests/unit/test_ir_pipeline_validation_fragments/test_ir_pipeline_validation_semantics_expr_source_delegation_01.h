@@ -639,13 +639,10 @@
             "expr.name == \"count\" || expr.name == \"capacity\" || expr.name == \"at\" ||") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
-            "const bool vectorMethodTargetMissing =\n"
-            "        !hasImportedDefinitionPath(vectorMethodTarget) &&\n"
-            "        defMap_.count(vectorMethodTarget) == 0;") !=
-        std::string::npos);
-  CHECK(semanticsExprMethodResolutionSource.find(
             "rewriteEligibleExperimentalVectorCompatibilityMethodTargetToCanonical(\n"
-            "        vectorMethodTarget, vectorMethodTargetMissing);") !=
+            "        vectorMethodTarget,\n"
+            "        !hasImportedDefinitionPath(vectorMethodTarget) &&\n"
+            "            defMap_.count(vectorMethodTarget) == 0);") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "preferVisibleCanonicalVectorMethodTarget(resolved)") ==
@@ -654,12 +651,9 @@
             "preferVisibleCanonicalVectorMethodTarget(vectorMethodTarget)") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
-            "const bool resolvedVectorCompatibilityMethodTargetEligible =\n"
-            "      !isBuiltinMethod && isVectorCompatibilityMethod && !resolved.empty();") !=
-        std::string::npos);
-  CHECK(semanticsExprMethodResolutionSource.find(
             "rewriteEligibleExperimentalVectorCompatibilityMethodTargetToCanonical(\n"
-            "      resolved, resolvedVectorCompatibilityMethodTargetEligible);") !=
+            "      resolved,\n"
+            "      !isBuiltinMethod && isVectorCompatibilityMethod && !resolved.empty());") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "preferCanonicalVectorCompatibilityMethodTarget(\n"
@@ -736,6 +730,9 @@
             "rewriteExperimentalVectorCompatibilityMethodTargetToCanonical(vectorMethodTarget)") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
+            "const bool vectorMethodTargetMissing =") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
             "if (vectorMethodTargetMissing) {\n"
             "      rewriteExperimentalVectorCompatibilityMethodTargetToCanonical(vectorMethodTarget);") ==
         std::string::npos);
@@ -746,6 +743,9 @@
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "rewriteExperimentalVectorCompatibilityMethodTargetToCanonical(resolved)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "const bool resolvedVectorCompatibilityMethodTargetEligible =") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (resolvedVectorCompatibilityMethodTargetEligible) {\n"

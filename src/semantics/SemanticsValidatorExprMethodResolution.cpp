@@ -185,11 +185,10 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       expr.namespacePrefix != "/std/collections/vector" &&
       resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
                                       vectorMethodTarget)) {
-    const bool vectorMethodTargetMissing =
-        !hasImportedDefinitionPath(vectorMethodTarget) &&
-        defMap_.count(vectorMethodTarget) == 0;
     rewriteEligibleExperimentalVectorCompatibilityMethodTargetToCanonical(
-        vectorMethodTarget, vectorMethodTargetMissing);
+        vectorMethodTarget,
+        !hasImportedDefinitionPath(vectorMethodTarget) &&
+            defMap_.count(vectorMethodTarget) == 0);
     if (hasImportedDefinitionPath(vectorMethodTarget) ||
         defMap_.count(vectorMethodTarget) > 0) {
       resolved = vectorMethodTarget;
@@ -256,10 +255,9 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       isBuiltinMethod = false;
     }
   }
-  const bool resolvedVectorCompatibilityMethodTargetEligible =
-      !isBuiltinMethod && isVectorCompatibilityMethod && !resolved.empty();
   rewriteEligibleExperimentalVectorCompatibilityMethodTargetToCanonical(
-      resolved, resolvedVectorCompatibilityMethodTargetEligible);
+      resolved,
+      !isBuiltinMethod && isVectorCompatibilityMethod && !resolved.empty());
   bool keepBuiltinIndexedArgsPackMapMethod = false;
   keepBuiltinIndexedArgsPackMapMethod = resolveMapTarget(expr.args.front());
   if (expr.args.front().kind == Expr::Kind::Call) {
