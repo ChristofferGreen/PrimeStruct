@@ -2587,11 +2587,7 @@
             "const auto tryResolveCollectionMethodFromSurfaceOrReturn =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const auto resolveCountMethodTargetFromReceiver =\n"
-            "      [&](const Expr &receiver, bool &isBuiltinMethod,\n"
-            "          std::string &methodResolved) -> bool {\n"
-            "    const std::string stdlibMapCountMethodTarget =\n"
-            "        \"/std/collections/map/count\";") !=
+            "const auto resolveCountMethodTargetFromReceiver =\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "handledOut = true;\n"
@@ -2607,26 +2603,6 @@
             "    resolved = methodResolved;\n"
             "    resolvedMethod = isBuiltinMethod;\n"
             "    return true;") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "handledOut = true;\n"
-            "    usedMethodTarget = true;\n"
-            "    hasMethodReceiverIndex = true;\n"
-            "    methodReceiverIndex = 0;\n"
-            "    const Expr &receiver = expr.args.front();\n"
-            "    bool isBuiltinMethod = false;\n"
-            "    std::string methodResolved;\n"
-            "    if (!resolveCountMethodTargetFromReceiver(receiver, isBuiltinMethod,\n"
-            "                                              methodResolved)) {\n"
-            "      return false;\n"
-            "    }\n"
-            "    resolved = methodResolved;\n"
-            "    resolvedMethod = isBuiltinMethod;\n"
-            "    return true;") ==
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "return resolveCollectionMethodTargetFromReceiver(\n"
-            "        resolveCountMethodTargetFromReceiver);") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (resolveCountMethod(true)) {\n"
@@ -2677,7 +2653,34 @@
             "                   context.isNamespacedMapCountCall ||\n"
             "                   context.isUnnamespacedMapCountFallbackCall ||\n"
             "                   context.isResolvedMapCountCall),\n"
-            "              expr.args.size() == 1 &&") !=
+            "              expr.args.size() == 1 &&\n"
+            "                  ((defMap_.find(resolved) == defMap_.end() &&\n"
+            "                    !context.isStdNamespacedMapCountCall) ||\n"
+            "                   (!isStdNamespacedVectorCompatibilityDirectCall(\n"
+            "                        expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
+            "                    context.isNamespacedVectorHelperCall &&\n"
+            "                    context.namespacedHelper == \"count\" &&\n"
+            "                    isVectorBuiltinName(expr, \"count\") &&\n"
+            "                    expr.args.size() == 1 &&\n"
+            "                    !hasDefinitionPath(resolved) &&\n"
+            "                    !(context.isArrayNamespacedVectorCountCompatibilityCall !=\n"
+            "                          nullptr &&\n"
+            "                      context.isArrayNamespacedVectorCountCompatibilityCall(\n"
+            "                          expr))) ||\n"
+            "                   context.isStdNamespacedMapCountCall ||\n"
+            "                   context.isNamespacedMapCountCall ||\n"
+            "                   context.isUnnamespacedMapCountFallbackCall ||\n"
+            "                   context.isResolvedMapCountCall),\n"
+            "              expr.args.size() != 1 &&\n"
+            "                  (defMap_.find(resolved) != defMap_.end() ||\n"
+            "                   context.isStdNamespacedMapCountCall ||\n"
+            "                   context.isNamespacedMapCountCall ||\n"
+            "                   context.isUnnamespacedMapCountFallbackCall ||\n"
+            "                   context.isResolvedMapCountCall),\n"
+            "              [&](const Expr &receiver, bool &isBuiltinMethod,\n"
+            "                  std::string &methodResolved) -> bool {\n"
+            "                const std::string stdlibMapCountMethodTarget =\n"
+            "                    \"/std/collections/map/count\";") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (std::optional<bool> resolvedCountMethod =\n"

@@ -140,6 +140,7 @@ Wave D (queue hygiene):
     - Final release gate passes with `./scripts/compile.sh --release`.
   - stop_rule: If shared classifier rewrites destabilize `map`/`soa_vector`, isolate the generic mechanism in this leaf and defer remaining shared deletions to TODO-0409.
   - notes: This leaf should leave a reusable generic path that TODO-0409 can apply to `map` and `soa_vector`.
+  - progress: Completed `TODO-0834` by deleting the one-use `resolveCountMethodTargetFromReceiver` helper in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the shared surface-route call now owns the count target-routing lambda inline.
   - progress: Completed `TODO-0833` by deleting the one-use `resolveCapacityMethodTargetFromReceiver` helper in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the shared surface-route call now owns the capacity target-routing lambda inline.
   - progress: Completed `TODO-0832` by deleting the one-use `routesThroughVectorCapacityMethodSurface` local in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the shared surface-route helper now carries the capacity-side gate inline at its only call site.
   - progress: Completed `TODO-0831` by deleting the one-use `routesThroughVectorCountMethodSurface` local in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the shared surface-route helper now carries the count-side gate inline at its only call site.
