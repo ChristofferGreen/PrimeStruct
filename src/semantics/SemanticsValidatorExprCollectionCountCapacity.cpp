@@ -142,8 +142,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       if (requireSingleArg) {
         return (!resolvesExplicitCountMethodTarget &&
                 !context.isStdNamespacedMapCountCall) ||
-               (context.isNamespacedVectorCountCall &&
-                !callsStdNamespacedVectorCountHelper) ||
+               context.isNamespacedVectorCountCall ||
                resolvesMapCountSurface;
       }
       return resolvesExplicitCountMethodTarget || resolvesMapCountSurface;

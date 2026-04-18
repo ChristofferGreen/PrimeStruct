@@ -1443,8 +1443,7 @@
             "      if (requireSingleArg) {\n"
             "        return (!resolvesExplicitCountMethodTarget &&\n"
             "                !context.isStdNamespacedMapCountCall) ||\n"
-            "               (context.isNamespacedVectorCountCall &&\n"
-            "                !context.isStdNamespacedVectorCountCall) ||\n"
+            "               context.isNamespacedVectorCountCall ||\n"
             "               resolvesMapCountSurface;\n"
             "      }\n"
             "      return resolvesExplicitCountMethodTarget || resolvesMapCountSurface;\n"
@@ -2022,7 +2021,11 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "(context.isNamespacedVectorCountCall &&\n"
-            "                !callsStdNamespacedVectorCountHelper) ||") !=
+            "                !callsStdNamespacedVectorCountHelper) ||") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "context.isNamespacedVectorCountCall ||\n"
+            "               resolvesMapCountSurface;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool shouldBuiltinValidateStdNamespacedVectorCountCall =\n"
