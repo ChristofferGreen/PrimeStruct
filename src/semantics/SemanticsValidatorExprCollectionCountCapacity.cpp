@@ -306,7 +306,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         rejectsUnimportedBareMapCountCallTarget ||
         rejectsBuiltinStdlibMapCountCallTarget;
     if (rejectsResolvedMapCountCallTarget) {
-      return failCollectionCountCapacityDiagnostic("unknown call target: /std/collections/map/count");
+      return failCollectionCountCapacityDiagnostic("unknown call target: " +
+                                                  stdlibMapCountMethodTarget);
     }
     return finalizeResolvedCollectionMethodTargetAfterRemovedRootedVectorCheck(
         methodResolved, isBuiltinMethod);

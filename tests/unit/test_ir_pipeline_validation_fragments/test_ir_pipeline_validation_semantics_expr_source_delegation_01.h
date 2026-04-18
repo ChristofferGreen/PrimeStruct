@@ -2004,8 +2004,12 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (rejectsResolvedMapCountCallTarget) {\n"
-            "      return failCollectionCountCapacityDiagnostic(\"unknown call target: /std/collections/map/count\");\n"
+            "      return failCollectionCountCapacityDiagnostic(\"unknown call target: \" +\n"
+            "                                                  stdlibMapCountMethodTarget);\n"
             "    }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "return failCollectionCountCapacityDiagnostic(\"unknown call target: /std/collections/map/count\");") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto matchesCountMethodCallShape =") ==
