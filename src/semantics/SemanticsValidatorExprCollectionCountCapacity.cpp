@@ -207,10 +207,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       isBuiltinMethod = false;
       return true;
     };
-    const auto tryResolveCountMethod = [&]() -> bool {
-      return resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
-                                 "count", methodResolved, isBuiltinMethod);
-    };
     const auto tryAssignCountMethodFallbackAfterResolveMiss = [&]() -> bool {
       if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||
           expr.args.empty()) {
@@ -243,7 +239,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       }
     }
     if (needsCountMethodResolveOrFallback &&
-        !tryResolveCountMethod() &&
+        !resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
+                             "count", methodResolved, isBuiltinMethod) &&
         !tryAssignCountMethodFallbackAfterResolveMiss()) {
       return false;
     }

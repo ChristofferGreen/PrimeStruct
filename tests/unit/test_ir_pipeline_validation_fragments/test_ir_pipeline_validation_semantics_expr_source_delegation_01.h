@@ -1464,7 +1464,7 @@
             "const auto tryResolveCountMethod = [&]() -> bool {\n"
             "      return resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
             "                                 \"count\", methodResolved, isBuiltinMethod);\n"
-            "    };") !=
+            "    };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto tryAssignCountMethodFallbackAfterResolveMiss = [&]() -> bool {\n"
@@ -1516,10 +1516,18 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (needsCountMethodResolveOrFallback &&\n"
-            "        !tryResolveCountMethod() &&\n"
+            "        !resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
+            "                             \"count\", methodResolved, isBuiltinMethod) &&\n"
             "        !tryAssignCountMethodFallbackAfterResolveMiss()) {\n"
             "      return false;\n"
             "    }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (needsCountMethodResolveOrFallback &&\n"
+            "        !tryResolveCountMethod() &&\n"
+            "        !tryAssignCountMethodFallbackAfterResolveMiss()) {\n"
+            "      return false;\n"
+            "    }") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else if (!tryResolveCountMethod() &&\n"
