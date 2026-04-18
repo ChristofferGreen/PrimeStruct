@@ -355,29 +355,25 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 const bool usesStdNamespacedCapacityCompatibilityHelper =
                     isStdNamespacedVectorCompatibilityHelperPath(
                         resolveCalleePath(expr), "capacity");
-                if (resolveVectorHelperMethodTarget(
+                const bool resolvedVisibleCapacityHelperMethodTarget =
+                    resolveVectorHelperMethodTarget(
                         params, locals, receiver, "capacity",
                         methodResolved) &&
                     ((methodResolved =
                           preferVectorStdlibHelperPath(methodResolved)),
                      (hasDeclaredDefinitionPath(methodResolved) ||
-                      hasImportedDefinitionPath(methodResolved)))) {
+                      hasImportedDefinitionPath(methodResolved)));
+                if (resolvedVisibleCapacityHelperMethodTarget) {
                   isBuiltinMethod = false;
-                  if (usesStdNamespacedCapacityCompatibilityHelper) {
-                    assignStdlibVectorCapacityCompatibilityTarget();
-                  }
-                } else {
-                  if (usesStdNamespacedCapacityCompatibilityHelper) {
-                    assignStdlibVectorCapacityCompatibilityTarget();
-                  } else if (resolveMethodTarget(
-                                 params, locals, expr.namespacePrefix, receiver,
-                                 "capacity", methodResolved,
-                                 isBuiltinMethod)) {
-                    // Method target resolved directly.
-                  } else {
-                    (void)validateExpr(params, locals, receiver);
-                    return false;
-                  }
+                }
+                if (usesStdNamespacedCapacityCompatibilityHelper) {
+                  assignStdlibVectorCapacityCompatibilityTarget();
+                } else if (!resolvedVisibleCapacityHelperMethodTarget &&
+                           !resolveMethodTarget(
+                               params, locals, expr.namespacePrefix, receiver,
+                               "capacity", methodResolved, isBuiltinMethod)) {
+                  (void)validateExpr(params, locals, receiver);
+                  return false;
                 }
                 if (!isBuiltinMethod &&
                     defMap_.find(methodResolved) == defMap_.end() &&
