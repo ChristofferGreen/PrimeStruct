@@ -79,20 +79,18 @@ bool SemanticsValidator::validateExprMethodCallTarget(
 
   const bool isVectorCompatibilityMethod =
       isVectorCompatibilityHelperName(expr.name);
-  auto preferCanonicalVectorCompatibilityMethodTarget =
+  const std::string canonicalVectorCompatibilityMethodTarget =
+      "/std/collections/vector/" + expr.name;
+  auto shouldPreferCanonicalVectorCompatibilityMethodTarget =
       [&](const std::string &target) {
-        const std::string canonicalTarget = "/std/collections/vector/" + expr.name;
         const bool targetsExperimentalVectorCompatibilityPath =
             target.rfind("/std/collections/experimental_vector/", 0) == 0 ||
             target.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
         const bool hasVisibleCanonicalVectorCompatibilityTarget =
-            hasImportedDefinitionPath(canonicalTarget) ||
-            defMap_.count(canonicalTarget) > 0;
-        if (targetsExperimentalVectorCompatibilityPath &&
-            hasVisibleCanonicalVectorCompatibilityTarget) {
-          return canonicalTarget;
-        }
-        return target;
+            hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||
+            defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0;
+        return targetsExperimentalVectorCompatibilityPath &&
+               hasVisibleCanonicalVectorCompatibilityTarget;
       };
   if (expr.namespacePrefix.empty() &&
       !expr.args.empty() &&
@@ -178,9 +176,9 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
                                       vectorMethodTarget)) {
     if (!hasImportedDefinitionPath(vectorMethodTarget) &&
-        defMap_.count(vectorMethodTarget) == 0) {
-      vectorMethodTarget =
-          preferCanonicalVectorCompatibilityMethodTarget(vectorMethodTarget);
+        defMap_.count(vectorMethodTarget) == 0 &&
+        shouldPreferCanonicalVectorCompatibilityMethodTarget(vectorMethodTarget)) {
+      vectorMethodTarget = canonicalVectorCompatibilityMethodTarget;
     }
     if (hasImportedDefinitionPath(vectorMethodTarget) ||
         defMap_.count(vectorMethodTarget) > 0) {
@@ -248,8 +246,9 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       isBuiltinMethod = false;
     }
   }
-  if (!isBuiltinMethod && isVectorCompatibilityMethod) {
-    resolved = preferCanonicalVectorCompatibilityMethodTarget(resolved);
+  if (!isBuiltinMethod && isVectorCompatibilityMethod &&
+      shouldPreferCanonicalVectorCompatibilityMethodTarget(resolved)) {
+    resolved = canonicalVectorCompatibilityMethodTarget;
   }
   bool keepBuiltinIndexedArgsPackMapMethod = false;
   keepBuiltinIndexedArgsPackMapMethod = resolveMapTarget(expr.args.front());
