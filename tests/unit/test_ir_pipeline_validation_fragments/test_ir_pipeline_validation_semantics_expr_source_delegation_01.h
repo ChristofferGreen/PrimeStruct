@@ -1859,13 +1859,6 @@
             "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const bool routesThroughMapCountCompatibility =\n"
-            "        context.isStdNamespacedMapCountCall ||\n"
-            "        context.isNamespacedMapCountCall ||\n"
-            "        context.isUnnamespacedMapCountFallbackCall ||\n"
-            "        context.isResolvedMapCountCall;") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!(requireSingleArg\n"
             "              ? ((defMap_.find(resolved) == defMap_.end() &&\n"
             "                  !context.isStdNamespacedMapCountCall) ||\n"
@@ -1880,9 +1873,15 @@
             "                        nullptr &&\n"
             "                    context.isArrayNamespacedVectorCountCompatibilityCall(\n"
             "                        expr))) ||\n"
-            "                 routesThroughMapCountCompatibility)\n"
+            "                 context.isStdNamespacedMapCountCall ||\n"
+            "                 context.isNamespacedMapCountCall ||\n"
+            "                 context.isUnnamespacedMapCountFallbackCall ||\n"
+            "                 context.isResolvedMapCountCall)\n"
             "              : (defMap_.find(resolved) != defMap_.end() ||\n"
-            "                 routesThroughMapCountCompatibility))) {\n"
+            "                 context.isStdNamespacedMapCountCall ||\n"
+            "                 context.isNamespacedMapCountCall ||\n"
+            "                 context.isUnnamespacedMapCountFallbackCall ||\n"
+            "                 context.isResolvedMapCountCall))) {\n"
             "      return false;\n"
             "    }") !=
         std::string::npos);
@@ -1970,6 +1969,9 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool resolvesMapCountMethodTarget =") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool routesThroughMapCountCompatibility =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"

@@ -144,11 +144,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     }
   }
   auto resolveCountMethod = [&](bool requireSingleArg) -> bool {
-    const bool routesThroughMapCountCompatibility =
-        context.isStdNamespacedMapCountCall ||
-        context.isNamespacedMapCountCall ||
-        context.isUnnamespacedMapCountFallbackCall ||
-        context.isResolvedMapCountCall;
     if (hasNamedArguments(expr.argNames) ||
         isUnimportedStdNamespacedVectorCompatibilityDirectCall(
             expr.isMethodCall,
@@ -169,7 +164,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       return false;
     }
     if (!(isVectorBuiltinName(expr, "count") ||
-          routesThroughMapCountCompatibility)) {
+          context.isStdNamespacedMapCountCall ||
+          context.isNamespacedMapCountCall ||
+          context.isUnnamespacedMapCountFallbackCall ||
+          context.isResolvedMapCountCall)) {
       return false;
     }
     if (!(requireSingleArg
@@ -186,9 +184,15 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                         nullptr &&
                     context.isArrayNamespacedVectorCountCompatibilityCall(
                         expr))) ||
-                 routesThroughMapCountCompatibility)
+                 context.isStdNamespacedMapCountCall ||
+                 context.isNamespacedMapCountCall ||
+                 context.isUnnamespacedMapCountFallbackCall ||
+                 context.isResolvedMapCountCall)
               : (defMap_.find(resolved) != defMap_.end() ||
-                 routesThroughMapCountCompatibility))) {
+                 context.isStdNamespacedMapCountCall ||
+                 context.isNamespacedMapCountCall ||
+                 context.isUnnamespacedMapCountFallbackCall ||
+                 context.isResolvedMapCountCall))) {
       return false;
     }
 
