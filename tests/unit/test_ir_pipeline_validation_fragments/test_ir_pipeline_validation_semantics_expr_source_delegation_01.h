@@ -1931,15 +1931,12 @@
             "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const std::string bareMapCountMethodTarget = \"/map/count\";") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const std::string stdlibMapCountMethodTarget =\n"
             "        \"/std/collections/map/count\";") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (context.isUnnamespacedMapCountFallbackCall &&\n"
-            "        !hasDeclaredDefinitionPath(bareMapCountMethodTarget) &&\n"
+            "        !hasDeclaredDefinitionPath(\"/map/count\") &&\n"
             "        lacksVisibleStdlibMapCountDefinition &&\n"
             "        context.resolveMapTarget != nullptr &&\n"
             "        context.resolveMapTarget(receiver)) {\n"
@@ -2022,6 +2019,9 @@
             "bool needsCountMethodResolveOrFallback =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const std::string bareMapCountMethodTarget =") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
             "          expr.args.empty()) {\n"
             "        (void)validateExpr(params, locals, expr.args.front());\n"
@@ -2038,7 +2038,7 @@
             "if ((!expr.isMethodCall &&\n"
             "         expr.args.size() == 1 &&\n"
             "         expr.args.front().kind == Expr::Kind::Name &&\n"
-            "         methodResolved == bareMapCountMethodTarget &&\n"
+            "         methodResolved == \"/map/count\" &&\n"
             "         !hasImportedDefinitionPath(\"/count\") &&\n"
             "         !hasDeclaredDefinitionPath(\"/count\") &&\n"
             "         lacksVisibleStdlibMapCountDefinition) ||\n"
