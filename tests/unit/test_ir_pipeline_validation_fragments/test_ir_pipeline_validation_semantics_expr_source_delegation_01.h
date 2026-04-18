@@ -1048,8 +1048,21 @@
             "        hasImportedDefinitionPath(\"/std/collections/vector/capacity\"))") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "if (!hasDeclaredDefinitionPath(\"/std/collections/vector/capacity\") &&\n"
+            "        !hasImportedDefinitionPath(\"/std/collections/vector/capacity\") &&\n"
+            "        (resolvesVector || resolvesExperimentalVector))") ==
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
             "return failLateCallCompatibilityDiagnostic(\n"
             "          \"unknown call target: /std/collections/vector/count\");") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "if (!expr.isMethodCall && setupOut.isStdNamespacedVectorCapacityCall &&\n"
+            "      !hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/capacity\") &&\n"
+            "      !allowStdNamespacedVectorUserReceiverProbe) {\n"
+            "    return failCollectionDispatchDiagnostic(\n"
+            "        \"unknown call target: /std/collections/vector/capacity\");\n"
+            "  }") !=
         std::string::npos);
   CHECK(semanticsExprMethodCompatibilitySetupSource.find(
             "return soaUnavailableMethodDiagnostic(resolvedPath);") !=

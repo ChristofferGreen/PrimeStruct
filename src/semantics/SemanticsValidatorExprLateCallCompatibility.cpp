@@ -142,12 +142,6 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
       return failLateCallCompatibilityDiagnostic(
           "capacity requires vector target");
     }
-    if (!hasDeclaredDefinitionPath("/std/collections/vector/capacity") &&
-        !hasImportedDefinitionPath("/std/collections/vector/capacity") &&
-        (resolvesVector || resolvesExperimentalVector)) {
-      return failLateCallCompatibilityDiagnostic(
-          "unknown call target: /std/collections/vector/capacity");
-    }
   }
 
   return true;
