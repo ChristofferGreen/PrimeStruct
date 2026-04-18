@@ -19,6 +19,14 @@ inline bool isStdNamespacedVectorCompatibilityHelperPath(
          0;
 }
 
+inline bool isStdNamespacedVectorCompatibilityDirectCall(
+    bool isMethodCall,
+    std::string_view path,
+    std::string_view helperName) {
+  return !isMethodCall &&
+         isStdNamespacedVectorCompatibilityHelperPath(path, helperName);
+}
+
 inline std::string vectorCompatibilityRequiresVectorTargetDiagnostic(
     std::string_view helperName) {
   return std::string(helperName) + " requires vector target";

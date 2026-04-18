@@ -256,9 +256,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
 
   auto resolveCapacityMethod = [&](bool requireSingleArg) -> bool {
     if (hasNamedArguments(expr.argNames) ||
-        ((!expr.isMethodCall &&
-          isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
-                                                       "capacity")) &&
+        (isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,
+                                                      resolveCalleePath(expr),
+                                                      "capacity") &&
          !hasImportedDefinitionPath("/std/collections/vector/capacity")) ||
         !isVectorBuiltinName(expr, "capacity")) {
       return false;

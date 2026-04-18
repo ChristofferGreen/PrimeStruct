@@ -170,10 +170,11 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
   if (isDirectStdNamespacedVectorCountBuiltinCall) {
     return validateDirectVectorCountCapacityCall("count", "/std/collections/vector/count");
   }
-  if (!expr.isMethodCall && !resolvedMethod &&
-      hasImportedDefinitionPath("/std/collections/vector/capacity") &&
-      isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
+  if (isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,
+                                                   resolveCalleePath(expr),
                                                    "capacity") &&
+      !resolvedMethod &&
+      hasImportedDefinitionPath("/std/collections/vector/capacity") &&
       expr.args.size() == 1 &&
       resolved.rfind("/std/collections/vector/capacity", 0) == 0) {
     return validateDirectVectorCountCapacityCall("capacity", "/std/collections/vector/capacity");
@@ -535,9 +536,9 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
   }
 
   if (!resolvedMethod && isVectorBuiltinName(expr, "capacity") &&
-      !(!expr.isMethodCall &&
-        isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
-                                                     "capacity")) &&
+      !isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,
+                                                    resolveCalleePath(expr),
+                                                    "capacity") &&
       it == defMap_.end()) {
     handledOut = true;
     if (!expr.templateArgs.empty()) {
