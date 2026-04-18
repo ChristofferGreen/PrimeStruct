@@ -65,6 +65,17 @@ struct StdNamespacedVectorCompatibilityHelperState {
         classifyCountMapTargetDiagnostic(mapTargetDetected,
                                          preferUnknownCallTarget));
   }
+
+  [[nodiscard]] std::string classifyCountTargetDiagnosticMessage(
+      bool vectorLikeTarget,
+      bool mapTargetDetected,
+      bool preferUnknownCallTarget) const {
+    if (rejectsVectorLikeTargetWithoutVisibleHelper(vectorLikeTarget)) {
+      return vectorCompatibilityUnknownCallTargetDiagnostic("count");
+    }
+    return classifyCountMapTargetDiagnosticMessage(mapTargetDetected,
+                                                   preferUnknownCallTarget);
+  }
 };
 
 inline StdNamespacedVectorCompatibilityHelperState

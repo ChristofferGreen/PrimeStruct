@@ -92,13 +92,13 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       context.isStdNamespacedVectorCountCall && expr.args.size() == 1 &&
       context.resolveMapTarget != nullptr &&
       context.resolveMapTarget(expr.args.front());
-  const std::string stdNamespacedVectorCountMapTargetDiagnosticMessage =
-      stdNamespacedVectorCountHelperState.classifyCountMapTargetDiagnosticMessage(
-          resolvesStdNamespacedVectorCountMapTarget, false);
-  if (!stdNamespacedVectorCountMapTargetDiagnosticMessage.empty()) {
+  const std::string stdNamespacedVectorCountTargetDiagnosticMessage =
+      stdNamespacedVectorCountHelperState.classifyCountTargetDiagnosticMessage(
+          false, resolvesStdNamespacedVectorCountMapTarget, false);
+  if (!stdNamespacedVectorCountTargetDiagnosticMessage.empty()) {
     handledOut = true;
     return failCollectionCountCapacityDiagnostic(
-        std::move(stdNamespacedVectorCountMapTargetDiagnosticMessage));
+        std::move(stdNamespacedVectorCountTargetDiagnosticMessage));
   }
 
   auto resolveCountMethod = [&](bool requireSingleArg) -> bool {

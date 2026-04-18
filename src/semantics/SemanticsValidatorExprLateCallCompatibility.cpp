@@ -107,24 +107,25 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
           context.dispatchResolvers->resolveMapTarget(expr.args.front(),
                                                       mapKeyType,
                                                       mapValueType);
-      const std::string stdNamespacedVectorCountMapTargetDiagnosticMessage =
+      const std::string stdNamespacedVectorCountTargetDiagnosticMessage =
           stdNamespacedVectorCountHelperState
-              .classifyCountMapTargetDiagnosticMessage(
-                  resolvesMapAfterValidation, resolvesNonVectorCountTarget);
-      if (!stdNamespacedVectorCountMapTargetDiagnosticMessage.empty()) {
+              .classifyCountTargetDiagnosticMessage(
+                  false, resolvesMapAfterValidation,
+                  resolvesNonVectorCountTarget);
+      if (!stdNamespacedVectorCountTargetDiagnosticMessage.empty()) {
         return failLateCallCompatibilityDiagnostic(
-            std::move(stdNamespacedVectorCountMapTargetDiagnosticMessage));
+            std::move(stdNamespacedVectorCountTargetDiagnosticMessage));
       }
       return failLateCallCompatibilityDiagnostic(
           vectorCompatibilityRequiresVectorTargetDiagnostic("count"));
     }
-    const bool rejectsVectorCountTargetWithoutVisibleHelper =
+    const std::string stdNamespacedVectorCountTargetDiagnosticMessage =
         stdNamespacedVectorCountHelperState
-            .rejectsVectorLikeTargetWithoutVisibleHelper(
-                resolvesVectorLikeCountTarget);
-    if (rejectsVectorCountTargetWithoutVisibleHelper) {
+            .classifyCountTargetDiagnosticMessage(
+                resolvesVectorLikeCountTarget, false, false);
+    if (!stdNamespacedVectorCountTargetDiagnosticMessage.empty()) {
       return failLateCallCompatibilityDiagnostic(
-          vectorCompatibilityUnknownCallTargetDiagnostic("count"));
+          std::move(stdNamespacedVectorCountTargetDiagnosticMessage));
     }
   }
 
