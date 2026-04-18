@@ -3361,6 +3361,12 @@
             "            hasImportedDefinitionPath(\"/std/collections/vector/capacity\"));\n"
             "const bool capacityMethodSurfaceUsesNonVectorBuiltinName =\n"
             "    !isVectorBuiltinName(expr, \"capacity\");\n"
+            "const bool violatesCapacityMethodSurfacePreconditions =\n"
+            "    capacityMethodSurfaceHasNamedArguments ||\n"
+            "    routesThroughUnimportedStdNamespacedVectorCapacityCompatibilityDirectCall ||\n"
+            "    capacityMethodSurfaceUsesNonVectorBuiltinName;\n"
+            "const bool allowsCapacityMethodSurfacePreconditions =\n"
+            "    !violatesCapacityMethodSurfacePreconditions;\n"
             "const bool routesThroughNamespacedVectorCapacityHelperSurface =\n"
             "    context.isNamespacedVectorHelperCall;\n"
             "const bool routesThroughNamespacedVectorCapacityCallSurface =\n"
@@ -3379,9 +3385,7 @@
             "     (capacityMethodSurfaceUsesSingleArgument &&\n"
             "      (capacityMethodSurfaceLacksResolvedDefinitionTarget ||\n"
             "       routesThroughNamespacedVectorCapacityCallSurface)));\n"
-            "if (!(capacityMethodSurfaceHasNamedArguments ||\n"
-            "      routesThroughUnimportedStdNamespacedVectorCapacityCompatibilityDirectCall ||\n"
-            "      capacityMethodSurfaceUsesNonVectorBuiltinName) &&\n"
+            "if (allowsCapacityMethodSurfacePreconditions &&\n"
             "    matchesCapacityMethodSurfaceRouteShape) {\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -3405,6 +3409,16 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool capacityMethodSurfaceUsesNonVectorBuiltinName =\n"
             "    !isVectorBuiltinName(expr, \"capacity\");\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool violatesCapacityMethodSurfacePreconditions =\n"
+            "    capacityMethodSurfaceHasNamedArguments ||\n"
+            "    routesThroughUnimportedStdNamespacedVectorCapacityCompatibilityDirectCall ||\n"
+            "    capacityMethodSurfaceUsesNonVectorBuiltinName;\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool allowsCapacityMethodSurfacePreconditions =\n"
+            "    !violatesCapacityMethodSurfacePreconditions;\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool routesThroughNamespacedVectorCapacityHelperSurface =\n"
@@ -3431,6 +3445,16 @@
             "      routesThroughUnimportedStdNamespacedVectorCapacityCompatibilityDirectCall ||\n"
             "      !isVectorBuiltinName(expr, \"capacity\")) &&\n"
             "    matchesCapacityMethodSurfaceRouteShape) {\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (!(capacityMethodSurfaceHasNamedArguments ||\n"
+            "      routesThroughUnimportedStdNamespacedVectorCapacityCompatibilityDirectCall ||\n"
+            "      capacityMethodSurfaceUsesNonVectorBuiltinName) &&\n"
+            "    matchesCapacityMethodSurfaceRouteShape) {\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (allowsCapacityMethodSurfacePreconditions &&\n"
+            "    matchesCapacityMethodSurfaceRouteShape) {\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool matchesCapacityMethodSurfaceRouteShape =\n"
