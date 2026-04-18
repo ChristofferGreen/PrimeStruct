@@ -366,12 +366,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   const bool matchesSingleArgCapacityMethodSurfaceRouteShape =
       capacityMethodSurfaceUsesSingleArgument &&
       matchesSingleArgCapacityMethodSurfaceRouteInputs;
-  const bool matchesCapacityMethodSurfaceRouteShape =
+  const bool routesThroughCapacityMethodSurface =
       matchesHelperCapacityMethodSurfaceRouteShape ||
       matchesSingleArgCapacityMethodSurfaceRouteShape;
   const bool matchesCapacityMethodSurfaceRoute =
       allowsCapacityMethodSurfacePreconditions &&
-      matchesCapacityMethodSurfaceRouteShape;
+      routesThroughCapacityMethodSurface;
   if (matchesCapacityMethodSurfaceRoute) {
     handledOut = true;
     usedMethodTarget = true;
