@@ -2694,7 +2694,8 @@
             "                    rejectsDirectBareMapCountTarget ||\n"
             "                    rejectsBuiltinStdlibMapCountTarget;\n"
             "                const std::string stdlibMapCountUnknownTargetDiagnostic =\n"
-            "                    \"unknown call target: /std/collections/map/count\";\n"
+            "                    \"unknown call target: \" +\n"
+            "                    stdlibMapCountTargetPath;\n"
             "                if (rejectsMapCountUnknownTarget) {\n"
             "                  return failExprDiagnostic(\n"
             "                      expr, stdlibMapCountUnknownTargetDiagnostic);\n"
@@ -2746,6 +2747,10 @@
             "                  return failExprDiagnostic(\n"
             "                      expr, stdlibMapCountUnknownTargetDiagnostic);\n"
             "                }") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "                const std::string stdlibMapCountUnknownTargetDiagnostic =\n"
+            "                    \"unknown call target: /std/collections/map/count\";\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "                const bool hasVisibleCountMethodTarget =\n"

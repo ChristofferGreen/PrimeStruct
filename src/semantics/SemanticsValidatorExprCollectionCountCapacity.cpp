@@ -320,7 +320,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     rejectsDirectBareMapCountTarget ||
                     rejectsBuiltinStdlibMapCountTarget;
                 const std::string stdlibMapCountUnknownTargetDiagnostic =
-                    "unknown call target: /std/collections/map/count";
+                    "unknown call target: " + stdlibMapCountTargetPath;
                 if (rejectsMapCountUnknownTarget) {
                   return failExprDiagnostic(
                       expr, stdlibMapCountUnknownTargetDiagnostic);
