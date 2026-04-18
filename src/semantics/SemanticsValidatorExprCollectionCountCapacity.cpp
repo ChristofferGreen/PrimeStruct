@@ -175,6 +175,36 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       error_.clear();
       isBuiltinMethod = false;
     };
+    const auto tryAssignPointerLikeCountMethodTarget = [&]() -> bool {
+      std::string typeName;
+      if (receiver.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding =
+                findParamBinding(params, receiver.name)) {
+          typeName = paramBinding->typeName;
+        } else if (auto it = locals.find(receiver.name);
+                   it != locals.end()) {
+          typeName = it->second.typeName;
+        }
+      }
+      if (typeName.empty()) {
+        typeName = inferPointerLikeCallReturnType(receiver, params, locals);
+      }
+      if (typeName.empty()) {
+        if (isPointerExpr(receiver, params, locals)) {
+          typeName = "Pointer";
+        } else if (isPointerLikeExpr(receiver, params, locals)) {
+          typeName = "Reference";
+        }
+      }
+      if (typeName != "Pointer" && typeName != "Reference") {
+        (void)validateExpr(params, locals, expr.args.front());
+        return false;
+      }
+      methodResolved = "/" + typeName + "/count";
+      error_.clear();
+      isBuiltinMethod = false;
+      return true;
+    };
     if (context.isUnnamespacedMapCountFallbackCall &&
         !hasDeclaredDefinitionPath("/map/count") &&
         lacksVisibleStdlibMapCountDefinition &&
@@ -197,33 +227,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         if (resolvesMapCountMethodTarget) {
           assignResolvedStdlibMapCountMethodTarget();
         } else {
-          std::string typeName;
-          if (receiver.kind == Expr::Kind::Name) {
-            if (const BindingInfo *paramBinding =
-                    findParamBinding(params, receiver.name)) {
-              typeName = paramBinding->typeName;
-            } else if (auto it = locals.find(receiver.name);
-                       it != locals.end()) {
-              typeName = it->second.typeName;
-            }
-          }
-          if (typeName.empty()) {
-            typeName = inferPointerLikeCallReturnType(receiver, params, locals);
-          }
-          if (typeName.empty()) {
-            if (isPointerExpr(receiver, params, locals)) {
-              typeName = "Pointer";
-            } else if (isPointerLikeExpr(receiver, params, locals)) {
-              typeName = "Reference";
-            }
-          }
-          if (typeName != "Pointer" && typeName != "Reference") {
-            (void)validateExpr(params, locals, expr.args.front());
+          if (!tryAssignPointerLikeCountMethodTarget()) {
             return false;
           }
-          methodResolved = "/" + typeName + "/count";
-          error_.clear();
-          isBuiltinMethod = false;
         }
       }
     } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
@@ -236,33 +242,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       if (resolvesMapCountMethodTarget) {
         assignResolvedStdlibMapCountMethodTarget();
       } else {
-        std::string typeName;
-        if (receiver.kind == Expr::Kind::Name) {
-          if (const BindingInfo *paramBinding =
-                  findParamBinding(params, receiver.name)) {
-            typeName = paramBinding->typeName;
-          } else if (auto it = locals.find(receiver.name);
-                     it != locals.end()) {
-            typeName = it->second.typeName;
-          }
-        }
-        if (typeName.empty()) {
-          typeName = inferPointerLikeCallReturnType(receiver, params, locals);
-        }
-        if (typeName.empty()) {
-          if (isPointerExpr(receiver, params, locals)) {
-            typeName = "Pointer";
-          } else if (isPointerLikeExpr(receiver, params, locals)) {
-            typeName = "Reference";
-          }
-        }
-        if (typeName != "Pointer" && typeName != "Reference") {
-          (void)validateExpr(params, locals, expr.args.front());
+        if (!tryAssignPointerLikeCountMethodTarget()) {
           return false;
         }
-        methodResolved = "/" + typeName + "/count";
-        error_.clear();
-        isBuiltinMethod = false;
       }
     }
     if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&

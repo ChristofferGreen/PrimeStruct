@@ -1435,6 +1435,11 @@
             "    };") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto tryAssignPointerLikeCountMethodTarget = [&]() -> bool {\n"
+            "      std::string typeName;\n"
+            "      if (receiver.kind == Expr::Kind::Name) {") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (context.isUnnamespacedMapCountFallbackCall &&\n"
             "        !hasDeclaredDefinitionPath(\"/map/count\") &&\n"
             "        lacksVisibleStdlibMapCountDefinition &&\n"
@@ -1449,6 +1454,20 @@
             "if (resolvesMapCountMethodTarget) {\n"
             "        assignResolvedStdlibMapCountMethodTarget();\n"
             "      } else {") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "} else {\n"
+            "          if (!tryAssignPointerLikeCountMethodTarget()) {\n"
+            "            return false;\n"
+            "          }\n"
+            "        }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "} else {\n"
+            "        if (!tryAssignPointerLikeCountMethodTarget()) {\n"
+            "          return false;\n"
+            "        }\n"
+            "      }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (context.isUnnamespacedMapCountFallbackCall &&\n"
@@ -1476,6 +1495,16 @@
             "if (resolvesMapCountMethodTarget) {\n"
             "        methodResolved = \"/std/collections/map/count\";\n"
             "      } else {") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "} else {\n"
+            "          std::string typeName;\n"
+            "          if (receiver.kind == Expr::Kind::Name) {") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "} else {\n"
+            "        std::string typeName;\n"
+            "        if (receiver.kind == Expr::Kind::Name) {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool rejectsStdlibMapCountTargetAsUnknownCallTarget =\n"
