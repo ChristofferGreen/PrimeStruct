@@ -1550,11 +1550,11 @@
             "      !hasDefinitionPath(resolved) &&") !=
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "!expr.isMethodCall && callsStdNamespacedVectorCountHelper &&\n"
+            "callsStdNamespacedVectorCountHelper &&\n"
             "      expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call &&") !=
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "if (!expr.isMethodCall && callsStdNamespacedVectorCountHelper &&\n"
+            "if (callsStdNamespacedVectorCountHelper &&\n"
             "      !hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/count\") &&") !=
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
@@ -1569,6 +1569,10 @@
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "isStdNamespacedVectorCompatibilityDirectCall(\n"
             "          expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
+            "      expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call &&") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "!expr.isMethodCall && callsStdNamespacedVectorCountHelper &&\n"
             "      expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call &&") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
@@ -1590,6 +1594,10 @@
             "    return failCollectionDispatchDiagnostic(\n"
             "        vectorCompatibilityUnknownCallTargetDiagnostic(\"count\"));\n"
             "  }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "if (!expr.isMethodCall && callsStdNamespacedVectorCountHelper &&\n"
+            "      !hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/count\") &&") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "setupOut.shouldBuiltinValidateStdNamespacedVectorCountCall =\n"

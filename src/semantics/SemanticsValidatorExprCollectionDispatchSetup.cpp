@@ -187,7 +187,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
     }
   }
   setupOut.isDirectStdNamespacedVectorCountWrapperMapTarget =
-      !expr.isMethodCall && callsStdNamespacedVectorCountHelper &&
+      callsStdNamespacedVectorCountHelper &&
       expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call &&
       resolveMapTarget(expr.args.front());
 
@@ -195,7 +195,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       !expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&
       setupOut.isNamespacedVectorHelperCall &&
       (setupOut.namespacedHelper == "count" || setupOut.namespacedHelper == "capacity");
-  if (!expr.isMethodCall && callsStdNamespacedVectorCountHelper &&
+  if (callsStdNamespacedVectorCountHelper &&
       !hasVisibleCanonicalVectorHelperPath("/std/collections/vector/count") &&
       !allowStdNamespacedVectorUserReceiverProbe) {
     return failCollectionDispatchDiagnostic(
