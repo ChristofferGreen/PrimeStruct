@@ -77,24 +77,34 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   const bool callsStdNamespacedVectorCountHelper =
       isStdNamespacedVectorCompatibilityDirectCall(
           expr.isMethodCall, resolveCalleePath(expr), "count");
-  if (callsStdNamespacedVectorCountHelper) {
-    const bool resolvesStdNamespacedVectorCountMapTarget =
-        expr.args.size() == 1 &&
-        context.resolveMapTarget != nullptr &&
-        context.resolveMapTarget(expr.args.front());
-    const std::string stdNamespacedVectorCountTargetDiagnosticMessage =
-        context.isDirectStdNamespacedVectorCountWrapperMapTarget &&
-                !hasDeclaredDefinitionPath("/std/collections/vector/count")
-            ? vectorCompatibilityUnknownCallTargetDiagnostic("count")
-            : (resolvesStdNamespacedVectorCountMapTarget &&
-                       !hasResolvableDefinitionPath("/std/collections/vector/count"))
-                  ? vectorCompatibilityRequiresVectorTargetDiagnostic("count")
-                  : "";
-    if (!stdNamespacedVectorCountTargetDiagnosticMessage.empty()) {
-      handledOut = true;
-      return failCollectionCountCapacityDiagnostic(
-          std::move(stdNamespacedVectorCountTargetDiagnosticMessage));
-    }
+  const bool callsUndeclaredStdNamespacedVectorCountHelper =
+      isUnavailableStdNamespacedVectorCompatibilityDirectCall(
+          expr.isMethodCall,
+          resolveCalleePath(expr),
+          "count",
+          hasDeclaredDefinitionPath("/std/collections/vector/count"));
+  const bool callsUnresolvableStdNamespacedVectorCountHelper =
+      isUnavailableStdNamespacedVectorCompatibilityDirectCall(
+          expr.isMethodCall,
+          resolveCalleePath(expr),
+          "count",
+          hasResolvableDefinitionPath("/std/collections/vector/count"));
+  const bool resolvesStdNamespacedVectorCountMapTarget =
+      expr.args.size() == 1 &&
+      context.resolveMapTarget != nullptr &&
+      context.resolveMapTarget(expr.args.front());
+  const std::string stdNamespacedVectorCountTargetDiagnosticMessage =
+      context.isDirectStdNamespacedVectorCountWrapperMapTarget &&
+              callsUndeclaredStdNamespacedVectorCountHelper
+          ? vectorCompatibilityUnknownCallTargetDiagnostic("count")
+          : (resolvesStdNamespacedVectorCountMapTarget &&
+                     callsUnresolvableStdNamespacedVectorCountHelper)
+                ? vectorCompatibilityRequiresVectorTargetDiagnostic("count")
+                : "";
+  if (!stdNamespacedVectorCountTargetDiagnosticMessage.empty()) {
+    handledOut = true;
+    return failCollectionCountCapacityDiagnostic(
+        std::move(stdNamespacedVectorCountTargetDiagnosticMessage));
   }
   auto resolveCountMethod = [&](bool requireSingleArg) -> bool {
     if (hasNamedArguments(expr.argNames) ||
@@ -309,6 +319,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           return true;
         }
       }
+      if (isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
+                                                       "capacity")) {
+        methodResolved = "/std/collections/vector/capacity";
+        isBuiltinMethod = true;
+        return true;
+      }
       return resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), "capacity",
                                  methodResolved, isBuiltinMethod);
     };
@@ -324,7 +340,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       return failCollectionCountCapacityDiagnostic(
           removedRootedVectorDirectCallDiagnostic);
     }
-    const bool methodResolvedMissing =
+    bool methodResolvedMissing =
         !isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved);
     if (methodResolvedMissing) {
       if (requireSingleArg &&
@@ -333,6 +349,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         if (context.promoteCapacityToBuiltinValidation != nullptr) {
           context.promoteCapacityToBuiltinValidation(expr.args.front(), methodResolved,
                                                      isBuiltinMethod, false);
+          methodResolvedMissing =
+              !isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved);
         }
       }
     }

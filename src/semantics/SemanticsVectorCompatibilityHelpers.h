@@ -49,6 +49,17 @@ inline bool isUnimportedStdNamespacedVectorCompatibilityDirectCall(
                                                       helperName);
 }
 
+inline bool isUnavailableStdNamespacedVectorCompatibilityDirectCall(
+    bool isMethodCall,
+    std::string_view path,
+    std::string_view helperName,
+    bool helperAvailable) {
+  return !helperAvailable &&
+         isStdNamespacedVectorCompatibilityDirectCall(isMethodCall,
+                                                      path,
+                                                      helperName);
+}
+
 inline bool isImportedResolvedStdNamespacedVectorCompatibilityDirectCall(
     bool isMethodCall,
     std::string_view path,

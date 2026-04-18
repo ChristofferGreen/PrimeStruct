@@ -85,8 +85,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     std::string elemType;
     const bool isVectorReceiver = resolveVectorTarget(expr.args.front(), elemType);
     if (isVectorReceiver &&
-        hasDeclaredDefinitionPath("/std/collections/vector/" + expr.name) &&
-        !hasImportedDefinitionPath("/std/collections/vector/" + expr.name)) {
+        (hasDeclaredDefinitionPath("/std/collections/vector/" + expr.name) ||
+         hasImportedDefinitionPath("/std/collections/vector/" + expr.name))) {
       if (expr.name == "count" && expr.args.size() != 1) {
         return failMethodResolutionDiagnostic("argument count mismatch for builtin count");
       }
@@ -191,6 +191,14 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     }
   } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), expr.name, resolved,
                                   isBuiltinMethod)) {
+    bool promotedCapacityToBuiltinValidation = false;
+    if (isVectorBuiltinName(expr, "capacity") &&
+        isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
+                                                     "capacity")) {
+      context.promoteCapacityToBuiltinValidation(expr.args.front(), resolved,
+                                                 isBuiltinMethod, true);
+      promotedCapacityToBuiltinValidation = isBuiltinMethod;
+    }
     auto resolveInferredMapMethodFallback = [&]() -> bool {
       const std::string helperName = expr.name;
       if (!(helperName == "count" || helperName == "count_ref" ||
@@ -225,7 +233,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       }
       return true;
     };
-    if (resolveInferredMapMethodFallback()) {
+    if (promotedCapacityToBuiltinValidation) {
+    } else if (resolveInferredMapMethodFallback()) {
     } else if (hasBlockArgs &&
                resolvePointerLikeMethodTarget(params, locals, expr.args.front(), expr.name, resolved)) {
       isBuiltinMethod = false;
@@ -245,6 +254,15 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   if (!isBuiltinMethod && isVectorCompatibilityMethod && !resolved.empty() &&
       shouldRewriteExperimentalVectorCompatibilityMethodTargetToCanonical(resolved)) {
     resolved = "/std/collections/vector/" + expr.name;
+  }
+  if (resolved == "/std/collections/vector/capacity") {
+    isBuiltinMethod = true;
+  } else if (resolved == "/std/collections/vector/count" &&
+             !expr.args.empty()) {
+    std::string elemType;
+    if (resolveVectorTarget(expr.args.front(), elemType)) {
+      isBuiltinMethod = true;
+    }
   }
   bool keepBuiltinIndexedArgsPackMapMethod = false;
   keepBuiltinIndexedArgsPackMapMethod = resolveMapTarget(expr.args.front());

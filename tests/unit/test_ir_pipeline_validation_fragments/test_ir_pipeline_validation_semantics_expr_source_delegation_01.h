@@ -1554,8 +1554,16 @@
             "      expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call &&") !=
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "if (callsStdNamespacedVectorCountHelper &&\n"
-            "      !hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/count\") &&") !=
+            "const bool callsUnavailableStdNamespacedVectorCountHelper =\n"
+            "      isUnavailableStdNamespacedVectorCompatibilityDirectCall(\n"
+            "          expr.isMethodCall,\n"
+            "          resolveCalleePath(expr),\n"
+            "          \"count\",\n"
+            "          hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/count\"));") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "if (callsUnavailableStdNamespacedVectorCountHelper &&\n"
+            "      !allowStdNamespacedVectorUserReceiverProbe) {") !=
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "const bool isStdNamespacedVectorCountCall =\n"
@@ -1586,14 +1594,6 @@
             "    return failCollectionDispatchDiagnostic(\n"
             "        vectorCompatibilityUnknownCallTargetDiagnostic(\"count\"));\n"
             "  }") ==
-        std::string::npos);
-  CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "if (!expr.isMethodCall && isStdNamespacedVectorCountCall &&\n"
-            "      !hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/count\") &&\n"
-            "      !allowStdNamespacedVectorUserReceiverProbe) {\n"
-            "    return failCollectionDispatchDiagnostic(\n"
-            "        vectorCompatibilityUnknownCallTargetDiagnostic(\"count\"));\n"
-            "  }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "if (!expr.isMethodCall && callsStdNamespacedVectorCountHelper &&\n"
@@ -1917,7 +1917,28 @@
             "          expr.isMethodCall, resolveCalleePath(expr), \"count\");") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (callsStdNamespacedVectorCountHelper) {") !=
+            "const bool callsUndeclaredStdNamespacedVectorCountHelper =\n"
+            "      isUnavailableStdNamespacedVectorCompatibilityDirectCall(\n"
+            "          expr.isMethodCall,\n"
+            "          resolveCalleePath(expr),\n"
+            "          \"count\",\n"
+            "          hasDeclaredDefinitionPath(\"/std/collections/vector/count\"));") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool callsUnresolvableStdNamespacedVectorCountHelper =\n"
+            "      isUnavailableStdNamespacedVectorCompatibilityDirectCall(\n"
+            "          expr.isMethodCall,\n"
+            "          resolveCalleePath(expr),\n"
+            "          \"count\",\n"
+            "          hasResolvableDefinitionPath(\"/std/collections/vector/count\"));") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "context.isDirectStdNamespacedVectorCountWrapperMapTarget &&\n"
+            "              callsUndeclaredStdNamespacedVectorCountHelper") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "resolvesStdNamespacedVectorCountMapTarget &&\n"
+            "                     callsUnresolvableStdNamespacedVectorCountHelper") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool isStdNamespacedVectorCountCall =\n"
@@ -1927,6 +1948,14 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (isStdNamespacedVectorCompatibilityDirectCall(\n"
             "          expr.isMethodCall, resolveCalleePath(expr), \"count\")) {") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "context.isDirectStdNamespacedVectorCountWrapperMapTarget &&\n"
+            "                !hasDeclaredDefinitionPath(\"/std/collections/vector/count\")") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "resolvesStdNamespacedVectorCountMapTarget &&\n"
+            "                       !hasResolvableDefinitionPath(\"/std/collections/vector/count\")") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
@@ -1949,6 +1978,9 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "context.shouldBuiltinValidateStdNamespacedVectorCountCall") ==
+        std::string::npos);
+  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+            "inline bool isUnavailableStdNamespacedVectorCompatibilityDirectCall(") !=
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "const bool shouldBuiltinValidateStdNamespacedVectorCapacityCall =\n"

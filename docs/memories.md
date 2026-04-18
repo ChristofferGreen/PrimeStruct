@@ -33,6 +33,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
   flattening the vector-specific synthetic block fixed concise
   `[vector<T>] values{...}` bindings without regressing ordinary omitted-type
   brace bindings, and the full release gate passed afterward.
+- `release-compile-run-primec-needs-rebuild`:
+  focused release compile-run reruns must rebuild `build-release/primec`
+  alongside `PrimeStruct_backend_tests`, because the compile-run shards
+  execute the standalone compiler binary and can otherwise report stale
+  diagnostics from an older `primec` even when the test binary is fresh.
+  Evidence: a focused `ctest` rerun stayed red after
+  `cmake --build build-release --target PrimeStruct_backend_tests`, but the
+  same exact repro sources produced the expected post-fix diagnostics only
+  after rebuilding `primec` too, and the full release gate then passed.
 - `resolve-call-collection-non-collection-return-guard`:
   `resolveCallCollectionTypePath(...)` must stop once a direct helper call has
   an inferred declared non-collection return type, because falling through to

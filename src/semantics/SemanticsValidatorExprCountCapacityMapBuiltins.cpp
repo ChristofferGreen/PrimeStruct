@@ -147,27 +147,6 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
         }
         return validateExpr(params, locals, expr.args.front());
       };
-  auto tryRewriteBareMapCountBuiltinFallback = [&]() -> std::optional<Expr> {
-    if (context.shouldBuiltinValidateBareMapCountCall) {
-      return std::nullopt;
-    }
-    Expr rewrittenMapHelperCall;
-    if (!tryRewriteBareMapHelperCall(expr, "count", *dispatchResolvers,
-                                     rewrittenMapHelperCall)) {
-      return std::nullopt;
-    }
-    return rewrittenMapHelperCall;
-  };
-  const auto validateVectorCountBuiltinPath = [&](bool allowBareMapRewrite) -> bool {
-    handledOut = true;
-    if (allowBareMapRewrite) {
-      if (std::optional<Expr> rewrittenMapHelperCall =
-              tryRewriteBareMapCountBuiltinFallback()) {
-        return validateExpr(params, locals, *rewrittenMapHelperCall);
-      }
-    }
-    return validateVectorCountBuiltinCall();
-  };
   if (isDirectExperimentalVectorCountCall) {
     return validateDirectVectorCountCapacityCall(
         "count", "/std/collections/experimental_vector/vectorCount");
@@ -248,6 +227,10 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
   };
   const auto validateVectorCountBuiltinCall = [&]() -> bool {
     handledOut = true;
+    if (expr.args.size() != 1) {
+      return failCountCapacityMapBuiltin(
+          "argument count mismatch for builtin count");
+    }
     if (!expr.templateArgs.empty()) {
       return failCountCapacityMapBuiltin(
           "count does not accept template arguments");
@@ -255,11 +238,28 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       return failCountCapacityMapBuiltin("count does not accept block arguments");
     }
-    if (expr.args.size() != 1) {
-      return failCountCapacityMapBuiltin(
-          "argument count mismatch for builtin count");
-    }
     return validateExpr(params, locals, expr.args.front());
+  };
+  auto tryRewriteBareMapCountBuiltinFallback = [&]() -> std::optional<Expr> {
+    if (context.shouldBuiltinValidateBareMapCountCall) {
+      return std::nullopt;
+    }
+    Expr rewrittenMapHelperCall;
+    if (!tryRewriteBareMapHelperCall(expr, "count", *dispatchResolvers,
+                                     rewrittenMapHelperCall)) {
+      return std::nullopt;
+    }
+    return rewrittenMapHelperCall;
+  };
+  const auto validateVectorCountBuiltinPath = [&](bool allowBareMapRewrite) -> bool {
+    handledOut = true;
+    if (allowBareMapRewrite) {
+      if (std::optional<Expr> rewrittenMapHelperCall =
+              tryRewriteBareMapCountBuiltinFallback()) {
+        return validateExpr(params, locals, *rewrittenMapHelperCall);
+      }
+    }
+    return validateVectorCountBuiltinCall();
   };
   const bool isExplicitCanonicalMapCountCall =
       !expr.isMethodCall &&
@@ -542,6 +542,10 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
 
   const auto validateVectorCapacityBuiltinCall = [&]() -> bool {
     handledOut = true;
+    if (expr.args.size() != 1) {
+      return failCountCapacityMapBuiltin(
+          "argument count mismatch for builtin capacity");
+    }
     if (!expr.templateArgs.empty()) {
       return failCountCapacityMapBuiltin(
           "capacity does not accept template arguments");
@@ -549,10 +553,6 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       return failCountCapacityMapBuiltin(
           "capacity does not accept block arguments");
-    }
-    if (expr.args.size() != 1) {
-      return failCountCapacityMapBuiltin(
-          "argument count mismatch for builtin capacity");
     }
     std::string elemType;
     if (!context.resolveVectorTarget(expr.args.front(), elemType)) {
