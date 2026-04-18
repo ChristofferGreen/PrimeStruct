@@ -547,7 +547,6 @@
       std::string &resolved,
       ExprCollectionDispatchSetup &setupOut);
   struct ExprDirectCollectionFallbackContext {
-    bool isStdNamespacedVectorCountCall = false;
     const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
   };
   bool validateExprDirectCollectionFallbacks(

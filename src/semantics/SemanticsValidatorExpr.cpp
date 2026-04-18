@@ -836,8 +836,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                           *rewrittenCollectionCountCapacityCall);
     }
     ExprDirectCollectionFallbackContext directCollectionFallbackContext;
-    directCollectionFallbackContext.isStdNamespacedVectorCountCall =
-        collectionDispatchSetup.isStdNamespacedVectorCountCall;
     directCollectionFallbackContext.dispatchResolvers =
         &dispatchBootstrap.dispatchResolvers;
     std::optional<Expr> rewrittenDirectCollectionFallbackCall;

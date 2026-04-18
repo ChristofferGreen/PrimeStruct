@@ -27,7 +27,8 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
 
   const auto &dispatchResolvers = *context.dispatchResolvers;
 
-  if (!expr.isMethodCall && context.isStdNamespacedVectorCountCall &&
+  if (!expr.isMethodCall &&
+      resolveCalleePath(expr).rfind("/std/collections/vector/count", 0) == 0 &&
       expr.args.size() == 1 &&
       !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
       !hasImportedDefinitionPath("/std/collections/vector/count")) {

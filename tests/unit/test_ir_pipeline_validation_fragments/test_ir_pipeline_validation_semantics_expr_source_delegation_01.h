@@ -405,7 +405,8 @@
             "getRemovedRootedVectorDirectCallDiagnostic(expr)") !=
         std::string::npos);
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
-            "if (!expr.isMethodCall && context.isStdNamespacedVectorCountCall &&\n"
+            "if (!expr.isMethodCall &&\n"
+            "      resolveCalleePath(expr).rfind(\"/std/collections/vector/count\", 0) == 0 &&\n"
             "      expr.args.size() == 1 &&\n"
             "      !hasDeclaredDefinitionPath(\"/std/collections/vector/count\") &&\n"
             "      !hasImportedDefinitionPath(\"/std/collections/vector/count\")) {\n"
@@ -418,6 +419,19 @@
             "          \"unknown call target: /std/collections/vector/count\");\n"
             "    }\n"
             "  }") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "bool isStdNamespacedVectorCountCall = false;") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "directCollectionFallbackContext.isStdNamespacedVectorCountCall =") ==
+        std::string::npos);
+  CHECK(semanticsExprPrivateValidationSource.find(
+            "bool isStdNamespacedVectorCountCall = false;") !=
+        std::string::npos);
+  CHECK(semanticsExprPrivateValidationSource.find(
+            "struct ExprDirectCollectionFallbackContext {\n"
+            "    bool isStdNamespacedVectorCountCall = false;") ==
         std::string::npos);
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
             "auto resolvesExperimentalVectorValueReceiverForBareAccess =") ==
