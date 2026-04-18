@@ -76,10 +76,14 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     return it != locals.end() && isFileBinding(it->second);
   };
 
+  const bool isVectorCompatibilityMethod =
+      expr.name == "count" || expr.name == "capacity" || expr.name == "at" ||
+      expr.name == "at_unsafe" || expr.name == "push" || expr.name == "pop" ||
+      expr.name == "reserve" || expr.name == "clear" || expr.name == "remove_at" ||
+      expr.name == "remove_swap";
   if (expr.namespacePrefix.empty() &&
       !expr.args.empty() &&
-      (expr.name == "count" || expr.name == "capacity" ||
-       expr.name == "at" || expr.name == "at_unsafe")) {
+      isVectorCompatibilityMethod) {
     std::string elemType;
     const bool isVectorReceiver = resolveVectorTarget(expr.args.front(), elemType);
     if (isVectorReceiver &&
@@ -152,14 +156,6 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   methodReceiverIndex = 0;
   bool isBuiltinMethod = false;
   const bool hasBlockArgs = expr.hasBodyArguments || !expr.bodyArguments.empty();
-  const bool isVectorCompatibilityMethod =
-      expr.name == "count" || expr.name == "capacity" || expr.name == "at" ||
-      expr.name == "at_unsafe" || expr.name == "push" || expr.name == "pop" ||
-      expr.name == "reserve" || expr.name == "clear" || expr.name == "remove_at" ||
-      expr.name == "remove_swap";
-  const bool hasVisibleCanonicalVectorHelperForMethod =
-      hasImportedDefinitionPath("/std/collections/vector/" + expr.name) ||
-      defMap_.count("/std/collections/vector/" + expr.name) > 0;
   std::string vectorMethodTarget;
   if (isVectorCompatibilityMethod &&
       expr.namespacePrefix != "vector" &&
@@ -171,7 +167,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     if (!hasImportedDefinitionPath(vectorMethodTarget) &&
         defMap_.count(vectorMethodTarget) == 0 &&
         vectorMethodTarget.rfind("/std/collections/experimental_vector/", 0) == 0 &&
-        hasVisibleCanonicalVectorHelperForMethod) {
+        (hasImportedDefinitionPath("/std/collections/vector/" + expr.name) ||
+         defMap_.count("/std/collections/vector/" + expr.name) > 0)) {
       vectorMethodTarget = "/std/collections/vector/" + expr.name;
     }
     if (hasImportedDefinitionPath(vectorMethodTarget) ||
@@ -242,7 +239,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   }
   if (!isBuiltinMethod && isVectorCompatibilityMethod &&
       resolved.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 &&
-      hasVisibleCanonicalVectorHelperForMethod) {
+      (hasImportedDefinitionPath("/std/collections/vector/" + expr.name) ||
+       defMap_.count("/std/collections/vector/" + expr.name) > 0)) {
     resolved = preferVectorStdlibHelperPath("/std/collections/vector/" + expr.name);
   }
   bool keepBuiltinIndexedArgsPackMapMethod = false;

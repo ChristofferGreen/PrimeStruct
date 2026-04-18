@@ -543,9 +543,20 @@
             "      expr.name == \"remove_swap\";") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
+            "if (expr.namespacePrefix.empty() &&\n"
+            "      !expr.args.empty() &&\n"
+            "      isVectorCompatibilityMethod) {") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "if (expr.namespacePrefix.empty() &&\n"
+            "      !expr.args.empty() &&\n"
+            "      (expr.name == \"count\" || expr.name == \"capacity\" ||\n"
+            "       expr.name == \"at\" || expr.name == \"at_unsafe\")) {") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
             "const bool hasVisibleCanonicalVectorHelperForMethod =\n"
             "      hasImportedDefinitionPath(\"/std/collections/vector/\" + expr.name) ||\n"
-            "      defMap_.count(\"/std/collections/vector/\" + expr.name) > 0;") !=
+            "      defMap_.count(\"/std/collections/vector/\" + expr.name) > 0;") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (isVectorCompatibilityMethod &&\n"
@@ -592,7 +603,8 @@
             "if (!hasImportedDefinitionPath(vectorMethodTarget) &&\n"
             "        defMap_.count(vectorMethodTarget) == 0 &&\n"
             "        vectorMethodTarget.rfind(\"/std/collections/experimental_vector/\", 0) == 0 &&\n"
-            "        hasVisibleCanonicalVectorHelperForMethod) {\n"
+            "        (hasImportedDefinitionPath(\"/std/collections/vector/\" + expr.name) ||\n"
+            "         defMap_.count(\"/std/collections/vector/\" + expr.name) > 0)) {\n"
             "      vectorMethodTarget = \"/std/collections/vector/\" + expr.name;") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
@@ -604,7 +616,8 @@
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (!isBuiltinMethod && isVectorCompatibilityMethod &&\n"
             "      resolved.rfind(\"/std/collections/experimental_vector/Vector__\", 0) == 0 &&\n"
-            "      hasVisibleCanonicalVectorHelperForMethod) {\n"
+            "      (hasImportedDefinitionPath(\"/std/collections/vector/\" + expr.name) ||\n"
+            "       defMap_.count(\"/std/collections/vector/\" + expr.name) > 0)) {\n"
             "    resolved = preferVectorStdlibHelperPath(\"/std/collections/vector/\" + expr.name);") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
