@@ -3012,11 +3012,26 @@
             "                                                     \"capacity\");") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto tryResolveCapacityMethodAfterHelperMiss = [&]() -> bool {\n"
+            "      if (routesThroughStdNamespacedVectorCapacityHelper) {\n"
+            "        assignStdNamespacedVectorCapacityMethodTarget();\n"
+            "        return true;\n"
+            "      }\n"
+            "      return tryResolveCapacityMethodWithValidation();\n"
+            "    };") != std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), \"capacity\",\n"
             "                                        methodResolved)) {\n"
             "      methodResolved = preferVectorStdlibHelperPath(methodResolved);\n"
             "      if (hasResolvableDefinitionPath(methodResolved)) {\n"
             "        isBuiltinMethod = false;\n"
+            "      } else if (!tryResolveCapacityMethodAfterHelperMiss()) {\n"
+            "        return false;\n"
+            "      }\n"
+            "    } else if (!tryResolveCapacityMethodAfterHelperMiss()) {\n"
+            "      return false;\n"
+            "    }") != std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "      } else if (routesThroughStdNamespacedVectorCapacityHelper) {\n"
             "        assignStdNamespacedVectorCapacityMethodTarget();\n"
             "      } else if (!tryResolveCapacityMethodWithValidation()) {\n"
@@ -3026,7 +3041,7 @@
             "      assignStdNamespacedVectorCapacityMethodTarget();\n"
             "    } else if (!tryResolveCapacityMethodWithValidation()) {\n"
             "      return false;\n"
-            "    }") != std::string::npos);
+            "    }") == std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "      } else if (routesThroughStdNamespacedVectorCapacityHelper) {\n"
             "        methodResolved = \"/std/collections/vector/capacity\";\n"

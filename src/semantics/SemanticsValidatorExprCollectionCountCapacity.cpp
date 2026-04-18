@@ -353,19 +353,22 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     const bool routesThroughStdNamespacedVectorCapacityHelper =
         isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
                                                      "capacity");
+    const auto tryResolveCapacityMethodAfterHelperMiss = [&]() -> bool {
+      if (routesThroughStdNamespacedVectorCapacityHelper) {
+        assignStdNamespacedVectorCapacityMethodTarget();
+        return true;
+      }
+      return tryResolveCapacityMethodWithValidation();
+    };
     if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), "capacity",
                                         methodResolved)) {
       methodResolved = preferVectorStdlibHelperPath(methodResolved);
       if (hasResolvableDefinitionPath(methodResolved)) {
         isBuiltinMethod = false;
-      } else if (routesThroughStdNamespacedVectorCapacityHelper) {
-        assignStdNamespacedVectorCapacityMethodTarget();
-      } else if (!tryResolveCapacityMethodWithValidation()) {
+      } else if (!tryResolveCapacityMethodAfterHelperMiss()) {
         return false;
       }
-    } else if (routesThroughStdNamespacedVectorCapacityHelper) {
-      assignStdNamespacedVectorCapacityMethodTarget();
-    } else if (!tryResolveCapacityMethodWithValidation()) {
+    } else if (!tryResolveCapacityMethodAfterHelperMiss()) {
       return false;
     }
     normalizeResolvedCollectionMethodTarget(methodResolved, isBuiltinMethod);
