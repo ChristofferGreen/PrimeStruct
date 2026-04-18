@@ -308,10 +308,13 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
        isNamespacedVectorCountCall || isStdNamespacedMapCountCall ||
        isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall ||
        isResolvedMapCountCall);
+  const bool inferBuiltinCapacityCallTargetsDirectReceiver =
+      defMap_.find(resolved) == defMap_.end() ||
+      isNamespacedVectorCapacityCall;
   const bool isDirectBuiltinCountCapacityCapacityCall =
       isInferBuiltinCapacityLike &&
       !expr.args.empty() &&
-      (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCapacityCall);
+      inferBuiltinCapacityCallTargetsDirectReceiver;
   setupOut.builtinCollectionDirectCountCapacityContext.isDirectCountCall =
       isDirectBuiltinCountCapacityCountCall;
   setupOut.builtinCollectionDirectCountCapacityContext.isDirectCountSingleArg =
@@ -320,8 +323,8 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       isDirectBuiltinCountCapacityCapacityCall;
   setupOut.builtinCollectionDirectCountCapacityContext
       .isDirectCapacitySingleArg =
-      isDirectBuiltinCountCapacityCapacityCall &&
-      isInferBuiltinSingleArgCapacityLike;
+      isInferBuiltinSingleArgCapacityLike &&
+      inferBuiltinCapacityCallTargetsDirectReceiver;
   setupOut.builtinCollectionDirectCountCapacityContext
       .shouldInferBuiltinBareMapCountCall = shouldInferBuiltinBareMapCountCall;
   setupOut.builtinCollectionDirectCountCapacityContext.resolveMethodCallPath =
