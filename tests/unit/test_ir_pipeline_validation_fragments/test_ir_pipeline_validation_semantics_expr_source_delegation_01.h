@@ -2179,7 +2179,7 @@
             "      return false;\n"
             "    }\n"
             "    return std::nullopt;\n"
-            "  };") !=
+            "  };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto finalizeResolvedCollectionMethodTarget =\n"
@@ -2205,7 +2205,7 @@
             "  }\n"
             "  if (handledOut) {\n"
             "    return false;\n"
-            "  }") ==
+            "  }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (std::optional<bool> resolvedCountMethod =\n"
@@ -2215,7 +2215,7 @@
             "  if (std::optional<bool> resolvedCountMethod =\n"
             "          tryResolveCollectionMethodAttempt(resolveCountMethod, false)) {\n"
             "    return *resolvedCountMethod;\n"
-            "  }") !=
+            "  }") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (resolveCapacityMethod(false)) {\n"
@@ -2229,7 +2229,7 @@
             "  }\n"
             "  if (handledOut) {\n"
             "    return false;\n"
-            "  }") ==
+            "  }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (std::optional<bool> resolvedCapacityMethod =\n"
@@ -2239,7 +2239,7 @@
             "  if (std::optional<bool> resolvedCapacityMethod =\n"
             "          tryResolveCollectionMethodAttempt(resolveCapacityMethod, true)) {\n"
             "    return *resolvedCapacityMethod;\n"
-            "  }") !=
+            "  }") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (stdNamespacedVectorCountMapTargetDiagnostic ==\n"

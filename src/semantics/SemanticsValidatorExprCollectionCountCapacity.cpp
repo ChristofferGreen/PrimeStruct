@@ -34,16 +34,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           methodResolved = resolved;
         }
       };
-  const auto tryResolveCollectionMethodAttempt =
-      [&](auto &&resolveMethod, bool requireSingleArg) -> std::optional<bool> {
-    if (resolveMethod(requireSingleArg)) {
-      return true;
-    }
-    if (handledOut) {
-      return false;
-    }
-    return std::nullopt;
-  };
   const auto finalizeResolvedCollectionMethodTargetAfterRemovedRootedVectorCheck =
       [&](const std::string &methodResolved, bool isBuiltinMethod) -> bool {
     const std::string removedRootedVectorDirectCallDiagnostic =
@@ -282,13 +272,17 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     return finalizeResolvedCollectionMethodTargetAfterRemovedRootedVectorCheck(
         methodResolved, isBuiltinMethod);
   };
-  if (std::optional<bool> resolvedCountMethod =
-          tryResolveCollectionMethodAttempt(resolveCountMethod, true)) {
-    return *resolvedCountMethod;
+  if (resolveCountMethod(true)) {
+    return true;
   }
-  if (std::optional<bool> resolvedCountMethod =
-          tryResolveCollectionMethodAttempt(resolveCountMethod, false)) {
-    return *resolvedCountMethod;
+  if (handledOut) {
+    return false;
+  }
+  if (resolveCountMethod(false)) {
+    return true;
+  }
+  if (handledOut) {
+    return false;
   }
 
   auto resolveCapacityMethod = [&](bool requireSingleArg) -> bool {
@@ -368,13 +362,17 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         methodResolved, isBuiltinMethod);
   };
 
-  if (std::optional<bool> resolvedCapacityMethod =
-          tryResolveCollectionMethodAttempt(resolveCapacityMethod, false)) {
-    return *resolvedCapacityMethod;
+  if (resolveCapacityMethod(false)) {
+    return true;
   }
-  if (std::optional<bool> resolvedCapacityMethod =
-          tryResolveCollectionMethodAttempt(resolveCapacityMethod, true)) {
-    return *resolvedCapacityMethod;
+  if (handledOut) {
+    return false;
+  }
+  if (resolveCapacityMethod(true)) {
+    return true;
+  }
+  if (handledOut) {
+    return false;
   }
 
   return true;

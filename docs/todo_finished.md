@@ -10,6 +10,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 17, 2026)**
 
 **Group 14 - SoA bring-up and end-state cleanup**
+- ✓ TODO-0778: Remove shared method-attempt helper. Completed: the shared `tryResolveCollectionMethodAttempt` helper in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the inline resolve-or-handledOut count/capacity control flow present while the deleted helper stays absent.
 - ✓ TODO-0777: Remove count map-count visibility local. Completed: the one-use `lacksVisibleStdlibMapCountDefinition` local in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the inline count-side map-count visibility checks present while the deleted local stays absent.
 - ✓ TODO-0776: Remove count/capacity instantiation helper. Completed: the one-use `isConcreteCountCapacityInstantiation` helper in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the inline top-level count/capacity instantiation probe present while the deleted helper stays absent.
 - ✓ TODO-0775: Remove shared method finalizer helper. Completed: the one-use `finalizeResolvedCollectionMethodTarget` helper in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the unknown-method/commit tail inline inside `finalizeResolvedCollectionMethodTargetAfterRemovedRootedVectorCheck` while the deleted helper stays absent.
