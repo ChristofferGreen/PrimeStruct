@@ -1468,11 +1468,6 @@
             "    };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const auto tryAssignPointerLikeCountMethodTarget = [&]() -> bool {\n"
-            "      std::string typeName;\n"
-            "      if (receiver.kind == Expr::Kind::Name) {") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto tryResolveCountMethod = [&]() -> bool {\n"
             "      return resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
             "                                 \"count\", methodResolved, isBuiltinMethod);\n"
@@ -1539,8 +1534,34 @@
             "        methodResolved = \"/std/collections/map/count\";\n"
             "        error_.clear();\n"
             "        isBuiltinMethod = false;\n"
-            "      } else if (!tryAssignPointerLikeCountMethodTarget()) {\n"
-            "        return false;\n"
+            "      } else {\n"
+            "        std::string typeName;\n"
+            "        if (receiver.kind == Expr::Kind::Name) {\n"
+            "          if (const BindingInfo *paramBinding =\n"
+            "                  findParamBinding(params, receiver.name)) {\n"
+            "            typeName = paramBinding->typeName;\n"
+            "          } else if (auto it = locals.find(receiver.name);\n"
+            "                     it != locals.end()) {\n"
+            "            typeName = it->second.typeName;\n"
+            "          }\n"
+            "        }\n"
+            "        if (typeName.empty()) {\n"
+            "          typeName = inferPointerLikeCallReturnType(receiver, params, locals);\n"
+            "        }\n"
+            "        if (typeName.empty()) {\n"
+            "          if (isPointerExpr(receiver, params, locals)) {\n"
+            "            typeName = \"Pointer\";\n"
+            "          } else if (isPointerLikeExpr(receiver, params, locals)) {\n"
+            "            typeName = \"Reference\";\n"
+            "          }\n"
+            "        }\n"
+            "        if (typeName != \"Pointer\" && typeName != \"Reference\") {\n"
+            "          (void)validateExpr(params, locals, expr.args.front());\n"
+            "          return false;\n"
+            "        }\n"
+            "        methodResolved = \"/\" + typeName + \"/count\";\n"
+            "        error_.clear();\n"
+            "        isBuiltinMethod = false;\n"
             "      }\n"
             "    }") !=
         std::string::npos);
@@ -1957,6 +1978,9 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool canUseCountResolveMissFallback =") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto tryAssignPointerLikeCountMethodTarget =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if ((!expr.isMethodCall &&\n"
