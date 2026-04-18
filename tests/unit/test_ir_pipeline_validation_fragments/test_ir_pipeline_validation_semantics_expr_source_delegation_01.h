@@ -607,12 +607,16 @@
             "auto preferCanonicalVectorCompatibilityMethodTarget =") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
+            "[&](const std::string &target)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
             "expr.name == \"count\" || expr.name == \"capacity\" || expr.name == \"at\" ||") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (!hasImportedDefinitionPath(vectorMethodTarget) &&\n"
             "        defMap_.count(vectorMethodTarget) == 0) {\n"
-            "      preferCanonicalVectorCompatibilityMethodTarget(vectorMethodTarget);") !=
+            "      vectorMethodTarget =\n"
+            "          preferCanonicalVectorCompatibilityMethodTarget(vectorMethodTarget);") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "preferVisibleCanonicalVectorMethodTarget(resolved)") ==
@@ -622,7 +626,7 @@
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (!isBuiltinMethod && isVectorCompatibilityMethod) {\n"
-            "    preferCanonicalVectorCompatibilityMethodTarget(resolved);") !=
+            "    resolved = preferCanonicalVectorCompatibilityMethodTarget(resolved);") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "preferCanonicalVectorCompatibilityMethodTarget(\n"
@@ -634,7 +638,16 @@
             "        preferVectorStdlibHelperPath(\"/std/collections/vector/\" + expr.name))") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
-            "target = \"/std/collections/vector/\" + expr.name;") !=
+            "preferCanonicalVectorCompatibilityMethodTarget(vectorMethodTarget);") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "preferCanonicalVectorCompatibilityMethodTarget(resolved);") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "target = \"/std/collections/vector/\" + expr.name;") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "return \"/std/collections/vector/\" + expr.name;") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (!isBuiltinMethod && isVectorCompatibilityMethod &&\n"
