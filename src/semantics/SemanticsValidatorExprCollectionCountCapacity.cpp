@@ -118,19 +118,23 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     if (!isCountLike) {
       return false;
     }
-    if (requireSingleArg) {
-      if (!((defMap_.find(resolved) == defMap_.end() && !context.isStdNamespacedMapCountCall) ||
-            (context.isNamespacedVectorCountCall && !context.isStdNamespacedVectorCountCall) ||
-            context.isStdNamespacedMapCountCall || context.isNamespacedMapCountCall ||
-            context.isUnnamespacedMapCountFallbackCall || context.isResolvedMapCountCall)) {
-        return false;
+    const auto matchesCountMethodCallShape = [&](bool requireSingleArg) {
+      const bool resolvesExplicitCountMethodTarget =
+          defMap_.find(resolved) != defMap_.end();
+      const bool resolvesMapCountSurface =
+          context.isStdNamespacedMapCountCall || context.isNamespacedMapCountCall ||
+          context.isUnnamespacedMapCountFallbackCall || context.isResolvedMapCountCall;
+      if (requireSingleArg) {
+        return (!resolvesExplicitCountMethodTarget &&
+                !context.isStdNamespacedMapCountCall) ||
+               (context.isNamespacedVectorCountCall &&
+                !context.isStdNamespacedVectorCountCall) ||
+               resolvesMapCountSurface;
       }
-    } else {
-      if (!(defMap_.find(resolved) != defMap_.end() || context.isStdNamespacedMapCountCall ||
-            context.isNamespacedMapCountCall || context.isUnnamespacedMapCountFallbackCall ||
-            context.isResolvedMapCountCall)) {
-        return false;
-      }
+      return resolvesExplicitCountMethodTarget || resolvesMapCountSurface;
+    };
+    if (!matchesCountMethodCallShape(requireSingleArg)) {
+      return false;
     }
 
     handledOut = true;

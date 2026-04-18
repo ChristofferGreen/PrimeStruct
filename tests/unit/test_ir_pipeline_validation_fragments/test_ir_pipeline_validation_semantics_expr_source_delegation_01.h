@@ -1434,6 +1434,44 @@
             "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto matchesCountMethodCallShape = [&](bool requireSingleArg) {\n"
+            "      const bool resolvesExplicitCountMethodTarget =\n"
+            "          defMap_.find(resolved) != defMap_.end();\n"
+            "      const bool resolvesMapCountSurface =\n"
+            "          context.isStdNamespacedMapCountCall || context.isNamespacedMapCountCall ||\n"
+            "          context.isUnnamespacedMapCountFallbackCall || context.isResolvedMapCountCall;\n"
+            "      if (requireSingleArg) {\n"
+            "        return (!resolvesExplicitCountMethodTarget &&\n"
+            "                !context.isStdNamespacedMapCountCall) ||\n"
+            "               (context.isNamespacedVectorCountCall &&\n"
+            "                !context.isStdNamespacedVectorCountCall) ||\n"
+            "               resolvesMapCountSurface;\n"
+            "      }\n"
+            "      return resolvesExplicitCountMethodTarget || resolvesMapCountSurface;\n"
+            "    };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (requireSingleArg) {\n"
+            "      if (!((defMap_.find(resolved) == defMap_.end() && !context.isStdNamespacedMapCountCall) ||\n"
+            "            (context.isNamespacedVectorCountCall && !context.isStdNamespacedVectorCountCall) ||\n"
+            "            context.isStdNamespacedMapCountCall || context.isNamespacedMapCountCall ||\n"
+            "            context.isUnnamespacedMapCountFallbackCall || context.isResolvedMapCountCall)) {\n"
+            "        return false;\n"
+            "      }\n"
+            "    } else {\n"
+            "      if (!(defMap_.find(resolved) != defMap_.end() || context.isStdNamespacedMapCountCall ||\n"
+            "            context.isNamespacedMapCountCall || context.isUnnamespacedMapCountFallbackCall ||\n"
+            "            context.isResolvedMapCountCall)) {\n"
+            "        return false;\n"
+            "      }\n"
+            "    }") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (!matchesCountMethodCallShape(requireSingleArg)) {\n"
+            "      return false;\n"
+            "    }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (stdNamespacedVectorCountMapTargetDiagnostic ==\n"
             "      VectorCompatibilityCountMapTargetDiagnostic::RequiresVectorTarget)") ==
         std::string::npos);
