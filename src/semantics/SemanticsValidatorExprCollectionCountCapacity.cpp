@@ -255,12 +255,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   }
 
   auto resolveCapacityMethod = [&](bool requireSingleArg) -> bool {
-    const bool isStdNamespacedVectorCapacityCall =
-        !expr.isMethodCall &&
-        isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
-                                                     "capacity");
     if (hasNamedArguments(expr.argNames) ||
-        (isStdNamespacedVectorCapacityCall &&
+        ((!expr.isMethodCall &&
+          isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
+                                                       "capacity")) &&
          !hasImportedDefinitionPath("/std/collections/vector/capacity")) ||
         !isVectorBuiltinName(expr, "capacity")) {
       return false;

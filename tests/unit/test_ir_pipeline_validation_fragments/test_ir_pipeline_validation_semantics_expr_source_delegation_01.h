@@ -1618,7 +1618,7 @@
             "const bool isStdNamespacedVectorCapacityCall =\n"
             "        !expr.isMethodCall &&\n"
             "        isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),\n"
-            "                                                     \"capacity\");") !=
+            "                                                     \"capacity\");") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool shouldBuiltinValidateStdNamespacedVectorCapacityCall =\n"
@@ -1626,7 +1626,9 @@
             "        hasImportedDefinitionPath(\"/std/collections/vector/capacity\");") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "(isStdNamespacedVectorCapacityCall &&\n"
+            "((!expr.isMethodCall &&\n"
+            "          isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),\n"
+            "                                                       \"capacity\")) &&\n"
             "         !hasImportedDefinitionPath(\"/std/collections/vector/capacity\")) ||") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
