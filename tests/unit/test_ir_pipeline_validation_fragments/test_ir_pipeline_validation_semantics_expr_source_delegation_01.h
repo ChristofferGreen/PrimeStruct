@@ -1643,6 +1643,18 @@
             "                                                 *dispatchResolverAdapters) &&\n"
             "      it == defMap_.end();") != std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "auto tryRewriteBareMapCountBuiltinFallback = [&]() -> std::optional<Expr> {\n"
+            "    if (context.shouldBuiltinValidateBareMapCountCall) {\n"
+            "      return std::nullopt;\n"
+            "    }\n"
+            "    Expr rewrittenMapHelperCall;\n"
+            "    if (!tryRewriteBareMapHelperCall(expr, \"count\", *dispatchResolvers,\n"
+            "                                     rewrittenMapHelperCall)) {\n"
+            "      return std::nullopt;\n"
+            "    }\n"
+            "    return rewrittenMapHelperCall;\n"
+            "  };") != std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "if (!resolvedMethod && isVectorBuiltinName(expr, \"count\") &&\n"
             "      !isArrayNamespacedVectorCountCompatibilityCall(expr, *dispatchResolvers) &&\n"
             "      !isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,\n"
@@ -1654,13 +1666,14 @@
             "      it == defMap_.end()) {\n"
             "    handledOut = true;\n"
             "    if (!context.shouldBuiltinValidateBareMapCountCall) {\n"
-            "      Expr rewrittenMapHelperCall;\n"
-            "      if (tryRewriteBareMapHelperCall(expr, \"count\", *dispatchResolvers,\n"
-            "                                      rewrittenMapHelperCall)) {\n"
-            "        return validateExpr(params, locals, rewrittenMapHelperCall);\n"
-            "      }\n"
+            "      Expr rewrittenMapHelperCall;") ==
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "if (std::optional<Expr> rewrittenMapHelperCall =\n"
+            "            tryRewriteBareMapCountBuiltinFallback()) {\n"
+            "      return validateExpr(params, locals, *rewrittenMapHelperCall);\n"
             "    }\n"
-            "    return validateVectorCountBuiltinCall();") ==
+            "    return validateVectorCountBuiltinCall();") !=
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "!isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,\n"

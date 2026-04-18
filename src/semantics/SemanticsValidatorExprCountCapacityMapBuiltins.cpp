@@ -147,6 +147,17 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
         }
         return validateExpr(params, locals, expr.args.front());
       };
+  auto tryRewriteBareMapCountBuiltinFallback = [&]() -> std::optional<Expr> {
+    if (context.shouldBuiltinValidateBareMapCountCall) {
+      return std::nullopt;
+    }
+    Expr rewrittenMapHelperCall;
+    if (!tryRewriteBareMapHelperCall(expr, "count", *dispatchResolvers,
+                                     rewrittenMapHelperCall)) {
+      return std::nullopt;
+    }
+    return rewrittenMapHelperCall;
+  };
   if (isDirectExperimentalVectorCountCall) {
     return validateDirectVectorCountCapacityCall(
         "count", "/std/collections/experimental_vector/vectorCount");
@@ -511,12 +522,9 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
 
   if (shouldValidateVectorCountBuiltinFallback) {
     handledOut = true;
-    if (!context.shouldBuiltinValidateBareMapCountCall) {
-      Expr rewrittenMapHelperCall;
-      if (tryRewriteBareMapHelperCall(expr, "count", *dispatchResolvers,
-                                      rewrittenMapHelperCall)) {
-        return validateExpr(params, locals, rewrittenMapHelperCall);
-      }
+    if (std::optional<Expr> rewrittenMapHelperCall =
+            tryRewriteBareMapCountBuiltinFallback()) {
+      return validateExpr(params, locals, *rewrittenMapHelperCall);
     }
     return validateVectorCountBuiltinCall();
   }
