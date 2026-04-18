@@ -10,6 +10,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 17, 2026)**
 
 **Group 14 - SoA bring-up and end-state cleanup**
+- ✓ TODO-0700: Remove count method-target wrapper. Completed: the one-use `resolveCountMethodTarget` wrapper was deleted from `SemanticsValidatorExprCollectionCountCapacity.cpp`, and focused expr source-lock coverage now keeps the inline count fallback chain present while the old wrapper stays absent.
 - ✓ TODO-0699: Remove collection count diagnostic local. Completed: the one-use collection-side `stdNamespacedVectorCountDiagnosticMessage` local was deleted from `SemanticsValidatorExprCollectionCountCapacity.cpp`, and focused expr source-lock coverage now keeps the direct in-branch shared selector form present while the old local stays absent.
 - ✓ TODO-0698: Remove dispatch count diagnostic local. Completed: the one-use dispatch-side `stdNamespacedVectorCountDiagnosticMessage` local was deleted from `SemanticsValidatorExprCollectionDispatchSetup.cpp`, and focused expr source-lock coverage now keeps the direct in-branch shared selector form present while the old local stays absent.
 - ✓ TODO-0697: Share removed rooted-vector diagnostic return. Completed: the duplicated removed-rooted-vector diagnostic branch in `SemanticsValidatorExprCollectionCountCapacity.cpp` now lives behind shared local `failRemovedRootedVectorDirectCallIfPresent`, and focused expr source-lock coverage keeps the shared helper form present while the old duplicated branch stays absent.

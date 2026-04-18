@@ -1434,20 +1434,45 @@
             "      error_.clear();\n"
             "      isBuiltinMethod = false;\n"
             "      return true;\n"
-            "    };") !=
+            "    };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), \"count\",\n"
-            "                                               methodResolved)) {") ==
+            "                                               \"count\", methodResolved)) {") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), \"count\",\n"
-            "                                    methodResolved, isBuiltinMethod)) {") ==
+            "                                    \"count\", methodResolved, isBuiltinMethod)) {") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else if (!resolveCountMethodTarget()) {\n"
             "      (void)validateExpr(params, locals, expr.args.front());\n"
             "      return false;\n"
+            "    }") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "} else if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(),\n"
+            "                                               \"count\", methodResolved)) {\n"
+            "      methodResolved = preferVectorStdlibHelperPath(methodResolved);\n"
+            "      if (hasResolvableDefinitionPath(methodResolved)) {\n"
+            "        isBuiltinMethod = false;\n"
+            "      } else if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
+            "                                     \"count\", methodResolved, isBuiltinMethod)) {\n"
+            "      } else if (!resolveBodyArgumentCountTarget()) {\n"
+            "        (void)validateExpr(params, locals, expr.args.front());\n"
+            "        return false;\n"
+            "      } else {\n"
+            "        error_.clear();\n"
+            "        isBuiltinMethod = false;\n"
+            "      }\n"
+            "    } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
+            "                                    \"count\", methodResolved, isBuiltinMethod)) {\n"
+            "      if (!resolveBodyArgumentCountTarget()) {\n"
+            "        (void)validateExpr(params, locals, expr.args.front());\n"
+            "        return false;\n"
+            "      }\n"
+            "      error_.clear();\n"
+            "      isBuiltinMethod = false;\n"
             "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
