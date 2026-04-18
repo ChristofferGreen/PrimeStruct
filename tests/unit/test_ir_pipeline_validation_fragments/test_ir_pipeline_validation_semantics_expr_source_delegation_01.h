@@ -1098,8 +1098,11 @@
             "                                                      mapValueType);") !=
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
-            "const bool rejectsStdNamespacedVectorCountMapTargetAsUnknownCallTarget =\n"
-            "          resolvesNonVectorCountTarget && resolvesMapAfterValidation;") !=
+            "const auto stdNamespacedVectorCountMapTargetDiagnostic =\n"
+            "          classifyStdNamespacedVectorCountMapTargetDiagnostic(\n"
+            "              resolvesMapAfterValidation, resolvesNonVectorCountTarget,\n"
+            "              hasDeclaredStdNamespacedVectorCountHelper,\n"
+            "              hasImportedStdNamespacedVectorCountHelper);") !=
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "if (resolvesMap ||\n"
@@ -1111,12 +1114,21 @@
             "if (resolvesMapAfterValidation)") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
-            "if (rejectsStdNamespacedVectorCountMapTargetAsUnknownCallTarget)") !=
+            "if (stdNamespacedVectorCountMapTargetDiagnostic ==\n"
+            "          VectorCompatibilityCountMapTargetDiagnostic::UnknownCallTarget)") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "const bool hasDeclaredStdNamespacedVectorCountHelper =\n"
+            "        hasDeclaredDefinitionPath(\"/std/collections/vector/count\");") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "const bool hasImportedStdNamespacedVectorCountHelper =\n"
+            "        hasImportedDefinitionPath(\"/std/collections/vector/count\");") !=
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "const bool lacksVisibleStdNamespacedVectorCountHelper =\n"
-            "          !hasDeclaredDefinitionPath(\"/std/collections/vector/count\") &&\n"
-            "          !hasImportedDefinitionPath(\"/std/collections/vector/count\");") !=
+            "        !hasDeclaredStdNamespacedVectorCountHelper &&\n"
+            "        !hasImportedStdNamespacedVectorCountHelper;") !=
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "const bool rejectsVectorCountTargetWithoutVisibleHelper =\n"
@@ -1176,14 +1188,15 @@
             "      context.resolveMapTarget(expr.args.front());") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const bool rejectsStdNamespacedVectorCountMapTargetForImportedOrMissingDeclaredHelper =\n"
-            "      lacksDeclaredStdNamespacedVectorCountHelper ||\n"
+            "const bool hasImportedStdNamespacedVectorCountHelper =\n"
             "      hasImportedDefinitionPath(\"/std/collections/vector/count\");") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const bool rejectsStdNamespacedVectorCountMapTargetAsNonVector =\n"
-            "      resolvesStdNamespacedVectorCountMapTarget &&\n"
-            "      rejectsStdNamespacedVectorCountMapTargetForImportedOrMissingDeclaredHelper;") !=
+            "const auto stdNamespacedVectorCountMapTargetDiagnostic =\n"
+            "      classifyStdNamespacedVectorCountMapTargetDiagnostic(\n"
+            "          resolvesStdNamespacedVectorCountMapTarget, false,\n"
+            "          !lacksDeclaredStdNamespacedVectorCountHelper,\n"
+            "          hasImportedStdNamespacedVectorCountHelper);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "      (lacksDeclaredStdNamespacedVectorCountHelper ||\n"
@@ -1199,7 +1212,8 @@
             "       hasImportedDefinitionPath(\"/std/collections/vector/count\")))") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (rejectsStdNamespacedVectorCountMapTargetAsNonVector)") !=
+            "if (stdNamespacedVectorCountMapTargetDiagnostic ==\n"
+            "      VectorCompatibilityCountMapTargetDiagnostic::RequiresVectorTarget)") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "vectorCompatibilityRequiresVectorTargetDiagnostic(\"count\")") !=

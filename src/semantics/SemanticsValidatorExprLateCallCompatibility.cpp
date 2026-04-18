@@ -94,6 +94,10 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
     const bool resolvesNonVectorCountTarget =
         !resolvesVectorLikeCountTarget && !resolvesArray &&
         !resolvesString;
+    const bool hasDeclaredStdNamespacedVectorCountHelper =
+        hasDeclaredDefinitionPath("/std/collections/vector/count");
+    const bool hasImportedStdNamespacedVectorCountHelper =
+        hasImportedDefinitionPath("/std/collections/vector/count");
     if (resolvesNonVectorCountTarget) {
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
@@ -103,9 +107,13 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
           context.dispatchResolvers->resolveMapTarget(expr.args.front(),
                                                       mapKeyType,
                                                       mapValueType);
-      const bool rejectsStdNamespacedVectorCountMapTargetAsUnknownCallTarget =
-          resolvesNonVectorCountTarget && resolvesMapAfterValidation;
-      if (rejectsStdNamespacedVectorCountMapTargetAsUnknownCallTarget) {
+      const auto stdNamespacedVectorCountMapTargetDiagnostic =
+          classifyStdNamespacedVectorCountMapTargetDiagnostic(
+              resolvesMapAfterValidation, resolvesNonVectorCountTarget,
+              hasDeclaredStdNamespacedVectorCountHelper,
+              hasImportedStdNamespacedVectorCountHelper);
+      if (stdNamespacedVectorCountMapTargetDiagnostic ==
+          VectorCompatibilityCountMapTargetDiagnostic::UnknownCallTarget) {
         return failLateCallCompatibilityDiagnostic(
             vectorCompatibilityUnknownCallTargetDiagnostic("count"));
       }
@@ -113,8 +121,8 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
           vectorCompatibilityRequiresVectorTargetDiagnostic("count"));
     }
     const bool lacksVisibleStdNamespacedVectorCountHelper =
-        !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
-        !hasImportedDefinitionPath("/std/collections/vector/count");
+        !hasDeclaredStdNamespacedVectorCountHelper &&
+        !hasImportedStdNamespacedVectorCountHelper;
     const bool rejectsVectorCountTargetWithoutVisibleHelper =
         lacksVisibleStdNamespacedVectorCountHelper &&
         resolvesVectorLikeCountTarget;

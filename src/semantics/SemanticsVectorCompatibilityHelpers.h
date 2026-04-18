@@ -12,6 +12,30 @@ inline bool isVectorCompatibilityHelperName(std::string_view helperName) {
          helperName == "remove_swap";
 }
 
+enum class VectorCompatibilityCountMapTargetDiagnostic {
+  None,
+  UnknownCallTarget,
+  RequiresVectorTarget,
+};
+
+inline VectorCompatibilityCountMapTargetDiagnostic
+classifyStdNamespacedVectorCountMapTargetDiagnostic(
+    bool mapTargetDetected,
+    bool preferUnknownCallTarget,
+    bool hasDeclaredHelper,
+    bool hasImportedHelper) {
+  if (!mapTargetDetected) {
+    return VectorCompatibilityCountMapTargetDiagnostic::None;
+  }
+  if (preferUnknownCallTarget) {
+    return VectorCompatibilityCountMapTargetDiagnostic::UnknownCallTarget;
+  }
+  if (!hasDeclaredHelper || hasImportedHelper) {
+    return VectorCompatibilityCountMapTargetDiagnostic::RequiresVectorTarget;
+  }
+  return VectorCompatibilityCountMapTargetDiagnostic::None;
+}
+
 inline std::string vectorCompatibilityRequiresVectorTargetDiagnostic(
     std::string_view helperName) {
   return std::string(helperName) + " requires vector target";
