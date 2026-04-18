@@ -337,12 +337,14 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       !isVectorBuiltinName(expr, "capacity");
   const bool capacityMethodSurfaceUsesSingleArgument =
       expr.args.size() == 1;
+  const bool capacityMethodSurfaceLacksResolvedDefinitionTarget =
+      defMap_.find(resolved) == defMap_.end();
   const bool matchesCapacityMethodSurfaceRouteShape =
       ((!(expr.args.empty() || capacityMethodSurfaceUsesSingleArgument ||
-          defMap_.find(resolved) == defMap_.end()) &&
+          capacityMethodSurfaceLacksResolvedDefinitionTarget) &&
         context.isNamespacedVectorHelperCall) ||
        (capacityMethodSurfaceUsesSingleArgument &&
-        (defMap_.find(resolved) == defMap_.end() ||
+        (capacityMethodSurfaceLacksResolvedDefinitionTarget ||
          context.isNamespacedVectorCapacityCall)));
   if (!(capacityMethodSurfaceHasNamedArguments ||
         routesThroughUnimportedStdNamespacedVectorCapacityCompatibilityDirectCall ||
