@@ -3158,7 +3158,7 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool isCapacityMethodTargetMissing =\n"
-            "        !isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved);") !=
+            "        !isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved);") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto isCapacityMethodTargetMissing = [&]() {\n"
@@ -3187,11 +3187,11 @@
             "        context.promoteCapacityToBuiltinValidation(expr.args.front(), methodResolved,\n"
             "                                                   isBuiltinMethod, false);\n"
             "      }\n"
-            "    }") == std::string::npos);
+            "    }") != std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {\n"
             "      return failCollectionCountCapacityDiagnostic(\"unknown method: \" + methodResolved);\n"
-            "    }") == std::string::npos);
+            "    }") != std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "resolved = methodResolved;\n"
             "    resolvedMethod = isBuiltinMethod;\n"

@@ -369,9 +369,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       return false;
     }
     normalizeResolvedCollectionMethodTarget(methodResolved, isBuiltinMethod);
-    const bool isCapacityMethodTargetMissing =
-        !isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved);
-    if (isCapacityMethodTargetMissing) {
+    if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {
       if (requireSingleArg &&
           (context.isNonCollectionStructCapacityTarget == nullptr ||
            !context.isNonCollectionStructCapacityTarget(methodResolved)) &&
@@ -380,7 +378,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                                                    isBuiltinMethod, false);
       }
     }
-    if (isCapacityMethodTargetMissing) {
+    if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {
       return failCollectionCountCapacityDiagnostic("unknown method: " + methodResolved);
     }
     return finalizeResolvedCollectionMethodTargetAfterRemovedRootedVectorCheck(
