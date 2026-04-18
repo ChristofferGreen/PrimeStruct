@@ -98,13 +98,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     (void)failExprDiagnostic(expr, removedRootedVectorDirectCallDiagnostic);
     return true;
   };
-  const auto normalizeInstantiatedCollectionMethodTarget =
-      [&](std::string &methodResolved, bool isBuiltinMethod) {
-    if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&
-        resolved.rfind(methodResolved + "__t", 0) == 0) {
-      methodResolved = resolved;
-    }
-  };
   const auto isUnknownCollectionMethodTarget =
       [&](bool isBuiltinMethod, const std::string &methodResolved) {
     return !isBuiltinMethod && !hasDeclaredDefinitionPath(methodResolved) &&
@@ -133,7 +126,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           auto &&beforeFailureChecks,
           auto &&failPrimary,
           auto &&failSecondary) -> bool {
-    normalizeInstantiatedCollectionMethodTarget(methodResolved, isBuiltinMethod);
+    if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&
+        resolved.rfind(methodResolved + "__t", 0) == 0) {
+      methodResolved = resolved;
+    }
     if (!beforeFailureChecks(methodResolved, isBuiltinMethod)) {
       return false;
     }

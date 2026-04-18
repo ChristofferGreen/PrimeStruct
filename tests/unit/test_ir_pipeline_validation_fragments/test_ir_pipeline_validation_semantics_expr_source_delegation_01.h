@@ -1393,12 +1393,7 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto normalizeInstantiatedCollectionMethodTarget =\n"
-            "      [&](std::string &methodResolved, bool isBuiltinMethod) {\n"
-            "    if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&\n"
-            "        resolved.rfind(methodResolved + \"__t\", 0) == 0) {\n"
-            "      methodResolved = resolved;\n"
-            "    }\n"
-            "  };") !=
+            "      [&](std::string &methodResolved, bool isBuiltinMethod) {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto isUnknownCollectionMethodTarget =\n"
@@ -1462,7 +1457,10 @@
             "          auto &&beforeFailureChecks,\n"
             "          auto &&failPrimary,\n"
             "          auto &&failSecondary) -> bool {\n"
-            "    normalizeInstantiatedCollectionMethodTarget(methodResolved, isBuiltinMethod);\n"
+            "    if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end() &&\n"
+            "        resolved.rfind(methodResolved + \"__t\", 0) == 0) {\n"
+            "      methodResolved = resolved;\n"
+            "    }\n"
             "    if (!beforeFailureChecks(methodResolved, isBuiltinMethod)) {\n"
             "      return false;\n"
             "    }\n"
@@ -1522,7 +1520,7 @@
             "    }") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "normalizeInstantiatedCollectionMethodTarget(methodResolved, isBuiltinMethod);") !=
+            "normalizeInstantiatedCollectionMethodTarget(methodResolved, isBuiltinMethod);") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "return finalizeCollectionMethodTarget(") !=
