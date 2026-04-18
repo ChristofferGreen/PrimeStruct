@@ -26,6 +26,20 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         return !hasDeclaredDefinitionPath(methodTargetPath) &&
                !hasImportedDefinitionPath(methodTargetPath);
       };
+  const auto failUnknownMethodTarget =
+      [&](const std::string &methodTargetPath) {
+        return failExprDiagnostic(expr, "unknown method: " + methodTargetPath);
+      };
+  const auto failRemovedRootedVectorDirectCall =
+      [&]() {
+        if (const std::string removedRootedVectorDirectCallDiagnostic =
+                getRemovedRootedVectorDirectCallDiagnostic(expr);
+            !removedRootedVectorDirectCallDiagnostic.empty()) {
+          return failExprDiagnostic(expr,
+                                    removedRootedVectorDirectCallDiagnostic);
+        }
+        return true;
+      };
   if (!expr.isMethodCall && defMap_.find(resolved) != defMap_.end()) {
     const size_t lastSlash = resolved.find_last_of('/');
     const size_t instantiationPos =
@@ -295,11 +309,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     resolved.rfind(methodResolved + "__t", 0) == 0) {
                   methodResolved = resolved;
                 }
-                if (const std::string removedRootedVectorDirectCallDiagnostic =
-                        getRemovedRootedVectorDirectCallDiagnostic(expr);
-                    !removedRootedVectorDirectCallDiagnostic.empty()) {
-                  (void)failExprDiagnostic(
-                      expr, removedRootedVectorDirectCallDiagnostic);
+                if (!failRemovedRootedVectorDirectCall()) {
                   return false;
                 }
                 const bool failsCountUnknownTargetValidation =
@@ -319,9 +329,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     !isBuiltinMethod &&
                     lacksVisibleMethodTargetPath(methodResolved);
                 if (lacksVisibleCountMethodTarget) {
-                  (void)failExprDiagnostic(expr,
-                                           "unknown method: " + methodResolved);
-                  return false;
+                  return failUnknownMethodTarget(methodResolved);
                 }
     }
     resolved = methodResolved;
@@ -443,11 +451,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     promotesBuiltinValidationForUnknownCapacityMethod =
                         lacksVisibleCapacityMethodTargetBeforePromotion &&
                         allowsCapacityBuiltinValidationPromotion;
-                if (const std::string removedRootedVectorDirectCallDiagnostic =
-                        getRemovedRootedVectorDirectCallDiagnostic(expr);
-                    !removedRootedVectorDirectCallDiagnostic.empty()) {
-                  (void)failExprDiagnostic(
-                      expr, removedRootedVectorDirectCallDiagnostic);
+                if (!failRemovedRootedVectorDirectCall()) {
                   return false;
                 }
                 if (promotesBuiltinValidationForUnknownCapacityMethod) {
@@ -458,9 +462,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     !isBuiltinMethod &&
                     lacksVisibleMethodTargetPath(methodResolved);
                 if (lacksVisibleCapacityMethodTarget) {
-                  (void)failExprDiagnostic(expr,
-                                           "unknown method: " + methodResolved);
-                  return false;
+                  return failUnknownMethodTarget(methodResolved);
                 }
     }
     resolved = methodResolved;
