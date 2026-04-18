@@ -3811,7 +3811,34 @@
             "                return false;\n"
             "              });\n"
             "        },\n"
-            "        finalizeCapacityMethodTarget);") !=
+            "        [&](std::string &methodResolved, bool &isBuiltinMethod) {\n"
+            "          return finalizeCollectionMethodTarget(\n"
+            "              methodResolved, isBuiltinMethod,\n"
+            "              [&](std::string &methodResolved, bool &isBuiltinMethod) {\n"
+            "                if (isUnknownCollectionMethodTarget(isBuiltinMethod,\n"
+            "                                                    methodResolved)) {\n"
+            "                  if ((context.isNonCollectionStructCapacityTarget ==\n"
+            "                           nullptr ||\n"
+            "                       !context.isNonCollectionStructCapacityTarget(\n"
+            "                           methodResolved)) &&\n"
+            "                      context.promoteCapacityToBuiltinValidation != nullptr) {\n"
+            "                    context.promoteCapacityToBuiltinValidation(\n"
+            "                        receiver, methodResolved, isBuiltinMethod, false);\n"
+            "                  }\n"
+            "                }\n"
+            "                return true;\n"
+            "              },\n"
+            "              [&](const std::string &methodResolved, bool isBuiltinMethod) {\n"
+            "                return failUnknownCollectionMethodTarget(isBuiltinMethod,\n"
+            "                                                         methodResolved);\n"
+            "              },\n"
+            "              [&](const std::string &, bool) {\n"
+            "                return failRemovedRootedVectorDirectCall();\n"
+            "              });\n"
+            "        });") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto finalizeCapacityMethodTarget =\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!tryResolveCollectionMethodTargetFromHelperRoute(\n"
