@@ -4327,6 +4327,8 @@
             "                                      isBuiltinMethod)) {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const std::string stdlibVectorCapacityTargetPath =\n"
+            "    \"/std/collections/vector/capacity\";\n"
             "const bool usesStdNamespacedCapacityCompatibilityHelper =\n"
             "    isStdNamespacedVectorCompatibilityHelperPath(\n"
             "        resolveCalleePath(expr), \"capacity\");\n"
@@ -4339,12 +4341,12 @@
             "      hasImportedDefinitionPath(methodResolved)))) {\n"
             "  isBuiltinMethod = false;\n"
             "  if (usesStdNamespacedCapacityCompatibilityHelper) {\n"
-            "    methodResolved = \"/std/collections/vector/capacity\";\n"
+            "    methodResolved = stdlibVectorCapacityTargetPath;\n"
             "    isBuiltinMethod = true;\n"
             "  }\n"
             "} else {\n"
             "  if (usesStdNamespacedCapacityCompatibilityHelper) {\n"
-            "    methodResolved = \"/std/collections/vector/capacity\";\n"
+            "    methodResolved = stdlibVectorCapacityTargetPath;\n"
             "    isBuiltinMethod = true;\n"
             "  } else if (resolveMethodTarget(\n"
             "                 params, locals, expr.namespacePrefix, receiver,\n"
@@ -4399,6 +4401,10 @@
             "    methodResolved = \"/std/collections/vector/capacity\";\n"
             "    isBuiltinMethod = true;\n"
             "  } else if (resolveMethodTarget(\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const std::string stdlibVectorCapacityTargetPath =\n"
+            "    \"/std/collections/vector/capacity\";\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!isBuiltinMethod &&\n"
