@@ -283,14 +283,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       }
     }
     normalizeResolvedCollectionMethodTarget(methodResolved, isBuiltinMethod);
-    const bool resolvesBareMapCountMethodTarget =
-        methodResolved == bareMapCountMethodTarget;
     const bool resolvesStdlibMapCountMethodTarget =
         methodResolved == stdlibMapCountMethodTarget;
     if ((!expr.isMethodCall &&
          expr.args.size() == 1 &&
          expr.args.front().kind == Expr::Kind::Name &&
-         resolvesBareMapCountMethodTarget &&
+         methodResolved == bareMapCountMethodTarget &&
          !hasImportedDefinitionPath("/count") &&
          !hasDeclaredDefinitionPath("/count") &&
          lacksVisibleStdlibMapCountDefinition) ||
