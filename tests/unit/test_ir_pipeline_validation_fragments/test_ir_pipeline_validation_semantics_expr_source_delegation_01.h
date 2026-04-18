@@ -1863,10 +1863,25 @@
             "      };\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto tryRewriteBareVectorCountOrCapacityHelperCall =\n"
+            "      [&]() {\n"
+            "        return context.tryRewriteBareVectorHelperCall != nullptr &&\n"
+            "               (context.tryRewriteBareVectorHelperCall(\"count\",\n"
+            "                                                      rewrittenVectorHelperCall) ||\n"
+            "                context.tryRewriteBareVectorHelperCall(\"capacity\",\n"
+            "                                                      rewrittenVectorHelperCall));\n"
+            "      };\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "      if (helperName == \"count\" || helperName == \"capacity\") {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "      (context.namespacedHelper == \"count\" || context.namespacedHelper == \"capacity\")) {\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "  if (context.tryRewriteBareVectorHelperCall != nullptr &&\n"
+            "      (context.tryRewriteBareVectorHelperCall(\"count\", rewrittenVectorHelperCall) ||\n"
+            "       context.tryRewriteBareVectorHelperCall(\"capacity\", rewrittenVectorHelperCall))) {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else {\n"

@@ -131,9 +131,15 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   }
 
   Expr rewrittenVectorHelperCall;
-  if (context.tryRewriteBareVectorHelperCall != nullptr &&
-      (context.tryRewriteBareVectorHelperCall("count", rewrittenVectorHelperCall) ||
-       context.tryRewriteBareVectorHelperCall("capacity", rewrittenVectorHelperCall))) {
+  const auto tryRewriteBareVectorCountOrCapacityHelperCall =
+      [&]() {
+        return context.tryRewriteBareVectorHelperCall != nullptr &&
+               (context.tryRewriteBareVectorHelperCall("count",
+                                                      rewrittenVectorHelperCall) ||
+                context.tryRewriteBareVectorHelperCall("capacity",
+                                                      rewrittenVectorHelperCall));
+      };
+  if (tryRewriteBareVectorCountOrCapacityHelperCall()) {
     handledOut = true;
     rewrittenExprOut = std::move(rewrittenVectorHelperCall);
     return true;
