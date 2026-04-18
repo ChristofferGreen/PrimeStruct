@@ -125,30 +125,37 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     return true;
   }
 
-  if (matchesNamedArgumentCountOrCapacityHelperFastPath) {
-    handledOut = true;
-    bool isBuiltinMethod = false;
-    std::string methodResolved;
-    const auto resolvesNamedArgumentCountOrCapacityHelperTarget =
-        [&](std::string &resolvedMethodTarget, bool &resolvedBuiltinMethod) {
-          return resolveMethodTarget(params,
-                                     locals,
-                                     expr.namespacePrefix,
-                                     expr.args.front(),
-                                     context.namespacedHelper,
-                                     resolvedMethodTarget,
-                                     resolvedBuiltinMethod) &&
-                 !resolvedBuiltinMethod &&
-                 defMap_.find(resolvedMethodTarget) != defMap_.end();
-        };
-    if (resolvesNamedArgumentCountOrCapacityHelperTarget(methodResolved,
-                                                         isBuiltinMethod)) {
-      usedMethodTarget = true;
-      hasMethodReceiverIndex = true;
-      methodReceiverIndex = 0;
-      resolved = methodResolved;
-      resolvedMethod = false;
-    }
+  const auto applyNamedArgumentCountOrCapacityHelperFastPath =
+      [&]() {
+        if (!matchesNamedArgumentCountOrCapacityHelperFastPath) {
+          return false;
+        }
+        handledOut = true;
+        bool isBuiltinMethod = false;
+        std::string methodResolved;
+        const auto resolvesNamedArgumentCountOrCapacityHelperTarget =
+            [&](std::string &resolvedMethodTarget, bool &resolvedBuiltinMethod) {
+              return resolveMethodTarget(params,
+                                         locals,
+                                         expr.namespacePrefix,
+                                         expr.args.front(),
+                                         context.namespacedHelper,
+                                         resolvedMethodTarget,
+                                         resolvedBuiltinMethod) &&
+                     !resolvedBuiltinMethod &&
+                     defMap_.find(resolvedMethodTarget) != defMap_.end();
+            };
+        if (resolvesNamedArgumentCountOrCapacityHelperTarget(methodResolved,
+                                                             isBuiltinMethod)) {
+          usedMethodTarget = true;
+          hasMethodReceiverIndex = true;
+          methodReceiverIndex = 0;
+          resolved = methodResolved;
+          resolvedMethod = false;
+        }
+        return true;
+      };
+  if (applyNamedArgumentCountOrCapacityHelperFastPath()) {
     return true;
   }
 
