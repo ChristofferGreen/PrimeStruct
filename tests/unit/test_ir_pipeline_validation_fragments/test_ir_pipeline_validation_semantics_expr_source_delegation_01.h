@@ -1472,6 +1472,42 @@
             "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto tryResolveCountMethod = [&]() -> std::optional<bool> {\n"
+            "    if (resolveCountMethod(true)) {\n"
+            "      return true;\n"
+            "    }\n"
+            "    if (handledOut) {\n"
+            "      return false;\n"
+            "    }\n"
+            "    if (resolveCountMethod(false)) {\n"
+            "      return true;\n"
+            "    }\n"
+            "    if (handledOut) {\n"
+            "      return false;\n"
+            "    }\n"
+            "    return std::nullopt;\n"
+            "  };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (resolveCountMethod(true)) {\n"
+            "    return true;\n"
+            "  }\n"
+            "  if (handledOut) {\n"
+            "    return false;\n"
+            "  }\n"
+            "  if (resolveCountMethod(false)) {\n"
+            "    return true;\n"
+            "  }\n"
+            "  if (handledOut) {\n"
+            "    return false;\n"
+            "  }") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (std::optional<bool> resolvedCountMethod = tryResolveCountMethod()) {\n"
+            "    return *resolvedCountMethod;\n"
+            "  }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (stdNamespacedVectorCountMapTargetDiagnostic ==\n"
             "      VectorCompatibilityCountMapTargetDiagnostic::RequiresVectorTarget)") ==
         std::string::npos);

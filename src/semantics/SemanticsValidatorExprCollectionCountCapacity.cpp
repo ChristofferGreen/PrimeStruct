@@ -1,6 +1,7 @@
 #include "SemanticsValidator.h"
 #include "SemanticsVectorCompatibilityHelpers.h"
 
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -245,18 +246,24 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     resolvedMethod = isBuiltinMethod;
     return true;
   };
+  const auto tryResolveCountMethod = [&]() -> std::optional<bool> {
+    if (resolveCountMethod(true)) {
+      return true;
+    }
+    if (handledOut) {
+      return false;
+    }
+    if (resolveCountMethod(false)) {
+      return true;
+    }
+    if (handledOut) {
+      return false;
+    }
+    return std::nullopt;
+  };
 
-  if (resolveCountMethod(true)) {
-    return true;
-  }
-  if (handledOut) {
-    return false;
-  }
-  if (resolveCountMethod(false)) {
-    return true;
-  }
-  if (handledOut) {
-    return false;
+  if (std::optional<bool> resolvedCountMethod = tryResolveCountMethod()) {
+    return *resolvedCountMethod;
   }
 
   auto resolveCapacityMethod = [&](bool requireSingleArg) -> bool {
