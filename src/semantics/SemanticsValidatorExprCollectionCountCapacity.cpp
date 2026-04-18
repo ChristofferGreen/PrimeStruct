@@ -91,14 +91,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       context.isStdNamespacedVectorCountCall && expr.args.size() == 1 &&
       context.resolveMapTarget != nullptr &&
       context.resolveMapTarget(expr.args.front());
-  const auto stdNamespacedVectorCountMapTargetDiagnostic =
-      classifyStdNamespacedVectorCountMapTargetDiagnostic(
-          resolvesStdNamespacedVectorCountMapTarget, false,
-          stdNamespacedVectorCountHelperState.hasDeclaredHelper,
-          stdNamespacedVectorCountHelperState.hasImportedHelper);
   const std::string stdNamespacedVectorCountMapTargetDiagnosticMessage =
-      vectorCompatibilityCountMapTargetDiagnosticMessage(
-          stdNamespacedVectorCountMapTargetDiagnostic);
+      classifyStdNamespacedVectorCountMapTargetDiagnosticMessage(
+          resolvesStdNamespacedVectorCountMapTarget, false,
+          stdNamespacedVectorCountHelperState);
   if (!stdNamespacedVectorCountMapTargetDiagnosticMessage.empty()) {
     handledOut = true;
     return failCollectionCountCapacityDiagnostic(

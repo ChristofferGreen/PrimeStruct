@@ -80,4 +80,14 @@ inline std::string vectorCompatibilityCountMapTargetDiagnosticMessage(
   return "";
 }
 
+inline std::string classifyStdNamespacedVectorCountMapTargetDiagnosticMessage(
+    bool mapTargetDetected,
+    bool preferUnknownCallTarget,
+    const StdNamespacedVectorCompatibilityHelperState &helperState) {
+  return vectorCompatibilityCountMapTargetDiagnosticMessage(
+      classifyStdNamespacedVectorCountMapTargetDiagnostic(
+          mapTargetDetected, preferUnknownCallTarget,
+          helperState.hasDeclaredHelper, helperState.hasImportedHelper));
+}
+
 } // namespace primec::semantics

@@ -107,14 +107,10 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
           context.dispatchResolvers->resolveMapTarget(expr.args.front(),
                                                       mapKeyType,
                                                       mapValueType);
-      const auto stdNamespacedVectorCountMapTargetDiagnostic =
-          classifyStdNamespacedVectorCountMapTargetDiagnostic(
-              resolvesMapAfterValidation, resolvesNonVectorCountTarget,
-              stdNamespacedVectorCountHelperState.hasDeclaredHelper,
-              stdNamespacedVectorCountHelperState.hasImportedHelper);
       const std::string stdNamespacedVectorCountMapTargetDiagnosticMessage =
-          vectorCompatibilityCountMapTargetDiagnosticMessage(
-              stdNamespacedVectorCountMapTargetDiagnostic);
+          classifyStdNamespacedVectorCountMapTargetDiagnosticMessage(
+              resolvesMapAfterValidation, resolvesNonVectorCountTarget,
+              stdNamespacedVectorCountHelperState);
       if (!stdNamespacedVectorCountMapTargetDiagnosticMessage.empty()) {
         return failLateCallCompatibilityDiagnostic(
             std::move(stdNamespacedVectorCountMapTargetDiagnosticMessage));
