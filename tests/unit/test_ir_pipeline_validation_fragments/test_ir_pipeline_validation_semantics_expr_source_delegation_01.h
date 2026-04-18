@@ -2366,13 +2366,17 @@
             "      context.isStdNamespacedMapCountCall;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool routesThroughNamespacedMapCountSurface =\n"
+            "      context.isNamespacedMapCountCall;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool routesThroughUnnamespacedMapCountFallbackSurface =\n"
             "      context.isUnnamespacedMapCountFallbackCall;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool routesThroughMapCountCallSurface =\n"
             "      routesThroughStdNamespacedMapCountSurface ||\n"
-            "      context.isNamespacedMapCountCall ||\n"
+            "      routesThroughNamespacedMapCountSurface ||\n"
             "      routesThroughUnnamespacedMapCountFallbackSurface ||\n"
             "      context.isResolvedMapCountCall;") !=
         std::string::npos);
@@ -2854,6 +2858,12 @@
             "      context.isStdNamespacedMapCountCall ||\n"
             "      context.isNamespacedMapCountCall ||\n"
             "      context.isUnnamespacedMapCountFallbackCall ||\n"
+            "      context.isResolvedMapCountCall;") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool routesThroughMapCountCallSurface =\n"
+            "      routesThroughStdNamespacedMapCountSurface ||\n"
+            "      context.isNamespacedMapCountCall ||\n"
             "      context.isResolvedMapCountCall;") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
