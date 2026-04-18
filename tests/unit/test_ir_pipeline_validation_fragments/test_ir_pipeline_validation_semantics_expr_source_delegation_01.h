@@ -1851,31 +1851,23 @@
             "        defMap_.find(resolved) != defMap_.end();") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const bool allowsSingleArgUnresolvedCountMethodTarget =\n"
-            "        !resolvesExistingCountMethodTarget &&\n"
-            "        !context.isStdNamespacedMapCountCall;") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const bool matchesResolvedCountMethodTargetShape =\n"
-            "        requireSingleArg\n"
-            "            ? (allowsSingleArgUnresolvedCountMethodTarget ||\n"
-            "               (!isStdNamespacedVectorCompatibilityDirectCall(\n"
-            "                    expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
-            "                context.isNamespacedVectorHelperCall &&\n"
-            "                context.namespacedHelper == \"count\" &&\n"
-            "                isVectorBuiltinName(expr, \"count\") &&\n"
-            "                expr.args.size() == 1 &&\n"
-            "                !hasDefinitionPath(resolved) &&\n"
-            "                !(context.isArrayNamespacedVectorCountCompatibilityCall !=\n"
-            "                      nullptr &&\n"
-            "                  context.isArrayNamespacedVectorCountCompatibilityCall(\n"
-            "                      expr))) ||\n"
-            "               routesThroughMapCountCompatibility)\n"
-            "            : (resolvesExistingCountMethodTarget ||\n"
-            "               routesThroughMapCountCompatibility);") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (!matchesResolvedCountMethodTargetShape) {\n"
+            "if (!(requireSingleArg\n"
+            "              ? ((!resolvesExistingCountMethodTarget &&\n"
+            "                  !context.isStdNamespacedMapCountCall) ||\n"
+            "                 (!isStdNamespacedVectorCompatibilityDirectCall(\n"
+            "                      expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
+            "                  context.isNamespacedVectorHelperCall &&\n"
+            "                  context.namespacedHelper == \"count\" &&\n"
+            "                  isVectorBuiltinName(expr, \"count\") &&\n"
+            "                  expr.args.size() == 1 &&\n"
+            "                  !hasDefinitionPath(resolved) &&\n"
+            "                  !(context.isArrayNamespacedVectorCountCompatibilityCall !=\n"
+            "                        nullptr &&\n"
+            "                    context.isArrayNamespacedVectorCountCompatibilityCall(\n"
+            "                        expr))) ||\n"
+            "                 routesThroughMapCountCompatibility)\n"
+            "              : (resolvesExistingCountMethodTarget ||\n"
+            "                 routesThroughMapCountCompatibility))) {\n"
             "      return false;\n"
             "    }") !=
         std::string::npos);
@@ -1949,6 +1941,12 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool usesNamespacedVectorCountFallbackShape =") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool allowsSingleArgUnresolvedCountMethodTarget =") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool matchesResolvedCountMethodTargetShape =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"

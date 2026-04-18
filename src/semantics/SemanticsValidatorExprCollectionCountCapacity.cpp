@@ -151,26 +151,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         context.isResolvedMapCountCall;
     const bool resolvesExistingCountMethodTarget =
         defMap_.find(resolved) != defMap_.end();
-    const bool allowsSingleArgUnresolvedCountMethodTarget =
-        !resolvesExistingCountMethodTarget &&
-        !context.isStdNamespacedMapCountCall;
-    const bool matchesResolvedCountMethodTargetShape =
-        requireSingleArg
-            ? (allowsSingleArgUnresolvedCountMethodTarget ||
-               (!isStdNamespacedVectorCompatibilityDirectCall(
-                    expr.isMethodCall, resolveCalleePath(expr), "count") &&
-                context.isNamespacedVectorHelperCall &&
-                context.namespacedHelper == "count" &&
-                isVectorBuiltinName(expr, "count") &&
-                expr.args.size() == 1 &&
-                !hasDefinitionPath(resolved) &&
-                !(context.isArrayNamespacedVectorCountCompatibilityCall !=
-                      nullptr &&
-                  context.isArrayNamespacedVectorCountCompatibilityCall(
-                      expr))) ||
-               routesThroughMapCountCompatibility)
-            : (resolvesExistingCountMethodTarget ||
-               routesThroughMapCountCompatibility);
     if (hasNamedArguments(expr.argNames) ||
         isUnimportedStdNamespacedVectorCompatibilityDirectCall(
             expr.isMethodCall,
@@ -194,7 +174,23 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           routesThroughMapCountCompatibility)) {
       return false;
     }
-    if (!matchesResolvedCountMethodTargetShape) {
+    if (!(requireSingleArg
+              ? ((!resolvesExistingCountMethodTarget &&
+                  !context.isStdNamespacedMapCountCall) ||
+                 (!isStdNamespacedVectorCompatibilityDirectCall(
+                      expr.isMethodCall, resolveCalleePath(expr), "count") &&
+                  context.isNamespacedVectorHelperCall &&
+                  context.namespacedHelper == "count" &&
+                  isVectorBuiltinName(expr, "count") &&
+                  expr.args.size() == 1 &&
+                  !hasDefinitionPath(resolved) &&
+                  !(context.isArrayNamespacedVectorCountCompatibilityCall !=
+                        nullptr &&
+                    context.isArrayNamespacedVectorCountCompatibilityCall(
+                        expr))) ||
+                 routesThroughMapCountCompatibility)
+              : (resolvesExistingCountMethodTarget ||
+                 routesThroughMapCountCompatibility))) {
       return false;
     }
 
