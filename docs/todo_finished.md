@@ -10,6 +10,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 17, 2026)**
 
 **Group 14 - SoA bring-up and end-state cleanup**
+- ✓ TODO-0716: Remove count resolve-or-fallback helper. Completed: the one-use `tryResolveCountMethodOrFallback` helper was deleted from `SemanticsValidatorExprCollectionCountCapacity.cpp`, and focused expr source-lock coverage now keeps the two inline resolve-or-fallback count branch forms present while the old helper stays absent.
 - ✓ TODO-0715: Remove count fallback helper. Completed: the one-use `tryAssignCountMethodFallbackTarget` helper was deleted from `SemanticsValidatorExprCollectionCountCapacity.cpp`, and focused expr source-lock coverage now keeps the full fallback path inside `tryResolveCountMethodOrFallback` while the old helper stays absent.
 - ✓ TODO-0714: Remove builtin map-count helper. Completed: the one-use `assignBuiltinStdlibMapCountMethodTarget` helper was deleted from `SemanticsValidatorExprCollectionCountCapacity.cpp`, and focused expr source-lock coverage now keeps the inline builtin `/std/collections/map/count` assignment present while the old helper stays absent.
 - ✓ TODO-0713: Remove resolved map-count helper. Completed: the one-use `assignResolvedStdlibMapCountMethodTarget` helper was deleted from `SemanticsValidatorExprCollectionCountCapacity.cpp`, and focused expr source-lock coverage now keeps the inline non-builtin `/std/collections/map/count` assignment present while the old helper stays absent.
