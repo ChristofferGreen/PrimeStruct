@@ -1803,10 +1803,9 @@
             "          const bool usesCountResolveMissMapFallback =\n"
             "              context.resolveMapTarget != nullptr &&\n"
             "              context.resolveMapTarget(receiver);\n"
+            "          std::string countResolveMissTargetPath;\n"
             "          if (usesCountResolveMissMapFallback) {\n"
-            "            methodResolved = \"/std/collections/map/count\";\n"
-            "            error_.clear();\n"
-            "            isBuiltinMethod = false;\n"
+            "            countResolveMissTargetPath = \"/std/collections/map/count\";\n"
             "          } else {\n"
             "            std::string typeName;\n"
             "            const bool resolvesCountReceiverTypeFromNameBinding =\n"
@@ -1848,10 +1847,11 @@
             "              (void)validateExpr(params, locals, receiver);\n"
             "              return false;\n"
             "            }\n"
-            "            methodResolved = \"/\" + typeName + \"/count\";\n"
-            "            error_.clear();\n"
-            "            isBuiltinMethod = false;\n"
+            "            countResolveMissTargetPath = \"/\" + typeName + \"/count\";\n"
             "          }\n"
+            "          methodResolved = countResolveMissTargetPath;\n"
+            "          error_.clear();\n"
+            "          isBuiltinMethod = false;\n"
             "        }\n"
             "      }\n"
             "    }") !=
@@ -1879,6 +1879,18 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "          if (context.resolveMapTarget != nullptr &&\n"
             "              context.resolveMapTarget(receiver)) {\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "          if (usesCountResolveMissMapFallback) {\n"
+            "            methodResolved = \"/std/collections/map/count\";\n"
+            "            error_.clear();\n"
+            "            isBuiltinMethod = false;\n"
+            "          } else {\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "            methodResolved = \"/\" + typeName + \"/count\";\n"
+            "            error_.clear();\n"
+            "            isBuiltinMethod = false;\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "        if (resolveMethodTarget(\n"

@@ -228,10 +228,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                       }
                       const bool usesCountResolveMissMapFallback =
                           resolvesMapCountReceiver;
+                      std::string countResolveMissTargetPath;
                       if (usesCountResolveMissMapFallback) {
-                        methodResolved = stdlibMapCountTargetPath;
-                        error_.clear();
-                        isBuiltinMethod = false;
+                        countResolveMissTargetPath = stdlibMapCountTargetPath;
                       } else {
                         std::string typeName;
                         const bool resolvesCountReceiverTypeFromNameBinding =
@@ -274,10 +273,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                           (void)validateExpr(params, locals, receiver);
                           return false;
                         }
-                        methodResolved = "/" + typeName + "/count";
-                        error_.clear();
-                        isBuiltinMethod = false;
+                        countResolveMissTargetPath =
+                            "/" + typeName + "/count";
                       }
+                      methodResolved = countResolveMissTargetPath;
+                      error_.clear();
+                      isBuiltinMethod = false;
                     }
                   }
                 }
