@@ -384,15 +384,14 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     !isBuiltinMethod &&
                     !hasDeclaredDefinitionPath(methodResolved) &&
                     !hasImportedDefinitionPath(methodResolved);
-                if (lacksVisibleCapacityMethodTarget &&
-                    (context.isNonCollectionStructCapacityTarget == nullptr ||
-                     !context.isNonCollectionStructCapacityTarget(
-                         methodResolved)) &&
-                    context.promoteCapacityToBuiltinValidation != nullptr) {
-                  context.promoteCapacityToBuiltinValidation(
-                      receiver, methodResolved, isBuiltinMethod, false);
-                }
                 if (lacksVisibleCapacityMethodTarget) {
+                  if ((context.isNonCollectionStructCapacityTarget == nullptr ||
+                       !context.isNonCollectionStructCapacityTarget(
+                           methodResolved)) &&
+                      context.promoteCapacityToBuiltinValidation != nullptr) {
+                    context.promoteCapacityToBuiltinValidation(
+                        receiver, methodResolved, isBuiltinMethod, false);
+                  }
                   (void)failExprDiagnostic(expr,
                                            "unknown method: " + methodResolved);
                   return false;

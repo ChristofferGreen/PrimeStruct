@@ -4366,15 +4366,14 @@
             "    !isBuiltinMethod &&\n"
             "    !hasDeclaredDefinitionPath(methodResolved) &&\n"
             "    !hasImportedDefinitionPath(methodResolved);\n"
-            "if (lacksVisibleCapacityMethodTarget &&\n"
-            "    (context.isNonCollectionStructCapacityTarget == nullptr ||\n"
-            "     !context.isNonCollectionStructCapacityTarget(\n"
-            "         methodResolved)) &&\n"
-            "    context.promoteCapacityToBuiltinValidation != nullptr) {\n"
-            "  context.promoteCapacityToBuiltinValidation(\n"
-            "      receiver, methodResolved, isBuiltinMethod, false);\n"
-            "}\n"
             "if (lacksVisibleCapacityMethodTarget) {\n"
+            "  if ((context.isNonCollectionStructCapacityTarget == nullptr ||\n"
+            "       !context.isNonCollectionStructCapacityTarget(\n"
+            "           methodResolved)) &&\n"
+            "      context.promoteCapacityToBuiltinValidation != nullptr) {\n"
+            "    context.promoteCapacityToBuiltinValidation(\n"
+            "        receiver, methodResolved, isBuiltinMethod, false);\n"
+            "  }\n"
             "  (void)failExprDiagnostic(expr,\n"
             "                           \"unknown method: \" + methodResolved);\n"
             "  return false;\n"
@@ -4451,6 +4450,31 @@
             "    return false;\n"
             "  }\n"
             "}\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (lacksVisibleCapacityMethodTarget) {\n"
+            "  if ((context.isNonCollectionStructCapacityTarget == nullptr ||\n"
+            "       !context.isNonCollectionStructCapacityTarget(\n"
+            "           methodResolved)) &&\n"
+            "      context.promoteCapacityToBuiltinValidation != nullptr) {\n"
+            "    context.promoteCapacityToBuiltinValidation(\n"
+            "        receiver, methodResolved, isBuiltinMethod, false);\n"
+            "  }\n"
+            "  (void)failExprDiagnostic(expr,\n"
+            "                           \"unknown method: \" + methodResolved);\n"
+            "  return false;\n"
+            "}\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (lacksVisibleCapacityMethodTarget &&\n"
+            "    (context.isNonCollectionStructCapacityTarget == nullptr ||\n"
+            "     !context.isNonCollectionStructCapacityTarget(\n"
+            "         methodResolved)) &&\n"
+            "    context.promoteCapacityToBuiltinValidation != nullptr) {\n"
+            "  context.promoteCapacityToBuiltinValidation(\n"
+            "      receiver, methodResolved, isBuiltinMethod, false);\n"
+            "}\n"
+            "if (lacksVisibleCapacityMethodTarget) {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!isBuiltinMethod &&\n"
