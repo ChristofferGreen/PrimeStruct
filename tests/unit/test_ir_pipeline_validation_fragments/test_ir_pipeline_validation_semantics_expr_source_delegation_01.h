@@ -1994,6 +1994,12 @@
             "                    methodResolved == bareMapCountTargetPath;\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "                const bool reusesResolvedCountMonomorphizedTarget =\n"
+            "                    !isBuiltinMethod &&\n"
+            "                    defMap_.find(methodResolved) == defMap_.end() &&\n"
+            "                    resolved.rfind(methodResolved + \"__t\", 0) == 0;\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto finalizeCountMethodTarget =\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(

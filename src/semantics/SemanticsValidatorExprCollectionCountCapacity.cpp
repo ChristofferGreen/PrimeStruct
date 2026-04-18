@@ -288,11 +288,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     }
                   }
                 }
-                const bool reusesResolvedCountMonomorphizedTarget =
-                    !isBuiltinMethod &&
+                if (!isBuiltinMethod &&
                     defMap_.find(methodResolved) == defMap_.end() &&
-                    resolved.rfind(methodResolved + "__t", 0) == 0;
-                if (reusesResolvedCountMonomorphizedTarget) {
+                    resolved.rfind(methodResolved + "__t", 0) == 0) {
                   methodResolved = resolved;
                 }
                 if ((isDirectNamedCountReceiverCall &&
