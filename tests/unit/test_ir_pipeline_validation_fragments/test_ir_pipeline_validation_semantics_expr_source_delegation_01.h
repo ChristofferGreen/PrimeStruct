@@ -387,6 +387,12 @@
             "      getRemovedRootedVectorDirectCallDiagnostic(expr);") !=
         std::string::npos);
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
+            "const auto &resolveStringTarget = dispatchResolvers.resolveStringTarget;") ==
+        std::string::npos);
+  CHECK(semanticsExprDirectCollectionFallbacksSource.find(
+            "const auto &resolveArrayTarget = dispatchResolvers.resolveArrayTarget;") ==
+        std::string::npos);
+  CHECK(semanticsExprDirectCollectionFallbacksSource.find(
             "explicitPath == \"/vector/at\" || explicitPath == \"/vector/at_unsafe\"") ==
         std::string::npos);
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
@@ -397,6 +403,21 @@
         std::string::npos);
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
             "getRemovedRootedVectorDirectCallDiagnostic(expr)") !=
+        std::string::npos);
+  CHECK(semanticsExprDirectCollectionFallbacksSource.find(
+            "if (!expr.isMethodCall && context.isStdNamespacedVectorCountCall &&\n"
+            "      expr.args.size() == 1 &&\n"
+            "      !hasDeclaredDefinitionPath(\"/std/collections/vector/count\") &&\n"
+            "      !hasImportedDefinitionPath(\"/std/collections/vector/count\")) {\n"
+            "    std::string elemType;\n"
+            "    if (dispatchResolvers.resolveStringTarget(expr.args.front()) ||\n"
+            "        dispatchResolvers.resolveArrayTarget(expr.args.front(), elemType) ||\n"
+            "        dispatchResolvers.resolveExperimentalVectorTarget(\n"
+            "            expr.args.front(), elemType)) {\n"
+            "      return failDirectCollectionFallbackDiagnostic(\n"
+            "          \"unknown call target: /std/collections/vector/count\");\n"
+            "    }\n"
+            "  }") !=
         std::string::npos);
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
             "auto resolvesExperimentalVectorValueReceiverForBareAccess =") ==

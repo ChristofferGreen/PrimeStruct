@@ -26,16 +26,14 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
   }
 
   const auto &dispatchResolvers = *context.dispatchResolvers;
-  const auto &resolveStringTarget = dispatchResolvers.resolveStringTarget;
-  const auto &resolveArrayTarget = dispatchResolvers.resolveArrayTarget;
 
   if (!expr.isMethodCall && context.isStdNamespacedVectorCountCall &&
       expr.args.size() == 1 &&
       !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
       !hasImportedDefinitionPath("/std/collections/vector/count")) {
     std::string elemType;
-    if (resolveStringTarget(expr.args.front()) ||
-        resolveArrayTarget(expr.args.front(), elemType) ||
+    if (dispatchResolvers.resolveStringTarget(expr.args.front()) ||
+        dispatchResolvers.resolveArrayTarget(expr.args.front(), elemType) ||
         dispatchResolvers.resolveExperimentalVectorTarget(
             expr.args.front(), elemType)) {
       return failDirectCollectionFallbackDiagnostic(
