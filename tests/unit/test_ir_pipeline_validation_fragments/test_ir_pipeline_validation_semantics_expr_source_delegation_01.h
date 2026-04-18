@@ -424,7 +424,7 @@
             "    resolved = methodResolved;\n"
             "    resolvedMethod = isBuiltinMethod;\n"
             "    return true;\n"
-            "  };") !=
+            "  };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "getRemovedRootedVectorDirectCallDiagnostic(expr)") !=
@@ -3294,15 +3294,40 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "resolved = methodResolved;\n"
             "    resolvedMethod = isBuiltinMethod;\n"
-            "    return true;\n"
-            "  };") !=
+            "    return true;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "return finalizeResolvedCollectionMethodTarget(methodResolved, isBuiltinMethod);") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "return finalizeResolvedCollectionMethodTargetAfterRemovedRootedVectorCheck(\n"
-            "        methodResolved, isBuiltinMethod);") !=
+            "        methodResolved, isBuiltinMethod);") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const std::string removedRootedVectorDirectCallDiagnostic =\n"
+            "        getRemovedRootedVectorDirectCallDiagnostic(expr);\n"
+            "    if (!removedRootedVectorDirectCallDiagnostic.empty()) {\n"
+            "      return failCollectionCountCapacityDiagnostic(\n"
+            "          removedRootedVectorDirectCallDiagnostic);\n"
+            "    }\n"
+            "    if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {\n"
+            "      return failCollectionCountCapacityDiagnostic(\"unknown method: \" +\n"
+            "                                                  methodResolved);\n"
+            "    }\n"
+            "    resolved = methodResolved;\n"
+            "    resolvedMethod = isBuiltinMethod;\n"
+            "    return true;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const std::string removedRootedVectorDirectCallDiagnostic =\n"
+            "        getRemovedRootedVectorDirectCallDiagnostic(expr);\n"
+            "    if (!removedRootedVectorDirectCallDiagnostic.empty()) {\n"
+            "      return failCollectionCountCapacityDiagnostic(\n"
+            "          removedRootedVectorDirectCallDiagnostic);\n"
+            "    }\n"
+            "    resolved = methodResolved;\n"
+            "    resolvedMethod = isBuiltinMethod;\n"
+            "    return true;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "(isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,\n"
