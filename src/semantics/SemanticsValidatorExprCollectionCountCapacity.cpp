@@ -255,8 +255,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                             typeName = "Reference";
                           }
                         }
-                        if (typeName != "Pointer" &&
-                            typeName != "Reference") {
+                        const bool resolvesPointerLikeCountReceiverType =
+                            typeName == "Pointer" || typeName == "Reference";
+                        if (!resolvesPointerLikeCountReceiverType) {
                           (void)validateExpr(params, locals, receiver);
                           return false;
                         }

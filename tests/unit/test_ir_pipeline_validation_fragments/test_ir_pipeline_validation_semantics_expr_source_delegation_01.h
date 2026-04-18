@@ -1828,7 +1828,9 @@
             "                typeName = \"Reference\";\n"
             "              }\n"
             "            }\n"
-            "            if (typeName != \"Pointer\" && typeName != \"Reference\") {\n"
+            "            const bool resolvesPointerLikeCountReceiverType =\n"
+            "                typeName == \"Pointer\" || typeName == \"Reference\";\n"
+            "            if (!resolvesPointerLikeCountReceiverType) {\n"
             "              (void)validateExpr(params, locals, receiver);\n"
             "              return false;\n"
             "            }\n"
@@ -1839,6 +1841,9 @@
             "        }\n"
             "      }\n"
             "    }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "            if (typeName != \"Pointer\" && typeName != \"Reference\") {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "          if (context.resolveMapTarget != nullptr &&\n"
