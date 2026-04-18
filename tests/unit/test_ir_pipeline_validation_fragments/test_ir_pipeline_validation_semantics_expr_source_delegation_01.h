@@ -610,6 +610,9 @@
             "const std::string canonicalTarget = \"/std/collections/vector/\" + expr.name;") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
+            "const bool targetsExperimentalVectorCompatibilityPath =") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
             "[&](const std::string &target)") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
@@ -657,8 +660,17 @@
             "return canonicalTarget;") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
+            "if (targetsExperimentalVectorCompatibilityPath &&\n"
+            "            (hasImportedDefinitionPath(canonicalTarget) ||\n"
+            "             defMap_.count(canonicalTarget) > 0))") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
             "hasImportedDefinitionPath(\"/std/collections/vector/\" + expr.name) ||\n"
             "             defMap_.count(\"/std/collections/vector/\" + expr.name) > 0") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "if ((target.rfind(\"/std/collections/experimental_vector/\", 0) == 0 ||\n"
+            "             target.rfind(\"/std/collections/experimental_vector/Vector__\", 0) == 0) &&") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "return \"/std/collections/vector/\" + expr.name;") ==
