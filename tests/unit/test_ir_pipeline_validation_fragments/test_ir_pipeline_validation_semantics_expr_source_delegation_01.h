@@ -1717,10 +1717,21 @@
             "    if (!expr.templateArgs.empty()) {") ==
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "const auto tryValidateVectorCountBuiltinPath = [&]() -> std::optional<bool> {\n"
+            "    if (resolvedMethod &&\n"
+            "        logicalResolvedMethod == \"/std/collections/vector/count\") {\n"
+            "      return validateVectorCountBuiltinPath(false);\n"
+            "    }\n"
+            "    if (shouldValidateVectorCountBuiltinFallback) {\n"
+            "      return validateVectorCountBuiltinPath(true);\n"
+            "    }\n"
+            "    return std::nullopt;\n"
+            "  };") != std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "if (resolvedMethod &&\n"
             "      logicalResolvedMethod == \"/std/collections/vector/count\") {\n"
             "    return validateVectorCountBuiltinPath(false);\n"
-            "  }") != std::string::npos);
+            "  }") == std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "const bool shouldValidateVectorCountBuiltinFallback =\n"
             "      !resolvedMethod && isVectorBuiltinName(expr, \"count\") &&\n"
@@ -1780,6 +1791,12 @@
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "if (shouldValidateVectorCountBuiltinFallback) {\n"
             "    return validateVectorCountBuiltinPath(true);\n"
+            "  }") ==
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "if (std::optional<bool> validatedVectorCountBuiltinPath =\n"
+            "        tryValidateVectorCountBuiltinPath()) {\n"
+            "    return *validatedVectorCountBuiltinPath;\n"
             "  }") !=
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(

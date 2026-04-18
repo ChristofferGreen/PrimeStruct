@@ -269,11 +269,6 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
        expr.namespacePrefix == "/std/collections/map" ||
        expr.namespacePrefix == "std/collections/map");
 
-  if (resolvedMethod &&
-      logicalResolvedMethod == "/std/collections/vector/count") {
-    return validateVectorCountBuiltinPath(false);
-  }
-
   const bool shouldValidateVectorCountBuiltinFallback =
       !resolvedMethod && isVectorBuiltinName(expr, "count") &&
       !isArrayNamespacedVectorCountCompatibilityCall(expr, *dispatchResolvers) &&
@@ -284,6 +279,21 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       !isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals,
                                                  *dispatchResolverAdapters) &&
       it == defMap_.end();
+  const auto tryValidateVectorCountBuiltinPath = [&]() -> std::optional<bool> {
+    if (resolvedMethod &&
+        logicalResolvedMethod == "/std/collections/vector/count") {
+      return validateVectorCountBuiltinPath(false);
+    }
+    if (shouldValidateVectorCountBuiltinFallback) {
+      return validateVectorCountBuiltinPath(true);
+    }
+    return std::nullopt;
+  };
+
+  if (std::optional<bool> validatedVectorCountBuiltinPath =
+          tryValidateVectorCountBuiltinPath()) {
+    return *validatedVectorCountBuiltinPath;
+  }
 
   if (resolvedMethod && (logicalResolvedMethod == "/array/count" ||
                          isLegacyOrCanonicalSoaHelperPath(
@@ -528,10 +538,6 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     }
     return validateExpr(params, locals, receiverExpr) &&
            validateExpr(params, locals, keyExpr);
-  }
-
-  if (shouldValidateVectorCountBuiltinFallback) {
-    return validateVectorCountBuiltinPath(true);
   }
 
   const auto validateVectorCapacityBuiltinCall = [&]() -> bool {
