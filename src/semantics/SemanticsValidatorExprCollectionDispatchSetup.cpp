@@ -208,10 +208,18 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       !expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&
       setupOut.isNamespacedVectorHelperCall &&
       (setupOut.namespacedHelper == "count" || setupOut.namespacedHelper == "capacity");
-  if (callsInvisibleStdNamespacedVectorCountHelper &&
-      !allowStdNamespacedVectorUserReceiverProbe) {
+  const std::string stdNamespacedVectorCountDiagnosticMessage =
+      allowStdNamespacedVectorUserReceiverProbe
+          ? ""
+          : classifyStdNamespacedVectorCountDiagnosticMessage(
+                callsInvisibleStdNamespacedVectorCountHelper,
+                false,
+                false,
+                false,
+                false);
+  if (!stdNamespacedVectorCountDiagnosticMessage.empty()) {
     return failCollectionDispatchDiagnostic(
-        vectorCompatibilityUnknownCallTargetDiagnostic("count"));
+        std::move(stdNamespacedVectorCountDiagnosticMessage));
   }
   if (callsInvisibleStdNamespacedVectorCapacityHelper &&
       !allowStdNamespacedVectorUserReceiverProbe) {

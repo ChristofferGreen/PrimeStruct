@@ -115,4 +115,20 @@ inline std::string vectorCompatibilityUnknownCallTargetDiagnostic(
          std::string(helperName);
 }
 
+inline std::string classifyStdNamespacedVectorCountDiagnosticMessage(
+    bool callsInvisibleHelper,
+    bool isDirectWrapperMapTarget,
+    bool callsUndeclaredHelper,
+    bool resolvesMapTarget,
+    bool callsUnresolvableHelper) {
+  if (callsInvisibleHelper ||
+      (isDirectWrapperMapTarget && callsUndeclaredHelper)) {
+    return vectorCompatibilityUnknownCallTargetDiagnostic("count");
+  }
+  if (resolvesMapTarget && callsUnresolvableHelper) {
+    return vectorCompatibilityRequiresVectorTargetDiagnostic("count");
+  }
+  return "";
+}
+
 } // namespace primec::semantics
