@@ -212,6 +212,23 @@ main() {
   CHECK(error.find("capacity requires vector target") != std::string::npos);
 }
 
+TEST_CASE("map wrapper temporary capacity method reports vector target diagnostic") {
+  const std::string source = R"(
+wrapMapAuto() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(values)
+}
+
+[return<int>]
+main() {
+  return(wrapMapAuto().capacity())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("capacity requires vector target") != std::string::npos);
+}
+
 TEST_CASE("count preserves receiver call-target diagnostics") {
   const std::string source = R"(
 [return<int>]
