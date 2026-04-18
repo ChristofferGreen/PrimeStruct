@@ -140,6 +140,7 @@ Wave D (queue hygiene):
     - Final release gate passes with `./scripts/compile.sh --release`.
   - stop_rule: If shared classifier rewrites destabilize `map`/`soa_vector`, isolate the generic mechanism in this leaf and defer remaining shared deletions to TODO-0409.
   - notes: This leaf should leave a reusable generic path that TODO-0409 can apply to `map` and `soa_vector`.
+  - progress: Completed `TODO-0782` by deleting the shared `failCollectionCountCapacityDiagnostic` helper in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the remaining count/capacity diagnostics now call `failExprDiagnostic(expr, ...)` directly at each live branch.
   - progress: Completed `TODO-0781` by deleting the shared `finalizeResolvedCollectionMethodTargetAfterRemovedRootedVectorCheck` helper in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the count/capacity resolver now carries that removed-rooted and commit tail inline at its two remaining call sites.
   - progress: Completed `TODO-0780` by deleting the shared `normalizeResolvedCollectionMethodTarget` helper in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the count/capacity resolver now carries that monomorphized-target normalization inline at its two remaining call sites.
   - progress: Completed `TODO-0779` by deleting the one-use `assignCountMethodTargetAfterResolveMiss` helper in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the count resolver now carries that resolve-miss fallback inline at its two remaining call sites.

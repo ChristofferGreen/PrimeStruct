@@ -10,6 +10,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 17, 2026)**
 
 **Group 14 - SoA bring-up and end-state cleanup**
+- ✓ TODO-0782: Remove shared count/capacity diagnostic helper. Completed: the shared `failCollectionCountCapacityDiagnostic` helper in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the direct `failExprDiagnostic(expr, ...)` branches present while the deleted helper stays absent.
 - ✓ TODO-0781: Remove shared collection finalizer. Completed: the shared `finalizeResolvedCollectionMethodTargetAfterRemovedRootedVectorCheck` helper in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the inline removed-rooted and commit tails present while the deleted helper stays absent.
 - ✓ TODO-0780: Remove shared collection normalizer. Completed: the shared `normalizeResolvedCollectionMethodTarget` helper in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the inline monomorphized-target normalization present while the deleted helper stays absent.
 - ✓ TODO-0779: Remove count resolve-miss helper. Completed: the one-use `assignCountMethodTargetAfterResolveMiss` helper in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the inline count resolve-miss fallback present while the deleted helper stays absent.
