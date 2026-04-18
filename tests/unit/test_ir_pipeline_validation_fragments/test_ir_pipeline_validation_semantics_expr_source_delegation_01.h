@@ -1431,7 +1431,7 @@
             "const auto assignBuiltinStdlibMapCountMethodTarget = [&]() {\n"
             "      methodResolved = \"/std/collections/map/count\";\n"
             "      isBuiltinMethod = true;\n"
-            "    };") !=
+            "    };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto assignResolvedStdlibMapCountMethodTarget = [&]() {\n"
@@ -1462,7 +1462,8 @@
             "        resolvesMapCountMethodTarget) {") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "      assignBuiltinStdlibMapCountMethodTarget();") !=
+            "      methodResolved = \"/std/collections/map/count\";\n"
+            "      isBuiltinMethod = true;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (resolvesMapCountMethodTarget) {\n"
