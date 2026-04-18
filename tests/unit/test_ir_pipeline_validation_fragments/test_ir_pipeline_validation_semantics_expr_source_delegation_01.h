@@ -1543,10 +1543,14 @@
             "          expr.isMethodCall, resolveCalleePath(expr), \"count\");") !=
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "!expr.isMethodCall && !callsStdNamespacedVectorCountHelper &&\n"
+            "!callsStdNamespacedVectorCountHelper &&\n"
             "      setupOut.isNamespacedVectorHelperCall && setupOut.namespacedHelper == \"count\" &&\n"
             "      isVectorBuiltinName(expr, \"count\") && expr.args.size() == 1 &&\n"
             "      !hasDefinitionPath(resolved) &&") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "!expr.isMethodCall && !callsStdNamespacedVectorCountHelper &&\n"
+            "      setupOut.isNamespacedVectorHelperCall && setupOut.namespacedHelper == \"count\" &&") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "callsStdNamespacedVectorCountHelper &&\n"

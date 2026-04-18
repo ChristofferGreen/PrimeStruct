@@ -127,7 +127,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
           hasVisibleCanonicalVectorHelperPath("/std/collections/vector/capacity"));
 
   setupOut.isNamespacedVectorCountCall =
-      !expr.isMethodCall && !callsStdNamespacedVectorCountHelper &&
+      !callsStdNamespacedVectorCountHelper &&
       setupOut.isNamespacedVectorHelperCall && setupOut.namespacedHelper == "count" &&
       isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
       !hasDefinitionPath(resolved) &&

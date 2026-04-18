@@ -10,6 +10,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 17, 2026)**
 
 **Group 14 - SoA bring-up and end-state cleanup**
+- ✓ TODO-0676: Remove dispatch count direct-call recheck. Completed: the redundant `!expr.isMethodCall` recheck was deleted from the dispatch-side `setupOut.isNamespacedVectorCountCall` assignment in `SemanticsValidatorExprCollectionDispatchSetup.cpp`, and focused expr source-lock coverage now keeps the direct `!callsStdNamespacedVectorCountHelper` form present while the old guard stays absent.
 - ✓ TODO-0675: Remove dead count direct-call alias. Completed: the dead `callsStdNamespacedVectorCountHelper` local was deleted from `SemanticsValidatorExprCollectionCountCapacity.cpp`, and focused expr source-lock coverage now keeps that unused alias absent.
 - ✓ TODO-0674: Inline dispatch count visibility predicate. Completed: the one-use `callsInvisibleStdNamespacedVectorCountHelper` local was deleted from `SemanticsValidatorExprCollectionDispatchSetup.cpp`, and focused expr source-lock coverage now keeps the inline shared invisible direct-call predicate present while the old local stays absent.
 - ✓ TODO-0673: Inline count import predicate. Completed: the one-use `callsUnimportedStdNamespacedVectorCountHelper` local was deleted from `SemanticsValidatorExprCollectionCountCapacity.cpp`, and focused expr source-lock coverage now keeps the inline shared unimported direct-call predicate present while the old local stays absent.
