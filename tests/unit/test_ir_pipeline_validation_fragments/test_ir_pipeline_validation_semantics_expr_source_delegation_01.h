@@ -1435,13 +1435,11 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto matchesCountMethodCallShape = [&](bool requireSingleArg) {\n"
-            "      const bool resolvesExplicitCountMethodTarget =\n"
-            "          defMap_.find(resolved) != defMap_.end();\n"
             "      const bool resolvesMapCountSurface =\n"
             "          context.isStdNamespacedMapCountCall || context.isNamespacedMapCountCall ||\n"
             "          context.isUnnamespacedMapCountFallbackCall || context.isResolvedMapCountCall;\n"
             "      if (requireSingleArg) {\n"
-            "        return (!resolvesExplicitCountMethodTarget &&\n"
+            "        return (defMap_.find(resolved) == defMap_.end() &&\n"
             "                !context.isStdNamespacedMapCountCall) ||\n"
             "               (!isStdNamespacedVectorCompatibilityDirectCall(\n"
             "                    expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
@@ -1454,8 +1452,11 @@
             "                  context.isArrayNamespacedVectorCountCompatibilityCall(expr))) ||\n"
             "               resolvesMapCountSurface;\n"
             "      }\n"
-            "      return resolvesExplicitCountMethodTarget || resolvesMapCountSurface;\n"
+            "      return defMap_.find(resolved) != defMap_.end() || resolvesMapCountSurface;\n"
             "    };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool resolvesExplicitCountMethodTarget =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (requireSingleArg) {\n"
