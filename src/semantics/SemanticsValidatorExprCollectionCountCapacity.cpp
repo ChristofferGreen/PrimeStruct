@@ -44,16 +44,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     }
     return std::nullopt;
   };
-  const auto finalizeResolvedCollectionMethodTarget =
-      [&](const std::string &methodResolved, bool isBuiltinMethod) -> bool {
-    if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {
-      return failCollectionCountCapacityDiagnostic("unknown method: " +
-                                                   methodResolved);
-    }
-    resolved = methodResolved;
-    resolvedMethod = isBuiltinMethod;
-    return true;
-  };
   const auto finalizeResolvedCollectionMethodTargetAfterRemovedRootedVectorCheck =
       [&](const std::string &methodResolved, bool isBuiltinMethod) -> bool {
     const std::string removedRootedVectorDirectCallDiagnostic =
@@ -62,8 +52,13 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       return failCollectionCountCapacityDiagnostic(
           removedRootedVectorDirectCallDiagnostic);
     }
-    return finalizeResolvedCollectionMethodTarget(methodResolved,
-                                                  isBuiltinMethod);
+    if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {
+      return failCollectionCountCapacityDiagnostic("unknown method: " +
+                                                   methodResolved);
+    }
+    resolved = methodResolved;
+    resolvedMethod = isBuiltinMethod;
+    return true;
   };
   auto isConcreteCountCapacityInstantiation = [&](const std::string &path) {
     if (defMap_.find(path) == defMap_.end()) {

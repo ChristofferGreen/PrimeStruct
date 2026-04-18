@@ -417,8 +417,13 @@
             "      return failCollectionCountCapacityDiagnostic(\n"
             "          removedRootedVectorDirectCallDiagnostic);\n"
             "    }\n"
-            "    return finalizeResolvedCollectionMethodTarget(methodResolved,\n"
-            "                                                  isBuiltinMethod);\n"
+            "    if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {\n"
+            "      return failCollectionCountCapacityDiagnostic(\"unknown method: \" +\n"
+            "                                                   methodResolved);\n"
+            "    }\n"
+            "    resolved = methodResolved;\n"
+            "    resolvedMethod = isBuiltinMethod;\n"
+            "    return true;\n"
             "  };") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -2165,7 +2170,7 @@
             "    resolved = methodResolved;\n"
             "    resolvedMethod = isBuiltinMethod;\n"
             "    return true;\n"
-            "  };") !=
+            "  };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (resolveCountMethod(true)) {\n"
@@ -3197,7 +3202,7 @@
             "resolved = methodResolved;\n"
             "    resolvedMethod = isBuiltinMethod;\n"
             "    return true;\n"
-            "  };") ==
+            "  };") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "return finalizeResolvedCollectionMethodTarget(methodResolved, isBuiltinMethod);") ==
