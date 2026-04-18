@@ -84,9 +84,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       context.isStdNamespacedVectorCountCall && expr.args.size() == 1 &&
       context.resolveMapTarget != nullptr &&
       context.resolveMapTarget(expr.args.front());
-  if (resolvesStdNamespacedVectorCountMapTarget &&
+  const bool rejectsStdNamespacedVectorCountMapTargetAsNonVector =
+      resolvesStdNamespacedVectorCountMapTarget &&
       (defMap_.find("/std/collections/vector/count") == defMap_.end() ||
-       hasImportedDefinitionPath("/std/collections/vector/count"))) {
+       hasImportedDefinitionPath("/std/collections/vector/count"));
+  if (rejectsStdNamespacedVectorCountMapTargetAsNonVector) {
     handledOut = true;
     return failCollectionCountCapacityDiagnostic(
         vectorCompatibilityRequiresVectorTargetDiagnostic("count"));
