@@ -1834,11 +1834,14 @@
             "                  resolvesCountReceiverTypeFromPointerLikeExpr =\n"
             "                      !resolvesCountReceiverTypeFromPointerExpr &&\n"
             "                      isPointerLikeExpr(receiver, params, locals);\n"
-            "              if (resolvesCountReceiverTypeFromPointerExpr) {\n"
-            "                typeName = \"Pointer\";\n"
-            "              } else if (\n"
-            "                  resolvesCountReceiverTypeFromPointerLikeExpr) {\n"
-            "                typeName = \"Reference\";\n"
+            "              const char *countResolveMissPointerTypeName =\n"
+            "                  resolvesCountReceiverTypeFromPointerExpr\n"
+            "                      ? \"Pointer\"\n"
+            "                      : (resolvesCountReceiverTypeFromPointerLikeExpr\n"
+            "                             ? \"Reference\"\n"
+            "                             : nullptr);\n"
+            "              if (countResolveMissPointerTypeName != nullptr) {\n"
+            "                typeName = countResolveMissPointerTypeName;\n"
             "              }\n"
             "            }\n"
             "            const bool resolvesPointerLikeCountReceiverType =\n"
@@ -1891,6 +1894,14 @@
             "            methodResolved = \"/\" + typeName + \"/count\";\n"
             "            error_.clear();\n"
             "            isBuiltinMethod = false;\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "              if (resolvesCountReceiverTypeFromPointerExpr) {\n"
+            "                typeName = \"Pointer\";\n"
+            "              } else if (\n"
+            "                  resolvesCountReceiverTypeFromPointerLikeExpr) {\n"
+            "                typeName = \"Reference\";\n"
+            "              }\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "        if (resolveMethodTarget(\n"

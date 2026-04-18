@@ -260,11 +260,14 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                               resolvesCountReceiverTypeFromPointerLikeExpr =
                                   !resolvesCountReceiverTypeFromPointerExpr &&
                                   isPointerLikeExpr(receiver, params, locals);
-                          if (resolvesCountReceiverTypeFromPointerExpr) {
-                            typeName = "Pointer";
-                          } else if (
-                              resolvesCountReceiverTypeFromPointerLikeExpr) {
-                            typeName = "Reference";
+                          const char *countResolveMissPointerTypeName =
+                              resolvesCountReceiverTypeFromPointerExpr
+                                  ? "Pointer"
+                                  : (resolvesCountReceiverTypeFromPointerLikeExpr
+                                         ? "Reference"
+                                         : nullptr);
+                          if (countResolveMissPointerTypeName != nullptr) {
+                            typeName = countResolveMissPointerTypeName;
                           }
                         }
                         const bool resolvesPointerLikeCountReceiverType =
