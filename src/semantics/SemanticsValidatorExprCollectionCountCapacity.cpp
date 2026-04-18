@@ -359,8 +359,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
        (capacityMethodSurfaceUsesSingleArgument &&
         (capacityMethodSurfaceLacksResolvedDefinitionTarget ||
          routesThroughNamespacedVectorCapacityCallSurface)));
-  if (allowsCapacityMethodSurfacePreconditions &&
-      matchesCapacityMethodSurfaceRouteShape) {
+  const bool matchesCapacityMethodSurfaceRoute =
+      allowsCapacityMethodSurfacePreconditions &&
+      matchesCapacityMethodSurfaceRouteShape;
+  if (matchesCapacityMethodSurfaceRoute) {
     handledOut = true;
     usedMethodTarget = true;
     hasMethodReceiverIndex = true;
