@@ -140,6 +140,7 @@ Wave D (queue hygiene):
     - Final release gate passes with `./scripts/compile.sh --release`.
   - stop_rule: If shared classifier rewrites destabilize `map`/`soa_vector`, isolate the generic mechanism in this leaf and defer remaining shared deletions to TODO-0409.
   - notes: This leaf should leave a reusable generic path that TODO-0409 can apply to `map` and `soa_vector`.
+  - progress: Completed `TODO-0900` by inlining the count-side method-target visibility gate in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so that the count branch no longer carries the one-use `hasVisibleCountMethodTarget` local.
   - progress: Completed `TODO-0899` by routing the count-side unknown-target diagnostic in `SemanticsValidatorExprCollectionCountCapacity.cpp` through shared `stdlibMapCountTargetPath`, so that the count branch no longer carries that direct `/std/collections/map/count` literal.
   - progress: Completed `TODO-0898` by inlining the count resolve-miss name-kind gate in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so that the count branch no longer carries the one-use `resolvesCountReceiverTypeFromNameBinding` local.
   - progress: Completed `TODO-0897` by hoisting the count resolve-miss name-bound receiver type lookup in `SemanticsValidatorExprCollectionCountCapacity.cpp` behind shared `countResolveMissReceiverBinding`, so that the count branch no longer repeats direct param/local type assignment branches.

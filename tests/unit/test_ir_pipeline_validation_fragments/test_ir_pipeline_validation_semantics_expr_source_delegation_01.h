@@ -2753,24 +2753,19 @@
             "                    \"unknown call target: /std/collections/map/count\";\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "                const bool hasVisibleCountMethodTarget =\n"
-            "                    isBuiltinMethod ||\n"
-            "                    hasDeclaredDefinitionPath(methodResolved) ||\n"
-            "                    hasImportedDefinitionPath(methodResolved);\n"
-            "                if (!hasVisibleCountMethodTarget) {\n"
-            "                  (void)failExprDiagnostic(expr,\n"
-            "                                           \"unknown method: \" + methodResolved);\n"
-            "                  return false;\n"
-            "                }") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "                if (!(isBuiltinMethod ||\n"
             "                      hasDeclaredDefinitionPath(methodResolved) ||\n"
             "                      hasImportedDefinitionPath(methodResolved))) {\n"
             "                  (void)failExprDiagnostic(expr,\n"
             "                                           \"unknown method: \" + methodResolved);\n"
             "                  return false;\n"
-            "                }") ==
+            "                }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "                const bool hasVisibleCountMethodTarget =\n"
+            "                    isBuiltinMethod ||\n"
+            "                    hasDeclaredDefinitionPath(methodResolved) ||\n"
+            "                    hasImportedDefinitionPath(methodResolved);\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "                const bool reusesResolvedCountMonomorphizedTarget =\n"

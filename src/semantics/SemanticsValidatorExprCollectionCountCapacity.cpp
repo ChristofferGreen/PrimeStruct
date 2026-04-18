@@ -334,11 +334,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                       expr, removedRootedVectorDirectCallDiagnostic);
                   return false;
                 }
-                const bool hasVisibleCountMethodTarget =
-                    isBuiltinMethod ||
-                    hasDeclaredDefinitionPath(methodResolved) ||
-                    hasImportedDefinitionPath(methodResolved);
-                if (!hasVisibleCountMethodTarget) {
+                if (!(isBuiltinMethod ||
+                      hasDeclaredDefinitionPath(methodResolved) ||
+                      hasImportedDefinitionPath(methodResolved))) {
                   (void)failExprDiagnostic(expr,
                                            "unknown method: " + methodResolved);
                   return false;
