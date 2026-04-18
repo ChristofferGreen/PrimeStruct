@@ -532,6 +532,11 @@
             "      expr.name == \"remove_swap\";") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
+            "const bool hasVisibleCanonicalVectorHelperForMethod =\n"
+            "      hasImportedDefinitionPath(\"/std/collections/vector/\" + expr.name) ||\n"
+            "      defMap_.count(\"/std/collections/vector/\" + expr.name) > 0;") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
             "if (isVectorCompatibilityMethod &&\n"
             "      normalizedMethodNamespace != \"vector\" &&\n"
             "      normalizedMethodNamespace != \"std/collections/vector\" &&") !=
@@ -574,8 +579,7 @@
             "if (!hasImportedDefinitionPath(vectorMethodTarget) &&\n"
             "        defMap_.count(vectorMethodTarget) == 0 &&\n"
             "        vectorMethodTarget.rfind(\"/std/collections/experimental_vector/\", 0) == 0 &&\n"
-            "        (hasImportedDefinitionPath(\"/std/collections/vector/\" + expr.name) ||\n"
-            "         defMap_.count(\"/std/collections/vector/\" + expr.name) > 0)) {\n"
+            "        hasVisibleCanonicalVectorHelperForMethod) {\n"
             "      vectorMethodTarget = \"/std/collections/vector/\" + expr.name;") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
@@ -587,8 +591,7 @@
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (!isBuiltinMethod && isVectorCompatibilityMethod &&\n"
             "      resolved.rfind(\"/std/collections/experimental_vector/Vector__\", 0) == 0 &&\n"
-            "      (hasImportedDefinitionPath(\"/std/collections/vector/\" + expr.name) ||\n"
-            "       defMap_.count(\"/std/collections/vector/\" + expr.name) > 0)) {\n"
+            "      hasVisibleCanonicalVectorHelperForMethod) {\n"
             "    resolved = preferVectorStdlibHelperPath(\"/std/collections/vector/\" + expr.name);") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
