@@ -6,6 +6,7 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 13, 2026)**
+- ✓ TODO-0868: Share stdlib map-count fallback gate. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the remaining stdlib map-count fallback eligibility bundle behind shared `allowsStdlibMapCountFallbackRoute`, and focused expr source-lock coverage now keeps that shared local present while the old inline conjunction stays absent.
 - ✓ TODO-0867: Share unresolved single-arg count route. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the remaining unresolved single-arg count-route branch behind shared `allowsUnresolvedSingleArgCountRoute`, and focused expr source-lock coverage now keeps that shared local present while the old inline conjunction stays absent.
 - ✓ TODO-0866: Share direct bare-map rejection bundle. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the remaining direct bare-map count rejection bundle behind shared `rejectsDirectBareMapCountValidation`, and focused expr source-lock coverage now keeps that shared local present while the old inline conjunction stays absent.
 - ✓ TODO-0865: Share builtin map-count target gate. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the remaining builtin stdlib map-count target gate behind shared `targetsBuiltinStdlibMapCountMethod`, and focused expr source-lock coverage now keeps that shared local present while the old inline conjunction stays absent.

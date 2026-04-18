@@ -2828,16 +2828,25 @@
             "  const bool lacksVisibleStdlibMapCountDefinition =\n"
             "      !hasDeclaredDefinitionPath(stdlibMapCountTargetPath) &&\n"
             "      !hasImportedDefinitionPath(stdlibMapCountTargetPath);\n"
-            "  const bool routesThroughStdlibMapCountFallback =\n"
-            "      context.isUnnamespacedMapCountFallbackCall &&\n"
+            "  const bool allowsStdlibMapCountFallbackRoute =\n"
             "      !hasDeclaredDefinitionPath(bareMapCountTargetPath) &&\n"
             "      lacksVisibleStdlibMapCountDefinition &&\n"
             "      resolvesMapCountReceiver;\n"
+            "  const bool routesThroughStdlibMapCountFallback =\n"
+            "      context.isUnnamespacedMapCountFallbackCall &&\n"
+            "      allowsStdlibMapCountFallbackRoute;\n"
             "  bool isBuiltinMethod = false;\n"
             "  std::string methodResolved;\n"
             "  {\n"
             "                if (routesThroughStdlibMapCountFallback) {\n"
             "                  methodResolved = stdlibMapCountTargetPath;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "  const bool routesThroughStdlibMapCountFallback =\n"
+            "      context.isUnnamespacedMapCountFallbackCall &&\n"
+            "      !hasDeclaredDefinitionPath(bareMapCountTargetPath) &&\n"
+            "      lacksVisibleStdlibMapCountDefinition &&\n"
+            "      resolvesMapCountReceiver;\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool matchesCountRouteArgShape =\n"
