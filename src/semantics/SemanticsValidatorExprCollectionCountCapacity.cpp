@@ -78,25 +78,27 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       expr.args.size() == 1 &&
       context.resolveMapTarget != nullptr &&
       context.resolveMapTarget(expr.args.front());
-  const std::string stdNamespacedVectorCountTargetDiagnosticMessage =
-      classifyStdNamespacedVectorCountDiagnosticMessage(
-          false,
-          context.isDirectStdNamespacedVectorCountWrapperMapTarget,
-          isUndeclaredStdNamespacedVectorCompatibilityDirectCall(
-              expr.isMethodCall,
-              resolveCalleePath(expr),
-              "count",
-              hasDeclaredDefinitionPath("/std/collections/vector/count")),
-          resolvesStdNamespacedVectorCountMapTarget,
-          isUnresolvableStdNamespacedVectorCompatibilityDirectCall(
-              expr.isMethodCall,
-              resolveCalleePath(expr),
-              "count",
-              hasResolvableDefinitionPath("/std/collections/vector/count")));
-  if (!stdNamespacedVectorCountTargetDiagnosticMessage.empty()) {
-    handledOut = true;
-    return failCollectionCountCapacityDiagnostic(
-        std::move(stdNamespacedVectorCountTargetDiagnosticMessage));
+  {
+    std::string stdNamespacedVectorCountTargetDiagnosticMessage =
+        classifyStdNamespacedVectorCountDiagnosticMessage(
+            false,
+            context.isDirectStdNamespacedVectorCountWrapperMapTarget,
+            isUndeclaredStdNamespacedVectorCompatibilityDirectCall(
+                expr.isMethodCall,
+                resolveCalleePath(expr),
+                "count",
+                hasDeclaredDefinitionPath("/std/collections/vector/count")),
+            resolvesStdNamespacedVectorCountMapTarget,
+            isUnresolvableStdNamespacedVectorCompatibilityDirectCall(
+                expr.isMethodCall,
+                resolveCalleePath(expr),
+                "count",
+                hasResolvableDefinitionPath("/std/collections/vector/count")));
+    if (!stdNamespacedVectorCountTargetDiagnosticMessage.empty()) {
+      handledOut = true;
+      return failCollectionCountCapacityDiagnostic(
+          std::move(stdNamespacedVectorCountTargetDiagnosticMessage));
+    }
   }
   auto resolveCountMethod = [&](bool requireSingleArg) -> bool {
     if (hasNamedArguments(expr.argNames) ||

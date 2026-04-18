@@ -140,6 +140,7 @@ Wave D (queue hygiene):
     - Final release gate passes with `./scripts/compile.sh --release`.
   - stop_rule: If shared classifier rewrites destabilize `map`/`soa_vector`, isolate the generic mechanism in this leaf and defer remaining shared deletions to TODO-0409.
   - notes: This leaf should leave a reusable generic path that TODO-0409 can apply to `map` and `soa_vector`.
+  - progress: Completed `TODO-0682` by deleting the one-use `stdNamespacedVectorCountTargetDiagnosticMessage` local from `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the collection-side count diagnostic path now performs its shared selector call directly inside the failure block.
   - progress: Completed `TODO-0681` by deleting the one-use `stdNamespacedVectorCountDiagnosticMessage` local from `SemanticsValidatorExprCollectionDispatchSetup.cpp`, so the dispatch-side count diagnostic path now performs its shared selector call directly inside the failure branch.
   - progress: Completed `TODO-0680` by deleting the one-use `callsStdNamespacedVectorCountHelper` local from `SemanticsValidatorExprCollectionDispatchSetup.cpp`, so the dispatch-side count wrapper-map target now uses the shared direct-call helper inline instead of carrying a dedicated alias.
   - progress: Completed `TODO-0679` by deleting the one-use `isNamespacedVectorCountCall` local from `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the collection-side count method-shape gate now keeps that canonical namespaced-count condition inline inside `matchesCountMethodCallShape(...)`.
