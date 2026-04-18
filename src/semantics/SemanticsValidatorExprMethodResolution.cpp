@@ -23,10 +23,6 @@ bool isExperimentalVectorCompatibilityMethodTarget(std::string_view methodTarget
          methodTarget.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
 }
 
-bool isExperimentalVectorCompatibilityResolvedMethodTarget(std::string_view methodTarget) {
-  return methodTarget.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
-}
-
 } // namespace
 
 bool SemanticsValidator::validateExprMethodCallTarget(
@@ -264,7 +260,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     }
   }
   if (!isBuiltinMethod && isVectorCompatibilityMethodName(expr.name) &&
-      isExperimentalVectorCompatibilityResolvedMethodTarget(resolved) &&
+      resolved.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 &&
       hasVisibleCanonicalVectorMethodTarget) {
     resolved = preferVectorStdlibHelperPath(canonicalVectorMethodTarget);
   }
