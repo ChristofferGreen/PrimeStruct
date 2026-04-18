@@ -21,9 +21,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     size_t &methodReceiverIndex) {
   handledOut = false;
   rewrittenExprOut.reset();
-  auto hasResolvableDefinitionPath = [&](const std::string &path) {
-    return hasDeclaredDefinitionPath(path) || hasImportedDefinitionPath(path);
-  };
   if (!expr.isMethodCall && defMap_.find(resolved) != defMap_.end()) {
     const size_t lastSlash = resolved.find_last_of('/');
     const size_t instantiationPos =
@@ -83,7 +80,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 expr.isMethodCall,
                 resolveCalleePath(expr),
                 "count",
-                hasResolvableDefinitionPath("/std/collections/vector/count")));
+                hasDeclaredDefinitionPath("/std/collections/vector/count") ||
+                    hasImportedDefinitionPath(
+                        "/std/collections/vector/count")));
         !stdNamespacedVectorCountDiagnosticMessage.empty()) {
       handledOut = true;
       return failExprDiagnostic(expr,
@@ -163,7 +162,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     } else if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
                                                "count", methodResolved)) {
       methodResolved = preferVectorStdlibHelperPath(methodResolved);
-      if (hasResolvableDefinitionPath(methodResolved)) {
+      if (hasDeclaredDefinitionPath(methodResolved) ||
+          hasImportedDefinitionPath(methodResolved)) {
         isBuiltinMethod = false;
       } else if (!resolveMethodTarget(
                      params,
@@ -283,7 +283,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       return failExprDiagnostic(expr,
                                 removedRootedVectorDirectCallDiagnostic);
     }
-    if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {
+    if (!isBuiltinMethod && !hasDeclaredDefinitionPath(methodResolved) &&
+        !hasImportedDefinitionPath(methodResolved)) {
       return failExprDiagnostic(expr,
                                 "unknown method: " + methodResolved);
     }
@@ -337,7 +338,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
                                         "capacity", methodResolved)) {
       methodResolved = preferVectorStdlibHelperPath(methodResolved);
-      if (hasResolvableDefinitionPath(methodResolved)) {
+      if (hasDeclaredDefinitionPath(methodResolved) ||
+          hasImportedDefinitionPath(methodResolved)) {
         isBuiltinMethod = false;
       } else if (isStdNamespacedVectorCompatibilityHelperPath(
                      resolveCalleePath(expr), "capacity")) {
@@ -368,7 +370,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         resolved.rfind(methodResolved + "__t", 0) == 0) {
       methodResolved = resolved;
     }
-    if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {
+    if (!isBuiltinMethod && !hasDeclaredDefinitionPath(methodResolved) &&
+        !hasImportedDefinitionPath(methodResolved)) {
       if (requireSingleArg &&
           (context.isNonCollectionStructCapacityTarget == nullptr ||
            !context.isNonCollectionStructCapacityTarget(methodResolved)) &&
@@ -377,7 +380,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                                                    isBuiltinMethod, false);
       }
     }
-    if (!isBuiltinMethod && !hasResolvableDefinitionPath(methodResolved)) {
+    if (!isBuiltinMethod && !hasDeclaredDefinitionPath(methodResolved) &&
+        !hasImportedDefinitionPath(methodResolved)) {
       return failExprDiagnostic(expr,
                                 "unknown method: " + methodResolved);
     }
