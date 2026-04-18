@@ -2384,6 +2384,17 @@
             "      !isArrayNamespacedVectorCountCompatibilityActive;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool matchesCountRouteArgShape =\n"
+            "      (expr.args.size() == 1 &&\n"
+            "       ((defMap_.find(resolved) == defMap_.end() &&\n"
+            "         !context.isStdNamespacedMapCountCall) ||\n"
+            "        routesThroughNamespacedVectorCountFallback ||\n"
+            "        routesThroughMapCountCallSurface)) ||\n"
+            "      (expr.args.size() != 1 &&\n"
+            "       (defMap_.find(resolved) != defMap_.end() ||\n"
+            "        routesThroughMapCountCallSurface));") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "bool needsCountMethodResolveOrFallback =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -2700,14 +2711,7 @@
             "    !isArrayNamespacedVectorCountCompatibilityActive &&\n"
             "    (isVectorBuiltinName(expr, \"count\") ||\n"
             "     routesThroughMapCountCallSurface) &&\n"
-            "    ((expr.args.size() == 1 &&\n"
-            "      ((defMap_.find(resolved) == defMap_.end() &&\n"
-            "        !context.isStdNamespacedMapCountCall) ||\n"
-            "       routesThroughNamespacedVectorCountFallback ||\n"
-            "       routesThroughMapCountCallSurface)) ||\n"
-            "     (expr.args.size() != 1 &&\n"
-            "      (defMap_.find(resolved) != defMap_.end() ||\n"
-            "       routesThroughMapCountCallSurface)))) {\n"
+            "    matchesCountRouteArgShape) {\n"
             "  handledOut = true;\n"
             "  usedMethodTarget = true;\n"
             "  hasMethodReceiverIndex = true;\n"
