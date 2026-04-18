@@ -2993,6 +2993,15 @@
             "    };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto tryResolveCapacityMethodWithValidation = [&]() -> bool {\n"
+            "      if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
+            "                               \"capacity\", methodResolved, isBuiltinMethod)) {\n"
+            "        (void)validateExpr(params, locals, expr.args.front());\n"
+            "        return false;\n"
+            "      }\n"
+            "      return true;\n"
+            "    };") != std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool routesThroughStdNamespacedVectorCapacityHelper =\n"
             "        isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),\n"
             "                                                     \"capacity\");") !=
@@ -3006,19 +3015,27 @@
             "      } else if (routesThroughStdNamespacedVectorCapacityHelper) {\n"
             "        methodResolved = \"/std/collections/vector/capacity\";\n"
             "        isBuiltinMethod = true;\n"
-            "      } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), \"capacity\",\n"
-            "                                      methodResolved, isBuiltinMethod)) {\n"
-            "        (void)validateExpr(params, locals, expr.args.front());\n"
+            "      } else if (!tryResolveCapacityMethodWithValidation()) {\n"
             "        return false;\n"
             "      }\n"
             "    } else if (routesThroughStdNamespacedVectorCapacityHelper) {\n"
             "      methodResolved = \"/std/collections/vector/capacity\";\n"
             "      isBuiltinMethod = true;\n"
-            "    } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), \"capacity\",\n"
-            "                                    methodResolved, isBuiltinMethod)) {\n"
-            "      (void)validateExpr(params, locals, expr.args.front());\n"
+            "    } else if (!tryResolveCapacityMethodWithValidation()) {\n"
             "      return false;\n"
             "    }") != std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
+            "                                      \"capacity\", methodResolved, isBuiltinMethod)) {\n"
+            "        (void)validateExpr(params, locals, expr.args.front());\n"
+            "        return false;\n"
+            "      }") == std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "} else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
+            "                                    \"capacity\", methodResolved, isBuiltinMethod)) {\n"
+            "      (void)validateExpr(params, locals, expr.args.front());\n"
+            "      return false;\n"
+            "    }") == std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "else if (isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),\n"
             "                                                            \"capacity\")) {") ==
