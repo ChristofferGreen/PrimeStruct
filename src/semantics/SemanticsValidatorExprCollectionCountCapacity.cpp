@@ -96,6 +96,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       [](const std::string &helperName) {
         return helperName == "count" || helperName == "capacity";
       };
+  const bool routesThroughNamespacedCountOrCapacityHelperSurface =
+      context.isNamespacedVectorHelperCall &&
+      isCountOrCapacityHelperName(context.namespacedHelper);
   if (!expr.isMethodCall && defMap_.find(resolved) != defMap_.end()) {
     const size_t lastSlash = resolved.find_last_of('/');
     const size_t instantiationPos =
@@ -113,8 +116,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   if (hasNamedArguments(expr.argNames) &&
       expr.args.size() == 1 &&
       defMap_.find(resolved) == defMap_.end() &&
-      context.isNamespacedVectorHelperCall &&
-      isCountOrCapacityHelperName(context.namespacedHelper)) {
+      routesThroughNamespacedCountOrCapacityHelperSurface) {
     handledOut = true;
     bool isBuiltinMethod = false;
     std::string methodResolved;
