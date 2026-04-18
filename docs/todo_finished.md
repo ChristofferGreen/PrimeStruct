@@ -6,6 +6,7 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 13, 2026)**
+- ✓ TODO-0854: Share stdlib map-count target path. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the count-side stdlib map-count target path behind shared `stdlibMapCountTargetPath`, and focused expr source-lock coverage now keeps that shared local present while the old inline path handling stays absent.
 - ✓ TODO-0853: Share map-count rejection tail. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the count-side `/std/collections/map/count` rejection tail behind shared `rejectsDirectBareMapCountTarget` and `rejectsBuiltinStdlibMapCountTarget`, and focused expr source-lock coverage now keeps those shared locals present while the old inline rejection branch stays absent.
 - ✓ TODO-0852: Share count route gate. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the remaining outer count-route gate behind shared `matchesCountMethodSurfaceRoute`, and focused expr source-lock coverage now keeps that shared local present while the old inline gate stays absent.
 - ✓ TODO-0851: Share count route surface selector. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the remaining count-side surface selector behind shared `routesThroughCountMethodSurface`, and focused expr source-lock coverage now keeps that shared local present while the old inline route selector stays absent.

@@ -2433,7 +2433,7 @@
             "const bool targetsBareMapCountMethod =\n"
             "                    methodResolved == \"/map/count\";\n"
             "                const bool targetsStdlibMapCountMethod =\n"
-            "                    methodResolved == \"/std/collections/map/count\";\n"
+            "                    methodResolved == stdlibMapCountTargetPath;\n"
             "                const bool rejectsDirectBareMapCountTarget =\n"
             "                    !expr.isMethodCall && expr.args.size() == 1 &&\n"
             "                    receiver.kind == Expr::Kind::Name &&\n"
@@ -2733,11 +2733,13 @@
             "      !hasDeclaredDefinitionPath(\"/map/count\") &&\n"
             "      lacksVisibleStdlibMapCountDefinition &&\n"
             "      resolvesMapCountReceiver;\n"
+            "  const std::string stdlibMapCountTargetPath =\n"
+            "      \"/std/collections/map/count\";\n"
             "  bool isBuiltinMethod = false;\n"
             "  std::string methodResolved;\n"
             "  {\n"
             "                if (routesThroughStdlibMapCountFallback) {\n"
-            "                  methodResolved = \"/std/collections/map/count\";") !=
+            "                  methodResolved = stdlibMapCountTargetPath;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (std::optional<bool> resolvedCountMethod =\n"
