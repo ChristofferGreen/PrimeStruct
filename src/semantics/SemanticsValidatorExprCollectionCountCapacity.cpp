@@ -134,6 +134,16 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
            preferVisibleVectorHelperMethodTarget(methodResolved,
                                                 isBuiltinMethod);
   };
+  const auto tryResolveCollectionMethodTargetOrElse =
+      [&](const Expr &receiver, const char *methodName,
+          std::string &methodResolved, bool &isBuiltinMethod,
+          auto &&handleResolveMiss) -> bool {
+    if (resolveMethodTarget(params, locals, expr.namespacePrefix, receiver,
+                            methodName, methodResolved, isBuiltinMethod)) {
+      return true;
+    }
+    return handleResolveMiss(receiver, isBuiltinMethod, methodResolved);
+  };
   const auto tryResolveCollectionMethodFromSurface =
       [&](bool routesThroughMethodSurface, bool matchesSurfaceRoute,
           auto &&resolveMethodTarget) -> std::optional<bool> {
@@ -206,12 +216,14 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     const auto tryResolveCountMethodTargetWithFallback =
         [&](const Expr &receiver, bool &isBuiltinMethod,
             std::string &methodResolved) -> bool {
-      if (resolveMethodTarget(params, locals, expr.namespacePrefix, receiver,
-                              "count", methodResolved, isBuiltinMethod)) {
-        return true;
-      }
-      return assignCountMethodTargetAfterResolveMiss(receiver, isBuiltinMethod,
-                                                     methodResolved);
+      return tryResolveCollectionMethodTargetOrElse(
+          receiver, "count", methodResolved, isBuiltinMethod,
+          [&](const Expr &receiver, bool &isBuiltinMethod,
+              std::string &methodResolved) {
+            return assignCountMethodTargetAfterResolveMiss(receiver,
+                                                           isBuiltinMethod,
+                                                           methodResolved);
+          });
     };
     if (context.isUnnamespacedMapCountFallbackCall &&
         !hasDeclaredDefinitionPath("/map/count") &&
@@ -319,12 +331,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     const auto tryResolveCapacityMethodTargetWithValidation =
         [&](const Expr &receiver, bool &isBuiltinMethod,
             std::string &methodResolved) -> bool {
-      if (resolveMethodTarget(params, locals, expr.namespacePrefix, receiver,
-                              "capacity", methodResolved, isBuiltinMethod)) {
-        return true;
-      }
-      (void)validateExpr(params, locals, receiver);
-      return false;
+      return tryResolveCollectionMethodTargetOrElse(
+          receiver, "capacity", methodResolved, isBuiltinMethod,
+          [&](const Expr &receiver, bool &, std::string &) {
+            (void)validateExpr(params, locals, receiver);
+            return false;
+          });
     };
     if (!tryResolveVisibleVectorHelperMethodTarget(receiver, "capacity",
                                                    methodResolved,

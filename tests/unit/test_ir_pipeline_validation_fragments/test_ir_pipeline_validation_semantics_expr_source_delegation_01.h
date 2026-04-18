@@ -1439,6 +1439,18 @@
             "  };") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto tryResolveCollectionMethodTargetOrElse =\n"
+            "      [&](const Expr &receiver, const char *methodName,\n"
+            "          std::string &methodResolved, bool &isBuiltinMethod,\n"
+            "          auto &&handleResolveMiss) -> bool {\n"
+            "    if (resolveMethodTarget(params, locals, expr.namespacePrefix, receiver,\n"
+            "                            methodName, methodResolved, isBuiltinMethod)) {\n"
+            "      return true;\n"
+            "    }\n"
+            "    return handleResolveMiss(receiver, isBuiltinMethod, methodResolved);\n"
+            "  };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "  auto isConcreteCountCapacityInstantiation = [&](const std::string &path) {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -1663,13 +1675,27 @@
             "    const auto tryResolveCountMethodTargetWithFallback =\n"
             "        [&](const Expr &receiver, bool &isBuiltinMethod,\n"
             "            std::string &methodResolved) -> bool {\n"
+            "      return tryResolveCollectionMethodTargetOrElse(\n"
+            "          receiver, \"count\", methodResolved, isBuiltinMethod,\n"
+            "          [&](const Expr &receiver, bool &isBuiltinMethod,\n"
+            "              std::string &methodResolved) {\n"
+            "            return assignCountMethodTargetAfterResolveMiss(receiver,\n"
+            "                                                           isBuiltinMethod,\n"
+            "                                                           methodResolved);\n"
+            "          });\n"
+            "    };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "    const auto tryResolveCountMethodTargetWithFallback =\n"
+            "        [&](const Expr &receiver, bool &isBuiltinMethod,\n"
+            "            std::string &methodResolved) -> bool {\n"
             "      if (resolveMethodTarget(params, locals, expr.namespacePrefix, receiver,\n"
             "                              \"count\", methodResolved, isBuiltinMethod)) {\n"
             "        return true;\n"
             "      }\n"
             "      return assignCountMethodTargetAfterResolveMiss(receiver, isBuiltinMethod,\n"
             "                                                     methodResolved);\n"
-            "    };") !=
+            "    };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (context.isUnnamespacedMapCountFallbackCall &&\n"
@@ -3512,13 +3538,25 @@
             "    const auto tryResolveCapacityMethodTargetWithValidation =\n"
             "        [&](const Expr &receiver, bool &isBuiltinMethod,\n"
             "            std::string &methodResolved) -> bool {\n"
+            "      return tryResolveCollectionMethodTargetOrElse(\n"
+            "          receiver, \"capacity\", methodResolved, isBuiltinMethod,\n"
+            "          [&](const Expr &receiver, bool &, std::string &) {\n"
+            "            (void)validateExpr(params, locals, receiver);\n"
+            "            return false;\n"
+            "          });\n"
+            "    };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "    const auto tryResolveCapacityMethodTargetWithValidation =\n"
+            "        [&](const Expr &receiver, bool &isBuiltinMethod,\n"
+            "            std::string &methodResolved) -> bool {\n"
             "      if (resolveMethodTarget(params, locals, expr.namespacePrefix, receiver,\n"
             "                              \"capacity\", methodResolved, isBuiltinMethod)) {\n"
             "        return true;\n"
             "      }\n"
             "      (void)validateExpr(params, locals, receiver);\n"
             "      return false;\n"
-            "    };") !=
+            "    };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto assignStdNamespacedVectorCapacityMethodTarget = [&]() {\n"
