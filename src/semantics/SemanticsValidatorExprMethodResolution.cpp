@@ -7,6 +7,11 @@
 namespace primec::semantics {
 namespace {
 
+bool isExperimentalVectorCompatibilityMethodTarget(std::string_view methodTarget) {
+  return methodTarget.rfind("/std/collections/experimental_vector/", 0) == 0 ||
+         methodTarget.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+}
+
 } // namespace
 
 bool SemanticsValidator::validateExprMethodCallTarget(
@@ -169,8 +174,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
                                       vectorMethodTarget)) {
     if (!hasImportedDefinitionPath(vectorMethodTarget) &&
         defMap_.count(vectorMethodTarget) == 0 &&
-        (vectorMethodTarget.rfind("/std/collections/experimental_vector/", 0) == 0 ||
-         vectorMethodTarget.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) &&
+        isExperimentalVectorCompatibilityMethodTarget(vectorMethodTarget) &&
         hasVisibleCanonicalVectorCompatibilityMethodTarget) {
       vectorMethodTarget = canonicalVectorCompatibilityMethodTarget;
     }
@@ -241,8 +245,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     }
   }
   if (!isBuiltinMethod && isVectorCompatibilityMethod &&
-      (resolved.rfind("/std/collections/experimental_vector/", 0) == 0 ||
-       resolved.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) &&
+      isExperimentalVectorCompatibilityMethodTarget(resolved) &&
       hasVisibleCanonicalVectorCompatibilityMethodTarget) {
     resolved = canonicalVectorCompatibilityMethodTarget;
   }
