@@ -126,6 +126,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     hasMethodReceiverIndex = true;
     methodReceiverIndex = 0;
     const Expr &receiver = expr.args.front();
+    const bool resolvesMapCountReceiver =
+        context.resolveMapTarget != nullptr &&
+        context.resolveMapTarget(receiver);
     bool isBuiltinMethod = false;
     std::string methodResolved;
     {
@@ -133,8 +136,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     !hasDeclaredDefinitionPath("/map/count") &&
                     !hasDeclaredDefinitionPath("/std/collections/map/count") &&
                     !hasImportedDefinitionPath("/std/collections/map/count") &&
-                    context.resolveMapTarget != nullptr &&
-                    context.resolveMapTarget(receiver)) {
+                    resolvesMapCountReceiver) {
                   methodResolved = "/std/collections/map/count";
                   isBuiltinMethod = true;
                 } else {
@@ -157,8 +159,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                         (void)validateExpr(params, locals, receiver);
                         return false;
                       }
-                      if (context.resolveMapTarget != nullptr &&
-                          context.resolveMapTarget(receiver)) {
+                      if (resolvesMapCountReceiver) {
                         methodResolved = "/std/collections/map/count";
                         error_.clear();
                         isBuiltinMethod = false;

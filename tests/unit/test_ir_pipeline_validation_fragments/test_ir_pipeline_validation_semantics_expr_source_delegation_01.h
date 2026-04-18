@@ -2015,11 +2015,14 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (context.resolveMapTarget != nullptr &&\n"
-            "            context.resolveMapTarget(receiver)) {") !=
+            "            context.resolveMapTarget(receiver)) {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (context.resolveMapTarget != nullptr &&\n"
-            "          context.resolveMapTarget(receiver)) {") !=
+            "          context.resolveMapTarget(receiver)) {") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (resolvesMapCountReceiver) {") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
@@ -2686,6 +2689,9 @@
             "  hasMethodReceiverIndex = true;\n"
             "  methodReceiverIndex = 0;\n"
             "  const Expr &receiver = expr.args.front();\n"
+            "  const bool resolvesMapCountReceiver =\n"
+            "      context.resolveMapTarget != nullptr &&\n"
+            "      context.resolveMapTarget(receiver);\n"
             "  bool isBuiltinMethod = false;\n"
             "  std::string methodResolved;\n"
             "  {\n"
@@ -2693,8 +2699,7 @@
             "                    !hasDeclaredDefinitionPath(\"/map/count\") &&\n"
             "                    !hasDeclaredDefinitionPath(\"/std/collections/map/count\") &&\n"
             "                    !hasImportedDefinitionPath(\"/std/collections/map/count\") &&\n"
-            "                    context.resolveMapTarget != nullptr &&\n"
-            "                    context.resolveMapTarget(receiver)) {\n"
+            "                    resolvesMapCountReceiver) {\n"
             "                  methodResolved = \"/std/collections/map/count\";") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
