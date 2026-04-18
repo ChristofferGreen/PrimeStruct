@@ -4671,6 +4671,11 @@
             "     hasImportedDefinitionPath(methodResolved));\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (hasVisibleCapacityHelperMethodTarget) {\n"
+            "  isBuiltinMethod = false;\n"
+            "}\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool needsDirectCapacityMethodTargetResolution =\n"
             "    !usesStdNamespacedCapacityCompatibilityHelper &&\n"
             "    !hasVisibleCapacityHelperMethodTarget;\n") !=

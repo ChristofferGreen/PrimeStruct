@@ -403,9 +403,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     resolvedCapacityHelperMethodTarget &&
                     (hasDeclaredDefinitionPath(methodResolved) ||
                      hasImportedDefinitionPath(methodResolved));
-                if (hasVisibleCapacityHelperMethodTarget) {
-                  isBuiltinMethod = false;
-                }
                 const bool needsDirectCapacityMethodTargetResolution =
                     !usesStdNamespacedCapacityCompatibilityHelper &&
                     !hasVisibleCapacityHelperMethodTarget;
