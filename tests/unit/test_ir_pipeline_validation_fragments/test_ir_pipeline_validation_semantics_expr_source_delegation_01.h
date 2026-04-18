@@ -1074,13 +1074,18 @@
             "          \"unknown call target: /std/collections/vector/count\");") !=
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "const bool resolvesVectorLikeCountTarget =\n"
+            "          resolvesVector || resolvesExperimentalVector;") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
             "const bool resolvesNonVectorCountTarget =\n"
-            "          !resolvesVector && !resolvesExperimentalVector && !resolvesArray &&\n"
+            "          !resolvesVectorLikeCountTarget && !resolvesArray &&\n"
             "          !resolvesString;") !=
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
-            "if (!resolvesVector && !resolvesExperimentalVector && !resolvesArray &&\n"
-            "        !resolvesString) {") ==
+            "const bool resolvesNonVectorCountTarget =\n"
+            "          !resolvesVector && !resolvesExperimentalVector && !resolvesArray &&\n"
+            "          !resolvesString;") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "const bool resolvesMapAfterValidation =\n"
@@ -1099,12 +1104,15 @@
             "const bool rejectsVectorCountTargetWithoutVisibleHelper =\n"
             "          !hasDeclaredDefinitionPath(\"/std/collections/vector/count\") &&\n"
             "          !hasImportedDefinitionPath(\"/std/collections/vector/count\") &&\n"
-            "          (resolvesVector || resolvesExperimentalVector);") !=
+            "          resolvesVectorLikeCountTarget;") !=
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "if (!hasDeclaredDefinitionPath(\"/std/collections/vector/count\") &&\n"
             "        !hasImportedDefinitionPath(\"/std/collections/vector/count\") &&\n"
-            "        (resolvesVector || resolvesExperimentalVector))") ==
+            "        resolvesVectorLikeCountTarget)") ==
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "(resolvesVector || resolvesExperimentalVector);") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "if (rejectsVectorCountTargetWithoutVisibleHelper)") !=

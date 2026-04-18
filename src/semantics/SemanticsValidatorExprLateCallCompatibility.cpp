@@ -80,6 +80,8 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
     const bool resolvesExperimentalVector =
         context.dispatchResolvers->resolveExperimentalVectorTarget(
             expr.args.front(), experimentalElemType);
+    const bool resolvesVectorLikeCountTarget =
+        resolvesVector || resolvesExperimentalVector;
     const bool resolvesArray =
         context.dispatchResolvers->resolveArrayTarget(expr.args.front(),
                                                       arrayElemType);
@@ -90,7 +92,7 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
     const bool resolvesMap = context.dispatchResolvers->resolveMapTarget(
         expr.args.front(), mapKeyType, mapValueType);
     const bool resolvesNonVectorCountTarget =
-        !resolvesVector && !resolvesExperimentalVector && !resolvesArray &&
+        !resolvesVectorLikeCountTarget && !resolvesArray &&
         !resolvesString;
     if (resolvesNonVectorCountTarget) {
       if (!validateExpr(params, locals, expr.args.front())) {
@@ -111,7 +113,7 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
     const bool rejectsVectorCountTargetWithoutVisibleHelper =
         !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
         !hasImportedDefinitionPath("/std/collections/vector/count") &&
-        (resolvesVector || resolvesExperimentalVector);
+        resolvesVectorLikeCountTarget;
     if (rejectsVectorCountTargetWithoutVisibleHelper) {
       return failLateCallCompatibilityDiagnostic(
           "unknown call target: /std/collections/vector/count");
