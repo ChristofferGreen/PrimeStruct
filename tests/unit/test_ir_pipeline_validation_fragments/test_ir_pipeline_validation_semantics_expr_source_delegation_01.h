@@ -2395,6 +2395,10 @@
             "        routesThroughMapCountCallSurface));") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool routesThroughCountMethodSurface =\n"
+            "      isVectorBuiltinName(expr, \"count\") || routesThroughMapCountCallSurface;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "bool needsCountMethodResolveOrFallback =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -2709,8 +2713,7 @@
             "          hasImportedDefinitionPath(\"/std/collections/vector/count\")) ||\n"
             "      expr.args.empty()) &&\n"
             "    !isArrayNamespacedVectorCountCompatibilityActive &&\n"
-            "    (isVectorBuiltinName(expr, \"count\") ||\n"
-            "     routesThroughMapCountCallSurface) &&\n"
+            "    routesThroughCountMethodSurface &&\n"
             "    matchesCountRouteArgShape) {\n"
             "  handledOut = true;\n"
             "  usedMethodTarget = true;\n"
