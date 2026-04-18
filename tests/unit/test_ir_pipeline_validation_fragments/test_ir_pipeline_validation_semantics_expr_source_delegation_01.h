@@ -4653,6 +4653,29 @@
             "    \"/std/collections/vector/capacity\";\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool resolvedCapacityHelperMethodTarget =\n"
+            "    resolveVectorHelperMethodTarget(\n"
+            "        params, locals, receiver, \"capacity\",\n"
+            "        methodResolved);\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (resolvedCapacityHelperMethodTarget) {\n"
+            "  methodResolved =\n"
+            "      preferVectorStdlibHelperPath(methodResolved);\n"
+            "}\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool hasVisibleCapacityHelperMethodTarget =\n"
+            "    resolvedCapacityHelperMethodTarget &&\n"
+            "    (hasDeclaredDefinitionPath(methodResolved) ||\n"
+            "     hasImportedDefinitionPath(methodResolved));\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool needsDirectCapacityMethodTargetResolution =\n"
+            "    !usesStdNamespacedCapacityCompatibilityHelper &&\n"
+            "    !hasVisibleCapacityHelperMethodTarget;\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool resolvedVisibleCapacityHelperMethodTarget =\n"
             "    resolveVectorHelperMethodTarget(\n"
             "        params, locals, receiver, \"capacity\",\n"
@@ -4660,12 +4683,7 @@
             "    ((methodResolved =\n"
             "          preferVectorStdlibHelperPath(methodResolved)),\n"
             "     (hasDeclaredDefinitionPath(methodResolved) ||\n"
-            "      hasImportedDefinitionPath(methodResolved)));\n") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const bool needsDirectCapacityMethodTargetResolution =\n"
-            "    !usesStdNamespacedCapacityCompatibilityHelper &&\n"
-            "    !resolvedVisibleCapacityHelperMethodTarget;\n") !=
+            "      hasImportedDefinitionPath(methodResolved)));\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "  if (usesStdNamespacedCapacityCompatibilityHelper) {\n"
