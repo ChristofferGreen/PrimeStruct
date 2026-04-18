@@ -1543,14 +1543,7 @@
             "          expr.isMethodCall, resolveCalleePath(expr), \"count\");") !=
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "!callsStdNamespacedVectorCountHelper &&\n"
-            "      setupOut.isNamespacedVectorHelperCall && setupOut.namespacedHelper == \"count\" &&\n"
-            "      isVectorBuiltinName(expr, \"count\") && expr.args.size() == 1 &&\n"
-            "      !hasDefinitionPath(resolved) &&") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "!expr.isMethodCall && !callsStdNamespacedVectorCountHelper &&\n"
-            "      setupOut.isNamespacedVectorHelperCall && setupOut.namespacedHelper == \"count\" &&") ==
+            "setupOut.isNamespacedVectorCountCall =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "callsStdNamespacedVectorCountHelper &&\n"
@@ -1743,8 +1736,11 @@
         std::string::npos);
   CHECK(semanticsExprPrivateValidationSource.find(
             "    bool isStdNamespacedMapCountCall = false;\n"
-            "    bool isNamespacedVectorCountCall = false;\n"
-            "    bool isNamespacedMapCountCall = false;") ==
+            "    bool isNamespacedMapCountCall = false;\n"
+            "    bool isUnnamespacedMapCountFallbackCall = false;") !=
+        std::string::npos);
+  CHECK(semanticsExprPrivateValidationSource.find(
+            "    bool isNamespacedVectorCountCall = false;") ==
         std::string::npos);
   CHECK(semanticsExprPrivateValidationSource.find(
             "struct ExprCountCapacityMapBuiltinContext {\n"

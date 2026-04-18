@@ -512,7 +512,6 @@
     bool isStdNamespacedMapCountCall = false;
     bool isNamespacedMapHelperCall = false;
     std::string namespacedHelper;
-    bool isNamespacedVectorCountCall = false;
     bool isNamespacedMapCountCall = false;
     bool isUnnamespacedMapCountFallbackCall = false;
     bool isResolvedMapCountCall = false;

@@ -126,12 +126,6 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
           "capacity",
           hasVisibleCanonicalVectorHelperPath("/std/collections/vector/capacity"));
 
-  setupOut.isNamespacedVectorCountCall =
-      !callsStdNamespacedVectorCountHelper &&
-      setupOut.isNamespacedVectorHelperCall && setupOut.namespacedHelper == "count" &&
-      isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
-      !hasDefinitionPath(resolved) &&
-      !this->isArrayNamespacedVectorCountCompatibilityCall(expr, dispatchResolvers);
   setupOut.isUnnamespacedMapCountFallbackCall =
       !expr.isMethodCall &&
       this->isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals, dispatchResolverAdapters);
