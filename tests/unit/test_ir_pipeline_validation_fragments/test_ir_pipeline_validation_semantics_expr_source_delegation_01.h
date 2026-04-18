@@ -1800,8 +1800,10 @@
             "            (void)validateExpr(params, locals, receiver);\n"
             "            return false;\n"
             "          }\n"
-            "          if (context.resolveMapTarget != nullptr &&\n"
-            "              context.resolveMapTarget(receiver)) {\n"
+            "          const bool usesCountResolveMissMapFallback =\n"
+            "              context.resolveMapTarget != nullptr &&\n"
+            "              context.resolveMapTarget(receiver);\n"
+            "          if (usesCountResolveMissMapFallback) {\n"
             "            methodResolved = \"/std/collections/map/count\";\n"
             "            error_.clear();\n"
             "            isBuiltinMethod = false;\n"
@@ -1837,6 +1839,10 @@
             "        }\n"
             "      }\n"
             "    }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "          if (context.resolveMapTarget != nullptr &&\n"
+            "              context.resolveMapTarget(receiver)) {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "        if (resolveMethodTarget(\n"

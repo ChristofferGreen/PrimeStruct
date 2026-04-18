@@ -226,7 +226,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                         (void)validateExpr(params, locals, receiver);
                         return false;
                       }
-                      if (resolvesMapCountReceiver) {
+                      const bool usesCountResolveMissMapFallback =
+                          resolvesMapCountReceiver;
+                      if (usesCountResolveMissMapFallback) {
                         methodResolved = stdlibMapCountTargetPath;
                         error_.clear();
                         isBuiltinMethod = false;
