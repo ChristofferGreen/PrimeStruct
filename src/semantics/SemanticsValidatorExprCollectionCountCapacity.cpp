@@ -97,6 +97,22 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     }
     return failExprDiagnostic(expr, removedRootedVectorDirectCallDiagnostic);
   };
+  const auto resolveCollectionMethodTargetFromReceiver =
+      [&](auto &&resolveMethodTarget) -> bool {
+    handledOut = true;
+    usedMethodTarget = true;
+    hasMethodReceiverIndex = true;
+    methodReceiverIndex = 0;
+    const Expr &receiver = expr.args.front();
+    bool isBuiltinMethod = false;
+    std::string methodResolved;
+    if (!resolveMethodTarget(receiver, isBuiltinMethod, methodResolved)) {
+      return false;
+    }
+    resolved = methodResolved;
+    resolvedMethod = isBuiltinMethod;
+    return true;
+  };
   const auto resolveCountMethodTargetFromReceiver =
       [&](const Expr &receiver, bool &isBuiltinMethod,
           std::string &methodResolved) -> bool {
@@ -263,20 +279,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
        context.isNamespacedMapCountCall ||
        context.isUnnamespacedMapCountFallbackCall ||
        context.isResolvedMapCountCall)) {
-    handledOut = true;
-    usedMethodTarget = true;
-    hasMethodReceiverIndex = true;
-    methodReceiverIndex = 0;
-    const Expr &receiver = expr.args.front();
-    bool isBuiltinMethod = false;
-    std::string methodResolved;
-    if (!resolveCountMethodTargetFromReceiver(receiver, isBuiltinMethod,
-                                              methodResolved)) {
-      return false;
-    }
-    resolved = methodResolved;
-    resolvedMethod = isBuiltinMethod;
-    return true;
+    return resolveCollectionMethodTargetFromReceiver(
+        resolveCountMethodTargetFromReceiver);
   }
   if (handledOut) {
     return false;
@@ -301,20 +305,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
        context.isNamespacedMapCountCall ||
        context.isUnnamespacedMapCountFallbackCall ||
        context.isResolvedMapCountCall)) {
-    handledOut = true;
-    usedMethodTarget = true;
-    hasMethodReceiverIndex = true;
-    methodReceiverIndex = 0;
-    const Expr &receiver = expr.args.front();
-    bool isBuiltinMethod = false;
-    std::string methodResolved;
-    if (!resolveCountMethodTargetFromReceiver(receiver, isBuiltinMethod,
-                                              methodResolved)) {
-      return false;
-    }
-    resolved = methodResolved;
-    resolvedMethod = isBuiltinMethod;
-    return true;
+    return resolveCollectionMethodTargetFromReceiver(
+        resolveCountMethodTargetFromReceiver);
   }
   if (handledOut) {
     return false;
@@ -382,20 +374,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     if (!(expr.args.empty() || expr.args.size() == 1 ||
           defMap_.find(resolved) == defMap_.end()) &&
         context.isNamespacedVectorHelperCall) {
-      handledOut = true;
-      usedMethodTarget = true;
-      hasMethodReceiverIndex = true;
-      methodReceiverIndex = 0;
-      const Expr &receiver = expr.args.front();
-      bool isBuiltinMethod = false;
-      std::string methodResolved;
-      if (!resolveCapacityMethodTargetFromReceiver(receiver, isBuiltinMethod,
-                                                   methodResolved)) {
-        return false;
-      }
-      resolved = methodResolved;
-      resolvedMethod = isBuiltinMethod;
-      return true;
+      return resolveCollectionMethodTargetFromReceiver(
+          resolveCapacityMethodTargetFromReceiver);
     }
   }
   if (handledOut) {
@@ -411,20 +391,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     if (expr.args.size() == 1 &&
         (defMap_.find(resolved) == defMap_.end() ||
          context.isNamespacedVectorCapacityCall)) {
-      handledOut = true;
-      usedMethodTarget = true;
-      hasMethodReceiverIndex = true;
-      methodReceiverIndex = 0;
-      const Expr &receiver = expr.args.front();
-      bool isBuiltinMethod = false;
-      std::string methodResolved;
-      if (!resolveCapacityMethodTargetFromReceiver(receiver, isBuiltinMethod,
-                                                   methodResolved)) {
-        return false;
-      }
-      resolved = methodResolved;
-      resolvedMethod = isBuiltinMethod;
-      return true;
+      return resolveCollectionMethodTargetFromReceiver(
+          resolveCapacityMethodTargetFromReceiver);
     }
   }
   if (handledOut) {

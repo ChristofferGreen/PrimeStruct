@@ -2296,6 +2296,24 @@
             "    }") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto resolveCollectionMethodTargetFromReceiver =\n"
+            "      [&](auto &&resolveMethodTarget) -> bool {\n"
+            "    handledOut = true;\n"
+            "    usedMethodTarget = true;\n"
+            "    hasMethodReceiverIndex = true;\n"
+            "    methodReceiverIndex = 0;\n"
+            "    const Expr &receiver = expr.args.front();\n"
+            "    bool isBuiltinMethod = false;\n"
+            "    std::string methodResolved;\n"
+            "    if (!resolveMethodTarget(receiver, isBuiltinMethod, methodResolved)) {\n"
+            "      return false;\n"
+            "    }\n"
+            "    resolved = methodResolved;\n"
+            "    resolvedMethod = isBuiltinMethod;\n"
+            "    return true;\n"
+            "  };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto resolveCountMethodTargetFromReceiver =\n"
             "      [&](const Expr &receiver, bool &isBuiltinMethod,\n"
             "          std::string &methodResolved) -> bool {\n"
@@ -2322,6 +2340,26 @@
             "    resolved = methodResolved;\n"
             "    resolvedMethod = isBuiltinMethod;\n"
             "    return true;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "handledOut = true;\n"
+            "    usedMethodTarget = true;\n"
+            "    hasMethodReceiverIndex = true;\n"
+            "    methodReceiverIndex = 0;\n"
+            "    const Expr &receiver = expr.args.front();\n"
+            "    bool isBuiltinMethod = false;\n"
+            "    std::string methodResolved;\n"
+            "    if (!resolveCountMethodTargetFromReceiver(receiver, isBuiltinMethod,\n"
+            "                                              methodResolved)) {\n"
+            "      return false;\n"
+            "    }\n"
+            "    resolved = methodResolved;\n"
+            "    resolvedMethod = isBuiltinMethod;\n"
+            "    return true;") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "return resolveCollectionMethodTargetFromReceiver(\n"
+            "        resolveCountMethodTargetFromReceiver);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (resolveCountMethod(true)) {\n"
@@ -2403,6 +2441,26 @@
             "      resolved = methodResolved;\n"
             "      resolvedMethod = isBuiltinMethod;\n"
             "      return true;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "handledOut = true;\n"
+            "      usedMethodTarget = true;\n"
+            "      hasMethodReceiverIndex = true;\n"
+            "      methodReceiverIndex = 0;\n"
+            "      const Expr &receiver = expr.args.front();\n"
+            "      bool isBuiltinMethod = false;\n"
+            "      std::string methodResolved;\n"
+            "      if (!resolveCapacityMethodTargetFromReceiver(receiver, isBuiltinMethod,\n"
+            "                                                   methodResolved)) {\n"
+            "        return false;\n"
+            "      }\n"
+            "      resolved = methodResolved;\n"
+            "      resolvedMethod = isBuiltinMethod;\n"
+            "      return true;") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "return resolveCollectionMethodTargetFromReceiver(\n"
+            "          resolveCapacityMethodTargetFromReceiver);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (resolveCapacityMethod(false)) {\n"
