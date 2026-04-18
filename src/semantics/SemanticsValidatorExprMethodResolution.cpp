@@ -284,26 +284,18 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       !keepBuiltinIndexedArgsPackMapMethod) {
     isBuiltinMethod = false;
   }
-  auto bareVectorAccessMethodMissingSamePathHelper = [&]() -> std::string {
-    if (!expr.isMethodCall || !expr.namespacePrefix.empty() || expr.args.empty()) {
-      return "";
-    }
-    if (expr.name != "at" && expr.name != "at_unsafe") {
-      return "";
-    }
+  if (expr.isMethodCall &&
+      expr.namespacePrefix.empty() &&
+      !expr.args.empty() &&
+      (expr.name == "at" || expr.name == "at_unsafe")) {
     std::string elemType;
-    if (!resolveVectorTarget(expr.args.front(), elemType)) {
-      return "";
+    if (resolveVectorTarget(expr.args.front(), elemType)) {
+      const std::string methodPath = preferredBareVectorHelperTarget(expr.name);
+      if (!hasDeclaredDefinitionPath(methodPath) &&
+          !hasImportedDefinitionPath(methodPath)) {
+        return failMethodResolutionDiagnostic("unknown method: " + methodPath);
+      }
     }
-    const std::string methodPath = preferredBareVectorHelperTarget(expr.name);
-    return hasDeclaredDefinitionPath(methodPath) || hasImportedDefinitionPath(methodPath)
-               ? ""
-               : methodPath;
-  };
-  if (const std::string missingSamePathHelper =
-          bareVectorAccessMethodMissingSamePathHelper();
-      !missingSamePathHelper.empty()) {
-    return failMethodResolutionDiagnostic("unknown method: " + missingSamePathHelper);
   }
   auto isStdlibFileWriteFacadeResolvedPath = [&](const std::string &path) {
     return path == "/File/write" || path == "/File/write_line" ||

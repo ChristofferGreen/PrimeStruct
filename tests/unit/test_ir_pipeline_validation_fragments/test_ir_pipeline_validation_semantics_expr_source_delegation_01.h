@@ -762,6 +762,24 @@
             "methodTarget.rfind(\"/std/collections/experimental_vector/Vector__\", 0) != 0") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
+            "auto bareVectorAccessMethodMissingSamePathHelper =") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "if (expr.isMethodCall &&\n"
+            "      expr.namespacePrefix.empty() &&\n"
+            "      !expr.args.empty() &&\n"
+            "      (expr.name == \"at\" || expr.name == \"at_unsafe\")) {\n"
+            "    std::string elemType;\n"
+            "    if (resolveVectorTarget(expr.args.front(), elemType)) {\n"
+            "      const std::string methodPath = preferredBareVectorHelperTarget(expr.name);\n"
+            "      if (!hasDeclaredDefinitionPath(methodPath) &&\n"
+            "          !hasImportedDefinitionPath(methodPath)) {\n"
+            "        return failMethodResolutionDiagnostic(\"unknown method: \" + methodPath);\n"
+            "      }\n"
+            "    }\n"
+            "  }") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
             "expr.args.front().kind == Expr::Kind::Call &&\n"
             "      !expr.args.front().isBinding &&\n"
             "      !expr.args.front().isMethodCall &&\n"
