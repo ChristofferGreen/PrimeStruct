@@ -214,9 +214,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     const bool resolvesMapCountMethodTarget =
         context.resolveMapTarget != nullptr &&
         context.resolveMapTarget(receiver);
-    const bool canUseCountResolveMissFallback =
-        (expr.hasBodyArguments || !expr.bodyArguments.empty()) &&
-        !expr.args.empty();
     const auto tryAssignPointerLikeCountMethodTarget = [&]() -> bool {
       std::string typeName;
       if (receiver.kind == Expr::Kind::Name) {
@@ -266,7 +263,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     if (needsCountMethodResolveOrFallback &&
         !resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
                              "count", methodResolved, isBuiltinMethod)) {
-      if (!canUseCountResolveMissFallback) {
+      if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||
+          expr.args.empty()) {
         (void)validateExpr(params, locals, expr.args.front());
         return false;
       }

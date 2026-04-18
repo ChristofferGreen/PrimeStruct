@@ -1899,11 +1899,6 @@
             "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const bool canUseCountResolveMissFallback =\n"
-            "        (expr.hasBodyArguments || !expr.bodyArguments.empty()) &&\n"
-            "        !expr.args.empty();") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool resolvesBareMapCountMethodTarget =\n"
             "        methodResolved == bareMapCountMethodTarget;") !=
         std::string::npos);
@@ -1959,13 +1954,10 @@
             "          expr.args.empty()) {\n"
             "        (void)validateExpr(params, locals, expr.args.front());\n"
             "        return false;\n"
-            "      }") ==
+            "      }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (!canUseCountResolveMissFallback) {\n"
-            "        (void)validateExpr(params, locals, expr.args.front());\n"
-            "        return false;\n"
-            "      }") !=
+            "const bool canUseCountResolveMissFallback =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if ((!expr.isMethodCall &&\n"
