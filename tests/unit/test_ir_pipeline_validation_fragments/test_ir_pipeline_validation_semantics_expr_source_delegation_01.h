@@ -2466,9 +2466,13 @@
             "      countMethodSurfaceHasNoArguments;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool allowsCountMethodSurfaceCompatibility =\n"
+            "      !isArrayNamespacedVectorCountCompatibilityActive;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool matchesCountMethodSurfaceRoute =\n"
             "      !violatesCountMethodSurfacePreconditions &&\n"
-            "      !isArrayNamespacedVectorCountCompatibilityActive &&\n"
+            "      allowsCountMethodSurfaceCompatibility &&\n"
             "      routesThroughCountMethodSurface && matchesCountRouteArgShape;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -2496,6 +2500,12 @@
             "      countMethodSurfaceHasNamedArguments ||\n"
             "      routesThroughUnimportedStdNamespacedVectorCountCompatibilityDirectCall ||\n"
             "      expr.args.empty();") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool matchesCountMethodSurfaceRoute =\n"
+            "      !violatesCountMethodSurfacePreconditions &&\n"
+            "      !isArrayNamespacedVectorCountCompatibilityActive &&\n"
+            "      routesThroughCountMethodSurface && matchesCountRouteArgShape;") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "bool needsCountMethodResolveOrFallback =") ==
