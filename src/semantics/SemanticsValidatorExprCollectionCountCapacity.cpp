@@ -414,10 +414,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     resolveMethodTarget(
                         params, locals, expr.namespacePrefix, receiver,
                         "capacity", methodResolved, isBuiltinMethod);
+                const bool failsCapacityMethodTargetResolution =
+                    needsDirectCapacityMethodTargetResolution &&
+                    !resolvedCapacityMethodTargetDirectly;
                 if (usesStdNamespacedCapacityCompatibilityHelper) {
                   assignStdlibVectorCapacityCompatibilityTarget();
-                } else if (needsDirectCapacityMethodTargetResolution &&
-                           !resolvedCapacityMethodTargetDirectly) {
+                } else if (failsCapacityMethodTargetResolution) {
                   (void)validateExpr(params, locals, receiver);
                   return false;
                 }
