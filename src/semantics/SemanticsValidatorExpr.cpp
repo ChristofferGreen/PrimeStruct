@@ -835,16 +835,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return validateExpr(params, locals,
                           *rewrittenCollectionCountCapacityCall);
     }
-    ExprDirectCollectionFallbackContext directCollectionFallbackContext;
-    directCollectionFallbackContext.dispatchResolvers =
-        &dispatchBootstrap.dispatchResolvers;
     std::optional<Expr> rewrittenDirectCollectionFallbackCall;
     if (!validateExprDirectCollectionFallbacks(
             params,
             locals,
             expr,
             resolved,
-            directCollectionFallbackContext,
+            dispatchBootstrap.dispatchResolvers,
             rewrittenDirectCollectionFallbackCall)) {
       return false;
     }

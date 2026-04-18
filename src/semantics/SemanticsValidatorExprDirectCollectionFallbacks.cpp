@@ -7,16 +7,13 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
     const std::unordered_map<std::string, BindingInfo> &locals,
     const Expr &expr,
     const std::string &resolved,
-    const ExprDirectCollectionFallbackContext &context,
+    const BuiltinCollectionDispatchResolvers &dispatchResolvers,
     std::optional<Expr> &rewrittenExprOut) {
   auto failDirectCollectionFallbackDiagnostic =
       [&](std::string message) -> bool {
     return failExprDiagnostic(expr, std::move(message));
   };
   rewrittenExprOut.reset();
-  if (context.dispatchResolvers == nullptr) {
-    return true;
-  }
 
   const std::string removedRootedVectorDirectCallDiagnostic =
       getRemovedRootedVectorDirectCallDiagnostic(expr);
@@ -24,8 +21,6 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
     return failDirectCollectionFallbackDiagnostic(
         removedRootedVectorDirectCallDiagnostic);
   }
-
-  const auto &dispatchResolvers = *context.dispatchResolvers;
 
   if (!expr.isMethodCall &&
       resolveCalleePath(expr).rfind("/std/collections/vector/count", 0) == 0 &&

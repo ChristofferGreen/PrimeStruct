@@ -546,15 +546,12 @@
       const BuiltinCollectionDispatchResolverAdapters &dispatchResolverAdapters,
       std::string &resolved,
       ExprCollectionDispatchSetup &setupOut);
-  struct ExprDirectCollectionFallbackContext {
-    const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
-  };
   bool validateExprDirectCollectionFallbacks(
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
       const Expr &expr,
       const std::string &resolved,
-      const ExprDirectCollectionFallbackContext &context,
+      const BuiltinCollectionDispatchResolvers &dispatchResolvers,
       std::optional<Expr> &rewrittenExprOut);
   struct ExprCollectionAccessDispatchContext {
     bool isNamespacedVectorHelperCall = false;

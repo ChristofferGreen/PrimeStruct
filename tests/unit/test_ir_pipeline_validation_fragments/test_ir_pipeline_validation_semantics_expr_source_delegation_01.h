@@ -426,12 +426,33 @@
   CHECK(semanticsExprSource.find(
             "directCollectionFallbackContext.isStdNamespacedVectorCountCall =") ==
         std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "ExprDirectCollectionFallbackContext directCollectionFallbackContext;") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "dispatchBootstrap.dispatchResolvers,\n"
+            "            rewrittenDirectCollectionFallbackCall)") !=
+        std::string::npos);
   CHECK(semanticsExprPrivateValidationSource.find(
             "bool isStdNamespacedVectorCountCall = false;") !=
         std::string::npos);
   CHECK(semanticsExprPrivateValidationSource.find(
+            "struct ExprDirectCollectionFallbackContext {") ==
+        std::string::npos);
+  CHECK(semanticsExprPrivateValidationSource.find(
             "struct ExprDirectCollectionFallbackContext {\n"
             "    bool isStdNamespacedVectorCountCall = false;") ==
+        std::string::npos);
+  CHECK(semanticsExprPrivateValidationSource.find(
+            "const BuiltinCollectionDispatchResolvers &dispatchResolvers,\n"
+            "      std::optional<Expr> &rewrittenExprOut);") !=
+        std::string::npos);
+  CHECK(semanticsExprDirectCollectionFallbacksSource.find(
+            "const BuiltinCollectionDispatchResolvers &dispatchResolvers,\n"
+            "    std::optional<Expr> &rewrittenExprOut)") !=
+        std::string::npos);
+  CHECK(semanticsExprDirectCollectionFallbacksSource.find(
+            "if (context.dispatchResolvers == nullptr)") ==
         std::string::npos);
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
             "auto resolvesExperimentalVectorValueReceiverForBareAccess =") ==
