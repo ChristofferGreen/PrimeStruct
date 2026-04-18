@@ -47,13 +47,6 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
   const bool isStdNamespacedVectorCountCall =
       !expr.isMethodCall &&
       resolveCalleePath(expr).rfind("/std/collections/vector/count", 0) == 0;
-  const bool isDirectStdNamespacedVectorCapacityBuiltinCall =
-      !expr.isMethodCall && !resolvedMethod &&
-      hasImportedDefinitionPath("/std/collections/vector/capacity") &&
-      isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
-                                                   "capacity") &&
-      expr.args.size() == 1 &&
-      resolved.rfind("/std/collections/vector/capacity", 0) == 0;
   auto canonicalizeSoaCountHelperPath = [](std::string canonicalPath) {
     const size_t specializationSuffix = canonicalPath.find("__");
     if (specializationSuffix != std::string::npos) {
@@ -177,7 +170,12 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
   if (isDirectStdNamespacedVectorCountBuiltinCall) {
     return validateDirectVectorCountCapacityCall("count", "/std/collections/vector/count");
   }
-  if (isDirectStdNamespacedVectorCapacityBuiltinCall) {
+  if (!expr.isMethodCall && !resolvedMethod &&
+      hasImportedDefinitionPath("/std/collections/vector/capacity") &&
+      isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
+                                                   "capacity") &&
+      expr.args.size() == 1 &&
+      resolved.rfind("/std/collections/vector/capacity", 0) == 0) {
     return validateDirectVectorCountCapacityCall("capacity", "/std/collections/vector/capacity");
   }
   if (isDirectStdNamespacedSoaCountBuiltinCall) {

@@ -1581,6 +1581,15 @@
             "      resolveCalleePath(expr).rfind(\"/std/collections/vector/capacity\", 0) == 0;") ==
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "const bool isDirectStdNamespacedVectorCapacityBuiltinCall =\n"
+            "      !expr.isMethodCall && !resolvedMethod &&\n"
+            "      hasImportedDefinitionPath(\"/std/collections/vector/capacity\") &&\n"
+            "      isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),\n"
+            "                                                   \"capacity\") &&\n"
+            "      expr.args.size() == 1 &&\n"
+            "      resolved.rfind(\"/std/collections/vector/capacity\", 0) == 0;") ==
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "hasImportedDefinitionPath(\"/std/collections/vector/capacity\") &&\n"
             "      isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),\n"
             "                                                   \"capacity\") &&\n"
