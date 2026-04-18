@@ -1882,12 +1882,30 @@
             "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const std::string bareMapCountMethodTarget = \"/map/count\";") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const std::string stdlibMapCountMethodTarget =\n"
+            "        \"/std/collections/map/count\";") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool resolvesBareMapCountMethodTarget =\n"
-            "        methodResolved == \"/map/count\";") !=
+            "        methodResolved == bareMapCountMethodTarget;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool resolvesStdlibMapCountMethodTarget =\n"
-            "        methodResolved == \"/std/collections/map/count\";") !=
+            "        methodResolved == stdlibMapCountMethodTarget;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool resolvesBareMapCountMethodTarget =\n"
+            "        methodResolved == \"/map/count\";") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool resolvesStdlibMapCountMethodTarget =\n"
+            "        methodResolved == \"/std/collections/map/count\";") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "methodResolved = \"/std/collections/map/count\";") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool rejectsUnimportedBareMapCountCallTarget =\n"

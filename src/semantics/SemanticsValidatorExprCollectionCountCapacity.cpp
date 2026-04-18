@@ -205,6 +205,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     const Expr &receiver = expr.args.front();
     bool isBuiltinMethod = false;
     std::string methodResolved;
+    const std::string bareMapCountMethodTarget = "/map/count";
+    const std::string stdlibMapCountMethodTarget =
+        "/std/collections/map/count";
     const bool lacksVisibleStdlibMapCountDefinition =
         !hasDeclaredDefinitionPath("/std/collections/map/count") &&
         !hasImportedDefinitionPath("/std/collections/map/count");
@@ -246,7 +249,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         !hasDeclaredDefinitionPath("/map/count") &&
         lacksVisibleStdlibMapCountDefinition &&
         resolvesMapCountMethodTarget) {
-      methodResolved = "/std/collections/map/count";
+      methodResolved = stdlibMapCountMethodTarget;
       isBuiltinMethod = true;
       needsCountMethodResolveOrFallback = false;
     } else if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
@@ -266,7 +269,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         return false;
       }
       if (resolvesMapCountMethodTarget) {
-        methodResolved = "/std/collections/map/count";
+        methodResolved = stdlibMapCountMethodTarget;
         error_.clear();
         isBuiltinMethod = false;
       } else if (!tryAssignPointerLikeCountMethodTarget()) {
@@ -275,9 +278,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     }
     normalizeResolvedCollectionMethodTarget(methodResolved, isBuiltinMethod);
     const bool resolvesBareMapCountMethodTarget =
-        methodResolved == "/map/count";
+        methodResolved == bareMapCountMethodTarget;
     const bool resolvesStdlibMapCountMethodTarget =
-        methodResolved == "/std/collections/map/count";
+        methodResolved == stdlibMapCountMethodTarget;
     const bool rejectsUnimportedBareMapCountCallTarget =
         !expr.isMethodCall &&
         expr.args.size() == 1 &&
