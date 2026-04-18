@@ -1468,17 +1468,7 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto tryResolveCollectionMethodTargetFromHelperRoute =\n"
-            "      [&](const Expr &receiver, const char *methodName,\n"
-            "          std::string &methodResolved, bool &isBuiltinMethod,\n"
-            "          auto &&handleVisibleHelperHit,\n"
-            "          auto &&handleHelperMiss) -> bool {\n"
-            "    if (tryResolveVisibleVectorHelperMethodTarget(receiver, methodName,\n"
-            "                                                  methodResolved,\n"
-            "                                                  isBuiltinMethod)) {\n"
-            "      return handleVisibleHelperHit(receiver, methodResolved, isBuiltinMethod);\n"
-            "    }\n"
-            "    return handleHelperMiss(receiver, methodResolved, isBuiltinMethod);\n"
-            "  };") !=
+            "      [&](const Expr &receiver, const char *methodName,\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto finalizeCollectionMethodTarget =\n"
@@ -1506,9 +1496,13 @@
             "          auto &&handleVisibleHelperHit,\n"
             "          auto &&handleHelperMiss,\n"
             "          auto &&finalizeMethodTarget) -> bool {\n"
-            "    if (!tryResolveCollectionMethodTargetFromHelperRoute(\n"
-            "            receiver, methodName, methodResolved, isBuiltinMethod,\n"
-            "            handleVisibleHelperHit, handleHelperMiss)) {\n"
+            "    if (tryResolveVisibleVectorHelperMethodTarget(receiver, methodName,\n"
+            "                                                  methodResolved,\n"
+            "                                                  isBuiltinMethod)) {\n"
+            "      if (!handleVisibleHelperHit(receiver, methodResolved, isBuiltinMethod)) {\n"
+            "        return false;\n"
+            "      }\n"
+            "    } else if (!handleHelperMiss(receiver, methodResolved, isBuiltinMethod)) {\n"
             "      return false;\n"
             "    }\n"
             "    return finalizeMethodTarget(methodResolved, isBuiltinMethod);\n"
