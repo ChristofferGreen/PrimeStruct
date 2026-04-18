@@ -253,6 +253,17 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     return validateVectorCountBuiltinCall();
   }
 
+  const bool shouldValidateVectorCountBuiltinFallback =
+      !resolvedMethod && isVectorBuiltinName(expr, "count") &&
+      !isArrayNamespacedVectorCountCompatibilityCall(expr, *dispatchResolvers) &&
+      !isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,
+                                                    resolveCalleePath(expr),
+                                                    "count") &&
+      !context.isNamespacedMapCountCall && !context.isResolvedMapCountCall &&
+      !isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals,
+                                                 *dispatchResolverAdapters) &&
+      it == defMap_.end();
+
   if (resolvedMethod && (logicalResolvedMethod == "/array/count" ||
                          isLegacyOrCanonicalSoaHelperPath(
                              logicalSoaCountCanonical,
@@ -498,15 +509,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
            validateExpr(params, locals, keyExpr);
   }
 
-  if (!resolvedMethod && isVectorBuiltinName(expr, "count") &&
-      !isArrayNamespacedVectorCountCompatibilityCall(expr, *dispatchResolvers) &&
-      !isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,
-                                                    resolveCalleePath(expr),
-                                                    "count") &&
-      !context.isNamespacedMapCountCall && !context.isResolvedMapCountCall &&
-      !isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals,
-                                                 *dispatchResolverAdapters) &&
-      it == defMap_.end()) {
+  if (shouldValidateVectorCountBuiltinFallback) {
     handledOut = true;
     if (!context.shouldBuiltinValidateBareMapCountCall) {
       Expr rewrittenMapHelperCall;

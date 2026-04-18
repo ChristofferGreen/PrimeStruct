@@ -1632,6 +1632,17 @@
             "    if (!expr.templateArgs.empty()) {") ==
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "const bool shouldValidateVectorCountBuiltinFallback =\n"
+            "      !resolvedMethod && isVectorBuiltinName(expr, \"count\") &&\n"
+            "      !isArrayNamespacedVectorCountCompatibilityCall(expr, *dispatchResolvers) &&\n"
+            "      !isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,\n"
+            "                                                    resolveCalleePath(expr),\n"
+            "                                                    \"count\") &&\n"
+            "      !context.isNamespacedMapCountCall && !context.isResolvedMapCountCall &&\n"
+            "      !isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals,\n"
+            "                                                 *dispatchResolverAdapters) &&\n"
+            "      it == defMap_.end();") != std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "if (!resolvedMethod && isVectorBuiltinName(expr, \"count\") &&\n"
             "      !isArrayNamespacedVectorCountCompatibilityCall(expr, *dispatchResolvers) &&\n"
             "      !isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,\n"
@@ -1649,7 +1660,7 @@
             "        return validateExpr(params, locals, rewrittenMapHelperCall);\n"
             "      }\n"
             "    }\n"
-            "    if (!expr.templateArgs.empty()) {") ==
+            "    return validateVectorCountBuiltinCall();") ==
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "!isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,\n"
