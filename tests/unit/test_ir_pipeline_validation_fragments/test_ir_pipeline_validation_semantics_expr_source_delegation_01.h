@@ -1595,7 +1595,7 @@
             "            false,\n"
             "            false,\n"
             "            false,\n"
-            "            false);") !=
+            "            false);") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "const bool allowStdNamespacedVectorUserReceiverProbe =") ==
@@ -1609,18 +1609,18 @@
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "if (!probesNamedStdNamespacedVectorUserReceiver) {\n"
-            "    const std::string stdNamespacedVectorCountDiagnosticMessage =\n"
-            "        classifyStdNamespacedVectorCountDiagnosticMessage(\n"
-            "            isInvisibleStdNamespacedVectorCompatibilityDirectCall(\n"
-            "                expr.isMethodCall,\n"
-            "                resolveCalleePath(expr),\n"
-            "                \"count\",\n"
-            "                hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/count\")),\n"
-            "            false,\n"
-            "            false,\n"
-            "            false,\n"
-            "            false);\n"
-            "    if (!stdNamespacedVectorCountDiagnosticMessage.empty()) {\n"
+            "    if (const std::string stdNamespacedVectorCountDiagnosticMessage =\n"
+            "            classifyStdNamespacedVectorCountDiagnosticMessage(\n"
+            "                isInvisibleStdNamespacedVectorCompatibilityDirectCall(\n"
+            "                    expr.isMethodCall,\n"
+            "                    resolveCalleePath(expr),\n"
+            "                    \"count\",\n"
+            "                    hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/count\")),\n"
+            "                false,\n"
+            "                false,\n"
+            "                false,\n"
+            "                false);\n"
+            "        !stdNamespacedVectorCountDiagnosticMessage.empty()) {\n"
             "      return failCollectionDispatchDiagnostic(\n"
             "          stdNamespacedVectorCountDiagnosticMessage);\n"
             "    }\n"

@@ -196,7 +196,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
        setupOut.namespacedHelper == "capacity");
 
   if (!probesNamedStdNamespacedVectorUserReceiver) {
-    const std::string stdNamespacedVectorCountDiagnosticMessage =
+    if (const std::string stdNamespacedVectorCountDiagnosticMessage =
         classifyStdNamespacedVectorCountDiagnosticMessage(
             isInvisibleStdNamespacedVectorCompatibilityDirectCall(
                 expr.isMethodCall,
@@ -207,7 +207,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
             false,
             false,
             false);
-    if (!stdNamespacedVectorCountDiagnosticMessage.empty()) {
+        !stdNamespacedVectorCountDiagnosticMessage.empty()) {
       return failCollectionDispatchDiagnostic(
           stdNamespacedVectorCountDiagnosticMessage);
     }
