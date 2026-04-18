@@ -1090,6 +1090,16 @@
             "vectorCompatibilityRequiresVectorTargetDiagnostic(\"count\")") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool resolvesStdNamespacedVectorCountMapTarget =\n"
+            "      context.isStdNamespacedVectorCountCall && expr.args.size() == 1 &&\n"
+            "      context.resolveMapTarget != nullptr &&\n"
+            "      context.resolveMapTarget(expr.args.front());") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if ((context.isStdNamespacedVectorCountCall && expr.args.size() == 1 &&\n"
+            "       context.resolveMapTarget != nullptr && context.resolveMapTarget(expr.args.front())) &&") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "vectorCompatibilityRequiresVectorTargetDiagnostic(\"count\")") !=
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
