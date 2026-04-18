@@ -1443,7 +1443,7 @@
             "      return true;\n"
             "    }\n"
             "    return handleResolveMiss(receiver, isBuiltinMethod, methodResolved);\n"
-            "  };") !=
+            "  };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto tryResolveCollectionMethodTargetFromHelperRoute =\n"
@@ -1845,7 +1845,14 @@
             "          return true;\n"
             "        },\n"
             "        [&](const std::string &, bool) {\n"
-            "          return failRemovedRootedVectorDirectCall();\n"
+            "          const std::string removedRootedVectorDirectCallDiagnostic =\n"
+            "              getRemovedRootedVectorDirectCallDiagnostic(expr);\n"
+            "          if (removedRootedVectorDirectCallDiagnostic.empty()) {\n"
+            "            return false;\n"
+            "          }\n"
+            "          (void)failExprDiagnostic(\n"
+            "              expr, removedRootedVectorDirectCallDiagnostic);\n"
+            "          return true;\n"
             "        },\n"
             "        [&](const std::string &methodResolved, bool isBuiltinMethod) {\n"
             "          if (isBuiltinMethod ||\n"
@@ -2520,7 +2527,7 @@
             "    }\n"
             "    (void)failExprDiagnostic(expr, removedRootedVectorDirectCallDiagnostic);\n"
             "    return true;\n"
-            "  };") !=
+            "  };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const std::string removedRootedVectorDirectCallDiagnostic =\n"
@@ -3813,7 +3820,17 @@
             "                return true;\n"
             "              },\n"
             "              [&](const std::string &, bool) {\n"
-            "                return failRemovedRootedVectorDirectCall();\n"
+            "                const std::string\n"
+            "                    removedRootedVectorDirectCallDiagnostic =\n"
+            "                        getRemovedRootedVectorDirectCallDiagnostic(\n"
+            "                            expr);\n"
+            "                if (removedRootedVectorDirectCallDiagnostic.empty()) {\n"
+            "                  return false;\n"
+            "                }\n"
+            "                (void)failExprDiagnostic(\n"
+            "                    expr,\n"
+            "                    removedRootedVectorDirectCallDiagnostic);\n"
+            "                return true;\n"
             "              });\n"
             "        });") !=
         std::string::npos);

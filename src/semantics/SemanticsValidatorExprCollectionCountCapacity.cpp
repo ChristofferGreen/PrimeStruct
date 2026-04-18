@@ -89,15 +89,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                                 stdNamespacedVectorCountDiagnosticMessage);
     }
   }
-  const auto failRemovedRootedVectorDirectCall = [&]() -> bool {
-    const std::string removedRootedVectorDirectCallDiagnostic =
-        getRemovedRootedVectorDirectCallDiagnostic(expr);
-    if (removedRootedVectorDirectCallDiagnostic.empty()) {
-      return false;
-    }
-    (void)failExprDiagnostic(expr, removedRootedVectorDirectCallDiagnostic);
-    return true;
-  };
   const auto tryResolveCollectionMethodTargetOrElse =
       [&](const Expr &receiver, const char *methodName,
           std::string &methodResolved, bool &isBuiltinMethod,
@@ -311,7 +302,14 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                       return true;
                     },
                     [&](const std::string &, bool) {
-                      return failRemovedRootedVectorDirectCall();
+                      const std::string removedRootedVectorDirectCallDiagnostic =
+                          getRemovedRootedVectorDirectCallDiagnostic(expr);
+                      if (removedRootedVectorDirectCallDiagnostic.empty()) {
+                        return false;
+                      }
+                      (void)failExprDiagnostic(
+                          expr, removedRootedVectorDirectCallDiagnostic);
+                      return true;
                     },
                     [&](const std::string &methodResolved,
                         bool isBuiltinMethod) {
@@ -404,7 +402,17 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                             return true;
                           },
                           [&](const std::string &, bool) {
-                            return failRemovedRootedVectorDirectCall();
+                            const std::string
+                                removedRootedVectorDirectCallDiagnostic =
+                                    getRemovedRootedVectorDirectCallDiagnostic(
+                                        expr);
+                            if (removedRootedVectorDirectCallDiagnostic.empty()) {
+                              return false;
+                            }
+                            (void)failExprDiagnostic(
+                                expr,
+                                removedRootedVectorDirectCallDiagnostic);
+                            return true;
                           });
                     });
               })) {
