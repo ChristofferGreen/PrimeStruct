@@ -1847,6 +1847,10 @@
             "        context.isResolvedMapCountCall;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool resolvesExistingCountMethodTarget =\n"
+            "        defMap_.find(resolved) != defMap_.end();") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool usesNamespacedVectorCountFallbackShape =\n"
             "        !isStdNamespacedVectorCompatibilityDirectCall(\n"
             "            expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
@@ -1859,15 +1863,21 @@
             "          context.isArrayNamespacedVectorCountCompatibilityCall(expr));") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (requireSingleArg) {\n"
-            "      if (!((defMap_.find(resolved) == defMap_.end() &&\n"
-             "             !context.isStdNamespacedMapCountCall) ||\n"
-            "            usesNamespacedVectorCountFallbackShape ||\n"
-            "            routesThroughMapCountCompatibility)) {\n"
-            "        return false;\n"
-            "      }\n"
-            "    } else if (!(defMap_.find(resolved) != defMap_.end() ||\n"
-            "                 routesThroughMapCountCompatibility)) {\n"
+            "const bool allowsSingleArgUnresolvedCountMethodTarget =\n"
+            "        !resolvesExistingCountMethodTarget &&\n"
+            "        !context.isStdNamespacedMapCountCall;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool matchesResolvedCountMethodTargetShape =\n"
+            "        requireSingleArg\n"
+            "            ? (allowsSingleArgUnresolvedCountMethodTarget ||\n"
+            "               usesNamespacedVectorCountFallbackShape ||\n"
+            "               routesThroughMapCountCompatibility)\n"
+            "            : (resolvesExistingCountMethodTarget ||\n"
+            "               routesThroughMapCountCompatibility);") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (!matchesResolvedCountMethodTargetShape) {\n"
             "      return false;\n"
             "    }") !=
         std::string::npos);
@@ -1879,6 +1889,19 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool resolvesExplicitCountMethodTarget =") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (requireSingleArg) {\n"
+            "      if (!((defMap_.find(resolved) == defMap_.end() &&\n"
+            "             !context.isStdNamespacedMapCountCall) ||\n"
+            "            usesNamespacedVectorCountFallbackShape ||\n"
+            "            routesThroughMapCountCompatibility)) {\n"
+            "        return false;\n"
+            "      }\n"
+            "    } else if (!(defMap_.find(resolved) != defMap_.end() ||\n"
+            "                 routesThroughMapCountCompatibility)) {\n"
+            "      return false;\n"
+            "    }") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (requireSingleArg) {\n"

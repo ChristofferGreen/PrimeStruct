@@ -149,6 +149,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         context.isNamespacedMapCountCall ||
         context.isUnnamespacedMapCountFallbackCall ||
         context.isResolvedMapCountCall;
+    const bool resolvesExistingCountMethodTarget =
+        defMap_.find(resolved) != defMap_.end();
     const bool usesNamespacedVectorCountFallbackShape =
         !isStdNamespacedVectorCompatibilityDirectCall(
             expr.isMethodCall, resolveCalleePath(expr), "count") &&
@@ -159,6 +161,16 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         !hasDefinitionPath(resolved) &&
         !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
           context.isArrayNamespacedVectorCountCompatibilityCall(expr));
+    const bool allowsSingleArgUnresolvedCountMethodTarget =
+        !resolvesExistingCountMethodTarget &&
+        !context.isStdNamespacedMapCountCall;
+    const bool matchesResolvedCountMethodTargetShape =
+        requireSingleArg
+            ? (allowsSingleArgUnresolvedCountMethodTarget ||
+               usesNamespacedVectorCountFallbackShape ||
+               routesThroughMapCountCompatibility)
+            : (resolvesExistingCountMethodTarget ||
+               routesThroughMapCountCompatibility);
     if (hasNamedArguments(expr.argNames) ||
         isUnimportedStdNamespacedVectorCompatibilityDirectCall(
             expr.isMethodCall,
@@ -182,15 +194,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           routesThroughMapCountCompatibility)) {
       return false;
     }
-    if (requireSingleArg) {
-      if (!((defMap_.find(resolved) == defMap_.end() &&
-             !context.isStdNamespacedMapCountCall) ||
-            usesNamespacedVectorCountFallbackShape ||
-            routesThroughMapCountCompatibility)) {
-        return false;
-      }
-    } else if (!(defMap_.find(resolved) != defMap_.end() ||
-                 routesThroughMapCountCompatibility)) {
+    if (!matchesResolvedCountMethodTargetShape) {
       return false;
     }
 
