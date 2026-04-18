@@ -215,9 +215,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                   if (hasVisibleCountHelperMethodTarget) {
                     isBuiltinMethod = false;
                   } else {
-                    if (resolveMethodTarget(
+                    const bool resolvedCountMethodTargetDirectly =
+                        resolveMethodTarget(
                             params, locals, expr.namespacePrefix, receiver,
-                            "count", methodResolved, isBuiltinMethod)) {
+                            "count", methodResolved, isBuiltinMethod);
+                    if (resolvedCountMethodTargetDirectly) {
                       // Method target resolved directly.
                     } else {
                       if (countResolveMissLacksBodyArguments) {

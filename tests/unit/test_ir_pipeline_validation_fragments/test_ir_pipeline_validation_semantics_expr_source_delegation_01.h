@@ -1788,9 +1788,11 @@
             "      if (hasVisibleCountHelperMethodTarget) {\n"
             "        isBuiltinMethod = false;\n"
             "      } else {\n"
-            "        if (resolveMethodTarget(\n"
+            "        const bool resolvedCountMethodTargetDirectly =\n"
+            "            resolveMethodTarget(\n"
             "                params, locals, expr.namespacePrefix, receiver, \"count\",\n"
-            "                methodResolved, isBuiltinMethod)) {\n"
+            "                methodResolved, isBuiltinMethod);\n"
+            "        if (resolvedCountMethodTargetDirectly) {\n"
             "          // Method target resolved directly.\n"
             "        } else {\n"
             "          if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
@@ -1835,6 +1837,11 @@
             "        }\n"
             "      }\n"
             "    }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "        if (resolveMethodTarget(\n"
+            "                params, locals, expr.namespacePrefix, receiver, \"count\",\n"
+            "                methodResolved, isBuiltinMethod)) {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else {\n"
