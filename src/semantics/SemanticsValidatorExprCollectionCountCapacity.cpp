@@ -142,6 +142,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     hasMethodReceiverIndex = true;
     methodReceiverIndex = 0;
     const Expr &receiver = expr.args.front();
+    const bool isDirectNamedCountReceiverCall =
+        !expr.isMethodCall && isSingleArgCountCall &&
+        receiver.kind == Expr::Kind::Name;
     const bool resolvesMapCountReceiver =
         context.resolveMapTarget != nullptr &&
         context.resolveMapTarget(receiver);
@@ -235,8 +238,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 const bool targetsStdlibMapCountMethod =
                     methodResolved == stdlibMapCountTargetPath;
                 const bool rejectsDirectBareMapCountTarget =
-                    !expr.isMethodCall && isSingleArgCountCall &&
-                    receiver.kind == Expr::Kind::Name &&
+                    isDirectNamedCountReceiverCall &&
                     targetsBareMapCountMethod &&
                     lacksVisibleBareCountDefinition &&
                     lacksVisibleStdlibMapCountDefinition;

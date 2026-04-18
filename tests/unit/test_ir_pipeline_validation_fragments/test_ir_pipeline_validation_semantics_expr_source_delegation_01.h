@@ -2455,8 +2455,7 @@
             "                const bool targetsStdlibMapCountMethod =\n"
             "                    methodResolved == stdlibMapCountTargetPath;\n"
             "                const bool rejectsDirectBareMapCountTarget =\n"
-            "                    !expr.isMethodCall && isSingleArgCountCall &&\n"
-            "                    receiver.kind == Expr::Kind::Name &&\n"
+            "                    isDirectNamedCountReceiverCall &&\n"
             "                    targetsBareMapCountMethod &&\n"
             "                    lacksVisibleBareCountDefinition &&\n"
             "                    lacksVisibleStdlibMapCountDefinition;\n"
@@ -2757,6 +2756,14 @@
             "                    lacksVisibleStdlibMapCountDefinition;") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "                const bool rejectsDirectBareMapCountTarget =\n"
+            "                    !expr.isMethodCall && isSingleArgCountCall &&\n"
+            "                    receiver.kind == Expr::Kind::Name &&\n"
+            "                    targetsBareMapCountMethod &&\n"
+            "                    lacksVisibleBareCountDefinition &&\n"
+            "                    lacksVisibleStdlibMapCountDefinition;") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool matchesCountMethodSurfaceRoute =\n"
             "      !(hasNamedArguments(expr.argNames) ||\n"
             "        isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
@@ -2775,6 +2782,9 @@
             "  hasMethodReceiverIndex = true;\n"
             "  methodReceiverIndex = 0;\n"
             "  const Expr &receiver = expr.args.front();\n"
+            "  const bool isDirectNamedCountReceiverCall =\n"
+            "      !expr.isMethodCall && isSingleArgCountCall &&\n"
+            "      receiver.kind == Expr::Kind::Name;\n"
             "  const bool resolvesMapCountReceiver =\n"
             "      context.resolveMapTarget != nullptr &&\n"
             "      context.resolveMapTarget(receiver);\n"
