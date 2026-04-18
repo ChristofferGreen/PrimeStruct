@@ -1963,6 +1963,47 @@
                     "                    resolved.rfind(methodResolved + \"__t\", 0) == 0) {\n"
                     "                  methodResolved = resolved;\n"
                     "                }\n"
+            "                if (const std::string removedRootedVectorDirectCallDiagnostic =\n"
+            "                        getRemovedRootedVectorDirectCallDiagnostic(expr);\n"
+            "                    !removedRootedVectorDirectCallDiagnostic.empty()) {\n"
+            "                  (void)failExprDiagnostic(\n"
+            "                      expr, removedRootedVectorDirectCallDiagnostic);\n"
+            "                  return false;\n"
+            "                }\n"
+            "                const bool failsCountUnknownTargetValidation =\n"
+            "                    (isDirectNamedCountReceiverCall &&\n"
+            "                     methodResolved == bareMapCountTargetPath &&\n"
+            "                     lacksVisibleBareCountDefinition &&\n"
+            "                     lacksVisibleStdlibMapCountDefinition) ||\n"
+            "                    (isBuiltinMethod &&\n"
+            "                     methodResolved == stdlibMapCountTargetPath &&\n"
+            "                     lacksVisibleStdlibMapCountDefinition &&\n"
+            "                     !context.shouldBuiltinValidateBareMapCountCall);\n"
+            "                if (failsCountUnknownTargetValidation) {\n"
+            "                  return failExprDiagnostic(\n"
+            "                      expr, \"unknown call target: \" + stdlibMapCountTargetPath);\n"
+            "                }\n"
+            "                if (!isBuiltinMethod &&\n"
+            "                    !hasDeclaredDefinitionPath(methodResolved) &&\n"
+            "                    !hasImportedDefinitionPath(methodResolved)) {\n"
+            "                  (void)failExprDiagnostic(expr,\n"
+                    "                                           \"unknown method: \" + methodResolved);\n"
+            "                  return false;\n"
+            "                }\n"
+            "                return true;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "                {\n"
+            "                  const std::string removedRootedVectorDirectCallDiagnostic =\n"
+            "                      getRemovedRootedVectorDirectCallDiagnostic(expr);\n"
+            "                  if (!removedRootedVectorDirectCallDiagnostic.empty()) {\n"
+            "                    (void)failExprDiagnostic(\n"
+            "                        expr, removedRootedVectorDirectCallDiagnostic);\n"
+            "                    return false;\n"
+            "                  }\n"
+            "                }\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "                const bool failsCountUnknownTargetValidation =\n"
             "                    (isDirectNamedCountReceiverCall &&\n"
             "                     methodResolved == bareMapCountTargetPath &&\n"
@@ -1982,25 +2023,6 @@
             "                  (void)failExprDiagnostic(\n"
             "                      expr, removedRootedVectorDirectCallDiagnostic);\n"
             "                  return false;\n"
-            "                }\n"
-            "                if (!isBuiltinMethod &&\n"
-            "                    !hasDeclaredDefinitionPath(methodResolved) &&\n"
-            "                    !hasImportedDefinitionPath(methodResolved)) {\n"
-            "                  (void)failExprDiagnostic(expr,\n"
-            "                                           \"unknown method: \" + methodResolved);\n"
-            "                  return false;\n"
-            "                }\n"
-            "                return true;") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "                {\n"
-            "                  const std::string removedRootedVectorDirectCallDiagnostic =\n"
-            "                      getRemovedRootedVectorDirectCallDiagnostic(expr);\n"
-            "                  if (!removedRootedVectorDirectCallDiagnostic.empty()) {\n"
-            "                    (void)failExprDiagnostic(\n"
-            "                        expr, removedRootedVectorDirectCallDiagnostic);\n"
-            "                    return false;\n"
-            "                  }\n"
             "                }\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -5171,6 +5193,19 @@
             "      return failExprDiagnostic(expr,\n"
             "                                removedRootedVectorDirectCallDiagnostic);\n"
             "    }\n"
+            "    const bool failsCountUnknownTargetValidation =\n"
+            "        (isDirectNamedCountReceiverCall &&\n"
+            "         methodResolved == bareMapCountTargetPath &&\n"
+            "         lacksVisibleBareCountDefinition &&\n"
+            "         lacksVisibleStdlibMapCountDefinition) ||\n"
+            "        (isBuiltinMethod &&\n"
+            "         methodResolved == stdlibMapCountTargetPath &&\n"
+            "         lacksVisibleStdlibMapCountDefinition &&\n"
+            "         !context.shouldBuiltinValidateBareMapCountCall);\n"
+            "    if (failsCountUnknownTargetValidation) {\n"
+            "      return failExprDiagnostic(expr,\n"
+            "                                \"unknown call target: \" + stdlibMapCountTargetPath);\n"
+            "    }\n"
             "    const bool lacksVisibleCountMethodTarget =\n"
             "        !isBuiltinMethod &&\n"
             "        !hasDeclaredDefinitionPath(methodResolved) &&\n"
@@ -5188,6 +5223,18 @@
             "    !isBuiltinMethod &&\n"
             "    !hasDeclaredDefinitionPath(methodResolved) &&\n"
             "    !hasImportedDefinitionPath(methodResolved);\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const std::string removedRootedVectorDirectCallDiagnostic =\n"
+            "        getRemovedRootedVectorDirectCallDiagnostic(expr);\n"
+            "    if (!removedRootedVectorDirectCallDiagnostic.empty()) {\n"
+            "      return failExprDiagnostic(expr,\n"
+            "                                removedRootedVectorDirectCallDiagnostic);\n"
+            "    }\n"
+            "    const bool lacksVisibleCountMethodTarget =\n"
+            "        !isBuiltinMethod &&\n"
+            "        !hasDeclaredDefinitionPath(methodResolved) &&\n"
+            "        !hasImportedDefinitionPath(methodResolved);\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!isBuiltinMethod &&\n"

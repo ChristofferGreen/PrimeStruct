@@ -291,6 +291,13 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     resolved.rfind(methodResolved + "__t", 0) == 0) {
                   methodResolved = resolved;
                 }
+                if (const std::string removedRootedVectorDirectCallDiagnostic =
+                        getRemovedRootedVectorDirectCallDiagnostic(expr);
+                    !removedRootedVectorDirectCallDiagnostic.empty()) {
+                  (void)failExprDiagnostic(
+                      expr, removedRootedVectorDirectCallDiagnostic);
+                  return false;
+                }
                 const bool failsCountUnknownTargetValidation =
                     (isDirectNamedCountReceiverCall &&
                      methodResolved == bareMapCountTargetPath &&
@@ -303,13 +310,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 if (failsCountUnknownTargetValidation) {
                   return failExprDiagnostic(
                       expr, "unknown call target: " + stdlibMapCountTargetPath);
-                }
-                if (const std::string removedRootedVectorDirectCallDiagnostic =
-                        getRemovedRootedVectorDirectCallDiagnostic(expr);
-                    !removedRootedVectorDirectCallDiagnostic.empty()) {
-                  (void)failExprDiagnostic(
-                      expr, removedRootedVectorDirectCallDiagnostic);
-                  return false;
                 }
                 const bool lacksVisibleCountMethodTarget =
                     !isBuiltinMethod &&
