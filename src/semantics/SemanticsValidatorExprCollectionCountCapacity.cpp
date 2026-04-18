@@ -155,10 +155,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       countMethodSurfaceHasNoArguments;
   const bool allowsCountMethodSurfaceCompatibility =
       !isArrayNamespacedVectorCountCompatibilityActive;
+  const bool allowsCountMethodSurfaceRouteShape =
+      routesThroughCountMethodSurface && matchesCountRouteArgShape;
   const bool matchesCountMethodSurfaceRoute =
       !violatesCountMethodSurfacePreconditions &&
       allowsCountMethodSurfaceCompatibility &&
-      routesThroughCountMethodSurface && matchesCountRouteArgShape;
+      allowsCountMethodSurfaceRouteShape;
   if (matchesCountMethodSurfaceRoute) {
     handledOut = true;
     usedMethodTarget = true;
