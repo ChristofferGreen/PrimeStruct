@@ -1742,9 +1742,9 @@
             "    bool isStdNamespacedVectorCountCall = false;") ==
         std::string::npos);
   CHECK(semanticsExprPrivateValidationSource.find(
-            "    bool isStdNamespacedVectorCountCall = false;\n"
             "    bool isStdNamespacedMapCountCall = false;\n"
-            "    bool isNamespacedVectorCountCall = false;") !=
+            "    bool isNamespacedVectorCountCall = false;\n"
+            "    bool isNamespacedMapCountCall = false;") ==
         std::string::npos);
   CHECK(semanticsExprPrivateValidationSource.find(
             "struct ExprCountCapacityMapBuiltinContext {\n"
@@ -1785,6 +1785,9 @@
         std::string::npos);
   CHECK(semanticsExprSource.find(
             ".isStdNamespacedVectorCountCall =") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            ".isNamespacedVectorCountCall =") ==
         std::string::npos);
   CHECK(semanticsExprSource.find(
             ".shouldBuiltinValidateStdNamespacedVectorCountCall =") ==
@@ -1952,6 +1955,18 @@
             "const bool callsStdNamespacedVectorCountHelper =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool isNamespacedVectorCountCall =\n"
+            "        !isStdNamespacedVectorCompatibilityDirectCall(\n"
+            "            expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
+            "        context.isNamespacedVectorHelperCall &&\n"
+            "        context.namespacedHelper == \"count\" &&\n"
+            "        isVectorBuiltinName(expr, \"count\") &&\n"
+            "        expr.args.size() == 1 &&\n"
+            "        !hasDefinitionPath(resolved) &&\n"
+            "        !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
+            "          context.isArrayNamespacedVectorCountCompatibilityCall(expr));") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const std::string stdNamespacedVectorCountTargetDiagnosticMessage =\n"
             "      classifyStdNamespacedVectorCountDiagnosticMessage(\n"
             "          false,\n"
@@ -2015,8 +2030,11 @@
             "                !callsStdNamespacedVectorCountHelper) ||") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "context.isNamespacedVectorCountCall ||\n"
+            "isNamespacedVectorCountCall ||\n"
             "               resolvesMapCountSurface;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "context.isNamespacedVectorCountCall") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool shouldBuiltinValidateStdNamespacedVectorCountCall =\n"
