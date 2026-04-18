@@ -367,11 +367,13 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const std::string removedRootedVectorDirectCallDiagnostic =\n"
-            "      getRemovedRootedVectorDirectCallDiagnostic(expr);") !=
+            "      getRemovedRootedVectorDirectCallDiagnostic(expr);") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto failRemovedRootedVectorDirectCallIfPresent =\n"
             "      [&]() -> std::optional<bool> {\n"
+            "    const std::string removedRootedVectorDirectCallDiagnostic =\n"
+            "        getRemovedRootedVectorDirectCallDiagnostic(expr);\n"
             "    if (removedRootedVectorDirectCallDiagnostic.empty()) {\n"
             "      return std::nullopt;\n"
             "    }\n"

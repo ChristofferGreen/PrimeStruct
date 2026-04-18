@@ -27,10 +27,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   auto hasResolvableDefinitionPath = [&](const std::string &path) {
     return hasDeclaredDefinitionPath(path) || hasImportedDefinitionPath(path);
   };
-  const std::string removedRootedVectorDirectCallDiagnostic =
-      getRemovedRootedVectorDirectCallDiagnostic(expr);
   const auto failRemovedRootedVectorDirectCallIfPresent =
       [&]() -> std::optional<bool> {
+    const std::string removedRootedVectorDirectCallDiagnostic =
+        getRemovedRootedVectorDirectCallDiagnostic(expr);
     if (removedRootedVectorDirectCallDiagnostic.empty()) {
       return std::nullopt;
     }
