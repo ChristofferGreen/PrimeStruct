@@ -21,6 +21,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     size_t &methodReceiverIndex) {
   handledOut = false;
   rewrittenExprOut.reset();
+  const auto lacksVisibleMethodTargetPath =
+      [&](const std::string &methodTargetPath) {
+        return !hasDeclaredDefinitionPath(methodTargetPath) &&
+               !hasImportedDefinitionPath(methodTargetPath);
+      };
   if (!expr.isMethodCall && defMap_.find(resolved) != defMap_.end()) {
     const size_t lastSlash = resolved.find_last_of('/');
     const size_t instantiationPos =
@@ -210,8 +215,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                   }
                   const bool hasVisibleCountHelperMethodTarget =
                       resolvedCountHelperMethodTarget &&
-                      (hasDeclaredDefinitionPath(methodResolved) ||
-                       hasImportedDefinitionPath(methodResolved));
+                      !lacksVisibleMethodTargetPath(methodResolved);
                   const bool needsDirectCountMethodTargetResolution =
                       !hasVisibleCountHelperMethodTarget;
                   const bool resolvedCountMethodTargetDirectly =
@@ -313,8 +317,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 }
                 const bool lacksVisibleCountMethodTarget =
                     !isBuiltinMethod &&
-                    !hasDeclaredDefinitionPath(methodResolved) &&
-                    !hasImportedDefinitionPath(methodResolved);
+                    lacksVisibleMethodTargetPath(methodResolved);
                 if (lacksVisibleCountMethodTarget) {
                   (void)failExprDiagnostic(expr,
                                            "unknown method: " + methodResolved);
@@ -403,8 +406,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 }
                 const bool hasVisibleCapacityHelperMethodTarget =
                     resolvedCapacityHelperMethodTarget &&
-                    (hasDeclaredDefinitionPath(methodResolved) ||
-                     hasImportedDefinitionPath(methodResolved));
+                    !lacksVisibleMethodTargetPath(methodResolved);
                 const bool needsDirectCapacityMethodTargetResolution =
                     !usesStdNamespacedCapacityCompatibilityHelper &&
                     !hasVisibleCapacityHelperMethodTarget;
@@ -431,8 +433,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 }
                 const bool lacksVisibleCapacityMethodTargetBeforePromotion =
                     !isBuiltinMethod &&
-                    !hasDeclaredDefinitionPath(methodResolved) &&
-                    !hasImportedDefinitionPath(methodResolved);
+                    lacksVisibleMethodTargetPath(methodResolved);
                 const bool allowsCapacityBuiltinValidationPromotion =
                     (context.isNonCollectionStructCapacityTarget == nullptr ||
                      !context.isNonCollectionStructCapacityTarget(
@@ -455,8 +456,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 }
                 const bool lacksVisibleCapacityMethodTarget =
                     !isBuiltinMethod &&
-                    !hasDeclaredDefinitionPath(methodResolved) &&
-                    !hasImportedDefinitionPath(methodResolved);
+                    lacksVisibleMethodTargetPath(methodResolved);
                 if (lacksVisibleCapacityMethodTarget) {
                   (void)failExprDiagnostic(expr,
                                            "unknown method: " + methodResolved);

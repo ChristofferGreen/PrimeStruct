@@ -140,6 +140,7 @@ Wave D (queue hygiene):
     - Final release gate passes with `./scripts/compile.sh --release`.
   - stop_rule: If shared classifier rewrites destabilize `map`/`soa_vector`, isolate the generic mechanism in this leaf and defer remaining shared deletions to TODO-0409.
   - notes: This leaf should leave a reusable generic path that TODO-0409 can apply to `map` and `soa_vector`.
+  - progress: Completed `TODO-0961` by hoisting the repeated method-target visibility predicate behind `lacksVisibleMethodTargetPath` in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the mirrored count/capacity resolver tails no longer repeat the same declared/imported visibility bundle inline.
   - progress: Completed `TODO-0960` by adding wrapper-temporary semantic coverage for canonical `/std/collections/vector/capacity` slash-method rejection on map receivers, so the mirrored method-form capacity routing stays pinned while `vector` stdlib-authoritative cleanup continues.
   - progress: Completed `TODO-0959` by adding wrapper-temporary semantic coverage for map `count()` method resolution and canonical `/std/collections/vector/count` slash-method rejection on map receivers, so the live method-form count routing stays pinned while `vector` stdlib-authoritative cleanup continues.
   - progress: Completed `TODO-0958` by adding mirrored semantic regression coverage for non-collection `count` receiver and wrapper-temporary call/method forms, so the live `unknown method: /Counter/count` fallback stays pinned while `vector` stdlib-authoritative cleanup continues.

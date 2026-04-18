@@ -1774,6 +1774,13 @@
             "      isBuiltinMethod = true;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto lacksVisibleMethodTargetPath =\n"
+            "    [&](const std::string &methodTargetPath) {\n"
+            "      return !hasDeclaredDefinitionPath(methodTargetPath) &&\n"
+            "             !hasImportedDefinitionPath(methodTargetPath);\n"
+            "    };\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else {\n"
             "      const bool resolvedCountHelperMethodTarget =\n"
             "          resolveVectorHelperMethodTarget(\n"
@@ -1783,8 +1790,7 @@
             "      }\n"
             "      const bool hasVisibleCountHelperMethodTarget =\n"
             "          resolvedCountHelperMethodTarget &&\n"
-            "          (hasDeclaredDefinitionPath(methodResolved) ||\n"
-            "           hasImportedDefinitionPath(methodResolved));\n"
+            "          !lacksVisibleMethodTargetPath(methodResolved);\n"
             "      const bool needsDirectCountMethodTargetResolution =\n"
             "          !hasVisibleCountHelperMethodTarget;\n"
             "      const bool resolvedCountMethodTargetDirectly =\n"
@@ -4740,8 +4746,7 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool hasVisibleCapacityHelperMethodTarget =\n"
             "    resolvedCapacityHelperMethodTarget &&\n"
-            "    (hasDeclaredDefinitionPath(methodResolved) ||\n"
-            "     hasImportedDefinitionPath(methodResolved));\n") !=
+            "    !lacksVisibleMethodTargetPath(methodResolved);\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (hasVisibleCapacityHelperMethodTarget) {\n"
@@ -4861,14 +4866,12 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool lacksVisibleCapacityMethodTarget =\n"
             "    !isBuiltinMethod &&\n"
-            "    !hasDeclaredDefinitionPath(methodResolved) &&\n"
-            "    !hasImportedDefinitionPath(methodResolved);\n") ==
+            "    lacksVisibleMethodTargetPath(methodResolved);\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool lacksVisibleCapacityMethodTargetBeforePromotion =\n"
             "    !isBuiltinMethod &&\n"
-            "    !hasDeclaredDefinitionPath(methodResolved) &&\n"
-            "    !hasImportedDefinitionPath(methodResolved);\n") !=
+            "    lacksVisibleMethodTargetPath(methodResolved);\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!isBuiltinMethod &&\n"
@@ -4886,8 +4889,7 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool lacksVisibleCapacityMethodTarget =\n"
             "    !isBuiltinMethod &&\n"
-            "    !hasDeclaredDefinitionPath(methodResolved) &&\n"
-            "    !hasImportedDefinitionPath(methodResolved);\n") !=
+            "    lacksVisibleMethodTargetPath(methodResolved);\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool allowsCapacityBuiltinValidationPromotion =\n"
@@ -5226,8 +5228,7 @@
             "    }\n"
             "    const bool lacksVisibleCountMethodTarget =\n"
             "        !isBuiltinMethod &&\n"
-            "        !hasDeclaredDefinitionPath(methodResolved) &&\n"
-            "        !hasImportedDefinitionPath(methodResolved);\n"
+            "        lacksVisibleMethodTargetPath(methodResolved);\n"
             "    if (lacksVisibleCountMethodTarget) {\n"
             "      return failExprDiagnostic(expr,\n"
             "                                \"unknown method: \" + methodResolved);\n"
@@ -5239,8 +5240,7 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool lacksVisibleCountMethodTarget =\n"
             "    !isBuiltinMethod &&\n"
-            "    !hasDeclaredDefinitionPath(methodResolved) &&\n"
-            "    !hasImportedDefinitionPath(methodResolved);\n") !=
+            "    lacksVisibleMethodTargetPath(methodResolved);\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const std::string removedRootedVectorDirectCallDiagnostic =\n"
