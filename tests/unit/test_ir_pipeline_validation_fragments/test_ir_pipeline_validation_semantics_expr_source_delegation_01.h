@@ -1625,6 +1625,41 @@
             "      resolved.rfind(\"/std/collections/vector/capacity\", 0) == 0;") !=
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "const auto validateVectorCapacityBuiltinCall = [&]() -> bool {\n"
+            "    handledOut = true;\n"
+            "    if (!expr.templateArgs.empty()) {\n"
+            "      return failCountCapacityMapBuiltin(\n"
+            "          \"capacity does not accept template arguments\");\n"
+            "    }\n"
+            "    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {\n"
+            "      return failCountCapacityMapBuiltin(\n"
+            "          \"capacity does not accept block arguments\");\n"
+            "    }\n"
+            "    if (expr.args.size() != 1) {\n"
+            "      return failCountCapacityMapBuiltin(\n"
+            "          \"argument count mismatch for builtin capacity\");\n"
+            "    }\n"
+            "    std::string elemType;\n"
+            "    if (!context.resolveVectorTarget(expr.args.front(), elemType)) {\n"
+            "      return failCountCapacityMapBuiltin(\n"
+            "          vectorCompatibilityRequiresVectorTargetDiagnostic(\"capacity\"));\n"
+            "    }\n"
+            "    return validateExpr(params, locals, expr.args.front());\n"
+            "  };") != std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "if (resolvedMethod &&\n"
+            "      resolved == \"/std/collections/vector/capacity\") {\n"
+            "    const auto validateVectorCapacityBuiltinCall = [&]() -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "if (!resolvedMethod && isVectorBuiltinName(expr, \"capacity\") &&\n"
+            "      !isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,\n"
+            "                                                    resolveCalleePath(expr),\n"
+            "                                                    \"capacity\") &&\n"
+            "      it == defMap_.end()) {\n"
+            "    const auto validateVectorCapacityBuiltinCall = [&]() -> bool {") ==
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,\n"
             "                                                   resolveCalleePath(expr),\n"
             "                                                   \"capacity\") &&\n"

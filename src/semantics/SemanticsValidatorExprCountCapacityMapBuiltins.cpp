@@ -513,8 +513,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     return validateExpr(params, locals, expr.args.front());
   }
 
-  if (resolvedMethod &&
-      resolved == "/std/collections/vector/capacity") {
+  const auto validateVectorCapacityBuiltinCall = [&]() -> bool {
     handledOut = true;
     if (!expr.templateArgs.empty()) {
       return failCountCapacityMapBuiltin(
@@ -534,6 +533,11 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
           vectorCompatibilityRequiresVectorTargetDiagnostic("capacity"));
     }
     return validateExpr(params, locals, expr.args.front());
+  };
+
+  if (resolvedMethod &&
+      resolved == "/std/collections/vector/capacity") {
+    return validateVectorCapacityBuiltinCall();
   }
 
   if (!resolvedMethod && isVectorBuiltinName(expr, "capacity") &&
@@ -541,25 +545,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
                                                     resolveCalleePath(expr),
                                                     "capacity") &&
       it == defMap_.end()) {
-    handledOut = true;
-    if (!expr.templateArgs.empty()) {
-      return failCountCapacityMapBuiltin(
-          "capacity does not accept template arguments");
-    }
-    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      return failCountCapacityMapBuiltin(
-          "capacity does not accept block arguments");
-    }
-    if (expr.args.size() != 1) {
-      return failCountCapacityMapBuiltin(
-          "argument count mismatch for builtin capacity");
-    }
-    std::string elemType;
-    if (!context.resolveVectorTarget(expr.args.front(), elemType)) {
-      return failCountCapacityMapBuiltin(
-          vectorCompatibilityRequiresVectorTargetDiagnostic("capacity"));
-    }
-    return validateExpr(params, locals, expr.args.front());
+    return validateVectorCapacityBuiltinCall();
   }
 
   return true;
