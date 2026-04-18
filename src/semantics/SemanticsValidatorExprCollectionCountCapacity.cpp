@@ -350,9 +350,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       methodResolved = "/std/collections/vector/capacity";
       isBuiltinMethod = true;
     };
-    const bool routesThroughStdNamespacedVectorCapacityHelper =
-        isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
-                                                     "capacity");
     const auto tryResolveCapacityMethodFromHelperRouting = [&]() -> bool {
       if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), "capacity",
                                           methodResolved)) {
@@ -362,7 +359,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           return true;
         }
       }
-      if (routesThroughStdNamespacedVectorCapacityHelper) {
+      if (isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
+                                                       "capacity")) {
         assignStdNamespacedVectorCapacityMethodTarget();
         return true;
       }
