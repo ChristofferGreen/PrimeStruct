@@ -10,6 +10,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 17, 2026)**
 
 **Group 14 - SoA bring-up and end-state cleanup**
+- ✓ TODO-0801: Share count resolve-miss fallback. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now routes the duplicated count resolve-miss fallback body through shared `assignCountMethodTargetAfterResolveMiss`, and focused expr source-lock coverage keeps that helper present while the old inline fallback block stays absent.
 - ✓ TODO-0800: Share instantiated collection target normalization. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now routes the duplicated monomorphized-target normalization block through shared `normalizeInstantiatedCollectionMethodTarget`, and focused expr source-lock coverage keeps that helper present while the old inline block stays absent.
 - ✓ TODO-0799: Rename collection surface helper. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now names the generic surface helper `tryResolveCollectionMethodFromSurface`, and focused expr source-lock coverage keeps the renamed helper present while the stale `tryResolveCollectionMethodFromSurfaceOrReturn` name stays absent.
 - ✓ TODO-0798: Inline collection surface helper. Completed: the one-use `tryResolveCollectionMethodFromSurface` helper in `SemanticsValidatorExprCollectionCountCapacity.cpp` is gone, and focused expr source-lock coverage now keeps the shared surface-routing body inside `tryResolveCollectionMethodFromSurfaceOrReturn` while the deleted helper stays absent.
