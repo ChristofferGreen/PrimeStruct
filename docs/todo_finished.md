@@ -6,6 +6,7 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 13, 2026)**
+- ✓ TODO-0872: Share resolved map-count flag. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the repeated resolved map-count flag behind shared `routesThroughResolvedMapCountSurface`, and focused expr source-lock coverage now keeps that shared local present while the old inline raw-context use stays absent.
 - ✓ TODO-0871: Share namespaced map-count flag. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the repeated namespaced map-count flag behind shared `routesThroughNamespacedMapCountSurface`, and focused expr source-lock coverage now keeps that shared local present while the old inline raw-context use stays absent.
 - ✓ TODO-0870: Share std-namespaced map-count flag. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the repeated std-namespaced map-count flag behind shared `routesThroughStdNamespacedMapCountSurface`, and focused expr source-lock coverage now keeps that shared local present while the old inline raw-context uses stay absent.
 - ✓ TODO-0869: Share unnamespaced map-count fallback flag. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now hoists the repeated unnamespaced map-count fallback flag behind shared `routesThroughUnnamespacedMapCountFallbackSurface`, and focused expr source-lock coverage now keeps that shared local present while the old inline raw-context uses stay absent.

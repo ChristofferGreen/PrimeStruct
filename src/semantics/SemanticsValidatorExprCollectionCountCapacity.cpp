@@ -95,11 +95,13 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       context.isNamespacedMapCountCall;
   const bool routesThroughUnnamespacedMapCountFallbackSurface =
       context.isUnnamespacedMapCountFallbackCall;
+  const bool routesThroughResolvedMapCountSurface =
+      context.isResolvedMapCountCall;
   const bool routesThroughMapCountCallSurface =
       routesThroughStdNamespacedMapCountSurface ||
       routesThroughNamespacedMapCountSurface ||
       routesThroughUnnamespacedMapCountFallbackSurface ||
-      context.isResolvedMapCountCall;
+      routesThroughResolvedMapCountSurface;
   const bool isSingleArgCountCall = expr.args.size() == 1;
   const bool isMultiArgCountCall = !isSingleArgCountCall;
   const bool isArrayNamespacedVectorCountCompatibilityActive =
