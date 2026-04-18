@@ -10,6 +10,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 17, 2026)**
 
 **Group 14 - SoA bring-up and end-state cleanup**
+- ✓ TODO-0841: Inline collection surface routes. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` no longer carries the one-use `tryResolveCollectionMethodFromSurfaceRoutes` helper, and focused expr source-lock coverage now keeps the inline count/capacity surface-route handled/receiver setup present while the deleted helper stays absent.
 - ✓ TODO-0840: Inline helper-route finalizer. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` no longer carries the one-use `tryResolveCollectionMethodTargetFromHelperRouteOrFinalize` helper, and focused expr source-lock coverage now keeps the inline count/capacity helper-route dispatch and finalization scaffold present while the deleted helper stays absent.
 - ✓ TODO-0839: Inline collection finalizer. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` no longer carries the one-use `finalizeCollectionMethodTarget` helper, and focused expr source-lock coverage now keeps the inline count/capacity normalization and failure-tail blocks present while the deleted helper stays absent.
 - ✓ TODO-0838: Inline target resolve scaffold. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` no longer carries the one-use `tryResolveCollectionMethodTargetOrElse` helper, and focused expr source-lock coverage now keeps the inline count/capacity resolve-or-miss branches present while the deleted helper stays absent.

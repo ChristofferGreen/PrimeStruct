@@ -89,15 +89,41 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                                 stdNamespacedVectorCountDiagnosticMessage);
     }
   }
-  const auto tryResolveCollectionMethodFromSurfaceRoutes =
-      [&](bool routesThroughMethodSurface,
-          bool matchesPrimarySurfaceRoute,
-          bool matchesSecondarySurfaceRoute,
-          auto &&resolveMethodTarget) -> std::optional<bool> {
-    if (!routesThroughMethodSurface ||
-        (!matchesPrimarySurfaceRoute && !matchesSecondarySurfaceRoute)) {
-      return std::nullopt;
-    }
+  if (!(hasNamedArguments(expr.argNames) ||
+        isUnimportedStdNamespacedVectorCompatibilityDirectCall(
+            expr.isMethodCall,
+            resolveCalleePath(expr),
+            "count",
+            hasImportedDefinitionPath("/std/collections/vector/count")) ||
+        expr.args.empty()) &&
+      !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
+        context.isArrayNamespacedVectorCountCompatibilityCall(expr)) &&
+      (isVectorBuiltinName(expr, "count") ||
+       context.isStdNamespacedMapCountCall ||
+       context.isNamespacedMapCountCall ||
+       context.isUnnamespacedMapCountFallbackCall ||
+       context.isResolvedMapCountCall) &&
+      ((expr.args.size() == 1 &&
+        ((defMap_.find(resolved) == defMap_.end() &&
+          !context.isStdNamespacedMapCountCall) ||
+         (!isStdNamespacedVectorCompatibilityDirectCall(
+              expr.isMethodCall, resolveCalleePath(expr), "count") &&
+          context.isNamespacedVectorHelperCall &&
+          context.namespacedHelper == "count" &&
+          isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
+          !hasDefinitionPath(resolved) &&
+          !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
+            context.isArrayNamespacedVectorCountCompatibilityCall(expr))) ||
+         context.isStdNamespacedMapCountCall ||
+         context.isNamespacedMapCountCall ||
+         context.isUnnamespacedMapCountFallbackCall ||
+         context.isResolvedMapCountCall)) ||
+       (expr.args.size() != 1 &&
+        (defMap_.find(resolved) != defMap_.end() ||
+         context.isStdNamespacedMapCountCall ||
+         context.isNamespacedMapCountCall ||
+         context.isUnnamespacedMapCountFallbackCall ||
+         context.isResolvedMapCountCall)))) {
     handledOut = true;
     usedMethodTarget = true;
     hasMethodReceiverIndex = true;
@@ -105,55 +131,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     const Expr &receiver = expr.args.front();
     bool isBuiltinMethod = false;
     std::string methodResolved;
-    if (!resolveMethodTarget(receiver, isBuiltinMethod, methodResolved)) {
-      return false;
-    }
-    resolved = methodResolved;
-    resolvedMethod = isBuiltinMethod;
-    return true;
-  };
-  if (std::optional<bool> resolvedCountMethod =
-          tryResolveCollectionMethodFromSurfaceRoutes(
-              !(hasNamedArguments(expr.argNames) ||
-                isUnimportedStdNamespacedVectorCompatibilityDirectCall(
-                    expr.isMethodCall,
-                    resolveCalleePath(expr),
-                    "count",
-                    hasImportedDefinitionPath("/std/collections/vector/count")) ||
-                expr.args.empty()) &&
-                  !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
-                    context.isArrayNamespacedVectorCountCompatibilityCall(expr)) &&
-                  (isVectorBuiltinName(expr, "count") ||
-                   context.isStdNamespacedMapCountCall ||
-                   context.isNamespacedMapCountCall ||
-                   context.isUnnamespacedMapCountFallbackCall ||
-                   context.isResolvedMapCountCall),
-              expr.args.size() == 1 &&
-                  ((defMap_.find(resolved) == defMap_.end() &&
-                    !context.isStdNamespacedMapCountCall) ||
-                   (!isStdNamespacedVectorCompatibilityDirectCall(
-                        expr.isMethodCall, resolveCalleePath(expr), "count") &&
-                    context.isNamespacedVectorHelperCall &&
-                    context.namespacedHelper == "count" &&
-                    isVectorBuiltinName(expr, "count") &&
-                    expr.args.size() == 1 &&
-                    !hasDefinitionPath(resolved) &&
-                    !(context.isArrayNamespacedVectorCountCompatibilityCall !=
-                          nullptr &&
-                      context.isArrayNamespacedVectorCountCompatibilityCall(
-                          expr))) ||
-                   context.isStdNamespacedMapCountCall ||
-                   context.isNamespacedMapCountCall ||
-                   context.isUnnamespacedMapCountFallbackCall ||
-                   context.isResolvedMapCountCall),
-              expr.args.size() != 1 &&
-                  (defMap_.find(resolved) != defMap_.end() ||
-                   context.isStdNamespacedMapCountCall ||
-                   context.isNamespacedMapCountCall ||
-                   context.isUnnamespacedMapCountFallbackCall ||
-                   context.isResolvedMapCountCall),
-              [&](const Expr &receiver, bool &isBuiltinMethod,
-                  std::string &methodResolved) -> bool {
+    {
                 const std::string stdlibMapCountMethodTarget =
                     "/std/collections/map/count";
                 if (context.isUnnamespacedMapCountFallbackCall &&
@@ -266,28 +244,33 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                                            "unknown method: " + methodResolved);
                   return false;
                 }
-                return true;
-              })) {
-    return *resolvedCountMethod;
+    }
+    resolved = methodResolved;
+    resolvedMethod = isBuiltinMethod;
+    return true;
   }
 
-  if (std::optional<bool> resolvedCapacityMethod =
-          tryResolveCollectionMethodFromSurfaceRoutes(
-              !(hasNamedArguments(expr.argNames) ||
-                isUnimportedStdNamespacedVectorCompatibilityDirectCall(
-                    expr.isMethodCall,
-                    resolveCalleePath(expr),
-                    "capacity",
-                    hasImportedDefinitionPath("/std/collections/vector/capacity")) ||
-                !isVectorBuiltinName(expr, "capacity")),
-              !(expr.args.empty() || expr.args.size() == 1 ||
-                defMap_.find(resolved) == defMap_.end()) &&
-                  context.isNamespacedVectorHelperCall,
-              expr.args.size() == 1 &&
-                  (defMap_.find(resolved) == defMap_.end() ||
-                   context.isNamespacedVectorCapacityCall),
-              [&](const Expr &receiver, bool &isBuiltinMethod,
-                  std::string &methodResolved) -> bool {
+  if (!(hasNamedArguments(expr.argNames) ||
+        isUnimportedStdNamespacedVectorCompatibilityDirectCall(
+            expr.isMethodCall,
+            resolveCalleePath(expr),
+            "capacity",
+            hasImportedDefinitionPath("/std/collections/vector/capacity")) ||
+        !isVectorBuiltinName(expr, "capacity")) &&
+      ((!(expr.args.empty() || expr.args.size() == 1 ||
+          defMap_.find(resolved) == defMap_.end()) &&
+        context.isNamespacedVectorHelperCall) ||
+       (expr.args.size() == 1 &&
+        (defMap_.find(resolved) == defMap_.end() ||
+         context.isNamespacedVectorCapacityCall)))) {
+    handledOut = true;
+    usedMethodTarget = true;
+    hasMethodReceiverIndex = true;
+    methodReceiverIndex = 0;
+    const Expr &receiver = expr.args.front();
+    bool isBuiltinMethod = false;
+    std::string methodResolved;
+    {
                 if (resolveVectorHelperMethodTarget(
                         params, locals, receiver, "capacity",
                         methodResolved) &&
@@ -348,9 +331,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     return false;
                   }
                 }
-                return true;
-              })) {
-    return *resolvedCapacityMethod;
+    }
+    resolved = methodResolved;
+    resolvedMethod = isBuiltinMethod;
+    return true;
   }
 
   return true;
