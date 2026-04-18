@@ -1568,7 +1568,17 @@
             "      expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call &&") !=
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "const std::string stdNamespacedVectorCountDiagnosticMessage =") ==
+            "const std::string stdNamespacedVectorCountDiagnosticMessage =\n"
+            "        classifyStdNamespacedVectorCountDiagnosticMessage(\n"
+            "            isInvisibleStdNamespacedVectorCompatibilityDirectCall(\n"
+            "                expr.isMethodCall,\n"
+            "                resolveCalleePath(expr),\n"
+            "                \"count\",\n"
+            "                hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/count\")),\n"
+            "            false,\n"
+            "            false,\n"
+            "            false,\n"
+            "            false);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "const bool allowStdNamespacedVectorUserReceiverProbe =") ==
@@ -1578,28 +1588,20 @@
             "        setupOut.isNamespacedVectorHelperCall &&\n"
             "        (setupOut.namespacedHelper == \"count\" ||\n"
             "         setupOut.namespacedHelper == \"capacity\"))) {\n"
-            "    if (!classifyStdNamespacedVectorCountDiagnosticMessage(\n"
-            "             isInvisibleStdNamespacedVectorCompatibilityDirectCall(\n"
-            "                 expr.isMethodCall,\n"
-            "                 resolveCalleePath(expr),\n"
-            "                 \"count\",\n"
-            "                 hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/count\")),\n"
-            "             false,\n"
-            "             false,\n"
-            "             false,\n"
-            "             false)\n"
-            "             .empty()) {\n"
+            "    const std::string stdNamespacedVectorCountDiagnosticMessage =\n"
+            "        classifyStdNamespacedVectorCountDiagnosticMessage(\n"
+            "            isInvisibleStdNamespacedVectorCompatibilityDirectCall(\n"
+            "                expr.isMethodCall,\n"
+            "                resolveCalleePath(expr),\n"
+            "                \"count\",\n"
+            "                hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/count\")),\n"
+            "            false,\n"
+            "            false,\n"
+            "            false,\n"
+            "            false);\n"
+            "    if (!stdNamespacedVectorCountDiagnosticMessage.empty()) {\n"
             "      return failCollectionDispatchDiagnostic(\n"
-            "          classifyStdNamespacedVectorCountDiagnosticMessage(\n"
-            "              isInvisibleStdNamespacedVectorCompatibilityDirectCall(\n"
-            "                  expr.isMethodCall,\n"
-            "                  resolveCalleePath(expr),\n"
-            "                  \"count\",\n"
-            "                  hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/count\")),\n"
-            "              false,\n"
-            "              false,\n"
-            "              false,\n"
-            "              false));\n"
+            "          stdNamespacedVectorCountDiagnosticMessage);\n"
             "    }\n"
             "  }") !=
         std::string::npos);
