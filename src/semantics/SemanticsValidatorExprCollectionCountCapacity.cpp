@@ -251,7 +251,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                           typeName = inferPointerLikeCallReturnType(
                               receiver, params, locals);
                         }
-                        if (typeName.empty()) {
+                        const bool needsCountReceiverTypeFromPointerFallback =
+                            typeName.empty();
+                        if (needsCountReceiverTypeFromPointerFallback) {
                           if (isPointerExpr(receiver, params, locals)) {
                             typeName = "Pointer";
                           } else if (isPointerLikeExpr(receiver, params,

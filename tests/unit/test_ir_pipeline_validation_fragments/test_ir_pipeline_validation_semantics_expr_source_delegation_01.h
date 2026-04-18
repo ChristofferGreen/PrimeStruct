@@ -1825,7 +1825,9 @@
             "            if (needsCountReceiverTypeFromCallReturn) {\n"
             "              typeName = inferPointerLikeCallReturnType(receiver, params, locals);\n"
             "            }\n"
-            "            if (typeName.empty()) {\n"
+            "            const bool needsCountReceiverTypeFromPointerFallback =\n"
+            "                typeName.empty();\n"
+            "            if (needsCountReceiverTypeFromPointerFallback) {\n"
             "              if (isPointerExpr(receiver, params, locals)) {\n"
             "                typeName = \"Pointer\";\n"
             "              } else if (isPointerLikeExpr(receiver, params, locals)) {\n"
@@ -1845,6 +1847,15 @@
             "        }\n"
             "      }\n"
             "    }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "            if (typeName.empty()) {\n"
+            "              if (isPointerExpr(receiver, params, locals)) {\n"
+            "                typeName = \"Pointer\";\n"
+            "              } else if (isPointerLikeExpr(receiver, params, locals)) {\n"
+            "                typeName = \"Reference\";\n"
+            "              }\n"
+            "            }\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "            if (typeName.empty()) {\n"
