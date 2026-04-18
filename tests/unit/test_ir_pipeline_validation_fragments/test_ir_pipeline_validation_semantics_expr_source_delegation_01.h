@@ -3731,10 +3731,8 @@
             "    };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const auto assignStdNamespacedVectorCapacityMethodTarget = [&]() {\n"
-            "      methodResolved = \"/std/collections/vector/capacity\";\n"
-            "      isBuiltinMethod = true;\n"
-            "    };") != std::string::npos);
+            "const auto assignStdNamespacedVectorCapacityMethodTarget = [&]() {\n") ==
+        std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(),\n"
             "                                        \"capacity\", methodResolved)) {\n"
@@ -3830,14 +3828,16 @@
             "        receiver, \"capacity\", methodResolved, isBuiltinMethod,\n"
             "        [&](const Expr &, std::string &, bool &) {\n"
             "          if (routesThroughStdNamespacedVectorCapacityHelper) {\n"
-            "            assignStdNamespacedVectorCapacityMethodTarget();\n"
+            "            methodResolved = \"/std/collections/vector/capacity\";\n"
+            "            isBuiltinMethod = true;\n"
             "          }\n"
             "          return true;\n"
             "        },\n"
             "        [&](const Expr &receiver, std::string &methodResolved,\n"
             "            bool &isBuiltinMethod) {\n"
             "          if (routesThroughStdNamespacedVectorCapacityHelper) {\n"
-            "            assignStdNamespacedVectorCapacityMethodTarget();\n"
+            "            methodResolved = \"/std/collections/vector/capacity\";\n"
+            "            isBuiltinMethod = true;\n"
             "            return true;\n"
             "          }\n"
             "          return tryResolveCollectionMethodTargetOrElse(\n"
