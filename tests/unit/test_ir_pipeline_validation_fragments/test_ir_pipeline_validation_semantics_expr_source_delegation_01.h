@@ -4878,6 +4878,13 @@
             "const auto finalizeCapacityMethodTarget =\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (const std::string removedRootedVectorDirectCallDiagnostic =\n"
+            "        getRemovedRootedVectorDirectCallDiagnostic(expr);\n"
+            "    !removedRootedVectorDirectCallDiagnostic.empty()) {\n"
+            "  (void)failExprDiagnostic(\n"
+            "      expr, removedRootedVectorDirectCallDiagnostic);\n"
+            "  return false;\n"
+            "}\n"
             "if (promotesBuiltinValidationForUnknownCapacityMethod) {\n"
             "  context.promoteCapacityToBuiltinValidation(\n"
             "      receiver, methodResolved, isBuiltinMethod, false);\n"
@@ -4887,6 +4894,41 @@
             "                           \"unknown method: \" + methodResolved);\n"
             "  return false;\n"
             "}\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (promotesBuiltinValidationForUnknownCapacityMethod) {\n"
+            "  context.promoteCapacityToBuiltinValidation(\n"
+            "      receiver, methodResolved, isBuiltinMethod, false);\n"
+            "}\n"
+            "if (lacksVisibleCapacityMethodTarget) {\n"
+            "  (void)failExprDiagnostic(expr,\n"
+            "                           \"unknown method: \" + methodResolved);\n"
+            "  return false;\n"
+            "}\n"
+            "if (const std::string removedRootedVectorDirectCallDiagnostic =\n"
+            "        getRemovedRootedVectorDirectCallDiagnostic(expr);\n"
+            "    !removedRootedVectorDirectCallDiagnostic.empty()) {\n"
+            "  (void)failExprDiagnostic(\n"
+            "      expr, removedRootedVectorDirectCallDiagnostic);\n"
+            "}\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (promotesBuiltinValidationForUnknownCapacityMethod) {\n"
+            "  context.promoteCapacityToBuiltinValidation(\n"
+            "      receiver, methodResolved, isBuiltinMethod, false);\n"
+            "}\n"
+            "if (lacksVisibleCapacityMethodTarget) {\n"
+            "  (void)failExprDiagnostic(expr,\n"
+            "                           \"unknown method: \" + methodResolved);\n"
+            "  return false;\n"
+            "}\n"
+            "if (const std::string removedRootedVectorDirectCallDiagnostic =\n"
+            "        getRemovedRootedVectorDirectCallDiagnostic(expr);\n"
+            "    !removedRootedVectorDirectCallDiagnostic.empty()) {\n"
+            "  (void)failExprDiagnostic(\n"
+            "      expr, removedRootedVectorDirectCallDiagnostic);\n"
+            "  return false;\n"
+            "}\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (lacksVisibleCapacityMethodTarget) {\n"

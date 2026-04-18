@@ -442,6 +442,13 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     promotesBuiltinValidationForUnknownCapacityMethod =
                         lacksVisibleCapacityMethodTarget &&
                         allowsCapacityBuiltinValidationPromotion;
+                if (const std::string removedRootedVectorDirectCallDiagnostic =
+                        getRemovedRootedVectorDirectCallDiagnostic(expr);
+                    !removedRootedVectorDirectCallDiagnostic.empty()) {
+                  (void)failExprDiagnostic(
+                      expr, removedRootedVectorDirectCallDiagnostic);
+                  return false;
+                }
                 if (promotesBuiltinValidationForUnknownCapacityMethod) {
                   context.promoteCapacityToBuiltinValidation(
                       receiver, methodResolved, isBuiltinMethod, false);
@@ -449,13 +456,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 if (lacksVisibleCapacityMethodTarget) {
                   (void)failExprDiagnostic(expr,
                                            "unknown method: " + methodResolved);
-                  return false;
-                }
-                if (const std::string removedRootedVectorDirectCallDiagnostic =
-                        getRemovedRootedVectorDirectCallDiagnostic(expr);
-                    !removedRootedVectorDirectCallDiagnostic.empty()) {
-                  (void)failExprDiagnostic(
-                      expr, removedRootedVectorDirectCallDiagnostic);
                   return false;
                 }
     }
