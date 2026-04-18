@@ -138,9 +138,6 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       !expr.isMethodCall && isNamespacedVectorHelperCall &&
       namespacedHelper == "capacity" &&
       isVectorBuiltinName(expr, "capacity");
-  const bool isStdNamespacedVectorCapacityCall =
-      !expr.isMethodCall &&
-      resolveCalleePath(expr).rfind("/std/collections/vector/capacity", 0) == 0;
   setupOut.isStdNamespacedVectorAccessSpelling =
       setupOut.hasBuiltinAccessSpelling && !expr.isMethodCall &&
       resolveCalleePath(expr).rfind("/std/collections/vector/at", 0) == 0;
@@ -244,7 +241,8 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
        shouldBuiltinValidateStdNamespacedVectorCountCall);
   setupOut.builtinCollectionCountCapacityDispatchContext.isCapacityLike =
       isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
-      (!isStdNamespacedVectorCapacityCall ||
+      (!(!expr.isMethodCall &&
+         resolveCalleePath(expr).rfind("/std/collections/vector/capacity", 0) == 0) ||
        hasImportedDefinitionPath("/std/collections/vector/capacity"));
   setupOut.builtinCollectionCountCapacityDispatchContext
       .isUnnamespacedMapCountFallbackCall = isUnnamespacedMapCountFallbackCall;
@@ -304,7 +302,8 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
        isResolvedMapCountCall);
   const bool isDirectBuiltinCountCapacityCapacityCall =
       !expr.isMethodCall && isVectorBuiltinName(expr, "capacity") &&
-      (!isStdNamespacedVectorCapacityCall ||
+      (!(!expr.isMethodCall &&
+         resolveCalleePath(expr).rfind("/std/collections/vector/capacity", 0) == 0) ||
        hasImportedDefinitionPath("/std/collections/vector/capacity")) &&
       !expr.args.empty() &&
       (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCapacityCall);

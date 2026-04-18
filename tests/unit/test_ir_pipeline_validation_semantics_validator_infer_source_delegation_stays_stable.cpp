@@ -492,13 +492,17 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferCollectionDispatchSetupSource.find("const bool isStdNamespacedVectorCountCall =") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
+            "const bool isStdNamespacedVectorCapacityCall =") ==
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSetupSource.find(
             "const bool shouldBuiltinValidateStdNamespacedVectorCapacityCall =") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
             "const bool hasStdNamespacedVectorCapacityDefinition =") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
-            "(!isStdNamespacedVectorCapacityCall ||\n"
+            "(!(!expr.isMethodCall &&\n"
+            "         resolveCalleePath(expr).rfind(\"/std/collections/vector/capacity\", 0) == 0) ||\n"
             "       hasImportedDefinitionPath(\"/std/collections/vector/capacity\"));") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find("setupOut.shouldDeferResolvedNamespacedCollectionHelperReturn =") !=
