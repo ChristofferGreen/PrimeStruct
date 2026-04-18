@@ -611,7 +611,8 @@
             "        defMap_.count(vectorMethodTarget) == 0) {\n"
             "      const std::string canonicalVectorCompatibilityMethodTarget =\n"
             "          \"/std/collections/vector/\" + expr.name;\n"
-            "      if (isExperimentalVectorCompatibilityMethodTarget(vectorMethodTarget) &&\n"
+            "      if ((vectorMethodTarget.rfind(\"/std/collections/experimental_vector/\", 0) == 0 ||\n"
+            "           vectorMethodTarget.rfind(\"/std/collections/experimental_vector/Vector__\", 0) == 0) &&\n"
             "          (hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||\n"
             "           defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0)) {\n"
             "        vectorMethodTarget = canonicalVectorCompatibilityMethodTarget;\n"
@@ -622,7 +623,7 @@
             "bool isExperimentalVectorCompatibilityMethodTarget(std::string_view methodTarget) {\n"
             "  return methodTarget.rfind(\"/std/collections/experimental_vector/\", 0) == 0 ||\n"
             "         methodTarget.rfind(\"/std/collections/experimental_vector/Vector__\", 0) == 0;\n"
-            "}") !=
+            "}") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "expr.name == \"count\" || expr.name == \"capacity\" || expr.name == \"at\" ||") ==
@@ -640,7 +641,8 @@
             "if (!isBuiltinMethod && isVectorCompatibilityMethod && !resolved.empty()) {\n"
             "    const std::string canonicalVectorCompatibilityMethodTarget =\n"
             "        \"/std/collections/vector/\" + expr.name;\n"
-            "    if (isExperimentalVectorCompatibilityMethodTarget(resolved) &&\n"
+            "    if ((resolved.rfind(\"/std/collections/experimental_vector/\", 0) == 0 ||\n"
+            "         resolved.rfind(\"/std/collections/experimental_vector/Vector__\", 0) == 0) &&\n"
             "        (hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||\n"
             "         defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0)) {\n"
             "      resolved = canonicalVectorCompatibilityMethodTarget;\n"
@@ -744,6 +746,12 @@
             "      isExperimentalVectorCompatibilityMethodTarget(resolved) &&\n"
             "      hasVisibleCanonicalVectorCompatibilityMethodTarget) {\n"
             "    resolved = canonicalVectorCompatibilityMethodTarget;") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "isExperimentalVectorCompatibilityMethodTarget(vectorMethodTarget)") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "isExperimentalVectorCompatibilityMethodTarget(resolved)") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "methodTarget.rfind(\"/std/collections/experimental_vector/Vector__\", 0) != 0") ==
