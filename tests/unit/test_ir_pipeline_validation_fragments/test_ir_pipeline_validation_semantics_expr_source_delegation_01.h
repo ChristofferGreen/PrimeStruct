@@ -1896,6 +1896,11 @@
             "        resolvesMapCountMethodTarget;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool canUseCountResolveMissFallback =\n"
+            "        (expr.hasBodyArguments || !expr.bodyArguments.empty()) &&\n"
+            "        !expr.args.empty();") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool resolvesBareMapCountMethodTarget =\n"
             "        methodResolved == bareMapCountMethodTarget;") !=
         std::string::npos);
@@ -1923,6 +1928,19 @@
             "      isBuiltinMethod = true;\n"
             "      needsCountMethodResolveOrFallback = false;\n"
             "    }") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
+            "          expr.args.empty()) {\n"
+            "        (void)validateExpr(params, locals, expr.args.front());\n"
+            "        return false;\n"
+            "      }") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (!canUseCountResolveMissFallback) {\n"
+            "        (void)validateExpr(params, locals, expr.args.front());\n"
+            "        return false;\n"
+            "      }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool rejectsUnimportedBareMapCountCallTarget =\n"
