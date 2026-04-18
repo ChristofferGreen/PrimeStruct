@@ -3002,11 +3002,6 @@
             "      return true;\n"
             "    };") != std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const auto assignStdNamespacedVectorCapacityMethodTarget = [&]() {\n"
-            "      methodResolved = \"/std/collections/vector/capacity\";\n"
-            "      isBuiltinMethod = true;\n"
-            "    };") != std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto tryResolveCapacityMethodFromHelperRouting = [&]() -> bool {\n"
             "      if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), \"capacity\",\n"
             "                                          methodResolved)) {\n"
@@ -3018,11 +3013,17 @@
             "      }\n"
             "      if (isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),\n"
             "                                                       \"capacity\")) {\n"
-            "        assignStdNamespacedVectorCapacityMethodTarget();\n"
+            "        methodResolved = \"/std/collections/vector/capacity\";\n"
+            "        isBuiltinMethod = true;\n"
             "        return true;\n"
             "      }\n"
             "      return tryResolveCapacityMethodWithValidation();\n"
             "    };") != std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto assignStdNamespacedVectorCapacityMethodTarget = [&]() {\n"
+            "      methodResolved = \"/std/collections/vector/capacity\";\n"
+            "      isBuiltinMethod = true;\n"
+            "    };") == std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!tryResolveCapacityMethodFromHelperRouting()) {\n"
             "      return false;\n"
@@ -3069,6 +3070,12 @@
             "    } else if (!tryResolveCapacityMethodWithValidation()) {\n"
             "      return false;\n"
             "    }") == std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "      if (isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),\n"
+            "                                                       \"capacity\")) {\n"
+            "        assignStdNamespacedVectorCapacityMethodTarget();\n"
+            "        return true;\n"
+            "      }\n") == std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "      } else if (routesThroughStdNamespacedVectorCapacityHelper) {\n"
             "        methodResolved = \"/std/collections/vector/capacity\";\n"
