@@ -1991,15 +1991,11 @@
             "        lacksVisibleStdlibMapCountDefinition;") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "const bool rejectsBuiltinStdlibMapCountCallTarget =\n"
-            "        isBuiltinMethod &&\n"
-            "        resolvesStdlibMapCountMethodTarget &&\n"
-            "        lacksVisibleStdlibMapCountDefinition &&\n"
-            "        !context.shouldBuiltinValidateBareMapCountCall;") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (rejectsUnimportedBareMapCountCallTarget ||\n"
-            "        rejectsBuiltinStdlibMapCountCallTarget) {\n"
+            "        (isBuiltinMethod &&\n"
+            "         resolvesStdlibMapCountMethodTarget &&\n"
+            "         lacksVisibleStdlibMapCountDefinition &&\n"
+            "         !context.shouldBuiltinValidateBareMapCountCall)) {\n"
             "      return failCollectionCountCapacityDiagnostic(\"unknown call target: \" +\n"
             "                                                  stdlibMapCountMethodTarget);\n"
             "    }") !=
@@ -2009,6 +2005,9 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool rejectsResolvedMapCountCallTarget =") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool rejectsBuiltinStdlibMapCountCallTarget =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto matchesCountMethodCallShape =") ==

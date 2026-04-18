@@ -297,13 +297,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         !hasImportedDefinitionPath("/count") &&
         !hasDeclaredDefinitionPath("/count") &&
         lacksVisibleStdlibMapCountDefinition;
-    const bool rejectsBuiltinStdlibMapCountCallTarget =
-        isBuiltinMethod &&
-        resolvesStdlibMapCountMethodTarget &&
-        lacksVisibleStdlibMapCountDefinition &&
-        !context.shouldBuiltinValidateBareMapCountCall;
     if (rejectsUnimportedBareMapCountCallTarget ||
-        rejectsBuiltinStdlibMapCountCallTarget) {
+        (isBuiltinMethod &&
+         resolvesStdlibMapCountMethodTarget &&
+         lacksVisibleStdlibMapCountDefinition &&
+         !context.shouldBuiltinValidateBareMapCountCall)) {
       return failCollectionCountCapacityDiagnostic("unknown call target: " +
                                                   stdlibMapCountMethodTarget);
     }
