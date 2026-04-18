@@ -89,6 +89,13 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   const bool hasVisibleCanonicalVectorCompatibilityMethodTarget =
       hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||
       defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0;
+  auto rewriteExperimentalVectorCompatibilityMethodTargetToCanonical =
+      [&](std::string &methodTarget) {
+        if (isExperimentalVectorCompatibilityMethodTarget(methodTarget) &&
+            hasVisibleCanonicalVectorCompatibilityMethodTarget) {
+          methodTarget = canonicalVectorCompatibilityMethodTarget;
+        }
+      };
   if (expr.namespacePrefix.empty() &&
       !expr.args.empty() &&
       isVectorCompatibilityMethod) {
@@ -173,10 +180,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
                                       vectorMethodTarget)) {
     if (!hasImportedDefinitionPath(vectorMethodTarget) &&
-        defMap_.count(vectorMethodTarget) == 0 &&
-        isExperimentalVectorCompatibilityMethodTarget(vectorMethodTarget) &&
-        hasVisibleCanonicalVectorCompatibilityMethodTarget) {
-      vectorMethodTarget = canonicalVectorCompatibilityMethodTarget;
+        defMap_.count(vectorMethodTarget) == 0) {
+      rewriteExperimentalVectorCompatibilityMethodTargetToCanonical(vectorMethodTarget);
     }
     if (hasImportedDefinitionPath(vectorMethodTarget) ||
         defMap_.count(vectorMethodTarget) > 0) {
@@ -245,9 +250,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     }
   }
   if (!isBuiltinMethod && isVectorCompatibilityMethod &&
-      isExperimentalVectorCompatibilityMethodTarget(resolved) &&
-      hasVisibleCanonicalVectorCompatibilityMethodTarget) {
-    resolved = canonicalVectorCompatibilityMethodTarget;
+      !resolved.empty()) {
+    rewriteExperimentalVectorCompatibilityMethodTargetToCanonical(resolved);
   }
   bool keepBuiltinIndexedArgsPackMapMethod = false;
   keepBuiltinIndexedArgsPackMapMethod = resolveMapTarget(expr.args.front());

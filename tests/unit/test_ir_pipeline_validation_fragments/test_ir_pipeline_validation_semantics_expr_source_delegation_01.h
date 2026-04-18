@@ -613,6 +613,15 @@
             "      defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0;") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
+            "auto rewriteExperimentalVectorCompatibilityMethodTargetToCanonical =\n"
+            "      [&](std::string &methodTarget) {\n"
+            "        if (isExperimentalVectorCompatibilityMethodTarget(methodTarget) &&\n"
+            "            hasVisibleCanonicalVectorCompatibilityMethodTarget) {\n"
+            "          methodTarget = canonicalVectorCompatibilityMethodTarget;\n"
+            "        }\n"
+            "      };") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
             "bool isExperimentalVectorCompatibilityMethodTarget(std::string_view methodTarget) {\n"
             "  return methodTarget.rfind(\"/std/collections/experimental_vector/\", 0) == 0 ||\n"
             "         methodTarget.rfind(\"/std/collections/experimental_vector/Vector__\", 0) == 0;\n"
@@ -623,10 +632,8 @@
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (!hasImportedDefinitionPath(vectorMethodTarget) &&\n"
-            "        defMap_.count(vectorMethodTarget) == 0 &&\n"
-            "        isExperimentalVectorCompatibilityMethodTarget(vectorMethodTarget) &&\n"
-            "        hasVisibleCanonicalVectorCompatibilityMethodTarget) {\n"
-            "      vectorMethodTarget = canonicalVectorCompatibilityMethodTarget;") !=
+            "        defMap_.count(vectorMethodTarget) == 0) {\n"
+            "      rewriteExperimentalVectorCompatibilityMethodTargetToCanonical(vectorMethodTarget);") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "preferVisibleCanonicalVectorMethodTarget(resolved)") ==
@@ -636,9 +643,8 @@
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (!isBuiltinMethod && isVectorCompatibilityMethod &&\n"
-            "      isExperimentalVectorCompatibilityMethodTarget(resolved) &&\n"
-            "      hasVisibleCanonicalVectorCompatibilityMethodTarget) {\n"
-            "    resolved = canonicalVectorCompatibilityMethodTarget;") !=
+            "      !resolved.empty()) {\n"
+            "    rewriteExperimentalVectorCompatibilityMethodTargetToCanonical(resolved);") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "preferCanonicalVectorCompatibilityMethodTarget(\n"
@@ -706,10 +712,22 @@
             "resolved.rfind(\"/std/collections/experimental_vector/\", 0) == 0") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
-            "isExperimentalVectorCompatibilityMethodTarget(vectorMethodTarget)") !=
+            "isExperimentalVectorCompatibilityMethodTarget(vectorMethodTarget)") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
-            "isExperimentalVectorCompatibilityMethodTarget(resolved)") !=
+            "isExperimentalVectorCompatibilityMethodTarget(resolved)") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "rewriteExperimentalVectorCompatibilityMethodTargetToCanonical(vectorMethodTarget)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "rewriteExperimentalVectorCompatibilityMethodTargetToCanonical(resolved)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "if (!isBuiltinMethod && isVectorCompatibilityMethod &&\n"
+            "      isExperimentalVectorCompatibilityMethodTarget(resolved) &&\n"
+            "      hasVisibleCanonicalVectorCompatibilityMethodTarget) {\n"
+            "    resolved = canonicalVectorCompatibilityMethodTarget;") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "methodTarget.rfind(\"/std/collections/experimental_vector/Vector__\", 0) != 0") ==
