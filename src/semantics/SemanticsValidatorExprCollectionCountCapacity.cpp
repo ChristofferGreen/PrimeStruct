@@ -351,10 +351,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       expr.args.size() == 1;
   const bool capacityMethodSurfaceLacksResolvedDefinitionTarget =
       defMap_.find(resolved) == defMap_.end();
-  const bool matchesHelperCapacityMethodSurfaceRouteShape =
+  const bool matchesHelperCapacityMethodSurfaceRouteInputs =
       !(capacityMethodSurfaceHasNoArguments ||
         capacityMethodSurfaceUsesSingleArgument ||
-        capacityMethodSurfaceLacksResolvedDefinitionTarget) &&
+        capacityMethodSurfaceLacksResolvedDefinitionTarget);
+  const bool matchesHelperCapacityMethodSurfaceRouteShape =
+      matchesHelperCapacityMethodSurfaceRouteInputs &&
       routesThroughNamespacedVectorCapacityHelperSurface;
   const bool matchesSingleArgCapacityMethodSurfaceRouteShape =
       capacityMethodSurfaceUsesSingleArgument &&
