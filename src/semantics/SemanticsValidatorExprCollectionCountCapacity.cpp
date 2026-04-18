@@ -380,11 +380,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     resolved.rfind(methodResolved + "__t", 0) == 0) {
                   methodResolved = resolved;
                 }
-                const bool lacksVisibleCapacityMethodTarget =
-                    !isBuiltinMethod &&
+                if (!isBuiltinMethod &&
                     !hasDeclaredDefinitionPath(methodResolved) &&
-                    !hasImportedDefinitionPath(methodResolved);
-                if (lacksVisibleCapacityMethodTarget) {
+                    !hasImportedDefinitionPath(methodResolved)) {
                   if ((context.isNonCollectionStructCapacityTarget == nullptr ||
                        !context.isNonCollectionStructCapacityTarget(
                            methodResolved)) &&

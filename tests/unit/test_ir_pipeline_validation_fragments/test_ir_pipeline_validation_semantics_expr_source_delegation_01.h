@@ -4362,11 +4362,9 @@
             "    resolved.rfind(methodResolved + \"__t\", 0) == 0) {\n"
             "  methodResolved = resolved;\n"
             "}\n"
-            "const bool lacksVisibleCapacityMethodTarget =\n"
-            "    !isBuiltinMethod &&\n"
+            "if (!isBuiltinMethod &&\n"
             "    !hasDeclaredDefinitionPath(methodResolved) &&\n"
-            "    !hasImportedDefinitionPath(methodResolved);\n"
-            "if (lacksVisibleCapacityMethodTarget) {\n"
+            "    !hasImportedDefinitionPath(methodResolved)) {\n"
             "  if ((context.isNonCollectionStructCapacityTarget == nullptr ||\n"
             "       !context.isNonCollectionStructCapacityTarget(\n"
             "           methodResolved)) &&\n"
@@ -4452,7 +4450,9 @@
             "}\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (lacksVisibleCapacityMethodTarget) {\n"
+            "if (!isBuiltinMethod &&\n"
+            "    !hasDeclaredDefinitionPath(methodResolved) &&\n"
+            "    !hasImportedDefinitionPath(methodResolved)) {\n"
             "  if ((context.isNonCollectionStructCapacityTarget == nullptr ||\n"
             "       !context.isNonCollectionStructCapacityTarget(\n"
             "           methodResolved)) &&\n"
@@ -4475,6 +4475,12 @@
             "      receiver, methodResolved, isBuiltinMethod, false);\n"
             "}\n"
             "if (lacksVisibleCapacityMethodTarget) {\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool lacksVisibleCapacityMethodTarget =\n"
+            "    !isBuiltinMethod &&\n"
+            "    !hasDeclaredDefinitionPath(methodResolved) &&\n"
+            "    !hasImportedDefinitionPath(methodResolved);\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!isBuiltinMethod &&\n"
