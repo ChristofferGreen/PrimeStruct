@@ -54,6 +54,14 @@ This file stores durable session-derived facts that are useful in later work. Ke
   was updated after a focused `primec` repro showed the canonical no-helper
   case compiling successfully and exiting with status `6`; the full release
   gate passed afterward.
+- `vector-compatibility-helper-name-shared-header`:
+  vector compatibility helper-name matching is now shared through
+  `src/semantics/SemanticsVectorCompatibilityHelpers.h`, so
+  `SemanticsValidatorExprMethodResolution.cpp` and
+  `SemanticsValidatorExprVectorHelpers.cpp` should reuse that helper instead
+  of carrying duplicated helper-name lists.
+  Evidence: `TODO-0544` moved the shared predicate into the new header and
+  the full release gate passed afterward.
 - `vector-canonical-helper-gate-shared-predicates`:
   `SemanticsValidatorExprVectorHelpers.cpp` now owns the surviving canonical
   `/std/collections/vector/*` direct-call gate through shared

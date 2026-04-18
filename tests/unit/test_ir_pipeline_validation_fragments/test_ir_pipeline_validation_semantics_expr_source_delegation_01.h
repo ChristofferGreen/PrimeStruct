@@ -600,6 +600,13 @@
             "        defMap_.count(vectorMethodTarget) == 0 &&") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
+            "const bool isVectorCompatibilityMethod =\n"
+            "      isVectorCompatibilityHelperName(expr.name);") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "expr.name == \"count\" || expr.name == \"capacity\" || expr.name == \"at\" ||") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
             "if (!hasImportedDefinitionPath(vectorMethodTarget) &&\n"
             "        defMap_.count(vectorMethodTarget) == 0 &&\n"
             "        vectorMethodTarget.rfind(\"/std/collections/experimental_vector/\", 0) == 0 &&\n"
@@ -617,7 +624,7 @@
             "if (!isBuiltinMethod && isVectorCompatibilityMethod &&\n"
             "      resolved.rfind(\"/std/collections/experimental_vector/Vector__\", 0) == 0 &&\n"
             "      (hasImportedDefinitionPath(\"/std/collections/vector/\" + expr.name) ||\n"
-            "       defMap_.count(\"/std/collections/vector/\" + expr.name) > 0)) {\n"
+             "       defMap_.count(\"/std/collections/vector/\" + expr.name) > 0)) {\n"
             "    resolved = preferVectorStdlibHelperPath(\"/std/collections/vector/\" + expr.name);") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
@@ -633,6 +640,9 @@
             "      !expr.args.front().isMethodCall &&\n"
             "      resolveCallCollectionTypePath(expr.args.front(), params, locals, receiverCollectionTypePath) &&\n"
             "      receiverCollectionTypePath == \"/vector\"") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "bool isVectorCompatibilityHelperName(const std::string &helperName)") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "resolved == \"/std/collections/vector/count\"") ==

@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsVectorCompatibilityHelpers.h"
 
 #include <string>
 #include <string_view>
@@ -77,10 +78,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   };
 
   const bool isVectorCompatibilityMethod =
-      expr.name == "count" || expr.name == "capacity" || expr.name == "at" ||
-      expr.name == "at_unsafe" || expr.name == "push" || expr.name == "pop" ||
-      expr.name == "reserve" || expr.name == "clear" || expr.name == "remove_at" ||
-      expr.name == "remove_swap";
+      isVectorCompatibilityHelperName(expr.name);
   if (expr.namespacePrefix.empty() &&
       !expr.args.empty() &&
       isVectorCompatibilityMethod) {

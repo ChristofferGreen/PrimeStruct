@@ -1,17 +1,11 @@
 #include "SemanticsValidator.h"
+#include "SemanticsVectorCompatibilityHelpers.h"
 
 #include <string>
 #include <vector>
 
 namespace primec::semantics {
 namespace {
-
-bool isVectorCompatibilityHelperName(const std::string &helperName) {
-  return helperName == "count" || helperName == "capacity" || helperName == "at" ||
-         helperName == "at_unsafe" || helperName == "push" || helperName == "pop" ||
-         helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
-         helperName == "remove_swap";
-}
 
 bool isStdNamespacedVectorCanonicalCompatibilityHelperPath(
     const std::string &resolved,
