@@ -144,6 +144,23 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     }
     return handleResolveMiss(receiver, isBuiltinMethod, methodResolved);
   };
+  const auto finalizeCollectionMethodTarget =
+      [&](std::string &methodResolved, bool &isBuiltinMethod,
+          auto &&beforeFailureChecks,
+          auto &&failPrimary,
+          auto &&failSecondary) -> bool {
+    normalizeInstantiatedCollectionMethodTarget(methodResolved, isBuiltinMethod);
+    if (!beforeFailureChecks(methodResolved, isBuiltinMethod)) {
+      return false;
+    }
+    if (failPrimary(methodResolved, isBuiltinMethod)) {
+      return false;
+    }
+    if (failSecondary(methodResolved, isBuiltinMethod)) {
+      return false;
+    }
+    return true;
+  };
   const auto tryResolveCollectionMethodFromSurface =
       [&](bool routesThroughMethodSurface, bool matchesSurfaceRoute,
           auto &&resolveMethodTarget) -> std::optional<bool> {
@@ -240,31 +257,35 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                                                        methodResolved)) {
       return false;
     }
-    normalizeInstantiatedCollectionMethodTarget(methodResolved, isBuiltinMethod);
-    if ((!expr.isMethodCall &&
-         expr.args.size() == 1 &&
-         receiver.kind == Expr::Kind::Name &&
-         methodResolved == "/map/count" &&
-         !hasImportedDefinitionPath("/count") &&
-         !hasDeclaredDefinitionPath("/count") &&
-         !hasDeclaredDefinitionPath("/std/collections/map/count") &&
-         !hasImportedDefinitionPath("/std/collections/map/count")) ||
-        (isBuiltinMethod &&
-         methodResolved == stdlibMapCountMethodTarget &&
-         !hasDeclaredDefinitionPath("/std/collections/map/count") &&
-         !hasImportedDefinitionPath("/std/collections/map/count") &&
-         !context.shouldBuiltinValidateBareMapCountCall)) {
-      return failExprDiagnostic(expr,
-                                "unknown call target: " +
-                                    stdlibMapCountMethodTarget);
-    }
-    if (failRemovedRootedVectorDirectCall()) {
-      return false;
-    }
-    if (failUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {
-      return false;
-    }
-    return true;
+    return finalizeCollectionMethodTarget(
+        methodResolved, isBuiltinMethod,
+        [&](const std::string &methodResolved, bool isBuiltinMethod) {
+          if ((!expr.isMethodCall &&
+               expr.args.size() == 1 &&
+               receiver.kind == Expr::Kind::Name &&
+               methodResolved == "/map/count" &&
+               !hasImportedDefinitionPath("/count") &&
+               !hasDeclaredDefinitionPath("/count") &&
+               !hasDeclaredDefinitionPath("/std/collections/map/count") &&
+               !hasImportedDefinitionPath("/std/collections/map/count")) ||
+              (isBuiltinMethod &&
+               methodResolved == stdlibMapCountMethodTarget &&
+               !hasDeclaredDefinitionPath("/std/collections/map/count") &&
+               !hasImportedDefinitionPath("/std/collections/map/count") &&
+               !context.shouldBuiltinValidateBareMapCountCall)) {
+            return failExprDiagnostic(expr,
+                                      "unknown call target: " +
+                                          stdlibMapCountMethodTarget);
+          }
+          return true;
+        },
+        [&](const std::string &, bool) {
+          return failRemovedRootedVectorDirectCall();
+        },
+        [&](const std::string &methodResolved, bool isBuiltinMethod) {
+          return failUnknownCollectionMethodTarget(isBuiltinMethod,
+                                                   methodResolved);
+        });
   };
   const bool routesThroughVectorCountMethodSurface =
       !(hasNamedArguments(expr.argNames) ||
@@ -350,22 +371,26 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     } else if (routesThroughStdNamespacedVectorCapacityHelper) {
       assignStdNamespacedVectorCapacityMethodTarget();
     }
-    normalizeInstantiatedCollectionMethodTarget(methodResolved, isBuiltinMethod);
-    if (isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {
-      if ((context.isNonCollectionStructCapacityTarget == nullptr ||
-           !context.isNonCollectionStructCapacityTarget(methodResolved)) &&
-          context.promoteCapacityToBuiltinValidation != nullptr) {
-        context.promoteCapacityToBuiltinValidation(receiver, methodResolved,
-                                                   isBuiltinMethod, false);
-      }
-    }
-    if (failUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {
-      return false;
-    }
-    if (failRemovedRootedVectorDirectCall()) {
-      return false;
-    }
-    return true;
+    return finalizeCollectionMethodTarget(
+        methodResolved, isBuiltinMethod,
+        [&](std::string &methodResolved, bool &isBuiltinMethod) {
+          if (isUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {
+            if ((context.isNonCollectionStructCapacityTarget == nullptr ||
+                 !context.isNonCollectionStructCapacityTarget(methodResolved)) &&
+                context.promoteCapacityToBuiltinValidation != nullptr) {
+              context.promoteCapacityToBuiltinValidation(
+                  receiver, methodResolved, isBuiltinMethod, false);
+            }
+          }
+          return true;
+        },
+        [&](const std::string &methodResolved, bool isBuiltinMethod) {
+          return failUnknownCollectionMethodTarget(isBuiltinMethod,
+                                                   methodResolved);
+        },
+        [&](const std::string &, bool) {
+          return failRemovedRootedVectorDirectCall();
+        });
   };
   const bool routesThroughVectorCapacityMethodSurface =
       !(hasNamedArguments(expr.argNames) ||

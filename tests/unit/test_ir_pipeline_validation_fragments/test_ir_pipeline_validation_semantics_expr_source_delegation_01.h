@@ -1451,6 +1451,25 @@
             "  };") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto finalizeCollectionMethodTarget =\n"
+            "      [&](std::string &methodResolved, bool &isBuiltinMethod,\n"
+            "          auto &&beforeFailureChecks,\n"
+            "          auto &&failPrimary,\n"
+            "          auto &&failSecondary) -> bool {\n"
+            "    normalizeInstantiatedCollectionMethodTarget(methodResolved, isBuiltinMethod);\n"
+            "    if (!beforeFailureChecks(methodResolved, isBuiltinMethod)) {\n"
+            "      return false;\n"
+            "    }\n"
+            "    if (failPrimary(methodResolved, isBuiltinMethod)) {\n"
+            "      return false;\n"
+            "    }\n"
+            "    if (failSecondary(methodResolved, isBuiltinMethod)) {\n"
+            "      return false;\n"
+            "    }\n"
+            "    return true;\n"
+            "  };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "  auto isConcreteCountCapacityInstantiation = [&](const std::string &path) {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -1478,6 +1497,9 @@
             "normalizeInstantiatedCollectionMethodTarget(methodResolved, isBuiltinMethod);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "return finalizeCollectionMethodTarget(") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (!isBuiltinMethod && !hasDeclaredDefinitionPath(methodResolved) &&\n"
             "        !hasImportedDefinitionPath(methodResolved)) {") ==
         std::string::npos);
@@ -1494,6 +1516,16 @@
             "if (failUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {\n"
             "      return false;\n"
             "    }") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (failRemovedRootedVectorDirectCall()) {\n"
+            "      return false;\n"
+            "    }\n"
+            "    if (failUnknownCollectionMethodTarget(isBuiltinMethod, methodResolved)) {\n"
+            "      return false;\n"
+            "    }\n"
+            "    return true;\n"
+            "  };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else if (resolveVectorHelperMethodTarget(params, locals, receiver, \"count\",\n"
