@@ -1539,9 +1539,23 @@
             "\"capacity requires vector target\"") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "!isStdNamespacedVectorCompatibilityDirectCall(\n"
+            "          expr.isMethodCall, resolveCalleePath(expr), \"count\") &&") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "isStdNamespacedVectorCompatibilityDirectCall(\n"
+            "          expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
+            "      expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call &&") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "if (!expr.isMethodCall &&\n"
+            "      isStdNamespacedVectorCompatibilityDirectCall(\n"
+            "          expr.isMethodCall, resolveCalleePath(expr), \"count\") &&") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "const bool isStdNamespacedVectorCountCall =\n"
             "      isStdNamespacedVectorCompatibilityDirectCall(\n"
-            "          expr.isMethodCall, resolveCalleePath(expr), \"count\");") !=
+            "          expr.isMethodCall, resolveCalleePath(expr), \"count\");") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "const bool isStdNamespacedVectorCountCall =\n"

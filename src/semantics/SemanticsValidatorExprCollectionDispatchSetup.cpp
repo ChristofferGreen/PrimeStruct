@@ -38,9 +38,6 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       getNamespacedCollectionHelperName(expr, namespacedCollection, setupOut.namespacedHelper);
   setupOut.isNamespacedVectorHelperCall =
       isNamespacedCollectionHelperCall && namespacedCollection == "vector";
-  const bool isStdNamespacedVectorCountCall =
-      isStdNamespacedVectorCompatibilityDirectCall(
-          expr.isMethodCall, resolveCalleePath(expr), "count");
   setupOut.isStdNamespacedMapCountCall =
       !expr.isMethodCall &&
       (resolveCalleePath(expr) == "/std/collections/map/count" ||
@@ -118,7 +115,9 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
   };
 
   setupOut.isNamespacedVectorCountCall =
-      !expr.isMethodCall && !isStdNamespacedVectorCountCall &&
+      !expr.isMethodCall &&
+      !isStdNamespacedVectorCompatibilityDirectCall(
+          expr.isMethodCall, resolveCalleePath(expr), "count") &&
       setupOut.isNamespacedVectorHelperCall && setupOut.namespacedHelper == "count" &&
       isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
       !hasDefinitionPath(resolved) &&
@@ -187,7 +186,9 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
     }
   }
   setupOut.isDirectStdNamespacedVectorCountWrapperMapTarget =
-      !expr.isMethodCall && isStdNamespacedVectorCountCall &&
+      !expr.isMethodCall &&
+      isStdNamespacedVectorCompatibilityDirectCall(
+          expr.isMethodCall, resolveCalleePath(expr), "count") &&
       expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call &&
       resolveMapTarget(expr.args.front());
 
@@ -195,7 +196,9 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       !expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&
       setupOut.isNamespacedVectorHelperCall &&
       (setupOut.namespacedHelper == "count" || setupOut.namespacedHelper == "capacity");
-  if (!expr.isMethodCall && isStdNamespacedVectorCountCall &&
+  if (!expr.isMethodCall &&
+      isStdNamespacedVectorCompatibilityDirectCall(
+          expr.isMethodCall, resolveCalleePath(expr), "count") &&
       !hasVisibleCanonicalVectorHelperPath("/std/collections/vector/count") &&
       !allowStdNamespacedVectorUserReceiverProbe) {
     return failCollectionDispatchDiagnostic(
