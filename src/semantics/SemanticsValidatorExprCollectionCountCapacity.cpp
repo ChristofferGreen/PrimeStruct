@@ -312,9 +312,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 }
                 const std::string removedRootedVectorDirectCallDiagnostic =
                     getRemovedRootedVectorDirectCallDiagnostic(expr);
-                const bool rejectsRemovedRootedVectorDirectCall =
-                    !removedRootedVectorDirectCallDiagnostic.empty();
-                if (rejectsRemovedRootedVectorDirectCall) {
+                if (!removedRootedVectorDirectCallDiagnostic.empty()) {
                   (void)failExprDiagnostic(
                       expr, removedRootedVectorDirectCallDiagnostic);
                   return false;
