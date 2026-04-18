@@ -78,13 +78,13 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       isStdNamespacedVectorCompatibilityDirectCall(
           expr.isMethodCall, resolveCalleePath(expr), "count");
   const bool callsUndeclaredStdNamespacedVectorCountHelper =
-      isUnavailableStdNamespacedVectorCompatibilityDirectCall(
+      isUndeclaredStdNamespacedVectorCompatibilityDirectCall(
           expr.isMethodCall,
           resolveCalleePath(expr),
           "count",
           hasDeclaredDefinitionPath("/std/collections/vector/count"));
   const bool callsUnresolvableStdNamespacedVectorCountHelper =
-      isUnavailableStdNamespacedVectorCompatibilityDirectCall(
+      isUnresolvableStdNamespacedVectorCompatibilityDirectCall(
           expr.isMethodCall,
           resolveCalleePath(expr),
           "count",

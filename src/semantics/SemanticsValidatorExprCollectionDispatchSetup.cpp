@@ -116,8 +116,8 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
   const bool callsStdNamespacedVectorCountHelper =
       isStdNamespacedVectorCompatibilityDirectCall(
           expr.isMethodCall, resolveCalleePath(expr), "count");
-  const bool callsUnavailableStdNamespacedVectorCountHelper =
-      isUnavailableStdNamespacedVectorCompatibilityDirectCall(
+  const bool callsInvisibleStdNamespacedVectorCountHelper =
+      isInvisibleStdNamespacedVectorCompatibilityDirectCall(
           expr.isMethodCall,
           resolveCalleePath(expr),
           "count",
@@ -125,8 +125,8 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
   const bool callsStdNamespacedVectorCapacityHelper =
       isStdNamespacedVectorCompatibilityDirectCall(
           expr.isMethodCall, resolveCalleePath(expr), "capacity");
-  const bool callsUnavailableStdNamespacedVectorCapacityHelper =
-      isUnavailableStdNamespacedVectorCompatibilityDirectCall(
+  const bool callsInvisibleStdNamespacedVectorCapacityHelper =
+      isInvisibleStdNamespacedVectorCompatibilityDirectCall(
           expr.isMethodCall,
           resolveCalleePath(expr),
           "capacity",
@@ -208,12 +208,12 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       !expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&
       setupOut.isNamespacedVectorHelperCall &&
       (setupOut.namespacedHelper == "count" || setupOut.namespacedHelper == "capacity");
-  if (callsUnavailableStdNamespacedVectorCountHelper &&
+  if (callsInvisibleStdNamespacedVectorCountHelper &&
       !allowStdNamespacedVectorUserReceiverProbe) {
     return failCollectionDispatchDiagnostic(
         vectorCompatibilityUnknownCallTargetDiagnostic("count"));
   }
-  if (callsUnavailableStdNamespacedVectorCapacityHelper &&
+  if (callsInvisibleStdNamespacedVectorCapacityHelper &&
       !allowStdNamespacedVectorUserReceiverProbe) {
     return failCollectionDispatchDiagnostic(
         vectorCompatibilityUnknownCallTargetDiagnostic("capacity"));

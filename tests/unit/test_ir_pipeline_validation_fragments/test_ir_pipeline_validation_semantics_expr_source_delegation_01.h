@@ -1554,15 +1554,15 @@
             "      expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call &&") !=
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "const bool callsUnavailableStdNamespacedVectorCountHelper =\n"
-            "      isUnavailableStdNamespacedVectorCompatibilityDirectCall(\n"
+            "const bool callsInvisibleStdNamespacedVectorCountHelper =\n"
+            "      isInvisibleStdNamespacedVectorCompatibilityDirectCall(\n"
             "          expr.isMethodCall,\n"
             "          resolveCalleePath(expr),\n"
             "          \"count\",\n"
             "          hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/count\"));") !=
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "if (callsUnavailableStdNamespacedVectorCountHelper &&\n"
+            "if (callsInvisibleStdNamespacedVectorCountHelper &&\n"
             "      !allowStdNamespacedVectorUserReceiverProbe) {") !=
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
@@ -1613,8 +1613,8 @@
             "          expr.isMethodCall, resolveCalleePath(expr), \"capacity\");") !=
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "const bool callsUnavailableStdNamespacedVectorCapacityHelper =\n"
-            "      isUnavailableStdNamespacedVectorCompatibilityDirectCall(\n"
+            "const bool callsInvisibleStdNamespacedVectorCapacityHelper =\n"
+            "      isInvisibleStdNamespacedVectorCompatibilityDirectCall(\n"
             "          expr.isMethodCall,\n"
             "          resolveCalleePath(expr),\n"
             "          \"capacity\",\n"
@@ -1632,7 +1632,7 @@
             "      resolveCalleePath(expr).rfind(\"/std/collections/vector/capacity\", 0) == 0;") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "if (callsUnavailableStdNamespacedVectorCapacityHelper &&\n"
+            "if (callsInvisibleStdNamespacedVectorCapacityHelper &&\n"
             "      !allowStdNamespacedVectorUserReceiverProbe) {\n"
             "    return failCollectionDispatchDiagnostic(\n"
             "        vectorCompatibilityUnknownCallTargetDiagnostic(\"capacity\"));\n"
@@ -1936,7 +1936,7 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool callsUndeclaredStdNamespacedVectorCountHelper =\n"
-            "      isUnavailableStdNamespacedVectorCompatibilityDirectCall(\n"
+            "      isUndeclaredStdNamespacedVectorCompatibilityDirectCall(\n"
             "          expr.isMethodCall,\n"
             "          resolveCalleePath(expr),\n"
             "          \"count\",\n"
@@ -1944,7 +1944,7 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool callsUnresolvableStdNamespacedVectorCountHelper =\n"
-            "      isUnavailableStdNamespacedVectorCompatibilityDirectCall(\n"
+            "      isUnresolvableStdNamespacedVectorCompatibilityDirectCall(\n"
             "          expr.isMethodCall,\n"
             "          resolveCalleePath(expr),\n"
             "          \"count\",\n"
@@ -1999,6 +1999,15 @@
         std::string::npos);
   CHECK(semanticsVectorCompatibilityHelpersSource.find(
             "inline bool isUnavailableStdNamespacedVectorCompatibilityDirectCall(") !=
+        std::string::npos);
+  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+            "inline bool isInvisibleStdNamespacedVectorCompatibilityDirectCall(") !=
+        std::string::npos);
+  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+            "inline bool isUndeclaredStdNamespacedVectorCompatibilityDirectCall(") !=
+        std::string::npos);
+  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+            "inline bool isUnresolvableStdNamespacedVectorCompatibilityDirectCall(") !=
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "const bool shouldBuiltinValidateStdNamespacedVectorCapacityCall =\n"

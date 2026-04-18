@@ -60,6 +60,33 @@ inline bool isUnavailableStdNamespacedVectorCompatibilityDirectCall(
                                                       helperName);
 }
 
+inline bool isInvisibleStdNamespacedVectorCompatibilityDirectCall(
+    bool isMethodCall,
+    std::string_view path,
+    std::string_view helperName,
+    bool hasVisibleHelper) {
+  return isUnavailableStdNamespacedVectorCompatibilityDirectCall(
+      isMethodCall, path, helperName, hasVisibleHelper);
+}
+
+inline bool isUndeclaredStdNamespacedVectorCompatibilityDirectCall(
+    bool isMethodCall,
+    std::string_view path,
+    std::string_view helperName,
+    bool hasDeclaredHelper) {
+  return isUnavailableStdNamespacedVectorCompatibilityDirectCall(
+      isMethodCall, path, helperName, hasDeclaredHelper);
+}
+
+inline bool isUnresolvableStdNamespacedVectorCompatibilityDirectCall(
+    bool isMethodCall,
+    std::string_view path,
+    std::string_view helperName,
+    bool hasResolvableHelper) {
+  return isUnavailableStdNamespacedVectorCompatibilityDirectCall(
+      isMethodCall, path, helperName, hasResolvableHelper);
+}
+
 inline bool isImportedResolvedStdNamespacedVectorCompatibilityDirectCall(
     bool isMethodCall,
     std::string_view path,
