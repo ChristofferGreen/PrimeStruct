@@ -128,14 +128,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     }
     return false;
   };
-  const auto tryResolveVisibleVectorHelperMethodTarget =
-      [&](const Expr &receiver, const char *methodName,
-          std::string &methodResolved, bool &isBuiltinMethod) {
-    return resolveVectorHelperMethodTarget(params, locals, receiver, methodName,
-                                           methodResolved) &&
-           preferVisibleVectorHelperMethodTarget(methodResolved,
-                                                isBuiltinMethod);
-  };
   const auto tryResolveCollectionMethodTargetOrElse =
       [&](const Expr &receiver, const char *methodName,
           std::string &methodResolved, bool &isBuiltinMethod,
@@ -169,9 +161,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           auto &&handleVisibleHelperHit,
           auto &&handleHelperMiss,
           auto &&finalizeMethodTarget) -> bool {
-    if (tryResolveVisibleVectorHelperMethodTarget(receiver, methodName,
-                                                  methodResolved,
-                                                  isBuiltinMethod)) {
+    if (resolveVectorHelperMethodTarget(params, locals, receiver, methodName,
+                                        methodResolved) &&
+        preferVisibleVectorHelperMethodTarget(methodResolved,
+                                             isBuiltinMethod)) {
       if (!handleVisibleHelperHit(receiver, methodResolved, isBuiltinMethod)) {
         return false;
       }

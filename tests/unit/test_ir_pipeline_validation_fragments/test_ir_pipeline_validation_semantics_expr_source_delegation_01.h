@@ -1446,13 +1446,7 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto tryResolveVisibleVectorHelperMethodTarget =\n"
-            "      [&](const Expr &receiver, const char *methodName,\n"
-            "          std::string &methodResolved, bool &isBuiltinMethod) {\n"
-            "    return resolveVectorHelperMethodTarget(params, locals, receiver, methodName,\n"
-            "                                           methodResolved) &&\n"
-            "           preferVisibleVectorHelperMethodTarget(methodResolved,\n"
-            "                                                isBuiltinMethod);\n"
-            "  };") !=
+            "      [&](const Expr &receiver, const char *methodName,\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto tryResolveCollectionMethodTargetOrElse =\n"
@@ -1496,9 +1490,10 @@
             "          auto &&handleVisibleHelperHit,\n"
             "          auto &&handleHelperMiss,\n"
             "          auto &&finalizeMethodTarget) -> bool {\n"
-            "    if (tryResolveVisibleVectorHelperMethodTarget(receiver, methodName,\n"
-            "                                                  methodResolved,\n"
-            "                                                  isBuiltinMethod)) {\n"
+            "    if (resolveVectorHelperMethodTarget(params, locals, receiver, methodName,\n"
+            "                                        methodResolved) &&\n"
+            "        preferVisibleVectorHelperMethodTarget(methodResolved,\n"
+            "                                             isBuiltinMethod)) {\n"
             "      if (!handleVisibleHelperHit(receiver, methodResolved, isBuiltinMethod)) {\n"
             "        return false;\n"
             "      }\n"
