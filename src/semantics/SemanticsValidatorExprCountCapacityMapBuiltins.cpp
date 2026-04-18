@@ -40,6 +40,9 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       context.shouldBuiltinValidateStdNamespacedVectorCountCall &&
       expr.args.size() == 1 &&
       resolved.rfind("/std/collections/vector/count", 0) == 0;
+  const bool isStdNamespacedVectorCountCall =
+      !expr.isMethodCall &&
+      resolveCalleePath(expr).rfind("/std/collections/vector/count", 0) == 0;
   const bool isDirectStdNamespacedVectorCapacityBuiltinCall =
       !expr.isMethodCall && !resolvedMethod &&
       context.shouldBuiltinValidateStdNamespacedVectorCapacityCall &&
@@ -478,7 +481,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
   if (!resolvedMethod && isVectorBuiltinName(expr, "count") &&
       !isArrayNamespacedVectorCountCompatibilityCall(expr, *dispatchResolvers) &&
       (!context.shouldBuiltinValidateStdNamespacedVectorCountCall &&
-       !context.isStdNamespacedVectorCountCall) &&
+       !isStdNamespacedVectorCountCall) &&
       !context.isNamespacedMapCountCall && !context.isResolvedMapCountCall &&
       !isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals,
                                                  *dispatchResolverAdapters) &&

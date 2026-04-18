@@ -1468,6 +1468,30 @@
             "        collectionDispatchSetup.shouldBuiltinValidateStdNamespacedVectorCountCall,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
+            "        collectionDispatchSetup.isStdNamespacedVectorCountCall,") ==
+        std::string::npos);
+  CHECK(semanticsExprPrivateValidationSource.find(
+            "    bool isStdNamespacedVectorCountCall = false;\n"
+            "    bool shouldBuiltinValidateStdNamespacedVectorCountCall = false;\n"
+            "    bool shouldBuiltinValidateBareMapCountCall = false;") ==
+        std::string::npos);
+  CHECK(semanticsExprBuiltinContextSetupSource.find(
+            "contextOut.isStdNamespacedVectorCountCall = isStdNamespacedVectorCountCall;") ==
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "const bool isStdNamespacedVectorCountCall =\n"
+            "      !expr.isMethodCall &&\n"
+            "      resolveCalleePath(expr).rfind(\"/std/collections/vector/count\", 0) == 0;") !=
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "(!context.shouldBuiltinValidateStdNamespacedVectorCountCall &&\n"
+            "       !isStdNamespacedVectorCountCall) &&") !=
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "(!context.shouldBuiltinValidateStdNamespacedVectorCountCall &&\n"
+            "       !context.isStdNamespacedVectorCountCall) &&") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
             "prepareExprLateMapSoaBuiltinContext(\n"
             "          shouldBuiltinValidateBareMapContainsCall,\n"
             "          dispatchBootstrap.dispatchResolvers,") !=

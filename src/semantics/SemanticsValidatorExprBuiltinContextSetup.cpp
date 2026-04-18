@@ -34,7 +34,6 @@ void SemanticsValidator::prepareExprLateBuiltinContext(
 
 void SemanticsValidator::prepareExprCountCapacityMapBuiltinContext(
     bool shouldBuiltinValidateStdNamespacedVectorCountCall,
-    bool isStdNamespacedVectorCountCall,
     bool shouldBuiltinValidateBareMapCountCall,
     bool isNamespacedMapCountCall,
     bool isResolvedMapCountCall,
@@ -46,7 +45,6 @@ void SemanticsValidator::prepareExprCountCapacityMapBuiltinContext(
   contextOut = {};
   contextOut.shouldBuiltinValidateStdNamespacedVectorCountCall =
       shouldBuiltinValidateStdNamespacedVectorCountCall;
-  contextOut.isStdNamespacedVectorCountCall = isStdNamespacedVectorCountCall;
   contextOut.shouldBuiltinValidateBareMapCountCall =
       shouldBuiltinValidateBareMapCountCall;
   contextOut.isNamespacedMapCountCall = isNamespacedMapCountCall;

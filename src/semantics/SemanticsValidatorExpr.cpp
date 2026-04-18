@@ -910,7 +910,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     ExprCountCapacityMapBuiltinContext countCapacityMapBuiltinContext;
     prepareExprCountCapacityMapBuiltinContext(
         collectionDispatchSetup.shouldBuiltinValidateStdNamespacedVectorCountCall,
-        collectionDispatchSetup.isStdNamespacedVectorCountCall,
         shouldBuiltinValidateBareMapCountCall,
         collectionDispatchSetup.isNamespacedMapCountCall,
         collectionDispatchSetup.isResolvedMapCountCall,
