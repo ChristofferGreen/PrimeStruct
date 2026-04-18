@@ -23,6 +23,16 @@ struct StdNamespacedVectorCompatibilityHelperState {
   [[nodiscard]] bool lacksVisibleHelper() const {
     return !hasDeclaredHelper && !hasImportedHelper;
   }
+
+  [[nodiscard]] bool rejectsVectorLikeTargetWithoutVisibleHelper(
+      bool vectorLikeTarget) const {
+    return vectorLikeTarget && lacksVisibleHelper();
+  }
+
+  [[nodiscard]] bool rejectsWrapperMapTargetWithoutDeclaredHelper(
+      bool wrapperMapTarget) const {
+    return wrapperMapTarget && lacksDeclaredHelper();
+  }
 };
 
 inline StdNamespacedVectorCompatibilityHelperState

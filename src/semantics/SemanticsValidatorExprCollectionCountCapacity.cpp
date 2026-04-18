@@ -70,8 +70,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           hasDeclaredDefinitionPath("/std/collections/vector/count"),
           hasImportedDefinitionPath("/std/collections/vector/count"));
   const bool rejectsStdNamespacedVectorCountWrapperMapTargetWithoutDeclaredHelper =
-      context.isDirectStdNamespacedVectorCountWrapperMapTarget &&
-      stdNamespacedVectorCountHelperState.lacksDeclaredHelper();
+      stdNamespacedVectorCountHelperState
+          .rejectsWrapperMapTargetWithoutDeclaredHelper(
+              context.isDirectStdNamespacedVectorCountWrapperMapTarget);
   if (rejectsStdNamespacedVectorCountWrapperMapTargetWithoutDeclaredHelper) {
     handledOut = true;
     return failCollectionCountCapacityDiagnostic(

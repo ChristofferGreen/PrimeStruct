@@ -119,8 +119,9 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
           vectorCompatibilityRequiresVectorTargetDiagnostic("count"));
     }
     const bool rejectsVectorCountTargetWithoutVisibleHelper =
-        stdNamespacedVectorCountHelperState.lacksVisibleHelper() &&
-        resolvesVectorLikeCountTarget;
+        stdNamespacedVectorCountHelperState
+            .rejectsVectorLikeTargetWithoutVisibleHelper(
+                resolvesVectorLikeCountTarget);
     if (rejectsVectorCountTargetWithoutVisibleHelper) {
       return failLateCallCompatibilityDiagnostic(
           vectorCompatibilityUnknownCallTargetDiagnostic("count"));

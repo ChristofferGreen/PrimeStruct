@@ -1147,8 +1147,13 @@
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "const bool rejectsVectorCountTargetWithoutVisibleHelper =\n"
-            "        stdNamespacedVectorCountHelperState.lacksVisibleHelper() &&\n"
-            "          resolvesVectorLikeCountTarget;") !=
+            "        stdNamespacedVectorCountHelperState\n"
+            "            .rejectsVectorLikeTargetWithoutVisibleHelper(\n"
+            "                resolvesVectorLikeCountTarget);") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "stdNamespacedVectorCountHelperState.lacksVisibleHelper() &&\n"
+            "        resolvesVectorLikeCountTarget;") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "!hasDeclaredDefinitionPath(\"/std/collections/vector/count\") &&\n"
@@ -1177,8 +1182,13 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool rejectsStdNamespacedVectorCountWrapperMapTargetWithoutDeclaredHelper =\n"
-            "      context.isDirectStdNamespacedVectorCountWrapperMapTarget &&\n"
-            "      stdNamespacedVectorCountHelperState.lacksDeclaredHelper();") !=
+            "      stdNamespacedVectorCountHelperState\n"
+            "          .rejectsWrapperMapTargetWithoutDeclaredHelper(\n"
+            "              context.isDirectStdNamespacedVectorCountWrapperMapTarget);") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "context.isDirectStdNamespacedVectorCountWrapperMapTarget &&\n"
+            "      stdNamespacedVectorCountHelperState.lacksDeclaredHelper();") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "context.isDirectStdNamespacedVectorCountWrapperMapTarget &&\n"
