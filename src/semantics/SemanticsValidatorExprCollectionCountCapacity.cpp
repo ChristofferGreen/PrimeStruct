@@ -83,8 +83,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
               !hasDeclaredDefinitionPath("/std/collections/vector/count")
           ? vectorCompatibilityUnknownCallTargetDiagnostic("count")
           : (resolvesStdNamespacedVectorCountMapTarget &&
-                     (!hasDeclaredDefinitionPath("/std/collections/vector/count") ||
-                      hasImportedDefinitionPath("/std/collections/vector/count")))
+                     !hasResolvableDefinitionPath("/std/collections/vector/count"))
                 ? vectorCompatibilityRequiresVectorTargetDiagnostic("count")
                 : (resolvesStdNamespacedVectorCountMapTarget
                        ? ""
