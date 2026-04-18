@@ -1448,12 +1448,16 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto tryAssignCountMethodFallbackTarget = [&]() -> bool {\n"
             "      if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
-            "          expr.args.empty()) {") !=
+            "          expr.args.empty()) {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto tryResolveCountMethodOrFallback = [&]() -> bool {\n"
             "      if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
-            "                              \"count\", methodResolved, isBuiltinMethod)) {") !=
+            "                              \"count\", methodResolved, isBuiltinMethod)) {\n"
+            "        return true;\n"
+            "      }\n"
+            "      if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||\n"
+            "          expr.args.empty()) {") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (context.isUnnamespacedMapCountFallbackCall &&\n"
@@ -1466,7 +1470,7 @@
             "      isBuiltinMethod = true;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (resolvesMapCountMethodTarget) {\n"
+            "      if (resolvesMapCountMethodTarget) {\n"
             "        methodResolved = \"/std/collections/map/count\";\n"
             "        error_.clear();\n"
             "        isBuiltinMethod = false;\n"

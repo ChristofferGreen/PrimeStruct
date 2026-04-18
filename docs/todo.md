@@ -140,6 +140,7 @@ Wave D (queue hygiene):
     - Final release gate passes with `./scripts/compile.sh --release`.
   - stop_rule: If shared classifier rewrites destabilize `map`/`soa_vector`, isolate the generic mechanism in this leaf and defer remaining shared deletions to TODO-0409.
   - notes: This leaf should leave a reusable generic path that TODO-0409 can apply to `map` and `soa_vector`.
+  - progress: Completed `TODO-0715` by deleting the one-use `tryAssignCountMethodFallbackTarget` helper from `SemanticsValidatorExprCollectionCountCapacity.cpp`, so `tryResolveCountMethodOrFallback` now owns the full count fallback path directly.
   - progress: Completed `TODO-0714` by deleting the one-use `assignBuiltinStdlibMapCountMethodTarget` helper from `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the unnamespaced builtin map-count fallback now writes the canonical stdlib target inline.
   - progress: Completed `TODO-0712` by hoisting the repeated `resolveMethodTarget(...)/fallback` control flow in `SemanticsValidatorExprCollectionCountCapacity.cpp` behind `tryResolveCountMethodOrFallback`, so both surviving count routing branches now reuse one resolve-or-fallback path.
   - progress: Completed `TODO-0713` by deleting the one-use `assignResolvedStdlibMapCountMethodTarget` helper from `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the count fallback path now writes the non-builtin `/std/collections/map/count` target inline.

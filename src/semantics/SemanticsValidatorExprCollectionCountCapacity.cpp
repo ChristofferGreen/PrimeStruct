@@ -200,7 +200,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       isBuiltinMethod = false;
       return true;
     };
-    const auto tryAssignCountMethodFallbackTarget = [&]() -> bool {
+    const auto tryResolveCountMethodOrFallback = [&]() -> bool {
+      if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
+                              "count", methodResolved, isBuiltinMethod)) {
+        return true;
+      }
       if (!(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||
           expr.args.empty()) {
         (void)validateExpr(params, locals, expr.args.front());
@@ -214,13 +218,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         return false;
       }
       return true;
-    };
-    const auto tryResolveCountMethodOrFallback = [&]() -> bool {
-      if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
-                              "count", methodResolved, isBuiltinMethod)) {
-        return true;
-      }
-      return tryAssignCountMethodFallbackTarget();
     };
     if (context.isUnnamespacedMapCountFallbackCall &&
         !hasDeclaredDefinitionPath("/map/count") &&
