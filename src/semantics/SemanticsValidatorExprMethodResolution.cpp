@@ -81,6 +81,9 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       isVectorCompatibilityHelperName(expr.name);
   const std::string canonicalVectorCompatibilityMethodTarget =
       "/std/collections/vector/" + expr.name;
+  const bool hasVisibleCanonicalVectorCompatibilityMethodTarget =
+      hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||
+      defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0;
   if (expr.namespacePrefix.empty() &&
       !expr.args.empty() &&
       isVectorCompatibilityMethod) {
@@ -168,8 +171,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         defMap_.count(vectorMethodTarget) == 0 &&
         (vectorMethodTarget.rfind("/std/collections/experimental_vector/", 0) == 0 ||
          vectorMethodTarget.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) &&
-        (hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||
-         defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0)) {
+        hasVisibleCanonicalVectorCompatibilityMethodTarget) {
       vectorMethodTarget = canonicalVectorCompatibilityMethodTarget;
     }
     if (hasImportedDefinitionPath(vectorMethodTarget) ||
@@ -241,8 +243,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   if (!isBuiltinMethod && isVectorCompatibilityMethod &&
       (resolved.rfind("/std/collections/experimental_vector/", 0) == 0 ||
        resolved.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) &&
-      (hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||
-       defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0)) {
+      hasVisibleCanonicalVectorCompatibilityMethodTarget) {
     resolved = canonicalVectorCompatibilityMethodTarget;
   }
   bool keepBuiltinIndexedArgsPackMapMethod = false;
