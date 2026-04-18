@@ -152,7 +152,6 @@
     bool shouldBuiltinValidateBareMapCountCall = false;
     bool isNamespacedMapCountCall = false;
     bool isResolvedMapCountCall = false;
-    bool isStdNamespacedVectorCapacityCall = false;
     std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
     std::function<bool(const Expr &)> resolveMapTarget;
     const BuiltinCollectionDispatchResolverAdapters *dispatchResolverAdapters = nullptr;
@@ -170,7 +169,6 @@
       bool shouldBuiltinValidateBareMapCountCall,
       bool isNamespacedMapCountCall,
       bool isResolvedMapCountCall,
-      bool isStdNamespacedVectorCapacityCall,
       const BuiltinCollectionDispatchResolverAdapters &dispatchResolverAdapters,
       const BuiltinCollectionDispatchResolvers &dispatchResolvers,
       ExprCountCapacityMapBuiltinContext &contextOut);

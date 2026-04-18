@@ -51,6 +51,9 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       !expr.isMethodCall &&
       hasImportedDefinitionPath("/std/collections/vector/capacity") &&
       resolveCalleePath(expr).rfind("/std/collections/vector/capacity", 0) == 0;
+  const bool isStdNamespacedVectorCapacityCall =
+      !expr.isMethodCall &&
+      resolveCalleePath(expr).rfind("/std/collections/vector/capacity", 0) == 0;
   const bool isDirectStdNamespacedVectorCapacityBuiltinCall =
       !expr.isMethodCall && !resolvedMethod &&
       shouldBuiltinValidateStdNamespacedVectorCapacityCall &&
@@ -540,7 +543,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
 
   if (!resolvedMethod && isVectorBuiltinName(expr, "capacity") &&
       (!shouldBuiltinValidateStdNamespacedVectorCapacityCall &&
-       !context.isStdNamespacedVectorCapacityCall) &&
+       !isStdNamespacedVectorCapacityCall) &&
       it == defMap_.end()) {
     handledOut = true;
     if (!expr.templateArgs.empty()) {

@@ -1487,6 +1487,11 @@
             "    bool shouldBuiltinValidateStdNamespacedVectorCapacityCall = false;\n"
             "    bool isStdNamespacedVectorCapacityCall = false;") ==
         std::string::npos);
+  CHECK(semanticsExprPrivateValidationSource.find(
+            "    bool isResolvedMapCountCall = false;\n"
+            "    bool isStdNamespacedVectorCapacityCall = false;\n"
+            "    std::function<bool(const Expr &, std::string &)> resolveVectorTarget;") ==
+        std::string::npos);
   CHECK(semanticsExprBuiltinContextSetupSource.find(
             "contextOut.isStdNamespacedVectorCountCall = isStdNamespacedVectorCountCall;") ==
         std::string::npos);
@@ -1497,6 +1502,10 @@
   CHECK(semanticsExprBuiltinContextSetupSource.find(
             "contextOut.shouldBuiltinValidateStdNamespacedVectorCapacityCall =\n"
             "      shouldBuiltinValidateStdNamespacedVectorCapacityCall;") ==
+        std::string::npos);
+  CHECK(semanticsExprBuiltinContextSetupSource.find(
+            "contextOut.isStdNamespacedVectorCapacityCall =\n"
+            "      isStdNamespacedVectorCapacityCall;") ==
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "const bool shouldBuiltinValidateStdNamespacedVectorCountCall =\n"
@@ -1527,11 +1536,23 @@
             "      resolveCalleePath(expr).rfind(\"/std/collections/vector/capacity\", 0) == 0;") !=
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "const bool isStdNamespacedVectorCapacityCall =\n"
+            "      !expr.isMethodCall &&\n"
+            "      resolveCalleePath(expr).rfind(\"/std/collections/vector/capacity\", 0) == 0;") !=
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "(!shouldBuiltinValidateStdNamespacedVectorCapacityCall &&\n"
-            "       !context.isStdNamespacedVectorCapacityCall) &&") !=
+            "       !isStdNamespacedVectorCapacityCall) &&") !=
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "(!shouldBuiltinValidateStdNamespacedVectorCapacityCall &&\n"
+            "       !context.isStdNamespacedVectorCapacityCall) &&") ==
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "context.shouldBuiltinValidateStdNamespacedVectorCapacityCall") ==
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "context.isStdNamespacedVectorCapacityCall") ==
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "prepareExprLateMapSoaBuiltinContext(\n"

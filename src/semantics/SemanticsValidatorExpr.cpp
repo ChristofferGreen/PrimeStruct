@@ -912,7 +912,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         shouldBuiltinValidateBareMapCountCall,
         collectionDispatchSetup.isNamespacedMapCountCall,
         collectionDispatchSetup.isResolvedMapCountCall,
-        collectionDispatchSetup.isStdNamespacedVectorCapacityCall,
         dispatchBootstrap.dispatchResolverAdapters,
         dispatchBootstrap.dispatchResolvers,
         countCapacityMapBuiltinContext);
