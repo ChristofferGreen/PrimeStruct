@@ -1857,6 +1857,18 @@
             "    };\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto isCountOrCapacityHelperName =\n"
+            "      [](const std::string &helperName) {\n"
+            "        return helperName == \"count\" || helperName == \"capacity\";\n"
+            "      };\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "      if (helperName == \"count\" || helperName == \"capacity\") {\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "      (context.namespacedHelper == \"count\" || context.namespacedHelper == \"capacity\")) {\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "} else {\n"
             "      const bool hasVisibleCountHelperMethodTarget =\n"
             "          resolveVisiblePreferredVectorHelperMethodTarget(\n"
