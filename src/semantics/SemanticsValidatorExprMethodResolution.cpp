@@ -81,13 +81,6 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       isVectorCompatibilityHelperName(expr.name);
   const std::string canonicalVectorCompatibilityMethodTarget =
       "/std/collections/vector/" + expr.name;
-  auto shouldPreferCanonicalVectorCompatibilityMethodTarget =
-      [&](const std::string &target) {
-        return (target.rfind("/std/collections/experimental_vector/", 0) == 0 ||
-                target.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) &&
-               (hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||
-                defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0);
-      };
   if (expr.namespacePrefix.empty() &&
       !expr.args.empty() &&
       isVectorCompatibilityMethod) {
@@ -173,7 +166,10 @@ bool SemanticsValidator::validateExprMethodCallTarget(
                                       vectorMethodTarget)) {
     if (!hasImportedDefinitionPath(vectorMethodTarget) &&
         defMap_.count(vectorMethodTarget) == 0 &&
-        shouldPreferCanonicalVectorCompatibilityMethodTarget(vectorMethodTarget)) {
+        (vectorMethodTarget.rfind("/std/collections/experimental_vector/", 0) == 0 ||
+         vectorMethodTarget.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) &&
+        (hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||
+         defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0)) {
       vectorMethodTarget = canonicalVectorCompatibilityMethodTarget;
     }
     if (hasImportedDefinitionPath(vectorMethodTarget) ||
@@ -243,7 +239,10 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     }
   }
   if (!isBuiltinMethod && isVectorCompatibilityMethod &&
-      shouldPreferCanonicalVectorCompatibilityMethodTarget(resolved)) {
+      (resolved.rfind("/std/collections/experimental_vector/", 0) == 0 ||
+       resolved.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) &&
+      (hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||
+       defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0)) {
     resolved = canonicalVectorCompatibilityMethodTarget;
   }
   bool keepBuiltinIndexedArgsPackMapMethod = false;
