@@ -2376,32 +2376,60 @@
             "  }") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (!(hasNamedArguments(expr.argNames) ||\n"
+            "const bool routesThroughVectorCountMethodSurface =\n"
+            "      !(hasNamedArguments(expr.argNames) ||\n"
             "        isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
             "            expr.isMethodCall,\n"
             "            resolveCalleePath(expr),\n"
             "            \"count\",\n"
             "            hasImportedDefinitionPath(\"/std/collections/vector/count\")) ||\n"
             "        expr.args.empty()) &&\n"
-            "      expr.args.size() == 1 &&\n"
             "      !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
-            "        context.isArrayNamespacedVectorCountCompatibilityCall(expr)) &&") !=
+            "        context.isArrayNamespacedVectorCountCompatibilityCall(expr)) &&\n"
+            "      (isVectorBuiltinName(expr, \"count\") ||\n"
+            "       context.isStdNamespacedMapCountCall ||\n"
+            "       context.isNamespacedMapCountCall ||\n"
+            "       context.isUnnamespacedMapCountFallbackCall ||\n"
+            "       context.isResolvedMapCountCall);") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+ 	            "if (!(hasNamedArguments(expr.argNames) ||\n"
+ 	            "        isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
+ 	            "            expr.isMethodCall,\n"
+ 	            "            resolveCalleePath(expr),\n"
+ 	            "            \"count\",\n"
+ 	            "            hasImportedDefinitionPath(\"/std/collections/vector/count\")) ||\n"
+ 	            "        expr.args.empty()) &&\n"
+ 	            "      expr.args.size() == 1 &&\n"
+ 	            "      !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
+ 	            "        context.isArrayNamespacedVectorCountCompatibilityCall(expr)) &&") ==
+ 	        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "if (routesThroughVectorCountMethodSurface &&\n"
+            "      expr.args.size() == 1 &&") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "  if (handledOut) {\n"
             "    return false;\n"
             "  }\n"
-            "  if (!(hasNamedArguments(expr.argNames) ||\n"
-            "        isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
-            "            expr.isMethodCall,\n"
-            "            resolveCalleePath(expr),\n"
-            "            \"count\",\n"
-            "            hasImportedDefinitionPath(\"/std/collections/vector/count\")) ||\n"
-            "        expr.args.empty()) &&\n"
-            "      expr.args.size() != 1 &&\n"
-            "      !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
-            "        context.isArrayNamespacedVectorCountCompatibilityCall(expr)) &&") !=
+            "  if (routesThroughVectorCountMethodSurface &&\n"
+            "      expr.args.size() != 1 &&") !=
         std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+ 	            "  if (handledOut) {\n"
+ 	            "    return false;\n"
+ 	            "  }\n"
+ 	            "  if (!(hasNamedArguments(expr.argNames) ||\n"
+ 	            "        isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
+ 	            "            expr.isMethodCall,\n"
+ 	            "            resolveCalleePath(expr),\n"
+ 	            "            \"count\",\n"
+ 	            "            hasImportedDefinitionPath(\"/std/collections/vector/count\")) ||\n"
+ 	            "        expr.args.empty()) &&\n"
+ 	            "      expr.args.size() != 1 &&\n"
+ 	            "      !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&\n"
+ 	            "        context.isArrayNamespacedVectorCountCompatibilityCall(expr)) &&") ==
+ 	        std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (std::optional<bool> resolvedCountMethod =\n"
             "          tryResolveCollectionMethodAttempt(resolveCountMethod, true)) {\n"

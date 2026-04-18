@@ -249,21 +249,23 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     }
     return true;
   };
-  if (!(hasNamedArguments(expr.argNames) ||
+  const bool routesThroughVectorCountMethodSurface =
+      !(hasNamedArguments(expr.argNames) ||
         isUnimportedStdNamespacedVectorCompatibilityDirectCall(
             expr.isMethodCall,
             resolveCalleePath(expr),
             "count",
             hasImportedDefinitionPath("/std/collections/vector/count")) ||
         expr.args.empty()) &&
-      expr.args.size() == 1 &&
       !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
         context.isArrayNamespacedVectorCountCompatibilityCall(expr)) &&
       (isVectorBuiltinName(expr, "count") ||
        context.isStdNamespacedMapCountCall ||
        context.isNamespacedMapCountCall ||
        context.isUnnamespacedMapCountFallbackCall ||
-       context.isResolvedMapCountCall) &&
+       context.isResolvedMapCountCall);
+  if (routesThroughVectorCountMethodSurface &&
+      expr.args.size() == 1 &&
       ((defMap_.find(resolved) == defMap_.end() &&
         !context.isStdNamespacedMapCountCall) ||
        (!isStdNamespacedVectorCompatibilityDirectCall(
@@ -285,21 +287,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   if (handledOut) {
     return false;
   }
-  if (!(hasNamedArguments(expr.argNames) ||
-        isUnimportedStdNamespacedVectorCompatibilityDirectCall(
-            expr.isMethodCall,
-            resolveCalleePath(expr),
-            "count",
-            hasImportedDefinitionPath("/std/collections/vector/count")) ||
-        expr.args.empty()) &&
+  if (routesThroughVectorCountMethodSurface &&
       expr.args.size() != 1 &&
-      !(context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
-        context.isArrayNamespacedVectorCountCompatibilityCall(expr)) &&
-      (isVectorBuiltinName(expr, "count") ||
-       context.isStdNamespacedMapCountCall ||
-       context.isNamespacedMapCountCall ||
-       context.isUnnamespacedMapCountFallbackCall ||
-       context.isResolvedMapCountCall) &&
       (defMap_.find(resolved) != defMap_.end() ||
        context.isStdNamespacedMapCountCall ||
        context.isNamespacedMapCountCall ||
