@@ -158,11 +158,13 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     }
     return rewrittenMapHelperCall;
   };
-  const auto validateVectorCountBuiltinFallback = [&]() -> bool {
+  const auto validateVectorCountBuiltinPath = [&](bool allowBareMapRewrite) -> bool {
     handledOut = true;
-    if (std::optional<Expr> rewrittenMapHelperCall =
-            tryRewriteBareMapCountBuiltinFallback()) {
-      return validateExpr(params, locals, *rewrittenMapHelperCall);
+    if (allowBareMapRewrite) {
+      if (std::optional<Expr> rewrittenMapHelperCall =
+              tryRewriteBareMapCountBuiltinFallback()) {
+        return validateExpr(params, locals, *rewrittenMapHelperCall);
+      }
     }
     return validateVectorCountBuiltinCall();
   };
@@ -269,7 +271,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
 
   if (resolvedMethod &&
       logicalResolvedMethod == "/std/collections/vector/count") {
-    return validateVectorCountBuiltinCall();
+    return validateVectorCountBuiltinPath(false);
   }
 
   const bool shouldValidateVectorCountBuiltinFallback =
@@ -529,7 +531,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
   }
 
   if (shouldValidateVectorCountBuiltinFallback) {
-    return validateVectorCountBuiltinFallback();
+    return validateVectorCountBuiltinPath(true);
   }
 
   const auto validateVectorCapacityBuiltinCall = [&]() -> bool {

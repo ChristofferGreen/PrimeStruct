@@ -1626,11 +1626,27 @@
             "    return validateExpr(params, locals, expr.args.front());\n"
             "  };") != std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "const auto validateVectorCountBuiltinPath = [&](bool allowBareMapRewrite) -> bool {\n"
+            "    handledOut = true;\n"
+            "    if (allowBareMapRewrite) {\n"
+            "      if (std::optional<Expr> rewrittenMapHelperCall =\n"
+            "              tryRewriteBareMapCountBuiltinFallback()) {\n"
+            "        return validateExpr(params, locals, *rewrittenMapHelperCall);\n"
+            "      }\n"
+            "    }\n"
+            "    return validateVectorCountBuiltinCall();\n"
+            "  };") != std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "if (resolvedMethod &&\n"
             "      logicalResolvedMethod == \"/std/collections/vector/count\") {\n"
             "    handledOut = true;\n"
             "    if (!expr.templateArgs.empty()) {") ==
         std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "if (resolvedMethod &&\n"
+            "      logicalResolvedMethod == \"/std/collections/vector/count\") {\n"
+            "    return validateVectorCountBuiltinPath(false);\n"
+            "  }") != std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "const bool shouldValidateVectorCountBuiltinFallback =\n"
             "      !resolvedMethod && isVectorBuiltinName(expr, \"count\") &&\n"
@@ -1662,7 +1678,7 @@
             "      return validateExpr(params, locals, *rewrittenMapHelperCall);\n"
             "    }\n"
             "    return validateVectorCountBuiltinCall();\n"
-            "  };") != std::string::npos);
+            "  };") == std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "if (!resolvedMethod && isVectorBuiltinName(expr, \"count\") &&\n"
             "      !isArrayNamespacedVectorCountCompatibilityCall(expr, *dispatchResolvers) &&\n"
@@ -1689,7 +1705,7 @@
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "if (shouldValidateVectorCountBuiltinFallback) {\n"
-            "    return validateVectorCountBuiltinFallback();\n"
+            "    return validateVectorCountBuiltinPath(true);\n"
             "  }") !=
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
