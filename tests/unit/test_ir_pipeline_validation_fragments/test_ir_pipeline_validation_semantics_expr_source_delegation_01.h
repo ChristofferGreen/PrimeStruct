@@ -1319,7 +1319,7 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool resolvesStdNamespacedVectorCountMapTarget =\n"
-            "      context.isStdNamespacedVectorCountCall && expr.args.size() == 1 &&\n"
+            "      isStdNamespacedVectorCountCall && expr.args.size() == 1 &&\n"
             "      context.resolveMapTarget != nullptr &&\n"
             "      context.resolveMapTarget(expr.args.front());") !=
         std::string::npos);
@@ -1654,6 +1654,11 @@
             "    bool shouldBuiltinValidateBareMapCountCall = false;") !=
         std::string::npos);
   CHECK(semanticsExprPrivateValidationSource.find(
+            "    bool isStdNamespacedVectorCountCall = false;\n"
+            "    bool isStdNamespacedMapCountCall = false;\n"
+            "    bool isNamespacedVectorCountCall = false;") !=
+        std::string::npos);
+  CHECK(semanticsExprPrivateValidationSource.find(
             "struct ExprCountCapacityMapBuiltinContext {\n"
             "    bool shouldBuiltinValidateStdNamespacedVectorCountCall = false;") ==
         std::string::npos);
@@ -1689,6 +1694,9 @@
   CHECK(semanticsExprBuiltinContextSetupSource.find(
             "contextOut.shouldBuiltinValidateStdNamespacedVectorCountCall =\n"
             "      shouldBuiltinValidateStdNamespacedVectorCountCall;") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            ".isStdNamespacedVectorCountCall =") ==
         std::string::npos);
   CHECK(semanticsExprSource.find(
             ".shouldBuiltinValidateStdNamespacedVectorCountCall =") ==
@@ -1853,9 +1861,17 @@
             "context.shouldBuiltinValidateStdNamespacedVectorCountCall") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool isStdNamespacedVectorCountCall =\n"
+            "      isStdNamespacedVectorCompatibilityDirectCall(\n"
+            "          expr.isMethodCall, resolveCalleePath(expr), \"count\");") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool shouldBuiltinValidateStdNamespacedVectorCountCall =\n"
-            "      context.isStdNamespacedVectorCountCall &&\n"
+            "      isStdNamespacedVectorCountCall &&\n"
             "      hasImportedDefinitionPath(\"/std/collections/vector/count\");") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "context.isStdNamespacedVectorCountCall") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "context.shouldBuiltinValidateStdNamespacedVectorCountCall") ==

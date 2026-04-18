@@ -74,8 +74,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     rewrittenExprOut = std::move(rewrittenVectorHelperCall);
     return true;
   }
+  const bool isStdNamespacedVectorCountCall =
+      isStdNamespacedVectorCompatibilityDirectCall(
+          expr.isMethodCall, resolveCalleePath(expr), "count");
 
-  if (context.isStdNamespacedVectorCountCall) {
+  if (isStdNamespacedVectorCountCall) {
     const bool resolvesStdNamespacedVectorCountMapTarget =
         expr.args.size() == 1 &&
         context.resolveMapTarget != nullptr &&
@@ -95,12 +98,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     }
   }
   const bool shouldBuiltinValidateStdNamespacedVectorCountCall =
-      context.isStdNamespacedVectorCountCall &&
+      isStdNamespacedVectorCountCall &&
       hasImportedDefinitionPath("/std/collections/vector/count");
 
   auto resolveCountMethod = [&](bool requireSingleArg) -> bool {
     if (hasNamedArguments(expr.argNames) ||
-        (context.isStdNamespacedVectorCountCall &&
+        (isStdNamespacedVectorCountCall &&
          !shouldBuiltinValidateStdNamespacedVectorCountCall) ||
         expr.args.empty()) {
       return false;
@@ -132,7 +135,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         return (!resolvesExplicitCountMethodTarget &&
                 !context.isStdNamespacedMapCountCall) ||
                (context.isNamespacedVectorCountCall &&
-                !context.isStdNamespacedVectorCountCall) ||
+                !isStdNamespacedVectorCountCall) ||
                resolvesMapCountSurface;
       }
       return resolvesExplicitCountMethodTarget || resolvesMapCountSurface;

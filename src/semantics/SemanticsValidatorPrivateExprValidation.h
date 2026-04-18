@@ -585,7 +585,6 @@
   struct ExprCollectionCountCapacityDispatchContext {
     bool isNamespacedVectorHelperCall = false;
     std::string namespacedHelper;
-    bool isStdNamespacedVectorCountCall = false;
     bool isStdNamespacedMapCountCall = false;
     bool isNamespacedVectorCountCall = false;
     bool isNamespacedMapCountCall = false;
