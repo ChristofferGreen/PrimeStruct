@@ -1894,13 +1894,18 @@
             "      routesThroughNamespacedCountOrCapacityHelperSurface;\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto tryRewriteBareNamedVectorHelperCall =\n"
+            "      [&](const char *helperName) {\n"
+            "        return context.tryRewriteBareVectorHelperCall != nullptr &&\n"
+            "               context.tryRewriteBareVectorHelperCall(\n"
+            "                   helperName, rewrittenVectorHelperCall);\n"
+            "      };\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto tryRewriteBareVectorCountOrCapacityHelperCall =\n"
             "      [&]() {\n"
-            "        return context.tryRewriteBareVectorHelperCall != nullptr &&\n"
-            "               (context.tryRewriteBareVectorHelperCall(\"count\",\n"
-            "                                                      rewrittenVectorHelperCall) ||\n"
-            "                context.tryRewriteBareVectorHelperCall(\"capacity\",\n"
-            "                                                      rewrittenVectorHelperCall));\n"
+            "        return tryRewriteBareNamedVectorHelperCall(\"count\") ||\n"
+            "               tryRewriteBareNamedVectorHelperCall(\"capacity\");\n"
             "      };\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -2001,6 +2006,15 @@
             "    if (resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),\n"
             "                            context.namespacedHelper, methodResolved, isBuiltinMethod) &&\n"
             "        !isBuiltinMethod && defMap_.find(methodResolved) != defMap_.end()) {\n") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "      [&]() {\n"
+            "        return context.tryRewriteBareVectorHelperCall != nullptr &&\n"
+            "               (context.tryRewriteBareVectorHelperCall(\"count\",\n"
+            "                                                      rewrittenVectorHelperCall) ||\n"
+            "                context.tryRewriteBareVectorHelperCall(\"capacity\",\n"
+            "                                                      rewrittenVectorHelperCall));\n"
+            "      };\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "  if (context.tryRewriteBareVectorHelperCall != nullptr &&\n"

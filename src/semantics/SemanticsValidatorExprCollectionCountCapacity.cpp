@@ -160,13 +160,16 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   }
 
   Expr rewrittenVectorHelperCall;
+  const auto tryRewriteBareNamedVectorHelperCall =
+      [&](const char *helperName) {
+        return context.tryRewriteBareVectorHelperCall != nullptr &&
+               context.tryRewriteBareVectorHelperCall(
+                   helperName, rewrittenVectorHelperCall);
+      };
   const auto tryRewriteBareVectorCountOrCapacityHelperCall =
       [&]() {
-        return context.tryRewriteBareVectorHelperCall != nullptr &&
-               (context.tryRewriteBareVectorHelperCall("count",
-                                                      rewrittenVectorHelperCall) ||
-                context.tryRewriteBareVectorHelperCall("capacity",
-                                                      rewrittenVectorHelperCall));
+        return tryRewriteBareNamedVectorHelperCall("count") ||
+               tryRewriteBareNamedVectorHelperCall("capacity");
       };
   const auto applyBareVectorCountOrCapacityHelperRewrite =
       [&]() {
