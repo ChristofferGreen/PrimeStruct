@@ -1759,7 +1759,7 @@
             "                                                           isBuiltinMethod,\n"
             "                                                           methodResolved);\n"
             "          });\n"
-            "    };") !=
+            "    };") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "    const auto tryResolveCountMethodTargetWithFallback =\n"
@@ -1792,8 +1792,13 @@
             "          [&](const Expr &, std::string &, bool &) { return true; },\n"
             "          [&](const Expr &receiver, std::string &methodResolved,\n"
             "              bool &isBuiltinMethod) {\n"
-            "            return tryResolveCountMethodTargetWithFallback(\n"
-            "                receiver, isBuiltinMethod, methodResolved);\n"
+            "            return tryResolveCollectionMethodTargetOrElse(\n"
+            "                receiver, \"count\", methodResolved, isBuiltinMethod,\n"
+            "                [&](const Expr &receiver, bool &isBuiltinMethod,\n"
+            "                    std::string &methodResolved) {\n"
+            "                  return assignCountMethodTargetAfterResolveMiss(\n"
+            "                      receiver, isBuiltinMethod, methodResolved);\n"
+            "                });\n"
             "          },\n"
             "          finalizeCountMethodTarget);\n"
             "    }") !=

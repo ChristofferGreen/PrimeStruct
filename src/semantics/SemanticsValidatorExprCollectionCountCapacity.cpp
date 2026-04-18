@@ -268,18 +268,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       }
       return true;
     };
-    const auto tryResolveCountMethodTargetWithFallback =
-        [&](const Expr &receiver, bool &isBuiltinMethod,
-            std::string &methodResolved) -> bool {
-      return tryResolveCollectionMethodTargetOrElse(
-          receiver, "count", methodResolved, isBuiltinMethod,
-          [&](const Expr &receiver, bool &isBuiltinMethod,
-              std::string &methodResolved) {
-            return assignCountMethodTargetAfterResolveMiss(receiver,
-                                                           isBuiltinMethod,
-                                                           methodResolved);
-          });
-    };
     const auto finalizeCountMethodTarget =
         [&](std::string &methodResolved, bool &isBuiltinMethod) {
           return finalizeCollectionMethodTarget(
@@ -328,8 +316,13 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           [&](const Expr &, std::string &, bool &) { return true; },
           [&](const Expr &receiver, std::string &methodResolved,
               bool &isBuiltinMethod) {
-            return tryResolveCountMethodTargetWithFallback(
-                receiver, isBuiltinMethod, methodResolved);
+            return tryResolveCollectionMethodTargetOrElse(
+                receiver, "count", methodResolved, isBuiltinMethod,
+                [&](const Expr &receiver, bool &isBuiltinMethod,
+                    std::string &methodResolved) {
+                  return assignCountMethodTargetAfterResolveMiss(
+                      receiver, isBuiltinMethod, methodResolved);
+                });
           },
           finalizeCountMethodTarget);
     }
