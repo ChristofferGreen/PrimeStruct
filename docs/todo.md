@@ -140,6 +140,7 @@ Wave D (queue hygiene):
     - Final release gate passes with `./scripts/compile.sh --release`.
   - stop_rule: If shared classifier rewrites destabilize `map`/`soa_vector`, isolate the generic mechanism in this leaf and defer remaining shared deletions to TODO-0409.
   - notes: This leaf should leave a reusable generic path that TODO-0409 can apply to `map` and `soa_vector`.
+  - progress: Completed `TODO-0768` by deleting the one-use `isCapacityMethodTargetMissing` helper in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the capacity promotion/reject flow now carries that missing-target predicate inline.
   - progress: Completed `TODO-0767` by deleting the one-use `routesThroughStdNamespacedVectorCapacityHelper` local in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the capacity entry-routing helper now carries that stdlib-helper-path probe inline.
   - progress: Completed `TODO-0766` by deleting the one-use `tryResolveCapacityMethodAfterHelperMiss` wrapper in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the capacity entry-routing helper now carries that helper-miss routing inline.
   - progress: Completed `TODO-0765` by deleting the one-use `tryResolveCapacityMethodAfterHelperHit` wrapper in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the capacity entry-routing helper now carries that helper-hit normalization-and-fallback logic inline.
