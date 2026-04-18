@@ -271,19 +271,20 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         removedRootedVectorDirectCallFailure.has_value()) {
       return *removedRootedVectorDirectCallFailure;
     }
+    const bool lacksVisibleStdlibMapCountDefinition =
+        !hasDeclaredDefinitionPath("/std/collections/map/count") &&
+        !hasImportedDefinitionPath("/std/collections/map/count");
     if (!expr.isMethodCall &&
         expr.args.size() == 1 &&
         expr.args.front().kind == Expr::Kind::Name &&
         methodResolved == "/map/count" &&
         !hasImportedDefinitionPath("/count") &&
         !hasDeclaredDefinitionPath("/count") &&
-        !(hasDeclaredDefinitionPath("/std/collections/map/count") ||
-          hasImportedDefinitionPath("/std/collections/map/count"))) {
+        lacksVisibleStdlibMapCountDefinition) {
       return failCollectionCountCapacityDiagnostic("unknown call target: /std/collections/map/count");
     }
     if (isBuiltinMethod && methodResolved == "/std/collections/map/count" &&
-        !(hasDeclaredDefinitionPath("/std/collections/map/count") ||
-          hasImportedDefinitionPath("/std/collections/map/count")) &&
+        lacksVisibleStdlibMapCountDefinition &&
         !context.shouldBuiltinValidateBareMapCountCall) {
       return failCollectionCountCapacityDiagnostic("unknown call target: /std/collections/map/count");
     }

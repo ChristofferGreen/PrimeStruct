@@ -10,6 +10,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 17, 2026)**
 
 **Group 14 - SoA bring-up and end-state cleanup**
+- ✓ TODO-0704: Hoist map-count visibility gate. Completed: the duplicated visible-`/std/collections/map/count` failure gate in `SemanticsValidatorExprCollectionCountCapacity.cpp` now lives in shared local `lacksVisibleStdlibMapCountDefinition`, and focused expr source-lock coverage keeps the shared local present while the old repeated inline visibility pair stays absent.
 - ✓ TODO-0703: Remove rooted-vector diagnostic local. Completed: the standalone `removedRootedVectorDirectCallDiagnostic` local was deleted from `SemanticsValidatorExprCollectionCountCapacity.cpp`, and focused expr source-lock coverage now keeps the shared `failRemovedRootedVectorDirectCallIfPresent` helper fetching that diagnostic directly while the old outer local stays absent.
 - ✓ TODO-0702: Remove map-count visibility helper. Completed: the trivial `hasVisibleStdlibMapCountDefinition` helper was deleted from `SemanticsValidatorExprCollectionCountCapacity.cpp`, and focused expr source-lock coverage now keeps the direct declared/imported visibility checks present while the old helper stays absent.
 - ✓ TODO-0701: Remove count body-argument wrapper. Completed: the `resolveBodyArgumentCountTarget` wrapper was deleted from `SemanticsValidatorExprCollectionCountCapacity.cpp`, and focused expr source-lock coverage now keeps the inline count body-argument fallback present while the old wrapper stays absent.
