@@ -38,7 +38,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       getNamespacedCollectionHelperName(expr, namespacedCollection, setupOut.namespacedHelper);
   setupOut.isNamespacedVectorHelperCall =
       isNamespacedCollectionHelperCall && namespacedCollection == "vector";
-  setupOut.isStdNamespacedVectorCountCall =
+  const bool isStdNamespacedVectorCountCall =
       !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/count", 0) == 0;
   setupOut.isStdNamespacedMapCountCall =
       !expr.isMethodCall &&
@@ -117,7 +117,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
   };
 
   setupOut.isNamespacedVectorCountCall =
-      !expr.isMethodCall && !setupOut.isStdNamespacedVectorCountCall &&
+      !expr.isMethodCall && !isStdNamespacedVectorCountCall &&
       setupOut.isNamespacedVectorHelperCall && setupOut.namespacedHelper == "count" &&
       isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
       !hasDefinitionPath(resolved) &&
@@ -186,7 +186,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
     }
   }
   setupOut.isDirectStdNamespacedVectorCountWrapperMapTarget =
-      !expr.isMethodCall && setupOut.isStdNamespacedVectorCountCall &&
+      !expr.isMethodCall && isStdNamespacedVectorCountCall &&
       expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call &&
       resolveMapTarget(expr.args.front());
 
@@ -194,7 +194,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       !expr.isMethodCall && hasNamedArguments(expr.argNames) && expr.args.size() == 1 &&
       setupOut.isNamespacedVectorHelperCall &&
       (setupOut.namespacedHelper == "count" || setupOut.namespacedHelper == "capacity");
-  if (!expr.isMethodCall && setupOut.isStdNamespacedVectorCountCall &&
+  if (!expr.isMethodCall && isStdNamespacedVectorCountCall &&
       !hasVisibleCanonicalVectorHelperPath("/std/collections/vector/count") &&
       !allowStdNamespacedVectorUserReceiverProbe) {
     return failCollectionDispatchDiagnostic(

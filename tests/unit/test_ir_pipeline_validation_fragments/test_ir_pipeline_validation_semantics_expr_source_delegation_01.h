@@ -1539,18 +1539,24 @@
             "\"capacity requires vector target\"") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "const bool isStdNamespacedVectorCountCall =\n"
+            "      !expr.isMethodCall && resolveCalleePath(expr).rfind(\"/std/collections/vector/count\", 0) == 0;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "if (!expr.isMethodCall && setupOut.isStdNamespacedVectorCountCall &&\n"
             "      !hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/count\") &&\n"
             "      !allowStdNamespacedVectorUserReceiverProbe) {\n"
             "    return failCollectionDispatchDiagnostic(\n"
             "        vectorCompatibilityUnknownCallTargetDiagnostic(\"count\"));\n"
+            "  }") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "if (!expr.isMethodCall && isStdNamespacedVectorCountCall &&\n"
+            "      !hasVisibleCanonicalVectorHelperPath(\"/std/collections/vector/count\") &&\n"
+            "      !allowStdNamespacedVectorUserReceiverProbe) {\n"
+            "    return failCollectionDispatchDiagnostic(\n"
+            "        vectorCompatibilityUnknownCallTargetDiagnostic(\"count\"));\n"
             "  }") !=
-        std::string::npos);
-  CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "setupOut.hasStdNamespacedVectorCountAliasDefinition =") ==
-        std::string::npos);
-  CHECK(semanticsExprCollectionDispatchSetupSource.find(
-            "const bool hasStdNamespacedVectorCountDefinition =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "setupOut.shouldBuiltinValidateStdNamespacedVectorCountCall =\n"
@@ -1652,6 +1658,10 @@
   CHECK(semanticsExprPrivateValidationSource.find(
             "    bool isStdNamespacedVectorCountCall = false;\n"
             "    bool shouldBuiltinValidateBareMapCountCall = false;") !=
+        std::string::npos);
+  CHECK(semanticsExprPrivateValidationSource.find(
+            "struct ExprCollectionDispatchSetup {\n"
+            "    bool isStdNamespacedVectorCountCall = false;") ==
         std::string::npos);
   CHECK(semanticsExprPrivateValidationSource.find(
             "    bool isStdNamespacedVectorCountCall = false;\n"

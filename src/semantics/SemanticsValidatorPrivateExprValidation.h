@@ -509,7 +509,6 @@
       ExprMethodCompatibilitySetup &setupOut);
   struct ExprCollectionDispatchSetup {
     bool isNamespacedVectorHelperCall = false;
-    bool isStdNamespacedVectorCountCall = false;
     bool isStdNamespacedMapCountCall = false;
     bool isNamespacedMapHelperCall = false;
     std::string namespacedHelper;
