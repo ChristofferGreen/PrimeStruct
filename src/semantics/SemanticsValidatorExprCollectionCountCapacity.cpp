@@ -338,14 +338,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     methodReceiverIndex = 0;
     bool isBuiltinMethod = false;
     std::string methodResolved;
-    const auto tryResolveCapacityMethodWithValidation = [&]() -> bool {
-      if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
-                               "capacity", methodResolved, isBuiltinMethod)) {
-        (void)validateExpr(params, locals, expr.args.front());
-        return false;
-      }
-      return true;
-    };
     const auto tryResolveCapacityMethodFromHelperRouting = [&]() -> bool {
       if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(), "capacity",
                                           methodResolved)) {
@@ -361,7 +353,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         isBuiltinMethod = true;
         return true;
       }
-      return tryResolveCapacityMethodWithValidation();
+      if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
+                               "capacity", methodResolved, isBuiltinMethod)) {
+        (void)validateExpr(params, locals, expr.args.front());
+        return false;
+      }
+      return true;
     };
     if (!tryResolveCapacityMethodFromHelperRouting()) {
       return false;
