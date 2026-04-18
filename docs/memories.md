@@ -44,6 +44,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
   guard in `SemanticsValidatorInferCollectionCallResolution.cpp`; the release
   gate passed afterward with focused semantics and native/C++ conformance
   coverage updated around those cases.
+- `source-lock-private-validation-header`:
+  source-lock fragments that assert content from
+  `SemanticsValidatorPrivateExprValidation.h` must read that header
+  explicitly; the assembled semantics-expression source helpers do not provide
+  a separate private-validation source string on their own.
+  Evidence: `./scripts/compile.sh --release` failed in
+  `test_ir_pipeline_validation_semantics_expr_source_delegation_01.h` until
+  the fragment added `semanticsExprPrivateValidationPath` and loaded
+  `semanticsExprPrivateValidationSource`, after which the full release gate
+  passed again.
 - `vector-canonical-count-capacity-builtin-fallback`:
   canonical `./std/collections/vector/count()` and
   `./std/collections/vector/capacity()` on builtin vector receivers now

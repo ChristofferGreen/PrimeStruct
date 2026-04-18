@@ -108,9 +108,9 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
                                                       mapKeyType,
                                                       mapValueType);
       const std::string stdNamespacedVectorCountMapTargetDiagnosticMessage =
-          classifyStdNamespacedVectorCountMapTargetDiagnosticMessage(
-              resolvesMapAfterValidation, resolvesNonVectorCountTarget,
-              stdNamespacedVectorCountHelperState);
+          stdNamespacedVectorCountHelperState
+              .classifyCountMapTargetDiagnosticMessage(
+                  resolvesMapAfterValidation, resolvesNonVectorCountTarget);
       if (!stdNamespacedVectorCountMapTargetDiagnosticMessage.empty()) {
         return failLateCallCompatibilityDiagnostic(
             std::move(stdNamespacedVectorCountMapTargetDiagnosticMessage));

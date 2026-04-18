@@ -113,6 +113,8 @@
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprResultFile.cpp";
   const std::filesystem::path semanticsExprVectorHelpersPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprVectorHelpers.cpp";
+  const std::filesystem::path semanticsExprPrivateValidationPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorPrivateExprValidation.h";
   REQUIRE(std::filesystem::exists(semanticsExprPath));
   REQUIRE(std::filesystem::exists(semanticsExprDispatchBootstrapPath));
   REQUIRE(std::filesystem::exists(semanticsExprPreDispatchDirectCallsPath));
@@ -161,6 +163,7 @@
   REQUIRE(std::filesystem::exists(semanticsExprMapSoaBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprResultFilePath));
   REQUIRE(std::filesystem::exists(semanticsExprVectorHelpersPath));
+  REQUIRE(std::filesystem::exists(semanticsExprPrivateValidationPath));
   const std::string semanticsExprSource = readText(semanticsExprPath);
   const std::string semanticsExprDispatchBootstrapSource =
       readText(semanticsExprDispatchBootstrapPath);
@@ -237,6 +240,8 @@
   const std::string semanticsExprMapSoaBuiltinsSource = readText(semanticsExprMapSoaBuiltinsPath);
   const std::string semanticsExprResultFileSource = readText(semanticsExprResultFilePath);
   const std::string semanticsExprVectorHelpersSource = readText(semanticsExprVectorHelpersPath);
+  const std::string semanticsExprPrivateValidationSource =
+      readText(semanticsExprPrivateValidationPath);
   CHECK(semanticsExprSource.find("bool SemanticsValidator::validateExpr") != std::string::npos);
   CHECK(semanticsExprSource.find("return validateLambdaExpr(params, locals, expr, enclosingStatements, statementIndex);") !=
         std::string::npos);
@@ -1099,9 +1104,12 @@
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "const std::string stdNamespacedVectorCountMapTargetDiagnosticMessage =\n"
-            "          classifyStdNamespacedVectorCountMapTargetDiagnosticMessage(\n"
-            "              resolvesMapAfterValidation, resolvesNonVectorCountTarget,\n"
-            "              stdNamespacedVectorCountHelperState);") !=
+            "          stdNamespacedVectorCountHelperState\n"
+            "              .classifyCountMapTargetDiagnosticMessage(\n"
+            "                  resolvesMapAfterValidation, resolvesNonVectorCountTarget);") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "classifyStdNamespacedVectorCountMapTargetDiagnosticMessage(") ==
         std::string::npos);
   CHECK(semanticsExprLateCallCompatibilitySource.find(
             "if (resolvesMap ||\n"
@@ -1224,9 +1232,11 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const std::string stdNamespacedVectorCountMapTargetDiagnosticMessage =\n"
-            "      classifyStdNamespacedVectorCountMapTargetDiagnosticMessage(\n"
-            "          resolvesStdNamespacedVectorCountMapTarget, false,\n"
-            "          stdNamespacedVectorCountHelperState);") !=
+            "      stdNamespacedVectorCountHelperState.classifyCountMapTargetDiagnosticMessage(\n"
+            "          resolvesStdNamespacedVectorCountMapTarget, false);") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "classifyStdNamespacedVectorCountMapTargetDiagnosticMessage(") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto stdNamespacedVectorCountMapTargetDiagnostic =\n"

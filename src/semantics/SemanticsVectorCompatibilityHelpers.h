@@ -12,6 +12,15 @@ inline bool isVectorCompatibilityHelperName(std::string_view helperName) {
          helperName == "remove_swap";
 }
 
+enum class VectorCompatibilityCountMapTargetDiagnostic {
+  None,
+  UnknownCallTarget,
+  RequiresVectorTarget,
+};
+
+inline std::string vectorCompatibilityCountMapTargetDiagnosticMessage(
+    VectorCompatibilityCountMapTargetDiagnostic diagnostic);
+
 struct StdNamespacedVectorCompatibilityHelperState {
   bool hasDeclaredHelper = false;
   bool hasImportedHelper = false;
@@ -33,6 +42,29 @@ struct StdNamespacedVectorCompatibilityHelperState {
       bool wrapperMapTarget) const {
     return wrapperMapTarget && lacksDeclaredHelper();
   }
+
+  [[nodiscard]] VectorCompatibilityCountMapTargetDiagnostic
+  classifyCountMapTargetDiagnostic(bool mapTargetDetected,
+                                   bool preferUnknownCallTarget) const {
+    if (!mapTargetDetected) {
+      return VectorCompatibilityCountMapTargetDiagnostic::None;
+    }
+    if (preferUnknownCallTarget) {
+      return VectorCompatibilityCountMapTargetDiagnostic::UnknownCallTarget;
+    }
+    if (lacksDeclaredHelper() || hasImportedHelper) {
+      return VectorCompatibilityCountMapTargetDiagnostic::RequiresVectorTarget;
+    }
+    return VectorCompatibilityCountMapTargetDiagnostic::None;
+  }
+
+  [[nodiscard]] std::string classifyCountMapTargetDiagnosticMessage(
+      bool mapTargetDetected,
+      bool preferUnknownCallTarget) const {
+    return vectorCompatibilityCountMapTargetDiagnosticMessage(
+        classifyCountMapTargetDiagnostic(mapTargetDetected,
+                                         preferUnknownCallTarget));
+  }
 };
 
 inline StdNamespacedVectorCompatibilityHelperState
@@ -40,30 +72,6 @@ makeStdNamespacedVectorCompatibilityHelperState(bool hasDeclaredHelper,
                                                 bool hasImportedHelper) {
   return StdNamespacedVectorCompatibilityHelperState{
       hasDeclaredHelper, hasImportedHelper};
-}
-
-enum class VectorCompatibilityCountMapTargetDiagnostic {
-  None,
-  UnknownCallTarget,
-  RequiresVectorTarget,
-};
-
-inline VectorCompatibilityCountMapTargetDiagnostic
-classifyStdNamespacedVectorCountMapTargetDiagnostic(
-    bool mapTargetDetected,
-    bool preferUnknownCallTarget,
-    bool hasDeclaredHelper,
-    bool hasImportedHelper) {
-  if (!mapTargetDetected) {
-    return VectorCompatibilityCountMapTargetDiagnostic::None;
-  }
-  if (preferUnknownCallTarget) {
-    return VectorCompatibilityCountMapTargetDiagnostic::UnknownCallTarget;
-  }
-  if (!hasDeclaredHelper || hasImportedHelper) {
-    return VectorCompatibilityCountMapTargetDiagnostic::RequiresVectorTarget;
-  }
-  return VectorCompatibilityCountMapTargetDiagnostic::None;
 }
 
 inline std::string vectorCompatibilityRequiresVectorTargetDiagnostic(
@@ -88,16 +96,6 @@ inline std::string vectorCompatibilityCountMapTargetDiagnosticMessage(
     return "";
   }
   return "";
-}
-
-inline std::string classifyStdNamespacedVectorCountMapTargetDiagnosticMessage(
-    bool mapTargetDetected,
-    bool preferUnknownCallTarget,
-    const StdNamespacedVectorCompatibilityHelperState &helperState) {
-  return vectorCompatibilityCountMapTargetDiagnosticMessage(
-      classifyStdNamespacedVectorCountMapTargetDiagnostic(
-          mapTargetDetected, preferUnknownCallTarget,
-          helperState.hasDeclaredHelper, helperState.hasImportedHelper));
 }
 
 } // namespace primec::semantics

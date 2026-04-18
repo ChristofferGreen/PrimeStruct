@@ -93,9 +93,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       context.resolveMapTarget != nullptr &&
       context.resolveMapTarget(expr.args.front());
   const std::string stdNamespacedVectorCountMapTargetDiagnosticMessage =
-      classifyStdNamespacedVectorCountMapTargetDiagnosticMessage(
-          resolvesStdNamespacedVectorCountMapTarget, false,
-          stdNamespacedVectorCountHelperState);
+      stdNamespacedVectorCountHelperState.classifyCountMapTargetDiagnosticMessage(
+          resolvesStdNamespacedVectorCountMapTarget, false);
   if (!stdNamespacedVectorCountMapTargetDiagnosticMessage.empty()) {
     handledOut = true;
     return failCollectionCountCapacityDiagnostic(
