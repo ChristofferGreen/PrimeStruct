@@ -1973,7 +1973,9 @@
             "      }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if ((targetsDirectNamedBareMapCountCall &&\n"
+            "if ((!expr.isMethodCall &&\n"
+            "         expr.args.size() == 1 &&\n"
+            "         expr.args.front().kind == Expr::Kind::Name &&\n"
             "         resolvesBareMapCountMethodTarget &&\n"
             "         !hasImportedDefinitionPath(\"/count\") &&\n"
             "         !hasDeclaredDefinitionPath(\"/count\") &&\n"
@@ -1997,6 +1999,9 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool rejectsUnimportedBareMapCountCallTarget =") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool targetsDirectNamedBareMapCountCall =") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto matchesCountMethodCallShape =") ==
