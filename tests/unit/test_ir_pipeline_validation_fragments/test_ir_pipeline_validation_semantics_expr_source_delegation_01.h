@@ -1156,10 +1156,18 @@
             "      context.resolveMapTarget(expr.args.front());") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const bool rejectsStdNamespacedVectorCountMapTargetForImportedOrMissingDeclaredHelper =\n"
+            "      lacksDeclaredStdNamespacedVectorCountHelper ||\n"
+            "      hasImportedDefinitionPath(\"/std/collections/vector/count\");") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool rejectsStdNamespacedVectorCountMapTargetAsNonVector =\n"
             "      resolvesStdNamespacedVectorCountMapTarget &&\n"
+            "      rejectsStdNamespacedVectorCountMapTargetForImportedOrMissingDeclaredHelper;") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "      (lacksDeclaredStdNamespacedVectorCountHelper ||\n"
-            "       hasImportedDefinitionPath(\"/std/collections/vector/count\"));") !=
+            "       hasImportedDefinitionPath(\"/std/collections/vector/count\"));") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "(defMap_.find(\"/std/collections/vector/count\") == defMap_.end() ||\n"
