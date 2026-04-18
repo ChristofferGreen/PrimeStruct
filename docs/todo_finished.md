@@ -10,6 +10,7 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
 **Todo Cleanup (April 17, 2026)**
 
 **Group 14 - SoA bring-up and end-state cleanup**
+- ✓ TODO-0685: Remove count dispatch wrapper. Completed: the one-use `tryResolveCountMethod` local was deleted from `SemanticsValidatorExprCollectionCountCapacity.cpp`, and focused expr source-lock coverage now keeps the direct `resolveCountMethod(true/false)` sequence present while the old wrapper lambda stays absent.
 - ✓ TODO-0684: Remove count routing local. Completed: the one-use `isCountLike` local was deleted from `SemanticsValidatorExprCollectionCountCapacity.cpp`, and focused expr source-lock coverage now keeps the inline count-surface gate present while the old local stays absent.
 - ✓ TODO-0683: Remove count map-target local. Completed: the one-use `resolvesStdNamespacedVectorCountMapTarget` local was deleted from `SemanticsValidatorExprCollectionCountCapacity.cpp`, and focused expr source-lock coverage now keeps the inline shared-selector map-target probe present while the old local stays absent.
 - ✓ TODO-0682: Remove count-capacity diagnostic local. Completed: the one-use `stdNamespacedVectorCountTargetDiagnosticMessage` local was deleted from `SemanticsValidatorExprCollectionCountCapacity.cpp`, and focused expr source-lock coverage now keeps the direct in-block shared selector form present while the old local stays absent.
