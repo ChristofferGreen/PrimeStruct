@@ -60,6 +60,7 @@ set(PRIMESTRUCT_SUPPORT_SOURCES
   src/EmitKind.cpp
   src/OptionsParser.cpp
   src/ProcessRunner.cpp
+  src/StdlibSurfaceRegistry.cpp
   src/SymbolInterner.cpp
   src/TempPaths.cpp
   src/TransformRules.cpp

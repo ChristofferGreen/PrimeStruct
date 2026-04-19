@@ -46,6 +46,96 @@ TEST_CASE("design doc records semantic ownership boundary policy") {
   CHECK(design.find("production lowering/publication paths.") != std::string::npos);
 }
 
+TEST_CASE("stdlib surface registry stays source locked") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path cmakePath = cwd / "CMakeLists.txt";
+  std::filesystem::path headerPath = cwd / "include" / "primec" / "StdlibSurfaceRegistry.h";
+  std::filesystem::path sourcePath = cwd / "src" / "StdlibSurfaceRegistry.cpp";
+  if (!std::filesystem::exists(cmakePath)) {
+    cmakePath = cwd.parent_path() / "CMakeLists.txt";
+  }
+  if (!std::filesystem::exists(headerPath)) {
+    headerPath = cwd.parent_path() / "include" / "primec" / "StdlibSurfaceRegistry.h";
+  }
+  if (!std::filesystem::exists(sourcePath)) {
+    sourcePath = cwd.parent_path() / "src" / "StdlibSurfaceRegistry.cpp";
+  }
+
+  REQUIRE(std::filesystem::exists(cmakePath));
+  REQUIRE(std::filesystem::exists(headerPath));
+  REQUIRE(std::filesystem::exists(sourcePath));
+
+  const std::string cmake = readTextFile(cmakePath);
+  const std::string header = readTextFile(headerPath);
+  const std::string source = readTextFile(sourcePath);
+
+  CHECK(cmake.find("src/StdlibSurfaceRegistry.cpp") != std::string::npos);
+
+  CHECK(header.find("enum class StdlibSurfaceDomain") != std::string::npos);
+  CHECK(header.find("enum class StdlibSurfaceShape") != std::string::npos);
+  CHECK(header.find("enum class StdlibSurfaceId") != std::string::npos);
+  CHECK(header.find("std::span<const std::string_view> memberNames;") != std::string::npos);
+  CHECK(header.find("std::span<const std::string_view> importAliasSpellings;") != std::string::npos);
+  CHECK(header.find("std::span<const std::string_view> compatibilitySpellings;") != std::string::npos);
+  CHECK(header.find("std::span<const std::string_view> loweringSpellings;") != std::string::npos);
+  CHECK(header.find("findStdlibSurfaceMetadataBySpelling") != std::string::npos);
+
+  CHECK(source.find("StdlibSurfaceId::FileHelpers") != std::string::npos);
+  CHECK(source.find("\"file.file_helpers\"") != std::string::npos);
+  CHECK(source.find("\"/std/file/File\"") != std::string::npos);
+  CHECK(source.find("\"/File\"") != std::string::npos);
+  CHECK(source.find("\"write_line\"") != std::string::npos);
+  CHECK(source.find("\"/file/write_bytes\"") != std::string::npos);
+
+  CHECK(source.find("StdlibSurfaceId::FileErrorHelpers") != std::string::npos);
+  CHECK(source.find("\"file.file_error\"") != std::string::npos);
+  CHECK(source.find("\"/std/file/FileError\"") != std::string::npos);
+  CHECK(source.find("\"/FileError\"") != std::string::npos);
+  CHECK(source.find("\"is_eof\"") != std::string::npos);
+  CHECK(source.find("\"/std/file/fileErrorResult\"") != std::string::npos);
+  CHECK(source.find("\"/file_error/why\"") != std::string::npos);
+
+  CHECK(source.find("StdlibSurfaceId::CollectionsVectorHelpers") != std::string::npos);
+  CHECK(source.find("\"collections.vector_helpers\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/vector\"") != std::string::npos);
+  CHECK(source.find("\"remove_swap\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/experimental_vector/vectorRemoveSwap\"") != std::string::npos);
+
+  CHECK(source.find("StdlibSurfaceId::CollectionsMapHelpers") != std::string::npos);
+  CHECK(source.find("\"collections.map_helpers\"") != std::string::npos);
+  CHECK(source.find("\"/map/count\"") != std::string::npos);
+  CHECK(source.find("\"count_ref\"") != std::string::npos);
+  CHECK(source.find("\"insert_ref\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/mapInsert\"") != std::string::npos);
+
+  CHECK(source.find("StdlibSurfaceId::CollectionsMapConstructors") != std::string::npos);
+  CHECK(source.find("\"collections.map_constructors\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/mapNew\"") != std::string::npos);
+  CHECK(source.find("\"mapOct\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/experimental_map/mapOct\"") != std::string::npos);
+
+  CHECK(source.find("StdlibSurfaceId::CollectionsContainerErrorHelpers") != std::string::npos);
+  CHECK(source.find("\"collections.container_error\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/ContainerError\"") != std::string::npos);
+  CHECK(source.find("\"/ContainerError\"") != std::string::npos);
+  CHECK(source.find("\"capacity_exceeded\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/containerErrorResult\"") != std::string::npos);
+
+  CHECK(source.find("StdlibSurfaceId::GfxBufferHelpers") != std::string::npos);
+  CHECK(source.find("\"gfx.buffer_helpers\"") != std::string::npos);
+  CHECK(source.find("\"/std/gfx/Buffer\"") != std::string::npos);
+  CHECK(source.find("\"/Buffer\"") != std::string::npos);
+  CHECK(source.find("\"/std/gfx/experimental/Buffer/upload\"") != std::string::npos);
+  CHECK(source.find("\"/std/gpu/buffer_load\"") != std::string::npos);
+
+  CHECK(source.find("StdlibSurfaceId::GfxErrorHelpers") != std::string::npos);
+  CHECK(source.find("\"gfx.gfx_error\"") != std::string::npos);
+  CHECK(source.find("\"/std/gfx/GfxError\"") != std::string::npos);
+  CHECK(source.find("\"/GfxError\"") != std::string::npos);
+  CHECK(source.find("\"/std/gfx/experimental/GfxError\"") != std::string::npos);
+  CHECK(source.find("\"frame_present_failed\"") != std::string::npos);
+}
+
 TEST_CASE("cmake splits primec library into subsystem targets") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path cmakePath = cwd / "CMakeLists.txt";

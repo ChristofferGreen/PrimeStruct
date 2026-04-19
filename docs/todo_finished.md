@@ -4150,3 +4150,16 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - stop_rule: Stop once the stdlib surface-versus-substrate boundary is documented well enough that follow-on cleanup can proceed without re-litigating scope in each item.
   - finished_at: 2026-04-19
   - evidence: Added an explicit stdlib style-boundary section to `docs/CodeExamples.md`, mirrored the same file-level classification under the ownership model in `docs/PrimeStruct.md`, added contributor guidance for the same boundary in `AGENTS.md`, updated `docs/todo.md` so `TODO-4027` now scopes only the style-aligned modules and explicitly excludes `bench_non_math`, `collections/collections.prime`, `collections/experimental_*`, and `gfx/experimental.prime`, and added a docs-lock regression in `tests/unit/test_compile_run_examples_docs_locks.cpp` that pins the style-aligned list, the canonical/bridge list, and the mixed-directory carve-outs.
+
+- [x] TODO-4036: Add shared stdlib surface registry for file, collections, and gfx helper metadata
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Bridge Consolidation
+  - scope: Introduce one shared stdlib bridge/registry module that declares the canonical metadata for file, collections, and gfx helper surfaces so later semantics and lowering work can consume one source of truth instead of scattered path tables.
+  - acceptance:
+    - A shared production module exists for stdlib surface metadata covering the initial file, collection, and gfx bridge targets.
+    - The registry defines the canonical metadata needed for import aliasing, helper classification, compatibility spellings, and downstream lowering identifiers for the migrated surfaces.
+    - Focused parity coverage or source-lock checks pin the intended scope of the bridge before follow-on migrations start consuming it.
+  - stop_rule: Stop once the shared registry exists and describes the initial stdlib bridge surfaces well enough for follow-on migration tasks; do not widen this item into semantics or lowering rewrites.
+  - finished_at: 2026-04-19
+  - evidence: Added `include/primec/StdlibSurfaceRegistry.h` and `src/StdlibSurfaceRegistry.cpp` under `primec_support_lib` so one shared production registry now declares the initial file helper, file error, vector helper, map helper, map constructor, container error, gfx buffer, and gfx error bridge families with canonical import roots, compatibility spellings, and stable bridge keys for later migration work; added a focused source-lock test in `tests/unit/test_ir_pipeline_backends_architecture.h` that pins the registry API shape, the CMake support-library placement, and the initial file/collections/gfx coverage; and updated `docs/todo.md` so `TODO-4037` is now the next unblocked stdlib bridge item while preserving the newer queue additions already present in the file.

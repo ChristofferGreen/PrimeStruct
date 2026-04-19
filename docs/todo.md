@@ -56,8 +56,8 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4036
 - TODO-4027
+- TODO-4037
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -69,51 +69,50 @@ Task template:
 - TODO-4033
 - TODO-4034
 - TODO-4035
-- TODO-4037
 - TODO-4038
+- TODO-4039
 
 ### Priority Lanes (Current)
 
 - Stdlib surface-style alignment: TODO-4027 through TODO-4035
-- Stdlib bridge consolidation: TODO-4036 through TODO-4041
+- Stdlib bridge consolidation: TODO-4037 through TODO-4041
 - Vector/map stdlib ownership cutover: TODO-4042 through TODO-4051
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4036
-2. TODO-4027
-3. TODO-4028
-4. TODO-4029
-5. TODO-4030
-6. TODO-4031
-7. TODO-4032
-8. TODO-4033
-9. TODO-4034
-10. TODO-4035
-11. TODO-4037
-12. TODO-4038
-13. TODO-4039
-14. TODO-4040
-15. TODO-4041
-16. TODO-4042
-17. TODO-4051
-18. TODO-4043
-19. TODO-4044
-20. TODO-4045
-21. TODO-4046
-22. TODO-4047
-23. TODO-4048
-24. TODO-4049
-25. TODO-4050
-26. TODO-4052
-27. TODO-4058
-28. TODO-4053
-29. TODO-4055
-30. TODO-4054
-31. TODO-4056
-32. TODO-4057
-33. TODO-4059
+1. TODO-4027
+2. TODO-4028
+3. TODO-4029
+4. TODO-4030
+5. TODO-4031
+6. TODO-4032
+7. TODO-4033
+8. TODO-4034
+9. TODO-4035
+10. TODO-4037
+11. TODO-4038
+12. TODO-4039
+13. TODO-4040
+14. TODO-4041
+15. TODO-4042
+16. TODO-4051
+17. TODO-4043
+18. TODO-4044
+19. TODO-4045
+20. TODO-4046
+21. TODO-4047
+22. TODO-4048
+23. TODO-4049
+24. TODO-4050
+25. TODO-4052
+26. TODO-4058
+27. TODO-4053
+28. TODO-4055
+29. TODO-4054
+30. TODO-4056
+31. TODO-4057
+32. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
@@ -121,7 +120,7 @@ Task template:
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4027, TODO-4028, TODO-4029, TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4036, TODO-4037, TODO-4038, TODO-4039, TODO-4040, TODO-4041 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4037, TODO-4038, TODO-4039, TODO-4040, TODO-4041 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4042, TODO-4043, TODO-4044, TODO-4045, TODO-4046, TODO-4047, TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Validator entrypoint and benchmark-plumbing split | none |
@@ -428,17 +427,6 @@ Task template:
     - Existing exact-import and wildcard-import alias behavior remains covered by focused parity tests.
     - Import alias behavior no longer requires duplicating the same stdlib path knowledge in multiple production files for the migrated surfaces.
   - stop_rule: Stop once import alias construction for the targeted stdlib surfaces is bridge-backed; split any packaging/root-discovery follow-up out of this item.
-
-- [ ] TODO-4036: Add shared stdlib surface registry for file, collections, and gfx helper metadata
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Stdlib Bridge Consolidation
-  - scope: Introduce one shared stdlib bridge/registry module that declares the canonical metadata for file, collections, and gfx helper surfaces so later semantics and lowering work can consume one source of truth instead of scattered path tables.
-  - acceptance:
-    - A shared production module exists for stdlib surface metadata covering the initial file, collection, and gfx bridge targets.
-    - The registry defines the canonical metadata needed for import aliasing, helper classification, compatibility spellings, and downstream lowering identifiers for the migrated surfaces.
-    - Focused parity coverage or source-lock checks pin the intended scope of the bridge before follow-on migrations start consuming it.
-  - stop_rule: Stop once the shared registry exists and describes the initial stdlib bridge surfaces well enough for follow-on migration tasks; do not widen this item into semantics or lowering rewrites.
 
 - [ ] TODO-4035: Audit canonical /std/gfx wrappers for readable surface syntax without changing hybrid runtime boundaries
   - owner: ai
