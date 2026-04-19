@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1123
+- TODO-1124
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1123
+- TODO-1124
 
 ### Priority Lanes (Current)
 
-- VM bare vector mutator method import-requirement skip debt: TODO-1123
+- Native user array count call-shadow skip debt: TODO-1124
 
 ### Execution Queue (Recommended)
 
-1. TODO-1123
+1. TODO-1124
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| VM bare vector mutator method skipped-test debt | TODO-1123 |
+| Native array count call-shadow skipped-test debt | TODO-1124 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| VM compile-run skipped-test debt | TODO-1123 |
+| Native compile-run skipped-test debt | TODO-1124 |
 
 ### Task Blocks
 
-- [ ] TODO-1123: Audit VM bare vector mutator method import-requirement skip debt
+- [ ] TODO-1124: Audit native user array count call-shadow skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped VM bare vector mutator method coverage, and lock the current VM contract for calling `push`, `pop`, `reserve`, `clear`, `remove_at`, and `remove_swap` without imported helpers.
+  - scope: Re-enable or delete the skipped native user array `count(values)` shadow coverage, and lock the current native backend contract with non-skipped assertions.
   - acceptance:
-    - `tests/unit/test_compile_run_vm_collections_shim_maps_c.cpp` no longer carries the skipped bare vector mutator method case in stale form.
-    - The VM test locks the actual current contract for bare vector mutator methods without imported helpers, whether that stays as successful execution or a stable diagnostic.
-  - stop_rule: Stop after the VM bare vector mutator method surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp` no longer carries the skipped native user array `count(values)` shadow case in stale form.
+    - The native test locks the actual current contract for bare user array count call shadowing, whether that stays as successful runtime behavior or a stable diagnostic.
+  - stop_rule: Stop after the native user array `count(values)` shadow surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.

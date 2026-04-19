@@ -623,7 +623,7 @@ TEST_CASE("runs vm bare vector mutators without imported helpers") {
   expectBareVectorMutatorImportRequirement("vm", "remove_swap", "values, 1i32");
 }
 
-TEST_CASE("runs vm bare vector mutator methods without imported helpers" * doctest::skip(true)) {
+TEST_CASE("runs vm bare vector mutator methods without imported helpers") {
   expectBareVectorMutatorMethodImportRequirement("vm", "push", "7i32");
   expectBareVectorMutatorMethodImportRequirement("vm", "pop", "");
   expectBareVectorMutatorMethodImportRequirement("vm", "reserve", "8i32");
