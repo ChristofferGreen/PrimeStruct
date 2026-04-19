@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1158
+- TODO-1159
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1158
+- TODO-1159
 
 ### Priority Lanes (Current)
 
-- VM slash-method vector access string-literal fallback skip debt: TODO-1158
+- VM slash-method vector access primitive count diagnostics skip debt: TODO-1159
 
 ### Execution Queue (Recommended)
 
-1. TODO-1158
+1. TODO-1159
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| VM canonical vector access skipped-test debt | TODO-1158 |
+| VM canonical vector access skipped-test debt | TODO-1159 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| VM compile-run skipped-test debt | TODO-1158 |
+| VM compile-run skipped-test debt | TODO-1159 |
 
 ### Task Blocks
 
-- [ ] TODO-1158: Audit VM slash-method vector access string-literal fallback skip debt
+- [ ] TODO-1159: Audit VM slash-method vector access primitive count diagnostics skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped VM slash-method vector access string-literal fallback coverage, and lock the current VM contract for `values./vector/at(0i32).count()` plus `values./std/collections/vector/at_unsafe(0i32).count()`.
+  - scope: Re-enable or delete the skipped VM slash-method vector access primitive-count diagnostic coverage, and lock the current VM contract for `values./vector/at(0i32).count()` plus `values./std/collections/vector/at_unsafe(0i32).count()` on `vector<i32>`.
   - acceptance:
-    - `tests/unit/test_compile_run_vm_collections_map_wrapper_shadows.cpp` no longer carries the skipped VM slash-method vector access string-literal fallback case in stale form.
-    - The VM test locks the actual current contract for the slash-method fallback surface, whether that remains the current `10` exit path or another stable VM-side outcome.
-  - stop_rule: Stop after the VM slash-method vector access string-literal fallback surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_vm_collections_map_wrapper_shadows.cpp` no longer carries the skipped VM slash-method vector access primitive-count diagnostic case in stale form.
+    - The VM test locks the actual current diagnostic contract for the slash-method primitive-count surface, whether that remains the current `unknown method: /i32/count` reject or another stable VM-side diagnostic.
+  - stop_rule: Stop after the VM slash-method vector access primitive-count diagnostic surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.

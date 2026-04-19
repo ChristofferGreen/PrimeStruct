@@ -248,7 +248,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
-TEST_CASE("rejects vm slash-method vector access string literals" * doctest::skip(true)) {
+TEST_CASE("rejects vm slash-method vector access string literals") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
