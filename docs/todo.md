@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1092
+- TODO-1093
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1092
+- TODO-1093
 
 ### Priority Lanes (Current)
 
-- Native vector skip debt: TODO-1092
+- Native vector namespace skip debt: TODO-1093
 
 ### Execution Queue (Recommended)
 
-1. TODO-1092
+1. TODO-1093
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Native vector compile-run skipped-test debt | TODO-1092 |
+| Native vector namespace skipped-test debt | TODO-1093 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Native compile-run skipped-test debt | TODO-1092 |
+| Native compile-run skipped-test debt | TODO-1093 |
 
 ### Task Blocks
 
-- [ ] TODO-1092: Audit native shared vector harness skip debt
+- [ ] TODO-1093: Audit native canonical vector namespace skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped native shared vector conformance harness coverage, and lock the current native backend contract with non-skipped assertions.
+  - scope: Re-enable or delete the skipped native canonical vector namespace coverage, and lock the current native backend contract with non-skipped assertions.
   - acceptance:
-    - `tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp` no longer carries the skipped shared-vector harness case in stale form.
-    - The native test locks the actual current contract for the shared stdlib plus experimental vector harness, whether that is successful compile-run behavior or a stable diagnostic.
-  - stop_rule: Stop after the native shared-vector harness surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp` no longer carries the skipped native canonical vector namespace case in stale form.
+    - The native test locks the actual current contract for canonical vector namespace helpers, whether that is successful compile-run behavior or a stable diagnostic.
+  - stop_rule: Stop after the native canonical vector namespace surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.

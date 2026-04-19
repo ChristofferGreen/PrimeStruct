@@ -3372,7 +3372,7 @@ main() {
   CHECK(runCommand(exePath) == 21);
 }
 
-TEST_CASE("compiles and runs native shared vector conformance harness for stdlib and experimental helpers" * doctest::skip(true)) {
+TEST_CASE("covers native shared vector harness contracts") {
   expectSharedVectorConformanceHarness("native");
 }
 
