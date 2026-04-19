@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1146
+- TODO-1147
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1146
+- TODO-1147
 
 ### Priority Lanes (Current)
 
-- Native wrapper-returned canonical map reference method-sugar key diagnostics skip debt: TODO-1146
+- Native direct wrapper-returned canonical map access string receiver typing skip debt: TODO-1147
 
 ### Execution Queue (Recommended)
 
-1. TODO-1146
+1. TODO-1147
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Native wrapper-returned canonical map reference skipped-test debt | TODO-1146 |
+| Native direct wrapper-returned canonical map access skipped-test debt | TODO-1147 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Native compile-run skipped-test debt | TODO-1146 |
+| Native compile-run skipped-test debt | TODO-1147 |
 
 ### Task Blocks
 
-- [ ] TODO-1146: Audit native wrapper-returned canonical map reference method-sugar key diagnostics skip debt
+- [ ] TODO-1147: Audit native direct wrapper-returned canonical map access string receiver typing skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped native key-type diagnostic coverage for wrapper-returned canonical map reference method sugar, and lock the current native contract for `borrowMap(location(values)).at(true)`.
+  - scope: Re-enable or delete the skipped native direct wrapper-returned canonical map access string-receiver typing coverage, and lock the current native contract for `count(/std/collections/map/at(wrapMap(), 1i32))`.
   - acceptance:
-    - `tests/unit/test_compile_run_native_backend_collections_canonical_count_shadows.cpp` no longer carries the skipped native wrapper-returned canonical map reference method-sugar key-diagnostic case in stale form.
-    - The native test locks the actual current diagnostic contract for `borrowMap(location(values)).at(true)`, whether that stays as a key-typing reject or another stable native-side diagnostic.
-  - stop_rule: Stop after the native wrapper-returned canonical map reference method-sugar key-diagnostic surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_native_backend_collections_canonical_count_shadows.cpp` no longer carries the skipped native direct wrapper-returned canonical map access string-receiver typing case in stale form.
+    - The native test locks the actual current contract for `count(/std/collections/map/at(wrapMap(), 1i32))`, whether that remains a successful string-count path or another stable native-side outcome.
+  - stop_rule: Stop after the native direct wrapper-returned canonical map access string-receiver typing surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.

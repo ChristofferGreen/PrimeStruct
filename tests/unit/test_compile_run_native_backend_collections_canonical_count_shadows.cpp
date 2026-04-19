@@ -138,7 +138,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("native keeps key diagnostics on wrapper-returned canonical map reference method sugar" * doctest::skip(true)) {
+TEST_CASE("native keeps key diagnostics on wrapper-returned canonical map reference method sugar") {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
