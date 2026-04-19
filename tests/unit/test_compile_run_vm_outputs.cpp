@@ -790,7 +790,7 @@ main() {
         "39\n");
 }
 
-TEST_CASE("runs vm png read for stored average-filter rgba inputs deterministically" * doctest::skip(true)) {
+TEST_CASE("runs vm png read for stored average-filter rgba inputs deterministically") {
   const std::string inPath =
       (testScratchPath("") / "primec_vm_image_read_average.png").string();
   {
