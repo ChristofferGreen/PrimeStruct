@@ -56,7 +56,6 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4012
 - TODO-4011
 - TODO-4010
 - TODO-4009
@@ -73,7 +72,7 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- VM/runtime hardening: TODO-4012, TODO-4010, TODO-4009
+- VM/runtime hardening: TODO-4010, TODO-4009
 - Emitter collection-helper parity: TODO-4011
 - Semantic ownership cutover: TODO-4002, TODO-4004, TODO-4008
 - Validator/publication simplification: TODO-4003, TODO-4005
@@ -81,17 +80,16 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4012
-2. TODO-4011
-3. TODO-4010
-4. TODO-4009
-5. TODO-4006
-6. TODO-4007
-7. TODO-4003
-8. TODO-4002
-9. TODO-4004
-10. TODO-4005
-11. TODO-4008
+1. TODO-4011
+2. TODO-4010
+3. TODO-4009
+4. TODO-4006
+5. TODO-4007
+6. TODO-4003
+7. TODO-4002
+8. TODO-4004
+9. TODO-4005
+10. TODO-4008
 
 ### PrimeStruct Coverage Snapshot
 
@@ -103,7 +101,7 @@ Task template:
 | IR lowerer compile-unit breakup | TODO-4006 |
 | Backend validation/build ergonomics | TODO-4007 |
 | Emitter/semantics map-helper parity | TODO-4011 |
-| VM debug-session argv ownership | TODO-4012 |
+| VM debug-session argv ownership | none |
 | Debug trace replay robustness | TODO-4010 |
 | VM/runtime debug numeric opcode parity | TODO-4009 |
 | Test-suite audit follow-up and release-gate stability | none |
@@ -117,25 +115,12 @@ Task template:
 | Lowerer/source-composition contract coverage | TODO-4006 |
 | Focused backend rerun ergonomics and suite partitioning | TODO-4007 |
 | Emitter map-helper canonicalization parity | TODO-4011 |
-| VM debug-session argv lifetime coverage | TODO-4012 |
+| VM debug-session argv lifetime coverage | none |
 | Debug trace replay malformed-input coverage | TODO-4010 |
 | Shared VM/debug numeric opcode behavior | TODO-4009 |
 | Release benchmark/example suite stability and doctest governance | none |
 
 ### Task Blocks
-
-- [ ] TODO-4012: Make VmDebugSession own argv storage
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: VM Runtime Hardening
-  - depends_on: none
-  - scope: Replace the non-owning `std::string_view` argv storage in `VmDebugSession` with owning storage so debug-trace, debug-json, and DAP sessions cannot retain dangling caller-backed argument text.
-  - acceptance:
-    - `VmDebugSession` stores argv text in owning storage, and any exposed or internal views point only into that owned storage for the lifetime of the session.
-    - Focused VM debug-session coverage proves `PrintArgv` and `PrintArgvUnsafe` continue to work through debug-trace, debug-json, or adapter-driven execution after session startup.
-    - Ownership comments and member naming in `include/primec/Vm.h` match the actual lifetime contract after the change.
-  - stop_rule: Stop once debug-session argv handling no longer depends on caller-owned string storage; broader VM CLI argument refactors belong in a separate leaf.
-  - notes: Start in `include/primec/Vm.h`, `src/VmDebugSessionSetup.cpp`, `src/VmIoHelpers.cpp`, and the debug entrypoints in `src/primevm_main.cpp` and `src/VmDebugAdapter.cpp`.
 
 - [ ] TODO-4011: Unify emitter map-helper parity surface
   - owner: ai

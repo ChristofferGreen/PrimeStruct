@@ -15,6 +15,21 @@ size_t vmDebugLocalCount(const IrFunction &function) {
   return localCount;
 }
 
+void copyOwnedArgv(const std::vector<std::string_view> &args,
+                   std::vector<std::string> &ownedArgStorage,
+                   std::vector<std::string_view> &ownedArgViews) {
+  ownedArgStorage.clear();
+  ownedArgViews.clear();
+  ownedArgStorage.reserve(args.size());
+  ownedArgViews.reserve(args.size());
+  for (const std::string_view arg : args) {
+    ownedArgStorage.emplace_back(arg);
+  }
+  for (const std::string &arg : ownedArgStorage) {
+    ownedArgViews.emplace_back(arg);
+  }
+}
+
 } // namespace
 
 bool VmDebugSession::initFromModule(const IrModule &module,
@@ -22,7 +37,7 @@ bool VmDebugSession::initFromModule(const IrModule &module,
                                     const std::vector<std::string_view> *args) {
   module_ = &module;
   argCount_ = argCount;
-  args_ = args;
+  argvViews_ = args;
   localCounts_.assign(module.functions.size(), 0);
   stack_.clear();
   heapSlots_.clear();
@@ -62,7 +77,8 @@ bool VmDebugSession::start(const IrModule &module, std::string &error, uint64_t 
     error = "invalid IR entry index";
     return false;
   }
-  ownedArgs_.clear();
+  ownedArgStorage_.clear();
+  ownedArgViews_.clear();
   if (!initFromModule(module, argCount, nullptr)) {
     error = "failed to initialize debug session";
     return false;
@@ -77,8 +93,8 @@ bool VmDebugSession::start(const IrModule &module,
     error = "invalid IR entry index";
     return false;
   }
-  ownedArgs_ = args;
-  if (!initFromModule(module, static_cast<uint64_t>(ownedArgs_.size()), &ownedArgs_)) {
+  copyOwnedArgv(args, ownedArgStorage_, ownedArgViews_);
+  if (!initFromModule(module, static_cast<uint64_t>(ownedArgViews_.size()), &ownedArgViews_)) {
     error = "failed to initialize debug session";
     return false;
   }

@@ -3882,3 +3882,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: The audit already confirmed release-first and parallel-test guidance are present, so this leaf should stay scoped to the missing size/runtime guardrails and their validation hook.
   - finished_at: 2026-04-19
   - evidence: Added explicit doctest size and runtime guardrail bullets to `AGENTS.md` covering the `>10` subcase split threshold plus the `>5` second runtime split-or-justify rule, and added source-lock coverage in `tests/unit/test_compile_run_examples_docs_locks.cpp` so normal validation keeps those contributor thresholds visible.
+
+- [x] TODO-4012: Make VmDebugSession own argv storage
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: VM Runtime Hardening
+  - depends_on: none
+  - scope: Replace the non-owning `std::string_view` argv storage in `VmDebugSession` with owning storage so debug-trace, debug-json, and DAP sessions cannot retain dangling caller-backed argument text.
+  - acceptance:
+    - `VmDebugSession` stores argv text in owning storage, and any exposed or internal views point only into that owned storage for the lifetime of the session.
+    - Focused VM debug-session coverage proves `PrintArgv` and `PrintArgvUnsafe` continue to work through debug-trace, debug-json, or adapter-driven execution after session startup.
+    - Ownership comments and member naming in `include/primec/Vm.h` match the actual lifetime contract after the change.
+  - stop_rule: Stop once debug-session argv handling no longer depends on caller-owned string storage; broader VM CLI argument refactors belong in a separate leaf.
+  - notes: Start in `include/primec/Vm.h`, `src/VmDebugSessionSetup.cpp`, `src/VmIoHelpers.cpp`, and the debug entrypoints in `src/primevm_main.cpp` and `src/VmDebugAdapter.cpp`.
+  - finished_at: 2026-04-19
+  - evidence: Replaced the debug-session argv `string_view` copy with deep-owned string storage plus stable internal view rebuilding in `VmDebugSession`, renamed the header members to match that ownership contract, and added focused session and adapter regressions that mutate caller-side argv buffers after launch while `PrintArgv` and `PrintArgvUnsafe` still emit the original owned text.

@@ -386,49 +386,49 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::PrintI32: {
-      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, args_, error)) {
+      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, argvViews_, error)) {
         return finishFault();
       }
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::PrintI64: {
-      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, args_, error)) {
+      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, argvViews_, error)) {
         return finishFault();
       }
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::PrintU64: {
-      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, args_, error)) {
+      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, argvViews_, error)) {
         return finishFault();
       }
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::PrintString: {
-      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, args_, error)) {
+      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, argvViews_, error)) {
         return finishFault();
       }
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::PrintStringDynamic: {
-      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, args_, error)) {
+      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, argvViews_, error)) {
         return finishFault();
       }
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::PrintArgv: {
-      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, args_, error)) {
+      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, argvViews_, error)) {
         return finishFault();
       }
       ip += 1;
       return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::PrintArgvUnsafe: {
-      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, args_, error)) {
+      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, argvViews_, error)) {
         return finishFault();
       }
       ip += 1;

@@ -1,12 +1,17 @@
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <fcntl.h>
+#include <fstream>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include <unistd.h>
 
 #include "third_party/doctest.h"
 
@@ -19,6 +24,147 @@ TEST_SUITE_BEGIN("primestruct.vm.debug.session");
 namespace {
 std::filesystem::path vmDebugSessionPath(const std::string &relativePath) {
   return primec::testing::testScratchPath("vm_debug_session/" + relativePath);
+}
+
+class ScopedFdRedirect {
+public:
+  ScopedFdRedirect(int targetFd, const std::filesystem::path &capturePath) : targetFd_(targetFd) {
+    flushTarget();
+    savedFd_ = ::dup(targetFd_);
+    if (savedFd_ < 0) {
+      error_ = "failed to duplicate file descriptor";
+      return;
+    }
+    captureFd_ = ::open(capturePath.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    if (captureFd_ < 0) {
+      error_ = "failed to open capture path: " + capturePath.string();
+      return;
+    }
+    if (::dup2(captureFd_, targetFd_) < 0) {
+      error_ = "failed to redirect file descriptor";
+    }
+  }
+
+  ~ScopedFdRedirect() { restore(); }
+
+  bool ok() const { return error_.empty(); }
+  const std::string &error() const { return error_; }
+
+  void restore() {
+    if (restored_) {
+      return;
+    }
+    flushTarget();
+    if (savedFd_ >= 0) {
+      ::dup2(savedFd_, targetFd_);
+      ::close(savedFd_);
+      savedFd_ = -1;
+    }
+    if (captureFd_ >= 0) {
+      ::close(captureFd_);
+      captureFd_ = -1;
+    }
+    restored_ = true;
+  }
+
+private:
+  void flushTarget() const {
+    if (targetFd_ == STDOUT_FILENO) {
+      std::fflush(stdout);
+    } else if (targetFd_ == STDERR_FILENO) {
+      std::fflush(stderr);
+    }
+  }
+
+  int targetFd_ = -1;
+  int savedFd_ = -1;
+  int captureFd_ = -1;
+  bool restored_ = false;
+  std::string error_;
+};
+
+struct CapturedVmIo {
+  std::string stdoutText;
+  std::string stderrText;
+  std::string error;
+};
+
+std::string readCapturedText(const std::filesystem::path &path, std::string &error) {
+  std::ifstream input(path, std::ios::binary);
+  if (!input.good()) {
+    error = "failed to read capture path: " + path.string();
+    return {};
+  }
+  std::ostringstream buffer;
+  buffer << input.rdbuf();
+  if (!input.good() && !input.eof()) {
+    error = "failed to read capture path: " + path.string();
+    return {};
+  }
+  return buffer.str();
+}
+
+template <typename Fn>
+CapturedVmIo captureVmIo(std::string_view stem, Fn &&fn) {
+  CapturedVmIo captured;
+  const std::filesystem::path stdoutPath = vmDebugSessionPath(std::string(stem) + ".stdout.txt");
+  const std::filesystem::path stderrPath = vmDebugSessionPath(std::string(stem) + ".stderr.txt");
+  std::filesystem::create_directories(stdoutPath.parent_path());
+  std::filesystem::remove(stdoutPath);
+  std::filesystem::remove(stderrPath);
+
+  {
+    ScopedFdRedirect stdoutRedirect(STDOUT_FILENO, stdoutPath);
+    if (!stdoutRedirect.ok()) {
+      captured.error = stdoutRedirect.error();
+      return captured;
+    }
+    ScopedFdRedirect stderrRedirect(STDERR_FILENO, stderrPath);
+    if (!stderrRedirect.ok()) {
+      captured.error = stderrRedirect.error();
+      return captured;
+    }
+    std::forward<Fn>(fn)();
+  }
+
+  captured.stdoutText = readCapturedText(stdoutPath, captured.error);
+  if (!captured.error.empty()) {
+    return captured;
+  }
+  captured.stderrText = readCapturedText(stderrPath, captured.error);
+  return captured;
+}
+
+std::vector<std::string_view> stringViewsOf(const std::vector<std::string> &args) {
+  std::vector<std::string_view> views;
+  views.reserve(args.size());
+  for (const std::string &arg : args) {
+    views.emplace_back(arg);
+  }
+  return views;
+}
+
+void overwriteStringInPlace(std::string &target, std::string_view replacement) {
+  REQUIRE(target.size() == replacement.size());
+  for (size_t i = 0; i < replacement.size(); ++i) {
+    target[i] = replacement[i];
+  }
+}
+
+primec::IrModule makeArgvPrintModule() {
+  primec::IrModule module;
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PrintArgv, primec::PrintFlagNewline});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::PrintArgvUnsafe,
+                                 static_cast<uint64_t>(primec::PrintFlagStderr | primec::PrintFlagNewline)});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 7});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(std::move(mainFn));
+  module.entryIndex = 0;
+  return module;
 }
 } // namespace
 
@@ -523,6 +669,34 @@ TEST_CASE("vm debug fault diagnostics include mapped source stack traces") {
   CHECK(error.find("stack trace:") != std::string::npos);
   CHECK(error.find("#0 /helper ip 2 debug_id 203 at 92:7 [canonical_ast]") != std::string::npos);
   CHECK(error.find("#1 /main ip 0 debug_id 101 at 40:5 [canonical_ast]") != std::string::npos);
+}
+
+TEST_CASE("vm debug session owns argv text after startup") {
+  primec::IrModule module = makeArgvPrintModule();
+  std::vector<std::string> sourceArgs = {"alpha", "bravo"};
+  const std::vector<std::string_view> args = stringViewsOf(sourceArgs);
+
+  primec::VmDebugSession session;
+  std::string error;
+  REQUIRE(session.start(module, error, args));
+  CHECK(error.empty());
+
+  overwriteStringInPlace(sourceArgs[0], "omega");
+  overwriteStringInPlace(sourceArgs[1], "delta");
+
+  primec::VmDebugStopReason stopReason = primec::VmDebugStopReason::Step;
+  bool continued = false;
+  CapturedVmIo captured = captureVmIo("argv_session_ownership", [&] {
+    continued = session.continueExecution(stopReason, error);
+  });
+
+  REQUIRE(captured.error.empty());
+  REQUIRE(continued);
+  CHECK(error.empty());
+  CHECK(stopReason == primec::VmDebugStopReason::Exit);
+  CHECK(session.snapshot().result == 7);
+  CHECK(captured.stdoutText == "alpha\n");
+  CHECK(captured.stderrText == "bravo\n");
 }
 
 #include "test_vm_debug_session_protocol.h"

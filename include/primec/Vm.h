@@ -225,8 +225,11 @@ private:
 
   const IrModule *module_ = nullptr;
   uint64_t argCount_ = 0;
-  const std::vector<std::string_view> *args_ = nullptr;
-  std::vector<std::string_view> ownedArgs_;
+  // Debug sessions deep-copy argv text at startup; `argvViews_` stays null for
+  // count-only launches and otherwise points at `ownedArgViews_`.
+  const std::vector<std::string_view> *argvViews_ = nullptr;
+  std::vector<std::string> ownedArgStorage_;
+  std::vector<std::string_view> ownedArgViews_;
   std::vector<size_t> localCounts_;
   std::vector<uint64_t> stack_;
   std::vector<uint64_t> heapSlots_;

@@ -145,6 +145,35 @@ TEST_CASE("vm debug adapter emits deterministic protocol transcripts") {
   CHECK(second == first);
 }
 
+TEST_CASE("vm debug adapter launch keeps owned argv text alive") {
+  primec::IrModule module = makeArgvPrintModule();
+  std::vector<std::string> sourceArgs = {"alpha", "bravo"};
+  const std::vector<std::string_view> args = stringViewsOf(sourceArgs);
+
+  primec::VmDebugAdapter adapter;
+  std::string error;
+  REQUIRE(adapter.launch(module, error, args));
+  CHECK(error.empty());
+
+  overwriteStringInPlace(sourceArgs[0], "omega");
+  overwriteStringInPlace(sourceArgs[1], "delta");
+
+  primec::VmDebugAdapterStopEvent stopEvent;
+  bool continued = false;
+  CapturedVmIo captured = captureVmIo("argv_adapter_ownership", [&] {
+    continued = adapter.continueExecution(stopEvent, error);
+  });
+
+  REQUIRE(captured.error.empty());
+  REQUIRE(continued);
+  CHECK(error.empty());
+  CHECK(stopEvent.reason == primec::VmDebugStopReason::Exit);
+  CHECK(stopEvent.dapReason == "exited");
+  CHECK(adapter.snapshot().result == 7);
+  CHECK(captured.stdoutText == "alpha\n");
+  CHECK(captured.stderrText == "bravo\n");
+}
+
 TEST_CASE("vm debug adapter reports invalid debug protocol queries") {
   primec::IrModule module;
   primec::IrFunction mainFn;
