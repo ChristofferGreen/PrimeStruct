@@ -527,7 +527,7 @@ main() {
   CHECK(runCommand(runCmd) == 96);
 }
 
-TEST_CASE("runs vm with user string count call shadow" * doctest::skip(true)) {
+TEST_CASE("runs vm with user string count call shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {

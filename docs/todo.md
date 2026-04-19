@@ -56,32 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- none
+- TODO-1139
 
 ### Immediate Next 10 (After Ready Now)
 
-- none
+- TODO-1139
 
 ### Priority Lanes (Current)
 
-- none
+- VM canonical map reference indexing skip debt: TODO-1139
 
 ### Execution Queue (Recommended)
 
-1. none
+1. TODO-1139
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| No active queued coverage debt | none |
+| VM canonical map reference indexing skipped-test debt | TODO-1139 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| No active queued validation debt | none |
+| VM compile-run skipped-test debt | TODO-1139 |
 
 ### Task Blocks
 
-none
+- [ ] TODO-1139: Audit VM canonical map reference indexing skip debt
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Backend skip-debt cleanup
+  - scope: Re-enable or delete the skipped VM canonical map reference indexing coverage, and lock the current VM contract for `ref[1i32].count()` on canonical map references.
+  - acceptance:
+    - `tests/unit/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp` no longer carries the skipped VM canonical map reference indexing case in stale form.
+    - The VM test locks the actual current `ref[1i32].count()` contract on canonical map references, whether that stays as the current runtime result or a stable diagnostic.
+  - stop_rule: Stop after the VM canonical map reference indexing surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
