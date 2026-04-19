@@ -281,7 +281,7 @@ main() {
   CHECK(runCommand(runCmd) == 10);
 }
 
-TEST_CASE("vm keeps slash-method vector access primitive count diagnostics" * doctest::skip(true)) {
+TEST_CASE("vm keeps slash-method vector access primitive count diagnostics") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
