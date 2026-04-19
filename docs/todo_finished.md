@@ -3852,3 +3852,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - stop_rule: Stop once the core demo-script suite passes under focused release validation; if reproduction shows separate root causes across summary/quoting and skip/fail classification, split those into follow-up leaves instead of broadening this one further.
   - finished_at: 2026-04-19
   - evidence: Reordered `scripts/run_canonical_browser_sample.sh` so headless-smoke prerequisite skips happen before wasm compilation and asset staging, added source-lock plus stub-run coverage that pins the skip-before-compile contract, and updated the browser launcher compile-run test to distinguish intentional skip paths from the compile-and-run path.
+
+- [x] TODO-4013: Stabilize semantic memory benchmark release gate
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Test Audit Follow-up
+  - depends_on: none
+  - scope: Reproduce the failing `PrimeStruct_semantic_memory_benchmark` target seen in `./scripts/compile.sh --release`, then fix the benchmark, harness, or release-gate classification so the semantic-memory benchmark path is deterministic again.
+  - acceptance:
+    - A focused release rerun for `PrimeStruct_semantic_memory_benchmark` reproduces the current failure and then passes after the fix.
+    - The final behavior is explicit: the benchmark either passes as part of the normal release gate or is intentionally reclassified with deterministic gating semantics backed by test, harness, or CTest coverage.
+    - The full release gate no longer fails immediately because of this benchmark target.
+  - stop_rule: Stop once the semantic-memory benchmark target is green or intentionally reclassified with deterministic release-gate behavior; if reproduction shows separate benchmark-correctness and gate-policy problems, split policy follow-up from the benchmark fix instead of widening this leaf into broad semantic benchmark redesign.
+  - notes: The audit hit this failure before ordinary compile-run shards turned red, so this should be handled as a distinct release-gate stabilization task rather than being buried under unrelated compile-run failures.
+  - finished_at: 2026-04-19
+  - evidence: Reclassified `PrimeStruct_semantic_memory_benchmark` to collector-only release behavior by passing `--skip-budget-check-in-benchmark` in CMake, added benchmark-harness coverage for both the wrapper skip path and the CMake contract, and updated the benchmark policy/README notes so the dependent `PrimeStruct_semantic_memory_trend` target is the explicit sustained-gate owner in release builds.

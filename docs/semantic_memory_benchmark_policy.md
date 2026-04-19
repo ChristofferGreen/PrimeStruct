@@ -181,6 +181,13 @@ the generated report and discovered history. Use
 `--skip-budget-check-in-benchmark` only for local exploratory runs that
 intentionally bypass policy gating.
 
+The release CMake/CTest collector target intentionally uses that skip flag:
+
+- `PrimeStruct_semantic_memory_benchmark` records the fresh benchmark report,
+  artifact bundle, and history input for the current build.
+- `PrimeStruct_semantic_memory_trend` depends on that collector target and owns
+  the sustained policy gate for the normal release path.
+
 For phase-one target checks tied to the baseline-derived criteria, use:
 
 - `python3 scripts/check_semantic_memory_phase_one_success.py --criteria benchmarks/semantic_memory_phase_one_success_criteria.json --report build-release/benchmarks/semantic_memory_report.json --history-dir build-release/benchmarks/semantic_memory_history --history-limit 2`

@@ -57,7 +57,6 @@ Task template:
 ### Ready Now (No Unmet TODO Dependencies)
 
 - TODO-4015
-- TODO-4013
 - TODO-4012
 - TODO-4011
 - TODO-4010
@@ -75,7 +74,7 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Test audit follow-ups: TODO-4013, TODO-4015
+- Test audit follow-ups: TODO-4015
 - VM/runtime hardening: TODO-4012, TODO-4010, TODO-4009
 - Emitter collection-helper parity: TODO-4011
 - Semantic ownership cutover: TODO-4002, TODO-4004, TODO-4008
@@ -84,19 +83,18 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4013
-2. TODO-4015
-3. TODO-4012
-4. TODO-4011
-5. TODO-4010
-6. TODO-4009
-7. TODO-4006
-8. TODO-4007
-9. TODO-4003
-10. TODO-4002
-11. TODO-4004
-12. TODO-4005
-13. TODO-4008
+1. TODO-4015
+2. TODO-4012
+3. TODO-4011
+4. TODO-4010
+5. TODO-4009
+6. TODO-4006
+7. TODO-4007
+8. TODO-4003
+9. TODO-4002
+10. TODO-4004
+11. TODO-4005
+12. TODO-4008
 
 ### PrimeStruct Coverage Snapshot
 
@@ -111,7 +109,7 @@ Task template:
 | VM debug-session argv ownership | TODO-4012 |
 | Debug trace replay robustness | TODO-4010 |
 | VM/runtime debug numeric opcode parity | TODO-4009 |
-| Test-suite audit follow-up and release-gate stability | TODO-4013, TODO-4015 |
+| Test-suite audit follow-up and release-gate stability | TODO-4015 |
 
 ### Validation Coverage Snapshot
 
@@ -125,7 +123,7 @@ Task template:
 | VM debug-session argv lifetime coverage | TODO-4012 |
 | Debug trace replay malformed-input coverage | TODO-4010 |
 | Shared VM/debug numeric opcode behavior | TODO-4009 |
-| Release benchmark/example suite stability and doctest governance | TODO-4013, TODO-4015 |
+| Release benchmark/example suite stability and doctest governance | TODO-4015 |
 
 ### Task Blocks
 
@@ -141,19 +139,6 @@ Task template:
     - One repository-side check, source-lock, or architecture assertion keeps the documented thresholds visible in normal contributor validation instead of relying only on tribal memory.
   - stop_rule: Stop once the doctest split and optimization thresholds are both documented and anchored in normal contributor validation; do not widen this leaf into a broad test-style linter.
   - notes: The audit already confirmed release-first and parallel-test guidance are present, so this leaf should stay scoped to the missing size/runtime guardrails and their validation hook.
-
-- [ ] TODO-4013: Stabilize semantic memory benchmark release gate
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Test Audit Follow-up
-  - depends_on: none
-  - scope: Reproduce the failing `PrimeStruct_semantic_memory_benchmark` target seen in `./scripts/compile.sh --release`, then fix the benchmark, harness, or release-gate classification so the semantic-memory benchmark path is deterministic again.
-  - acceptance:
-    - A focused release rerun for `PrimeStruct_semantic_memory_benchmark` reproduces the current failure and then passes after the fix.
-    - The final behavior is explicit: the benchmark either passes as part of the normal release gate or is intentionally reclassified with deterministic gating semantics backed by test, harness, or CTest coverage.
-    - The full release gate no longer fails immediately because of this benchmark target.
-  - stop_rule: Stop once the semantic-memory benchmark target is green or intentionally reclassified with deterministic release-gate behavior; if reproduction shows separate benchmark-correctness and gate-policy problems, split policy follow-up from the benchmark fix instead of widening this leaf into broad semantic benchmark redesign.
-  - notes: The audit hit this failure before ordinary compile-run shards turned red, so this should be handled as a distinct release-gate stabilization task rather than being buried under unrelated compile-run failures.
 
 - [ ] TODO-4012: Make VmDebugSession own argv storage
   - owner: ai

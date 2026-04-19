@@ -218,7 +218,9 @@ CTest/CMake gates:
 
 - `PrimeStruct_semantic_memory_trend` (depends on `PrimeStruct_semantic_memory_benchmark`)
 - `cmake --build build-release --target primestruct_semantic_memory_trend_check`
-- `PrimeStruct_semantic_memory_benchmark` and `PrimeStruct_semantic_memory_trend` both run through `scripts/semantic_memory_ci_artifacts.py`, so machine-readable report bundles are available in `build-release/benchmarks/semantic_memory_artifacts/` even when one step fails.
+- `PrimeStruct_semantic_memory_benchmark` runs the wrapper in collector-only mode (`--skip-budget-check-in-benchmark`) so the release path always captures a fresh report/history/artifact bundle before policy evaluation.
+- `PrimeStruct_semantic_memory_trend` runs the sustained budget gate against that collected report/history set, so release-gate failures are attributed to the policy step instead of the collector step.
+- Both targets still run through `scripts/semantic_memory_ci_artifacts.py`, so machine-readable report bundles are available in `build-release/benchmarks/semantic_memory_artifacts/` even when one step fails.
 
 ## Type-Graph Budget Gates
 

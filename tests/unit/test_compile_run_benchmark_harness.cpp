@@ -270,6 +270,23 @@ TEST_CASE("semantic memory ctest targets keep dependency ordering and serializat
           "  or bool(row.get('exceeds_expensive_rss_threshold'))\n"
           "  for row in offenders\n"
           ")\n"
+          "benchmark_target_contract_guard = re.search(\n"
+          "  r'add_custom_target\\(\\s*primestruct_semantic_memory_benchmark\\s*'\n"
+          "  r'COMMAND .*?--mode benchmark\\s*.*?--skip-budget-check-in-benchmark\\s*'\n"
+          "  r'.*?--trend-report \\$\\{CMAKE_BINARY_DIR\\}/benchmarks/semantic_memory_trend_report\\.json\\s*'\n"
+          "  r'.*?COMMENT \"Running semantic memory benchmark artifact collection\"\\s*'\n"
+          "  r'VERBATIM\\s*\\)',\n"
+          "  cmake_text,\n"
+          "  re.S,\n"
+          ") is not None\n"
+          "benchmark_test_contract_guard = re.search(\n"
+          "  r'add_test\\(\\s*NAME PrimeStruct_semantic_memory_benchmark\\s*'\n"
+          "  r'COMMAND .*?--mode benchmark\\s*.*?--skip-budget-check-in-benchmark\\s*'\n"
+          "  r'.*?--trend-report \\$\\{CMAKE_BINARY_DIR\\}/benchmarks/semantic_memory_trend_report\\.json\\s*'\n"
+          "  r'.*?--artifacts-dir \\$\\{CMAKE_BINARY_DIR\\}/benchmarks/semantic_memory_artifacts\\s*\\)',\n"
+          "  cmake_text,\n"
+          "  re.S,\n"
+          ") is not None\n"
           "benchmark_timeout_guard = re.search(\n"
           "  r'set_tests_properties\\(\\s*PrimeStruct_semantic_memory_benchmark\\s*'\n"
           "  r'PROPERTIES\\s*RUN_SERIAL TRUE\\s*TIMEOUT 1800\\s*\\)',\n"
@@ -289,12 +306,14 @@ TEST_CASE("semantic memory ctest targets keep dependency ordering and serializat
           "  cmake_text,\n"
           "  re.S,\n"
           ") is not None\n"
-          "ok = has_thresholds and has_offenders and offender_exceeds and benchmark_timeout_guard and parity_timeout_guard and trend_timeout_guard\n"
+          "ok = has_thresholds and has_offenders and offender_exceeds and benchmark_target_contract_guard and benchmark_test_contract_guard and benchmark_timeout_guard and parity_timeout_guard and trend_timeout_guard\n"
           "if not ok:\n"
           "  print(json.dumps({\n"
           "    'thresholds': thresholds,\n"
           "    'offender_count': len(offenders) if isinstance(offenders, list) else -1,\n"
           "    'offender_exceeds': offender_exceeds,\n"
+          "    'benchmark_target_contract_guard': benchmark_target_contract_guard,\n"
+          "    'benchmark_test_contract_guard': benchmark_test_contract_guard,\n"
           "    'benchmark_timeout_guard': benchmark_timeout_guard,\n"
           "    'parity_timeout_guard': parity_timeout_guard,\n"
           "    'trend_timeout_guard': trend_timeout_guard,\n"
@@ -3295,6 +3314,94 @@ TEST_CASE("semantic memory ci artifact wrapper benchmark mode runs budget gate")
     }
     const std::string filename = entry.path().filename().string();
     if (filename.rfind("semantic_memory_report_test_benchmark_mode_", 0) == 0 &&
+        entry.path().extension() == ".json") {
+      sawHistory = true;
+      break;
+    }
+  }
+  CHECK(sawHistory);
+}
+
+TEST_CASE("semantic memory ci artifact wrapper benchmark mode can skip budget gate") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path wrapperPath = repoRoot / "scripts" / "semantic_memory_ci_artifacts.py";
+  const std::filesystem::path rootScratch =
+      testScratchDir("semantic_memory_ci_artifacts_benchmark_mode_skip_budget");
+  const std::filesystem::path reportPath = rootScratch / "semantic_memory_report.json";
+  const std::filesystem::path budgetPath = rootScratch / "semantic_memory_budget_report.json";
+  const std::filesystem::path trendPath = rootScratch / "semantic_memory_trend_report.json";
+  const std::filesystem::path historyDir = rootScratch / "history";
+  const std::filesystem::path artifactsDir = rootScratch / "artifacts";
+  const std::filesystem::path trendTouchedPath = rootScratch / "trend_touched.txt";
+
+  const std::string benchScript = writeTemp(
+      "semantic_memory_ci_artifacts_benchmark_mode_skip_budget_bench.py",
+      "import json, pathlib, sys\n"
+      "path = pathlib.Path(sys.argv[1])\n"
+      "path.parent.mkdir(parents=True, exist_ok=True)\n"
+      "payload = {\n"
+      "  'schema': 'primestruct_semantic_memory_report_v1',\n"
+      "  'results': [{'fixture': 'toy', 'phase': 'ast-semantic', 'worst_peak_rss_bytes': 1, 'worst_wall_seconds': 0.1}],\n"
+      "}\n"
+      "path.write_text(json.dumps(payload) + '\\n', encoding='utf-8')\n");
+  const std::string trendScript = writeTemp(
+      "semantic_memory_ci_artifacts_benchmark_mode_skip_budget_trend.py",
+      "import pathlib, sys\n"
+      "path = pathlib.Path(sys.argv[1])\n"
+      "path.parent.mkdir(parents=True, exist_ok=True)\n"
+      "path.write_text('trend should not run\\n', encoding='utf-8')\n"
+      "sys.exit(4)\n");
+
+  const std::string benchmarkCmdOverride =
+      "python3 " + quoteShellArg(benchScript) + " " + quoteShellArg(reportPath.string());
+  const std::string trendCmdOverride =
+      "python3 " + quoteShellArg(trendScript) + " " + quoteShellArg(trendTouchedPath.string());
+
+  const std::string stdoutPath =
+      writeTemp("semantic_memory_ci_artifacts_benchmark_mode_skip_budget.out", "");
+  const std::string stderrPath =
+      writeTemp("semantic_memory_ci_artifacts_benchmark_mode_skip_budget.err", "");
+  const std::string cmd =
+      "python3 " + quoteShellArg(wrapperPath.string()) +
+      " --mode benchmark --skip-budget-check-in-benchmark"
+      " --run-label test_benchmark_mode_skip_budget --repo-root " + quoteShellArg(repoRoot.string()) +
+      " --benchmark-report " + quoteShellArg(reportPath.string()) +
+      " --budget-report " + quoteShellArg(budgetPath.string()) +
+      " --trend-report " + quoteShellArg(trendPath.string()) +
+      " --history-dir " + quoteShellArg(historyDir.string()) +
+      " --artifacts-dir " + quoteShellArg(artifactsDir.string()) +
+      " --benchmark-cmd " + quoteShellArg(benchmarkCmdOverride) +
+      " --trend-cmd " + quoteShellArg(trendCmdOverride) +
+      " > " + quoteShellArg(stdoutPath) + " 2> " + quoteShellArg(stderrPath);
+
+  CHECK(runCommand(cmd) == 0);
+  CHECK(readFile(stderrPath).empty());
+  CHECK_FALSE(std::filesystem::exists(trendTouchedPath));
+
+  const std::filesystem::path latestManifest =
+      artifactsDir / "test_benchmark_mode_skip_budget_latest_manifest.json";
+  REQUIRE(std::filesystem::exists(latestManifest));
+  const std::string manifest = readFile(latestManifest.string());
+  CHECK(manifest.find("\"mode\": \"benchmark\"") != std::string::npos);
+  CHECK(manifest.find("\"status\": \"passed\"") != std::string::npos);
+  CHECK(manifest.find("\"benchmark_exit_code\": 0") != std::string::npos);
+  CHECK(manifest.find("\"trend_exit_code\": null") != std::string::npos);
+  CHECK(manifest.find("\"trend_skipped\": false") != std::string::npos);
+  CHECK(manifest.find("\"budget_report\": null") != std::string::npos);
+  CHECK(manifest.find("\"trend_report\": null") != std::string::npos);
+
+  bool sawHistory = false;
+  for (const auto &entry : std::filesystem::directory_iterator(historyDir)) {
+    if (!entry.is_regular_file()) {
+      continue;
+    }
+    const std::string filename = entry.path().filename().string();
+    if (filename.rfind("semantic_memory_report_test_benchmark_mode_skip_budget_", 0) == 0 &&
         entry.path().extension() == ".json") {
       sawHistory = true;
       break;
