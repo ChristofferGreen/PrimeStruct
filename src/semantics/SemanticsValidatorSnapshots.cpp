@@ -9,6 +9,22 @@
 namespace primec::semantics {
 namespace {
 
+bool isSemanticCollectorEnabled(const SemanticProductBuildConfig *buildConfig,
+                                std::string_view collectorFamily) {
+  if (buildConfig == nullptr) {
+    return true;
+  }
+  if (buildConfig->disableAllCollectors) {
+    return false;
+  }
+  if (!buildConfig->collectorAllowlistSpecified) {
+    return true;
+  }
+  return std::find(buildConfig->collectorAllowlist.begin(),
+                   buildConfig->collectorAllowlist.end(),
+                   collectorFamily) != buildConfig->collectorAllowlist.end();
+}
+
 bool isBridgeHelperName(std::string_view collectionFamily, std::string_view helperName) {
   if (collectionFamily == "vector") {
     return helperName == "count" || helperName == "capacity" || helperName == "at" ||
@@ -690,6 +706,62 @@ std::vector<SemanticsValidator::CollectedCallableSummaryEntry>
 SemanticsValidator::takeCollectedCallableSummariesForSemanticProduct() {
   collectPilotRoutingSemanticProductFacts();
   return std::exchange(collectedCallableSummaries_, {});
+}
+
+SemanticsValidator::SemanticPublicationSurface
+SemanticsValidator::takeSemanticPublicationSurfaceForSemanticProduct(
+    const SemanticProductBuildConfig *buildConfig) {
+  SemanticPublicationSurface surface;
+
+  const bool needsRoutingSurface =
+      isSemanticCollectorEnabled(buildConfig, "direct_call_targets") ||
+      isSemanticCollectorEnabled(buildConfig, "method_call_targets") ||
+      isSemanticCollectorEnabled(buildConfig, "bridge_path_choices") ||
+      isSemanticCollectorEnabled(buildConfig, "callable_summaries");
+  if (needsRoutingSurface) {
+    collectPilotRoutingSemanticProductFacts();
+    if (isSemanticCollectorEnabled(buildConfig, "direct_call_targets")) {
+      surface.directCallTargets = std::exchange(collectedDirectCallTargets_, {});
+    }
+    if (isSemanticCollectorEnabled(buildConfig, "method_call_targets")) {
+      surface.methodCallTargets = std::exchange(collectedMethodCallTargets_, {});
+    }
+    if (isSemanticCollectorEnabled(buildConfig, "bridge_path_choices")) {
+      surface.bridgePathChoices = std::exchange(collectedBridgePathChoices_, {});
+    }
+    if (isSemanticCollectorEnabled(buildConfig, "callable_summaries")) {
+      surface.callableSummaries = std::exchange(collectedCallableSummaries_, {});
+    }
+    invalidatePilotRoutingSemanticCollectors();
+  }
+
+  if (isSemanticCollectorEnabled(buildConfig, "type_metadata")) {
+    surface.typeMetadata = typeMetadataSnapshotForSemanticProduct();
+  }
+  if (isSemanticCollectorEnabled(buildConfig, "struct_field_metadata")) {
+    surface.structFieldMetadata = structFieldMetadataSnapshotForSemanticProduct();
+  }
+  if (isSemanticCollectorEnabled(buildConfig, "binding_facts")) {
+    surface.bindingFacts = bindingFactSnapshotForSemanticProduct();
+  }
+  if (isSemanticCollectorEnabled(buildConfig, "return_facts")) {
+    surface.returnFacts = returnFactSnapshotForSemanticProduct();
+  }
+  if (isSemanticCollectorEnabled(buildConfig, "local_auto_facts")) {
+    surface.localAutoFacts = localAutoFactSnapshotForSemanticProduct();
+  }
+  if (isSemanticCollectorEnabled(buildConfig, "query_facts")) {
+    surface.queryFacts = queryFactSnapshotForSemanticProduct();
+  }
+  if (isSemanticCollectorEnabled(buildConfig, "try_facts")) {
+    surface.tryFacts = tryFactSnapshotForSemanticProduct();
+  }
+  if (isSemanticCollectorEnabled(buildConfig, "on_error_facts")) {
+    surface.onErrorFacts = onErrorFactSnapshotForSemanticProduct();
+  }
+
+  releaseTransientSnapshotCaches();
+  return surface;
 }
 
 void SemanticsValidator::ensureOnErrorSnapshotFactCache() const {

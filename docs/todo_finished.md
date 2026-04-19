@@ -3942,3 +3942,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Start in `src/VmExecutionNumeric.cpp`, `src/VmDebugSessionInstructionNumeric.cpp`, and the numeric dispatch call sites in `src/VmExecution.cpp` and `src/VmDebugSessionInstruction.cpp`.
   - finished_at: 2026-04-19
   - evidence: Added `src/VmNumericOpcodeShared.cpp` plus `src/VmNumericOpcodeShared.h` so arithmetic/comparison/conversion opcode semantics now live in one shared evaluator, rewired both execution-side numeric wrappers to delegate into that helper, added VM-versus-debug parity coverage for arithmetic/comparison/conversion/fault cases, and added a source-lock test that pins the shared-helper delegation contract.
+
+- [x] TODO-4002: Introduce unified semantic publication surface
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Semantic Product Publication
+  - depends_on: none
+  - scope: Replace ad hoc `takeCollected*ForSemanticProduct()` sweeps with one authoritative semantic-publication surface produced during validation and transferred into `SemanticProgram` for routing, callable-summary, binding/result, and graph-backed inference fact families.
+  - acceptance:
+    - `buildSemanticProgram(...)` consumes one structured publication surface rather than a mix of independent collector pulls for routing, callable-summary, binding/result, local-auto, query, `try(...)`, and `on_error` fact families.
+    - Deterministic semantic-product ordering and lookup behavior remain locked by focused dump and adapter coverage.
+    - Redundant production traversals across fact families are removed for the unified publication path.
+  - stop_rule: Stop once semantic-product publication has one authoritative production input surface for the covered fact families and duplicate fact-family sweeps are removed from that path; if routing/callable-summary publication and graph-backed inference publication do not fit one change, split those clusters before code changes instead of widening the leaf.
+  - notes: Primary implementation seams are `src/semantics/SemanticsValidate.cpp`, `src/semantics/SemanticsValidator.h`, and `src/semantics/SemanticsValidatorSnapshots.cpp`; retire the `takeCollected*ForSemanticProduct()` sweep pattern for the covered families rather than widening into later builder-layout cleanup.
+  - finished_at: 2026-04-19
+  - evidence: Added `SemanticsValidator::SemanticPublicationSurface` plus `takeSemanticPublicationSurfaceForSemanticProduct(...)`, rewired `buildSemanticProgram(...)` to consume that one production handoff for routing, callable-summary, metadata, binding/return, local-auto, query, `try(...)`, and `on_error` publication, and updated the graph-context source-lock coverage to pin the unified publication seam without regressing the remaining test-only snapshot helpers.

@@ -247,6 +247,21 @@ public:
     uint64_t semanticNodeId = 0;
   };
 
+  struct SemanticPublicationSurface {
+    std::vector<CollectedDirectCallTargetEntry> directCallTargets;
+    std::vector<CollectedMethodCallTargetEntry> methodCallTargets;
+    std::vector<CollectedBridgePathChoiceEntry> bridgePathChoices;
+    std::vector<CollectedCallableSummaryEntry> callableSummaries;
+    std::vector<TypeMetadataSnapshotEntry> typeMetadata;
+    std::vector<StructFieldMetadataSnapshotEntry> structFieldMetadata;
+    std::vector<BindingFactSnapshotEntry> bindingFacts;
+    std::vector<ReturnFactSnapshotEntry> returnFacts;
+    std::vector<LocalAutoBindingSnapshotEntry> localAutoFacts;
+    std::vector<QueryFactSnapshotEntry> queryFacts;
+    std::vector<TryValueSnapshotEntry> tryFacts;
+    std::vector<OnErrorSnapshotEntry> onErrorFacts;
+  };
+
   struct ValidationCounters {
     uint64_t callsVisited = 0;
     uint64_t peakLocalMapSize = 0;
@@ -275,6 +290,8 @@ public:
   std::vector<CollectedMethodCallTargetEntry> takeCollectedMethodCallTargetsForSemanticProduct();
   std::vector<CollectedBridgePathChoiceEntry> takeCollectedBridgePathChoicesForSemanticProduct();
   std::vector<CollectedCallableSummaryEntry> takeCollectedCallableSummariesForSemanticProduct();
+  SemanticPublicationSurface takeSemanticPublicationSurfaceForSemanticProduct(
+      const SemanticProductBuildConfig *buildConfig = nullptr);
   void invalidatePilotRoutingSemanticCollectors();
   std::vector<TypeMetadataSnapshotEntry> typeMetadataSnapshotForSemanticProduct() const;
   std::vector<StructFieldMetadataSnapshotEntry> structFieldMetadataSnapshotForSemanticProduct();

@@ -56,38 +56,36 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4002
-
-### Immediate Next 10 (After Ready Now)
-
 - TODO-4006
 - TODO-4007
 - TODO-4003
 - TODO-4004
 - TODO-4005
+
+### Immediate Next 10 (After Ready Now)
+
 - TODO-4008
 
 ### Priority Lanes (Current)
 
-- Semantic ownership cutover: TODO-4002, TODO-4004, TODO-4008
+- Semantic ownership cutover: TODO-4004, TODO-4008
 - Validator/publication simplification: TODO-4003, TODO-4005
 - Build and validation ergonomics: TODO-4006, TODO-4007
 
 ### Execution Queue (Recommended)
 
-1. TODO-4002
-2. TODO-4006
-3. TODO-4007
-4. TODO-4003
-5. TODO-4004
-6. TODO-4005
-7. TODO-4008
+1. TODO-4006
+2. TODO-4007
+3. TODO-4003
+4. TODO-4004
+5. TODO-4005
+6. TODO-4008
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4002, TODO-4004, TODO-4008 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4004, TODO-4008 |
 | Validator entrypoint and benchmark-plumbing split | TODO-4003 |
 | Semantic-product publication by module and fact family | TODO-4005 |
 | IR lowerer compile-unit breakup | TODO-4006 |
@@ -103,7 +101,7 @@ Task template:
 | Validation area | Primary TODO IDs |
 | --- | --- |
 | Semantic-product-authority conformance | TODO-4004, TODO-4008 |
-| Semantic-product publication parity and deterministic ordering | TODO-4002, TODO-4005 |
+| Semantic-product publication parity and deterministic ordering | TODO-4005 |
 | Lowerer/source-composition contract coverage | TODO-4006 |
 | Focused backend rerun ergonomics and suite partitioning | TODO-4007 |
 | Emitter map-helper canonicalization parity | none |
@@ -118,7 +116,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-19
   - phase: Architecture Stabilization
-  - depends_on: TODO-4002, TODO-4004, TODO-4005
+  - depends_on: TODO-4004, TODO-4005
   - scope: Delete one production-path temporary semantic-product adapter slice and its AST-dependent lowerer re-derivations for a fact family already made authoritative by TODO-4004 and TODO-4005, then refresh the open architecture queue so any remaining adapter-retirement slices are called out explicitly instead of hiding behind this leaf.
   - acceptance:
     - One concrete covered adapter/fact-family slice is deleted or explicitly limited to non-production-only fixtures.
@@ -157,7 +155,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-19
   - phase: Semantic Product Publication
-  - depends_on: TODO-4002
+  - depends_on: none
   - scope: Reorganize semantic-product publication around definition/module-scoped builders so fact publication, lookup indexing, and transient-cache release happen in smaller ownership-bounded stages.
   - acceptance:
     - Publication code is split into dedicated builder units by fact family or module scope instead of one broad `buildSemanticProgram(...)` sweep.
@@ -170,7 +168,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-19
   - phase: Semantic Ownership Cutover
-  - depends_on: TODO-4002
+  - depends_on: none
   - scope: Make production lowering fail closed when required semantic-product facts are missing instead of consulting validator-owned or AST-rederived semantic metadata.
   - acceptance:
     - Focused lowerer and `prepareIrModule` coverage proves the covered direct-call, method-call, local-auto, query, `try(...)`, and `on_error` families fail when published semantic-product facts are missing.
@@ -191,16 +189,3 @@ Task template:
     - Compile-pipeline and benchmark harness coverage both pass after the split.
   - stop_rule: Stop once benchmark-only behavior is isolated from the normal production validation flow at the API/call-plumbing boundary; do not expand this leaf into unrelated validator-internal cleanup.
   - notes: Start with `include/primec/Semantics.h`, `src/CompilePipeline.cpp`, and the benchmark harness callers; if the API split is easy but observer plumbing is not, keep the API split in this leaf and create a follow-up for deeper benchmark internals.
-
-- [ ] TODO-4002: Introduce unified semantic publication surface
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Semantic Product Publication
-  - depends_on: none
-  - scope: Replace ad hoc `takeCollected*ForSemanticProduct()` sweeps with one authoritative semantic-publication surface produced during validation and transferred into `SemanticProgram` for routing, callable-summary, binding/result, and graph-backed inference fact families.
-  - acceptance:
-    - `buildSemanticProgram(...)` consumes one structured publication surface rather than a mix of independent collector pulls for routing, callable-summary, binding/result, local-auto, query, `try(...)`, and `on_error` fact families.
-    - Deterministic semantic-product ordering and lookup behavior remain locked by focused dump and adapter coverage.
-    - Redundant production traversals across fact families are removed for the unified publication path.
-  - stop_rule: Stop once semantic-product publication has one authoritative production input surface for the covered fact families and duplicate fact-family sweeps are removed from that path; if routing/callable-summary publication and graph-backed inference publication do not fit one change, split those clusters before code changes instead of widening the leaf.
-  - notes: Primary implementation seams are `src/semantics/SemanticsValidate.cpp`, `src/semantics/SemanticsValidator.h`, and `src/semantics/SemanticsValidatorSnapshots.cpp`; retire the `takeCollected*ForSemanticProduct()` sweep pattern for the covered families rather than widening into later builder-layout cleanup.

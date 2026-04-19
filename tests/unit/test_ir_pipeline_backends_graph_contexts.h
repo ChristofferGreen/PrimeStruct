@@ -1545,20 +1545,44 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticsValidate.find("SemanticProgram buildSemanticProgram(const Program &program,") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("validator.takeCollectedDirectCallTargetsForSemanticProduct()") != std::string::npos);
-  CHECK(semanticsValidate.find("validator.takeCollectedMethodCallTargetsForSemanticProduct()") != std::string::npos);
-  CHECK(semanticsValidate.find("validator.takeCollectedBridgePathChoicesForSemanticProduct()") != std::string::npos);
-  CHECK(semanticsValidate.find("directCallTargetSnapshotsForBridgeDerivation") == std::string::npos);
-  CHECK(semanticsValidate.find("validator.takeCollectedCallableSummariesForSemanticProduct()") != std::string::npos);
-  CHECK(semanticsValidate.find("validator.typeMetadataSnapshotForSemanticProduct()") != std::string::npos);
-  CHECK(semanticsValidate.find("validator.structFieldMetadataSnapshotForSemanticProduct()") !=
+  const std::size_t buildSemanticProgramStart =
+      semanticsValidate.find("SemanticProgram buildSemanticProgram(const Program &program,");
+  const std::size_t semanticProgramFactCountStart =
+      semanticsValidate.find("uint64_t semanticProgramFactCount(const SemanticProgram &semanticProgram) {");
+  REQUIRE(buildSemanticProgramStart != std::string::npos);
+  REQUIRE(semanticProgramFactCountStart != std::string::npos);
+  REQUIRE(buildSemanticProgramStart < semanticProgramFactCountStart);
+  const std::string buildSemanticProgramBody = semanticsValidate.substr(
+      buildSemanticProgramStart, semanticProgramFactCountStart - buildSemanticProgramStart);
+
+  CHECK(buildSemanticProgramBody.find("auto publicationSurface =") != std::string::npos);
+  CHECK(buildSemanticProgramBody.find("validator.takeSemanticPublicationSurfaceForSemanticProduct(buildConfig)") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("validator.bindingFactSnapshotForSemanticProduct()") != std::string::npos);
-  CHECK(semanticsValidate.find("validator.returnFactSnapshotForSemanticProduct()") != std::string::npos);
-  CHECK(semanticsValidate.find("validator.localAutoFactSnapshotForSemanticProduct()") != std::string::npos);
-  CHECK(semanticsValidate.find("validator.queryFactSnapshotForSemanticProduct()") != std::string::npos);
-  CHECK(semanticsValidate.find("validator.tryFactSnapshotForSemanticProduct()") != std::string::npos);
-  CHECK(semanticsValidate.find("validator.onErrorFactSnapshotForSemanticProduct()") != std::string::npos);
+  CHECK(buildSemanticProgramBody.find("validator.takeCollectedDirectCallTargetsForSemanticProduct()") ==
+        std::string::npos);
+  CHECK(buildSemanticProgramBody.find("validator.takeCollectedMethodCallTargetsForSemanticProduct()") ==
+        std::string::npos);
+  CHECK(buildSemanticProgramBody.find("validator.takeCollectedBridgePathChoicesForSemanticProduct()") ==
+        std::string::npos);
+  CHECK(buildSemanticProgramBody.find("directCallTargetSnapshotsForBridgeDerivation") == std::string::npos);
+  CHECK(buildSemanticProgramBody.find("validator.takeCollectedCallableSummariesForSemanticProduct()") ==
+        std::string::npos);
+  CHECK(buildSemanticProgramBody.find("validator.typeMetadataSnapshotForSemanticProduct()") ==
+        std::string::npos);
+  CHECK(buildSemanticProgramBody.find("validator.structFieldMetadataSnapshotForSemanticProduct()") ==
+        std::string::npos);
+  CHECK(buildSemanticProgramBody.find("validator.bindingFactSnapshotForSemanticProduct()") ==
+        std::string::npos);
+  CHECK(buildSemanticProgramBody.find("validator.returnFactSnapshotForSemanticProduct()") ==
+        std::string::npos);
+  CHECK(buildSemanticProgramBody.find("validator.localAutoFactSnapshotForSemanticProduct()") ==
+        std::string::npos);
+  CHECK(buildSemanticProgramBody.find("validator.queryFactSnapshotForSemanticProduct()") ==
+        std::string::npos);
+  CHECK(buildSemanticProgramBody.find("validator.tryFactSnapshotForSemanticProduct()") ==
+        std::string::npos);
+  CHECK(buildSemanticProgramBody.find("validator.onErrorFactSnapshotForSemanticProduct()") ==
+        std::string::npos);
   CHECK(semanticsValidate.find("*semanticProgramOut = buildSemanticProgram(program, entryPath);") ==
         std::string::npos);
   CHECK(semanticsValidate.find("*semanticProgramOut = buildSemanticProgram(program, entryPath, validator, semanticProductBuildConfig);") !=
@@ -1719,6 +1743,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticsSnapshots.find("forEachResolvedNonMethodCallSnapshot(") != std::string::npos);
   CHECK(semanticsSnapshots.find("collectPilotRoutingSemanticProductFacts()") !=
         std::string::npos);
+  CHECK(semanticsSnapshots.find("takeSemanticPublicationSurfaceForSemanticProduct(") !=
+        std::string::npos);
   CHECK(semanticsSnapshots.find("takeCollectedBridgePathChoicesForSemanticProduct()") !=
         std::string::npos);
   CHECK(semanticsSnapshots.find("forEachResolvedNonMethodCallSnapshot(") <
@@ -1849,6 +1875,8 @@ TEST_CASE("semantic snapshot shared traversal keeps direct and bridge ordering k
 
   const std::size_t collectStart =
       semanticsSnapshots.find("SemanticsValidator::collectPilotRoutingSemanticProductFacts() {");
+  const std::size_t takeSurfaceStart =
+      semanticsSnapshots.find("SemanticsValidator::takeSemanticPublicationSurfaceForSemanticProduct(");
   const std::size_t directTakeStart =
       semanticsSnapshots.find("SemanticsValidator::takeCollectedDirectCallTargetsForSemanticProduct() {");
   const std::size_t bridgeTakeStart =
@@ -1856,13 +1884,15 @@ TEST_CASE("semantic snapshot shared traversal keeps direct and bridge ordering k
   const std::size_t callableTakeStart =
       semanticsSnapshots.find("SemanticsValidator::takeCollectedCallableSummariesForSemanticProduct() {");
   REQUIRE(collectStart != std::string::npos);
+  REQUIRE(takeSurfaceStart != std::string::npos);
   REQUIRE(directTakeStart != std::string::npos);
   REQUIRE(bridgeTakeStart != std::string::npos);
   REQUIRE(callableTakeStart != std::string::npos);
-  REQUIRE(collectStart < directTakeStart);
+  REQUIRE(collectStart < takeSurfaceStart);
+  REQUIRE(takeSurfaceStart < directTakeStart);
   REQUIRE(bridgeTakeStart < callableTakeStart);
 
-  const std::string collectBody = semanticsSnapshots.substr(collectStart, directTakeStart - collectStart);
+  const std::string collectBody = semanticsSnapshots.substr(collectStart, takeSurfaceStart - collectStart);
   CHECK(collectBody.find("forEachResolvedNonMethodCallSnapshot(") != std::string::npos);
   CHECK(collectBody.find("collectedDirectCallTargets_.push_back(") != std::string::npos);
   CHECK(collectBody.find("collectedBridgePathChoices_.push_back(") != std::string::npos);
@@ -1876,6 +1906,32 @@ TEST_CASE("semantic snapshot shared traversal keeps direct and bridge ordering k
   CHECK(collectBody.find("if (left.helperName != right.helperName)") != std::string::npos);
   CHECK(collectBody.find("return left.resolvedPath < right.resolvedPath;") != std::string::npos);
   CHECK(collectBody.find("return left.chosenPath < right.chosenPath;") != std::string::npos);
+
+  const std::string takeSurfaceBody =
+      semanticsSnapshots.substr(takeSurfaceStart, directTakeStart - takeSurfaceStart);
+  CHECK(takeSurfaceBody.find("collectPilotRoutingSemanticProductFacts();") != std::string::npos);
+  CHECK(takeSurfaceBody.find("surface.directCallTargets = std::exchange(collectedDirectCallTargets_, {});") !=
+        std::string::npos);
+  CHECK(takeSurfaceBody.find("surface.methodCallTargets = std::exchange(collectedMethodCallTargets_, {});") !=
+        std::string::npos);
+  CHECK(takeSurfaceBody.find("surface.bridgePathChoices = std::exchange(collectedBridgePathChoices_, {});") !=
+        std::string::npos);
+  CHECK(takeSurfaceBody.find("surface.callableSummaries = std::exchange(collectedCallableSummaries_, {});") !=
+        std::string::npos);
+  CHECK(takeSurfaceBody.find("invalidatePilotRoutingSemanticCollectors();") != std::string::npos);
+  CHECK(takeSurfaceBody.find("surface.bindingFacts = bindingFactSnapshotForSemanticProduct();") !=
+        std::string::npos);
+  CHECK(takeSurfaceBody.find("surface.returnFacts = returnFactSnapshotForSemanticProduct();") !=
+        std::string::npos);
+  CHECK(takeSurfaceBody.find("surface.localAutoFacts = localAutoFactSnapshotForSemanticProduct();") !=
+        std::string::npos);
+  CHECK(takeSurfaceBody.find("surface.queryFacts = queryFactSnapshotForSemanticProduct();") !=
+        std::string::npos);
+  CHECK(takeSurfaceBody.find("surface.tryFacts = tryFactSnapshotForSemanticProduct();") !=
+        std::string::npos);
+  CHECK(takeSurfaceBody.find("surface.onErrorFacts = onErrorFactSnapshotForSemanticProduct();") !=
+        std::string::npos);
+  CHECK(takeSurfaceBody.find("releaseTransientSnapshotCaches();") != std::string::npos);
 
   const std::string directTakeBody = semanticsSnapshots.substr(directTakeStart, bridgeTakeStart - directTakeStart);
   CHECK(directTakeBody.find("collectPilotRoutingSemanticProductFacts();") != std::string::npos);

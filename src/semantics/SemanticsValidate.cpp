@@ -283,6 +283,9 @@ SemanticProgram buildSemanticProgram(const Program &program,
       text.clear();
     }
   };
+  auto publicationSurface =
+      validator.takeSemanticPublicationSurfaceForSemanticProduct(buildConfig);
+  maybeRelieveSemanticAllocatorPressure();
 
   SemanticProgram semanticProgram;
   semanticProgram.entryPath = entryPath;
@@ -335,9 +338,8 @@ SemanticProgram buildSemanticProgram(const Program &program,
     module.identity.stableOrder = moduleIndex;
     return module;
   };
-  if (isCollectorEnabled("direct_call_targets")) {
-    const auto directCallTargets =
-        validator.takeCollectedDirectCallTargetsForSemanticProduct();
+  if (!publicationSurface.directCallTargets.empty()) {
+    const auto &directCallTargets = publicationSurface.directCallTargets;
     semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.reserve(directCallTargets.size());
     semanticProgram.directCallTargets.reserve(directCallTargets.size());
     for (const auto &snapshotEntry : directCallTargets) {
@@ -363,12 +365,9 @@ SemanticProgram buildSemanticProgram(const Program &program,
             semanticProgram.directCallTargets.back().resolvedPathId);
       }
     }
-    validator.releaseTransientSnapshotCaches();
-    maybeRelieveSemanticAllocatorPressure();
   }
-  if (isCollectorEnabled("method_call_targets")) {
-    const auto methodCallTargets =
-        validator.takeCollectedMethodCallTargetsForSemanticProduct();
+  if (!publicationSurface.methodCallTargets.empty()) {
+    const auto &methodCallTargets = publicationSurface.methodCallTargets;
     semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.reserve(methodCallTargets.size());
     semanticProgram.methodCallTargets.reserve(methodCallTargets.size());
     for (const auto &snapshotEntry : methodCallTargets) {
@@ -396,12 +395,9 @@ SemanticProgram buildSemanticProgram(const Program &program,
             semanticProgram.methodCallTargets.back().resolvedPathId);
       }
     }
-    validator.releaseTransientSnapshotCaches();
-    maybeRelieveSemanticAllocatorPressure();
   }
-  if (isCollectorEnabled("bridge_path_choices")) {
-    const auto bridgePathChoices =
-        validator.takeCollectedBridgePathChoicesForSemanticProduct();
+  if (!publicationSurface.bridgePathChoices.empty()) {
+    const auto &bridgePathChoices = publicationSurface.bridgePathChoices;
     semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.reserve(bridgePathChoices.size());
     semanticProgram.bridgePathChoices.reserve(bridgePathChoices.size());
     for (const auto &snapshotEntry : bridgePathChoices) {
@@ -431,9 +427,8 @@ SemanticProgram buildSemanticProgram(const Program &program,
       }
     }
   }
-  if (isCollectorEnabled("callable_summaries")) {
-    const auto callableSummaries =
-        validator.takeCollectedCallableSummariesForSemanticProduct();
+  if (!publicationSurface.callableSummaries.empty()) {
+    const auto &callableSummaries = publicationSurface.callableSummaries;
     semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId.reserve(callableSummaries.size());
     semanticProgram.callableSummaries.reserve(callableSummaries.size());
     for (const auto &snapshotEntry : callableSummaries) {
@@ -483,8 +478,8 @@ SemanticProgram buildSemanticProgram(const Program &program,
       }
     }
   }
-  if (isCollectorEnabled("type_metadata")) {
-    const auto typeMetadata = validator.typeMetadataSnapshotForSemanticProduct();
+  if (!publicationSurface.typeMetadata.empty()) {
+    const auto &typeMetadata = publicationSurface.typeMetadata;
     semanticProgram.typeMetadata.reserve(typeMetadata.size());
     for (const auto &entry : typeMetadata) {
       semanticProgram.typeMetadata.push_back(SemanticProgramTypeMetadata{
@@ -504,8 +499,8 @@ SemanticProgram buildSemanticProgram(const Program &program,
       });
     }
   }
-  if (isCollectorEnabled("struct_field_metadata")) {
-    const auto structFieldMetadata = validator.structFieldMetadataSnapshotForSemanticProduct();
+  if (!publicationSurface.structFieldMetadata.empty()) {
+    const auto &structFieldMetadata = publicationSurface.structFieldMetadata;
     semanticProgram.structFieldMetadata.reserve(structFieldMetadata.size());
     for (const auto &entry : structFieldMetadata) {
       semanticProgram.structFieldMetadata.push_back(SemanticProgramStructFieldMetadata{
@@ -520,8 +515,8 @@ SemanticProgram buildSemanticProgram(const Program &program,
       });
     }
   }
-  if (isCollectorEnabled("binding_facts")) {
-    auto bindingFacts = validator.bindingFactSnapshotForSemanticProduct();
+  if (!publicationSurface.bindingFacts.empty()) {
+    auto bindingFacts = std::move(publicationSurface.bindingFacts);
     semanticProgram.bindingFacts.reserve(bindingFacts.size());
     for (auto &snapshotEntry : bindingFacts) {
       SemanticProgramBindingFact entry;
@@ -562,11 +557,9 @@ SemanticProgram buildSemanticProgram(const Program &program,
       const std::size_t entryIndex = semanticProgram.bindingFacts.size() - 1;
       module.bindingFactIndices.push_back(entryIndex);
     }
-    validator.releaseTransientSnapshotCaches();
-    maybeRelieveSemanticAllocatorPressure();
   }
-  if (isCollectorEnabled("return_facts")) {
-    const auto returnFacts = validator.returnFactSnapshotForSemanticProduct();
+  if (!publicationSurface.returnFacts.empty()) {
+    const auto &returnFacts = publicationSurface.returnFacts;
     semanticProgram.returnFacts.reserve(returnFacts.size());
     for (const auto &snapshotEntry : returnFacts) {
       SemanticProgramReturnFact entry;
@@ -591,11 +584,9 @@ SemanticProgram buildSemanticProgram(const Program &program,
       const std::size_t entryIndex = semanticProgram.returnFacts.size() - 1;
       ensureModuleResolvedArtifacts(snapshotEntry.definitionPath).returnFactIndices.push_back(entryIndex);
     }
-    validator.releaseTransientSnapshotCaches();
-    maybeRelieveSemanticAllocatorPressure();
   }
-  if (isCollectorEnabled("local_auto_facts")) {
-    const auto localAutoFacts = validator.localAutoFactSnapshotForSemanticProduct();
+  if (!publicationSurface.localAutoFacts.empty()) {
+    const auto &localAutoFacts = publicationSurface.localAutoFacts;
     semanticProgram.localAutoFacts.reserve(localAutoFacts.size());
     for (const auto &snapshotEntry : localAutoFacts) {
       SemanticProgramLocalAutoFact entry;
@@ -683,8 +674,8 @@ SemanticProgram buildSemanticProgram(const Program &program,
       ensureModuleResolvedArtifacts(snapshotEntry.scopePath).localAutoFactIndices.push_back(entryIndex);
     }
   }
-  if (isCollectorEnabled("query_facts")) {
-    auto queryFacts = validator.queryFactSnapshotForSemanticProduct();
+  if (!publicationSurface.queryFacts.empty()) {
+    auto queryFacts = std::move(publicationSurface.queryFacts);
     semanticProgram.queryFacts.reserve(queryFacts.size());
     for (auto &snapshotEntry : queryFacts) {
       const std::string receiverBindingTypeText =
@@ -723,11 +714,9 @@ SemanticProgram buildSemanticProgram(const Program &program,
       const std::size_t entryIndex = semanticProgram.queryFacts.size() - 1;
       module.queryFactIndices.push_back(entryIndex);
     }
-    validator.releaseTransientSnapshotCaches();
-    maybeRelieveSemanticAllocatorPressure();
   }
-  if (isCollectorEnabled("try_facts")) {
-    const auto tryFacts = validator.tryFactSnapshotForSemanticProduct();
+  if (!publicationSurface.tryFacts.empty()) {
+    const auto &tryFacts = publicationSurface.tryFacts;
     semanticProgram.tryFacts.reserve(tryFacts.size());
     for (const auto &snapshotEntry : tryFacts) {
       SemanticProgramTryFact entry;
@@ -767,11 +756,9 @@ SemanticProgram buildSemanticProgram(const Program &program,
       const std::size_t entryIndex = semanticProgram.tryFacts.size() - 1;
       ensureModuleResolvedArtifacts(snapshotEntry.scopePath).tryFactIndices.push_back(entryIndex);
     }
-    validator.releaseTransientSnapshotCaches();
-    maybeRelieveSemanticAllocatorPressure();
   }
-  if (isCollectorEnabled("on_error_facts")) {
-    const auto onErrorFacts = validator.onErrorFactSnapshotForSemanticProduct();
+  if (!publicationSurface.onErrorFacts.empty()) {
+    const auto &onErrorFacts = publicationSurface.onErrorFacts;
     semanticProgram.onErrorFacts.reserve(onErrorFacts.size());
     for (const auto &snapshotEntry : onErrorFacts) {
       SemanticProgramOnErrorFact entry;
