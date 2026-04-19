@@ -193,7 +193,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs native u64 map access helpers" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native u64 map access helpers") {
   const std::string source = R"(
 [return<int>]
 main() {
