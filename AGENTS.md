@@ -156,9 +156,12 @@ build and layout solidify.
 
 ## Git commit guidelines
 - Use a clear, imperative subject line in present tense.
+- The `commit-msg` hook reads `.githooks/commit-msg`, strips comment lines and trailing whitespace, and then validates the message.
 - Avoid literal `\n` sequences in commit messages; use real newlines (multiple `-m` or an editor).
-- Keep the subject line <= 50 characters, start with a capital letter, no trailing period.
-- Separate subject/body with a blank line; wrap body lines at ~72 chars.
+- The subject line must be non-empty, stay within 50 characters, start with a capital letter, and must not end with a period.
+- The second line must be blank.
+- A body is required: include at least one non-empty body line after the blank separator.
+- Wrap every body line at 72 characters or less.
 - Prefer one logical change per commit.
 
 Example:
