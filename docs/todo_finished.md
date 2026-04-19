@@ -4238,3 +4238,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Split from oversized `TODO-4075`, whose remaining PNG decode/read helper-spelling cleanup continues as `TODO-4077` before the inferred-binding follow-ups starting at `TODO-4029`.
   - finished_at: 2026-04-19
   - evidence: Rewrote the early `pngReadU32Be` through `pngWriteIendChunk` helper lane in `stdlib/std/image/image.prime` from helper-form `assign(...)`, `plus(...)`, and `minus(...)` spellings to direct assignment and `+`/`-` expressions, left the later decode, inflate, scanline, Adam7, and `namespace png` read-path helpers untouched for the follow-up slice, expanded `tests/unit/test_compile_run_examples_docs_locks.cpp` to assert the early `pngPreludeBody` operator-form spellings while pinning representative `pngDecodeBody` helper-form spellings, and updated `docs/todo.md` so oversized `TODO-4075` is retired in favor of the remaining `TODO-4077` decode/read follow-up.
+
+- [x] TODO-4078: Align `/std/image/png` decode and scanline arithmetic and assignment to surface operators
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Surface Style Alignment
+  - depends_on: TODO-4026, TODO-4074, TODO-4076
+  - scope: Split the oversized remaining `/std/image/png` style cleanup and rewrite only the decode/scanline lane from `pngPaethPredictor` through `pngDecodeRows` away from `assign(...)`, `plus(...)`, and `minus(...)` where readable `=`, `+`, and `-` surface forms are already supported, without mixing in the later bitstream, Huffman, inflate, or top-level read-path machinery.
+  - acceptance:
+    - The PNG decode/scanline helper lane stops using helper-form arithmetic and assignment by default when direct surface operators are already supported.
+    - The later bitstream, Huffman, inflate, and `namespace png` read-path work stays isolated as explicit follow-up leaves instead of being folded into the same mechanical rewrite.
+    - Focused source-lock coverage pins representative operator-form sites in the decode/scanline lane and keeps representative later helper-form sites explicit until the follow-up lands.
+  - stop_rule: Stop once the PNG decode/scanline lane uses readable surface arithmetic and assignment by default; leave the remaining PNG bitstream/Huffman, inflate, and read-path cleanup separate.
+  - notes: Split from oversized `TODO-4077`, whose remaining PNG bitstream/Huffman, inflate, and read-path helper-spelling cleanup continues as `TODO-4079`, `TODO-4080`, and `TODO-4081` before the inferred-binding follow-ups starting at `TODO-4029`.
+  - finished_at: 2026-04-19
+  - evidence: Rewrote the decode/scanline helper lane from `pngPaethPredictor` through `pngDecodeRows` in `stdlib/std/image/image.prime` from helper-form `assign(...)`, `plus(...)`, and `minus(...)` spellings to direct assignment and `+`/`-` expressions, left the later bitstream, Huffman, inflate, and `namespace png` read-path helpers untouched for the follow-up slices, expanded `tests/unit/test_compile_run_examples_docs_locks.cpp` to assert the `pngScanlineBody` operator-form spellings while pinning representative `pngInflateReadBody` helper-form spellings, and updated `docs/todo.md` so oversized `TODO-4077` is retired in favor of `TODO-4079`, `TODO-4080`, and `TODO-4081`.

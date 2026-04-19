@@ -1000,10 +1000,10 @@ namespace std {
 
   [return<i32>]
   pngPaethPredictor([i32] left, [i32] up, [i32] upLeft) {
-    [i32] predictor{minus(plus(left, up), upLeft)}
-    [i32] leftDistance{abs(minus(predictor, left))}
-    [i32] upDistance{abs(minus(predictor, up))}
-    [i32] upLeftDistance{abs(minus(predictor, upLeft))}
+    [i32] predictor{left + up - upLeft}
+    [i32] leftDistance{abs(predictor - left)}
+    [i32] upDistance{abs(predictor - up)}
+    [i32] upLeftDistance{abs(predictor - upLeft)}
     if(and(less_equal(leftDistance, upDistance), less_equal(leftDistance, upLeftDistance)),
        then() { return(left) },
        else() { })
@@ -1046,17 +1046,17 @@ namespace std {
 
   [return<i32>]
   pngFilterBytesPerPixel([i32] bitDepth, [i32] colorType) {
-    return(divide(plus(multiply(pngColorTypeSamplesPerPixel(colorType), bitDepth), 7i32), 8i32))
+    return(divide(multiply(pngColorTypeSamplesPerPixel(colorType), bitDepth) + 7i32, 8i32))
   }
 
   [return<i32>]
   pngScanlineBytes([i32] width, [i32] bitDepth, [i32] colorType) {
-    return(divide(plus(multiply(multiply(width, pngColorTypeSamplesPerPixel(colorType)), bitDepth), 7i32), 8i32))
+    return(divide(multiply(multiply(width, pngColorTypeSamplesPerPixel(colorType)), bitDepth) + 7i32, 8i32))
   }
 
   [return<bool>]
   pngScanlineBytesValid([i32] width, [i32] bitDepth, [i32] colorType, [i32 mut] scanlineBytes) {
-    assign(scanlineBytes, 0i32)
+    scanlineBytes = 0i32
     if(less_equal(width, 0i32),
        then() { return(false) },
        else() { })
@@ -1065,11 +1065,11 @@ namespace std {
     if(or(less_equal(scanlineBitsWide, 0i64), greater_than(scanlineBitsWide, 17179869176i64)),
        then() { return(false) },
        else() { })
-    [i64] scanlineBytesWide{divide(plus(scanlineBitsWide, 7i64), 8i64)}
+    [i64] scanlineBytesWide{divide(scanlineBitsWide + 7i64, 8i64)}
     if(greater_than(scanlineBytesWide, 2147483647i64),
        then() { return(false) },
        else() { })
-    assign(scanlineBytes, convert<i32>(scanlineBytesWide))
+    scanlineBytes = convert<i32>(scanlineBytesWide)
     return(true)
   }
 
@@ -1078,7 +1078,7 @@ namespace std {
     [i32 mut] valueCount{1i32}
     [i32 mut] shift{0i32}
     while(less_than(shift, bitDepth), do() {
-      assign(valueCount, multiply(valueCount, 2i32))
+      valueCount = multiply(valueCount, 2i32)
       increment(shift)
     })
     return(valueCount)
@@ -1089,11 +1089,11 @@ namespace std {
     [i32] samplesPerByte{divide(8i32, bitDepth)}
     [i32] byteIndex{divide(pixelIndex, samplesPerByte)}
     [i32] sampleIndex{pngMod(pixelIndex, samplesPerByte)}
-    [i32] shiftAmount{multiply(minus(minus(samplesPerByte, 1i32), sampleIndex), bitDepth)}
+    [i32] shiftAmount{multiply(samplesPerByte - 1i32 - sampleIndex, bitDepth)}
     [i32 mut] shifted{rowBytes[byteIndex]}
     [i32 mut] shiftCount{0i32}
     while(less_than(shiftCount, shiftAmount), do() {
-      assign(shifted, divide(shifted, 2i32))
+      shifted = divide(shifted, 2i32)
       increment(shiftCount)
     })
     return(pngMod(shifted, pngSampleValueCount(bitDepth)))
@@ -1101,7 +1101,7 @@ namespace std {
 
   [return<i32>]
   pngScalePackedSampleToByte([i32] sample, [i32] bitDepth) {
-    [i32] maxSample{minus(pngSampleValueCount(bitDepth), 1i32)}
+    [i32] maxSample{pngSampleValueCount(bitDepth) - 1i32}
     if(less_equal(maxSample, 0i32),
        then() { return(0i32) },
        else() { })
@@ -1110,13 +1110,13 @@ namespace std {
 
   [return<i32>]
   pngScaleU16SampleToByte([i32] highByte, [i32] lowByte) {
-    return(divide(plus(multiply(highByte, 256i32), lowByte), 257i32))
+    return(divide(multiply(highByte, 256i32) + lowByte, 257i32))
   }
 
   [return<i32>]
   pngScanlineChannelByte([vector<i32>] rowBytes, [i32] byteIndex, [i32] bitDepth) {
     if(equal(bitDepth, 16i32),
-       then() { return(pngScaleU16SampleToByte(rowBytes[byteIndex], rowBytes[plus(byteIndex, 1i32)])) },
+       then() { return(pngScaleU16SampleToByte(rowBytes[byteIndex], rowBytes[byteIndex + 1i32])) },
        else() { })
     return(rowBytes[byteIndex])
   }
@@ -1179,7 +1179,7 @@ namespace std {
     if(less_equal(size, start),
        then() { return(0i32) },
        else() { })
-    return(divide(plus(minus(size, plus(start, 1i32)), step), step))
+    return(divide(size - (start + 1i32) + step, step))
   }
 
   [effects(heap_alloc), return<int>]
@@ -1226,14 +1226,14 @@ namespace std {
          return(1i32)
        },
        else() { })
-    [i64] requiredRowBytesWide{multiply(convert<i64>(height), plus(convert<i64>(scanlineBytes), 1i64))}
+    [i64] requiredRowBytesWide{multiply(convert<i64>(height), convert<i64>(scanlineBytes) + 1i64)}
     if(or(less_equal(requiredRowBytesWide, 0i64), greater_than(requiredRowBytesWide, 2147483647i64)),
        then() {
          /std/collections/vector/clear(pixels)
          return(1i32)
        },
        else() { })
-    if(less_than(minus(count(rawBytes), offset), convert<i32>(requiredRowBytesWide)),
+    if(less_than(count(rawBytes) - offset, convert<i32>(requiredRowBytesWide)),
        then() { return(1i32) },
        else() { })
 
@@ -1250,42 +1250,42 @@ namespace std {
            return(1i32)
          },
          else() { })
-      assign(offset, plus(offset, 1i32))
+      offset = offset + 1i32
       /std/collections/vector/clear(rowBytes)
 
       [i32 mut] byteIndex{0i32}
       while(less_than(byteIndex, scanlineBytes), do() {
-        [i32 mut] reconstructed{rawBytes[plus(offset, byteIndex)]}
+        [i32 mut] reconstructed{rawBytes[offset + byteIndex]}
         [i32 mut] leftByte{0i32}
         [i32 mut] upByte{0i32}
         [i32 mut] upLeftByte{0i32}
         if(greater_equal(byteIndex, bytesPerPixel),
-           then() { assign(leftByte, rowBytes[minus(byteIndex, bytesPerPixel)]) },
+           then() { leftByte = rowBytes[byteIndex - bytesPerPixel] },
            else() { })
         if(less_than(byteIndex, count(previousRowBytes)),
-           then() { assign(upByte, previousRowBytes[byteIndex]) },
+           then() { upByte = previousRowBytes[byteIndex] },
            else() { })
-        if(and(greater_equal(byteIndex, bytesPerPixel), less_than(minus(byteIndex, bytesPerPixel), count(previousRowBytes))),
-           then() { assign(upLeftByte, previousRowBytes[minus(byteIndex, bytesPerPixel)]) },
+        if(and(greater_equal(byteIndex, bytesPerPixel), less_than(byteIndex - bytesPerPixel, count(previousRowBytes))),
+           then() { upLeftByte = previousRowBytes[byteIndex - bytesPerPixel] },
            else() { })
         if(and(equal(filterType, 1i32), greater_equal(byteIndex, bytesPerPixel)),
            then() {
-             assign(reconstructed, pngMod(plus(reconstructed, leftByte), 256i32))
+             reconstructed = pngMod(reconstructed + leftByte, 256i32)
            },
            else() { })
         if(and(equal(filterType, 2i32), less_than(byteIndex, count(previousRowBytes))),
            then() {
-             assign(reconstructed, pngMod(plus(reconstructed, upByte), 256i32))
+             reconstructed = pngMod(reconstructed + upByte, 256i32)
            },
            else() { })
         if(equal(filterType, 3i32),
            then() {
-             assign(reconstructed, pngMod(plus(reconstructed, divide(plus(leftByte, upByte), 2i32)), 256i32))
+             reconstructed = pngMod(reconstructed + divide(leftByte + upByte, 2i32), 256i32)
            },
            else() { })
         if(equal(filterType, 4i32),
            then() {
-             assign(reconstructed, pngMod(plus(reconstructed, pngPaethPredictor(leftByte, upByte, upLeftByte)), 256i32))
+             reconstructed = pngMod(reconstructed + pngPaethPredictor(leftByte, upByte, upLeftByte), 256i32)
            },
            else() { })
         /std/collections/vector/push(rowBytes, reconstructed)
@@ -1306,15 +1306,15 @@ namespace std {
                 },
                 else() {
                   [i32] paletteOffset{multiply(sample, 3i32)}
-                  if(greater_equal(plus(paletteOffset, 2i32), count(paletteBytes)),
+                  if(greater_equal(paletteOffset + 2i32, count(paletteBytes)),
                      then() {
                        /std/collections/vector/clear(pixels)
                        return(1i32)
                      },
                      else() { })
                   /std/collections/vector/push(pixels, paletteBytes[paletteOffset])
-                  /std/collections/vector/push(pixels, paletteBytes[plus(paletteOffset, 1i32)])
-                  /std/collections/vector/push(pixels, paletteBytes[plus(paletteOffset, 2i32)])
+                  /std/collections/vector/push(pixels, paletteBytes[paletteOffset + 1i32])
+                  /std/collections/vector/push(pixels, paletteBytes[paletteOffset + 2i32])
                 })
              increment(pixelIndex)
            })
@@ -1342,24 +1342,24 @@ namespace std {
                        if(equal(colorType, 3i32),
                           then() {
                             [i32] paletteOffset{multiply(rowBytes[pixelByteIndex], 3i32)}
-                            if(greater_equal(plus(paletteOffset, 2i32), count(paletteBytes)),
+                            if(greater_equal(paletteOffset + 2i32, count(paletteBytes)),
                                then() {
                                  /std/collections/vector/clear(pixels)
                                  return(1i32)
                                },
                                else() { })
                             /std/collections/vector/push(pixels, paletteBytes[paletteOffset])
-                            /std/collections/vector/push(pixels, paletteBytes[plus(paletteOffset, 1i32)])
-                            /std/collections/vector/push(pixels, paletteBytes[plus(paletteOffset, 2i32)])
+                            /std/collections/vector/push(pixels, paletteBytes[paletteOffset + 1i32])
+                            /std/collections/vector/push(pixels, paletteBytes[paletteOffset + 2i32])
                           },
                           else() {
                             /std/collections/vector/push(pixels, pngScanlineChannelByte(rowBytes, pixelByteIndex, bitDepth))
-                            /std/collections/vector/push(pixels, pngScanlineChannelByte(rowBytes, plus(pixelByteIndex, channelByteStride), bitDepth))
-                            /std/collections/vector/push(pixels, pngScanlineChannelByte(rowBytes, plus(pixelByteIndex, multiply(channelByteStride, 2i32)), bitDepth))
+                            /std/collections/vector/push(pixels, pngScanlineChannelByte(rowBytes, pixelByteIndex + channelByteStride, bitDepth))
+                            /std/collections/vector/push(pixels, pngScanlineChannelByte(rowBytes, pixelByteIndex + multiply(channelByteStride, 2i32), bitDepth))
                           })
                      })
                 })
-             assign(pixelByteIndex, plus(pixelByteIndex, bytesPerPixel))
+             pixelByteIndex = pixelByteIndex + bytesPerPixel
            })
          })
       /std/collections/vector/clear(previousRowBytes)
@@ -1368,7 +1368,7 @@ namespace std {
         /std/collections/vector/push(previousRowBytes, rowBytes[previousRowIndex])
         increment(previousRowIndex)
       })
-      assign(offset, plus(offset, scanlineBytes))
+      offset = offset + scanlineBytes
       increment(row)
     })
     return(0i32)

@@ -56,7 +56,9 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4077
+- TODO-4079
+- TODO-4080
+- TODO-4081
 - TODO-4029
 - TODO-4037
 
@@ -74,51 +76,53 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Stdlib surface-style alignment: TODO-4077, TODO-4029 through TODO-4035
+- Stdlib surface-style alignment: TODO-4079, TODO-4080, TODO-4081, TODO-4029 through TODO-4035
 - Stdlib bridge consolidation: TODO-4037 through TODO-4041
 - Vector/map stdlib ownership cutover: TODO-4042 through TODO-4051
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4077
-2. TODO-4029
-3. TODO-4030
-4. TODO-4031
-5. TODO-4032
-6. TODO-4033
-7. TODO-4034
-8. TODO-4035
-9. TODO-4037
-10. TODO-4038
-11. TODO-4039
-12. TODO-4040
-13. TODO-4041
-14. TODO-4042
-15. TODO-4051
-16. TODO-4043
-17. TODO-4044
-18. TODO-4045
-19. TODO-4046
-20. TODO-4047
-21. TODO-4048
-22. TODO-4049
-23. TODO-4050
-24. TODO-4052
-25. TODO-4058
-26. TODO-4053
-27. TODO-4055
-28. TODO-4054
-29. TODO-4056
-30. TODO-4057
-31. TODO-4059
+1. TODO-4079
+2. TODO-4080
+3. TODO-4081
+4. TODO-4029
+5. TODO-4030
+6. TODO-4031
+7. TODO-4032
+8. TODO-4033
+9. TODO-4034
+10. TODO-4035
+11. TODO-4037
+12. TODO-4038
+13. TODO-4039
+14. TODO-4040
+15. TODO-4041
+16. TODO-4042
+17. TODO-4051
+18. TODO-4043
+19. TODO-4044
+20. TODO-4045
+21. TODO-4046
+22. TODO-4047
+23. TODO-4048
+24. TODO-4049
+25. TODO-4050
+26. TODO-4052
+27. TODO-4058
+28. TODO-4053
+29. TODO-4055
+30. TODO-4054
+31. TODO-4056
+32. TODO-4057
+33. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | none |
-| Stdlib surface-style alignment and public helper readability | TODO-4077, TODO-4029, TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
+| Stdlib surface-style alignment and public helper readability | TODO-4079, TODO-4080, TODO-4081, TODO-4029, TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4037, TODO-4038, TODO-4039, TODO-4040, TODO-4041 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4042, TODO-4043, TODO-4044, TODO-4045, TODO-4046, TODO-4047, TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
@@ -137,7 +141,7 @@ Task template:
 | Validation area | Primary TODO IDs |
 | --- | --- |
 | Semantic-product-authority conformance | none |
-| CodeExamples-aligned stdlib surface syntax conformance | TODO-4077, TODO-4029, TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
+| CodeExamples-aligned stdlib surface syntax conformance | TODO-4079, TODO-4080, TODO-4081, TODO-4029, TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
 | Semantic-product publication parity and deterministic ordering | TODO-4039 |
 | Lowerer/source-composition contract coverage | TODO-4040 |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
@@ -151,17 +155,41 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4077: Align `/std/image/png` decode and read arithmetic and assignment to surface operators
+- [ ] TODO-4079: Align `/std/image/png` bitstream and Huffman arithmetic and assignment to surface operators
   - owner: ai
   - created_at: 2026-04-19
   - phase: Stdlib Surface Style Alignment
-  - depends_on: TODO-4026, TODO-4074, TODO-4076
-  - scope: Continue the oversized `/std/image/png` helper-spelling cleanup after the completed chunk/write slice and rewrite the remaining decode, scanline, inflate, Huffman, Adam7, and `namespace png` read-path helpers away from `assign(...)`, `plus(...)`, and `minus(...)` where readable `=`, `+`, and `-` surface forms are already supported, without mixing in unrelated codec redesign.
+  - depends_on: TODO-4026, TODO-4074, TODO-4076, TODO-4078
+  - scope: Continue the oversized `/std/image/png` helper-spelling cleanup after the completed decode/scanline slice and rewrite the remaining bitstream, Huffman-table, code-length, fixed/dynamic symbol, and length/distance metadata helpers away from `assign(...)`, `plus(...)`, and `minus(...)` where readable `=`, `+`, and `-` surface forms are already supported, without mixing in top-level inflate orchestration or `namespace png` read-path rewrites.
   - acceptance:
-    - The remaining PNG decode/read path stops using helper-form arithmetic and assignment by default when direct surface operators are already supported.
-    - Any remaining helper-form arithmetic or assignment in the decode, inflate, scanline, or read-path helpers is limited to unsupported or clearly justified cases instead of broad mechanical carry-over.
-    - Focused source-lock coverage drops the temporary decode/read helper-form carve-out once the follow-up rewrite lands.
-  - stop_rule: Stop once the remaining PNG decode/read path uses readable surface arithmetic and assignment by default; split any deeper codec/API cleanup or unsupported syntax edge cases into separate follow-up work.
+    - The remaining PNG bitstream and Huffman helper lane stops using helper-form arithmetic and assignment by default when direct surface operators are already supported.
+    - Any remaining helper-form arithmetic or assignment in that helper lane is limited to unsupported or clearly justified cases instead of broad mechanical carry-over.
+    - Focused source-lock coverage drops the temporary bitstream/Huffman helper-form carve-out once the follow-up rewrite lands.
+  - stop_rule: Stop once the PNG bitstream and Huffman helper lane uses readable surface arithmetic and assignment by default; leave inflate orchestration and top-level read-path rewrites separate.
+
+- [ ] TODO-4080: Align `/std/image/png` inflate execution arithmetic and assignment to surface operators
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Surface Style Alignment
+  - depends_on: TODO-4026, TODO-4074, TODO-4076, TODO-4078, TODO-4079
+  - scope: Rewrite the remaining PNG inflate execution helpers away from `assign(...)`, `plus(...)`, and `minus(...)` where readable `=`, `+`, and `-` surface forms are already supported, limited to backreference copying, stored/fixed/dynamic block execution, and deflate-block orchestration.
+  - acceptance:
+    - The PNG inflate execution helpers stop using helper-form arithmetic and assignment by default when direct surface operators are already supported.
+    - Any remaining helper-form arithmetic or assignment in the inflate execution lane is limited to unsupported or clearly justified cases instead of broad mechanical carry-over.
+    - Focused source-lock coverage drops the temporary inflate-execution helper-form carve-out once the follow-up rewrite lands.
+  - stop_rule: Stop once the PNG inflate execution lane uses readable surface arithmetic and assignment by default; leave the top-level `namespace png` read-path rewrite separate.
+
+- [ ] TODO-4081: Align `/std/image/png` top-level read path arithmetic and assignment to surface operators
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Surface Style Alignment
+  - depends_on: TODO-4026, TODO-4074, TODO-4076, TODO-4078, TODO-4079, TODO-4080
+  - scope: Rewrite the remaining top-level `namespace png` read/decode orchestration away from `assign(...)`, `plus(...)`, and `minus(...)` where readable `=`, `+`, and `-` surface forms are already supported, without mixing in unrelated API or codec changes.
+  - acceptance:
+    - The remaining top-level `namespace png` read path stops using helper-form arithmetic and assignment by default when direct surface operators are already supported.
+    - Any residual helper-form arithmetic or assignment after this slice is limited to unsupported or clearly justified cases.
+    - Focused source-lock coverage drops the final PNG decode/read helper-form carve-out once the follow-up rewrite lands.
+  - stop_rule: Stop once the top-level `namespace png` read path uses readable surface arithmetic and assignment by default; split any unrelated API cleanup into separate follow-up work.
 
 - [ ] TODO-4059: Remove completed experimental naming from docs and user-facing guidance
   - owner: ai
