@@ -3659,3 +3659,16 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - stop_rule: Stop once the stale skipped rejection cases are replaced by active positive coverage and the semantic-product guardrail is in place; leave unrelated docs cleanup as separate future work.
   - finished_at: 2026-04-19
   - evidence: Replaced the skipped VM/native rejection tests with active positive runtime cases and added backend-conformance checks that `mapped`, `chained`, and `summed` auto locals keep `Result<i32, FileError>` metadata plus matching non-empty initializer resolved paths across `cpp-ir`, `vm`, and `native`.
+
+- [x] TODO-1025: Replace stale skipped ImageError helper semantics failures
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: One-off correctness coverage
+  - scope: Replace the stale skipped semantics tests that still expect `/std/image/*` ImageError helper validation to fail, and lock the documented stdlib-owned `ImageError` status/result/why constructor surface plus receiver-style method sugar under `validateProgram(...)`.
+  - acceptance:
+    - Semantics coverage validates `imageErrorStatus(err)`, `imageErrorResult<T>(err)`, `/ImageError/*` wrappers, and the matching type-owned namespace surface.
+    - Receiver-style `err.status()`, `err.result<T>()`, and `err.why()` are covered positively for ImageError.
+    - The stale expected failure path mentioning `/std/collections/vector/push` is removed from these ImageError helper tests.
+  - stop_rule: Stop once the stale skipped tests are converted into active positive validation coverage for the documented ImageError helper surface; leave unrelated image runtime work untouched.
+  - finished_at: 2026-04-19
+  - evidence: Unskipped the three stale ImageError semantics tests, switched them to successful `validateProgram(...)` expectations, and expanded coverage to include receiver-style `err.status()`, `err.result<i32>()`, and `err.why()` alongside the direct `/ImageError/*` and package-level helper surfaces.

@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.semantics.result_helpers");
 
-TEST_CASE("stdlib image error result helpers construct status and value results" * doctest::skip(true)) {
+TEST_CASE("stdlib image error result helpers construct status and value results") {
   const std::string source = R"(
 import /std/image/*
 
@@ -11,35 +11,42 @@ main() {
   [ImageError] err{imageReadUnsupported()}
   [Result<ImageError>] status{imageErrorStatus(imageReadUnsupported())}
   [Result<ImageError>] directStatus{/ImageError/status(imageReadUnsupported())}
+  [Result<ImageError>] methodStatus{err.status()}
   [Result<i32, ImageError>] valueStatus{imageErrorResult<i32>(imageInvalidOperation())}
   [Result<i32, ImageError>] directValueStatus{/ImageError/result<i32>(imageInvalidOperation())}
+  [Result<i32, ImageError>] methodValueStatus{err.result<i32>()}
   [Result<ImageError>] wrappedStatus{/ImageError/status(err)}
   [Result<i32, ImageError>] wrappedValue{/ImageError/result<i32>(err)}
   [bool] statusError{Result.error(status)}
   [bool] directStatusError{Result.error(directStatus)}
+  [bool] methodStatusError{Result.error(methodStatus)}
   [bool] wrappedStatusError{Result.error(wrappedStatus)}
   [bool] valueError{Result.error(valueStatus)}
   [bool] directValueError{Result.error(directValueStatus)}
+  [bool] methodValueError{Result.error(methodValueStatus)}
   [bool] wrappedValueError{Result.error(wrappedValue)}
   [string] directWhy{/ImageError/why(err)}
+  [string] receiverWhy{err.why()}
   [string] statusWhy{Result.why(status)}
   [string] directStatusWhy{Result.why(directStatus)}
+  [string] methodStatusWhy{Result.why(methodStatus)}
   [string] wrappedStatusWhy{Result.why(wrappedStatus)}
   [string] valueWhy{Result.why(valueStatus)}
   [string] directValueWhy{Result.why(directValueStatus)}
+  [string] methodValueWhy{Result.why(methodValueStatus)}
   [string] wrappedValueWhy{Result.why(wrappedValue)}
-  if(and(and(and(statusError, directStatusError), wrappedStatusError),
-         and(and(valueError, directValueError), wrappedValueError)),
+  if(and(and(and(and(statusError, directStatusError), methodStatusError), wrappedStatusError),
+         and(and(and(valueError, directValueError), methodValueError), wrappedValueError)),
      then(){ return() },
      else(){ return() })
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("stdlib ImageError why wrapper covers direct and Result-based access" * doctest::skip(true)) {
+TEST_CASE("stdlib ImageError why wrapper covers direct and Result-based access") {
   const std::string source = R"(
 import /std/image/*
 
@@ -48,16 +55,17 @@ main() {
   [ImageError] err{imageReadUnsupported()}
   [string] direct{/ImageError/why(err)}
   [string] viaType{ImageError.why(err)}
+  [string] viaReceiver{err.why()}
   [string] viaResult{Result.why(imageErrorStatus(err))}
   return()
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("stdlib ImageError constructor wrappers expose type-owned error values" * doctest::skip(true)) {
+TEST_CASE("stdlib ImageError constructor wrappers expose type-owned error values") {
   const std::string source = R"(
 import /std/image/*
 
@@ -73,8 +81,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib ImageError why wrapper rejects non image errors") {
