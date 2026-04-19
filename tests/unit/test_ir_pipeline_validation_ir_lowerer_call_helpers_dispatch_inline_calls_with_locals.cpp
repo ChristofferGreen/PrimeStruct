@@ -348,6 +348,82 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
             },
             error) == Result::Emitted);
 
+  primec::ir_lowerer::LocalInfo mapInfo;
+  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  mapInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  mapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  locals.emplace("items", mapInfo);
+
+  primec::Expr mapReceiver;
+  mapReceiver.kind = primec::Expr::Kind::Name;
+  mapReceiver.name = "items";
+
+  primec::Expr mapMethodContainsCall;
+  mapMethodContainsCall.kind = primec::Expr::Kind::Call;
+  mapMethodContainsCall.name = "contains";
+  mapMethodContainsCall.isMethodCall = true;
+  mapMethodContainsCall.args = {mapReceiver, indexArg};
+
+  primec::Definition mapContainsCallee;
+  mapContainsCallee.fullPath = "/std/collections/mapContains";
+
+  int mapContainsResolveMethodCalls = 0;
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            mapMethodContainsCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              ++mapContainsResolveMethodCalls;
+              return &mapContainsCallee;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::NotHandled);
+  CHECK(mapContainsResolveMethodCalls == 1);
+  CHECK(error == "stale");
+
+  primec::Expr mapMethodInsertCall;
+  mapMethodInsertCall.kind = primec::Expr::Kind::Call;
+  mapMethodInsertCall.name = "insert";
+  mapMethodInsertCall.isMethodCall = true;
+  mapMethodInsertCall.args = {mapReceiver, indexArg, indexArg};
+
+  primec::Definition mapInsertRefCallee;
+  mapInsertRefCallee.fullPath = "/std/collections/experimental_map/mapInsertRef";
+
+  int mapInsertResolveMethodCalls = 0;
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            mapMethodInsertCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              ++mapInsertResolveMethodCalls;
+              return &mapInsertRefCallee;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::NotHandled);
+  CHECK(mapInsertResolveMethodCalls == 1);
+  CHECK(error == "stale");
+
   primec::Expr explicitVectorCountCall;
   explicitVectorCountCall.kind = primec::Expr::Kind::Call;
   explicitVectorCountCall.name = "/vector/count";

@@ -283,9 +283,29 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable" * doctest::sk
 
   CHECK(inlineDispatchSource.find("bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee)") !=
         std::string::npos);
+  CHECK(inlineDispatchSource.find("#include \"primec/StdlibSurfaceRegistry.h\"") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("resolvePublishedInlineMapHelperName(callee.fullPath, resolvedHelperName)") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("findStdlibSurfaceMetadataByResolvedPath(resolvedPath)") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("metadata->id != StdlibSurfaceId::CollectionsMapHelpers") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("matchesInlineMapHelperFamily(aliasName, resolvedHelperName)") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("isInlineMapBuiltinHelperName(resolvedHelperName)") !=
+        std::string::npos);
   CHECK(inlineDispatchSource.find("bool isMapContainsHelperName(const Expr &expr)") !=
         std::string::npos);
   CHECK(inlineDispatchSource.find("bool isMapTryAtHelperName(const Expr &expr)") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("matchesHelper(\"/std/collections/mapContains\")") ==
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("matchesHelper(\"/std/collections/experimental_map/mapContainsRef\")") ==
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("matchesHelper(\"/std/collections/mapTryAt\")") ==
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("matchesHelper(\"/std/collections/mapInsert\")") ==
         std::string::npos);
   CHECK(inlineDispatchSource.find("bool isVectorTarget(const Expr &expr, const LocalMap &localsIn)") !=
         std::string::npos);

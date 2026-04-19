@@ -6,16 +6,95 @@
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "primec/AstCallPathHelpers.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 namespace primec::ir_lowerer {
 
 namespace {
 
+std::string stripGeneratedInlineHelperSuffix(std::string helperName) {
+  const size_t generatedSuffix = helperName.find("__");
+  if (generatedSuffix != std::string::npos) {
+    helperName.erase(generatedSuffix);
+  }
+  return helperName;
+}
+
+std::string canonicalInlineMapHelperName(std::string helperName) {
+  helperName = stripGeneratedInlineHelperSuffix(std::move(helperName));
+  if (helperName == "mapCount") {
+    return "count";
+  }
+  if (helperName == "mapCountRef") {
+    return "count_ref";
+  }
+  if (helperName == "mapContains") {
+    return "contains";
+  }
+  if (helperName == "mapContainsRef") {
+    return "contains_ref";
+  }
+  if (helperName == "mapTryAt") {
+    return "tryAt";
+  }
+  if (helperName == "mapTryAtRef") {
+    return "tryAt_ref";
+  }
+  if (helperName == "mapAt") {
+    return "at";
+  }
+  if (helperName == "mapAtRef") {
+    return "at_ref";
+  }
+  if (helperName == "mapAtUnsafe") {
+    return "at_unsafe";
+  }
+  if (helperName == "mapAtUnsafeRef") {
+    return "at_unsafe_ref";
+  }
+  if (helperName == "mapInsert") {
+    return "insert";
+  }
+  if (helperName == "mapInsertRef") {
+    return "insert_ref";
+  }
+  return helperName;
+}
+
+bool resolvePublishedInlineMapHelperName(std::string_view resolvedPath, std::string &helperNameOut) {
+  const auto *metadata = findStdlibSurfaceMetadataByResolvedPath(resolvedPath);
+  if (metadata == nullptr || metadata->id != StdlibSurfaceId::CollectionsMapHelpers) {
+    return false;
+  }
+  const size_t slash = resolvedPath.find_last_of('/');
+  if (slash == std::string_view::npos || slash + 1 >= resolvedPath.size()) {
+    return false;
+  }
+  helperNameOut = canonicalInlineMapHelperName(std::string(resolvedPath.substr(slash + 1)));
+  return !helperNameOut.empty();
+}
+
+bool matchesInlineMapHelperFamily(std::string_view requestedHelperName,
+                                  std::string_view resolvedHelperName) {
+  if (requestedHelperName == resolvedHelperName) {
+    return true;
+  }
+  return resolvedHelperName == std::string(requestedHelperName) + "_ref";
+}
+
+bool isInlineMapBuiltinHelperName(std::string_view helperName) {
+  return helperName == "count" || helperName == "count_ref" ||
+         helperName == "contains" || helperName == "contains_ref" ||
+         helperName == "tryAt" || helperName == "tryAt_ref" ||
+         helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
+         helperName == "insert" || helperName == "insert_ref";
+}
+
 bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
-  auto matchesHelper = [&](std::string_view basePath) {
-    return callee.fullPath == basePath ||
-           callee.fullPath.rfind(std::string(basePath) + "__t", 0) == 0;
-  };
+  std::string resolvedHelperName;
+  const bool hasPublishedResolvedHelper =
+      resolvePublishedInlineMapHelperName(callee.fullPath, resolvedHelperName);
   if (!expr.isMethodCall) {
     std::string aliasName;
     std::string normalizedName = expr.name;
@@ -24,78 +103,46 @@ bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
     }
     std::string accessName;
     if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2) {
-      return matchesHelper("/std/collections/map/at") ||
-             matchesHelper("/std/collections/mapAt") ||
-             matchesHelper("/std/collections/map/at_unsafe") ||
-             matchesHelper("/std/collections/mapAtUnsafe");
+      return hasPublishedResolvedHelper &&
+             (resolvedHelperName == "at" || resolvedHelperName == "at_ref" ||
+              resolvedHelperName == "at_unsafe" ||
+              resolvedHelperName == "at_unsafe_ref");
     }
     if (resolveMapHelperAliasName(expr, aliasName)) {
-      if (aliasName == "count" && expr.args.size() == 1) {
-        return matchesHelper("/std/collections/map/count") ||
-               matchesHelper("/std/collections/map/count_ref") ||
-               matchesHelper("/std/collections/mapCount") ||
-               matchesHelper("/std/collections/experimental_map/mapCount") ||
-               matchesHelper("/std/collections/experimental_map/mapCountRef");
-      }
-      if (aliasName == "contains" && expr.args.size() == 2) {
-        return matchesHelper("/std/collections/map/contains") ||
-               matchesHelper("/std/collections/map/contains_ref") ||
-               matchesHelper("/std/collections/mapContains") ||
-               matchesHelper("/std/collections/experimental_map/mapContains") ||
-               matchesHelper("/std/collections/experimental_map/mapContainsRef");
-      }
-      if (aliasName == "tryAt" && expr.args.size() == 2) {
-        return matchesHelper("/std/collections/map/tryAt") ||
-               matchesHelper("/std/collections/map/tryAt_ref") ||
-               matchesHelper("/std/collections/mapTryAt") ||
-               matchesHelper("/std/collections/experimental_map/mapTryAt") ||
-               matchesHelper("/std/collections/experimental_map/mapTryAtRef");
-      }
-      if (aliasName == "at" && expr.args.size() == 2) {
-        return matchesHelper("/std/collections/map/at") ||
-               matchesHelper("/std/collections/map/at_ref") ||
-               matchesHelper("/std/collections/mapAt") ||
-               matchesHelper("/std/collections/experimental_map/mapAt") ||
-               matchesHelper("/std/collections/experimental_map/mapAtRef");
-      }
-      if (aliasName == "at_unsafe" && expr.args.size() == 2) {
-        return matchesHelper("/std/collections/map/at_unsafe") ||
-               matchesHelper("/std/collections/map/at_unsafe_ref") ||
-               matchesHelper("/std/collections/mapAtUnsafe") ||
-               matchesHelper("/std/collections/experimental_map/mapAtUnsafe") ||
-               matchesHelper("/std/collections/experimental_map/mapAtUnsafeRef");
-      }
-      if (aliasName == "insert" && expr.args.size() == 3) {
-        return matchesHelper("/std/collections/map/insert") ||
-               matchesHelper("/std/collections/map/insert_ref") ||
-               matchesHelper("/std/collections/mapInsert") ||
-               matchesHelper("/std/collections/experimental_map/mapInsert") ||
-               matchesHelper("/std/collections/experimental_map/mapInsertRef");
-      }
+      const size_t expectedArgCount =
+          aliasName == "count" ? 1u : (aliasName == "insert" ? 3u : 2u);
+      return hasPublishedResolvedHelper &&
+             expr.args.size() == expectedArgCount &&
+             matchesInlineMapHelperFamily(aliasName, resolvedHelperName);
     }
     if ((normalizedName == "contains" || normalizedName == "map/contains" ||
          normalizedName == "std/collections/map/contains") &&
         expr.args.size() == 2) {
-      return matchesHelper("/std/collections/mapContains");
+      return hasPublishedResolvedHelper &&
+             matchesInlineMapHelperFamily("contains", resolvedHelperName);
     }
     if ((normalizedName == "tryAt" || normalizedName == "map/tryAt" ||
          normalizedName == "std/collections/map/tryAt") &&
         expr.args.size() == 2) {
-      return matchesHelper("/std/collections/mapTryAt");
+      return hasPublishedResolvedHelper &&
+             matchesInlineMapHelperFamily("tryAt", resolvedHelperName);
     }
     if ((normalizedName == "count" || normalizedName == "map/count" ||
          normalizedName == "std/collections/map/count") &&
         expr.args.size() == 1) {
-      return matchesHelper("/std/collections/map/count") ||
-             matchesHelper("/std/collections/mapCount");
+      return hasPublishedResolvedHelper &&
+             matchesInlineMapHelperFamily("count", resolvedHelperName);
     }
     if ((normalizedName == "insert" || normalizedName == "map/insert" ||
          normalizedName == "std/collections/map/insert") &&
         expr.args.size() == 3) {
-      return matchesHelper("/std/collections/map/insert") ||
-             matchesHelper("/std/collections/mapInsert");
+      return hasPublishedResolvedHelper &&
+             matchesInlineMapHelperFamily("insert", resolvedHelperName);
     }
     return false;
+  }
+  if (hasPublishedResolvedHelper && isInlineMapBuiltinHelperName(resolvedHelperName)) {
+    return true;
   }
   const size_t slash = callee.fullPath.find_last_of('/');
   if (slash == std::string::npos || slash == 0) {
@@ -105,9 +152,9 @@ bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
   if (receiverPath.rfind("/std/collections/experimental_map/Map__", 0) != 0) {
     return false;
   }
-  const std::string helperName = callee.fullPath.substr(slash + 1);
-  return helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
-         helperName == "at" || helperName == "at_unsafe" || helperName == "insert";
+  const std::string helperName =
+      canonicalInlineMapHelperName(callee.fullPath.substr(slash + 1));
+  return isInlineMapBuiltinHelperName(helperName);
 }
 
 bool isTypeNamespaceMethodCallForInlineEmit(const Expr &callExpr,
