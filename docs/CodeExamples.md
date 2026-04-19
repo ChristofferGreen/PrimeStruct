@@ -174,14 +174,14 @@ Pair {
 
 [int]
 sum_pair() {
-  pair{Pair([left] 4, [right] 8)}
+  [Pair] pair{[left] 4, [right] 8}
   return(pair.left + pair.right)
 }
 ```
 
 Why this is good:
 - The local binding stays short because the initializer already shows the type.
-- Labeled constructor arguments make field intent obvious at the call site.
+- Labeled field initializers make field intent obvious at the binding site.
 - The example introduces a distinct surface syntax without adding extra control-flow noise.
 
 ### Struct Defaults with Partial Construction
@@ -341,9 +341,9 @@ Current note:
   unsupported in the verified surface; spell helper parameters explicitly in
   examples.
 - Labeled struct-literal local bindings such as
-  `[Pair] pair{[left] 4, [right] 8}` are currently unsupported; use an
-  explicit constructor initializer such as `pair{Pair([left] 4, [right] 8)}`
-  instead.
+  `[Pair] pair{[left] 4, [right] 8}` are part of the verified current surface
+  and are preferred over constructor-wrapper spellings when the binding already
+  names the type.
 - The explicit constructor form `vector<T>{...}` remains valid, but docs no
   longer need it as a fallback for the readable vector loop example.
 

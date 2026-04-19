@@ -581,6 +581,43 @@ main([i32;] left; [i32;] right;) {
   CHECK(program.definitions[1].parameters.size() == 2);
 }
 
+TEST_CASE("parses labeled struct-literal local binding as constructor initializer") {
+  const std::string source = R"(
+[struct]
+Pair {
+  [int] left{0}
+  [int] right{0}
+}
+
+[int]
+sum_pair() {
+  [Pair] pair{[left] 4i32, [right] 8i32}
+  return(pair.left + pair.right)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 2);
+  const auto &sumPairDef = program.definitions[1];
+  REQUIRE(sumPairDef.statements.size() == 1);
+  const auto &binding = sumPairDef.statements[0];
+  REQUIRE(binding.isBinding);
+  REQUIRE(binding.args.size() == 1);
+  REQUIRE(binding.argNames.size() == 1);
+  CHECK_FALSE(binding.argNames[0].has_value());
+
+  const auto &initializer = binding.args[0];
+  REQUIRE(initializer.kind == primec::Expr::Kind::Call);
+  CHECK(initializer.name == "Pair");
+  REQUIRE(initializer.args.size() == 2);
+  REQUIRE(initializer.argNames.size() == 2);
+  REQUIRE(initializer.argNames[0].has_value());
+  REQUIRE(initializer.argNames[1].has_value());
+  CHECK(*initializer.argNames[0] == "left");
+  CHECK(*initializer.argNames[1] == "right");
+  CHECK(initializer.args[0].kind == primec::Expr::Kind::Literal);
+  CHECK(initializer.args[1].kind == primec::Expr::Kind::Literal);
+}
+
 TEST_CASE("parses leading separators in template lists") {
   const std::string source = R"(
 [return<int>]

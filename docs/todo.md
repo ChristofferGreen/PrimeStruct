@@ -56,49 +56,34 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-1. TODO-1072
-2. TODO-1071
+1. TODO-1071
 
 ### Immediate Next 10 (After Ready Now)
 
-1. TODO-1072
-2. TODO-1071
+1. TODO-1071
 
 ### Priority Lanes (Current)
 
-- Example surface parity: TODO-1072, TODO-1071
+- Example surface parity: TODO-1071
 
 ### Execution Queue (Recommended)
 
 Wave A:
-1. TODO-1072
-2. TODO-1071
+1. TODO-1071
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Example surface parity | TODO-1072, TODO-1071 |
+| Example surface parity | TODO-1071 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Parser and docs example parity | TODO-1072, TODO-1071 |
+| Parser and docs example parity | TODO-1071 |
 
 ### Task Blocks
-
-- [ ] TODO-1072: Restore labeled struct-literal local binding compile-run parity
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Example surface parity
-  - scope: support labeled struct-literal local bindings in the concise `[Type] name{[field] value, ...}` form and replace the constructor-wrapper workaround in docs once the surface compiles and runs.
-  - acceptance:
-    - `[Pair] pair{[left] 4, [right] 8}` parses and compiles through the supported release toolchain surface
-    - lowering routes the concise local binding through the same effective construction path as `pair{Pair([left] 4, [right] 8)}`
-    - `docs/CodeExamples.md` switches the current `Pair` example to the concise labeled struct-literal local binding form with matching coverage
-  - stop_rule: stop after labeled struct-literal local bindings compile and the docs example is updated; do not broaden to unrelated local-binding sugar in the same change
-  - notes: current parser failure is `PSC1003 expected identifier` at the first labeled field inside the binding
 
 - [ ] TODO-1071: Restore omitted parameter-type helper compile-run parity
   - owner: ai

@@ -269,6 +269,145 @@ bool Parser::normalizeValueBlock(std::vector<Expr> &body) {
 bool Parser::parseBindingInitializerList(std::vector<Expr> &out,
                                          std::vector<std::optional<std::string>> &argNames,
                                          const std::string &namespacePrefix) {
+  auto tryParseLabeledInitializerList = [&]() -> bool {
+    const size_t savedPos = pos_;
+    std::string ignoredError;
+    std::string *savedError = error_;
+    auto *savedErrorInfos = errorInfos_;
+    const ErrorInfo savedErrorInfo = lastErrorInfo_;
+    error_ = &ignoredError;
+    errorInfos_ = nullptr;
+
+    auto restoreState = [&](bool rewind) {
+      if (rewind) {
+        pos_ = savedPos;
+      }
+      error_ = savedError;
+      errorInfos_ = savedErrorInfos;
+      lastErrorInfo_ = savedErrorInfo;
+    };
+    auto skipCommentsOnly = [&]() {
+      while (tokens_[pos_].kind == TokenKind::Comment) {
+        ++pos_;
+      }
+    };
+    auto matchRaw = [&](TokenKind kind) -> bool {
+      skipCommentsOnly();
+      return tokens_[pos_].kind == kind;
+    };
+    auto consumeRaw = [&](TokenKind kind, const std::string &message) -> Token {
+      if (matchRaw(TokenKind::Invalid)) {
+        fail(describeInvalidToken(tokens_[pos_]));
+        return {TokenKind::End, ""};
+      }
+      if (!matchRaw(kind)) {
+        fail(message);
+        return {TokenKind::End, ""};
+      }
+      return tokens_[pos_++];
+    };
+    auto expectRaw = [&](TokenKind kind, const std::string &message) -> bool {
+      if (matchRaw(TokenKind::Invalid)) {
+        return fail(describeInvalidToken(tokens_[pos_]));
+      }
+      if (!matchRaw(kind)) {
+        return fail(message);
+      }
+      ++pos_;
+      return true;
+    };
+
+    if (!expectRaw(TokenKind::LBrace, "expected '{'")) {
+      restoreState(true);
+      return false;
+    }
+    if (matchRaw(TokenKind::RBrace)) {
+      restoreState(true);
+      return false;
+    }
+
+    ArgumentLabelGuard labelGuard(*this);
+    std::vector<Expr> labeledArgs;
+    std::vector<std::optional<std::string>> labeledArgNames;
+    while (true) {
+      if (!expectRaw(TokenKind::LBracket, "expected '['")) {
+        restoreState(true);
+        return false;
+      }
+      Token label = consumeRaw(TokenKind::Identifier, "expected argument label");
+      if (label.kind == TokenKind::End) {
+        restoreState(true);
+        return false;
+      }
+      if (label.text.find('/') != std::string::npos) {
+        restoreState(true);
+        return false;
+      }
+      std::string labelError;
+      if (!validateIdentifierText(label.text, labelError)) {
+        restoreState(true);
+        return false;
+      }
+      if (!expectRaw(TokenKind::RBracket, "expected ']' after argument label")) {
+        restoreState(true);
+        return false;
+      }
+      size_t nextIndex = pos_;
+      while (nextIndex < tokens_.size() && isIgnorableToken(tokens_[nextIndex].kind)) {
+        ++nextIndex;
+      }
+      if (nextIndex >= tokens_.size() ||
+          !isArgumentLabelValueStart(tokens_[nextIndex].kind)) {
+        restoreState(true);
+        return false;
+      }
+
+      Expr arg;
+      {
+        BareBindingGuard bindingGuard(*this, false);
+        if (!parseExpr(arg, namespacePrefix)) {
+          restoreState(true);
+          return false;
+        }
+      }
+      labeledArgs.push_back(std::move(arg));
+      labeledArgNames.push_back(label.text);
+
+      if (matchRaw(TokenKind::Comma) || matchRaw(TokenKind::Semicolon)) {
+        while (matchRaw(TokenKind::Comma) || matchRaw(TokenKind::Semicolon)) {
+          if (matchRaw(TokenKind::Comma)) {
+            expectRaw(TokenKind::Comma, "expected ','");
+          } else {
+            expectRaw(TokenKind::Semicolon, "expected ';'");
+          }
+        }
+        if (matchRaw(TokenKind::RBrace)) {
+          break;
+        }
+        continue;
+      }
+      if (matchRaw(TokenKind::RBrace)) {
+        break;
+      }
+      restoreState(true);
+      return false;
+    }
+
+    if (!expectRaw(TokenKind::RBrace, "expected '}'")) {
+      restoreState(true);
+      return false;
+    }
+
+    out = std::move(labeledArgs);
+    argNames = std::move(labeledArgNames);
+    restoreState(false);
+    return true;
+  };
+
+  if (tryParseLabeledInitializerList()) {
+    return true;
+  }
+
   Expr block;
   block.kind = Expr::Kind::Call;
   block.name = "block";

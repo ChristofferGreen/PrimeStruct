@@ -970,6 +970,38 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("binding initializer accepts labeled struct-literal local bindings") {
+  const std::string source = R"(
+[struct]
+Pair {
+  [int] left{0}
+  [int] right{0}
+}
+
+[return<int>]
+main() {
+  [Pair] pair{[left] 4i32, [right] 8i32}
+  return(plus(pair.left, pair.right))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("binding initializer shorthand still rejects named args for builtins") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values{[first] 1i32}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("binding initializer accepts return value blocks") {
   const std::string source = R"(
 [return<int>]
