@@ -33,6 +33,13 @@ bool SemanticsValidator::buildDefinitionMaps() {
   graphLocalAutoLegacyDirectCallReturnKindShadow_.clear();
   graphLocalAutoLegacyMethodCallPathShadow_.clear();
   graphLocalAutoLegacyMethodCallReturnKindShadow_.clear();
+  pilotRoutingSemanticCollectorsValid_ = false;
+  collectedDirectCallTargets_.clear();
+  collectedMethodCallTargets_.clear();
+  collectedBridgePathChoices_.clear();
+  collectedCallableSummaries_.clear();
+  onErrorSnapshotFactCacheValid_ = false;
+  onErrorSnapshotCache_.clear();
   structNames_.clear();
   publicDefinitions_.clear();
   paramsByDef_.clear();

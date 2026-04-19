@@ -424,100 +424,41 @@ SemanticsValidator::callBindingSnapshotForTesting() {
   return callBindingSnapshotCache_;
 }
 
-void SemanticsValidator::ensureCallableAndOnErrorSnapshotFactCaches() const {
-  if (callableAndOnErrorSnapshotFactCacheValid_) {
+void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
+  if (pilotRoutingSemanticCollectorsValid_) {
     return;
   }
 
-  callableSummaryDefinitionSnapshotCache_.clear();
-  onErrorSnapshotCache_.clear();
-  callableSummaryDefinitionSnapshotCache_.reserve(program_.definitions.size());
-  onErrorSnapshotCache_.reserve(program_.definitions.size());
+  collectedDirectCallTargets_.clear();
+  collectedMethodCallTargets_.clear();
+  collectedBridgePathChoices_.clear();
+  collectedCallableSummaries_.clear();
+  collectedDirectCallTargets_.reserve(program_.definitions.size());
+  collectedMethodCallTargets_.reserve(program_.definitions.size());
+  collectedBridgePathChoices_.reserve(program_.definitions.size());
+  collectedCallableSummaries_.reserve(
+      program_.definitions.size() + program_.executions.size());
 
-  for (const auto &def : program_.definitions) {
-    const auto state = buildDefinitionValidationState(def);
-    const auto &context = state.context;
-    ReturnKind returnKind = ReturnKind::Unknown;
-    if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {
-      returnKind = returnKindIt->second;
-    }
-
-    callableSummaryDefinitionSnapshotCache_.push_back(CallableSummarySnapshotEntry{
-        def.fullPath,
-        false,
-        returnKind,
-        context.definitionIsCompute,
-        context.definitionIsUnsafe,
-        std::vector<std::string>(context.activeEffects.begin(), context.activeEffects.end()),
-        snapshotCapabilities(def.transforms),
-        context.resultType.has_value() && context.resultType->isResult,
-        context.resultType.has_value() && context.resultType->isResult && context.resultType->hasValue,
-        context.resultType.has_value() && context.resultType->isResult ? context.resultType->valueType : std::string{},
-        context.resultType.has_value() && context.resultType->isResult ? context.resultType->errorType : std::string{},
-        context.onError.has_value(),
-        context.onError.has_value() ? context.onError->handlerPath : std::string{},
-        context.onError.has_value() ? context.onError->errorType : std::string{},
-        context.onError.has_value() ? context.onError->boundArgs.size() : 0,
-        def.semanticNodeId,
-    });
-
-    if (!context.onError.has_value()) {
-      continue;
-    }
-    std::vector<std::string> boundArgTexts;
-    boundArgTexts.reserve(context.onError->boundArgs.size());
-    for (const auto &transform : def.transforms) {
-      if (transform.name != "on_error") {
-        continue;
-      }
-      boundArgTexts = transform.arguments;
-      break;
-    }
-
-    onErrorSnapshotCache_.push_back(OnErrorSnapshotEntry{
-        def.fullPath,
-        returnKind,
-        context.onError->handlerPath,
-        context.onError->errorType,
-        context.onError->boundArgs.size(),
-        std::move(boundArgTexts),
-        context.resultType.has_value() && context.resultType->isResult && context.resultType->hasValue,
-        context.resultType.has_value() && context.resultType->isResult ? context.resultType->valueType : std::string{},
-        context.resultType.has_value() && context.resultType->isResult ? context.resultType->errorType : std::string{},
-        def.semanticNodeId,
-    });
-  }
-
-  for (auto &entry : callableSummaryDefinitionSnapshotCache_) {
-    std::sort(entry.activeEffects.begin(), entry.activeEffects.end());
-    entry.activeEffects.erase(std::unique(entry.activeEffects.begin(), entry.activeEffects.end()),
-                              entry.activeEffects.end());
-  }
-
-  std::stable_sort(callableSummaryDefinitionSnapshotCache_.begin(),
-                   callableSummaryDefinitionSnapshotCache_.end(),
-                   [](const auto &left, const auto &right) {
-                     if (left.fullPath != right.fullPath) {
-                       return left.fullPath < right.fullPath;
-                     }
-                     return left.isExecution < right.isExecution;
-                   });
-  std::stable_sort(onErrorSnapshotCache_.begin(),
-                   onErrorSnapshotCache_.end(),
-                   [](const auto &left, const auto &right) {
-                     return left.definitionPath < right.definitionPath;
-                   });
-  callableAndOnErrorSnapshotFactCacheValid_ = true;
-}
-
-std::vector<SemanticsValidator::DirectCallTargetSnapshotEntry>
-SemanticsValidator::directCallTargetSnapshotForSemanticProduct() const {
-  std::vector<DirectCallTargetSnapshotEntry> entries;
   forEachResolvedNonMethodCallSnapshot(
       program_,
       [this](const Expr &expr) { return resolveCalleePath(expr); },
       [&](const std::string &scopePath, const Expr &expr, std::string resolvedPath) {
-        entries.push_back(DirectCallTargetSnapshotEntry{
+        if (resolvedPath.empty()) {
+          return;
+        }
+        if (const auto bridgeChoice = collectionBridgeChoiceFromResolvedPath(resolvedPath);
+            bridgeChoice.has_value()) {
+          collectedBridgePathChoices_.push_back(CollectedBridgePathChoiceEntry{
+              scopePath,
+              bridgeChoice->first,
+              bridgeChoice->second,
+              resolvedPath,
+              expr.sourceLine,
+              expr.sourceColumn,
+              expr.semanticNodeId,
+          });
+        }
+        collectedDirectCallTargets_.push_back(CollectedDirectCallTargetEntry{
             scopePath,
             expr.name,
             std::move(resolvedPath),
@@ -526,28 +467,6 @@ SemanticsValidator::directCallTargetSnapshotForSemanticProduct() const {
             expr.semanticNodeId,
         });
       });
-
-  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
-    if (left.scopePath != right.scopePath) {
-      return left.scopePath < right.scopePath;
-    }
-    if (left.sourceLine != right.sourceLine) {
-      return left.sourceLine < right.sourceLine;
-    }
-    if (left.sourceColumn != right.sourceColumn) {
-      return left.sourceColumn < right.sourceColumn;
-    }
-    if (left.callName != right.callName) {
-      return left.callName < right.callName;
-    }
-    return left.resolvedPath < right.resolvedPath;
-  });
-  return entries;
-}
-
-std::vector<SemanticsValidator::MethodCallTargetSnapshotEntry>
-SemanticsValidator::methodCallTargetSnapshotForSemanticProduct() {
-  std::vector<MethodCallTargetSnapshotEntry> entries;
 
   auto withPreservedError = [&](const std::function<bool()> &fn) {
     const std::string previousError = error_;
@@ -591,7 +510,7 @@ SemanticsValidator::methodCallTargetSnapshotForSemanticProduct() {
       receiverBinding = {};
     }
 
-    entries.push_back(MethodCallTargetSnapshotEntry{
+    collectedMethodCallTargets_.push_back(CollectedMethodCallTargetEntry{
         def.fullPath,
         expr.name,
         std::move(resolvedPath),
@@ -602,76 +521,39 @@ SemanticsValidator::methodCallTargetSnapshotForSemanticProduct() {
     });
   });
 
-  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
-    if (left.scopePath != right.scopePath) {
-      return left.scopePath < right.scopePath;
+  for (const auto &def : program_.definitions) {
+    const auto state = buildDefinitionValidationState(def);
+    const auto &context = state.context;
+    ReturnKind returnKind = ReturnKind::Unknown;
+    if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {
+      returnKind = returnKindIt->second;
     }
-    if (left.sourceLine != right.sourceLine) {
-      return left.sourceLine < right.sourceLine;
-    }
-    if (left.sourceColumn != right.sourceColumn) {
-      return left.sourceColumn < right.sourceColumn;
-    }
-    if (left.methodName != right.methodName) {
-      return left.methodName < right.methodName;
-    }
-    return left.resolvedPath < right.resolvedPath;
-  });
-  return entries;
-}
 
-std::vector<SemanticsValidator::BridgePathChoiceSnapshotEntry>
-SemanticsValidator::bridgePathChoiceSnapshotForSemanticProduct() const {
-  std::vector<BridgePathChoiceSnapshotEntry> entries;
-  forEachResolvedNonMethodCallSnapshot(
-      program_,
-      [this](const Expr &expr) { return resolveCalleePath(expr); },
-      [&](const std::string &scopePath, const Expr &expr, std::string resolvedPath) {
-        if (const auto bridgeChoice = collectionBridgeChoiceFromResolvedPath(resolvedPath);
-            bridgeChoice.has_value()) {
-          entries.push_back(BridgePathChoiceSnapshotEntry{
-              scopePath,
-              bridgeChoice->first,
-              bridgeChoice->second,
-              std::move(resolvedPath),
-              expr.sourceLine,
-              expr.sourceColumn,
-              expr.semanticNodeId,
-          });
-        }
-      });
+    collectedCallableSummaries_.push_back(CollectedCallableSummaryEntry{
+        def.fullPath,
+        false,
+        returnKind,
+        context.definitionIsCompute,
+        context.definitionIsUnsafe,
+        std::vector<std::string>(context.activeEffects.begin(), context.activeEffects.end()),
+        snapshotCapabilities(def.transforms),
+        context.resultType.has_value() && context.resultType->isResult,
+        context.resultType.has_value() && context.resultType->isResult && context.resultType->hasValue,
+        context.resultType.has_value() && context.resultType->isResult ? context.resultType->valueType : std::string{},
+        context.resultType.has_value() && context.resultType->isResult ? context.resultType->errorType : std::string{},
+        context.onError.has_value(),
+        context.onError.has_value() ? context.onError->handlerPath : std::string{},
+        context.onError.has_value() ? context.onError->errorType : std::string{},
+        context.onError.has_value() ? context.onError->boundArgs.size() : 0,
+        def.semanticNodeId,
+    });
 
-  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
-    if (left.scopePath != right.scopePath) {
-      return left.scopePath < right.scopePath;
-    }
-    if (left.sourceLine != right.sourceLine) {
-      return left.sourceLine < right.sourceLine;
-    }
-    if (left.sourceColumn != right.sourceColumn) {
-      return left.sourceColumn < right.sourceColumn;
-    }
-    if (left.collectionFamily != right.collectionFamily) {
-      return left.collectionFamily < right.collectionFamily;
-    }
-    if (left.helperName != right.helperName) {
-      return left.helperName < right.helperName;
-    }
-    return left.chosenPath < right.chosenPath;
-  });
-  return entries;
-}
-
-std::vector<SemanticsValidator::CallableSummarySnapshotEntry>
-SemanticsValidator::callableSummarySnapshotForSemanticProduct() const {
-  ensureCallableAndOnErrorSnapshotFactCaches();
-  std::vector<CallableSummarySnapshotEntry> entries = callableSummaryDefinitionSnapshotCache_;
-  entries.reserve(entries.size() + program_.executions.size());
+  }
 
   for (const auto &exec : program_.executions) {
     const auto state = buildExecutionValidationState(exec);
     const auto &context = state.context;
-    entries.push_back(CallableSummarySnapshotEntry{
+    collectedCallableSummaries_.push_back(CollectedCallableSummaryEntry{
         exec.fullPath,
         true,
         ReturnKind::Unknown,
@@ -691,19 +573,151 @@ SemanticsValidator::callableSummarySnapshotForSemanticProduct() const {
     });
   }
 
-  for (auto &entry : entries) {
+  for (auto &entry : collectedCallableSummaries_) {
     std::sort(entry.activeEffects.begin(), entry.activeEffects.end());
     entry.activeEffects.erase(std::unique(entry.activeEffects.begin(), entry.activeEffects.end()),
                               entry.activeEffects.end());
   }
 
-  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
-    if (left.fullPath != right.fullPath) {
-      return left.fullPath < right.fullPath;
+  std::stable_sort(collectedDirectCallTargets_.begin(),
+                   collectedDirectCallTargets_.end(),
+                   [](const auto &left, const auto &right) {
+                     if (left.scopePath != right.scopePath) {
+                       return left.scopePath < right.scopePath;
+                     }
+                     if (left.sourceLine != right.sourceLine) {
+                       return left.sourceLine < right.sourceLine;
+                     }
+                     if (left.sourceColumn != right.sourceColumn) {
+                       return left.sourceColumn < right.sourceColumn;
+                     }
+                     if (left.callName != right.callName) {
+                       return left.callName < right.callName;
+                     }
+                     return left.resolvedPath < right.resolvedPath;
+                   });
+  std::stable_sort(collectedMethodCallTargets_.begin(),
+                   collectedMethodCallTargets_.end(),
+                   [](const auto &left, const auto &right) {
+                     if (left.scopePath != right.scopePath) {
+                       return left.scopePath < right.scopePath;
+                     }
+                     if (left.sourceLine != right.sourceLine) {
+                       return left.sourceLine < right.sourceLine;
+                     }
+                     if (left.sourceColumn != right.sourceColumn) {
+                       return left.sourceColumn < right.sourceColumn;
+                     }
+                     if (left.methodName != right.methodName) {
+                       return left.methodName < right.methodName;
+                     }
+                     return left.resolvedPath < right.resolvedPath;
+                   });
+  std::stable_sort(collectedBridgePathChoices_.begin(),
+                   collectedBridgePathChoices_.end(),
+                   [](const auto &left, const auto &right) {
+                     if (left.scopePath != right.scopePath) {
+                       return left.scopePath < right.scopePath;
+                     }
+                     if (left.sourceLine != right.sourceLine) {
+                       return left.sourceLine < right.sourceLine;
+                     }
+                     if (left.sourceColumn != right.sourceColumn) {
+                       return left.sourceColumn < right.sourceColumn;
+                     }
+                     if (left.collectionFamily != right.collectionFamily) {
+                       return left.collectionFamily < right.collectionFamily;
+                     }
+                     if (left.helperName != right.helperName) {
+                       return left.helperName < right.helperName;
+                     }
+                     return left.chosenPath < right.chosenPath;
+                   });
+  std::stable_sort(collectedCallableSummaries_.begin(),
+                   collectedCallableSummaries_.end(),
+                   [](const auto &left, const auto &right) {
+                     if (left.fullPath != right.fullPath) {
+                       return left.fullPath < right.fullPath;
+                     }
+                     return left.isExecution < right.isExecution;
+                   });
+  pilotRoutingSemanticCollectorsValid_ = true;
+}
+
+std::vector<SemanticsValidator::CollectedDirectCallTargetEntry>
+SemanticsValidator::takeCollectedDirectCallTargetsForSemanticProduct() {
+  collectPilotRoutingSemanticProductFacts();
+  return std::exchange(collectedDirectCallTargets_, {});
+}
+
+std::vector<SemanticsValidator::CollectedMethodCallTargetEntry>
+SemanticsValidator::takeCollectedMethodCallTargetsForSemanticProduct() {
+  collectPilotRoutingSemanticProductFacts();
+  return std::exchange(collectedMethodCallTargets_, {});
+}
+
+std::vector<SemanticsValidator::CollectedBridgePathChoiceEntry>
+SemanticsValidator::takeCollectedBridgePathChoicesForSemanticProduct() {
+  collectPilotRoutingSemanticProductFacts();
+  return std::exchange(collectedBridgePathChoices_, {});
+}
+
+std::vector<SemanticsValidator::CollectedCallableSummaryEntry>
+SemanticsValidator::takeCollectedCallableSummariesForSemanticProduct() {
+  collectPilotRoutingSemanticProductFacts();
+  return std::exchange(collectedCallableSummaries_, {});
+}
+
+void SemanticsValidator::ensureOnErrorSnapshotFactCache() const {
+  if (onErrorSnapshotFactCacheValid_) {
+    return;
+  }
+
+  onErrorSnapshotCache_.clear();
+  onErrorSnapshotCache_.reserve(program_.definitions.size());
+
+  for (const auto &def : program_.definitions) {
+    const auto state = buildDefinitionValidationState(def);
+    const auto &context = state.context;
+    if (!context.onError.has_value()) {
+      continue;
     }
-    return left.isExecution < right.isExecution;
-  });
-  return entries;
+
+    ReturnKind returnKind = ReturnKind::Unknown;
+    if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {
+      returnKind = returnKindIt->second;
+    }
+
+    std::vector<std::string> boundArgTexts;
+    boundArgTexts.reserve(context.onError->boundArgs.size());
+    for (const auto &transform : def.transforms) {
+      if (transform.name != "on_error") {
+        continue;
+      }
+      boundArgTexts = transform.arguments;
+      break;
+    }
+
+    onErrorSnapshotCache_.push_back(OnErrorSnapshotEntry{
+        def.fullPath,
+        returnKind,
+        context.onError->handlerPath,
+        context.onError->errorType,
+        context.onError->boundArgs.size(),
+        std::move(boundArgTexts),
+        context.resultType.has_value() && context.resultType->isResult && context.resultType->hasValue,
+        context.resultType.has_value() && context.resultType->isResult ? context.resultType->valueType : std::string{},
+        context.resultType.has_value() && context.resultType->isResult ? context.resultType->errorType : std::string{},
+        def.semanticNodeId,
+    });
+  }
+
+  std::stable_sort(onErrorSnapshotCache_.begin(),
+                   onErrorSnapshotCache_.end(),
+                   [](const auto &left, const auto &right) {
+                     return left.definitionPath < right.definitionPath;
+                   });
+  onErrorSnapshotFactCacheValid_ = true;
 }
 
 std::vector<SemanticsValidator::TypeMetadataSnapshotEntry>
@@ -1117,8 +1131,8 @@ SemanticsValidator::tryFactSnapshotForSemanticProduct() {
 
 std::vector<SemanticsValidator::OnErrorSnapshotEntry>
 SemanticsValidator::onErrorFactSnapshotForSemanticProduct() {
-  ensureCallableAndOnErrorSnapshotFactCaches();
-  callableAndOnErrorSnapshotFactCacheValid_ = false;
+  ensureOnErrorSnapshotFactCache();
+  onErrorSnapshotFactCacheValid_ = false;
   return std::exchange(onErrorSnapshotCache_, {});
 }
 

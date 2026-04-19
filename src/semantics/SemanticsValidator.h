@@ -124,7 +124,7 @@ public:
     BindingInfo binding;
   };
 
-  struct DirectCallTargetSnapshotEntry {
+  struct CollectedDirectCallTargetEntry {
     std::string scopePath;
     std::string callName;
     std::string resolvedPath;
@@ -146,7 +146,7 @@ public:
     uint64_t semanticNodeId = 0;
   };
 
-  struct MethodCallTargetSnapshotEntry {
+  struct CollectedMethodCallTargetEntry {
     std::string scopePath;
     std::string methodName;
     std::string resolvedPath;
@@ -156,7 +156,7 @@ public:
     uint64_t semanticNodeId = 0;
   };
 
-  struct BridgePathChoiceSnapshotEntry {
+  struct CollectedBridgePathChoiceEntry {
     std::string scopePath;
     std::string collectionFamily;
     std::string helperName;
@@ -166,7 +166,7 @@ public:
     uint64_t semanticNodeId = 0;
   };
 
-  struct CallableSummarySnapshotEntry {
+  struct CollectedCallableSummaryEntry {
     std::string fullPath;
     bool isExecution = false;
     ReturnKind returnKind = ReturnKind::Unknown;
@@ -271,10 +271,10 @@ public:
   std::vector<ReturnResolutionSnapshotEntry> returnResolutionSnapshotForTesting() const;
   std::vector<LocalAutoBindingSnapshotEntry> localAutoBindingSnapshotForTesting() const;
   std::vector<CallBindingSnapshotEntry> callBindingSnapshotForTesting();
-  std::vector<DirectCallTargetSnapshotEntry> directCallTargetSnapshotForSemanticProduct() const;
-  std::vector<MethodCallTargetSnapshotEntry> methodCallTargetSnapshotForSemanticProduct();
-  std::vector<BridgePathChoiceSnapshotEntry> bridgePathChoiceSnapshotForSemanticProduct() const;
-  std::vector<CallableSummarySnapshotEntry> callableSummarySnapshotForSemanticProduct() const;
+  std::vector<CollectedDirectCallTargetEntry> takeCollectedDirectCallTargetsForSemanticProduct();
+  std::vector<CollectedMethodCallTargetEntry> takeCollectedMethodCallTargetsForSemanticProduct();
+  std::vector<CollectedBridgePathChoiceEntry> takeCollectedBridgePathChoicesForSemanticProduct();
+  std::vector<CollectedCallableSummaryEntry> takeCollectedCallableSummariesForSemanticProduct();
   std::vector<TypeMetadataSnapshotEntry> typeMetadataSnapshotForSemanticProduct() const;
   std::vector<StructFieldMetadataSnapshotEntry> structFieldMetadataSnapshotForSemanticProduct();
   std::vector<BindingFactSnapshotEntry> bindingFactSnapshotForSemanticProduct();
@@ -772,8 +772,12 @@ private:
   bool callBindingSnapshotCacheValid_ = false;
   std::vector<TryValueSnapshotEntry> tryValueSnapshotCache_;
   std::vector<CallBindingSnapshotEntry> callBindingSnapshotCache_;
-  mutable bool callableAndOnErrorSnapshotFactCacheValid_ = false;
-  mutable std::vector<CallableSummarySnapshotEntry> callableSummaryDefinitionSnapshotCache_;
+  bool pilotRoutingSemanticCollectorsValid_ = false;
+  std::vector<CollectedDirectCallTargetEntry> collectedDirectCallTargets_;
+  std::vector<CollectedMethodCallTargetEntry> collectedMethodCallTargets_;
+  std::vector<CollectedBridgePathChoiceEntry> collectedBridgePathChoices_;
+  std::vector<CollectedCallableSummaryEntry> collectedCallableSummaries_;
+  mutable bool onErrorSnapshotFactCacheValid_ = false;
   mutable std::vector<OnErrorSnapshotEntry> onErrorSnapshotCache_;
   std::unordered_map<std::string, EffectFreeSummary> effectFreeDefCache_;
   std::unordered_set<std::string> effectFreeDefStack_;

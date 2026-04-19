@@ -10,7 +10,8 @@
   void ensureQuerySnapshotFactCaches();
   void ensureCallAndTrySnapshotFactCaches(bool includeTryValues,
                                           bool includeCallBindings);
-  void ensureCallableAndOnErrorSnapshotFactCaches() const;
+  void collectPilotRoutingSemanticProductFacts();
+  void ensureOnErrorSnapshotFactCache() const;
   bool buildDefinitionMaps();
   bool validateDefinitionBuildTransforms(const Definition &def,
                                          bool isStructHelper,

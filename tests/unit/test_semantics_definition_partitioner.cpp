@@ -795,6 +795,7 @@ main() {
 
   struct IndexFamilySnapshot {
     std::string formattedSemanticProduct;
+    std::size_t callableSummaryCount = 0;
     std::size_t directCallTargetCount = 0;
     std::size_t methodCallTargetCount = 0;
     std::size_t bridgePathChoiceCount = 0;
@@ -830,6 +831,7 @@ main() {
 
     IndexFamilySnapshot snapshot;
     snapshot.formattedSemanticProduct = primec::formatSemanticProgram(output.semanticProgram);
+    snapshot.callableSummaryCount = output.semanticProgram.callableSummaries.size();
     snapshot.directCallTargetCount = output.semanticProgram.directCallTargets.size();
     snapshot.methodCallTargetCount = output.semanticProgram.methodCallTargets.size();
     snapshot.bridgePathChoiceCount = output.semanticProgram.bridgePathChoices.size();
@@ -853,6 +855,8 @@ main() {
   CHECK(singleWorker.formattedSemanticProduct == fourWorkers.formattedSemanticProduct);
   CHECK(twoWorkers.formattedSemanticProduct == fourWorkers.formattedSemanticProduct);
 
+  CHECK(singleWorker.callableSummaryCount == twoWorkers.callableSummaryCount);
+  CHECK(singleWorker.callableSummaryCount == fourWorkers.callableSummaryCount);
   CHECK(singleWorker.directCallTargetCount == twoWorkers.directCallTargetCount);
   CHECK(singleWorker.directCallTargetCount == fourWorkers.directCallTargetCount);
   CHECK(singleWorker.methodCallTargetCount == twoWorkers.methodCallTargetCount);
@@ -872,6 +876,7 @@ main() {
   CHECK(singleWorker.returnFactCount == twoWorkers.returnFactCount);
   CHECK(singleWorker.returnFactCount == fourWorkers.returnFactCount);
 
+  CHECK(singleWorker.callableSummaryCount > 0);
   CHECK(singleWorker.directCallTargetCount > 0);
   CHECK(singleWorker.methodCallTargetCount > 0);
   CHECK(singleWorker.bridgePathChoiceCount == 0);

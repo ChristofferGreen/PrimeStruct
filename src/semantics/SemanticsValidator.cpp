@@ -288,7 +288,10 @@ bool SemanticsValidator::run() {
               << ",\"query_fact_snapshot_cache\":" << queryFactSnapshotCache_.size()
               << ",\"try_value_snapshot_cache\":" << tryValueSnapshotCache_.size()
               << ",\"call_binding_snapshot_cache\":" << callBindingSnapshotCache_.size()
-              << ",\"callable_summary_snapshot_cache\":" << callableSummaryDefinitionSnapshotCache_.size()
+              << ",\"pilot_routing_direct_call_collectors\":" << collectedDirectCallTargets_.size()
+              << ",\"pilot_routing_method_call_collectors\":" << collectedMethodCallTargets_.size()
+              << ",\"pilot_routing_bridge_collectors\":" << collectedBridgePathChoices_.size()
+              << ",\"pilot_routing_callable_collectors\":" << collectedCallableSummaries_.size()
               << ",\"on_error_snapshot_cache\":" << onErrorSnapshotCache_.size()
               << ",\"effect_free_def_cache\":" << effectFreeDefCache_.size()
               << ",\"effect_free_def_cache_buckets\":" << effectFreeDefCache_.bucket_count()
@@ -400,6 +403,8 @@ bool SemanticsValidator::run() {
     return false;
   }
   dumpValidatorState("validateEntry");
+  collectPilotRoutingSemanticProductFacts();
+  dumpValidatorState("collectPilotRoutingSemanticProductFacts");
   return true;
 }
 

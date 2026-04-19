@@ -56,38 +56,36 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-1. TODO-1063
+1. TODO-1064
 
 ### Immediate Next 10 (After Ready Now)
 
-1. TODO-1063
-2. TODO-1064
-3. TODO-1065
+1. TODO-1064
+2. TODO-1065
 
 ### Priority Lanes (Current)
 
-- Pilot semantic boundary ownership: TODO-1063, TODO-1064, TODO-1065
+- Pilot semantic boundary ownership: TODO-1064, TODO-1065
 
 ### Execution Queue (Recommended)
 
 Wave A:
-1. TODO-1063
+1. TODO-1064
 
 Wave B:
-1. TODO-1064
-2. TODO-1065
+1. TODO-1065
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Pilot semantic ownership boundary | TODO-1063, TODO-1064, TODO-1065 |
+| Pilot semantic ownership boundary | TODO-1064, TODO-1065 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Semantic-product publication parity | TODO-1063, TODO-1064 |
+| Semantic-product publication parity | TODO-1064 |
 | Lowering conformance and fallback deletion | TODO-1065 |
 
 ### Task Blocks
@@ -108,21 +106,9 @@ Wave B:
   - owner: ai
   - created_at: 2026-04-19
   - phase: Architecture boundary hardening
-  - depends_on: TODO-1063
   - scope: move the lowering lookup/index work now rebuilt in `IrLowererSemanticProductTargetAdapters.cpp` into semantic-product publication for the pilot routing slice so lowering consumes preindexed views instead of reconstructing routing maps per run.
   - acceptance:
     - lowering no longer rebuilds the current semantic-product routing index tables for the pilot slice
     - semantic-product publication emits the preindexed views or equivalent owned lookup tables needed by lowering for that slice
     - focused lowering tests prove parity while memory/perf coverage shows the adapter rebuild cost is removed or reduced for the pilot slice
   - stop_rule: stop after direct-call, method-call, bridge-path, and callable-summary lookup support are precomputed; leave other fact families for follow-up if needed
-
-- [ ] TODO-1063: Replace pilot routing snapshot export with append-only fact collectors
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Architecture boundary hardening
-  - scope: route the pilot routing semantic-product families through builder-owned collectors populated during validation, reducing the snapshot-export surface on `SemanticsValidator` for the first ownership slice.
-  - acceptance:
-    - direct-call, method-call, bridge-path, and callable-summary facts are emitted from append-only collectors instead of post-run snapshot reconstruction
-    - the corresponding pilot routing snapshot structs or export methods disappear from `SemanticsValidator`
-    - semantic-product formatter and lowering parity stay unchanged for the migrated pilot routing facts
-  - stop_rule: stop after the pilot routing families prove the collector pattern and shrink the validator export surface; leave non-routing families for follow-up tasks
