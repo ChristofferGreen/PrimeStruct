@@ -615,7 +615,7 @@ main() {
   CHECK(runCommand(runCmd) == 63);
 }
 
-TEST_CASE("runs vm with user array at_unsafe call shadow" * doctest::skip(true)) {
+TEST_CASE("runs vm with user array at_unsafe call shadow") {
   const std::string source = R"(
 [return<int>]
 /array/at_unsafe([array<i32>] values, [i32] index) {

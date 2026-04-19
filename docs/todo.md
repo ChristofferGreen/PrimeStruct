@@ -56,40 +56,30 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1164
+- none
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1164
+- none
 
 ### Priority Lanes (Current)
 
-- VM user array at_unsafe call-shadow skip debt: TODO-1164
+- none
 
 ### Execution Queue (Recommended)
 
-1. TODO-1164
+1. none
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| VM canonical vector access skipped-test debt | TODO-1164 |
+| VM canonical vector access skipped-test debt | none |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| VM compile-run skipped-test debt | TODO-1164 |
+| VM compile-run skipped-test debt | none |
 
 ### Task Blocks
-
-- [ ] TODO-1164: Audit VM user array at_unsafe call-shadow skip debt
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped VM user-array `at_unsafe(values, index)` call-shadow coverage, and lock the current VM contract when `/array/at_unsafe` competes with builtin unsafe-access lowering on `array<i32>`.
-  - acceptance:
-    - `tests/unit/test_compile_run_vm_collections_map_wrapper_shadows.cpp` no longer carries the skipped VM user-array `at_unsafe(values, index)` call-shadow case in stale form.
-    - The VM test locks the actual current contract for the call-shadow surface, whether that remains the current array-unsafe-access runtime path or another stable VM-side outcome.
-  - stop_rule: Stop after the VM user-array `at_unsafe(values, index)` call-shadow surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
