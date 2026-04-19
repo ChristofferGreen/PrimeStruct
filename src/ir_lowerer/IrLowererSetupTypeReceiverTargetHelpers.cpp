@@ -154,11 +154,14 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
       isVectorBuiltinName(callExpr, "remove_at") || isVectorBuiltinName(callExpr, "remove_swap");
   const bool isExplicitRemovedVectorMethodAlias = isExplicitRemovedVectorMethodAliasPath(callExpr.name);
   const bool isExplicitMapMethodAlias = isExplicitMapMethodAliasPath(callExpr.name);
+  const bool isExplicitMapContainsOrTryAtMethod =
+      isExplicitMapContainsOrTryAtMethodPath(callExpr.name);
   const bool isBuiltinMapContainsOrTryAtCall =
       isSimpleCallName(callExpr, "contains") || isSimpleCallName(callExpr, "tryAt") ||
       isSimpleCallName(callExpr, "insert");
   const bool allowBuiltinFallback =
       !isExplicitRemovedVectorMethodAlias && !isExplicitMapMethodAlias &&
+      !isExplicitMapContainsOrTryAtMethod &&
       !isBuiltinBareVectorCapacityMethod &&
       (isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||
        isBuiltinMapContainsOrTryAtCall ||
@@ -300,7 +303,9 @@ bool inferBuiltinAccessReceiverResultKind(const Expr &receiverCallExpr,
                                           const std::unordered_map<std::string, const Definition *> &defMap,
                                           LocalInfo::ValueKind &kindOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
-  if ((receiverCallExpr.isMethodCall && isExplicitMapMethodAliasPath(receiverCallExpr.name)) ||
+  if ((receiverCallExpr.isMethodCall &&
+       (isExplicitMapMethodAliasPath(receiverCallExpr.name) ||
+        isExplicitMapContainsOrTryAtMethodPath(receiverCallExpr.name))) ||
       isExplicitMapHelperFallbackPath(receiverCallExpr) ||
       isExplicitVectorReceiverProbeHelperExpr(receiverCallExpr)) {
     return false;

@@ -55,10 +55,11 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-1. TODO-0409
-2. TODO-0401
-3. TODO-0402
-4. TODO-0405
+1. TODO-0997
+2. TODO-0411
+3. TODO-0401
+4. TODO-0402
+5. TODO-0405
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -67,14 +68,15 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- P1 Collection stdlib ownership cutover (`map`, `soa_vector`): TODO-0409
+- P1 Collection stdlib ownership cutover (`map`, `soa_vector`): TODO-0997, TODO-0411
 - P2 SoA canonicalization + semantic memory/perf + multithread substrate + semantic-product boundary hardening: TODO-0401, TODO-0402, TODO-0405, TODO-0406
 - P3 Queue/snapshot governance: TODO-0403
 
 ### Execution Queue (Recommended)
 
 Wave A (collection stdlib ownership cutover):
-1. TODO-0409
+1. TODO-0997
+2. TODO-0411
 
 Wave B (SoA completion):
 1. TODO-0401
@@ -91,7 +93,7 @@ Wave D (queue hygiene):
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Collection stdlib ownership cutover (`map`, `soa_vector`) | TODO-0409 |
+| Collection stdlib ownership cutover (`map`, `soa_vector`) | TODO-0997, TODO-0411 |
 | SoA bring-up and stdlib-authoritative `soa_vector` end-state cleanup | TODO-0401 |
 | Semantic memory footprint and multithread compile substrate | TODO-0402 |
 | Semantic-product contract/index boundary hardening | TODO-0405, TODO-0406 |
@@ -101,27 +103,61 @@ Wave D (queue hygiene):
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0401, TODO-0402, TODO-0405, TODO-0406, TODO-0409 |
-| Collection conformance and alias-deletion checks (`map`/`soa_vector`) | TODO-0409 |
+| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0401, TODO-0402, TODO-0405, TODO-0406, TODO-0997, TODO-0411 |
+| Collection conformance and alias-deletion checks (`map`/`soa_vector`) | TODO-0997, TODO-0411 |
 | Benchmark/runtime regression checks (`./scripts/benchmark.sh`) | TODO-0402 |
 | Semantic-product contract/index and deterministic conformance checks | TODO-0405, TODO-0406 |
 | TODO/open-vs-finished hygiene (`docs/todo.md` vs `docs/todo_finished.md`) | TODO-0403 |
 
 ### Task Blocks
 
-- [ ] TODO-0409: Remove C++ name routing for `map` + `soa_vector`
+- [~] TODO-0409: Track remaining `map` + `soa_vector` name-routing cleanup
   - owner: ai
   - created_at: 2026-04-13
   - phase: Group 14
-  - scope: Complete stdlib-authoritative collection migration by routing `map` and `soa_vector` behavior through `.prime` definitions, then delete remaining production compiler/runtime C++ name/path alias logic for these collections in semantics/lowering (`src/` + `include/primec`, excluding tests/testing-only facades).
+  - scope: Track the remaining child leaves needed to finish stdlib-authoritative `map` and `soa_vector` behavior and delete the last production compiler/runtime name/path alias logic for those collections; implementation work lives in child TODOs.
   - acceptance:
-    - Production `src/` + `include/` collection routing no longer hardcodes `map`/`soa_vector` symbol/path aliases for normal call/access classification; dispatch is generic or intrinsic-driven.
-    - Release-mode collection conformance/tests for `map` and `soa_vector` pass, and any changed diagnostics are updated via deterministic snapshots.
-    - At least one real compatibility subsystem (legacy alias/canonicalization branch family) is deleted rather than renamed.
-    - Focused release-mode suites pass for the migration surface: `./build-release/PrimeStruct_semantics_tests --test-suite=primestruct.semantics.calls_flow.collections`, `./build-release/PrimeStruct_backend_tests --test-suite=primestruct.ir.pipeline.validation`, `./build-release/PrimeStruct_backend_tests --test-suite=primestruct.compile.run.vm.maps`, `./build-release/PrimeStruct_backend_tests --test-suite=primestruct.compile.run.vm.collections`, `./build-release/PrimeStruct_backend_tests --test-suite=primestruct.compile.run.native_backend.collections`, and `./build-release/PrimeStruct_backend_tests --test-suite=primestruct.compile.run.emitters.cpp`.
-    - Production guardrail check confirms no hardcoded collection compatibility routing remains in semantics/lowerer/emitter code paths (for example via `rg` over `src/semantics`, `src/ir_lowerer`, and emitter sources), with any remaining mentions justified as canonical stdlib or test-only references.
-    - Final release gate passes with `./scripts/compile.sh --release`.
-  - stop_rule: If landing both collections together is too risky for one commit, split into TODO-0410 (`map`) and TODO-0411 (`soa_vector`) with independent acceptance before continuing.
+    - Active child leaves for `map` and `soa_vector` (currently TODO-0997 and TODO-0411) stay explicit with bounded scope, deletion targets, and verification commands.
+    - This tracker is only completed after the `map` and `soa_vector` child work is archived in `docs/todo_finished.md` with evidence notes.
+    - At least one collection-alias deletion leaf remains `Ready Now` until the final collection compatibility routing is gone.
+  - stop_rule: If either collection branch remains too large for one code-affecting commit, keep splitting it into explicit child leaves before implementation continues.
+  - notes: Split the old broad leaf into `TODO-0410` (`map`) and `TODO-0411` (`soa_vector`). Archived child `TODO-0996` removed the lowerer explicit `map` `contains`/`tryAt` slash-method compatibility routing; active child `TODO-0997` owns the next `map` emitter cleanup slice.
+
+- [~] TODO-0410: Track remaining `map` name-routing cleanup
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Group 14
+  - scope: Track the remaining child leaves needed to delete production `map` name/path alias routing after the vector cutover; implementation work lives in child TODOs.
+  - acceptance:
+    - Active `map` child leaves stay explicit with bounded scope, canonical-path goals, and verification commands.
+    - Completed `map` child leaves move to `docs/todo_finished.md` with evidence notes in the same change that removes them from active planning.
+    - This tracker is only completed after no production semantics/lowerer/emitter code path still preserves rooted `map` compatibility routing for normal helper dispatch.
+  - stop_rule: If the remaining `map` cleanup still spans multiple subsystems, keep landing one subsystem-sized child leaf at a time before moving to `soa_vector`.
+  - notes: Archived child `TODO-0996` removed the lowerer explicit `map` `contains`/`tryAt` slash-method compatibility branch family. Active child `TODO-0997` owns the next emitter-facing `map` alias cleanup slice.
+
+- [ ] TODO-0997: Remove emitter `map` helper alias routing after lowerer slash-method cleanup
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Group 14
+  - scope: Delete the remaining emitter-side rooted `map` helper alias routing that still preserves `/map/*` compatibility paths in method-path resolution/name rewriting after the lowerer explicit `contains`/`tryAt` slash-method cleanup.
+  - acceptance:
+    - Production emitter map helper resolution no longer preserves rooted `/map/*` compatibility routing for at least one remaining helper family when canonical `/std/collections/map/*` metadata exists.
+    - Bare map helper emission continues to resolve through canonical `/std/collections/map/*` helpers or fail with canonical unknown-target diagnostics when those helpers are absent.
+    - Focused emitter coverage pins the canonical bare-helper behavior and the rejection of explicit rooted `/map/*` slash-method behavior for the touched helper family.
+    - At least one real emitter-side `map` alias branch family is deleted rather than renamed.
+  - stop_rule: If removing all remaining emitter-side `map` alias routing is too large, land one complete helper family first and add a single follow-up leaf for the rest.
+
+- [ ] TODO-0411: Remove C++ name routing for `soa_vector`
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Group 14
+  - scope: Complete stdlib-authoritative `soa_vector` migration by deleting the remaining production compiler/runtime name/path alias logic for `soa_vector` helpers in semantics/lowering/emitter (`src/` + `include/primec`, excluding tests/testing-only facades).
+  - acceptance:
+    - Production `src/` + `include/` `soa_vector` helper routing no longer hardcodes rooted `soa_vector` symbol/path aliases for normal call/access classification.
+    - Release-mode `soa_vector` conformance/tests can run against canonical stdlib helper paths with any changed diagnostics updated via deterministic snapshots.
+    - At least one real `soa_vector` compatibility subsystem (legacy alias/canonicalization branch family) is deleted rather than renamed.
+    - Focused release-mode suites for the affected `soa_vector` migration surface remain identified in the task notes before implementation starts.
+  - stop_rule: If the remaining `soa_vector` cleanup spans multiple helper families or subsystems, split it into explicit child leaves before implementation.
 
 - [ ] TODO-0406: Split production semantics APIs from testing snapshots
   - owner: ai
@@ -181,8 +217,8 @@ Wave D (queue hygiene):
   - phase: Group 14
   - scope: Track and close Group 14 child leaves required to finish stdlib-authoritative collection behavior and remove compatibility scaffolding; implementation work lives in child TODOs.
   - acceptance:
-    - Active Group 14 implementation leaves (currently TODO-0409) stay explicit with bounded scope, dependencies, and verification steps.
+    - Active Group 14 implementation leaves (currently TODO-0997 and TODO-0411, tracked under TODO-0410 and TODO-0409) stay explicit with bounded scope, dependencies, and verification steps.
     - This tracker is only completed after all Group 14 child leaves are archived in `docs/todo_finished.md` with evidence notes.
     - At least one leaf is always `Ready Now` with no unmet TODO dependencies.
   - stop_rule: If a leaf is too large for one commit plus focused conformance updates, split it before implementation.
-  - notes: Current active Group 14 child leaf is TODO-0409. Archived vector trackers/leaves TODO-0408, TODO-0990, TODO-0991, TODO-0992, TODO-0993, TODO-0994, and TODO-0995 plus prior Group 14 slices `[S2-01]` through `[S2-05]`, `[S3-01]` through `[S3-132]`, and `[S4-01a1]` through `[S4-03]` are already recorded in `docs/todo_finished.md` (April 12-19, 2026).
+  - notes: Current active Group 14 child leaves are TODO-0997 and TODO-0411, tracked under TODO-0410 and TODO-0409. Archived Group 14 trackers/leaves include the vector cleanup set TODO-0408, TODO-0990, TODO-0991, TODO-0992, TODO-0993, TODO-0994, and TODO-0995 plus the first map child TODO-0996; earlier Group 14 slices `[S2-01]` through `[S2-05]`, `[S3-01]` through `[S3-132]`, and `[S4-01a1]` through `[S4-03]` are already recorded in `docs/todo_finished.md` (April 12-19, 2026).

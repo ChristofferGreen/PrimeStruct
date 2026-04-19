@@ -503,7 +503,7 @@ bool isExplicitMapMethodAliasPath(const std::string &methodName) {
   return false;
 }
 
-bool isExplicitMapContainsOrTryAtCompatibilityMethodAliasPath(const std::string &methodName) {
+bool isExplicitMapContainsOrTryAtMethodPath(const std::string &methodName) {
   if (methodName.empty()) {
     return false;
   }
@@ -516,8 +516,12 @@ bool isExplicitMapContainsOrTryAtCompatibilityMethodAliasPath(const std::string 
   if (normalized.rfind(mapPrefix, 0) == 0) {
     std::string helperName;
     return resolveCollectionsMapWrapperAliasName(normalized.substr(mapPrefix.size()), helperName) &&
-           (helperName == "contains" || helperName == "tryAt" ||
-            helperName == "insert");
+           (helperName == "contains" || helperName == "tryAt");
+  }
+  if (normalized.rfind(stdMapPrefix, 0) == 0) {
+    std::string helperName;
+    return resolveCollectionsMapWrapperAliasName(normalized.substr(stdMapPrefix.size()), helperName) &&
+           (helperName == "contains" || helperName == "tryAt");
   }
   return false;
 }

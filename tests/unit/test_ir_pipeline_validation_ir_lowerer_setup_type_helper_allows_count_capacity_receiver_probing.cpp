@@ -617,9 +617,11 @@ TEST_CASE("ir lowerer setup type helper rejects canonical fallback for explicit 
 
   expectUnknownMethod("/map/contains", "unknown method: /map/contains");
   expectUnknownMethod("/map/tryAt", "unknown method: /map/tryAt");
+  expectUnknownMethod("/std/collections/map/contains", "unknown method: /std/collections/map/contains");
+  expectUnknownMethod("/std/collections/map/tryAt", "unknown method: /std/collections/map/tryAt");
 }
 
-TEST_CASE("ir lowerer setup type helper keeps explicit map contains and tryAt slash-method alias precedence") {
+TEST_CASE("ir lowerer setup type helper prefers canonical bare map contains and tryAt methods") {
   primec::Definition aliasContainsDef;
   aliasContainsDef.fullPath = "/map/contains";
   primec::Definition canonicalContainsDef;
@@ -675,11 +677,11 @@ TEST_CASE("ir lowerer setup type helper keeps explicit map contains and tryAt sl
     CHECK(error.empty());
   };
 
-  expectResolvedMethod("/map/contains", &aliasContainsDef);
-  expectResolvedMethod("/map/tryAt", &aliasTryAtDef);
+  expectResolvedMethod("contains", &canonicalContainsDef);
+  expectResolvedMethod("tryAt", &canonicalTryAtDef);
 }
 
-TEST_CASE("ir lowerer setup type helper keeps canonical map contains and tryAt slash-method precedence") {
+TEST_CASE("ir lowerer setup type helper rejects explicit map contains and tryAt slash methods even when definitions exist") {
   primec::Definition aliasContainsDef;
   aliasContainsDef.fullPath = "/map/contains";
   primec::Definition canonicalContainsDef;
@@ -709,7 +711,7 @@ TEST_CASE("ir lowerer setup type helper keeps canonical map contains and tryAt s
   valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
   locals.emplace("values", valuesLocal);
 
-  auto expectResolvedMethod = [&](const char *methodName, const primec::Definition *expected) {
+  auto expectUnknownMethod = [&](const char *methodName, const char *expectedError) {
     primec::Expr methodCall;
     methodCall.kind = primec::Expr::Kind::Call;
     methodCall.name = methodName;
@@ -731,12 +733,14 @@ TEST_CASE("ir lowerer setup type helper keeps canonical map contains and tryAt s
         [](const primec::Expr &) { return std::string(); },
         defMap,
         error);
-    CHECK(resolved == expected);
-    CHECK(error.empty());
+    CHECK(resolved == nullptr);
+    CHECK(error == std::string(expectedError));
   };
 
-  expectResolvedMethod("/std/collections/map/contains", &canonicalContainsDef);
-  expectResolvedMethod("/std/collections/map/tryAt", &canonicalTryAtDef);
+  expectUnknownMethod("/map/contains", "unknown method: /map/contains");
+  expectUnknownMethod("/map/tryAt", "unknown method: /map/tryAt");
+  expectUnknownMethod("/std/collections/map/contains", "unknown method: /std/collections/map/contains");
+  expectUnknownMethod("/std/collections/map/tryAt", "unknown method: /std/collections/map/tryAt");
 }
 
 TEST_CASE("ir lowerer setup type helper resolves declared receiver aliases through slashless map imports") {

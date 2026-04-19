@@ -14,8 +14,8 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     std::string &errorOut) {
   const bool isExplicitRemovedVectorMethodAlias = isExplicitRemovedVectorMethodAliasPath(methodName);
   const bool isExplicitMapMethodAlias = isExplicitMapMethodAliasPath(methodName);
-  const bool isExplicitMapContainsOrTryAtCompatibilityMethodAlias =
-      isExplicitMapContainsOrTryAtCompatibilityMethodAliasPath(methodName);
+  const bool isExplicitMapContainsOrTryAtMethod =
+      isExplicitMapContainsOrTryAtMethodPath(methodName);
   std::string normalizedMethodName = methodName;
   if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
     normalizedMethodName.erase(normalizedMethodName.begin());
@@ -44,6 +44,9 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       normalizedOriginalMethodName.rfind("std/collections/map/", 0) == 0;
   const bool isExplicitCompatibilityMapMethodAlias =
       isExplicitMapMethodAlias && !isExplicitCanonicalMapMethodAlias;
+  const bool isExplicitMapContainsOrTryAtCompatibilityMethodAlias =
+      normalizedOriginalMethodName.rfind("map/", 0) == 0 &&
+      isExplicitMapContainsOrTryAtMethod;
   const bool isExplicitVectorAliasMethod =
       normalizedOriginalMethodName.rfind("vector/", 0) == 0;
   const bool isExplicitCanonicalVectorMethod =
@@ -140,11 +143,6 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       }
     }
     if (path.rfind("/map/", 0) == 0) {
-      const std::string suffix = path.substr(std::string("/map/").size());
-      if (isExplicitMapContainsOrTryAtCompatibilityMethodAlias &&
-          (suffix == "contains" || suffix == "tryAt" || suffix == "insert")) {
-        return nullptr;
-      }
       const std::string stdlibAlias = "/std/collections/map/" + path.substr(std::string("/map/").size());
       defIt = defMap.find(stdlibAlias);
       if (defIt != defMap.end()) {
@@ -260,14 +258,11 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       resolvedTypeWithoutSlash.erase(resolvedTypeWithoutSlash.begin());
     }
     const std::string resolvedBase =
-        (isExplicitMapContainsOrTryAtCompatibilityMethodAlias &&
-         isMapReceiverTarget(resolvedTypeWithoutSlash))
-            ? "/map"
-            : (shouldPreferCanonicalVectorPath(resolvedTypeWithoutSlash)
-                   ? "/std/collections/vector"
-                   : (shouldPreferCanonicalMapPath(resolvedTypeWithoutSlash)
-                   ? "/std/collections/map"
-                   : normalizedResolvedTypePath));
+        (shouldPreferCanonicalVectorPath(resolvedTypeWithoutSlash)
+             ? "/std/collections/vector"
+             : (shouldPreferCanonicalMapPath(resolvedTypeWithoutSlash)
+                    ? "/std/collections/map"
+                    : normalizedResolvedTypePath));
     const std::string resolved = resolvedBase + "/" + normalizedMethodName;
     if (normalizedMethodName == "to_soa" && isVectorReceiverTarget(resolvedTypeWithoutSlash)) {
       errorOut.clear();
@@ -281,7 +276,8 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       errorOut = "unknown method: " + resolved;
       return nullptr;
     }
-    if (isExplicitMapMethodAlias && isMapReceiverTarget(resolvedTypeWithoutSlash)) {
+    if ((isExplicitMapMethodAlias || isExplicitMapContainsOrTryAtMethod) &&
+        isMapReceiverTarget(resolvedTypeWithoutSlash)) {
       errorOut = "unknown method: " + resolved;
       return nullptr;
     }
@@ -292,7 +288,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     }
     if (resolvedDef == nullptr) {
       if (!isExplicitCanonicalMapMethodAlias && !isExplicitCompatibilityMapMethodAlias &&
-          !isExplicitMapContainsOrTryAtCompatibilityMethodAlias &&
+          !isExplicitMapContainsOrTryAtMethod &&
           isMapReceiverTarget(resolvedTypeWithoutSlash) &&
           (normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||
            normalizedMethodName == "insert")) {
@@ -322,14 +318,11 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   }
 
   const std::string resolvedBase =
-      (isExplicitMapContainsOrTryAtCompatibilityMethodAlias &&
-       isMapReceiverTarget(normalizedTypeName))
-          ? "/map"
-          : (shouldPreferCanonicalVectorPath(normalizedTypeName)
-                 ? "/std/collections/vector"
-                 : (shouldPreferCanonicalMapPath(normalizedTypeName)
-                 ? "/std/collections/map"
-                 : "/" + normalizedTypeName));
+      (shouldPreferCanonicalVectorPath(normalizedTypeName)
+           ? "/std/collections/vector"
+           : (shouldPreferCanonicalMapPath(normalizedTypeName)
+                  ? "/std/collections/map"
+                  : "/" + normalizedTypeName));
   const std::string resolved = resolvedBase + "/" + normalizedMethodName;
   if (normalizedMethodName == "to_soa" && isVectorReceiverTarget(normalizedTypeName)) {
     errorOut.clear();
@@ -343,7 +336,8 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     errorOut = "unknown method: " + resolved;
     return nullptr;
   }
-  if (isExplicitMapMethodAlias && isMapReceiverTarget(normalizedTypeName)) {
+  if ((isExplicitMapMethodAlias || isExplicitMapContainsOrTryAtMethod) &&
+      isMapReceiverTarget(normalizedTypeName)) {
     errorOut = "unknown method: " + resolved;
     return nullptr;
   }
@@ -354,7 +348,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   }
   if (resolvedDef == nullptr) {
     if (!isExplicitCanonicalMapMethodAlias && !isExplicitCompatibilityMapMethodAlias &&
-        !isExplicitMapContainsOrTryAtCompatibilityMethodAlias &&
+        !isExplicitMapContainsOrTryAtMethod &&
         isMapReceiverTarget(normalizedTypeName) &&
         (normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||
          normalizedMethodName == "insert")) {

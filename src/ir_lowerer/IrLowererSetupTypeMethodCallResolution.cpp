@@ -192,11 +192,14 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       isVectorBuiltinName(callExpr, "remove_at") || isVectorBuiltinName(callExpr, "remove_swap");
   const bool isExplicitRemovedVectorMethodAlias = isExplicitRemovedVectorMethodAliasPath(callExpr.name);
   const bool isExplicitMapMethodAlias = isExplicitMapMethodAliasPath(callExpr.name);
+  const bool isExplicitMapContainsOrTryAtMethod =
+      isExplicitMapContainsOrTryAtMethodPath(callExpr.name);
   const bool isBuiltinMapContainsOrTryAtCall =
       isSimpleCallName(callExpr, "contains") || isSimpleCallName(callExpr, "tryAt") ||
       isSimpleCallName(callExpr, "insert");
   const bool allowBuiltinFallback =
       !isExplicitRemovedVectorMethodAlias && !isExplicitMapMethodAlias &&
+      !isExplicitMapContainsOrTryAtMethod &&
       !isBuiltinBareVectorCapacityMethod && !isBuiltinBareVectorAccessMethod &&
       !isBuiltinBareVectorMutatorMethod &&
       (isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||

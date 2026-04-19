@@ -33,7 +33,7 @@ bool resolveBorrowedMapHelperAliasName(const Expr &expr, std::string &helperName
 std::string normalizeCollectionHelperPath(const std::string &path);
 bool isExplicitRemovedVectorMethodAliasPath(const std::string &methodName);
 bool isExplicitMapMethodAliasPath(const std::string &methodName);
-bool isExplicitMapContainsOrTryAtCompatibilityMethodAliasPath(const std::string &methodName);
+bool isExplicitMapContainsOrTryAtMethodPath(const std::string &methodName);
 bool isVectorBuiltinName(const Expr &expr, const char *name);
 bool isMapBuiltinName(const Expr &expr, const char *name);
 bool isExplicitMapHelperFallbackPath(const Expr &expr);
