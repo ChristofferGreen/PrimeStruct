@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1097
+- TODO-1098
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1097
+- TODO-1098
 
 ### Priority Lanes (Current)
 
-- Native container error skip debt: TODO-1097
+- Native soa_vector slash-method skip debt: TODO-1098
 
 ### Execution Queue (Recommended)
 
-1. TODO-1097
+1. TODO-1098
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Native container error skipped-test debt | TODO-1097 |
+| Native `soa_vector` slash-method skipped-test debt | TODO-1098 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Native compile-run skipped-test debt | TODO-1097 |
+| Native compile-run skipped-test debt | TODO-1098 |
 
 ### Task Blocks
 
-- [ ] TODO-1097: Audit native imported container error skip debt
+- [ ] TODO-1098: Audit native soa_vector get slash-method skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped native imported-container-error conformance coverage, and lock the current native backend contract with non-skipped assertions.
+  - scope: Re-enable or delete the skipped native canonical `soa_vector/get` slash-method coverage, and lock the current native backend contract with non-skipped assertions.
   - acceptance:
-    - `tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp` no longer carries the skipped native imported container error conformance case in stale form.
-    - The native test locks the actual current contract for imported container error behavior, whether that is successful compile-run behavior or a stable diagnostic.
-  - stop_rule: Stop after the native imported container error surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp` no longer carries the skipped native canonical `soa_vector/get` slash-method case in stale form.
+    - The native test locks the actual current contract for slash-method `get` on experimental `SoaVector`, whether that is a successful runtime path or a stable diagnostic.
+  - stop_rule: Stop after the native canonical `soa_vector/get` slash-method surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.

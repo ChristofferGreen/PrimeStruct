@@ -3473,7 +3473,7 @@ TEST_CASE("compiles and runs native vector index runtime contract") {
   expectVectorIndexRuntimeContract("native", "remove_swap_method");
 }
 
-TEST_CASE("compiles and runs native imported container error contract conformance" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native imported container error contract conformance") {
   expectContainerErrorConformance("native");
 }
 
