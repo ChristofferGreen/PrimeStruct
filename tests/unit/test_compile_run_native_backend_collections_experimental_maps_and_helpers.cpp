@@ -3376,7 +3376,7 @@ TEST_CASE("covers native shared vector harness contracts") {
   expectSharedVectorConformanceHarness("native");
 }
 
-TEST_CASE("compiles and runs native canonical namespaced vector helpers" * doctest::skip(true)) {
+TEST_CASE("rejects native canonical namespaced vector helpers") {
   expectCanonicalVectorNamespaceConformance("native");
 }
 

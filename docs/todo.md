@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1093
+- TODO-1094
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1093
+- TODO-1094
 
 ### Priority Lanes (Current)
 
-- Native vector namespace skip debt: TODO-1093
+- Native vector constructor mismatch skip debt: TODO-1094
 
 ### Execution Queue (Recommended)
 
-1. TODO-1093
+1. TODO-1094
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Native vector namespace skipped-test debt | TODO-1093 |
+| Native vector constructor mismatch skipped-test debt | TODO-1094 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Native compile-run skipped-test debt | TODO-1093 |
+| Native compile-run skipped-test debt | TODO-1094 |
 
 ### Task Blocks
 
-- [ ] TODO-1093: Audit native canonical vector namespace skip debt
+- [ ] TODO-1094: Audit native explicit vector constructor mismatch skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped native canonical vector namespace coverage, and lock the current native backend contract with non-skipped assertions.
+  - scope: Re-enable or delete the skipped native explicit-Vector constructor mismatch coverage, and lock the current native backend contract with non-skipped assertions.
   - acceptance:
-    - `tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp` no longer carries the skipped native canonical vector namespace case in stale form.
-    - The native test locks the actual current contract for canonical vector namespace helpers, whether that is successful compile-run behavior or a stable diagnostic.
-  - stop_rule: Stop after the native canonical vector namespace surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp` no longer carries the skipped native explicit-Vector constructor mismatch case in stale form.
+    - The native test locks the actual current contract for the stdlib wrapper vector constructor explicit-Vector mismatch surface, whether that is successful compile-run behavior or a stable diagnostic.
+  - stop_rule: Stop after the native explicit-Vector constructor mismatch surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
