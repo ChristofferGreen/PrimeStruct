@@ -8,7 +8,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
 
-TEST_CASE("runs vm with user vector pop call shadow" * doctest::skip(true)) {
+TEST_CASE("runs vm with user vector pop call shadow") {
   const std::string source = R"(
 import /std/collections/*
 
