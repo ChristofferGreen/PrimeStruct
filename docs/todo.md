@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1140
+- TODO-1141
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1140
+- TODO-1141
 
 ### Priority Lanes (Current)
 
-- VM builtin count on canonical map reference string access skip debt: TODO-1140
+- VM wrapper-returned canonical map reference primitive-receiver diagnostics skip debt: TODO-1141
 
 ### Execution Queue (Recommended)
 
-1. TODO-1140
+1. TODO-1141
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| VM canonical map reference builtin-count skipped-test debt | TODO-1140 |
+| VM wrapper-returned canonical map reference diagnostics skipped-test debt | TODO-1141 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| VM compile-run skipped-test debt | TODO-1140 |
+| VM compile-run skipped-test debt | TODO-1141 |
 
 ### Task Blocks
 
-- [ ] TODO-1140: Audit VM builtin count on canonical map reference string access skip debt
+- [ ] TODO-1141: Audit VM wrapper-returned canonical map reference primitive-receiver diagnostics skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped VM bare builtin `count(...)` coverage on canonical map reference string access, and lock the current VM contract for `count(/std/collections/map/at(ref, 1i32))`.
+  - scope: Re-enable or delete the skipped VM primitive-receiver diagnostic coverage for wrapper-returned canonical map references, and lock the current VM contract for `/std/collections/map/at(borrowMap(location(values)), 1i32).count()`.
   - acceptance:
-    - `tests/unit/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp` no longer carries the skipped VM builtin-count-on-canonical-map-reference string access case in stale form.
-    - The VM test locks the actual current `count(/std/collections/map/at(ref, 1i32))` contract on canonical map references, whether that stays as the current runtime result or a stable diagnostic.
-  - stop_rule: Stop after the VM builtin-count-on-canonical-map-reference string access surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp` no longer carries the skipped VM wrapper-returned canonical map reference primitive-receiver diagnostics case in stale form.
+    - The VM test locks the actual current primitive-receiver diagnostic contract for `/std/collections/map/at(borrowMap(location(values)), 1i32).count()`, whether that stays as the current diagnostic text or another stable VM-side reject.
+  - stop_rule: Stop after the VM wrapper-returned canonical map reference primitive-receiver diagnostic surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.

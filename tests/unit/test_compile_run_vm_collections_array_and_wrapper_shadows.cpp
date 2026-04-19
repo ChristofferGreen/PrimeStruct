@@ -586,7 +586,7 @@ main() {
   CHECK(runCommand(runCmd) == 91);
 }
 
-TEST_CASE("runs vm builtin count on canonical map reference string access" * doctest::skip(true)) {
+TEST_CASE("runs vm builtin count on canonical map reference string access") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
