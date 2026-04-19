@@ -6,6 +6,7 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 19, 2026)**
+- ✓ TODO-1054: Reactivate native bool-map access runtime coverage. Completed: the skipped native compile-run case for `at(values, true)` plus `at_unsafe(values, false)` on a `map<bool, i32>{...}` binding is live again and now locks the documented native lowering path for builtin bool-keyed map access inside the supported comparable-key subset.
 - ✓ TODO-1053: Reactivate native map indexing runtime coverage. Completed: the skipped native compile-run case for `values[key]` on a numeric `map<i32, i32>{...}` binding is live again and now locks the documented native lowering path for builtin map bracket access alongside the existing `at(...)` helper coverage.
 - ✓ TODO-1052: Reactivate native map unsafe-access runtime coverage. Completed: the skipped native compile-run case for `at_unsafe(values, key)` on a numeric `map<i32, i32>{...}` binding is live again and now locks the documented native lowering path for builtin map `at_unsafe(...)` on numeric/bool map literals.
 - ✓ TODO-1051: Reactivate native map access helper runtime coverage. Completed: the skipped native compile-run case for `at(values, key)` on a numeric `map<i32, i32>{...}` binding is live again and now locks the documented native lowering path for builtin map `at(...)` on numeric/bool map literals.

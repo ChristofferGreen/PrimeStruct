@@ -177,7 +177,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native bool map access helpers" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native bool map access helpers") {
   const std::string source = R"(
 [return<int>]
 main() {
