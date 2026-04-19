@@ -543,7 +543,7 @@ main() {
   CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
 }
 
-TEST_CASE("runs vm with user array capacity call shadow" * doctest::skip(true)) {
+TEST_CASE("runs vm with user array capacity call shadow") {
   const std::string source = R"(
 [return<int>]
 /array/capacity([array<i32>] values) {
