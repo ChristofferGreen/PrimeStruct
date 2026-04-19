@@ -429,7 +429,7 @@ main() {
         "0\n");
 }
 
-TEST_CASE("runs vm ppm write for ascii p3 outputs" * doctest::skip(true)) {
+TEST_CASE("runs vm ppm write for ascii p3 outputs") {
   const std::filesystem::path outPath = testScratchPath("") / "primec_vm_image_write.ppm";
   std::error_code ec;
   std::filesystem::remove(outPath, ec);

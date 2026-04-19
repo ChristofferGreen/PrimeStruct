@@ -6,6 +6,7 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 19, 2026)**
+- ✓ TODO-1032: Reactivate VM PPM write output lock. Completed: the skipped VM compile-run case for `/std/image/ppm/write(...)` is live again and now locks the documented ASCII `P3` output contract for a simple RGB payload.
 - ✓ TODO-1031: Reactivate VM invalid PNG write guardrail. Completed: the skipped VM compile-run case for invalid `/std/image/png/write(...)` payload shape is live again and now locks the documented `image_invalid_operation` result plus the no-output-file behavior for malformed write inputs.
 - ✓ TODO-1030: Reactivate VM image write overflow guardrail. Completed: the skipped VM compile-run case for oversized `/std/image/ppm/write(...)` and `/std/image/png/write(...)` dimensions is live again and now locks the documented `image_invalid_operation` result for overflowed write-side size arithmetic before any output file is created.
 - ✓ TODO-1029: Reactivate image API docs/stdlib source lock. Completed: the skipped image API source-lock test is live again and now guards the current `/std/image/*` contract in `docs/PrimeStruct.md` against the checked-in `stdlib/std/image/image.prime` helper surface, decoder/writer helpers, and public `ImageError` wrappers.
