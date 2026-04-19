@@ -626,6 +626,58 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(soaConversions.find("[i32 mut] index{0i32}") == std::string::npos);
 }
 
+TEST_CASE("gfx stdlib wrappers stay source locked to inferred locals") {
+  std::filesystem::path gfxStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "gfx" / "gfx.prime";
+  if (!std::filesystem::exists(gfxStdlibPath)) {
+    gfxStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "gfx" / "gfx.prime";
+  }
+  REQUIRE(std::filesystem::exists(gfxStdlibPath));
+
+  const std::string gfxStdlib = readFile(gfxStdlibPath.string());
+
+  CHECK(gfxStdlib.find("config{\n        SubstrateSwapchainConfig(") != std::string::npos);
+  CHECK(gfxStdlib.find("swapchainToken{GraphicsSubstrate.createSwapchain(config)?}") != std::string::npos);
+  CHECK(gfxStdlib.find("vertexCount{count(vertices)}") != std::string::npos);
+  CHECK(gfxStdlib.find("indexCount{count(indices)}") != std::string::npos);
+  CHECK(gfxStdlib.find("meshToken{GraphicsSubstrate.createMesh(config)?}") != std::string::npos);
+  CHECK(gfxStdlib.find("pipelineToken{GraphicsSubstrate.createPipeline(config)?}") != std::string::npos);
+  CHECK(gfxStdlib.find("frameToken{GraphicsSubstrate.acquireFrame(config)?}") != std::string::npos);
+  CHECK(gfxStdlib.find("renderPassToken{GraphicsSubstrate.openRenderPass(config)}") != std::string::npos);
+  CHECK(gfxStdlib.find("drawToken{GraphicsSubstrate.drawMesh(config)}") != std::string::npos);
+  CHECK(gfxStdlib.find("endToken{GraphicsSubstrate.endRenderPass(config)}") != std::string::npos);
+  CHECK(gfxStdlib.find("window{Window([token] 1i32, [width] 1i32, [height] 1i32)}") != std::string::npos);
+  CHECK(gfxStdlib.find("deviceToken{GraphicsSubstrate.createDevice(config)?}") != std::string::npos);
+  CHECK(gfxStdlib.find("queueToken{GraphicsSubstrate.createQueue(config)?}") != std::string::npos);
+
+  CHECK(gfxStdlib.find("[SubstrateSwapchainConfig] config{") == std::string::npos);
+  CHECK(gfxStdlib.find("[i32] swapchainToken{GraphicsSubstrate.createSwapchain(config)?}") ==
+        std::string::npos);
+  CHECK(gfxStdlib.find("[i32] vertexCount{count(vertices)}") == std::string::npos);
+  CHECK(gfxStdlib.find("[i32] indexCount{count(indices)}") == std::string::npos);
+  CHECK(gfxStdlib.find("[SubstrateMeshConfig] config{") == std::string::npos);
+  CHECK(gfxStdlib.find("[i32] meshToken{GraphicsSubstrate.createMesh(config)?}") == std::string::npos);
+  CHECK(gfxStdlib.find("[SubstratePipelineConfig] config{") == std::string::npos);
+  CHECK(gfxStdlib.find("[i32] pipelineToken{GraphicsSubstrate.createPipeline(config)?}") ==
+        std::string::npos);
+  CHECK(gfxStdlib.find("[SubstrateFrameConfig] config{") == std::string::npos);
+  CHECK(gfxStdlib.find("[i32] frameToken{GraphicsSubstrate.acquireFrame(config)?}") ==
+        std::string::npos);
+  CHECK(gfxStdlib.find("[SubstrateRenderPassConfig] config{") == std::string::npos);
+  CHECK(gfxStdlib.find("[i32] renderPassToken{GraphicsSubstrate.openRenderPass(config)}") ==
+        std::string::npos);
+  CHECK(gfxStdlib.find("[SubstrateDrawMeshConfig] config{") == std::string::npos);
+  CHECK(gfxStdlib.find("[i32] drawToken{GraphicsSubstrate.drawMesh(config)}") == std::string::npos);
+  CHECK(gfxStdlib.find("[SubstrateRenderPassEndConfig] config{") == std::string::npos);
+  CHECK(gfxStdlib.find("[i32] endToken{GraphicsSubstrate.endRenderPass(config)}") == std::string::npos);
+  CHECK(gfxStdlib.find("[Window] window{Window([token] 1i32, [width] 1i32, [height] 1i32)}") ==
+        std::string::npos);
+  CHECK(gfxStdlib.find("[SubstrateDeviceConfig] config{") == std::string::npos);
+  CHECK(gfxStdlib.find("[i32] deviceToken{GraphicsSubstrate.createDevice(config)?}") ==
+        std::string::npos);
+  CHECK(gfxStdlib.find("[i32] queueToken{GraphicsSubstrate.createQueue(config)?}") ==
+        std::string::npos);
+}
+
 TEST_CASE("gfx stdlib wrapper arithmetic stays source locked to surface operators") {
   std::filesystem::path gfxStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "gfx" / "gfx.prime";
   std::filesystem::path gfxExperimentalPath =

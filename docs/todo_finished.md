@@ -4313,3 +4313,17 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Split from oversized `TODO-4029`, whose remaining inferred-binding cleanup now continues as `TODO-4083`, `TODO-4084`, and `TODO-4085`.
   - finished_at: 2026-04-19
   - evidence: Rewrote the obvious repeated-type local bindings in `stdlib/std/maybe/maybe.prime`, `stdlib/std/collections/vector.prime`, `stdlib/std/collections/map.prime`, and `stdlib/std/collections/soa_vector_conversions.prime` to concise inferred forms such as `[mut] out{...}`, `valueCount{...}`, and `current{...}`; expanded `tests/unit/test_compile_run_examples_docs_locks.cpp` with a focused inferred-binding source lock that pins those wrapper forms and guards against reintroducing the old repeated-type locals; and updated `docs/todo.md` to retire oversized `TODO-4029` in favor of the new `TODO-4083`, `TODO-4084`, and `TODO-4085` follow-up leaves.
+
+- [x] TODO-4083: Adopt concise inferred local bindings in `/std/gfx` wrappers where initializers already show the type
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Surface Style Alignment
+  - depends_on: TODO-4026, TODO-4071
+  - scope: Continue the split inferred-local cleanup by converting the remaining obvious repeated-type local bindings in `/std/gfx/gfx.prime` to concise inferred bindings where the initializer already establishes the type clearly, without changing the hybrid runtime boundary or substrate-facing API shape.
+  - acceptance:
+    - Obvious `/std/gfx/gfx.prime` local bindings avoid redundant type repetition when the initializer already establishes the type clearly.
+    - The resulting bindings match the supported inferred-local style documented in `docs/CodeExamples.md`.
+    - Boundary-sensitive substrate/config sites remain explicit only when needed instead of by default.
+  - stop_rule: Stop once the obvious `/std/gfx/gfx.prime` inferred-binding opportunities are converted; leave hybrid-boundary or API-shape changes separate.
+  - finished_at: 2026-04-19
+  - evidence: Rewrote the obvious repeated-type local bindings in `stdlib/std/gfx/gfx.prime` to concise inferred forms across the swapchain, mesh, pipeline, frame, render-pass, window, and device wrappers while leaving the hybrid runtime boundary and substrate-facing API shape unchanged; expanded `tests/unit/test_compile_run_examples_docs_locks.cpp` with a focused `/std/gfx` inferred-binding source lock that pins the new concise forms and guards against reintroducing the old repeated-type locals; and updated `docs/todo.md` so `TODO-4084` is now the top ready inferred-binding follow-up.
