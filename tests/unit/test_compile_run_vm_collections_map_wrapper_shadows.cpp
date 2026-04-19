@@ -579,7 +579,7 @@ main() {
   CHECK(runCommand(runCmd) == 65);
 }
 
-TEST_CASE("runs vm with user array at call shadow" * doctest::skip(true)) {
+TEST_CASE("runs vm with user array at call shadow") {
   const std::string source = R"(
 [return<int>]
 /array/at([array<i32>] values, [i32] index) {
