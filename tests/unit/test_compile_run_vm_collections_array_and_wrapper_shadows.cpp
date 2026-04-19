@@ -683,7 +683,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("vm keeps non-imported wrapper-returned canonical map reference access primitive receiver diagnostics" * doctest::skip(true)) {
+TEST_CASE("vm keeps wrapper-returned canonical map reference primitive receiver diagnostics") {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
@@ -712,7 +712,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
-TEST_CASE("vm rejects user map method sugar on wrapper-returned canonical map references" * doctest::skip(true)) {
+TEST_CASE("runs vm user map method sugar on wrapper-returned canonical map references") {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
