@@ -256,9 +256,29 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable" * doctest::sk
         std::string::npos);
   CHECK(callResolutionSource.find("bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)") !=
         std::string::npos);
+  CHECK(callResolutionSource.find("bool isPublishedCollectionBridgeStdlibSurfaceId(") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, expr)") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("findSemanticProductBridgePathChoiceStdlibSurfaceId(semanticProgram, expr)") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("StdlibSurfaceId::CollectionsVectorHelpers") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("StdlibSurfaceId::CollectionsMapHelpers") !=
+        std::string::npos);
   CHECK(callResolutionSource.find("normalizeMapImportAliasPath(") !=
         std::string::npos);
   CHECK(callResolutionSource.find("std::string resolveCallPathFromScopeWithoutImportAliases(") ==
+        std::string::npos);
+  CHECK(callResolutionSource.find("!isBridgeHelperCall(semanticProgram, expr, resolvedPath) &&") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("isResidualBridgeHelperPath(resolvedPath)") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("isResidualBridgeHelperPath(fallbackResolvedPath)") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("!isResolvedBridgeHelperPath(resolvedPath) &&") ==
+        std::string::npos);
+  CHECK(callResolutionSource.find("isResolvedBridgeHelperPath(fallbackResolvedPath) &&") ==
         std::string::npos);
 
   CHECK(inlineDispatchSource.find("bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee)") !=
@@ -2417,6 +2437,81 @@ TEST_CASE("ir lowerer call helpers resolve definition calls through slashless ma
   callExpr.kind = primec::Expr::Kind::Call;
   callExpr.name = "count_alias";
   CHECK(primec::ir_lowerer::resolveDefinitionCall(callExpr, defMap, resolveExprPath) == &canonicalMapCountDef);
+}
+
+TEST_CASE("ir lowerer call helpers suppress lowered collection helper paths from published surface ids") {
+  primec::Definition loweredMapContainsDef;
+  loweredMapContainsDef.fullPath = "/std/collections/mapContains";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/std/collections/mapContains", &loweredMapContainsDef},
+  };
+  const std::unordered_map<std::string, std::string> importAliases = {};
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "contains",
+      .sourceLine = 9,
+      .sourceColumn = 4,
+      .semanticNodeId = 81,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(
+          semanticProgram, "/std/collections/mapContains"),
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsMapHelpers,
+  });
+  semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
+      81, semanticProgram.directCallTargets.front().resolvedPathId);
+  semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.insert_or_assign(
+      81, primec::StdlibSurfaceId::CollectionsMapHelpers);
+
+  const auto resolveExprPath =
+      primec::ir_lowerer::makeResolveCallPathFromScope(
+          defMap,
+          importAliases,
+          primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram));
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "/std/collections/mapContains";
+  callExpr.semanticNodeId = 81;
+
+  CHECK(resolveExprPath(callExpr).empty());
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(callExpr, defMap, resolveExprPath) == nullptr);
+}
+
+TEST_CASE("ir lowerer bridge coverage uses published collection surface ids for lowered helper spellings") {
+  primec::Program program;
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "/std/collections/mapContains";
+  callExpr.semanticNodeId = 82;
+  mainDef.statements.push_back(callExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "contains",
+      .sourceLine = 11,
+      .sourceColumn = 7,
+      .semanticNodeId = 82,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(
+          semanticProgram, "/std/collections/mapContains"),
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsMapHelpers,
+  });
+  semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
+      82, semanticProgram.directCallTargets.front().resolvedPathId);
+  semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.insert_or_assign(
+      82, primec::StdlibSurfaceId::CollectionsMapHelpers);
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {};
+  const std::unordered_map<std::string, std::string> importAliases = {};
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductBridgePathCoverage(
+      program, &semanticProgram, defMap, importAliases, error));
+  CHECK(error.find("missing semantic-product bridge-path choice: /main -> /std/collections/mapContains") !=
+        std::string::npos);
 }
 
 TEST_CASE("ir lowerer call helpers keep semantic direct-call targets authoritative over rooted rewritten helper paths") {

@@ -11,21 +11,6 @@ namespace primec::ir_lowerer {
 namespace {
 
 bool isBridgeHelperName(std::string_view collectionFamily, std::string_view helperName) {
-  if (collectionFamily == "vector") {
-    return helperName == "count" || helperName == "capacity" || helperName == "at" ||
-           helperName == "at_unsafe" || helperName == "push" || helperName == "pop" ||
-           helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
-           helperName == "remove_swap";
-  }
-  if (collectionFamily == "map") {
-    return helperName == "count" || helperName == "contains" || helperName == "tryAt" ||
-           helperName == "at" || helperName == "at_unsafe" ||
-           helperName == "insert" || helperName == "insert_ref" ||
-           helperName == "mapInsert" ||
-           helperName == "mapCountRef" || helperName == "mapContainsRef" ||
-           helperName == "mapTryAtRef" || helperName == "mapAtRef" ||
-           helperName == "mapAtUnsafeRef" || helperName == "mapInsertRef";
-  }
   if (collectionFamily == "soa_vector") {
     return helperName == "count" || helperName == "get" || helperName == "ref" ||
            helperName == "to_aos" || helperName == "push" || helperName == "reserve";
@@ -33,8 +18,21 @@ bool isBridgeHelperName(std::string_view collectionFamily, std::string_view help
   return false;
 }
 
+bool isPublishedCollectionBridgeStdlibSurfaceId(std::optional<StdlibSurfaceId> surfaceId) {
+  return surfaceId.has_value() &&
+         (*surfaceId == StdlibSurfaceId::CollectionsVectorHelpers ||
+          *surfaceId == StdlibSurfaceId::CollectionsMapHelpers);
+}
+
+bool isPublishedCollectionBridgeCall(const SemanticProgram *semanticProgram, const Expr &expr) {
+  return isPublishedCollectionBridgeStdlibSurfaceId(
+             findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, expr)) ||
+         isPublishedCollectionBridgeStdlibSurfaceId(
+             findSemanticProductBridgePathChoiceStdlibSurfaceId(semanticProgram, expr));
+}
+
 std::optional<std::pair<std::string, std::string>>
-collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
+residualBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
   auto parsePrefixedHelper = [&](std::string_view prefix,
                                  std::string_view collectionFamily)
       -> std::optional<std::pair<std::string, std::string>> {
@@ -52,21 +50,6 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
     return std::pair<std::string, std::string>(std::string(collectionFamily), std::move(helperName));
   };
 
-  if (auto parsed = parsePrefixedHelper("/std/collections/vector/", "vector")) {
-    return parsed;
-  }
-  if (auto parsed = parsePrefixedHelper("/std/collections/experimental_vector/", "vector")) {
-    return parsed;
-  }
-  if (auto parsed = parsePrefixedHelper("/map/", "map")) {
-    return parsed;
-  }
-  if (auto parsed = parsePrefixedHelper("/std/collections/map/", "map")) {
-    return parsed;
-  }
-  if (auto parsed = parsePrefixedHelper("/std/collections/experimental_map/", "map")) {
-    return parsed;
-  }
   if (auto parsed = parsePrefixedHelper("/soa_vector/", "soa_vector")) {
     return parsed;
   }
@@ -76,8 +59,15 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
   return std::nullopt;
 }
 
-bool isResolvedBridgeHelperPath(const std::string &resolvedPath) {
-  return collectionBridgeChoiceFromResolvedPath(resolvedPath).has_value();
+bool isResidualBridgeHelperPath(const std::string &resolvedPath) {
+  return residualBridgeChoiceFromResolvedPath(resolvedPath).has_value();
+}
+
+bool isBridgeHelperCall(const SemanticProgram *semanticProgram,
+                        const Expr &expr,
+                        const std::string &resolvedPath) {
+  return isPublishedCollectionBridgeCall(semanticProgram, expr) ||
+         isResidualBridgeHelperPath(resolvedPath);
 }
 
 bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath) {
@@ -304,7 +294,7 @@ bool validateSemanticProductDirectCallCoverage(
       if (findSemanticProductBridgePathChoice(semanticProgram, expr).empty() &&
           findSemanticProductDirectCallTarget(semanticProgram, expr).empty()) {
         const std::string resolvedPath = resolveCallPathFromScope(expr, defMap, importAliases);
-        if (!isResolvedBridgeHelperPath(resolvedPath) &&
+        if (!isBridgeHelperCall(semanticProgram, expr, resolvedPath) &&
             !resolvesToDefinitionFamilyTarget(resolvedPath, defMap)) {
           return validateExprs(scopePath, expr.args) &&
                  validateExprs(scopePath, expr.bodyArguments);
@@ -381,14 +371,20 @@ bool validateSemanticProductBridgePathCoverage(
         return validateExprs(scopePath, expr.args) &&
                validateExprs(scopePath, expr.bodyArguments);
       }
+      if (isPublishedCollectionBridgeStdlibSurfaceId(
+              findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, expr))) {
+        error = "missing semantic-product bridge-path choice: " +
+                describeCallSite(scopePath, expr);
+        return false;
+      }
       if (const std::string resolvedPath = findSemanticProductDirectCallTarget(semanticProgram, expr);
-          isResolvedBridgeHelperPath(resolvedPath)) {
+          isResidualBridgeHelperPath(resolvedPath)) {
         error = "missing semantic-product bridge-path choice: " +
                 describeCallSite(scopePath, expr);
         return false;
       }
       const std::string fallbackResolvedPath = resolveCallPathFromScope(expr, defMap, importAliases);
-      if (isResolvedBridgeHelperPath(fallbackResolvedPath) &&
+      if (isResidualBridgeHelperPath(fallbackResolvedPath) &&
           resolvesToDefinitionFamilyTarget(fallbackResolvedPath, defMap)) {
         error = "missing semantic-product bridge-path choice: " +
                 describeCallSite(scopePath, expr);
@@ -545,7 +541,10 @@ ResolveExprPathFn makeResolveCallPathFromScope(
       }
       if (const std::string resolvedPath =
               findSemanticProductDirectCallTarget(semanticProgram, expr);
-          !resolvedPath.empty() && !isResolvedBridgeHelperPath(resolvedPath)) {
+          !resolvedPath.empty() &&
+          !isPublishedCollectionBridgeStdlibSurfaceId(
+              findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, expr)) &&
+          !isResidualBridgeHelperPath(resolvedPath)) {
         return resolvedPath;
       }
       if (expr.semanticNodeId != 0) {

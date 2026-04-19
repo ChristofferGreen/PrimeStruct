@@ -2038,9 +2038,19 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irCallResolution.find("bridgePathChoicesByExpr.contains(expr.semanticNodeId)") !=
         std::string::npos);
+  CHECK(irCallResolution.find("bool isPublishedCollectionBridgeStdlibSurfaceId(") !=
+        std::string::npos);
+  CHECK(irCallResolution.find("findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, expr)") !=
+        std::string::npos);
+  CHECK(irCallResolution.find("findSemanticProductBridgePathChoiceStdlibSurfaceId(semanticProgram, expr)") !=
+        std::string::npos);
+  CHECK(irCallResolution.find("StdlibSurfaceId::CollectionsVectorHelpers") !=
+        std::string::npos);
+  CHECK(irCallResolution.find("StdlibSurfaceId::CollectionsMapHelpers") !=
+        std::string::npos);
   CHECK(irCallResolution.find("const std::string resolvedPath = resolveCallPathFromScope(expr, defMap, importAliases);") !=
         std::string::npos);
-  CHECK(irCallResolution.find("!isResolvedBridgeHelperPath(resolvedPath) &&") !=
+  CHECK(irCallResolution.find("!isBridgeHelperCall(semanticProgram, expr, resolvedPath) &&") !=
         std::string::npos);
   CHECK(irCallResolution.find("!resolvesToDefinitionFamilyTarget(resolvedPath, defMap)") !=
         std::string::npos);
@@ -2052,7 +2062,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(irCallResolution.find("missing semantic-product bridge-path choice: ") != std::string::npos);
   CHECK(irCallResolution.find("const std::string fallbackResolvedPath = resolveCallPathFromScope(expr, defMap, importAliases);") !=
         std::string::npos);
-  CHECK(irCallResolution.find("isResolvedBridgeHelperPath(fallbackResolvedPath) &&") !=
+  CHECK(irCallResolution.find("isResidualBridgeHelperPath(resolvedPath)") !=
+        std::string::npos);
+  CHECK(irCallResolution.find("isResidualBridgeHelperPath(fallbackResolvedPath) &&") !=
         std::string::npos);
   CHECK(irCallResolution.find("resolvesToDefinitionFamilyTarget(fallbackResolvedPath, defMap)") !=
         std::string::npos);
