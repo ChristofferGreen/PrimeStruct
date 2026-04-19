@@ -164,7 +164,7 @@ main() {
   CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
 }
 
-TEST_CASE("vm keeps primitive diagnostics on canonical vector unsafe access count shadow" * doctest::skip(true)) {
+TEST_CASE("vm keeps primitive diagnostics on canonical vector unsafe access count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
