@@ -6,6 +6,7 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 19, 2026)**
+- ✓ TODO-1044: Reactivate VM PNG `IDAT` ordering guardrail. Completed: the skipped VM compile-run case for `/std/image/png/read(...)` on a PNG whose `IDAT` chunks are split by a non-`IDAT` chunk is live again and now locks the documented `image_invalid_operation` result plus the deterministic zeroing of width, height, and pixel outputs on failure.
 - ✓ TODO-1043: Reactivate VM PNG CRC guardrail. Completed: the skipped VM compile-run case for `/std/image/png/read(...)` on a PNG with a corrupted critical-chunk CRC is live again and now locks the documented `image_invalid_operation` result plus the deterministic zeroing of width, height, and pixel outputs on failure.
 - ✓ TODO-1042: Reactivate VM malformed PNG guardrail. Completed: the skipped VM compile-run case for malformed `/std/image/png/read(...)` input bytes is live again and now locks the documented `image_invalid_operation` result plus the deterministic zeroing of width, height, and pixel outputs on failure.
 - ✓ TODO-1041: Reactivate VM dynamic-Huffman backreference PNG read lock. Completed: the skipped VM compile-run case for `/std/image/png/read(...)` on an RGBA input encoded with dynamic-Huffman length/distance backreferences is live again and now locks the documented PNG decoder subset plus the flattened RGB output contract for that path.

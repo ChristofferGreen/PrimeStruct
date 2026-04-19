@@ -1164,7 +1164,7 @@ main() {
         "0\n");
 }
 
-TEST_CASE("rejects vm png inputs with non-consecutive idat chunks deterministically" * doctest::skip(true)) {
+TEST_CASE("rejects vm png inputs with non-consecutive idat chunks deterministically") {
   const std::string inPath =
       (testScratchPath("") / "primec_vm_image_read_invalid_idat_order.png").string();
   {
