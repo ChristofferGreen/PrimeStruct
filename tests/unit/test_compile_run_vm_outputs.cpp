@@ -1113,7 +1113,7 @@ main() {
         "0\n");
 }
 
-TEST_CASE("rejects vm png inputs with critical chunk crc mismatches deterministically" * doctest::skip(true)) {
+TEST_CASE("rejects vm png inputs with critical chunk crc mismatches deterministically") {
   const std::string inPath =
       (testScratchPath("") / "primec_vm_image_read_invalid_crc.png").string();
   {
