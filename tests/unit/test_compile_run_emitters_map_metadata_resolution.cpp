@@ -385,7 +385,7 @@ TEST_CASE("C++ emitter helper rejects compatibility metadata fallback for canoni
   expectUnresolved("/std/collections/map/tryAt", true);
 }
 
-TEST_CASE("C++ emitter helper keeps same-path map slash-method metadata precedence") {
+TEST_CASE("C++ emitter helper rejects same-path map contains and tryAt slash-method metadata") {
   primec::Expr receiverName;
   receiverName.kind = primec::Expr::Kind::Name;
   receiverName.name = "values";
@@ -406,29 +406,75 @@ TEST_CASE("C++ emitter helper keeps same-path map slash-method metadata preceden
   std::unordered_map<std::string, std::string> structTypeMap;
   std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
   std::unordered_map<std::string, std::string> returnStructs = {
-      {"/map/count", "/AliasCountMarker"},
-      {"/std/collections/map/count", "/CanonicalCountMarker"},
       {"/map/contains", "/AliasContainsMarker"},
       {"/std/collections/map/contains", "/CanonicalContainsMarker"},
       {"/map/tryAt", "/AliasTryAtMarker"},
       {"/std/collections/map/tryAt", "/CanonicalTryAtMarker"},
-      {"/map/at", "/AliasAtMarker"},
-      {"/std/collections/map/at", "/CanonicalAtMarker"},
-      {"/map/at_unsafe", "/AliasAtUnsafeMarker"},
-      {"/std/collections/map/at_unsafe", "/CanonicalAtUnsafeMarker"},
   };
 
-  auto expectResolved = [&](const char *receiverMethodName, bool includeKeyArg, const char *expectedPath) {
+  auto expectUnresolved = [&](const char *receiverMethodName) {
     primec::Expr receiverCall;
     receiverCall.kind = primec::Expr::Kind::Call;
     receiverCall.isMethodCall = true;
     receiverCall.name = receiverMethodName;
     receiverCall.args = {receiverName};
     receiverCall.argNames = {std::nullopt};
-    if (includeKeyArg) {
-      receiverCall.args.push_back(key);
-      receiverCall.argNames.push_back(std::nullopt);
-    }
+    receiverCall.args.push_back(key);
+    receiverCall.argNames.push_back(std::nullopt);
+
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.isMethodCall = true;
+    methodCall.name = "tag";
+    methodCall.args = {receiverCall};
+    methodCall.argNames = {std::nullopt};
+
+    std::string resolved = "/stale/path";
+    CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+        methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+    CHECK(resolved.empty());
+  };
+
+  expectUnresolved("/map/contains");
+  expectUnresolved("/std/collections/map/contains");
+  expectUnresolved("/map/tryAt");
+  expectUnresolved("/std/collections/map/tryAt");
+}
+
+TEST_CASE("C++ emitter helper keeps same-path map access slash-method metadata precedence") {
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+
+  primec::Expr key;
+  key.kind = primec::Expr::Kind::Literal;
+  key.intWidth = 32;
+  key.literalValue = 1;
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "map";
+  receiverInfo.typeTemplateArg = "i32, i32";
+  localTypes.emplace("values", receiverInfo);
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs = {
+      {"/map/at", "/AliasAtMarker"},
+      {"/std/collections/map/at", "/CanonicalAtMarker"},
+      {"/map/at_unsafe", "/AliasAtUnsafeMarker"},
+      {"/std/collections/map/at_unsafe", "/CanonicalAtUnsafeMarker"},
+  };
+
+  auto expectResolved = [&](const char *receiverMethodName, const char *expectedPath) {
+    primec::Expr receiverCall;
+    receiverCall.kind = primec::Expr::Kind::Call;
+    receiverCall.isMethodCall = true;
+    receiverCall.name = receiverMethodName;
+    receiverCall.args = {receiverName, key};
+    receiverCall.argNames = {std::nullopt, std::nullopt};
 
     primec::Expr methodCall;
     methodCall.kind = primec::Expr::Kind::Call;
@@ -443,14 +489,10 @@ TEST_CASE("C++ emitter helper keeps same-path map slash-method metadata preceden
     CHECK(resolved == expectedPath);
   };
 
-  expectResolved("/map/contains", true, "/AliasContainsMarker/tag");
-  expectResolved("/std/collections/map/contains", true, "/CanonicalContainsMarker/tag");
-  expectResolved("/map/tryAt", true, "/AliasTryAtMarker/tag");
-  expectResolved("/std/collections/map/tryAt", true, "/CanonicalTryAtMarker/tag");
-  expectResolved("/map/at", true, "/AliasAtMarker/tag");
-  expectResolved("/std/collections/map/at", true, "/CanonicalAtMarker/tag");
-  expectResolved("/map/at_unsafe", true, "/AliasAtUnsafeMarker/tag");
-  expectResolved("/std/collections/map/at_unsafe", true, "/CanonicalAtUnsafeMarker/tag");
+  expectResolved("/map/at", "/AliasAtMarker/tag");
+  expectResolved("/std/collections/map/at", "/CanonicalAtMarker/tag");
+  expectResolved("/map/at_unsafe", "/AliasAtUnsafeMarker/tag");
+  expectResolved("/std/collections/map/at_unsafe", "/CanonicalAtUnsafeMarker/tag");
 }
 
 TEST_CASE("C++ emitter helper rejects explicit map slash-method count receiver fallback") {

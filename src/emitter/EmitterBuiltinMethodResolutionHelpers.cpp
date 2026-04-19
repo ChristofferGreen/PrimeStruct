@@ -436,11 +436,17 @@ bool resolveMethodCallPath(const Expr &call,
                                    normalizedMethodName == "tryAt" ||
                                    normalizedMethodName == "at" ||
                                    normalizedMethodName == "at_unsafe";
+    const bool isRemovedMapSlashMethod =
+        normalizedMethodName == "contains" || normalizedMethodName == "tryAt";
     const bool hasAliasHelperDefinition =
         hasDefinitionOrMetadata(metadataView, aliasPath);
     const bool hasCanonicalHelperDefinition =
         hasDefinitionOrMetadata(metadataView, canonicalPath);
     if (isMapHelperMethod) {
+      if (isRemovedMapSlashMethod &&
+          (isExplicitMapAliasMethod || isExplicitStdlibMapMethod)) {
+        return false;
+      }
       if (isExplicitMapAliasMethod) {
         if (!hasAliasHelperDefinition) {
           return false;
