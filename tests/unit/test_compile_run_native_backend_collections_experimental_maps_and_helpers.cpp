@@ -263,7 +263,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("native canonical soa_vector to_aos slash-method keeps canonical reject" * doctest::skip(true)) {
+TEST_CASE("native canonical soa_vector to_aos slash-method keeps canonical reject") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
