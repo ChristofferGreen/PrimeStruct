@@ -133,6 +133,33 @@ Why this is good:
 - The helper name does not imply mutation.
 - Data and related behavior stay together.
 
+### User-Defined Method Calls
+
+When a struct helper reads like behavior owned by the value, call it through the
+instance so the relationship stays visible at the call site.
+
+```prime
+[struct]
+Counter {
+  [int] value{0}
+
+  [int]
+  nextValue() {
+    return(this.value + 1)
+  }
+}
+
+counter_result() {
+  counter{Counter([value] 4)}
+  return(counter.nextValue())
+}
+```
+
+Why this is good:
+- The call site makes the value-behavior relationship obvious.
+- The member function stays on the documented lowerCamelCase convention.
+- The example shows user-defined method-call syntax without extra control-flow noise.
+
 ### Concise Local Binding with Labeled Construction
 
 When the initializer already makes the type obvious, prefer the concise local
