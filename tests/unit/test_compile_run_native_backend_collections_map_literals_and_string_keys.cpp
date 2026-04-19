@@ -325,7 +325,7 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs native map literal string binding key" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native map literal string binding key") {
   const std::string source = R"(
 [return<int>]
 main() {

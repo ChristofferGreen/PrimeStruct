@@ -6,6 +6,7 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 19, 2026)**
+- ✓ TODO-1059: Reactivate native map literal string binding key. Completed: the skipped native compile-run case for builtin `map<string, i32>{...}` literals seeded with a literal-backed `[string]` binding key is live again and now locks the documented native lowering path for string-keyed map literals whose keys come from literal-backed bindings.
 - ✓ TODO-1058: Reactivate native string-keyed map literal runtime coverage. Completed: the skipped native compile-run case for builtin `map<string, i32>{...}` literals with string-literal keys is live again and now locks the documented native lowering path for literal-key string maps, including `at(...)`, `at_unsafe(...)`, and `count(...)` on the direct builtin literal surface.
 - ✓ TODO-1057: Refresh native string-valued map literal coverage. Completed: the stale skipped native compile-run case for builtin `map<i32, string>{...}` literals now matches the documented VM/native surface and actively locks the relocation-trivial value-type rejection diagnostic instead of expecting removed native runtime support for builtin string-valued maps.
 - ✓ TODO-1056: Reactivate native missing-key map runtime coverage. Completed: the skipped native compile-run case for `at(values, missing_key)` on a numeric `map<i32, i32>{...}` binding is live again and now locks the documented `map key not found` runtime contract for builtin map misses on native.
