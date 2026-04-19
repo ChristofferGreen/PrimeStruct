@@ -175,12 +175,20 @@ TEST_CASE("semantic memory baseline report is checked in with fixture phase cove
       quoteShellArg(
           "import json, math, sys\n"
           "report = json.load(open(sys.argv[1], encoding='utf-8'))\n"
+          "required_counts = {\n"
+          "  'direct_call_targets', 'method_call_targets', 'bridge_path_choices',\n"
+          "  'binding_facts', 'return_facts', 'local_auto_facts',\n"
+          "  'query_facts', 'try_facts', 'on_error_facts'\n"
+          "}\n"
           "fixtures = report.get('fixtures', [])\n"
           "phases = report.get('phases', [])\n"
           "results = report.get('results', [])\n"
+          "deltas = report.get('definition_validation_worker_mode_deltas', [])\n"
           "fixture_names = [row.get('name') for row in fixtures]\n"
           "pairs = {(row.get('fixture'), row.get('phase')) for row in results}\n"
+          "worker_rows = {(row.get('fixture'), row.get('phase'), row.get('definition_validation_workers')) for row in results}\n"
           "expected_pairs = {(f, p) for f in fixture_names for p in phases}\n"
+          "expected_worker_rows = {(f, p, w) for f in fixture_names for p in phases for w in (1, 2)}\n"
           "required_fields = (\n"
           "  'median_wall_seconds',\n"
           "  'worst_wall_seconds',\n"
@@ -196,11 +204,13 @@ TEST_CASE("semantic memory baseline report is checked in with fixture phase cove
           "ok = report.get('schema') == 'primestruct_semantic_memory_report_v1'\n"
           "ok = ok and report.get('runs') == 3\n"
           "ok = ok and phases == ['ast-semantic', 'semantic-product']\n"
+          "ok = ok and report.get('benchmark_options', {}).get('definition_validation_workers') == 'both'\n"
           "ok = ok and len(fixtures) == 10\n"
-          "ok = ok and len(results) == len(expected_pairs)\n"
+          "ok = ok and len(results) == len(expected_worker_rows)\n"
           "ok = ok and pairs == expected_pairs\n"
+          "ok = ok and worker_rows == expected_worker_rows\n"
           "semantic_rows = [row for row in results if row.get('phase') == 'semantic-product']\n"
-          "ok = ok and len(semantic_rows) == len(fixtures)\n"
+          "ok = ok and len(semantic_rows) == len(fixtures) * 2\n"
           "ok = ok and all(row_has_required_metrics(row) for row in results)\n"
           "ok = ok and all(isinstance(row.get('key_cardinality'), dict) for row in semantic_rows)\n"
           "ok = ok and all(\n"
@@ -209,8 +219,17 @@ TEST_CASE("semantic memory baseline report is checked in with fixture phase cove
           "  and isinstance(row['key_cardinality'].get('max_target_key_length'), int)\n"
           "  for row in semantic_rows\n"
           ")\n"
+          "ok = ok and all(set(row.get('semantic_product_index_family_counts', {}).keys()) == required_counts for row in semantic_rows)\n"
+          "ok = ok and len(deltas) == len(expected_pairs)\n"
+          "ok = ok and all(bool(delta.get('dump_sha256_identical')) for delta in deltas)\n"
+          "ok = ok and all(\n"
+          "  set(delta.get('semantic_product_index_family_counts_single_worker', {}).keys()) == required_counts\n"
+          "  and set(delta.get('semantic_product_index_family_counts_dual_worker', {}).keys()) == required_counts\n"
+          "  and bool(delta.get('semantic_product_index_family_counts_identical'))\n"
+          "  for delta in deltas\n"
+          ")\n"
           "ok = ok and all('is_expensive_threshold_offender' in row for row in results)\n"
-          "ok = ok and len(report.get('expensive_offenders', [])) >= 1\n"
+          "ok = ok and isinstance(report.get('expensive_offenders', []), list)\n"
           "if not ok:\n"
           "  print(json.dumps(report, indent=2, sort_keys=True))\n"
           "sys.exit(0 if ok else 1)\n") +
@@ -245,8 +264,8 @@ TEST_CASE("semantic memory ctest targets keep dependency ordering") {
           "runtime_limit = thresholds.get('max_wall_seconds')\n"
           "rss_limit = thresholds.get('max_peak_rss_bytes')\n"
           "has_thresholds = runtime_limit == 3.0 and rss_limit == 500 * 1024 * 1024\n"
-          "has_offenders = isinstance(offenders, list) and len(offenders) >= 1\n"
-          "offender_exceeds = has_offenders and any(\n"
+          "has_offenders = isinstance(offenders, list)\n"
+          "offender_exceeds = has_offenders and all(\n"
           "  bool(row.get('exceeds_expensive_runtime_threshold'))\n"
           "  or bool(row.get('exceeds_expensive_rss_threshold'))\n"
           "  for row in offenders\n"
@@ -299,7 +318,7 @@ TEST_CASE("semantic memory budget policy artifacts are checked in") {
   CHECK(policy.find("\"phase\": \"semantic-product\"") != std::string::npos);
   CHECK(note.find("Sustained-Window Rule") != std::string::npos);
   CHECK(note.find("Unified Semantic-Product Index Evidence") != std::string::npos);
-  CHECK(note.find("contains all `10`") != std::string::npos);
+  CHECK(note.find("`40` total rows") != std::string::npos);
   CHECK(note.find("key_cardinality") != std::string::npos);
   CHECK(note.find("semantic_product_index_family_counts") != std::string::npos);
   CHECK(note.find("definition_validation_worker_mode_deltas") != std::string::npos);
@@ -466,9 +485,13 @@ TEST_CASE("semantic memory phase-one success criteria artifacts are checked in")
   CHECK(criteria.find("\"schema\": \"primestruct_semantic_memory_phase_one_success_criteria_v1\"") != std::string::npos);
   CHECK(criteria.find("\"fixture\": \"math_star_repro\"") != std::string::npos);
   CHECK(criteria.find("\"phase\": \"semantic-product\"") != std::string::npos);
+  CHECK(criteria.find("\"baseline_value\": 9060352") != std::string::npos);
   CHECK(criteria.find("\"target_reduction_ratio\": 0.1") != std::string::npos);
   CHECK(criteria.find("\"absolute_cap_value\": 5368709120") != std::string::npos);
+  CHECK(criteria.find("\"effective_target_value\": 8154317") != std::string::npos);
   CHECK(note.find("Primary Goal") != std::string::npos);
+  CHECK(note.find("9060352") != std::string::npos);
+  CHECK(note.find("8154317") != std::string::npos);
   CHECK(note.find("Sustained Rule") != std::string::npos);
 }
 

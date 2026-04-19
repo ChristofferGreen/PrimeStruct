@@ -76,16 +76,10 @@ python3 scripts/semantic_memory_benchmark.py \
   --repo-root . \
   --primec build-release/primec \
   --runs 3 \
+  --definition-validation-workers both \
   --phases ast-semantic,semantic-product \
   --fixtures math_star_repro,no_import,math_vector,math_vector_matrix,non_math_large_include,inline_math_body,imported_math_body,scale_1x,scale_2x,scale_4x \
   --report-json build-release/benchmarks/semantic_memory_report.json
-```
-
-For deterministic partition-parity validation of definition validation workers,
-run the same command with:
-
-```bash
-  --definition-validation-workers both
 ```
 
 This mode records worker-mode deltas and fails when one-worker and two-worker
@@ -98,32 +92,25 @@ Current checked-in evidence for the unified lowerer `SemanticProductIndex`
 builder is split across the baseline report and the worker-parity benchmark
 mode:
 
-- `benchmarks/semantic_memory_baseline_report.json` currently contains all `10`
-  `semantic-product` fixture rows, and each of those rows already carries
-  `key_cardinality` metrics for the published direct/method target surfaces.
-- Regenerated reports produced with `--definition-validation-workers both` now
-  also publish `semantic_product_index_family_counts` on every
-  `semantic-product` row and carry matching
+- `benchmarks/semantic_memory_baseline_report.json` now contains both
+  definition-validation worker rows across all `10` fixtures and both semantic
+  phases (`40` total rows), and all `20` `semantic-product` rows carry both
+  `key_cardinality` metrics and `semantic_product_index_family_counts`.
+- The refreshed baseline report also carries matching
   `definition_validation_worker_mode_deltas[*].semantic_product_index_family_counts_*`
   fields for the unified semantic-product adapter path.
 - `benchmarks/semantic_memory/semantic_product_index_parity_evidence.json`
   is the paired checked-in evidence artifact that locks those family-count and
-  worker-parity fields before the next canonical baseline refresh lands.
+  worker-parity field shapes alongside the canonical baseline refresh.
 - `benchmarks/semantic_memory/semantic_product_index_math_star_repro_report.json`
   is the checked-in measured report for the primary `math_star_repro`
   `semantic-product` fixture, generated with
   `--definition-validation-workers both` so the worker-parity family-count
-  payload already exists in repository history before the full baseline refresh
-  lands.
+  payload also exists in a focused one-fixture artifact.
 - Use those family-count fields to confirm the direct-call, method-call,
   bridge-path, binding, return, local-auto, query, try, and `on_error` index
   families remain populated and worker-parity-identical while comparing RSS and
   wall-time deltas.
-
-The current checked-in baseline source predates those worker-parity family-count
-fields, so the next canonical report refresh should be generated with
-`--definition-validation-workers both` and recorded alongside the same policy
-update that relies on those counts.
 
 The checked-in primary-fixture measured artifact was generated with:
 

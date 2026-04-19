@@ -7,144 +7,144 @@
   },
   "entries": [
     {
-      "fixture": "math_star_repro",
+      "fixture": "imported_math_body",
       "phase": "ast-semantic",
-      "baseline_worst_peak_rss_bytes": 3493576704,
-      "soft_max_worst_peak_rss_bytes": 3842934375,
-      "max_worst_peak_rss_bytes": 3842934375
+      "baseline_worst_peak_rss_bytes": 18202624,
+      "soft_max_worst_peak_rss_bytes": 20022887,
+      "max_worst_peak_rss_bytes": 20022887
     },
     {
-      "fixture": "math_star_repro",
+      "fixture": "imported_math_body",
       "phase": "semantic-product",
-      "baseline_worst_peak_rss_bytes": 7100088320,
-      "soft_max_worst_peak_rss_bytes": 7810097153,
-      "max_worst_peak_rss_bytes": 7810097153
-    },
-    {
-      "fixture": "no_import",
-      "phase": "ast-semantic",
-      "baseline_worst_peak_rss_bytes": 9076736,
-      "soft_max_worst_peak_rss_bytes": 16777216,
-      "max_worst_peak_rss_bytes": 16777216
-    },
-    {
-      "fixture": "no_import",
-      "phase": "semantic-product",
-      "baseline_worst_peak_rss_bytes": 9076736,
-      "soft_max_worst_peak_rss_bytes": 16777216,
-      "max_worst_peak_rss_bytes": 16777216
-    },
-    {
-      "fixture": "math_vector",
-      "phase": "ast-semantic",
-      "baseline_worst_peak_rss_bytes": 3492954112,
-      "soft_max_worst_peak_rss_bytes": 3842249524,
-      "max_worst_peak_rss_bytes": 3842249524
-    },
-    {
-      "fixture": "math_vector",
-      "phase": "semantic-product",
-      "baseline_worst_peak_rss_bytes": 7099547648,
-      "soft_max_worst_peak_rss_bytes": 7809502413,
-      "max_worst_peak_rss_bytes": 7809502413
-    },
-    {
-      "fixture": "math_vector_matrix",
-      "phase": "ast-semantic",
-      "baseline_worst_peak_rss_bytes": 3494068224,
-      "soft_max_worst_peak_rss_bytes": 3843475047,
-      "max_worst_peak_rss_bytes": 3843475047
-    },
-    {
-      "fixture": "math_vector_matrix",
-      "phase": "semantic-product",
-      "baseline_worst_peak_rss_bytes": 7099629568,
-      "soft_max_worst_peak_rss_bytes": 7809592525,
-      "max_worst_peak_rss_bytes": 7809592525
-    },
-    {
-      "fixture": "non_math_large_include",
-      "phase": "ast-semantic",
-      "baseline_worst_peak_rss_bytes": 155598848,
-      "soft_max_worst_peak_rss_bytes": 171158733,
-      "max_worst_peak_rss_bytes": 171158733
-    },
-    {
-      "fixture": "non_math_large_include",
-      "phase": "semantic-product",
-      "baseline_worst_peak_rss_bytes": 439631872,
-      "soft_max_worst_peak_rss_bytes": 483595060,
-      "max_worst_peak_rss_bytes": 483595060
+      "baseline_worst_peak_rss_bytes": 34095104,
+      "soft_max_worst_peak_rss_bytes": 37504615,
+      "max_worst_peak_rss_bytes": 37504615
     },
     {
       "fixture": "inline_math_body",
       "phase": "ast-semantic",
-      "baseline_worst_peak_rss_bytes": 9830400,
+      "baseline_worst_peak_rss_bytes": 9060352,
       "soft_max_worst_peak_rss_bytes": 16777216,
       "max_worst_peak_rss_bytes": 16777216
     },
     {
       "fixture": "inline_math_body",
       "phase": "semantic-product",
-      "baseline_worst_peak_rss_bytes": 15187968,
+      "baseline_worst_peak_rss_bytes": 9060352,
       "soft_max_worst_peak_rss_bytes": 16777216,
       "max_worst_peak_rss_bytes": 16777216
     },
     {
-      "fixture": "imported_math_body",
+      "fixture": "math_star_repro",
       "phase": "ast-semantic",
-      "baseline_worst_peak_rss_bytes": 3497230336,
-      "soft_max_worst_peak_rss_bytes": 3846953370,
-      "max_worst_peak_rss_bytes": 3846953370
+      "baseline_worst_peak_rss_bytes": 9060352,
+      "soft_max_worst_peak_rss_bytes": 16777216,
+      "max_worst_peak_rss_bytes": 16777216
     },
     {
-      "fixture": "imported_math_body",
+      "fixture": "math_star_repro",
       "phase": "semantic-product",
-      "baseline_worst_peak_rss_bytes": 7108263936,
-      "soft_max_worst_peak_rss_bytes": 7819090330,
-      "max_worst_peak_rss_bytes": 7819090330
+      "baseline_worst_peak_rss_bytes": 9060352,
+      "soft_max_worst_peak_rss_bytes": 16777216,
+      "max_worst_peak_rss_bytes": 16777216
+    },
+    {
+      "fixture": "math_vector",
+      "phase": "ast-semantic",
+      "baseline_worst_peak_rss_bytes": 18120704,
+      "soft_max_worst_peak_rss_bytes": 19932775,
+      "max_worst_peak_rss_bytes": 19932775
+    },
+    {
+      "fixture": "math_vector",
+      "phase": "semantic-product",
+      "baseline_worst_peak_rss_bytes": 34029568,
+      "soft_max_worst_peak_rss_bytes": 37432525,
+      "max_worst_peak_rss_bytes": 37432525
+    },
+    {
+      "fixture": "math_vector_matrix",
+      "phase": "ast-semantic",
+      "baseline_worst_peak_rss_bytes": 17940480,
+      "soft_max_worst_peak_rss_bytes": 19734528,
+      "max_worst_peak_rss_bytes": 19734528
+    },
+    {
+      "fixture": "math_vector_matrix",
+      "phase": "semantic-product",
+      "baseline_worst_peak_rss_bytes": 33685504,
+      "soft_max_worst_peak_rss_bytes": 37054055,
+      "max_worst_peak_rss_bytes": 37054055
+    },
+    {
+      "fixture": "no_import",
+      "phase": "ast-semantic",
+      "baseline_worst_peak_rss_bytes": 9060352,
+      "soft_max_worst_peak_rss_bytes": 16777216,
+      "max_worst_peak_rss_bytes": 16777216
+    },
+    {
+      "fixture": "no_import",
+      "phase": "semantic-product",
+      "baseline_worst_peak_rss_bytes": 9060352,
+      "soft_max_worst_peak_rss_bytes": 16777216,
+      "max_worst_peak_rss_bytes": 16777216
+    },
+    {
+      "fixture": "non_math_large_include",
+      "phase": "ast-semantic",
+      "baseline_worst_peak_rss_bytes": 45350912,
+      "soft_max_worst_peak_rss_bytes": 49886004,
+      "max_worst_peak_rss_bytes": 49886004
+    },
+    {
+      "fixture": "non_math_large_include",
+      "phase": "semantic-product",
+      "baseline_worst_peak_rss_bytes": 44089344,
+      "soft_max_worst_peak_rss_bytes": 48498279,
+      "max_worst_peak_rss_bytes": 48498279
     },
     {
       "fixture": "scale_1x",
       "phase": "ast-semantic",
-      "baseline_worst_peak_rss_bytes": 9076736,
+      "baseline_worst_peak_rss_bytes": 9060352,
       "soft_max_worst_peak_rss_bytes": 16777216,
       "max_worst_peak_rss_bytes": 16777216
     },
     {
       "fixture": "scale_1x",
       "phase": "semantic-product",
-      "baseline_worst_peak_rss_bytes": 14303232,
+      "baseline_worst_peak_rss_bytes": 9060352,
       "soft_max_worst_peak_rss_bytes": 16777216,
       "max_worst_peak_rss_bytes": 16777216
     },
     {
       "fixture": "scale_2x",
       "phase": "ast-semantic",
-      "baseline_worst_peak_rss_bytes": 12664832,
+      "baseline_worst_peak_rss_bytes": 9060352,
       "soft_max_worst_peak_rss_bytes": 16777216,
       "max_worst_peak_rss_bytes": 16777216
     },
     {
       "fixture": "scale_2x",
       "phase": "semantic-product",
-      "baseline_worst_peak_rss_bytes": 23134208,
-      "soft_max_worst_peak_rss_bytes": 25447629,
-      "max_worst_peak_rss_bytes": 25447629
+      "baseline_worst_peak_rss_bytes": 9060352,
+      "soft_max_worst_peak_rss_bytes": 16777216,
+      "max_worst_peak_rss_bytes": 16777216
     },
     {
       "fixture": "scale_4x",
       "phase": "ast-semantic",
-      "baseline_worst_peak_rss_bytes": 19841024,
-      "soft_max_worst_peak_rss_bytes": 21825127,
-      "max_worst_peak_rss_bytes": 21825127
+      "baseline_worst_peak_rss_bytes": 9060352,
+      "soft_max_worst_peak_rss_bytes": 16777216,
+      "max_worst_peak_rss_bytes": 16777216
     },
     {
       "fixture": "scale_4x",
       "phase": "semantic-product",
-      "baseline_worst_peak_rss_bytes": 40845312,
-      "soft_max_worst_peak_rss_bytes": 44929844,
-      "max_worst_peak_rss_bytes": 44929844
+      "baseline_worst_peak_rss_bytes": 9060352,
+      "soft_max_worst_peak_rss_bytes": 16777216,
+      "max_worst_peak_rss_bytes": 16777216
     }
   ]
 }

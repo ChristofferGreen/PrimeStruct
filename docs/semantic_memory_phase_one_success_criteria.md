@@ -17,14 +17,14 @@ Target the primary high-RSS fixture:
 
 Baseline value (from `benchmarks/semantic_memory_baseline_report.json`):
 
-- `5927174144` bytes
+- `9060352` bytes
 
 Pass criterion:
 
 - Reduce by at least `10%` versus baseline, or satisfy an absolute cap of
   `5 GiB`, whichever is stricter.
 - Effective threshold from current baseline:
-  `min(5927174144 * 0.9, 5368709120) = 5334456730` bytes.
+  `min(9060352 * 0.9, 5368709120) = 8154317` bytes.
 
 ## Sustained Rule
 

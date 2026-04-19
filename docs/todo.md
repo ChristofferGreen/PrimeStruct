@@ -55,23 +55,21 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-1. TODO-1020
+1. TODO-0406
 
 ### Immediate Next 10 (After Ready Now)
 
-1. TODO-0406
-2. TODO-0403
+1. TODO-0403
 
 ### Priority Lanes (Current)
 
-- P1 Semantic memory/perf + multithread substrate + semantic-product boundary hardening: TODO-0402, TODO-0405, TODO-1013, TODO-1016, TODO-1018, TODO-1020, TODO-0406
+- P1 Semantic memory/perf + multithread substrate + semantics/testing API boundary hardening: TODO-0402, TODO-0406
 - P3 Queue/snapshot governance: TODO-0403
 
 ### Execution Queue (Recommended)
 
 Wave A (semantic memory/perf):
-1. TODO-1020
-2. TODO-0406
+1. TODO-0406
 
 Wave B (queue hygiene):
 1. TODO-0403
@@ -81,95 +79,30 @@ Wave B (queue hygiene):
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Semantic memory footprint and multithread compile substrate | TODO-0402 |
-| Semantic-product contract/index boundary hardening | TODO-0405, TODO-1013, TODO-1016, TODO-1018, TODO-1020, TODO-0406 |
+| Semantic/testing API boundary hardening | TODO-0406 |
 | TODO queue quality gates and dependency/coverage synchronization | TODO-0403 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0402, TODO-0405, TODO-1013, TODO-1016, TODO-1018, TODO-1020, TODO-0406 |
+| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0402, TODO-0406 |
 | Benchmark/runtime regression checks (`./scripts/benchmark.sh`) | TODO-0402 |
-| Semantic-product contract/index and deterministic conformance checks | TODO-0405, TODO-1013, TODO-1016, TODO-1018, TODO-1020, TODO-0406 |
+| Semantic/testing API and deterministic conformance checks | TODO-0406 |
 | TODO/open-vs-finished hygiene (`docs/todo.md` vs `docs/todo_finished.md`) | TODO-0403 |
 
 ### Task Blocks
-
-- [ ] TODO-1020: Refresh full checked-in semantic-memory baseline report for unified index proof
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Group 15
-  - scope: Regenerate and check in the full semantic-memory baseline artifact needed to record unified lowerer `SemanticProductIndex` non-regression across the canonical fixture matrix, using the worker-parity field surface already proven by archived `TODO-1019`.
-  - acceptance:
-    - `benchmarks/semantic_memory_baseline_report.json` is refreshed from a real benchmark run and includes `semantic_product_index_family_counts` for semantic-product rows plus `definition_validation_worker_mode_deltas` family-parity fields.
-    - `TODO-0405` notes cite that refreshed baseline report explicitly alongside archived artifacts `TODO-1017` and `TODO-1019`.
-    - The refresh stays in benchmark/reporting/docs surfaces and does not reopen lowerer adapter implementation.
-  - stop_rule: If the full canonical refresh is still too expensive for one safe change, split by fixture cohort instead of reverting to synthetic evidence.
-  - notes: Follow-on to archived children `TODO-1017` and `TODO-1019`, which checked in paired contract and primary-fixture measured artifacts for the family-count parity surface.
-
-- [~] TODO-1018: Track refreshed measured semantic-memory report artifacts for unified index proof
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Group 15
-  - scope: Gather the checked-in measured artifact set needed to make the unified lowerer `SemanticProductIndex` benchmark proof explicit, including the paired contract evidence, primary-fixture measured report, and eventual refreshed baseline report.
-  - acceptance:
-    - A checked-in paired evidence artifact locks `semantic_product_index_family_counts` and definition-worker parity field shape for the unified index report surface.
-    - A checked-in measured report artifact derived from a real benchmark run records those fields for at least one canonical fixture.
-    - A follow-on checked-in refreshed baseline report extends that measured surface across the canonical fixture matrix.
-  - stop_rule: If the full measured refresh remains too expensive for one safe change, keep the tracker open and split the remaining work into narrower measured-artifact leaves instead of reopening lowerer implementation.
-  - notes: Archived child `TODO-1017` checked in `benchmarks/semantic_memory/semantic_product_index_parity_evidence.json` as the paired contract artifact, and archived child `TODO-1019` checked in `benchmarks/semantic_memory/semantic_product_index_math_star_repro_report.json` as the primary-fixture measured report. Active child `TODO-1020` now targets the refreshed full baseline report.
-
-- [~] TODO-1016: Track checked-in semantic-memory artifacts for unified index proof
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Group 15
-  - scope: Gather the checked-in artifact set needed to make the unified lowerer `SemanticProductIndex` benchmark proof explicit, including paired contract evidence and the eventual refreshed baseline report.
-  - acceptance:
-    - A checked-in paired evidence artifact locks `semantic_product_index_family_counts` and definition-worker parity field shape for the unified index report surface.
-    - Follow-on checked-in measured report artifacts record those fields from real benchmark runs.
-    - `docs/todo.md` notes cite the checked-in artifact paths explicitly instead of relying on an implicit future refresh.
-  - stop_rule: If the measured refresh remains too expensive for one safe change, keep the tracker open and split the remaining work into narrower measured-artifact leaves instead of reopening lowerer implementation.
-  - notes: Active tracker `TODO-1018` now carries the measured-report artifact chain from archived children `TODO-1017` and `TODO-1019` through live leaf `TODO-1020`.
-- [~] TODO-1013: Track unified semantic-product index benchmark proof
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Group 15
-  - scope: Gather the remaining benchmark and deterministic non-regression evidence for the unified lowerer `SemanticProductIndex` builder now that the per-family fallback scans are removed.
-  - acceptance:
-    - Benchmark or focused measurement output records non-regression for the unified semantic-product adapter path relative to the previous baseline expectations.
-    - Existing deterministic parity coverage across worker counts stays aligned with the fully shared index-backed lookup path.
-    - `docs/todo.md` / `docs/todo_finished.md` notes reflect the measured outcome instead of leaving `TODO-0405` blocked on an implicit benchmark promise.
-  - stop_rule: If the benchmark harness cannot isolate this path cleanly, split the measurement work into a narrower reporting leaf instead of reopening lowerer adapter implementation work.
-  - notes: Archived child `TODO-1014` added explicit semantic-product index-family counts and worker-parity fields to the semantic-memory benchmark report, archived child `TODO-1015` updated the checked-in policy/evidence notes, archived child `TODO-1017` checked in `benchmarks/semantic_memory/semantic_product_index_parity_evidence.json` as a paired contract artifact, and archived child `TODO-1019` checked in `benchmarks/semantic_memory/semantic_product_index_math_star_repro_report.json` as the first measured report artifact. Active tracker `TODO-1018` now points at refreshed full baseline work `TODO-1020`.
 
 - [ ] TODO-0406: Split production semantics APIs from testing snapshots
   - owner: ai
   - created_at: 2026-04-13
   - phase: Group 15
-  - depends_on: TODO-0405
   - scope: Move snapshot-for-testing surface area out of production semantics interfaces and into explicit `include/primec/testing/*` facades so runtime/compiler consumers only depend on production contracts.
   - acceptance:
     - Production-facing semantics headers stop exposing snapshot-only structs/methods used exclusively by tests.
     - Existing semantics/IR snapshot tests compile and pass through testing facades without adding new `tests -> src` include-layer allowlist entries.
     - At least one snapshot-only compatibility path in production semantics code is deleted rather than relocated.
   - stop_rule: If removal breaks unrelated runtime/backend callsites, split into two leaves (facade introduction first, production API pruning second) before continuing.
-
-- [~] TODO-0405: Introduce unified semantic-product index builder
-  - owner: ai
-  - created_at: 2026-04-13
-  - phase: Group 15
-  - depends_on: TODO-0404
-  - scope: Replace ad-hoc lowerer semantic-product lookup-map construction with one typed `SemanticProductIndex` builder and shared lookup API for direct/method/bridge/binding/local-auto/query/try/on_error families.
-  - file_todos:
-    - [x] `TODO-0405-F01` files: `/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererSemanticProductTargetAdapters.{h,cpp}`, `/Users/chrgre01/src/PrimeStruct/include/primec/testing/ir_lowerer_helpers/IrLowererSemanticProductTargetAdapters.h`; fix: introduce a typed `SemanticProductIndex` plus `SemanticProductIndexBuilder`, wire adapter construction through that builder for direct/method/bridge/binding/local-auto/query/try/on_error family indices, and route semantic lookup helpers through shared index-backed lookup paths.
-    - [x] `TODO-0405-F02` files: `/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererSemanticProductTargetAdapters.cpp`, `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp`, `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends_graph_contexts.h`; fix: remove transitional duplicated legacy adapter-map population/fallback paths and migrate downstream checks to consume `SemanticProductIndex` directly.
-    - [x] `TODO-0405-F03` files: `/Users/chrgre01/src/PrimeStruct/tests/unit/test_ir_pipeline_backends_registry.cpp`, `/Users/chrgre01/src/PrimeStruct/tests/unit/test_semantics_definition_partitioner.cpp`; fix: add/refresh deterministic parity coverage across worker counts (`1`, `2`, `4`) for the unified index path.
-  - acceptance:
-    - Lowerer semantic-product adapter paths consume one shared index builder instead of duplicating per-family map assembly logic.
-    - Determinism parity coverage keeps semantic-product output and diagnostics stable across worker counts (`1`, `2`, `4`) on existing stress fixtures.
-    - Semantic memory benchmark reports show non-regression for the semantic-product/lowering path, with measurable allocation or runtime improvement in at least one tracked fixture.
-  - stop_rule: If measurable benchmark impact is not achieved after two attempts, archive this leaf as low-value per rule 16 and replace it with a different Group 15 hotspot.
-  - notes: Archived children `TODO-1008`, `TODO-1009`, `TODO-1010`, `TODO-1011`, `TODO-1012`, `TODO-1014`, `TODO-1015`, `TODO-1017`, and `TODO-1019` moved return-fact, on-error, local-auto, query, and try fallback lookup plus benchmark-report family-count wiring and checked-in evidence artifacts into the shared semantic-product adapter path. `benchmarks/semantic_memory/semantic_product_index_parity_evidence.json` now locks the family-count parity contract, `benchmarks/semantic_memory/semantic_product_index_math_star_repro_report.json` records the first measured worker-parity report, and active tracker `TODO-1013` points at refreshed full baseline work `TODO-1020`.
 
 - [ ] TODO-0403: Keep queue, lanes, and snapshots synchronized
   - owner: ai
@@ -193,4 +126,4 @@ Wave B (queue hygiene):
     - Each new leaf includes concrete validation commands, including release build/test and focused benchmark or memory checks.
     - Completed Group 15 leaves are moved to `docs/todo_finished.md` with evidence notes.
   - stop_rule: If a leaf cannot demonstrate measurable impact within one code-affecting commit, split it into smaller measurable leaves before implementation.
-  - notes: Prior Group 15 slices `[P0-17]` through `[P0-28]`, `[P1-01]` through `[P1-03]`, and `[P2-14]` through `[P2-42]` are already archived in `docs/todo_finished.md` (April 12-13, 2026). Archived children `TODO-1008`, `TODO-1009`, `TODO-1010`, `TODO-1011`, `TODO-1012`, `TODO-1014`, `TODO-1015`, `TODO-1017`, and `TODO-1019` moved return-fact, on-error, local-auto, query, and try fallback lookup plus benchmark-report family-count wiring and checked-in evidence artifacts into the shared semantic-product adapter path.
+  - notes: Prior Group 15 slices `[P0-17]` through `[P0-28]`, `[P1-01]` through `[P1-03]`, and `[P2-14]` through `[P2-42]` are already archived in `docs/todo_finished.md` (April 12-13, 2026). Archived items `TODO-0405`, `TODO-1013`, `TODO-1016`, `TODO-1018`, `TODO-1017`, `TODO-1019`, and `TODO-1020` now complete the unified semantic-product benchmark-proof chain with a refreshed full baseline report plus paired contract and primary-fixture measured artifacts. `TODO-0406` is the remaining live Group 15 leaf.

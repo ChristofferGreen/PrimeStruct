@@ -154,6 +154,10 @@ Benchmark-only collector controls are forwarded to `primec`:
 Initial checked-in baseline report:
 
 - `benchmarks/semantic_memory_baseline_report.json`
+  now records the full canonical fixture matrix with
+  `--definition-validation-workers both`, so semantic-product rows carry
+  `semantic_product_index_family_counts` and the report includes
+  `definition_validation_worker_mode_deltas`.
 - `benchmarks/semantic_memory_budget_policy.json` defines per-fixture per-phase
   soft/hard RSS budgets plus the sustained-window rule (`2` regressions in
   a `3`-report window).

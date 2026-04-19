@@ -9,10 +9,10 @@
       "fixture": "math_star_repro",
       "phase": "semantic-product",
       "metric": "worst_peak_rss_bytes",
-      "baseline_value": 5927174144,
+      "baseline_value": 9060352,
       "target_reduction_ratio": 0.1,
       "absolute_cap_value": 5368709120,
-      "effective_target_value": 5334456730,
+      "effective_target_value": 8154317,
       "pass_rule": "observed_value <= min(baseline_value * (1 - target_reduction_ratio), absolute_cap_value)"
     }
   ],
