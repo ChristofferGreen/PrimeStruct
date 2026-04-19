@@ -3278,7 +3278,7 @@ TEST_CASE("compiles and runs native experimental map inserts") {
   expectExperimentalMapInsertConformance("native");
 }
 
-TEST_CASE("compiles and runs native experimental map ownership-sensitive values" * doctest::skip(true)) {
+TEST_CASE("rejects native experimental map ownership-sensitive values") {
   expectExperimentalMapOwnershipConformance("native");
 }
 
