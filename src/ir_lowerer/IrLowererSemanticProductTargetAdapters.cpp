@@ -107,9 +107,6 @@ struct SemanticProductIndexBuilder {
     if (semanticProgram == nullptr) {
       return index;
     }
-    buildDirectCallIndex(index);
-    buildMethodCallIndex(index);
-    buildBridgePathChoiceIndex(index);
     buildOnErrorIndex(index);
     buildReturnIndex(index);
     buildLocalAutoIndex(index);
@@ -117,54 +114,6 @@ struct SemanticProductIndexBuilder {
     buildTryIndex(index);
     buildBindingIndex(index);
     return index;
-  }
-
-  void buildDirectCallIndex(SemanticProductIndex &index) const {
-    const auto directCallTargets = semanticProgramDirectCallTargetView(*semanticProgram);
-    index.directCallTargetIdsByExpr.reserve(directCallTargets.size());
-    for (const auto *entry : directCallTargets) {
-      if (entry->semanticNodeId == 0 || entry->resolvedPathId == InvalidSymbolId) {
-        continue;
-      }
-      const std::string_view resolvedPath =
-          semanticProgramResolveCallTargetString(*semanticProgram, entry->resolvedPathId);
-      if (!resolvedPath.empty()) {
-        index.directCallTargetIdsByExpr.insert_or_assign(entry->semanticNodeId, entry->resolvedPathId);
-      }
-    }
-  }
-
-  void buildMethodCallIndex(SemanticProductIndex &index) const {
-    const auto methodCallTargets = semanticProgramMethodCallTargetView(*semanticProgram);
-    index.methodCallTargetIdsByExpr.reserve(methodCallTargets.size());
-    for (const auto *entry : methodCallTargets) {
-      if (entry->semanticNodeId == 0 || entry->resolvedPathId == InvalidSymbolId) {
-        continue;
-      }
-      const std::string_view resolvedPath =
-          semanticProgramResolveCallTargetString(*semanticProgram, entry->resolvedPathId);
-      if (!resolvedPath.empty()) {
-        index.methodCallTargetIdsByExpr.insert_or_assign(entry->semanticNodeId, entry->resolvedPathId);
-      }
-    }
-  }
-
-  void buildBridgePathChoiceIndex(SemanticProductIndex &index) const {
-    const auto bridgePathChoices = semanticProgramBridgePathChoiceView(*semanticProgram);
-    index.bridgePathChoiceIdsByExpr.reserve(bridgePathChoices.size());
-    for (const auto *entry : bridgePathChoices) {
-      const std::string_view helperName =
-          semanticProgramBridgePathChoiceHelperName(*semanticProgram, *entry);
-      const std::string_view chosenPath =
-          semanticProgramResolveCallTargetString(*semanticProgram, entry->chosenPathId);
-      if (entry->semanticNodeId != 0 &&
-          entry->chosenPathId != InvalidSymbolId &&
-          entry->helperNameId != InvalidSymbolId &&
-          !helperName.empty() &&
-          !chosenPath.empty()) {
-        index.bridgePathChoiceIdsByExpr.insert_or_assign(entry->semanticNodeId, entry->chosenPathId);
-      }
-    }
   }
 
   void buildOnErrorIndex(SemanticProductIndex &index) const {
@@ -273,42 +222,6 @@ struct SemanticProductIndexBuilder {
   }
 };
 
-std::optional<SymbolId> lookupDirectCallTargetId(const SemanticProductIndex &index,
-                                                 uint64_t semanticNodeId) {
-  if (semanticNodeId == 0) {
-    return std::nullopt;
-  }
-  if (const auto it = index.directCallTargetIdsByExpr.find(semanticNodeId);
-      it != index.directCallTargetIdsByExpr.end()) {
-    return it->second;
-  }
-  return std::nullopt;
-}
-
-std::optional<SymbolId> lookupMethodCallTargetId(const SemanticProductIndex &index,
-                                                 uint64_t semanticNodeId) {
-  if (semanticNodeId == 0) {
-    return std::nullopt;
-  }
-  if (const auto it = index.methodCallTargetIdsByExpr.find(semanticNodeId);
-      it != index.methodCallTargetIdsByExpr.end()) {
-    return it->second;
-  }
-  return std::nullopt;
-}
-
-std::optional<SymbolId> lookupBridgePathChoiceId(const SemanticProductIndex &index,
-                                                 uint64_t semanticNodeId) {
-  if (semanticNodeId == 0) {
-    return std::nullopt;
-  }
-  if (const auto it = index.bridgePathChoiceIdsByExpr.find(semanticNodeId);
-      it != index.bridgePathChoiceIdsByExpr.end()) {
-    return it->second;
-  }
-  return std::nullopt;
-}
-
 } // namespace
 
 SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticProgram *semanticProgram) {
@@ -318,20 +231,8 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
   }
   adapter.hasSemanticProduct = true;
   adapter.semanticProgram = semanticProgram;
+  adapter.publishedRoutingLookups = &semanticProgram->publishedRoutingLookups;
   adapter.semanticIndex = SemanticProductIndexBuilder{semanticProgram}.build();
-
-  const auto callableSummaries = semanticProgramCallableSummaryView(*semanticProgram);
-  adapter.callableSummariesByPathId.reserve(callableSummaries.size());
-  for (const auto *entry : callableSummaries) {
-    if (entry->fullPathId == InvalidSymbolId) {
-      continue;
-    }
-    const std::string_view fullPath =
-        semanticProgramCallableSummaryFullPath(*semanticProgram, *entry);
-    if (!fullPath.empty()) {
-      adapter.callableSummariesByPathId.insert_or_assign(entry->fullPathId, entry);
-    }
-  }
 
   adapter.typeMetadataByPath.reserve(semanticProgram->typeMetadata.size());
   adapter.orderedStructTypeMetadata.reserve(semanticProgram->typeMetadata.size());
@@ -371,7 +272,8 @@ std::string findSemanticProductDirectCallTarget(const SemanticProductTargetAdapt
   if (adapter.semanticProgram == nullptr || expr.semanticNodeId == 0) {
     return {};
   }
-  if (const auto pathId = lookupDirectCallTargetId(adapter.semanticIndex, expr.semanticNodeId);
+  if (const auto pathId = semanticProgramLookupPublishedDirectCallTargetId(*adapter.semanticProgram,
+                                                                           expr.semanticNodeId);
       pathId.has_value() && *pathId != InvalidSymbolId) {
     const std::string_view resolvedPath =
         semanticProgramResolveCallTargetString(*adapter.semanticProgram, *pathId);
@@ -386,7 +288,8 @@ std::string findSemanticProductMethodCallTarget(const SemanticProductTargetAdapt
   if (expr.semanticNodeId == 0 || adapter.semanticProgram == nullptr) {
     return {};
   }
-  if (const auto pathId = lookupMethodCallTargetId(adapter.semanticIndex, expr.semanticNodeId);
+  if (const auto pathId = semanticProgramLookupPublishedMethodCallTargetId(*adapter.semanticProgram,
+                                                                           expr.semanticNodeId);
       pathId.has_value()) {
     if (*pathId == InvalidSymbolId) {
       return {};
@@ -405,7 +308,8 @@ std::string findSemanticProductBridgePathChoice(const SemanticProductTargetAdapt
   if (adapter.semanticProgram == nullptr || expr.semanticNodeId == 0) {
     return {};
   }
-  if (const auto pathId = lookupBridgePathChoiceId(adapter.semanticIndex, expr.semanticNodeId);
+  if (const auto pathId = semanticProgramLookupPublishedBridgePathChoiceId(*adapter.semanticProgram,
+                                                                           expr.semanticNodeId);
       pathId.has_value() && *pathId != InvalidSymbolId) {
     const std::string_view chosenPath =
         semanticProgramResolveCallTargetString(*adapter.semanticProgram, *pathId);
@@ -421,15 +325,7 @@ const SemanticProgramCallableSummary *findSemanticProductCallableSummary(const S
   if (fullPath.empty() || adapter.semanticProgram == nullptr) {
     return nullptr;
   }
-  const auto fullPathId = semanticProgramLookupCallTargetStringId(*adapter.semanticProgram, fullPath);
-  if (!fullPathId.has_value()) {
-    return nullptr;
-  }
-  if (const auto it = adapter.callableSummariesByPathId.find(*fullPathId);
-      it != adapter.callableSummariesByPathId.end()) {
-    return it->second;
-  }
-  return nullptr;
+  return semanticProgramLookupPublishedCallableSummary(*adapter.semanticProgram, fullPath);
 }
 
 const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(const SemanticProductTargetAdapter &adapter,

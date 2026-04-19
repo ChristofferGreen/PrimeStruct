@@ -507,6 +507,9 @@ main() {
   bridgeExpr.kind = primec::Expr::Kind::Call;
   bridgeExpr.semanticNodeId = bridgeEntry->semanticNodeId;
 
+  CHECK(semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.count(directExpr->semanticNodeId) == 1);
+  CHECK(semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.count(methodExpr->semanticNodeId) == 1);
+  CHECK(semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.count(bridgeExpr.semanticNodeId) == 1);
   CHECK(primec::ir_lowerer::findSemanticProductDirectCallTarget(adapter, *directExpr) == "/id_i32");
   CHECK(primec::ir_lowerer::findSemanticProductMethodCallTarget(adapter, *methodExpr) ==
         "/std/collections/vector/count");
@@ -515,6 +518,7 @@ main() {
 
   const auto *summary = primec::ir_lowerer::findSemanticProductCallableSummary(adapter, "/main");
   REQUIRE(summary != nullptr);
+  CHECK(semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId.count(summary->fullPathId) == 1);
   CHECK(summary->returnKind == "i32");
 }
 
@@ -1046,14 +1050,21 @@ TEST_CASE("ir lowerer semantic-product adapter reuses method-call path ids") {
           primec::semanticProgramInternCallTargetString(semanticProgram,
                                                         "/std/collections/map/contains"),
   });
+  semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.insert_or_assign(
+      44,
+      semanticProgram.methodCallTargets[0].resolvedPathId);
+  semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.insert_or_assign(
+      45,
+      semanticProgram.methodCallTargets[1].resolvedPathId);
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   REQUIRE(adapter.semanticProgram == &semanticProgram);
-  REQUIRE(adapter.semanticIndex.methodCallTargetIdsByExpr.count(44) == 1);
-  REQUIRE(adapter.semanticIndex.methodCallTargetIdsByExpr.count(45) == 1);
-  CHECK(adapter.semanticIndex.methodCallTargetIdsByExpr.at(44) ==
-        adapter.semanticIndex.methodCallTargetIdsByExpr.at(45));
-  CHECK(adapter.semanticIndex.methodCallTargetIdsByExpr.at(44) ==
+  REQUIRE(adapter.publishedRoutingLookups != nullptr);
+  REQUIRE(adapter.publishedRoutingLookups->methodCallTargetIdsByExpr.count(44) == 1);
+  REQUIRE(adapter.publishedRoutingLookups->methodCallTargetIdsByExpr.count(45) == 1);
+  CHECK(adapter.publishedRoutingLookups->methodCallTargetIdsByExpr.at(44) ==
+        adapter.publishedRoutingLookups->methodCallTargetIdsByExpr.at(45));
+  CHECK(adapter.publishedRoutingLookups->methodCallTargetIdsByExpr.at(44) ==
         semanticProgram.methodCallTargets[0].resolvedPathId);
 
   primec::Expr firstExpr;
@@ -1097,10 +1108,14 @@ TEST_CASE("ir lowerer semantic-product adapter ignores method-call targets missi
           primec::semanticProgramInternCallTargetString(semanticProgram,
                                                         "/std/collections/map/contains"),
   });
+  semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.insert_or_assign(
+      145,
+      semanticProgram.methodCallTargets[1].resolvedPathId);
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
-  CHECK(adapter.semanticIndex.methodCallTargetIdsByExpr.count(144) == 0);
-  CHECK(adapter.semanticIndex.methodCallTargetIdsByExpr.count(145) == 1);
+  REQUIRE(adapter.publishedRoutingLookups != nullptr);
+  CHECK(adapter.publishedRoutingLookups->methodCallTargetIdsByExpr.count(144) == 0);
+  CHECK(adapter.publishedRoutingLookups->methodCallTargetIdsByExpr.count(145) == 1);
 
   primec::Expr missingPathExpr;
   missingPathExpr.kind = primec::Expr::Kind::Call;
@@ -1178,11 +1193,13 @@ TEST_CASE("ir lowerer semantic-product adapter indexes callable summaries by ful
       .fullPathId =
           static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u),
   });
+  semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId.insert_or_assign(mainPathId, 0);
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
-  CHECK(adapter.callableSummariesByPathId.count(mainPathId) == 1);
-  CHECK(adapter.callableSummariesByPathId.count(primec::InvalidSymbolId) == 0);
-  CHECK(adapter.callableSummariesByPathId.count(
+  REQUIRE(adapter.publishedRoutingLookups != nullptr);
+  CHECK(adapter.publishedRoutingLookups->callableSummaryIndicesByPathId.count(mainPathId) == 1);
+  CHECK(adapter.publishedRoutingLookups->callableSummaryIndicesByPathId.count(primec::InvalidSymbolId) == 0);
+  CHECK(adapter.publishedRoutingLookups->callableSummaryIndicesByPathId.count(
             static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u)) == 0);
   const auto *summary = primec::ir_lowerer::findSemanticProductCallableSummary(adapter, "/main");
   REQUIRE(summary != nullptr);
@@ -1259,6 +1276,9 @@ TEST_CASE("ir lowerer semantic-product adapter ignores bridge-path choices with 
       .helperNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "count"),
       .chosenPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
   });
+  semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.insert_or_assign(
+      119,
+      semanticProgram.bridgePathChoices[1].chosenPathId);
   semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
       .scopePath = "/main",
       .collectionFamily = "vector",
@@ -1274,9 +1294,10 @@ TEST_CASE("ir lowerer semantic-product adapter ignores bridge-path choices with 
   });
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
-  CHECK(adapter.semanticIndex.bridgePathChoiceIdsByExpr.count(118) == 0);
-  CHECK(adapter.semanticIndex.bridgePathChoiceIdsByExpr.count(119) == 1);
-  CHECK(adapter.semanticIndex.bridgePathChoiceIdsByExpr.count(120) == 0);
+  REQUIRE(adapter.publishedRoutingLookups != nullptr);
+  CHECK(adapter.publishedRoutingLookups->bridgePathChoiceIdsByExpr.count(118) == 0);
+  CHECK(adapter.publishedRoutingLookups->bridgePathChoiceIdsByExpr.count(119) == 1);
+  CHECK(adapter.publishedRoutingLookups->bridgePathChoiceIdsByExpr.count(120) == 0);
 
   primec::Expr missingHelperExpr;
   missingHelperExpr.kind = primec::Expr::Kind::Call;

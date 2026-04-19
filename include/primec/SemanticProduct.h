@@ -336,6 +336,13 @@ struct SemanticProgramModuleResolvedArtifacts {
   std::vector<std::size_t> onErrorFactIndices;
 };
 
+struct SemanticProgramPublishedRoutingLookups {
+  std::unordered_map<uint64_t, SymbolId> directCallTargetIdsByExpr;
+  std::unordered_map<uint64_t, SymbolId> methodCallTargetIdsByExpr;
+  std::unordered_map<uint64_t, SymbolId> bridgePathChoiceIdsByExpr;
+  std::unordered_map<SymbolId, std::size_t> callableSummaryIndicesByPathId;
+};
+
 struct SemanticProgram {
   uint32_t contractVersion = SemanticProductContractVersionCurrent;
   std::string entryPath;
@@ -345,6 +352,7 @@ struct SemanticProgram {
   std::unordered_map<std::string, SymbolId, SemanticProgramStringHash, SemanticProgramStringEqual>
       callTargetStringIdsByText;
   std::vector<SemanticProgramModuleResolvedArtifacts> moduleResolvedArtifacts;
+  SemanticProgramPublishedRoutingLookups publishedRoutingLookups;
   std::vector<SemanticProgramDefinition> definitions;
   std::vector<SemanticProgramExecution> executions;
   std::vector<SemanticProgramDirectCallTarget> directCallTargets;
@@ -387,6 +395,18 @@ std::optional<SymbolId> semanticProgramLookupCallTargetStringId(const SemanticPr
                                                                 std::string_view text);
 void releaseSemanticProgramLookupMap(SemanticProgram &semanticProgram);
 std::string_view semanticProgramResolveCallTargetString(const SemanticProgram &semanticProgram, SymbolId id);
+std::optional<SymbolId> semanticProgramLookupPublishedDirectCallTargetId(const SemanticProgram &semanticProgram,
+                                                                         uint64_t semanticNodeId);
+std::optional<SymbolId> semanticProgramLookupPublishedMethodCallTargetId(const SemanticProgram &semanticProgram,
+                                                                         uint64_t semanticNodeId);
+std::optional<SymbolId> semanticProgramLookupPublishedBridgePathChoiceId(const SemanticProgram &semanticProgram,
+                                                                         uint64_t semanticNodeId);
+const SemanticProgramCallableSummary *semanticProgramLookupPublishedCallableSummaryByPathId(
+    const SemanticProgram &semanticProgram,
+    SymbolId fullPathId);
+const SemanticProgramCallableSummary *semanticProgramLookupPublishedCallableSummary(
+    const SemanticProgram &semanticProgram,
+    std::string_view fullPath);
 std::string_view semanticProgramDirectCallTargetResolvedPath(
     const SemanticProgram &semanticProgram,
     const SemanticProgramDirectCallTarget &entry);

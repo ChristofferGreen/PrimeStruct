@@ -56,36 +56,31 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-1. TODO-1064
+1. TODO-1065
 
 ### Immediate Next 10 (After Ready Now)
 
-1. TODO-1064
-2. TODO-1065
+1. TODO-1065
 
 ### Priority Lanes (Current)
 
-- Pilot semantic boundary ownership: TODO-1064, TODO-1065
+- Pilot semantic boundary ownership: TODO-1065
 
 ### Execution Queue (Recommended)
 
 Wave A:
-1. TODO-1064
-
-Wave B:
 1. TODO-1065
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Pilot semantic ownership boundary | TODO-1064, TODO-1065 |
+| Pilot semantic ownership boundary | TODO-1065 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Semantic-product publication parity | TODO-1064 |
 | Lowering conformance and fallback deletion | TODO-1065 |
 
 ### Task Blocks
@@ -101,14 +96,3 @@ Wave B:
     - negative tests fail deterministically when required semantic-product fields are absent or inconsistent
     - at least one compatibility fallback or adapter-only reconstruction path is deleted for each migrated pilot routing family
   - stop_rule: stop after the pilot routing slice is semantic-product-only; do not broaden to untouched fact families in the same change
-
-- [ ] TODO-1064: Precompute lowering lookup tables during semantic-product publication
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Architecture boundary hardening
-  - scope: move the lowering lookup/index work now rebuilt in `IrLowererSemanticProductTargetAdapters.cpp` into semantic-product publication for the pilot routing slice so lowering consumes preindexed views instead of reconstructing routing maps per run.
-  - acceptance:
-    - lowering no longer rebuilds the current semantic-product routing index tables for the pilot slice
-    - semantic-product publication emits the preindexed views or equivalent owned lookup tables needed by lowering for that slice
-    - focused lowering tests prove parity while memory/perf coverage shows the adapter rebuild cost is removed or reduced for the pilot slice
-  - stop_rule: stop after direct-call, method-call, bridge-path, and callable-summary lookup support are precomputed; leave other fact families for follow-up if needed

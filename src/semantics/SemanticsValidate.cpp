@@ -338,6 +338,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
   if (isCollectorEnabled("direct_call_targets")) {
     const auto directCallTargets =
         validator.takeCollectedDirectCallTargetsForSemanticProduct();
+    semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.reserve(directCallTargets.size());
     semanticProgram.directCallTargets.reserve(directCallTargets.size());
     for (const auto &snapshotEntry : directCallTargets) {
       SemanticProgramDirectCallTarget entry;
@@ -355,6 +356,12 @@ SemanticProgram buildSemanticProgram(const Program &program,
       const std::size_t entryIndex = semanticProgram.directCallTargets.size() - 1;
       ensureModuleResolvedArtifacts(snapshotEntry.scopePath).directCallTargetIndices.push_back(
           entryIndex);
+      if (snapshotEntry.semanticNodeId != 0 &&
+          semanticProgram.directCallTargets.back().resolvedPathId != InvalidSymbolId) {
+        semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
+            snapshotEntry.semanticNodeId,
+            semanticProgram.directCallTargets.back().resolvedPathId);
+      }
     }
     validator.releaseTransientSnapshotCaches();
     maybeRelieveSemanticAllocatorPressure();
@@ -362,6 +369,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
   if (isCollectorEnabled("method_call_targets")) {
     const auto methodCallTargets =
         validator.takeCollectedMethodCallTargetsForSemanticProduct();
+    semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.reserve(methodCallTargets.size());
     semanticProgram.methodCallTargets.reserve(methodCallTargets.size());
     for (const auto &snapshotEntry : methodCallTargets) {
       SemanticProgramMethodCallTarget entry;
@@ -381,6 +389,12 @@ SemanticProgram buildSemanticProgram(const Program &program,
       const std::size_t entryIndex = semanticProgram.methodCallTargets.size() - 1;
       ensureModuleResolvedArtifacts(snapshotEntry.scopePath).methodCallTargetIndices.push_back(
           entryIndex);
+      if (snapshotEntry.semanticNodeId != 0 &&
+          semanticProgram.methodCallTargets.back().resolvedPathId != InvalidSymbolId) {
+        semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.insert_or_assign(
+            snapshotEntry.semanticNodeId,
+            semanticProgram.methodCallTargets.back().resolvedPathId);
+      }
     }
     validator.releaseTransientSnapshotCaches();
     maybeRelieveSemanticAllocatorPressure();
@@ -388,6 +402,7 @@ SemanticProgram buildSemanticProgram(const Program &program,
   if (isCollectorEnabled("bridge_path_choices")) {
     const auto bridgePathChoices =
         validator.takeCollectedBridgePathChoicesForSemanticProduct();
+    semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.reserve(bridgePathChoices.size());
     semanticProgram.bridgePathChoices.reserve(bridgePathChoices.size());
     for (const auto &snapshotEntry : bridgePathChoices) {
       SemanticProgramBridgePathChoice entry;
@@ -407,11 +422,19 @@ SemanticProgram buildSemanticProgram(const Program &program,
       const std::size_t entryIndex = semanticProgram.bridgePathChoices.size() - 1;
       ensureModuleResolvedArtifacts(snapshotEntry.scopePath).bridgePathChoiceIndices.push_back(
           entryIndex);
+      if (snapshotEntry.semanticNodeId != 0 &&
+          semanticProgram.bridgePathChoices.back().chosenPathId != InvalidSymbolId &&
+          semanticProgram.bridgePathChoices.back().helperNameId != InvalidSymbolId) {
+        semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.insert_or_assign(
+            snapshotEntry.semanticNodeId,
+            semanticProgram.bridgePathChoices.back().chosenPathId);
+      }
     }
   }
   if (isCollectorEnabled("callable_summaries")) {
     const auto callableSummaries =
         validator.takeCollectedCallableSummariesForSemanticProduct();
+    semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId.reserve(callableSummaries.size());
     semanticProgram.callableSummaries.reserve(callableSummaries.size());
     for (const auto &snapshotEntry : callableSummaries) {
       SemanticProgramCallableSummary entry;
@@ -453,6 +476,11 @@ SemanticProgram buildSemanticProgram(const Program &program,
       const std::size_t entryIndex = semanticProgram.callableSummaries.size() - 1;
       ensureModuleResolvedArtifacts(snapshotEntry.fullPath).callableSummaryIndices.push_back(
           entryIndex);
+      if (semanticProgram.callableSummaries.back().fullPathId != InvalidSymbolId) {
+        semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId.insert_or_assign(
+            semanticProgram.callableSummaries.back().fullPathId,
+            entryIndex);
+      }
     }
   }
   if (isCollectorEnabled("type_metadata")) {

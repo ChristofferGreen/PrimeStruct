@@ -121,6 +121,104 @@ std::string_view semanticProgramResolveCallTargetString(const SemanticProgram &s
   return semanticProgram.callTargetStringTable[id - 1];
 }
 
+std::optional<SymbolId> semanticProgramLookupPublishedDirectCallTargetId(const SemanticProgram &semanticProgram,
+                                                                         uint64_t semanticNodeId) {
+  if (semanticNodeId == 0) {
+    return std::nullopt;
+  }
+  if (const auto it = semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.find(semanticNodeId);
+      it != semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.end()) {
+    return it->second;
+  }
+  for (const auto &entry : semanticProgram.directCallTargets) {
+    if (entry.semanticNodeId != semanticNodeId || entry.resolvedPathId == InvalidSymbolId) {
+      continue;
+    }
+    if (!semanticProgramResolveCallTargetString(semanticProgram, entry.resolvedPathId).empty()) {
+      return entry.resolvedPathId;
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<SymbolId> semanticProgramLookupPublishedMethodCallTargetId(const SemanticProgram &semanticProgram,
+                                                                         uint64_t semanticNodeId) {
+  if (semanticNodeId == 0) {
+    return std::nullopt;
+  }
+  if (const auto it = semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.find(semanticNodeId);
+      it != semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.end()) {
+    return it->second;
+  }
+  for (const auto &entry : semanticProgram.methodCallTargets) {
+    if (entry.semanticNodeId != semanticNodeId || entry.resolvedPathId == InvalidSymbolId) {
+      continue;
+    }
+    if (!semanticProgramResolveCallTargetString(semanticProgram, entry.resolvedPathId).empty()) {
+      return entry.resolvedPathId;
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<SymbolId> semanticProgramLookupPublishedBridgePathChoiceId(const SemanticProgram &semanticProgram,
+                                                                         uint64_t semanticNodeId) {
+  if (semanticNodeId == 0) {
+    return std::nullopt;
+  }
+  if (const auto it = semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.find(semanticNodeId);
+      it != semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.end()) {
+    return it->second;
+  }
+  for (const auto &entry : semanticProgram.bridgePathChoices) {
+    if (entry.semanticNodeId != semanticNodeId || entry.chosenPathId == InvalidSymbolId ||
+        entry.helperNameId == InvalidSymbolId) {
+      continue;
+    }
+    if (semanticProgramBridgePathChoiceHelperName(semanticProgram, entry).empty()) {
+      continue;
+    }
+    if (!semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId).empty()) {
+      return entry.chosenPathId;
+    }
+  }
+  return std::nullopt;
+}
+
+const SemanticProgramCallableSummary *semanticProgramLookupPublishedCallableSummaryByPathId(
+    const SemanticProgram &semanticProgram,
+    SymbolId fullPathId) {
+  if (fullPathId == InvalidSymbolId) {
+    return nullptr;
+  }
+  if (const auto it = semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId.find(fullPathId);
+      it != semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId.end()) {
+    if (it->second < semanticProgram.callableSummaries.size()) {
+      return &semanticProgram.callableSummaries[it->second];
+    }
+    return nullptr;
+  }
+  for (const auto &entry : semanticProgram.callableSummaries) {
+    if (entry.fullPathId != fullPathId) {
+      continue;
+    }
+    if (!semanticProgramCallableSummaryFullPath(semanticProgram, entry).empty()) {
+      return &entry;
+    }
+  }
+  return nullptr;
+}
+
+const SemanticProgramCallableSummary *semanticProgramLookupPublishedCallableSummary(
+    const SemanticProgram &semanticProgram,
+    std::string_view fullPath) {
+  const auto fullPathId = semanticProgramLookupCallTargetStringId(semanticProgram, fullPath);
+  if (!fullPathId.has_value()) {
+    return nullptr;
+  }
+  return semanticProgramLookupPublishedCallableSummaryByPathId(semanticProgram, *fullPathId);
+}
+
 std::string_view semanticProgramDirectCallTargetResolvedPath(
     const SemanticProgram &semanticProgram,
     const SemanticProgramDirectCallTarget &entry) {

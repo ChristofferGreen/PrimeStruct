@@ -270,21 +270,49 @@ bool precomputeSemanticProductReturnInfoCache(const LowerInferenceGetReturnInfoS
   }
 
   std::vector<const Definition *> definitions;
-  definitions.reserve(input.semanticProductTargets->callableSummariesByPathId.size());
-  for (const auto &[pathId, callableSummary] : input.semanticProductTargets->callableSummariesByPathId) {
-    (void)callableSummary;
-    const std::string_view pathView = semanticProgramResolveCallTargetString(
-        *input.semanticProductTargets->semanticProgram, pathId);
-    if (pathView.empty()) {
-      errorOut = "missing semantic-product callable summary path id";
-      return false;
+  const auto &publishedCallableSummaryIndices =
+      input.semanticProductTargets->semanticProgram->publishedRoutingLookups.callableSummaryIndicesByPathId;
+  definitions.reserve(!publishedCallableSummaryIndices.empty() ? publishedCallableSummaryIndices.size()
+                                                               : callableSummaries.size());
+
+  if (!publishedCallableSummaryIndices.empty()) {
+    for (const auto &[pathId, callableSummaryIndex] : publishedCallableSummaryIndices) {
+      if (callableSummaryIndex >= input.semanticProductTargets->semanticProgram->callableSummaries.size()) {
+        errorOut = "missing semantic-product callable summary path id";
+        return false;
+      }
+      const std::string_view pathView = semanticProgramResolveCallTargetString(
+          *input.semanticProductTargets->semanticProgram, pathId);
+      if (pathView.empty()) {
+        errorOut = "missing semantic-product callable summary path id";
+        return false;
+      }
+      const auto defIt = input.defMap->find(std::string(pathView));
+      if (defIt == input.defMap->end() || defIt->second == nullptr) {
+        errorOut = "native backend cannot resolve definition: " + std::string(pathView);
+        return false;
+      }
+      definitions.push_back(defIt->second);
     }
-    const auto defIt = input.defMap->find(std::string(pathView));
-    if (defIt == input.defMap->end() || defIt->second == nullptr) {
-      errorOut = "native backend cannot resolve definition: " + std::string(pathView);
-      return false;
+  } else {
+    for (const auto *entry : callableSummaries) {
+      if (entry == nullptr || entry->fullPathId == InvalidSymbolId) {
+        errorOut = "missing semantic-product callable summary path id";
+        return false;
+      }
+      const std::string_view pathView = semanticProgramResolveCallTargetString(
+          *input.semanticProductTargets->semanticProgram, entry->fullPathId);
+      if (pathView.empty()) {
+        errorOut = "missing semantic-product callable summary path id";
+        return false;
+      }
+      const auto defIt = input.defMap->find(std::string(pathView));
+      if (defIt == input.defMap->end() || defIt->second == nullptr) {
+        errorOut = "native backend cannot resolve definition: " + std::string(pathView);
+        return false;
+      }
+      definitions.push_back(defIt->second);
     }
-    definitions.push_back(defIt->second);
   }
   sortDefinitionsForDeterministicReturnSolve(definitions);
 
