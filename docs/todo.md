@@ -55,7 +55,7 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-1. TODO-0405
+1. TODO-1011
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -64,13 +64,13 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- P1 Semantic memory/perf + multithread substrate + semantic-product boundary hardening: TODO-0402, TODO-0405, TODO-0406
+- P1 Semantic memory/perf + multithread substrate + semantic-product boundary hardening: TODO-0402, TODO-0405, TODO-1011, TODO-0406
 - P3 Queue/snapshot governance: TODO-0403
 
 ### Execution Queue (Recommended)
 
 Wave A (semantic memory/perf):
-1. TODO-0405
+1. TODO-1011
 2. TODO-0406
 
 Wave B (queue hygiene):
@@ -81,19 +81,31 @@ Wave B (queue hygiene):
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Semantic memory footprint and multithread compile substrate | TODO-0402 |
-| Semantic-product contract/index boundary hardening | TODO-0405, TODO-0406 |
+| Semantic-product contract/index boundary hardening | TODO-0405, TODO-1011, TODO-0406 |
 | TODO queue quality gates and dependency/coverage synchronization | TODO-0403 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0402, TODO-0405, TODO-0406 |
+| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0402, TODO-0405, TODO-1011, TODO-0406 |
 | Benchmark/runtime regression checks (`./scripts/benchmark.sh`) | TODO-0402 |
-| Semantic-product contract/index and deterministic conformance checks | TODO-0405, TODO-0406 |
+| Semantic-product contract/index and deterministic conformance checks | TODO-0405, TODO-1011, TODO-0406 |
 | TODO/open-vs-finished hygiene (`docs/todo.md` vs `docs/todo_finished.md`) | TODO-0403 |
 
 ### Task Blocks
+
+- [ ] TODO-1011: Index query facts by resolved path and call name in the shared semantic-product adapter index
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Group 15
+  - scope: Extend the shared `SemanticProductIndex` builder so query fact lookup resolves resolved-path-plus-call-name matches without rebuilding or scanning the query fact view in lowerer adapter helpers.
+  - acceptance:
+    - `SemanticProductIndexBuilder` populates `queryFactsByResolvedPathAndCallNameId` from `semanticProgramQueryFactView(...)` while preserving the existing semantic-node lookup.
+    - `findSemanticProductQueryFact(...)` resolves resolved-path-plus-call-name matches through the shared semantic index without a fallback scan over query facts (baseline: one adapter-side query fallback scan remains today; target: zero).
+    - Focused lowerer adapter runtime and source-lock coverage pins the new composite-key indexing and the deleted fallback scan.
+  - stop_rule: If query composite-key indexing also requires changing semantic-product emission/layout contracts, split that storage change into a separate leaf before continuing.
+  - notes: Follow-on to archived children `TODO-1008`, `TODO-1009`, and `TODO-1010`, which moved return-fact, on-error, and local-auto fallback lookup into the shared semantic-product adapter index.
 
 - [ ] TODO-0406: Split production semantics APIs from testing snapshots
   - owner: ai
@@ -122,6 +134,7 @@ Wave B (queue hygiene):
     - Determinism parity coverage keeps semantic-product output and diagnostics stable across worker counts (`1`, `2`, `4`) on existing stress fixtures.
     - Semantic memory benchmark reports show non-regression for the semantic-product/lowering path, with measurable allocation or runtime improvement in at least one tracked fixture.
   - stop_rule: If measurable benchmark impact is not achieved after two attempts, archive this leaf as low-value per rule 16 and replace it with a different Group 15 hotspot.
+  - notes: Archived children `TODO-1008`, `TODO-1009`, and `TODO-1010` moved return-fact, on-error, and local-auto fallback lookup into the shared semantic-product adapter index. Active child `TODO-1011` now targets the remaining query resolved-path fallback scan.
 
 - [ ] TODO-0403: Keep queue, lanes, and snapshots synchronized
   - owner: ai
@@ -145,4 +158,4 @@ Wave B (queue hygiene):
     - Each new leaf includes concrete validation commands, including release build/test and focused benchmark or memory checks.
     - Completed Group 15 leaves are moved to `docs/todo_finished.md` with evidence notes.
   - stop_rule: If a leaf cannot demonstrate measurable impact within one code-affecting commit, split it into smaller measurable leaves before implementation.
-  - notes: Prior Group 15 slices `[P0-17]` through `[P0-28]`, `[P1-01]` through `[P1-03]`, and `[P2-14]` through `[P2-42]` are already archived in `docs/todo_finished.md` (April 12-13, 2026). Archived children `TODO-1008` and `TODO-1009` moved return-fact and on-error definition-path lookup into the shared semantic-product adapter index.
+  - notes: Prior Group 15 slices `[P0-17]` through `[P0-28]`, `[P1-01]` through `[P1-03]`, and `[P2-14]` through `[P2-42]` are already archived in `docs/todo_finished.md` (April 12-13, 2026). Archived children `TODO-1008`, `TODO-1009`, and `TODO-1010` moved return-fact, on-error, and local-auto fallback lookup into the shared semantic-product adapter index.

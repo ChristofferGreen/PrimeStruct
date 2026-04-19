@@ -208,10 +208,18 @@ struct SemanticProductIndexBuilder {
   void buildLocalAutoIndex(SemanticProductIndex &index) const {
     const auto localAutoFacts = semanticProgramLocalAutoFactView(*semanticProgram);
     index.localAutoFactsByExpr.reserve(localAutoFacts.size());
+    index.localAutoFactsByInitPathAndBindingNameId.reserve(localAutoFacts.size());
     for (const auto *entry : localAutoFacts) {
       if (entry->semanticNodeId != 0) {
         index.localAutoFactsByExpr.insert_or_assign(entry->semanticNodeId, entry);
       }
+      if (entry->initializerResolvedPathId == InvalidSymbolId ||
+          entry->bindingNameId == InvalidSymbolId) {
+        continue;
+      }
+      index.localAutoFactsByInitPathAndBindingNameId.insert_or_assign(
+          makeLocalAutoInitPathBindingNameKey(entry->initializerResolvedPathId, entry->bindingNameId),
+          entry);
     }
   }
 
@@ -495,13 +503,6 @@ const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(const Seman
           makeLocalAutoInitPathBindingNameKey(*initializerPathId, *bindingNameId));
       it != adapter.semanticIndex.localAutoFactsByInitPathAndBindingNameId.end()) {
     return it->second;
-  }
-  const auto localAutoFacts = semanticProgramLocalAutoFactView(*adapter.semanticProgram);
-  for (const auto *entry : localAutoFacts) {
-    if (entry->initializerResolvedPathId == *initializerPathId &&
-        entry->bindingNameId == *bindingNameId) {
-      return entry;
-    }
   }
   return nullptr;
 }
