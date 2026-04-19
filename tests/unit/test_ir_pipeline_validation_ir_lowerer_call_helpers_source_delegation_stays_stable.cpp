@@ -1525,6 +1525,42 @@ TEST_CASE("ir lowerer semantic-product adapter indexes return facts by definitio
   CHECK(primec::semanticProgramReturnFactDefinitionPath(semanticProgram, *returnFact) == "/main");
 }
 
+TEST_CASE("ir lowerer semantic-product index resolves return facts without broad adapter") {
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 0;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .returnKind = "return",
+      .structPath = "/i32",
+      .bindingTypeText = "i32",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 9,
+      .sourceColumn = 3,
+      .semanticNodeId = 0,
+      .definitionPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+  });
+
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  const auto mainPathId =
+      primec::semanticProgramLookupCallTargetStringId(semanticProgram, "/main");
+  REQUIRE(mainPathId.has_value());
+  CHECK(semanticIndex.returnFactsByDefinitionId.empty());
+  CHECK(semanticIndex.returnFactsByDefinitionPathId.count(*mainPathId) == 1);
+  const auto *returnFact =
+      primec::ir_lowerer::findSemanticProductReturnFact(
+          &semanticProgram, semanticIndex, mainDef);
+  REQUIRE(returnFact != nullptr);
+  CHECK(returnFact->definitionPathId != primec::InvalidSymbolId);
+  CHECK(primec::semanticProgramReturnFactDefinitionPath(semanticProgram, *returnFact) == "/main");
+}
+
 TEST_CASE("ir lowerer semantic-product adapter indexes on_error facts by definition path id") {
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
@@ -1562,6 +1598,50 @@ TEST_CASE("ir lowerer semantic-product adapter indexes on_error facts by definit
   CHECK(semanticTargets.semanticIndex.onErrorFactsByDefinitionId.empty());
   CHECK(semanticTargets.semanticIndex.onErrorFactsByDefinitionPathId.count(*mainPathId) == 1);
   const auto *onErrorFact = primec::ir_lowerer::findSemanticProductOnErrorFact(semanticTargets, mainDef);
+  REQUIRE(onErrorFact != nullptr);
+  CHECK(primec::semanticProgramOnErrorFactDefinitionPath(semanticProgram, *onErrorFact) == "/main");
+  CHECK(primec::semanticProgramOnErrorFactHandlerPath(semanticProgram, *onErrorFact) == "/handler");
+}
+
+TEST_CASE("ir lowerer semantic-product index resolves on_error facts without broad adapter") {
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 0;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
+      .definitionPath = "/main",
+      .returnKind = "return",
+      .errorType = "FileError",
+      .boundArgCount = 1,
+      .boundArgTexts = {"value"},
+      .returnResultHasValue = false,
+      .returnResultValueType = "",
+      .returnResultErrorType = "",
+      .semanticNodeId = 0,
+      .definitionPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .returnKindId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "return"),
+      .handlerPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
+      .errorTypeId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
+      .boundArgTextIds = {
+          primec::semanticProgramInternCallTargetString(semanticProgram, "value"),
+      },
+  });
+
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  const auto mainPathId =
+      primec::semanticProgramLookupCallTargetStringId(semanticProgram, "/main");
+  REQUIRE(mainPathId.has_value());
+  CHECK(semanticIndex.onErrorFactsByDefinitionId.empty());
+  CHECK(semanticIndex.onErrorFactsByDefinitionPathId.count(*mainPathId) == 1);
+  const auto *onErrorFact =
+      primec::ir_lowerer::findSemanticProductOnErrorFact(
+          &semanticProgram, semanticIndex, mainDef);
   REQUIRE(onErrorFact != nullptr);
   CHECK(primec::semanticProgramOnErrorFactDefinitionPath(semanticProgram, *onErrorFact) == "/main");
   CHECK(primec::semanticProgramOnErrorFactHandlerPath(semanticProgram, *onErrorFact) == "/handler");

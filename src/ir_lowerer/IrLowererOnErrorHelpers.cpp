@@ -139,8 +139,7 @@ bool buildOnErrorByDefinition(const Program &program,
       !validateSemanticProductCallableSummaryPathIds(*semanticProgram, error)) {
     return false;
   }
-  const SemanticProductTargetAdapter semanticProductTargets =
-      buildSemanticProductTargetAdapter(semanticProgram);
+  const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
   out.clear();
   out.reserve(program.definitions.size());
   for (const auto &def : program.definitions) {
@@ -153,7 +152,7 @@ bool buildOnErrorByDefinition(const Program &program,
       }
       if (callableSummary->hasOnError) {
         const auto *onErrorFact =
-            findSemanticProductOnErrorFactBySemanticId(semanticProductTargets, def);
+            findSemanticProductOnErrorFact(semanticProgram, semanticIndex, def);
         if (onErrorFact == nullptr) {
           error = "missing semantic-product on_error fact: " + def.fullPath;
           return false;

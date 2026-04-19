@@ -318,27 +318,69 @@ const SemanticProgramCallableSummary *findSemanticProductCallableSummary(const S
 }
 
 const SemanticProgramOnErrorFact *findSemanticProductOnErrorFactBySemanticId(
+    const SemanticProductIndex &semanticIndex,
+    const Definition &definition) {
+  return findDefinitionScopedSemanticFact(semanticIndex.onErrorFactsByDefinitionId, definition);
+}
+
+const SemanticProgramOnErrorFact *findSemanticProductOnErrorFactBySemanticId(
     const SemanticProductTargetAdapter &adapter,
     const Definition &definition) {
-  return findDefinitionScopedSemanticFact(adapter.semanticIndex.onErrorFactsByDefinitionId, definition);
+  return findSemanticProductOnErrorFactBySemanticId(adapter.semanticIndex, definition);
+}
+
+const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex &semanticIndex,
+    const Definition &definition) {
+  if (const auto *fact = findSemanticProductOnErrorFactBySemanticId(semanticIndex, definition);
+      fact != nullptr) {
+    return fact;
+  }
+  if (semanticProgram == nullptr || definition.fullPath.empty()) {
+    return nullptr;
+  }
+  const auto definitionPathId =
+      semanticProgramLookupCallTargetStringId(*semanticProgram, definition.fullPath);
+  if (!definitionPathId.has_value()) {
+    return nullptr;
+  }
+  if (const auto it = semanticIndex.onErrorFactsByDefinitionPathId.find(*definitionPathId);
+      it != semanticIndex.onErrorFactsByDefinitionPathId.end()) {
+    return it->second;
+  }
+  return nullptr;
 }
 
 const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(const SemanticProductTargetAdapter &adapter,
                                                                 const Definition &definition) {
-  if (const auto *fact = findSemanticProductOnErrorFactBySemanticId(adapter, definition);
+  return findSemanticProductOnErrorFact(adapter.semanticProgram, adapter.semanticIndex, definition);
+}
+
+const SemanticProgramReturnFact *findSemanticProductReturnFactBySemanticId(
+    const SemanticProductIndex &semanticIndex,
+    const Definition &definition) {
+  return findDefinitionScopedSemanticFact(semanticIndex.returnFactsByDefinitionId, definition);
+}
+
+const SemanticProgramReturnFact *findSemanticProductReturnFact(
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex &semanticIndex,
+    const Definition &definition) {
+  if (const auto *fact = findSemanticProductReturnFactBySemanticId(semanticIndex, definition);
       fact != nullptr) {
     return fact;
   }
-  if (adapter.semanticProgram == nullptr || definition.fullPath.empty()) {
+  if (semanticProgram == nullptr || definition.fullPath.empty()) {
     return nullptr;
   }
   const auto definitionPathId =
-      semanticProgramLookupCallTargetStringId(*adapter.semanticProgram, definition.fullPath);
+      semanticProgramLookupCallTargetStringId(*semanticProgram, definition.fullPath);
   if (!definitionPathId.has_value()) {
     return nullptr;
   }
-  if (const auto it = adapter.semanticIndex.onErrorFactsByDefinitionPathId.find(*definitionPathId);
-      it != adapter.semanticIndex.onErrorFactsByDefinitionPathId.end()) {
+  if (const auto it = semanticIndex.returnFactsByDefinitionPathId.find(*definitionPathId);
+      it != semanticIndex.returnFactsByDefinitionPathId.end()) {
     return it->second;
   }
   return nullptr;
@@ -346,24 +388,7 @@ const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(const SemanticP
 
 const SemanticProgramReturnFact *findSemanticProductReturnFact(const SemanticProductTargetAdapter &adapter,
                                                               const Definition &definition) {
-  if (const auto *fact = findDefinitionScopedSemanticFact(adapter.semanticIndex.returnFactsByDefinitionId,
-                                                          definition);
-      fact != nullptr) {
-    return fact;
-  }
-  if (adapter.semanticProgram == nullptr || definition.fullPath.empty()) {
-    return nullptr;
-  }
-  const auto definitionPathId =
-      semanticProgramLookupCallTargetStringId(*adapter.semanticProgram, definition.fullPath);
-  if (!definitionPathId.has_value()) {
-    return nullptr;
-  }
-  if (const auto it = adapter.semanticIndex.returnFactsByDefinitionPathId.find(*definitionPathId);
-      it != adapter.semanticIndex.returnFactsByDefinitionPathId.end()) {
-    return it->second;
-  }
-  return nullptr;
+  return findSemanticProductReturnFact(adapter.semanticProgram, adapter.semanticIndex, definition);
 }
 
 const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFactBySemanticId(

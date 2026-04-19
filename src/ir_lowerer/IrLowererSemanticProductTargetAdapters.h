@@ -49,10 +49,24 @@ const SemanticProgramCallableSummary *findSemanticProductCallableSummary(
     const SemanticProductTargetAdapter &adapter,
     const std::string &fullPath);
 const SemanticProgramOnErrorFact *findSemanticProductOnErrorFactBySemanticId(
+    const SemanticProductIndex &semanticIndex,
+    const Definition &definition);
+const SemanticProgramOnErrorFact *findSemanticProductOnErrorFactBySemanticId(
     const SemanticProductTargetAdapter &adapter,
+    const Definition &definition);
+const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex &semanticIndex,
     const Definition &definition);
 const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(const SemanticProductTargetAdapter &adapter,
                                                                 const Definition &definition);
+const SemanticProgramReturnFact *findSemanticProductReturnFactBySemanticId(
+    const SemanticProductIndex &semanticIndex,
+    const Definition &definition);
+const SemanticProgramReturnFact *findSemanticProductReturnFact(
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex &semanticIndex,
+    const Definition &definition);
 const SemanticProgramReturnFact *findSemanticProductReturnFact(const SemanticProductTargetAdapter &adapter,
                                                               const Definition &definition);
 const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFactBySemanticId(

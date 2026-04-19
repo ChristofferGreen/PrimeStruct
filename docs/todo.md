@@ -56,7 +56,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4021
+- TODO-4023
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -64,17 +64,17 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Semantic ownership cutover: TODO-4021
+- Semantic ownership cutover: TODO-4023
 
 ### Execution Queue (Recommended)
 
-1. TODO-4021
+1. TODO-4023
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4021 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4023 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | IR lowerer compile-unit breakup | none |
@@ -89,7 +89,7 @@ Task template:
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Semantic-product-authority conformance | TODO-4021 |
+| Semantic-product-authority conformance | TODO-4023 |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
 | Focused backend rerun ergonomics and suite partitioning | none |
@@ -101,15 +101,15 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4021: Retire remaining production semantic fact-index threading
+- [ ] TODO-4023: Retire remaining expression-scoped semantic fact threading
   - owner: ai
   - created_at: 2026-04-19
   - phase: Architecture Stabilization
-  - depends_on: TODO-4020
-  - scope: Remove the remaining production-path `SemanticProductTargetAdapter` threading for semantic fact-family lookup after the binding/local-auto validator and binding-type entry slice is direct, focusing on statement binding, result/query/`try(...)`, return, and `on_error` helpers plus lower-inference setup plumbing that still passes the broad adapter object through production hot paths.
+  - depends_on: TODO-4022
+  - scope: Remove the remaining production-path semantic fact threading for expression-scoped families after binding/local-auto entry readers plus definition-scoped return/`on_error` readers are direct, focusing on statement binding, result/query/`try(...)`, and the lower-inference setup plumbing that still threads `SemanticProductTargetAdapter` through production hot paths.
   - acceptance:
-    - Production lowering no longer builds or threads a broad `SemanticProductTargetAdapter` through the remaining statement/result/return/`on_error` semantic-fact lookup helpers.
+    - Production lowering no longer builds or threads a broad `SemanticProductTargetAdapter` through the remaining statement/result/query/`try(...)` semantic-fact lookup helpers.
     - Any retained semantic lookup adapter surface is either deleted or explicitly limited to test-only/non-production helpers with that boundary documented in source-lock coverage.
     - `docs/todo.md` and the coverage snapshot keep the remaining semantic adapter retirement work explicit instead of collapsing it back into hidden lowerer fallback cleanup.
-  - stop_rule: Stop once the remaining production lowerer fact-threading paths no longer depend on `SemanticProductTargetAdapter`; if statement/result and definition-scoped families still want different seams, split them into additional explicit leaves instead of widening this item further.
-  - notes: Start in `src/ir_lowerer/IrLowererStatementBindingHelpers.cpp`, `src/ir_lowerer/IrLowererResultHelpers.cpp`, `src/ir_lowerer/IrLowererOnErrorHelpers.cpp`, `src/ir_lowerer/IrLowererReturnInferenceHelpers.cpp`, and `src/ir_lowerer/IrLowererLowerInferenceReturnInfoHelpers.cpp`; the routing/callable-summary slice moved to finished `TODO-4018`, and the binding/local-auto entry slice moved to finished `TODO-4020`.
+  - stop_rule: Stop once the remaining production expression-scoped fact-threading paths no longer depend on `SemanticProductTargetAdapter`; if statement binding and result/try/query still want different seams, split them into additional explicit leaves instead of widening this item further.
+  - notes: Start in `src/ir_lowerer/IrLowererStatementBindingHelpers.cpp`, `src/ir_lowerer/IrLowererResultHelpers.cpp`, `src/ir_lowerer/IrLowererLowerInferenceDispatchSetup.cpp`, and the remaining lower-inference or emit helpers that still pass `SemanticProductTargetAdapter` for query/`try(...)` and statement-binding facts; the routing/callable-summary slice moved to finished `TODO-4018`, the binding/local-auto entry slice moved to finished `TODO-4020`, and the definition-scoped return/`on_error` slice moved to finished `TODO-4022`.

@@ -4092,3 +4092,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Split from oversized `TODO-4019` so the binding/local-auto entry slice could land independently before the deeper statement/result and definition-scoped fact threading work.
   - finished_at: 2026-04-19
   - evidence: Added direct `SemanticProductIndex` helpers in `src/ir_lowerer/IrLowererSemanticProductTargetAdapters.{h,cpp}` for building semantic fact indexes plus binding/local-auto lookup, rewired `src/ir_lowerer/IrLowererBindingTypeHelpers.cpp` so binding/local-auto validation and `makeBindingTypeAdapters(...)` use `buildSemanticProductIndex(semanticProgram)` with direct semantic-program/index lookups instead of constructing a broad adapter, added focused regression coverage in `tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp` for direct binding/local-auto index lookups, refreshed `tests/unit/test_ir_pipeline_backends_graph_contexts.h` to lock the new direct entry-slice surface, and replaced the open queue item with follow-up `TODO-4021` for the remaining fact-threading paths.
+
+- [x] TODO-4022: Retire semantic return/on_error adapter slice
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Architecture Stabilization
+  - depends_on: TODO-4020
+  - scope: Remove broad `SemanticProductTargetAdapter` mediation from the definition-scoped semantic fact readers for return and `on_error`, switching production return/on_error helpers to direct `SemanticProgram` plus `SemanticProductIndex` lookup helpers while leaving expression-scoped query/`try(...)`/statement-binding threading as follow-up work.
+  - acceptance:
+    - Production `on_error` and return readers no longer build or depend on a broad `SemanticProductTargetAdapter` for definition-scoped fact lookup.
+    - Definition-scoped semantic fact lookup support is available directly through `SemanticProductIndex` plus `SemanticProgram`.
+    - The remaining expression-scoped semantic fact-threading work stays explicit in `docs/todo.md`.
+  - stop_rule: Stop once the production definition-scoped return/`on_error` readers are direct; leave query/`try(...)` and statement-binding threading for follow-up work instead of widening this slice.
+  - notes: Split from oversized `TODO-4021` so the tighter definition-scoped fact slice could land independently before the remaining expression-scoped semantic threading work.
+  - finished_at: 2026-04-19
+  - evidence: Added direct `SemanticProgram + SemanticProductIndex` helpers in `src/ir_lowerer/IrLowererSemanticProductTargetAdapters.{h,cpp}` for definition-scoped return and `on_error` fact lookup, rewired `src/ir_lowerer/IrLowererOnErrorHelpers.cpp` and `src/ir_lowerer/IrLowererReturnInferenceHelpers.cpp` to use direct semantic-program/index readers instead of constructing a broad adapter, updated `src/ir_lowerer/IrLowererLowerInferenceReturnInfoHelpers.cpp` so semantic return-info building consumes `SemanticProgram` plus `SemanticProductIndex` directly even when broader inference state still carries the adapter for other families, added focused regression coverage in `tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp` for direct return/on_error index lookups, refreshed `tests/unit/test_ir_pipeline_backends_graph_contexts.h` to lock the new definition-scoped seam, and replaced the live queue item with follow-up `TODO-4023` for the remaining expression-scoped fact threading.

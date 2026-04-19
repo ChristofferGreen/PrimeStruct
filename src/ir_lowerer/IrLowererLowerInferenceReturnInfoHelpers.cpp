@@ -136,7 +136,8 @@ bool applySemanticResultValueTypeText(const LowerInferenceReturnInfoSetupInput &
 }
 
 bool buildSemanticProductReturnInfo(const LowerInferenceReturnInfoSetupInput &input,
-                                    const SemanticProductTargetAdapter &semanticProductTargets,
+                                    const SemanticProgram &semanticProgram,
+                                    const SemanticProductIndex &semanticIndex,
                                     const Definition &definition,
                                     ReturnInfo &infoOut,
                                     std::string &errorOut) {
@@ -150,13 +151,13 @@ bool buildSemanticProductReturnInfo(const LowerInferenceReturnInfoSetupInput &in
   }
 
   const auto *callableSummary =
-      findSemanticProductCallableSummary(semanticProductTargets.semanticProgram, definition.fullPath);
+      findSemanticProductCallableSummary(&semanticProgram, definition.fullPath);
   if (callableSummary == nullptr) {
     errorOut = "missing semantic-product callable summary: " + definition.fullPath;
     return false;
   }
 
-  const auto *returnFact = findSemanticProductReturnFact(semanticProductTargets, definition);
+  const auto *returnFact = findSemanticProductReturnFact(&semanticProgram, semanticIndex, definition);
   if (returnFact == nullptr) {
     errorOut = "missing semantic-product return fact: " + definition.fullPath;
     return false;
@@ -320,7 +321,12 @@ bool precomputeSemanticProductReturnInfoCache(const LowerInferenceGetReturnInfoS
   for (const Definition *definition : definitions) {
     ReturnInfo info;
     if (!buildSemanticProductReturnInfo(
-            returnInfoSetupInput, *input.semanticProductTargets, *definition, info, errorOut)) {
+            returnInfoSetupInput,
+            *input.semanticProductTargets->semanticProgram,
+            input.semanticProductTargets->semanticIndex,
+            *definition,
+            info,
+            errorOut)) {
       return false;
     }
     returnInfoCache.insert_or_assign(definition->fullPath, std::move(info));
@@ -690,7 +696,12 @@ bool runLowerInferenceGetReturnInfoStep(const LowerInferenceGetReturnInfoStepInp
   if (input.semanticProductTargets != nullptr && input.semanticProductTargets->hasSemanticProduct) {
     ReturnInfo info;
     if (!buildSemanticProductReturnInfo(
-            *input.returnInfoSetupInput, *input.semanticProductTargets, *defIt->second, info, errorOut)) {
+            *input.returnInfoSetupInput,
+            *input.semanticProductTargets->semanticProgram,
+            input.semanticProductTargets->semanticIndex,
+            *defIt->second,
+            info,
+            errorOut)) {
       return false;
     }
     returnInfoCache.insert_or_assign(path, info);

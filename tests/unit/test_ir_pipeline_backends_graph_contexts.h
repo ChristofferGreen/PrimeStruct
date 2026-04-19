@@ -1019,6 +1019,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<std::string, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionPath;") ==
         std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("const SemanticProgramOnErrorFact *findSemanticProductOnErrorFactBySemanticId(\n    const SemanticProductIndex &semanticIndex,") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(\n    const SemanticProgram *semanticProgram,\n    const SemanticProductIndex &semanticIndex,") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(") !=
         std::string::npos);
   CHECK(semanticProduct.find("const SemanticProgramTypeMetadata *semanticProgramLookupTypeMetadata(") !=
@@ -1040,6 +1044,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<uint64_t, const SemanticProgramReturnFact *> returnFactsByDefinitionId;") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<SymbolId, const SemanticProgramReturnFact *> returnFactsByDefinitionPathId;") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("const SemanticProgramReturnFact *findSemanticProductReturnFactBySemanticId(\n    const SemanticProductIndex &semanticIndex,") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("const SemanticProgramReturnFact *findSemanticProductReturnFact(\n    const SemanticProgram *semanticProgram,\n    const SemanticProductIndex &semanticIndex,") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramPublishedRoutingLookups *publishedRoutingLookups = nullptr;") !=
         std::string::npos);
@@ -1110,7 +1118,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramOnErrorFactView(*semanticProgram)") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("findDefinitionScopedSemanticFact(adapter.semanticIndex.onErrorFactsByDefinitionId, definition)") !=
+  CHECK(semanticTargetAdapterSource.find("findDefinitionScopedSemanticFact(semanticIndex.onErrorFactsByDefinitionId, definition)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("index.onErrorFactsByDefinitionPathId.reserve(onErrorFacts.size())") !=
         std::string::npos);
@@ -1127,7 +1135,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterSource.find("buildDirectCallIndex(index);") == std::string::npos);
   CHECK(semanticTargetAdapterSource.find("buildMethodCallIndex(index);") == std::string::npos);
   CHECK(semanticTargetAdapterSource.find("buildBridgePathChoiceIndex(index);") == std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("semanticProgramLookupCallTargetStringId(*adapter.semanticProgram, definition.fullPath)") !=
+  CHECK(semanticTargetAdapterSource.find("semanticProgramLookupCallTargetStringId(*semanticProgram, definition.fullPath)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.typeMetadataByPath.reserve(semanticProgram->typeMetadata.size())") ==
         std::string::npos);
@@ -1145,13 +1153,13 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterSource.find("index.returnFactsByDefinitionPathId.reserve(returnFacts.size())") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.returnFactsByDefinitionPath.reserve(") == std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("findDefinitionScopedSemanticFact(adapter.semanticIndex.returnFactsByDefinitionId,") !=
+  CHECK(semanticTargetAdapterSource.find("findDefinitionScopedSemanticFact(semanticIndex.returnFactsByDefinitionId,") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.returnFactsByDefinitionId.reserve(returnFacts.size())") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.returnFactsByDefinitionPathId.reserve(returnFacts.size())") ==
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("semanticProgramLookupCallTargetStringId(*adapter.semanticProgram, definition.fullPath)") !=
+  CHECK(semanticTargetAdapterSource.find("semanticProgramLookupCallTargetStringId(*semanticProgram, definition.fullPath)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramLocalAutoFactView(*semanticProgram)") !=
         std::string::npos);
@@ -1570,7 +1578,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(onErrorHelpersSource.find("buildEntryCountAccessSetup(entryDef, semanticProgram, out.countAccessSetup, error)") !=
         std::string::npos);
-  CHECK(onErrorHelpersSource.find("findSemanticProductOnErrorFactBySemanticId(semanticProductTargets, def)") !=
+  CHECK(onErrorHelpersSource.find("findSemanticProductOnErrorFact(semanticProgram, semanticIndex, def)") !=
         std::string::npos);
   CHECK(onErrorHelpersSource.find("missing semantic-product on_error fact: ") !=
         std::string::npos);
@@ -1624,7 +1632,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irReturnInference.find("findSemanticProductCallableSummary(semanticProgram, entryPath)") !=
         std::string::npos);
-  CHECK(irReturnInference.find("findSemanticProductReturnFact(semanticProductTargets, entryDef)") !=
+  CHECK(irReturnInference.find("findSemanticProductReturnFact(semanticProgram, semanticIndex, entryDef)") !=
         std::string::npos);
   CHECK(irReturnInference.find("missing semantic-product return fact: ") !=
         std::string::npos);
@@ -2210,6 +2218,31 @@ TEST_CASE("semantic product callable summaries use fullPathId without fullPath s
   CHECK(irLowererResultHelpers.find("summary->fullPathId == InvalidSymbolId") !=
         std::string::npos);
   CHECK(irLowererReturnInfoHelpers.find("entry->fullPathId == InvalidSymbolId || callablePath.empty()") !=
+        std::string::npos);
+}
+
+TEST_CASE("lower inference return info uses direct semantic return facts") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  const std::filesystem::path root =
+      std::filesystem::exists(cwd / "include" / "primec" / "SemanticProduct.h")
+          ? cwd
+          : cwd.parent_path();
+  const std::string irLowererReturnInfoHelpers =
+      readTextFile(root / "src" / "ir_lowerer" / "IrLowererLowerInferenceReturnInfoHelpers.cpp");
+
+  CHECK(irLowererReturnInfoHelpers.find("bool buildSemanticProductReturnInfo(const LowerInferenceReturnInfoSetupInput &input,\n"
+                                        "                                    const SemanticProgram &semanticProgram,\n"
+                                        "                                    const SemanticProductIndex &semanticIndex,") !=
+        std::string::npos);
+  CHECK(irLowererReturnInfoHelpers.find("const SemanticProductTargetAdapter &semanticProductTargets") ==
+        std::string::npos);
+  CHECK(irLowererReturnInfoHelpers.find("findSemanticProductCallableSummary(&semanticProgram, definition.fullPath)") !=
+        std::string::npos);
+  CHECK(irLowererReturnInfoHelpers.find("findSemanticProductReturnFact(&semanticProgram, semanticIndex, definition)") !=
+        std::string::npos);
+  CHECK(irLowererReturnInfoHelpers.find("*input.semanticProductTargets->semanticProgram,") !=
+        std::string::npos);
+  CHECK(irLowererReturnInfoHelpers.find("input.semanticProductTargets->semanticIndex,") !=
         std::string::npos);
 }
 
