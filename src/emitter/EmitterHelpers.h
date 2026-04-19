@@ -3,6 +3,7 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -20,6 +21,59 @@ struct PrintBuiltin {
   bool newline = false;
   std::string name;
 };
+
+inline bool isCanonicalMapHelperName(std::string_view helperName) {
+  return helperName == "count" || helperName == "count_ref" ||
+         helperName == "contains" || helperName == "contains_ref" ||
+         helperName == "tryAt" || helperName == "tryAt_ref" ||
+         helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
+         helperName == "insert" || helperName == "insert_ref";
+}
+
+inline bool isCanonicalMapCountHelperName(std::string_view helperName) {
+  return helperName == "count" || helperName == "count_ref";
+}
+
+inline bool isCanonicalMapAccessHelperName(std::string_view helperName) {
+  return helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+}
+
+inline bool isRemovedMapSlashMethodMetadataHelperName(std::string_view helperName) {
+  return helperName == "contains" || helperName == "contains_ref" ||
+         helperName == "tryAt" || helperName == "tryAt_ref";
+}
+
+inline bool isRemovedMapDirectCallResultCompatibilityHelperName(std::string_view helperName) {
+  return isRemovedMapSlashMethodMetadataHelperName(helperName) ||
+         isCanonicalMapAccessHelperName(helperName);
+}
+
+inline std::string_view mapHelperNameFromPath(std::string_view path) {
+  if (!path.empty() && path.front() == '/') {
+    path.remove_prefix(1);
+  }
+  constexpr std::string_view kMapPrefix = "map/";
+  constexpr std::string_view kCanonicalMapPrefix = "std/collections/map/";
+  if (path.rfind(kMapPrefix, 0) == 0) {
+    return path.substr(kMapPrefix.size());
+  }
+  if (path.rfind(kCanonicalMapPrefix, 0) == 0) {
+    return path.substr(kCanonicalMapPrefix.size());
+  }
+  return {};
+}
+
+inline bool isCanonicalMapHelperPath(std::string_view path) {
+  const std::string_view helperName = mapHelperNameFromPath(path);
+  return !helperName.empty() && isCanonicalMapHelperName(helperName);
+}
+
+inline bool isCanonicalMapAccessHelperPath(std::string_view path) {
+  const std::string_view helperName = mapHelperNameFromPath(path);
+  return !helperName.empty() && isCanonicalMapAccessHelperName(helperName);
+}
 
 std::string joinTemplateArgs(const std::vector<std::string> &args);
 ReturnKind getReturnKind(const Definition &def);

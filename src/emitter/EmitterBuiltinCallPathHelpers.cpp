@@ -97,17 +97,18 @@ bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
     return false;
   }
   if (name.rfind("map/", 0) == 0) {
-    std::string alias = name.substr(std::string("map/").size());
-    if (alias == "at" || alias == "at_unsafe") {
-      out = alias;
+    std::string_view alias = std::string_view(name).substr(std::string_view("map/").size());
+    if (isCanonicalMapAccessHelperName(alias)) {
+      out = std::string(alias);
       return true;
     }
     return false;
   }
   if (name.rfind("std/collections/map/", 0) == 0) {
-    std::string alias = name.substr(std::string("std/collections/map/").size());
-    if (alias == "at" || alias == "at_unsafe") {
-      out = alias;
+    std::string_view alias =
+        std::string_view(name).substr(std::string_view("std/collections/map/").size());
+    if (isCanonicalMapAccessHelperName(alias)) {
+      out = std::string(alias);
       return true;
     }
     return false;
@@ -115,7 +116,7 @@ bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
   if (name.find('/') != std::string::npos) {
     return false;
   }
-  if (name == "at" || name == "at_unsafe") {
+  if (isCanonicalMapAccessHelperName(name)) {
     out = name;
     return true;
   }
@@ -543,8 +544,7 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
   }
   if (preferred.rfind("/map/", 0) == 0 && nameMap.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/map/").size());
-    if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-        suffix != "at" && suffix != "at_unsafe") {
+    if (!isCanonicalMapHelperName(suffix)) {
       const std::string stdlibAlias = "/std/collections/map/" + suffix;
       if (nameMap.count(stdlibAlias) > 0) {
         preferred = stdlibAlias;
@@ -553,8 +553,7 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
   }
   if (preferred.rfind("/std/collections/map/", 0) == 0 && nameMap.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
-    if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-        suffix != "at" && suffix != "at_unsafe") {
+    if (!isCanonicalMapHelperName(suffix)) {
       const std::string mapAlias = "/map/" + suffix;
       if (nameMap.count(mapAlias) > 0) {
         preferred = mapAlias;

@@ -116,15 +116,13 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
     }
   } else if (normalizedPath.rfind("/map/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-    if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-        suffix != "at" && suffix != "at_unsafe") {
+    if (!isCanonicalMapHelperName(suffix)) {
       appendUniqueCandidate(candidates, "/std/collections/map/" + suffix);
     }
   } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
     const std::string suffix =
         normalizedPath.substr(std::string("/std/collections/map/").size());
-    if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-        suffix != "at" && suffix != "at_unsafe") {
+    if (!isCanonicalMapHelperName(suffix)) {
       appendUniqueCandidate(candidates, "/map/" + suffix);
     }
   }
@@ -151,16 +149,14 @@ void pruneMapAccessStructReturnCompatibilityCandidates(
   };
   if (normalizedPath.rfind("/map/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-    if (suffix == "contains" || suffix == "tryAt" ||
-        suffix == "at" || suffix == "at_unsafe") {
+    if (isCanonicalMapAccessHelperName(suffix)) {
       eraseCandidate("/map/" + suffix);
       eraseCandidate("/std/collections/map/" + suffix);
     }
   } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
     const std::string suffix =
         normalizedPath.substr(std::string("/std/collections/map/").size());
-    if (suffix == "contains" || suffix == "tryAt" ||
-        suffix == "at" || suffix == "at_unsafe") {
+    if (isCanonicalMapAccessHelperName(suffix)) {
       eraseCandidate("/map/" + suffix);
     }
   }
@@ -215,8 +211,7 @@ std::string preferCanonicalMapMethodHelperPath(const MethodResolutionMetadataVie
     return path;
   }
   const std::string suffix = path.substr(std::string("/map/").size());
-  if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-      suffix != "at" && suffix != "at_unsafe") {
+  if (!isCanonicalMapHelperName(suffix)) {
     return path;
   }
   const std::string canonicalPath = "/std/collections/map/" + suffix;

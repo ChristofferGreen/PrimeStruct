@@ -50,14 +50,12 @@
       }
     } else if (normalizedPath.rfind("/map/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-      if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-          suffix != "at" && suffix != "at_unsafe") {
+      if (!isCanonicalMapHelperName(suffix)) {
         appendUnique("/std/collections/map/" + suffix);
       }
     } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
-      if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-          suffix != "at" && suffix != "at_unsafe") {
+      if (!isCanonicalMapHelperName(suffix)) {
         appendUnique("/map/" + suffix);
       }
     }
@@ -82,12 +80,12 @@
     };
     if (normalizedPath.rfind("/map/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-      if (suffix == "at" || suffix == "at_unsafe") {
+      if (isCanonicalMapAccessHelperName(suffix)) {
         eraseCandidate("/std/collections/map/" + suffix);
       }
     } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
-      if (suffix == "at" || suffix == "at_unsafe") {
+      if (isCanonicalMapAccessHelperName(suffix)) {
         eraseCandidate("/map/" + suffix);
       }
     }
@@ -250,7 +248,9 @@
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    if (normalized != "std/collections/map/at" && normalized != "std/collections/map/at_unsafe") {
+    if (normalized.rfind("std/collections/map/", 0) != 0 ||
+        !isCanonicalMapAccessHelperName(
+            std::string_view(normalized).substr(std::string_view("std/collections/map/").size()))) {
       return "";
     }
     if (candidate.args.empty()) {
@@ -337,7 +337,7 @@
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    if (normalized != "at" && normalized != "at_unsafe") {
+    if (!isCanonicalMapAccessHelperName(normalized)) {
       return "";
     }
     const Expr &receiver = candidate.args.front();
@@ -364,9 +364,7 @@
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    return normalized == "map/at" || normalized == "map/at_unsafe" ||
-           normalized == "std/collections/map/at" ||
-           normalized == "std/collections/map/at_unsafe";
+    return isCanonicalMapAccessHelperPath(normalized);
   };
   auto resolvedTypePathForTarget = [&](const Expr &targetExpr) -> std::string {
     if (isStringValue(targetExpr, localTypes)) {

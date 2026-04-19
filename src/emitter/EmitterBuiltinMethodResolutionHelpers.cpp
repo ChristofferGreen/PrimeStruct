@@ -18,7 +18,7 @@ bool isRemovedVectorCompatibilityHelper(std::string_view helperName) {
 }
 
 bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
-  return helperName == "count" || helperName == "at" || helperName == "at_unsafe";
+  return isCanonicalMapHelperName(helperName);
 }
 
 bool isRemovedCollectionMethodAlias(const std::string &rawMethodName) {
@@ -46,8 +46,9 @@ bool isRemovedCollectionMethodAlias(const std::string &rawMethodName) {
 }
 
 bool removedCollectionAliasNeedsDefinition(std::string_view rawMethodName) {
-  return rawMethodName == "/map/count" ||
-         rawMethodName == "/std/collections/map/count" ||
+  const std::string_view mapHelperName = mapHelperNameFromPath(rawMethodName);
+  return (!mapHelperName.empty() &&
+          isCanonicalMapCountHelperName(mapHelperName)) ||
          rawMethodName == "/array/count" ||
          rawMethodName == "/array/capacity" ||
          rawMethodName == "/std/collections/vector/count" ||
@@ -431,13 +432,9 @@ bool resolveMethodCallPath(const Expr &call,
   if (resolvedType == "/map" || resolvedType == "map") {
     const std::string aliasPath = "/map/" + normalizedMethodName;
     const std::string canonicalPath = "/std/collections/map/" + normalizedMethodName;
-    const bool isMapHelperMethod = normalizedMethodName == "count" ||
-                                   normalizedMethodName == "contains" ||
-                                   normalizedMethodName == "tryAt" ||
-                                   normalizedMethodName == "at" ||
-                                   normalizedMethodName == "at_unsafe";
+    const bool isMapHelperMethod = isCanonicalMapHelperName(normalizedMethodName);
     const bool isRemovedMapSlashMethod =
-        normalizedMethodName == "contains" || normalizedMethodName == "tryAt";
+        isRemovedMapSlashMethodMetadataHelperName(normalizedMethodName);
     const bool hasAliasHelperDefinition =
         hasDefinitionOrMetadata(metadataView, aliasPath);
     const bool hasCanonicalHelperDefinition =

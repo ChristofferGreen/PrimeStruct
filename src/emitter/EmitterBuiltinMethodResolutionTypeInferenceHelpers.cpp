@@ -110,7 +110,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    if (normalized != "at" && normalized != "at_unsafe") {
+    if (!isCanonicalMapAccessHelperName(normalized)) {
       return false;
     }
     if (normalized.find('/') != std::string::npos) {
@@ -132,11 +132,11 @@ std::string inferMethodResolutionPrimitiveTypeName(
       return "";
     }
     const std::string canonicalPath = "/std/collections/map/" + candidate.name;
-    if (view.defMap.count(canonicalPath) > 0) {
+    if (hasDefinitionOrMetadata(view, canonicalPath)) {
       return canonicalPath;
     }
     const std::string aliasPath = "/map/" + candidate.name;
-    if (view.defMap.count(aliasPath) > 0) {
+    if (hasDefinitionOrMetadata(view, aliasPath)) {
       return aliasPath;
     }
     return "";
@@ -149,7 +149,9 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    if (normalized != "map/at" && normalized != "map/at_unsafe") {
+    if (normalized.rfind("map/", 0) != 0 ||
+        !isCanonicalMapAccessHelperName(
+            std::string_view(normalized).substr(std::string_view("map/").size()))) {
       return false;
     }
     if (view.defMap.find("/" + normalized) != view.defMap.end()) {
@@ -250,13 +252,14 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    if (normalized != "std/collections/map/at" &&
-        normalized != "std/collections/map/at_unsafe") {
+    if (normalized.rfind("std/collections/map/", 0) != 0 ||
+        !isCanonicalMapAccessHelperName(
+            std::string_view(normalized).substr(std::string_view("std/collections/map/").size()))) {
       return "";
     }
     const std::string resolvedExprPath = resolveExprPath(candidate);
-    if (resolvedExprPath != "/std/collections/map/at" &&
-        resolvedExprPath != "/std/collections/map/at_unsafe") {
+    if (!isCanonicalMapAccessHelperPath(resolvedExprPath) ||
+        resolvedExprPath.rfind("/std/collections/map/", 0) != 0) {
       return "";
     }
     return typeNameFromResolvedCandidates(view, {resolvedExprPath});
@@ -286,8 +289,9 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    if (normalized != "std/collections/map/at" &&
-        normalized != "std/collections/map/at_unsafe") {
+    if (normalized.rfind("std/collections/map/", 0) != 0 ||
+        !isCanonicalMapAccessHelperName(
+            std::string_view(normalized).substr(std::string_view("std/collections/map/").size()))) {
       return "";
     }
     const size_t receiverIndex = getAccessCallReceiverIndex(candidate, localTypes);
@@ -309,8 +313,12 @@ std::string inferMethodResolutionPrimitiveTypeName(
       return false;
     }
     const std::string resolvedExprPath = resolveExprPath(candidate);
-    return resolvedExprPath == "/map/contains" || resolvedExprPath == "/map/tryAt" ||
-           resolvedExprPath == "/map/at" || resolvedExprPath == "/map/at_unsafe";
+    if (resolvedExprPath.rfind("/map/", 0) != 0) {
+      return false;
+    }
+    const std::string_view helperName = mapHelperNameFromPath(resolvedExprPath);
+    return !helperName.empty() &&
+           isRemovedMapDirectCallResultCompatibilityHelperName(helperName);
   };
 
   inferPrimitiveTypeName = [&](const Expr &candidateExpr) -> std::string {

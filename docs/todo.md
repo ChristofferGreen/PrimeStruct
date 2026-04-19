@@ -56,7 +56,6 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4011
 - TODO-4010
 - TODO-4009
 - TODO-4002
@@ -73,23 +72,21 @@ Task template:
 ### Priority Lanes (Current)
 
 - VM/runtime hardening: TODO-4010, TODO-4009
-- Emitter collection-helper parity: TODO-4011
 - Semantic ownership cutover: TODO-4002, TODO-4004, TODO-4008
 - Validator/publication simplification: TODO-4003, TODO-4005
 - Build and validation ergonomics: TODO-4006, TODO-4007
 
 ### Execution Queue (Recommended)
 
-1. TODO-4011
-2. TODO-4010
-3. TODO-4009
-4. TODO-4006
-5. TODO-4007
-6. TODO-4003
-7. TODO-4002
-8. TODO-4004
-9. TODO-4005
-10. TODO-4008
+1. TODO-4010
+2. TODO-4009
+3. TODO-4006
+4. TODO-4007
+5. TODO-4003
+6. TODO-4002
+7. TODO-4004
+8. TODO-4005
+9. TODO-4008
 
 ### PrimeStruct Coverage Snapshot
 
@@ -100,7 +97,7 @@ Task template:
 | Semantic-product publication by module and fact family | TODO-4005 |
 | IR lowerer compile-unit breakup | TODO-4006 |
 | Backend validation/build ergonomics | TODO-4007 |
-| Emitter/semantics map-helper parity | TODO-4011 |
+| Emitter/semantics map-helper parity | none |
 | VM debug-session argv ownership | none |
 | Debug trace replay robustness | TODO-4010 |
 | VM/runtime debug numeric opcode parity | TODO-4009 |
@@ -114,26 +111,13 @@ Task template:
 | Semantic-product publication parity and deterministic ordering | TODO-4002, TODO-4005 |
 | Lowerer/source-composition contract coverage | TODO-4006 |
 | Focused backend rerun ergonomics and suite partitioning | TODO-4007 |
-| Emitter map-helper canonicalization parity | TODO-4011 |
+| Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
 | Debug trace replay malformed-input coverage | TODO-4010 |
 | Shared VM/debug numeric opcode behavior | TODO-4009 |
 | Release benchmark/example suite stability and doctest governance | none |
 
 ### Task Blocks
-
-- [ ] TODO-4011: Unify emitter map-helper parity surface
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Emitter Parity
-  - depends_on: none
-  - scope: Extend emitter-side map helper resolution and canonicalization so alias/canonical map method calls and method-sugar resolution cover the same map helper family as semantics and IR lowering, including `*_ref` and `insert(_ref)` surfaces.
-  - acceptance:
-    - Emitter method resolution handles `count`, `count_ref`, `contains`, `contains_ref`, `tryAt`, `tryAt_ref`, `at`, `at_ref`, `at_unsafe`, `at_unsafe_ref`, `insert`, and `insert_ref` consistently for canonical and alias map paths, including method-sugar call sites that currently fall through to emitter-local subset logic.
-    - Focused emitter metadata or compile-run coverage locks the covered map helper surfaces so emitter behavior matches semantics for the same helper family on direct helper calls and method-sugar entrypoints.
-    - The covered map helper family is defined through a shared helper table or equivalent single-source policy instead of emitter-local subset logic.
-  - stop_rule: Stop once emitter resolution no longer carries a smaller covered map-helper subset than semantics/IR-lowerer for the covered family; wider collection-helper unification beyond this slice should land as a follow-up.
-  - notes: Start in `src/emitter/EmitterBuiltinMethodResolutionHelpers.cpp` and `src/emitter/EmitterBuiltinMethodResolutionMetadataHelpers.cpp`, with `src/semantics/SemanticsValidatorExprMethodResolution.cpp` and `src/ir_lowerer/IrLowererCountAccessClassifiers.cpp` as the parity reference.
 
 - [ ] TODO-4010: Replace replay trace JSON string matching
   - owner: ai

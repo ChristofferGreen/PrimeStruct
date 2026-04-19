@@ -105,12 +105,14 @@
             if (!normalizedName.empty() && normalizedName.front() == '/') {
               normalizedName.erase(normalizedName.begin());
             }
-            if (normalizedName != "at" && normalizedName != "at_unsafe" &&
-                normalizedName != "std/collections/vector/at" &&
-                normalizedName != "std/collections/vector/at_unsafe" &&
-                normalizedName != "map/at" && normalizedName != "map/at_unsafe" &&
-                normalizedName != "std/collections/map/at" &&
-                normalizedName != "std/collections/map/at_unsafe") {
+            const bool isVectorAccessName =
+                normalizedName == "at" || normalizedName == "at_unsafe" ||
+                normalizedName == "std/collections/vector/at" ||
+                normalizedName == "std/collections/vector/at_unsafe";
+            const bool isMapAccessName =
+                isCanonicalMapAccessHelperName(normalizedName) ||
+                isCanonicalMapAccessHelperPath(normalizedName);
+            if (!isVectorAccessName && !isMapAccessName) {
               return false;
             }
 

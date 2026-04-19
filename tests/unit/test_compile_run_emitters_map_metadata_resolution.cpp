@@ -213,6 +213,8 @@ TEST_CASE("C++ emitter helper prefers canonical map method sugar over compatibil
   key.kind = primec::Expr::Kind::Literal;
   key.intWidth = 32;
   key.literalValue = 1;
+  primec::Expr value = key;
+  value.literalValue = 2;
 
   std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
   primec::emitter::BindingInfo receiverInfo;
@@ -243,17 +245,36 @@ TEST_CASE("C++ emitter helper prefers canonical map method sugar over compatibil
   };
   std::unordered_map<std::string, std::string> importAliases;
   std::unordered_map<std::string, std::string> structTypeMap;
-  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds = {
+      {"/map/count_ref", primec::emitter::ReturnKind::Int},
+      {"/std/collections/map/count_ref", primec::emitter::ReturnKind::Int},
+      {"/map/contains_ref", primec::emitter::ReturnKind::Bool},
+      {"/std/collections/map/contains_ref", primec::emitter::ReturnKind::Bool},
+      {"/map/tryAt_ref", primec::emitter::ReturnKind::Int},
+      {"/std/collections/map/tryAt_ref", primec::emitter::ReturnKind::Int},
+      {"/map/at_ref", primec::emitter::ReturnKind::Int},
+      {"/std/collections/map/at_ref", primec::emitter::ReturnKind::Int},
+      {"/map/at_unsafe_ref", primec::emitter::ReturnKind::Int},
+      {"/std/collections/map/at_unsafe_ref", primec::emitter::ReturnKind::Int},
+      {"/map/insert", primec::emitter::ReturnKind::Void},
+      {"/std/collections/map/insert", primec::emitter::ReturnKind::Void},
+      {"/map/insert_ref", primec::emitter::ReturnKind::Void},
+      {"/std/collections/map/insert_ref", primec::emitter::ReturnKind::Void},
+  };
   std::unordered_map<std::string, std::string> returnStructs;
-  auto expectResolved = [&](const char *methodName, const char *expectedPath, bool includeKeyArg) {
+  auto expectResolved = [&](const char *methodName, const char *expectedPath, size_t extraArgCount) {
     primec::Expr call;
     call.kind = primec::Expr::Kind::Call;
     call.isMethodCall = true;
     call.name = methodName;
     call.args = {receiver};
     call.argNames = {std::nullopt};
-    if (includeKeyArg) {
+    if (extraArgCount >= 1) {
       call.args.push_back(key);
+      call.argNames.push_back(std::nullopt);
+    }
+    if (extraArgCount >= 2) {
+      call.args.push_back(value);
       call.argNames.push_back(std::nullopt);
     }
 
@@ -263,16 +284,37 @@ TEST_CASE("C++ emitter helper prefers canonical map method sugar over compatibil
     CHECK(resolved == expectedPath);
   };
 
-  expectResolved("count", "/std/collections/map/count", false);
-  expectResolved("contains", "/std/collections/map/contains", true);
-  expectResolved("tryAt", "/std/collections/map/tryAt", true);
+  expectResolved("count", "/std/collections/map/count", 0);
+  expectResolved("count_ref", "/std/collections/map/count_ref", 0);
+  expectResolved("contains", "/std/collections/map/contains", 1);
+  expectResolved("contains_ref", "/std/collections/map/contains_ref", 1);
+  expectResolved("tryAt", "/std/collections/map/tryAt", 1);
+  expectResolved("tryAt_ref", "/std/collections/map/tryAt_ref", 1);
+  expectResolved("at_ref", "/std/collections/map/at_ref", 1);
+  expectResolved("at_unsafe_ref", "/std/collections/map/at_unsafe_ref", 1);
+  expectResolved("insert", "/std/collections/map/insert", 2);
+  expectResolved("insert_ref", "/std/collections/map/insert_ref", 2);
 
   defMap.erase(canonicalCountDef.fullPath);
   defMap.erase(canonicalContainsDef.fullPath);
   defMap.erase(canonicalTryAtDef.fullPath);
-  expectResolved("count", "/map/count", false);
-  expectResolved("contains", "/map/contains", true);
-  expectResolved("tryAt", "/map/tryAt", true);
+  returnKinds.erase("/std/collections/map/count_ref");
+  returnKinds.erase("/std/collections/map/contains_ref");
+  returnKinds.erase("/std/collections/map/tryAt_ref");
+  returnKinds.erase("/std/collections/map/at_ref");
+  returnKinds.erase("/std/collections/map/at_unsafe_ref");
+  returnKinds.erase("/std/collections/map/insert");
+  returnKinds.erase("/std/collections/map/insert_ref");
+  expectResolved("count", "/map/count", 0);
+  expectResolved("count_ref", "/map/count_ref", 0);
+  expectResolved("contains", "/map/contains", 1);
+  expectResolved("contains_ref", "/map/contains_ref", 1);
+  expectResolved("tryAt", "/map/tryAt", 1);
+  expectResolved("tryAt_ref", "/map/tryAt_ref", 1);
+  expectResolved("at_ref", "/map/at_ref", 1);
+  expectResolved("at_unsafe_ref", "/map/at_unsafe_ref", 1);
+  expectResolved("insert", "/map/insert", 2);
+  expectResolved("insert_ref", "/map/insert_ref", 2);
 }
 
 TEST_CASE("C++ emitter helper rejects canonical metadata fallback for explicit map slash methods") {
@@ -696,6 +738,8 @@ TEST_CASE("C++ emitter helper rejects rooted map contains and tryAt direct-call 
 
   expectUnresolved("/map/contains", "/AliasContainsMarker");
   expectUnresolved("/map/tryAt", "/AliasTryAtMarker");
+  expectUnresolved("/map/contains_ref", "/AliasContainsRefMarker");
+  expectUnresolved("/map/tryAt_ref", "/AliasTryAtRefMarker");
 }
 
 TEST_CASE("C++ emitter helper keeps canonical map contains and tryAt direct-call return metadata") {
@@ -744,6 +788,8 @@ TEST_CASE("C++ emitter helper keeps canonical map contains and tryAt direct-call
 
   expectResolved("/std/collections/map/contains", "/CanonicalContainsMarker");
   expectResolved("/std/collections/map/tryAt", "/CanonicalTryAtMarker");
+  expectResolved("/std/collections/map/contains_ref", "/CanonicalContainsRefMarker");
+  expectResolved("/std/collections/map/tryAt_ref", "/CanonicalTryAtRefMarker");
 }
 
 TEST_CASE("C++ emitter helper rejects rooted map access direct-call return metadata") {
@@ -792,6 +838,8 @@ TEST_CASE("C++ emitter helper rejects rooted map access direct-call return metad
 
   expectUnresolved("/map/at", "/AliasAtMarker");
   expectUnresolved("/map/at_unsafe", "/AliasAtUnsafeMarker");
+  expectUnresolved("/map/at_ref", "/AliasAtRefMarker");
+  expectUnresolved("/map/at_unsafe_ref", "/AliasAtUnsafeRefMarker");
 }
 
 TEST_CASE("C++ emitter helper keeps canonical map access direct-call return metadata") {
@@ -840,6 +888,8 @@ TEST_CASE("C++ emitter helper keeps canonical map access direct-call return meta
 
   expectResolved("/std/collections/map/at", "/CanonicalAtMarker");
   expectResolved("/std/collections/map/at_unsafe", "/CanonicalAtUnsafeMarker");
+  expectResolved("/std/collections/map/at_ref", "/CanonicalAtRefMarker");
+  expectResolved("/std/collections/map/at_unsafe_ref", "/CanonicalAtUnsafeRefMarker");
 }
 
 TEST_CASE("C++ emitter helper keeps cross-path vector alias access struct-return metadata") {

@@ -3897,3 +3897,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Start in `include/primec/Vm.h`, `src/VmDebugSessionSetup.cpp`, `src/VmIoHelpers.cpp`, and the debug entrypoints in `src/primevm_main.cpp` and `src/VmDebugAdapter.cpp`.
   - finished_at: 2026-04-19
   - evidence: Replaced the debug-session argv `string_view` copy with deep-owned string storage plus stable internal view rebuilding in `VmDebugSession`, renamed the header members to match that ownership contract, and added focused session and adapter regressions that mutate caller-side argv buffers after launch while `PrintArgv` and `PrintArgvUnsafe` still emit the original owned text.
+
+- [x] TODO-4011: Unify emitter map-helper parity surface
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Emitter Parity
+  - depends_on: none
+  - scope: Extend emitter-side map helper resolution and canonicalization so alias/canonical map method calls and method-sugar resolution cover the same map helper family as semantics and IR lowering, including `*_ref` and `insert(_ref)` surfaces.
+  - acceptance:
+    - Emitter method resolution handles `count`, `count_ref`, `contains`, `contains_ref`, `tryAt`, `tryAt_ref`, `at`, `at_ref`, `at_unsafe`, `at_unsafe_ref`, `insert`, and `insert_ref` consistently for canonical and alias map paths, including method-sugar call sites that currently fall through to emitter-local subset logic.
+    - Focused emitter metadata or compile-run coverage locks the covered map helper surfaces so emitter behavior matches semantics for the same helper family on direct helper calls and method-sugar entrypoints.
+    - The covered map helper family is defined through a shared helper table or equivalent single-source policy instead of emitter-local subset logic.
+  - stop_rule: Stop once emitter resolution no longer carries a smaller covered map-helper subset than semantics/IR-lowerer for the covered family; wider collection-helper unification beyond this slice should land as a follow-up.
+  - notes: Start in `src/emitter/EmitterBuiltinMethodResolutionHelpers.cpp` and `src/emitter/EmitterBuiltinMethodResolutionMetadataHelpers.cpp`, with `src/semantics/SemanticsValidatorExprMethodResolution.cpp` and `src/ir_lowerer/IrLowererCountAccessClassifiers.cpp` as the parity reference.
+  - finished_at: 2026-04-19
+  - evidence: Centralized the emitter-side canonical map helper family in `src/emitter/EmitterHelpers.h`, updated emitter method resolution/type inference/helper-path fallback sites to honor the full `count`/`contains`/`tryAt`/`at`/`insert` plus `*_ref` family, and expanded the focused emitter metadata/path-preference tests to lock method-sugar and direct-call behavior for those surfaces.

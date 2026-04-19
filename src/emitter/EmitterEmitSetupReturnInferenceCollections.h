@@ -23,8 +23,7 @@
     }
     if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap.count(preferred) == 0) {
       const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
-      if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-          suffix != "at" && suffix != "at_unsafe") {
+      if (!isCanonicalMapHelperName(suffix)) {
         const std::string mapAlias = "/map/" + suffix;
         if (defMap.count(mapAlias) > 0) {
           preferred = mapAlias;
@@ -87,22 +86,22 @@
       return candidates;
     }
     if (receiverStruct == "/map") {
+      const std::string_view explicitHelperName = mapHelperNameFromPath(rawMethodName);
       const bool isExplicitCompatibilityMethod =
-          rawMethodName == "map/count" || rawMethodName == "map/contains" ||
-          rawMethodName == "map/tryAt";
+          rawMethodName.rfind("map/", 0) == 0 &&
+          !explicitHelperName.empty() &&
+          isCanonicalMapHelperName(explicitHelperName);
       const bool isExplicitCanonicalMethod =
-          rawMethodName == "std/collections/map/count" ||
-          rawMethodName == "std/collections/map/contains" ||
-          rawMethodName == "std/collections/map/tryAt";
+          rawMethodName.rfind("std/collections/map/", 0) == 0 &&
+          !explicitHelperName.empty() &&
+          isCanonicalMapHelperName(explicitHelperName);
       if (isExplicitCompatibilityMethod) {
         return {"/map/" + methodName};
       }
       if (isExplicitCanonicalMethod) {
         return {"/std/collections/map/" + methodName};
       }
-      const bool isMapHelperMethod =
-          methodName == "count" || methodName == "contains" || methodName == "tryAt" ||
-          methodName == "at" || methodName == "at_unsafe";
+      const bool isMapHelperMethod = isCanonicalMapHelperName(methodName);
       if (isMapHelperMethod) {
         return {"/std/collections/map/" + methodName};
       }
@@ -110,9 +109,8 @@
           "/std/collections/map/" + methodName,
       };
       const bool blocksRemovedMapAliasStructReturnForwarding =
-          rawMethodName == "map/at" || rawMethodName == "map/at_unsafe" ||
-          rawMethodName == "std/collections/map/at" ||
-          rawMethodName == "std/collections/map/at_unsafe";
+          !explicitHelperName.empty() &&
+          isCanonicalMapAccessHelperName(explicitHelperName);
       if (!blocksRemovedMapAliasStructReturnForwarding) {
         candidates.push_back("/map/" + methodName);
       }
@@ -153,15 +151,13 @@
       }
     } else if (normalizedPath.rfind("/map/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-      if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-          suffix != "at" && suffix != "at_unsafe") {
+      if (!isCanonicalMapHelperName(suffix)) {
         appendUnique("/std/collections/map/" + suffix);
       }
     } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
       const std::string suffix =
           normalizedPath.substr(std::string("/std/collections/map/").size());
-      if (suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-          suffix != "at" && suffix != "at_unsafe") {
+      if (!isCanonicalMapHelperName(suffix)) {
         appendUnique("/map/" + suffix);
       }
     }
@@ -187,13 +183,13 @@
     };
     if (normalizedPath.rfind("/map/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-      if (suffix == "at" || suffix == "at_unsafe") {
+      if (isCanonicalMapAccessHelperName(suffix)) {
         eraseCandidate("/std/collections/map/" + suffix);
       }
     } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
       const std::string suffix =
           normalizedPath.substr(std::string("/std/collections/map/").size());
-      if (suffix == "at" || suffix == "at_unsafe") {
+      if (isCanonicalMapAccessHelperName(suffix)) {
         eraseCandidate("/map/" + suffix);
       }
     }
