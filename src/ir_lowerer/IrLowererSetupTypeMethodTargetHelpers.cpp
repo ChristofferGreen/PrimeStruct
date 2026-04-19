@@ -128,14 +128,16 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     return !isExplicitSoaAliasMethod && isRawBuiltinSoaVectorReceiverTarget(candidate) &&
            (isExplicitCanonicalSoaMethod || normalizedMethodName == "get" ||
             normalizedMethodName == "ref" || normalizedMethodName == "push" ||
-            normalizedMethodName == "reserve");
+            normalizedMethodName == "reserve" ||
+            normalizedMethodName == "to_aos");
   };
   auto shouldRetryCanonicalSoaHelperPath = [&](const std::string &candidate) {
     if (!isRawBuiltinSoaVectorReceiverTarget(candidate)) {
       return false;
     }
     return normalizedMethodName == "get" || normalizedMethodName == "ref" ||
-           normalizedMethodName == "push" || normalizedMethodName == "reserve";
+           normalizedMethodName == "push" || normalizedMethodName == "reserve" ||
+           normalizedMethodName == "to_aos";
   };
   auto findMethodDefinitionByPath = [&](const std::string &path) -> const Definition * {
     auto defIt = defMap.find(path);
@@ -181,24 +183,12 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     if (path.rfind("/std/collections/soa_vector/", 0) == 0) {
       const std::string suffix = path.substr(std::string("/std/collections/soa_vector/").size());
       if (suffix != "get" && suffix != "ref" && suffix != "push" &&
-          suffix != "reserve") {
+          suffix != "reserve" && suffix != "to_aos") {
         const std::string samePathAlias = "/soa_vector/" + suffix;
         defIt = defMap.find(samePathAlias);
         if (defIt != defMap.end()) {
           return defIt->second;
         }
-      }
-      if (suffix == "to_aos") {
-        defIt = defMap.find("/to_aos");
-        if (defIt != defMap.end()) {
-          return defIt->second;
-        }
-      }
-    }
-    if (path == "/to_aos") {
-      defIt = defMap.find("/std/collections/soa_vector/to_aos");
-      if (defIt != defMap.end()) {
-        return defIt->second;
       }
     }
     if (path.rfind("/Buffer/", 0) == 0) {
@@ -283,10 +273,6 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       errorOut.clear();
       return nullptr;
     }
-    if (normalizedMethodName == "to_aos" && isSoaVectorReceiverTarget(resolvedTypeWithoutSlash)) {
-      errorOut = soaToAosMismatchError();
-      return nullptr;
-    }
     if (isExplicitRemovedVectorMethodAlias && isVectorReceiverTarget(resolvedTypeWithoutSlash)) {
       errorOut = "unknown method: " + resolved;
       return nullptr;
@@ -343,10 +329,6 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   const std::string resolved = resolvedBase + "/" + normalizedMethodName;
   if (normalizedMethodName == "to_soa" && isVectorReceiverTarget(normalizedTypeName)) {
     errorOut.clear();
-    return nullptr;
-  }
-  if (normalizedMethodName == "to_aos" && isSoaVectorReceiverTarget(normalizedTypeName)) {
-    errorOut = soaToAosMismatchError();
     return nullptr;
   }
   if (isExplicitRemovedVectorMethodAlias && isVectorReceiverTarget(normalizedTypeName)) {

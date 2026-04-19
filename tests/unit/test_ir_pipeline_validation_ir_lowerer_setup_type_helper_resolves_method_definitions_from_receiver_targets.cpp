@@ -77,6 +77,10 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
   soaReserveDef.fullPath = "/soa_vector/reserve";
   primec::Definition stdSoaReserveDef;
   stdSoaReserveDef.fullPath = "/std/collections/soa_vector/reserve";
+  primec::Definition rootedToAosDef;
+  rootedToAosDef.fullPath = "/to_aos";
+  primec::Definition stdSoaToAosDef;
+  stdSoaToAosDef.fullPath = "/std/collections/soa_vector/to_aos";
   primec::Definition bufferCountDef;
   bufferCountDef.fullPath = "/std/gfx/Buffer/count";
   primec::Definition bufferEmptyDef;
@@ -122,6 +126,8 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
       {"/std/collections/soa_vector/push", &stdSoaPushDef},
       {"/soa_vector/reserve", &soaReserveDef},
       {"/std/collections/soa_vector/reserve", &stdSoaReserveDef},
+      {"/to_aos", &rootedToAosDef},
+      {"/std/collections/soa_vector/to_aos", &stdSoaToAosDef},
       {"/std/gfx/Buffer/count", &bufferCountDef},
       {"/std/gfx/Buffer/empty", &bufferEmptyDef},
       {"/pkg/Ctor/length", &structMethodDef},
@@ -355,6 +361,14 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "to_aos", "soa_vector", "", defMap, error) == &stdSoaToAosDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "to_aos", "std/collections/soa_vector", "", defMap, error) == &stdSoaToAosDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "count", "Buffer", "", defMap, error) == &bufferCountDef);
   CHECK(error.empty());
 
@@ -578,6 +592,29 @@ TEST_CASE("ir lowerer setup type helper rejects canonical soa mutator fallback t
             "reserve", "std/collections/soa_vector", "", defMap, error) == nullptr);
   CHECK(error ==
         "struct parameter type mismatch for /std/collections/soa_vector/reserve parameter values: expected "
+        "/std/collections/experimental_soa_vector/SoaVector__ specialization");
+}
+
+TEST_CASE("ir lowerer setup type helper rejects canonical soa to_aos fallback to rooted alias") {
+  primec::Definition rootedToAosDef;
+  rootedToAosDef.fullPath = "/to_aos";
+  std::string error;
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/to_aos", &rootedToAosDef},
+  };
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "to_aos", "soa_vector", "", defMap, error) == nullptr);
+  CHECK(error ==
+        "struct parameter type mismatch for /std/collections/soa_vector/to_aos parameter values: expected "
+        "/std/collections/experimental_soa_vector/SoaVector__ specialization");
+
+  error.clear();
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "to_aos", "std/collections/soa_vector", "", defMap, error) == nullptr);
+  CHECK(error ==
+        "struct parameter type mismatch for /std/collections/soa_vector/to_aos parameter values: expected "
         "/std/collections/experimental_soa_vector/SoaVector__ specialization");
 }
 
