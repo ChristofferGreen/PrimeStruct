@@ -11,26 +11,32 @@ main() {
   [FileError] err{fileReadEof()}
   [Result<FileError>] status{FileError.status(fileReadEof())}
   [Result<FileError>] directStatus{FileError.status(fileReadEof())}
+  [Result<FileError>] methodStatus{err.status()}
   [Result<i32, FileError>] valueStatus{FileError.result<i32>(fileReadEof())}
   [Result<i32, FileError>] directValueStatus{FileError.result<i32>(fileReadEof())}
+  [Result<i32, FileError>] methodValueStatus{err.result<i32>()}
   [Result<FileError>] wrappedStatus{FileError.status(err)}
   [Result<i32, FileError>] wrappedValue{FileError.result<i32>(err)}
   [bool] eof{fileErrorIsEof(fileReadEof())}
   [bool] otherEof{fileErrorIsEof(1i32)}
   [bool] statusError{Result.error(status)}
   [bool] directStatusError{Result.error(directStatus)}
+  [bool] methodStatusError{Result.error(methodStatus)}
   [bool] wrappedStatusError{Result.error(wrappedStatus)}
   [bool] valueError{Result.error(valueStatus)}
   [bool] directValueError{Result.error(directValueStatus)}
+  [bool] methodValueError{Result.error(methodValueStatus)}
   [bool] wrappedValueError{Result.error(wrappedValue)}
   [string] statusWhy{Result.why(status)}
   [string] directStatusWhy{Result.why(directStatus)}
+  [string] methodStatusWhy{Result.why(methodStatus)}
   [string] wrappedStatusWhy{Result.why(wrappedStatus)}
   [string] valueWhy{Result.why(valueStatus)}
   [string] directValueWhy{Result.why(directValueStatus)}
+  [string] methodValueWhy{Result.why(methodValueStatus)}
   [string] wrappedValueWhy{Result.why(wrappedValue)}
-  if(and(and(and(and(statusError, directStatusError), wrappedStatusError),
-             and(and(valueError, directValueError), wrappedValueError)),
+  if(and(and(and(and(and(statusError, directStatusError), methodStatusError), wrappedStatusError),
+             and(and(and(valueError, directValueError), methodValueError), wrappedValueError)),
          and(eof, not(otherEof))),
      then(){ return() },
      else(){ return() })
@@ -41,7 +47,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib file error result helpers reject non file errors" * doctest::skip(true)) {
+TEST_CASE("stdlib file error result helpers reject non file errors") {
   const std::string source = R"(
 import /std/file/*
 
@@ -254,7 +260,7 @@ main() {
   CHECK(error.find("argument count mismatch for /std/file/FileError/eof") != std::string::npos);
 }
 
-TEST_CASE("stdlib FileError status helper rejects non file errors" * doctest::skip(true)) {
+TEST_CASE("stdlib FileError status helper rejects non file errors") {
   const std::string source = R"(
 import /std/file/*
 

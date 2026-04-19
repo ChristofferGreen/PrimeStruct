@@ -3672,3 +3672,16 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - stop_rule: Stop once the stale skipped tests are converted into active positive validation coverage for the documented ImageError helper surface; leave unrelated image runtime work untouched.
   - finished_at: 2026-04-19
   - evidence: Unskipped the three stale ImageError semantics tests, switched them to successful `validateProgram(...)` expectations, and expanded coverage to include receiver-style `err.status()`, `err.result<i32>()`, and `err.why()` alongside the direct `/ImageError/*` and package-level helper surfaces.
+
+- [x] TODO-1026: Refresh stale FileError helper semantics coverage
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: One-off correctness coverage
+  - scope: Unskip the stale `FileError` helper semantics negatives that were still excluded from the suite, and extend the positive FileError helper coverage to lock receiver-style `err.status()` / `err.result<T>()` behavior alongside the existing type-owned helper surface.
+  - acceptance:
+    - The skipped `fileErrorIsEof(true)` and `FileError.status(true)` semantics negatives are active again with their current deterministic diagnostics.
+    - Positive FileError helper coverage includes receiver-style `err.status()` and `err.result<i32>()`.
+    - No new TODO is left open for this helper-surface refresh.
+  - stop_rule: Stop once the stale skipped FileError helper semantics cases are active and the receiver-style positive coverage is pinned; leave unrelated file runtime slices alone.
+  - finished_at: 2026-04-19
+  - evidence: Unskipped the stale FileError helper negative tests, kept their deterministic type-mismatch diagnostics, and expanded the main FileError helper semantics case to cover receiver-style `err.status()`, `err.result<i32>()`, and their `Result.error(...)` / `Result.why(...)` consumers.
