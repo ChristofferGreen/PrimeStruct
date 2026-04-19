@@ -3127,7 +3127,7 @@ TEST_CASE("compiles and runs native helper-wrapped experimental map assignment R
   expectWrappedExperimentalMapAssignConformance("native");
 }
 
-TEST_CASE("compiles and runs native canonical namespaced map constructors on explicit experimental map bindings" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native canonical namespaced map constructors on explicit experimental map bindings") {
   expectCanonicalMapNamespaceExperimentalConstructorConformance("native");
 }
 
