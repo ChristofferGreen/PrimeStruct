@@ -3207,7 +3207,7 @@ TEST_CASE("compiles and runs native inferred experimental map default parameters
   expectInferredExperimentalMapDefaultParameterConformance("native");
 }
 
-TEST_CASE("compiles and runs native helper-wrapped inferred experimental map default parameters" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native helper-wrapped inferred experimental map default parameters") {
   expectWrappedInferredExperimentalMapDefaultParameterConformance("native");
 }
 
