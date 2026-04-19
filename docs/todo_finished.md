@@ -3838,3 +3838,17 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - stop_rule: Stop once the ownership contract is documented and the covered production shadow-state subsystem has been deleted or explicitly isolated from production execution.
   - finished_at: 2026-04-19
   - evidence: Added `docs/adr/0002-semantic-ownership-boundary.md`, linked the policy from `docs/PrimeStruct.md`, quarantined the graph-local-auto legacy shadow maps behind explicit benchmark-only validator state, and updated the architecture/source-lock tests to pin the new ownership boundary.
+
+- [x] TODO-4014: Stabilize spinning cube demo script core tests
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Test Audit Follow-up
+  - depends_on: none
+  - scope: Reproduce and fix the currently failing `primestruct.compile.run.examples` core checks in `tests/unit/test_compile_run_examples_demo_script_core.cpp` so the deterministic summary, skip classification, quoting, and fail-reporting contract for `run_spinning_cube_demo.sh` is green again under focused release reruns.
+  - acceptance:
+    - A focused rerun of `PrimeStruct_backend_tests` filtered to `test_compile_run_examples_demo_script_core.cpp` passes in `build-release/`.
+    - The deterministic `WEB`, `NATIVE`, `METAL`, and `RESULT` summary expectations in the core demo-script suite match the current launcher behavior for the currently failing summary, skip, quoting, and native-fail scenarios.
+    - Any script or test updates keep the narrower argument-suite coverage introduced by the audit intact.
+  - stop_rule: Stop once the core demo-script suite passes under focused release validation; if reproduction shows separate root causes across summary/quoting and skip/fail classification, split those into follow-up leaves instead of broadening this one further.
+  - finished_at: 2026-04-19
+  - evidence: Reordered `scripts/run_canonical_browser_sample.sh` so headless-smoke prerequisite skips happen before wasm compilation and asset staging, added source-lock plus stub-run coverage that pins the skip-before-compile contract, and updated the browser launcher compile-run test to distinguish intentional skip paths from the compile-and-run path.

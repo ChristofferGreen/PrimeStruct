@@ -183,6 +183,24 @@ if [[ ! -f "$SHARED_RUNTIME" ]]; then
   fail "missing shared browser runtime helper: $SHARED_RUNTIME"
 fi
 
+if (( HEADLESS_SMOKE == 1 )); then
+  if ! python3 --version >/dev/null 2>&1; then
+    echo "${LAUNCHER_PREFIX} SMOKE: SKIP python3 unavailable"
+    exit 0
+  fi
+
+  browser_cmd=""
+  if ! browser_cmd="$(find_browser)"; then
+    echo "${LAUNCHER_PREFIX} SMOKE: SKIP headless browser unavailable"
+    exit 0
+  fi
+
+  if ! "$browser_cmd" --headless --disable-gpu --dump-dom about:blank >/dev/null 2>&1; then
+    echo "${LAUNCHER_PREFIX} SMOKE: SKIP browser headless mode unavailable"
+    exit 0
+  fi
+fi
+
 mkdir -p "$OUT_DIR"
 rm -rf "$SAMPLE_STAGE_DIR" "$SHARED_STAGE_DIR"
 rm -f "$SERVER_LOG_PATH" "$SERVER_DOM_PATH" "$SERVER_ERR_PATH"
@@ -200,22 +218,6 @@ cp "$SAMPLE_DIR/cube.wgsl" "$SAMPLE_STAGE_DIR/cube.wgsl"
 cp "$SHARED_RUNTIME" "$SHARED_STAGE_DIR/$(basename "$SHARED_RUNTIME")"
 
 if (( HEADLESS_SMOKE == 1 )); then
-  if ! python3 --version >/dev/null 2>&1; then
-    echo "${LAUNCHER_PREFIX} SMOKE: SKIP python3 unavailable"
-    exit 0
-  fi
-
-  browser_cmd=""
-  if ! browser_cmd="$(find_browser)"; then
-    echo "${LAUNCHER_PREFIX} SMOKE: SKIP headless browser unavailable"
-    exit 0
-  fi
-
-  if ! "$browser_cmd" --headless --disable-gpu --dump-dom about:blank >/dev/null 2>&1; then
-    echo "${LAUNCHER_PREFIX} SMOKE: SKIP browser headless mode unavailable"
-    exit 0
-  fi
-
   python3 -m http.server "$PORT" --bind 127.0.0.1 --directory "$OUT_DIR" >"$SERVER_LOG_PATH" 2>&1 &
   server_pid=$!
   cleanup() {

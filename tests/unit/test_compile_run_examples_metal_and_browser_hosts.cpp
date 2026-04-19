@@ -2,6 +2,8 @@
 
 #include "test_compile_run_examples_helpers.h"
 
+#include <fstream>
+
 TEST_SUITE_BEGIN("primestruct.compile.run.examples");
 
 TEST_CASE("spinning cube metal shader path compiles and enforces profile gating") {
@@ -252,10 +254,72 @@ TEST_CASE("browser spinning cube launcher wrapper stays thin over shared helper"
   CHECK(helperSource.find("SMOKE: SKIP headless browser unavailable") != std::string::npos);
   CHECK(helperSource.find("PASS: wasm bootstrap status verified") != std::string::npos);
   CHECK(helperSource.find("Serving ${INDEX_URL}") != std::string::npos);
+  const size_t headlessCheckPos = helperSource.find("if (( HEADLESS_SMOKE == 1 )); then");
+  const size_t compileWasmPos = helperSource.find("echo \"${LAUNCHER_PREFIX} Compiling browser wasm\"");
+  REQUIRE(headlessCheckPos != std::string::npos);
+  REQUIRE(compileWasmPos != std::string::npos);
+  CHECK(headlessCheckPos < compileWasmPos);
   CHECK(demoSource.find("run_browser_spinning_cube.sh") != std::string::npos);
   CHECK(demoSource.find("browser launcher execution failed") != std::string::npos);
   CHECK(demoSource.find("find_browser()") == std::string::npos);
   CHECK(demoSource.find("python3 -m http.server") == std::string::npos);
+}
+
+TEST_CASE("browser launcher skips smoke before wasm compile when python3 is unavailable") {
+  std::filesystem::path scriptPath = std::filesystem::path("..") / "scripts" / "run_browser_spinning_cube.sh";
+  if (!std::filesystem::exists(scriptPath)) {
+    scriptPath = std::filesystem::current_path() / "scripts" / "run_browser_spinning_cube.sh";
+  }
+  REQUIRE(std::filesystem::exists(scriptPath));
+
+  const std::filesystem::path outDir =
+      testScratchPath("") / "primec_spinning_cube_browser_launcher_python_skip";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path binDir = outDir / "bin";
+  std::filesystem::create_directories(binDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path fakePrimecPath = binDir / "primec";
+  {
+    std::ofstream fakePrimec(fakePrimecPath);
+    REQUIRE(fakePrimec.good());
+    fakePrimec << "#!/usr/bin/env bash\n";
+    fakePrimec << "echo \"unexpected primec invocation\" >&2\n";
+    fakePrimec << "exit 99\n";
+    REQUIRE(fakePrimec.good());
+  }
+  REQUIRE(runCommand("chmod +x " + quoteShellArg(fakePrimecPath.string())) == 0);
+
+  const std::filesystem::path fakePythonPath = binDir / "python3";
+  {
+    std::ofstream fakePython(fakePythonPath);
+    REQUIRE(fakePython.good());
+    fakePython << "#!/usr/bin/env bash\n";
+    fakePython << "exit 1\n";
+    REQUIRE(fakePython.good());
+  }
+  REQUIRE(runCommand("chmod +x " + quoteShellArg(fakePythonPath.string())) == 0);
+
+  const std::filesystem::path outPath = outDir / "launcher.out.txt";
+  const std::filesystem::path errPath = outDir / "launcher.err.txt";
+  const std::string command =
+      "PATH=" + quoteShellArg(binDir.string() + ":/usr/bin:/bin") + " " + quoteShellArg(scriptPath.string()) +
+      " --primec " + quoteShellArg(fakePrimecPath.string()) + " --out-dir " + quoteShellArg((outDir / "stage").string()) +
+      " --port 18769 --headless-smoke > " + quoteShellArg(outPath.string()) + " 2> " +
+      quoteShellArg(errPath.string());
+  CHECK(runCommand(command) == 0);
+
+  const std::string output = readFile(outPath.string());
+  const std::string diagnostics = readFile(errPath.string());
+  CHECK(diagnostics.empty());
+  CHECK(output.find("[browser-launcher] SMOKE: SKIP python3 unavailable") != std::string::npos);
+  CHECK(output.find("[browser-launcher] Compiling browser wasm") == std::string::npos);
+  CHECK(output.find("[browser-launcher] Staging browser assets") == std::string::npos);
+  CHECK_FALSE(std::filesystem::exists(outDir / "stage" / "spinning_cube" / "cube.wasm"));
 }
 
 TEST_CASE("browser launcher compile run coverage validates shared helper path") {
@@ -295,16 +359,26 @@ TEST_CASE("browser launcher compile run coverage validates shared helper path") 
 
   CHECK(code == 0);
   CHECK(diagnostics.empty());
-  CHECK(std::filesystem::exists(outDir / "spinning_cube" / "index.html"));
-  CHECK(std::filesystem::exists(outDir / "spinning_cube" / "main.js"));
-  CHECK(std::filesystem::exists(outDir / "spinning_cube" / "cube.wgsl"));
-  CHECK(std::filesystem::exists(outDir / "spinning_cube" / "cube.wasm"));
-  CHECK(std::filesystem::exists(outDir / "shared" / "browser_runtime_shared.js"));
-  CHECK(output.find("[browser-launcher] Compiling browser wasm") != std::string::npos);
-  CHECK(output.find("[browser-launcher] Staging browser assets") != std::string::npos);
   const bool reportedPass = output.find("PASS: wasm bootstrap status verified") != std::string::npos;
-  const bool reportedSkip = output.find("SMOKE: SKIP") != std::string::npos;
+  const bool reportedSkipPython = output.find("SMOKE: SKIP python3 unavailable") != std::string::npos;
+  const bool reportedSkipBrowser = output.find("SMOKE: SKIP headless browser unavailable") != std::string::npos;
+  const bool reportedSkipHeadlessMode =
+      output.find("SMOKE: SKIP browser headless mode unavailable") != std::string::npos;
+  const bool reportedSkip = reportedSkipPython || reportedSkipBrowser || reportedSkipHeadlessMode;
   CHECK((reportedPass || reportedSkip));
+  if (reportedPass) {
+    CHECK(std::filesystem::exists(outDir / "spinning_cube" / "index.html"));
+    CHECK(std::filesystem::exists(outDir / "spinning_cube" / "main.js"));
+    CHECK(std::filesystem::exists(outDir / "spinning_cube" / "cube.wgsl"));
+    CHECK(std::filesystem::exists(outDir / "spinning_cube" / "cube.wasm"));
+    CHECK(std::filesystem::exists(outDir / "shared" / "browser_runtime_shared.js"));
+    CHECK(output.find("[browser-launcher] Compiling browser wasm") != std::string::npos);
+    CHECK(output.find("[browser-launcher] Staging browser assets") != std::string::npos);
+  } else {
+    CHECK(output.find("[browser-launcher] Compiling browser wasm") == std::string::npos);
+    CHECK(output.find("[browser-launcher] Staging browser assets") == std::string::npos);
+    CHECK_FALSE(std::filesystem::exists(outDir / "spinning_cube" / "cube.wasm"));
+  }
 }
 
 TEST_CASE("metal spinning cube launcher wrapper stays thin over shared helper") {

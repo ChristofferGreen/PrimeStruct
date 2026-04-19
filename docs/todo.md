@@ -57,7 +57,6 @@ Task template:
 ### Ready Now (No Unmet TODO Dependencies)
 
 - TODO-4015
-- TODO-4014
 - TODO-4013
 - TODO-4012
 - TODO-4011
@@ -76,7 +75,7 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Test audit follow-ups: TODO-4013, TODO-4014, TODO-4015
+- Test audit follow-ups: TODO-4013, TODO-4015
 - VM/runtime hardening: TODO-4012, TODO-4010, TODO-4009
 - Emitter collection-helper parity: TODO-4011
 - Semantic ownership cutover: TODO-4002, TODO-4004, TODO-4008
@@ -85,20 +84,19 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4014
-2. TODO-4013
-3. TODO-4015
-4. TODO-4012
-5. TODO-4011
-6. TODO-4010
-7. TODO-4009
-8. TODO-4006
-9. TODO-4007
-10. TODO-4003
-11. TODO-4002
-12. TODO-4004
-13. TODO-4005
-14. TODO-4008
+1. TODO-4013
+2. TODO-4015
+3. TODO-4012
+4. TODO-4011
+5. TODO-4010
+6. TODO-4009
+7. TODO-4006
+8. TODO-4007
+9. TODO-4003
+10. TODO-4002
+11. TODO-4004
+12. TODO-4005
+13. TODO-4008
 
 ### PrimeStruct Coverage Snapshot
 
@@ -113,7 +111,7 @@ Task template:
 | VM debug-session argv ownership | TODO-4012 |
 | Debug trace replay robustness | TODO-4010 |
 | VM/runtime debug numeric opcode parity | TODO-4009 |
-| Test-suite audit follow-up and release-gate stability | TODO-4013, TODO-4014, TODO-4015 |
+| Test-suite audit follow-up and release-gate stability | TODO-4013, TODO-4015 |
 
 ### Validation Coverage Snapshot
 
@@ -127,7 +125,7 @@ Task template:
 | VM debug-session argv lifetime coverage | TODO-4012 |
 | Debug trace replay malformed-input coverage | TODO-4010 |
 | Shared VM/debug numeric opcode behavior | TODO-4009 |
-| Release benchmark/example suite stability and doctest governance | TODO-4013, TODO-4014, TODO-4015 |
+| Release benchmark/example suite stability and doctest governance | TODO-4013, TODO-4015 |
 
 ### Task Blocks
 
@@ -143,19 +141,6 @@ Task template:
     - One repository-side check, source-lock, or architecture assertion keeps the documented thresholds visible in normal contributor validation instead of relying only on tribal memory.
   - stop_rule: Stop once the doctest split and optimization thresholds are both documented and anchored in normal contributor validation; do not widen this leaf into a broad test-style linter.
   - notes: The audit already confirmed release-first and parallel-test guidance are present, so this leaf should stay scoped to the missing size/runtime guardrails and their validation hook.
-
-- [ ] TODO-4014: Stabilize spinning cube demo script core tests
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Test Audit Follow-up
-  - depends_on: none
-  - scope: Reproduce and fix the currently failing `primestruct.compile.run.examples` core checks in `tests/unit/test_compile_run_examples_demo_script_core.cpp` so the deterministic summary, skip classification, quoting, and fail-reporting contract for `run_spinning_cube_demo.sh` is green again under focused release reruns.
-  - acceptance:
-    - A focused rerun of `PrimeStruct_backend_tests` filtered to `test_compile_run_examples_demo_script_core.cpp` passes in `build-release/`.
-    - The deterministic `WEB`, `NATIVE`, `METAL`, and `RESULT` summary expectations in the core demo-script suite match the current launcher behavior for the currently failing summary, skip, quoting, and native-fail scenarios.
-    - Any script or test updates keep the narrower argument-suite coverage introduced by the audit intact.
-  - stop_rule: Stop once the core demo-script suite passes under focused release validation; if reproduction shows separate root causes across summary/quoting and skip/fail classification, split those into follow-up leaves instead of broadening this one further.
-  - notes: The audit narrowed the unrelated red surface to `test_compile_run_examples_demo_script_core.cpp`; the argument-focused file now passes on its own, so this leaf should stay on the core summary-contract file only.
 
 - [ ] TODO-4013: Stabilize semantic memory benchmark release gate
   - owner: ai
