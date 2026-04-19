@@ -80,7 +80,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("native keeps map method sugar on wrapper-returned canonical map references" * doctest::skip(true)) {
+TEST_CASE("native keeps map method sugar on wrapper-returned canonical map references") {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
