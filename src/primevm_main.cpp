@@ -7,6 +7,7 @@
 #include "primec/OptionsParser.h"
 #include "primec/Vm.h"
 #include "primec/VmDebugDap.h"
+#include "VmDebugDapProtocol.h"
 
 #include <cctype>
 #include <cstdint>
@@ -162,6 +163,8 @@ struct TraceCheckpoint {
   std::string reason;
   std::string snapshotJson;
   std::string snapshotPayloadJson;
+  bool hasSnapshotResult = false;
+  uint64_t snapshotResult = 0;
 };
 
 bool readTextFile(const std::string &path, std::string &out, std::string &error) {
@@ -180,113 +183,53 @@ bool readTextFile(const std::string &path, std::string &out, std::string &error)
   return true;
 }
 
-bool extractJsonUnsignedField(std::string_view json, std::string_view key, uint64_t &outValue) {
-  const std::string needle = std::string("\"") + std::string(key) + "\":";
-  const size_t keyPos = json.find(needle);
-  if (keyPos == std::string_view::npos) {
-    return false;
-  }
-  size_t valuePos = keyPos + needle.size();
-  if (valuePos >= json.size() || std::isdigit(static_cast<unsigned char>(json[valuePos])) == 0) {
-    return false;
-  }
-  size_t valueEnd = valuePos;
-  while (valueEnd < json.size() && std::isdigit(static_cast<unsigned char>(json[valueEnd])) != 0) {
-    ++valueEnd;
-  }
-  try {
-    size_t consumed = 0;
-    const unsigned long long parsed = std::stoull(std::string(json.substr(valuePos, valueEnd - valuePos)), &consumed);
-    if (consumed != valueEnd - valuePos) {
-      return false;
+std::string encodeParsedJsonValue(const primec::vm_debug_dap_detail::JsonValue &value) {
+  using JsonValue = primec::vm_debug_dap_detail::JsonValue;
+  switch (value.kind) {
+    case JsonValue::Kind::Null:
+      return "null";
+    case JsonValue::Kind::Bool:
+      return value.boolValue ? "true" : "false";
+    case JsonValue::Kind::Number:
+      return std::to_string(value.numberValue);
+    case JsonValue::Kind::String:
+      return std::string("\"") + primec::vm_debug_dap_detail::jsonEscape(value.stringValue) + "\"";
+    case JsonValue::Kind::Array: {
+      std::string out = "[";
+      for (size_t i = 0; i < value.arrayValue.size(); ++i) {
+        if (i > 0) {
+          out += ",";
+        }
+        out += encodeParsedJsonValue(value.arrayValue[i]);
+      }
+      out += "]";
+      return out;
     }
-    outValue = static_cast<uint64_t>(parsed);
-    return true;
-  } catch (...) {
-    return false;
+    case JsonValue::Kind::Object: {
+      std::string out = "{";
+      for (size_t i = 0; i < value.objectValue.size(); ++i) {
+        if (i > 0) {
+          out += ",";
+        }
+        out += std::string("\"") + primec::vm_debug_dap_detail::jsonEscape(value.objectValue[i].first) + "\":";
+        out += encodeParsedJsonValue(value.objectValue[i].second);
+      }
+      out += "}";
+      return out;
+    }
   }
+  return "null";
 }
 
-bool extractJsonStringField(std::string_view json, std::string_view key, std::string &outValue) {
-  const std::string needle = std::string("\"") + std::string(key) + "\":";
-  const size_t keyPos = json.find(needle);
-  if (keyPos == std::string_view::npos) {
+bool extractJsonUnsignedField(const primec::vm_debug_dap_detail::JsonValue &object,
+                              std::string_view key,
+                              uint64_t &outValue) {
+  int64_t parsedValue = 0;
+  if (!primec::vm_debug_dap_detail::jsonNumberField(object, key, parsedValue) || parsedValue < 0) {
     return false;
   }
-  size_t valuePos = keyPos + needle.size();
-  if (valuePos >= json.size() || json[valuePos] != '"') {
-    return false;
-  }
-  ++valuePos;
-  size_t valueEnd = valuePos;
-  bool escaped = false;
-  while (valueEnd < json.size()) {
-    const char c = json[valueEnd];
-    if (!escaped && c == '"') {
-      outValue.assign(json.substr(valuePos, valueEnd - valuePos));
-      return true;
-    }
-    if (!escaped && c == '\\') {
-      escaped = true;
-    } else {
-      escaped = false;
-    }
-    ++valueEnd;
-  }
-  return false;
-}
-
-bool extractJsonObjectField(std::string_view json, std::string_view key, std::string &outValue) {
-  const std::string needle = std::string("\"") + std::string(key) + "\":";
-  const size_t keyPos = json.find(needle);
-  if (keyPos == std::string_view::npos) {
-    return false;
-  }
-  size_t valuePos = keyPos + needle.size();
-  if (valuePos >= json.size() || json[valuePos] != '{') {
-    return false;
-  }
-  const size_t objectStart = valuePos;
-  size_t objectEnd = valuePos;
-  size_t depth = 0;
-  bool inString = false;
-  bool escaped = false;
-  while (objectEnd < json.size()) {
-    const char c = json[objectEnd];
-    if (inString) {
-      if (!escaped && c == '"') {
-        inString = false;
-      }
-      if (!escaped && c == '\\') {
-        escaped = true;
-      } else {
-        escaped = false;
-      }
-      ++objectEnd;
-      continue;
-    }
-    if (c == '"') {
-      inString = true;
-      escaped = false;
-      ++objectEnd;
-      continue;
-    }
-    if (c == '{') {
-      ++depth;
-    } else if (c == '}') {
-      if (depth == 0) {
-        return false;
-      }
-      --depth;
-      if (depth == 0) {
-        ++objectEnd;
-        outValue.assign(json.substr(objectStart, objectEnd - objectStart));
-        return true;
-      }
-    }
-    ++objectEnd;
-  }
-  return false;
+  outValue = static_cast<uint64_t>(parsedValue);
+  return true;
 }
 
 bool parseTraceCheckpoints(const std::string &traceText,
@@ -298,7 +241,9 @@ bool parseTraceCheckpoints(const std::string &traceText,
 
   std::stringstream stream(traceText);
   std::string line;
+  size_t lineNumber = 0;
   while (std::getline(stream, line)) {
+    ++lineNumber;
     if (!line.empty() && line.back() == '\r') {
       line.pop_back();
     }
@@ -306,37 +251,91 @@ bool parseTraceCheckpoints(const std::string &traceText,
       continue;
     }
 
-    std::string event;
-    if (!extractJsonStringField(line, "event", event)) {
+    primec::vm_debug_dap_detail::JsonValue parsedLine;
+    if (!primec::vm_debug_dap_detail::parseJsonPayload(line, parsedLine, error)) {
+      error = "malformed replay trace JSON on line " + std::to_string(lineNumber) + ": " + error;
+      return false;
+    }
+    if (parsedLine.kind != primec::vm_debug_dap_detail::JsonValue::Kind::Object) {
+      error = "malformed replay trace JSON on line " + std::to_string(lineNumber) +
+              ": root must be a JSON object";
+      return false;
+    }
+
+    const primec::vm_debug_dap_detail::JsonValue *eventValue =
+        primec::vm_debug_dap_detail::jsonObjectField(parsedLine, "event");
+    if (eventValue == nullptr) {
+      if (primec::vm_debug_dap_detail::jsonObjectField(parsedLine, "sequence") != nullptr ||
+          primec::vm_debug_dap_detail::jsonObjectField(parsedLine, "snapshot") != nullptr ||
+          primec::vm_debug_dap_detail::jsonObjectField(parsedLine, "snapshot_payload") != nullptr ||
+          primec::vm_debug_dap_detail::jsonObjectField(parsedLine, "reason") != nullptr) {
+        error = "malformed replay checkpoint on line " + std::to_string(lineNumber) +
+                ": missing string event field";
+        return false;
+      }
       continue;
+    }
+    if (eventValue->kind != primec::vm_debug_dap_detail::JsonValue::Kind::String) {
+      error = "malformed replay checkpoint on line " + std::to_string(lineNumber) +
+              ": missing string event field";
+      return false;
+    }
+    const std::string event = eventValue->stringValue;
+
+    const primec::vm_debug_dap_detail::JsonValue *snapshotValue =
+        primec::vm_debug_dap_detail::jsonObjectField(parsedLine, "snapshot");
+    if (snapshotValue == nullptr ||
+        snapshotValue->kind != primec::vm_debug_dap_detail::JsonValue::Kind::Object) {
+      error = "malformed replay checkpoint on line " + std::to_string(lineNumber) +
+              ": missing object snapshot field";
+      return false;
+    }
+    const primec::vm_debug_dap_detail::JsonValue *snapshotPayloadValue =
+        primec::vm_debug_dap_detail::jsonObjectField(parsedLine, "snapshot_payload");
+    if (snapshotPayloadValue == nullptr ||
+        snapshotPayloadValue->kind != primec::vm_debug_dap_detail::JsonValue::Kind::Object) {
+      error = "malformed replay checkpoint on line " + std::to_string(lineNumber) +
+              ": missing object snapshot_payload field";
+      return false;
     }
 
     uint64_t sequence = 0;
-    const bool hasSequence = extractJsonUnsignedField(line, "sequence", sequence);
+    const primec::vm_debug_dap_detail::JsonValue *sequenceValue =
+        primec::vm_debug_dap_detail::jsonObjectField(parsedLine, "sequence");
+    const bool hasSequence = sequenceValue != nullptr;
     if (hasSequence) {
+      if (sequenceValue->kind != primec::vm_debug_dap_detail::JsonValue::Kind::Number ||
+          sequenceValue->numberValue < 0) {
+        error = "malformed replay checkpoint on line " + std::to_string(lineNumber) +
+                ": sequence must be a non-negative integer";
+        return false;
+      }
+      sequence = static_cast<uint64_t>(sequenceValue->numberValue);
       lastSequence = sequence;
       haveSequence = true;
-    }
-
-    std::string snapshotJson;
-    std::string snapshotPayloadJson;
-    if (!extractJsonObjectField(line, "snapshot", snapshotJson) ||
-        !extractJsonObjectField(line, "snapshot_payload", snapshotPayloadJson)) {
-      continue;
     }
 
     TraceCheckpoint checkpoint;
     checkpoint.sequence = hasSequence ? sequence : (haveSequence ? lastSequence : 0);
     checkpoint.event = event;
     if (event == "stop") {
-      if (!extractJsonStringField(line, "reason", checkpoint.reason)) {
+      const primec::vm_debug_dap_detail::JsonValue *reasonValue =
+          primec::vm_debug_dap_detail::jsonObjectField(parsedLine, "reason");
+      if (reasonValue == nullptr) {
         checkpoint.reason = "stop";
+      } else if (reasonValue->kind != primec::vm_debug_dap_detail::JsonValue::Kind::String) {
+        error = "malformed replay checkpoint on line " + std::to_string(lineNumber) +
+                ": stop reason must be a string";
+        return false;
+      } else {
+        checkpoint.reason = reasonValue->stringValue;
       }
     } else {
       checkpoint.reason = event;
     }
-    checkpoint.snapshotJson = std::move(snapshotJson);
-    checkpoint.snapshotPayloadJson = std::move(snapshotPayloadJson);
+    checkpoint.snapshotJson = encodeParsedJsonValue(*snapshotValue);
+    checkpoint.snapshotPayloadJson = encodeParsedJsonValue(*snapshotPayloadValue);
+    checkpoint.hasSnapshotResult = extractJsonUnsignedField(*snapshotValue, "result", checkpoint.snapshotResult);
     outCheckpoints.push_back(std::move(checkpoint));
   }
 
@@ -436,9 +435,8 @@ int main(int argc, char **argv) {
     std::cout << replayLine << "\n";
 
     if (!options.debugReplaySequence.has_value() && checkpoint.event == "stop" && checkpoint.reason == "Exit") {
-      uint64_t replayResult = 0;
-      if (extractJsonUnsignedField(checkpoint.snapshotJson, "result", replayResult)) {
-        return static_cast<int>(static_cast<int32_t>(replayResult));
+      if (checkpoint.hasSnapshotResult) {
+        return static_cast<int>(static_cast<int32_t>(checkpoint.snapshotResult));
       }
     }
     return 0;

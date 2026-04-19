@@ -56,7 +56,6 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4010
 - TODO-4009
 - TODO-4002
 
@@ -71,22 +70,21 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- VM/runtime hardening: TODO-4010, TODO-4009
+- VM/runtime hardening: TODO-4009
 - Semantic ownership cutover: TODO-4002, TODO-4004, TODO-4008
 - Validator/publication simplification: TODO-4003, TODO-4005
 - Build and validation ergonomics: TODO-4006, TODO-4007
 
 ### Execution Queue (Recommended)
 
-1. TODO-4010
-2. TODO-4009
-3. TODO-4006
-4. TODO-4007
-5. TODO-4003
-6. TODO-4002
-7. TODO-4004
-8. TODO-4005
-9. TODO-4008
+1. TODO-4009
+2. TODO-4006
+3. TODO-4007
+4. TODO-4003
+5. TODO-4002
+6. TODO-4004
+7. TODO-4005
+8. TODO-4008
 
 ### PrimeStruct Coverage Snapshot
 
@@ -99,7 +97,7 @@ Task template:
 | Backend validation/build ergonomics | TODO-4007 |
 | Emitter/semantics map-helper parity | none |
 | VM debug-session argv ownership | none |
-| Debug trace replay robustness | TODO-4010 |
+| Debug trace replay robustness | none |
 | VM/runtime debug numeric opcode parity | TODO-4009 |
 | Test-suite audit follow-up and release-gate stability | none |
 
@@ -113,24 +111,11 @@ Task template:
 | Focused backend rerun ergonomics and suite partitioning | TODO-4007 |
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
-| Debug trace replay malformed-input coverage | TODO-4010 |
+| Debug trace replay malformed-input coverage | none |
 | Shared VM/debug numeric opcode behavior | TODO-4009 |
 | Release benchmark/example suite stability and doctest governance | none |
 
 ### Task Blocks
-
-- [ ] TODO-4010: Replace replay trace JSON string matching
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Debug Trace Robustness
-  - depends_on: none
-  - scope: Replace the ad hoc debug-trace replay JSON field extractors in `primevm_main.cpp` with the shared JSON parser and fail closed when checkpoint-capable trace lines are malformed.
-  - acceptance:
-    - Trace replay parses `event`, `sequence`, `snapshot`, `snapshot_payload`, and `reason` through the shared JSON parsing utilities instead of bespoke line-level string matching helpers.
-    - Malformed checkpoint-capable trace lines report deterministic errors instead of being silently skipped or truncating replay state.
-    - Focused trace replay coverage locks whitespace, escape, and malformed-input behavior for checkpoint parsing.
-  - stop_rule: Stop once replay no longer depends on the current `extractJson*` helpers and malformed checkpoint-capable input fails deterministically.
-  - notes: Start in `src/primevm_main.cpp` and reuse the parser in `src/VmDebugDapProtocol.cpp`; if the parser reuse fits cleanly but broader replay cleanup does not, keep this leaf scoped to checkpoint parsing only.
 
 - [ ] TODO-4009: Unify VM/debug numeric opcode behavior
   - owner: ai

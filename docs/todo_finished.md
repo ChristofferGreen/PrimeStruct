@@ -3912,3 +3912,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Start in `src/emitter/EmitterBuiltinMethodResolutionHelpers.cpp` and `src/emitter/EmitterBuiltinMethodResolutionMetadataHelpers.cpp`, with `src/semantics/SemanticsValidatorExprMethodResolution.cpp` and `src/ir_lowerer/IrLowererCountAccessClassifiers.cpp` as the parity reference.
   - finished_at: 2026-04-19
   - evidence: Centralized the emitter-side canonical map helper family in `src/emitter/EmitterHelpers.h`, updated emitter method resolution/type inference/helper-path fallback sites to honor the full `count`/`contains`/`tryAt`/`at`/`insert` plus `*_ref` family, and expanded the focused emitter metadata/path-preference tests to lock method-sugar and direct-call behavior for those surfaces.
+
+- [x] TODO-4010: Replace replay trace JSON string matching
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Debug Trace Robustness
+  - depends_on: none
+  - scope: Replace the ad hoc debug-trace replay JSON field extractors in `primevm_main.cpp` with the shared JSON parser and fail closed when checkpoint-capable trace lines are malformed.
+  - acceptance:
+    - Trace replay parses `event`, `sequence`, `snapshot`, `snapshot_payload`, and `reason` through the shared JSON parsing utilities instead of bespoke line-level string matching helpers.
+    - Malformed checkpoint-capable trace lines report deterministic errors instead of being silently skipped or truncating replay state.
+    - Focused trace replay coverage locks whitespace, escape, and malformed-input behavior for checkpoint parsing.
+  - stop_rule: Stop once replay no longer depends on the current `extractJson*` helpers and malformed checkpoint-capable input fails deterministically.
+  - notes: Start in `src/primevm_main.cpp` and reuse the parser in `src/VmDebugDapProtocol.cpp`; if the parser reuse fits cleanly but broader replay cleanup does not, keep this leaf scoped to checkpoint parsing only.
+  - finished_at: 2026-04-19
+  - evidence: Replaced the replay-only `extractJson*` string matchers in `src/primevm_main.cpp` with `VmDebugDapProtocol` JSON parsing helpers plus stable JSON re-serialization for accepted checkpoint objects, added deterministic line-numbered malformed-checkpoint errors, expanded replay smoke coverage for whitespace/escape and malformed traces, and added a source-lock test that pins shared parser reuse and the removal of the old bespoke helpers.

@@ -3610,6 +3610,25 @@ TEST_CASE("primevm uses shared ir preparation helper") {
   CHECK(source.find("validateIrModule(ir, primec::IrValidationTarget::Vm, error)") == std::string::npos);
 }
 
+TEST_CASE("primevm debug replay uses shared JSON parsing helpers") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path mainPath = cwd / "src" / "primevm_main.cpp";
+  if (!std::filesystem::exists(mainPath)) {
+    mainPath = cwd.parent_path() / "src" / "primevm_main.cpp";
+  }
+  REQUIRE(std::filesystem::exists(mainPath));
+
+  const std::string source = readTextFile(mainPath);
+  CHECK(source.find("parseJsonPayload(line, parsedLine, error)") != std::string::npos);
+  CHECK(source.find("jsonObjectField(parsedLine, \"snapshot\")") != std::string::npos);
+  CHECK(source.find("jsonObjectField(parsedLine, \"snapshot_payload\")") != std::string::npos);
+  CHECK(source.find("jsonObjectField(parsedLine, \"reason\")") != std::string::npos);
+  CHECK(source.find("jsonNumberField(object, key, parsedValue)") != std::string::npos);
+  CHECK(source.find("extractJsonUnsignedField(std::string_view json") == std::string::npos);
+  CHECK(source.find("extractJsonStringField(std::string_view json") == std::string::npos);
+  CHECK(source.find("extractJsonObjectField(std::string_view json") == std::string::npos);
+}
+
 TEST_CASE("ir pipeline helper skips semantic product for non-consuming requests") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path helperPath = cwd / "tests" / "unit" / "test_ir_pipeline_helpers.h";
