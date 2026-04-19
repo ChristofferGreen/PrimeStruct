@@ -117,7 +117,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     const std::unordered_set<std::string> &structNames,
     const InferReceiverExprKindFn &inferExprKind,
     const ResolveReceiverExprPathFn &resolveExprPath,
-    const SemanticProductTargetAdapter *semanticProductTargets,
+    const SemanticProgram *semanticProgram,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut);
 const Definition *resolveMethodCallDefinitionFromExpr(
@@ -143,7 +143,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     const std::unordered_set<std::string> &structNames,
     const InferReceiverExprKindFn &inferExprKind,
     const ResolveReceiverExprPathFn &resolveExprPath,
-    const SemanticProductTargetAdapter *semanticProductTargets,
+    const SemanticProgram *semanticProgram,
     const GetReturnInfoForPathFn &getReturnInfo,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut);

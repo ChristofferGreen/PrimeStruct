@@ -69,7 +69,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     const std::unordered_set<std::string> &structNames,
     const InferReceiverExprKindFn &inferExprKind,
     const ResolveReceiverExprPathFn &resolveExprPath,
-    const SemanticProductTargetAdapter *semanticProductTargets,
+    const SemanticProgram *semanticProgram,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut) {
   return resolveMethodCallDefinitionFromExpr(callExpr,
@@ -81,7 +81,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
                                              structNames,
                                              inferExprKind,
                                              resolveExprPath,
-                                             semanticProductTargets,
+                                             semanticProgram,
                                              {},
                                              defMap,
                                              errorOut);
@@ -125,13 +125,13 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     const std::unordered_set<std::string> &structNames,
     const InferReceiverExprKindFn &inferExprKind,
     const ResolveReceiverExprPathFn &resolveExprPath,
-    const SemanticProductTargetAdapter *semanticProductTargets,
+    const SemanticProgram *semanticProgram,
     const GetReturnInfoForPathFn &getReturnInfo,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut) {
   static const std::unordered_map<std::string, std::string> noImportAliases;
   const auto &semanticAwareImportAliases =
-      semanticProductTargets != nullptr ? noImportAliases : importAliases;
+      semanticProgram != nullptr ? noImportAliases : importAliases;
 
   if (callExpr.kind != Expr::Kind::Call || callExpr.isBinding) {
     return nullptr;
@@ -145,14 +145,14 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     return nullptr;
   }
 
-  if (semanticProductTargets != nullptr) {
+  if (semanticProgram != nullptr) {
     if (callExpr.semanticNodeId == 0) {
       errorOut = "missing semantic-product method-call semantic id: " +
                  describeMethodCallExpr(callExpr);
       return nullptr;
     }
     const std::string resolvedPath =
-        findSemanticProductMethodCallTarget(*semanticProductTargets, callExpr);
+        findSemanticProductMethodCallTarget(semanticProgram, callExpr);
     if (resolvedPath.empty()) {
       errorOut = "missing semantic-product method-call target: " +
                  describeMethodCallExpr(callExpr);

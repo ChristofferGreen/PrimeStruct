@@ -480,7 +480,7 @@ TEST_CASE("public lowerer testing headers stay in sync with semantic-product hel
   CHECK(resultHelpers.find("std::string *errorOut = nullptr") != std::string::npos);
   CHECK(resultHelpers.find("inferPackedResultStructType(") != std::string::npos);
   CHECK(resultHelpers.find("resolvePackedResultStructPayloadInfo(") != std::string::npos);
-  CHECK(setupType.find("const SemanticProductTargetAdapter *semanticProductTargets,") !=
+  CHECK(setupType.find("const SemanticProgram *semanticProgram,") !=
         std::string::npos);
   CHECK(setupType.find("resolveMethodCallDefinitionFromExpr(") != std::string::npos);
 }
@@ -961,18 +961,20 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(irEntrySetupSource.find("validateOnErrorFactFamily") != std::string::npos);
   CHECK(irEntrySetupSource.find("buildOnErrorByDefinition(context.program,") != std::string::npos);
   CHECK(irCallHelpers.find("SemanticProductTargetAdapter semanticProductTargets{};") != std::string::npos);
+  CHECK(irCallHelpers.find("const SemanticProgram *semanticProgram = nullptr;") != std::string::npos);
   CHECK(irCallResolution.find("buildSemanticProductTargetAdapter(semanticProgram)") != std::string::npos);
-  CHECK(irCallResolution.find("findSemanticProductDirectCallTarget(semanticProductTargets, expr)") !=
+  CHECK(irCallResolution.find("adapters.semanticProgram = semanticProgram;") != std::string::npos);
+  CHECK(irCallResolution.find("findSemanticProductDirectCallTarget(semanticProgram, expr)") !=
         std::string::npos);
-  CHECK(irCallResolution.find("findSemanticProductBridgePathChoice(semanticProductTargets, expr)") !=
+  CHECK(irCallResolution.find("findSemanticProductBridgePathChoice(semanticProgram, expr)") !=
         std::string::npos);
-  CHECK(irCallResolution.find("if (expr.isMethodCall) {\n        return findSemanticProductMethodCallTarget(semanticProductTargets, expr);") !=
+  CHECK(irCallResolution.find("if (expr.isMethodCall) {\n        if (const std::string resolvedPath =\n                findSemanticProductMethodCallTarget(semanticProgram, expr);") !=
         std::string::npos);
   CHECK(irCallResolution.find("return resolveCallPathFromScope(expr, defMap, importAliases);") ==
         std::string::npos);
   CHECK(irCallResolution.find("const std::string importResolved = resolveCallPathFromScope(expr, defMap, importAliases);") ==
         std::string::npos);
-  CHECK(irMethodResolution.find("findSemanticProductMethodCallTarget(*semanticProductTargets, callExpr)") !=
+  CHECK(irMethodResolution.find("findSemanticProductMethodCallTarget(semanticProgram, callExpr)") !=
         std::string::npos);
   CHECK(irMethodResolution.find("missing semantic-product method-call target: ") !=
         std::string::npos);
@@ -999,6 +1001,14 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("struct SemanticProductTargetAdapter") != std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("bool hasSemanticProduct = false;") != std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("std::string findSemanticProductDirectCallTarget(const SemanticProgram *semanticProgram, const Expr &expr);") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("std::string findSemanticProductMethodCallTarget(const SemanticProgram *semanticProgram, const Expr &expr);") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("std::string findSemanticProductBridgePathChoice(const SemanticProgram *semanticProgram, const Expr &expr);") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("const SemanticProgramCallableSummary *findSemanticProductCallableSummary(\n    const SemanticProgram *semanticProgram,") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramCallableSummary *findSemanticProductCallableSummary(") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<uint64_t, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionId;") !=
@@ -1184,6 +1194,14 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterSource.find("definition.fullPath.empty()") == std::string::npos);
   CHECK(semanticTargetAdapterSource.find("expr.semanticNodeId") != std::string::npos);
   CHECK(semanticTargetAdapterSource.find("insert_or_assign(entry.semanticNodeId, &entry)") != std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("std::string findSemanticProductDirectCallTarget(const SemanticProgram *semanticProgram, const Expr &expr)") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("std::string findSemanticProductMethodCallTarget(const SemanticProgram *semanticProgram, const Expr &expr)") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("std::string findSemanticProductBridgePathChoice(const SemanticProgram *semanticProgram, const Expr &expr)") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("const SemanticProgramCallableSummary *findSemanticProductCallableSummary(const SemanticProgram *semanticProgram,") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterSource.find("const SemanticProgramTypeMetadata *findSemanticProductTypeMetadata(") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("findSemanticProductStructFieldMetadata(") ==
@@ -1562,7 +1580,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
                                         "    const Definition &entryDef,\n"
                                         "    const SemanticProgram *semanticProgram,") !=
         std::string::npos);
-  CHECK(statementCallHelpersSource.find("buildSemanticProductTargetAdapter(semanticProgram)") !=
+  CHECK(statementCallHelpersSource.find("buildSemanticProductTargetAdapter(semanticProgram)") ==
         std::string::npos);
   CHECK(statementCallHelpersSource.find("const auto definitionsByPath = buildDefinitionBodyLookup(program);") !=
         std::string::npos);
@@ -1570,7 +1588,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(statementCallHelpersSource.find("semantic product definition missing AST body: ") !=
         std::string::npos);
-  CHECK(statementCallHelpersSource.find("findSemanticProductCallableSummary(semanticProductTargets, def.fullPath)") !=
+  CHECK(statementCallHelpersSource.find("findSemanticProductCallableSummary(semanticProgram, def.fullPath)") !=
         std::string::npos);
   CHECK(statementCallHelpersSource.find("missing semantic-product callable summary: ") !=
         std::string::npos);
@@ -1590,11 +1608,11 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(uninitializedTypeHelpers.find("const SemanticProgram *semanticProgram,") != std::string::npos);
   CHECK(uninitializedSetupBuilders.find("makeSetupMathAndBindingAdapters(hasMathImport, semanticProgram)") !=
         std::string::npos);
-  CHECK(irLowerEffects.find("findSemanticProductCallableSummary(semanticProductTargets, entryPath)") !=
+  CHECK(irLowerEffects.find("findSemanticProductCallableSummary(semanticProgram, entryPath)") !=
         std::string::npos);
   CHECK(irLowerEffects.find("missing semantic-product callable summary: ") !=
         std::string::npos);
-  CHECK(irReturnInference.find("findSemanticProductCallableSummary(semanticProductTargets, entryPath)") !=
+  CHECK(irReturnInference.find("findSemanticProductCallableSummary(semanticProgram, entryPath)") !=
         std::string::npos);
   CHECK(irReturnInference.find("findSemanticProductReturnFact(semanticProductTargets, entryDef)") !=
         std::string::npos);
@@ -1602,7 +1620,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irLowerEffects.find("return validateProgramEffects(program, nullptr, entryPath, defaultEffects, entryDefaultEffects, error);") !=
         std::string::npos);
-  CHECK(irLowerEffects.find("findSemanticProductCallableSummary(*semanticProductTargetsPtr, fullPath)") !=
+  CHECK(irLowerEffects.find("findSemanticProductCallableSummary(semanticProgram, fullPath)") !=
         std::string::npos);
   CHECK(primecMain.find("pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr") !=
         std::string::npos);

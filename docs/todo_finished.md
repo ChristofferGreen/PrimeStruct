@@ -4062,3 +4062,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Primary seams are `src/IrPreparation.cpp`, `src/primevm_main.cpp`, `src/main.cpp`, and the remaining adapter/fallback helpers under `src/ir_lowerer/`; choose one fact-family slice first and only keep neighboring retirements together when they share the same production entrypoints.
   - finished_at: 2026-04-19
   - evidence: Added direct struct/type metadata helpers in `include/primec/SemanticProduct.h` and `src/SemanticProduct.cpp`, deleted the struct metadata caches and lookup helpers from `src/ir_lowerer/IrLowererSemanticProductTargetAdapters.{h,cpp}`, rewired the production struct/type/layout lowering path to consume `const SemanticProgram *` directly in the lowerer helper units, refreshed `tests/unit/test_ir_pipeline_backends_graph_contexts.h` to lock the new direct semantic-product path and the absence of the retired adapter cache surface, and replaced the open queue item with explicit follow-up `TODO-4017` for the remaining production adapter slices.
+
+- [x] TODO-4018: Retire production semantic routing adapter slice
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Architecture Stabilization
+  - depends_on: TODO-4008
+  - scope: Remove production-path `SemanticProductTargetAdapter` mediation for published direct/method/bridge routing and callable-summary reads in the IR lowerer, switching call resolution, method resolution, and callable metadata readers to direct `SemanticProgram` lookups while leaving semantic fact-index lookups as explicit follow-up work.
+  - acceptance:
+    - Production call-resolution and method-resolution paths read published direct/method/bridge routing from `SemanticProgram` without routing through `SemanticProductTargetAdapter`.
+    - Production callable-summary readers for effect metadata and callable metadata read `SemanticProgram` directly instead of adapter-mediated lookups.
+    - The remaining semantic fact-index adapter work is written down as a separate follow-up in `docs/todo.md`.
+  - stop_rule: Stop once routing and callable-summary reads no longer depend on `SemanticProductTargetAdapter` in production lowering; leave semantic fact-index migration as separate follow-up work instead of widening this slice.
+  - notes: Split from the oversized `TODO-4017` umbrella so the routing/callable-summary seam could land as one code-affecting commit before the remaining fact-index migration.
+  - finished_at: 2026-04-19
+  - evidence: Added direct `SemanticProgram *` overloads for routing and callable-summary helpers in `src/ir_lowerer/IrLowererSemanticProductTargetAdapters.{h,cpp}`, rewired `src/ir_lowerer/IrLowererCallResolution.cpp` and `src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp` to resolve published direct/method/bridge targets from `SemanticProgram` instead of adapter-owned routing state, switched callable-summary readers in `src/ir_lowerer/IrLowererLowerEffects.cpp`, `src/ir_lowerer/IrLowererStatementCallHelpers.cpp`, `src/ir_lowerer/IrLowererOnErrorHelpers.cpp`, `src/ir_lowerer/IrLowererReturnInferenceHelpers.cpp`, and `src/ir_lowerer/IrLowererLowerInferenceReturnInfoHelpers.cpp` to the direct semantic-program path, refreshed `tests/unit/test_ir_pipeline_backends_graph_contexts.h` to lock that ownership split, and replaced the live queue item with follow-up `TODO-4019` for the remaining fact-index adapter slice.

@@ -35,6 +35,12 @@ struct SemanticProductTargetAdapter {
 
 SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticProgram *semanticProgram);
 
+std::string findSemanticProductDirectCallTarget(const SemanticProgram *semanticProgram, const Expr &expr);
+std::string findSemanticProductMethodCallTarget(const SemanticProgram *semanticProgram, const Expr &expr);
+std::string findSemanticProductBridgePathChoice(const SemanticProgram *semanticProgram, const Expr &expr);
+const SemanticProgramCallableSummary *findSemanticProductCallableSummary(
+    const SemanticProgram *semanticProgram,
+    const std::string &fullPath);
 std::string findSemanticProductDirectCallTarget(const SemanticProductTargetAdapter &adapter, const Expr &expr);
 std::string findSemanticProductMethodCallTarget(const SemanticProductTargetAdapter &adapter, const Expr &expr);
 std::string findSemanticProductBridgePathChoice(const SemanticProductTargetAdapter &adapter, const Expr &expr);

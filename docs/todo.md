@@ -56,7 +56,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4017
+- TODO-4019
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -64,17 +64,17 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Semantic ownership cutover: TODO-4017
+- Semantic ownership cutover: TODO-4019
 
 ### Execution Queue (Recommended)
 
-1. TODO-4017
+1. TODO-4019
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4017 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4019 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | IR lowerer compile-unit breakup | none |
@@ -89,7 +89,7 @@ Task template:
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Semantic-product-authority conformance | TODO-4017 |
+| Semantic-product-authority conformance | TODO-4019 |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
 | Focused backend rerun ergonomics and suite partitioning | none |
@@ -101,15 +101,15 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4017: Retire remaining production semantic target adapter slices
+- [ ] TODO-4019: Retire production semantic fact-index adapter slice
   - owner: ai
   - created_at: 2026-04-19
   - phase: Architecture Stabilization
-  - depends_on: TODO-4008
-  - scope: Remove the remaining production-path `SemanticProductTargetAdapter` mediation for published routing and fact-family lookups in the IR lowerer after the struct/type metadata slice is gone, threading `SemanticProgram` or a narrower direct semantic index into call resolution, binding/result, local-auto, query, `try(...)`, and `on_error` helpers instead of keeping one catch-all adapter object on the hot path.
+  - depends_on: TODO-4018
+  - scope: Remove the remaining production-path `SemanticProductTargetAdapter` mediation for semantic fact-family lookup in the IR lowerer now that routing and callable-summary reads are direct, threading `SemanticProgram` plus a narrower direct semantic index into binding/result, local-auto, query, `try(...)`, return, and `on_error` helpers instead of keeping the broad adapter object on the hot path.
   - acceptance:
-    - Production lowering no longer builds or threads a broad `SemanticProductTargetAdapter` through call-resolution and semantic-fact lookup helpers for the remaining covered families.
+    - Production lowering no longer builds or threads a broad `SemanticProductTargetAdapter` through semantic-fact lookup helpers for the remaining covered families.
     - Any retained semantic lookup adapter surface is either deleted or explicitly limited to test-only/non-production helpers with that boundary documented in source-lock coverage.
     - `docs/todo.md` and the coverage snapshot keep the remaining semantic adapter retirement work explicit instead of collapsing it back into hidden lowerer fallback cleanup.
-  - stop_rule: Stop once the remaining production lowerer routing/fact lookup slices no longer depend on `SemanticProductTargetAdapter`; if some families need separate prep/index seams, split them into additional explicit leaves instead of widening this one further.
-  - notes: Start in `src/ir_lowerer/IrLowererCallResolution.cpp`, `src/ir_lowerer/IrLowererCallHelpers.{h,cpp}`, `src/ir_lowerer/IrLowererBindingTypeHelpers.cpp`, and the remaining lookup helpers under `src/ir_lowerer/`; keep CLI entrypoint plumbing out of scope unless adapter removal still depends on it.
+  - stop_rule: Stop once the remaining production lowerer fact-lookup slices no longer depend on `SemanticProductTargetAdapter`; if some families need separate prep/index seams, split them into additional explicit leaves instead of widening this one further.
+  - notes: Start in `src/ir_lowerer/IrLowererBindingTypeHelpers.cpp`, `src/ir_lowerer/IrLowererResultHelpers.cpp`, `src/ir_lowerer/IrLowererOnErrorHelpers.cpp`, `src/ir_lowerer/IrLowererReturnInferenceHelpers.cpp`, and the remaining lookup helpers under `src/ir_lowerer/`; the routing and callable-summary slice moved to finished `TODO-4018`.

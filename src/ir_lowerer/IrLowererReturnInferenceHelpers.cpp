@@ -54,7 +54,7 @@ bool analyzeEntryReturnTransforms(const Definition &entryDef,
   if (semanticProgram != nullptr) {
     const SemanticProductTargetAdapter semanticProductTargets =
         buildSemanticProductTargetAdapter(semanticProgram);
-    const auto *callableSummary = findSemanticProductCallableSummary(semanticProductTargets, entryPath);
+    const auto *callableSummary = findSemanticProductCallableSummary(semanticProgram, entryPath);
     if (callableSummary == nullptr) {
       error = "missing semantic-product callable summary: " + entryPath;
       return false;

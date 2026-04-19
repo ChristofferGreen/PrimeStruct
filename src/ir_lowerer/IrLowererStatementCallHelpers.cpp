@@ -177,8 +177,6 @@ CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
     int32_t &nextLocal,
     std::vector<IrFunction> &outFunctions,
     std::string &error) {
-  const SemanticProductTargetAdapter semanticProductTargets =
-      buildSemanticProductTargetAdapter(semanticProgram);
   const auto definitionsByPath = buildDefinitionBodyLookup(program);
   auto lowerDefinition = [&](const Definition &def) -> CallableDefinitionOrchestrationResult {
     if (def.fullPath == entryDef.fullPath || isStructDefinition(def) ||
@@ -204,7 +202,7 @@ CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
     function = IrFunction{};
     function.name = def.fullPath;
     if (const auto *callableSummary =
-            findSemanticProductCallableSummary(semanticProductTargets, def.fullPath);
+            findSemanticProductCallableSummary(semanticProgram, def.fullPath);
         callableSummary != nullptr) {
       function.metadata.effectMask = 0;
       for (const auto &effect : callableSummary->activeEffects) {

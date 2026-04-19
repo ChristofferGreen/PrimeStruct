@@ -236,15 +236,15 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
   return adapter;
 }
 
-std::string findSemanticProductDirectCallTarget(const SemanticProductTargetAdapter &adapter, const Expr &expr) {
-  if (adapter.semanticProgram == nullptr || expr.semanticNodeId == 0) {
+std::string findSemanticProductDirectCallTarget(const SemanticProgram *semanticProgram, const Expr &expr) {
+  if (semanticProgram == nullptr || expr.semanticNodeId == 0) {
     return {};
   }
-  if (const auto pathId = semanticProgramLookupPublishedDirectCallTargetId(*adapter.semanticProgram,
+  if (const auto pathId = semanticProgramLookupPublishedDirectCallTargetId(*semanticProgram,
                                                                            expr.semanticNodeId);
       pathId.has_value() && *pathId != InvalidSymbolId) {
     const std::string_view resolvedPath =
-        semanticProgramResolveCallTargetString(*adapter.semanticProgram, *pathId);
+        semanticProgramResolveCallTargetString(*semanticProgram, *pathId);
     if (!resolvedPath.empty()) {
       return std::string(resolvedPath);
     }
@@ -252,18 +252,22 @@ std::string findSemanticProductDirectCallTarget(const SemanticProductTargetAdapt
   return {};
 }
 
-std::string findSemanticProductMethodCallTarget(const SemanticProductTargetAdapter &adapter, const Expr &expr) {
-  if (expr.semanticNodeId == 0 || adapter.semanticProgram == nullptr) {
+std::string findSemanticProductDirectCallTarget(const SemanticProductTargetAdapter &adapter, const Expr &expr) {
+  return findSemanticProductDirectCallTarget(adapter.semanticProgram, expr);
+}
+
+std::string findSemanticProductMethodCallTarget(const SemanticProgram *semanticProgram, const Expr &expr) {
+  if (expr.semanticNodeId == 0 || semanticProgram == nullptr) {
     return {};
   }
-  if (const auto pathId = semanticProgramLookupPublishedMethodCallTargetId(*adapter.semanticProgram,
+  if (const auto pathId = semanticProgramLookupPublishedMethodCallTargetId(*semanticProgram,
                                                                            expr.semanticNodeId);
       pathId.has_value()) {
     if (*pathId == InvalidSymbolId) {
       return {};
     }
     const std::string_view resolvedPath =
-        semanticProgramResolveCallTargetString(*adapter.semanticProgram, *pathId);
+        semanticProgramResolveCallTargetString(*semanticProgram, *pathId);
     if (resolvedPath.empty()) {
       return {};
     }
@@ -272,15 +276,19 @@ std::string findSemanticProductMethodCallTarget(const SemanticProductTargetAdapt
   return {};
 }
 
-std::string findSemanticProductBridgePathChoice(const SemanticProductTargetAdapter &adapter, const Expr &expr) {
-  if (adapter.semanticProgram == nullptr || expr.semanticNodeId == 0) {
+std::string findSemanticProductMethodCallTarget(const SemanticProductTargetAdapter &adapter, const Expr &expr) {
+  return findSemanticProductMethodCallTarget(adapter.semanticProgram, expr);
+}
+
+std::string findSemanticProductBridgePathChoice(const SemanticProgram *semanticProgram, const Expr &expr) {
+  if (semanticProgram == nullptr || expr.semanticNodeId == 0) {
     return {};
   }
-  if (const auto pathId = semanticProgramLookupPublishedBridgePathChoiceId(*adapter.semanticProgram,
+  if (const auto pathId = semanticProgramLookupPublishedBridgePathChoiceId(*semanticProgram,
                                                                            expr.semanticNodeId);
       pathId.has_value() && *pathId != InvalidSymbolId) {
     const std::string_view chosenPath =
-        semanticProgramResolveCallTargetString(*adapter.semanticProgram, *pathId);
+        semanticProgramResolveCallTargetString(*semanticProgram, *pathId);
     if (!chosenPath.empty()) {
       return std::string(chosenPath);
     }
@@ -288,12 +296,21 @@ std::string findSemanticProductBridgePathChoice(const SemanticProductTargetAdapt
   return {};
 }
 
-const SemanticProgramCallableSummary *findSemanticProductCallableSummary(const SemanticProductTargetAdapter &adapter,
+std::string findSemanticProductBridgePathChoice(const SemanticProductTargetAdapter &adapter, const Expr &expr) {
+  return findSemanticProductBridgePathChoice(adapter.semanticProgram, expr);
+}
+
+const SemanticProgramCallableSummary *findSemanticProductCallableSummary(const SemanticProgram *semanticProgram,
                                                                         const std::string &fullPath) {
-  if (fullPath.empty() || adapter.semanticProgram == nullptr) {
+  if (fullPath.empty() || semanticProgram == nullptr) {
     return nullptr;
   }
-  return semanticProgramLookupPublishedCallableSummary(*adapter.semanticProgram, fullPath);
+  return semanticProgramLookupPublishedCallableSummary(*semanticProgram, fullPath);
+}
+
+const SemanticProgramCallableSummary *findSemanticProductCallableSummary(const SemanticProductTargetAdapter &adapter,
+                                                                        const std::string &fullPath) {
+  return findSemanticProductCallableSummary(adapter.semanticProgram, fullPath);
 }
 
 const SemanticProgramOnErrorFact *findSemanticProductOnErrorFactBySemanticId(

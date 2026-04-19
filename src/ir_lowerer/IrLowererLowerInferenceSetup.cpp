@@ -76,7 +76,8 @@ bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &in
                                                *structNames,
                                                stateOut.inferExprKind,
                                                resolveExprPath,
-                                               semanticProductTargets,
+                                               semanticProductTargets == nullptr ? nullptr
+                                                                                : semanticProductTargets->semanticProgram,
                                                stateOut.getReturnInfo,
                                                *defMap,
                                                errorOut);

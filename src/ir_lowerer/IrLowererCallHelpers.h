@@ -24,6 +24,7 @@ struct CallResolutionAdapters {
   ResolveExprPathFn resolveExprPath{};
   IsTailCallCandidateFn isTailCallCandidate{};
   DefinitionExistsFn definitionExists{};
+  const SemanticProgram *semanticProgram = nullptr;
   SemanticProductTargetAdapter semanticProductTargets{};
 };
 struct EntryCallResolutionSetup {
@@ -75,7 +76,7 @@ ResolveExprPathFn makeResolveCallPathFromScope(
 ResolveExprPathFn makeResolveCallPathFromScope(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases,
-    const SemanticProductTargetAdapter &semanticProductTargets = {});
+    const SemanticProgram *semanticProgram = nullptr);
 IsTailCallCandidateFn makeIsTailCallCandidate(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveExprPathFn &resolveExprPath);

@@ -440,21 +440,14 @@ bool validateProgramEffects(const Program &program,
                             const std::vector<std::string> &defaultEffects,
                             const std::vector<std::string> &entryDefaultEffects,
                             std::string &error) {
-  SemanticProductTargetAdapter semanticProductTargets{};
-  const SemanticProductTargetAdapter *semanticProductTargetsPtr = nullptr;
-  if (semanticProgram != nullptr) {
-    semanticProductTargets = buildSemanticProductTargetAdapter(semanticProgram);
-    semanticProductTargetsPtr = &semanticProductTargets;
-  }
-
   const auto validateCallableEffects =
       [&](const std::string &fullPath,
           const std::vector<Transform> &transforms,
           bool isEntry,
           const std::string &context) -> bool {
-    if (semanticProductTargetsPtr != nullptr) {
+    if (semanticProgram != nullptr) {
       if (const auto *callableSummary =
-              findSemanticProductCallableSummary(*semanticProductTargetsPtr, fullPath);
+              findSemanticProductCallableSummary(semanticProgram, fullPath);
           callableSummary != nullptr) {
         for (const auto &effect : callableSummary->activeEffects) {
           if (!isSupportedEffect(effect)) {
@@ -551,9 +544,7 @@ bool resolveEntryMetadataMasks(const Definition &entryDef,
                                uint64_t &entryCapabilityMaskOut,
                                std::string &error) {
   if (semanticProgram != nullptr) {
-    const SemanticProductTargetAdapter semanticProductTargets =
-        buildSemanticProductTargetAdapter(semanticProgram);
-    if (const auto *callableSummary = findSemanticProductCallableSummary(semanticProductTargets, entryPath);
+    if (const auto *callableSummary = findSemanticProductCallableSummary(semanticProgram, entryPath);
         callableSummary != nullptr) {
       entryEffectMaskOut = 0;
       for (const auto &effect : callableSummary->activeEffects) {

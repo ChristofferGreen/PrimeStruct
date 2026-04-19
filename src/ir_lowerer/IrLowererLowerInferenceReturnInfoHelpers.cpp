@@ -149,7 +149,8 @@ bool buildSemanticProductReturnInfo(const LowerInferenceReturnInfoSetupInput &in
     return false;
   }
 
-  const auto *callableSummary = findSemanticProductCallableSummary(semanticProductTargets, definition.fullPath);
+  const auto *callableSummary =
+      findSemanticProductCallableSummary(semanticProductTargets.semanticProgram, definition.fullPath);
   if (callableSummary == nullptr) {
     errorOut = "missing semantic-product callable summary: " + definition.fullPath;
     return false;

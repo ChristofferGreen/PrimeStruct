@@ -146,7 +146,7 @@ bool buildOnErrorByDefinition(const Program &program,
   for (const auto &def : program.definitions) {
     std::optional<OnErrorHandler> handler;
     if (semanticProgram != nullptr) {
-      const auto *callableSummary = findSemanticProductCallableSummary(semanticProductTargets, def.fullPath);
+      const auto *callableSummary = findSemanticProductCallableSummary(semanticProgram, def.fullPath);
       if (callableSummary == nullptr) {
         error = "missing semantic-product callable summary: " + def.fullPath;
         return false;
