@@ -658,7 +658,7 @@ main() {
         "128\n");
 }
 
-TEST_CASE("runs vm png read for stored sub-filter rgba inputs deterministically" * doctest::skip(true)) {
+TEST_CASE("runs vm png read for stored sub-filter rgba inputs deterministically") {
   const std::string inPath = (testScratchPath("") / "primec_vm_image_read_sub.png").string();
   {
     const std::vector<unsigned char> pngBytes = withValidPngCrcs({
