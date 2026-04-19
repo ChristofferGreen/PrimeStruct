@@ -182,7 +182,7 @@ main() {
   CHECK(error.find("expected i32") != std::string::npos);
 }
 
-TEST_CASE("vector stdlib namespaced capacity expression keeps return mismatch diagnostics" * doctest::skip(true)) {
+TEST_CASE("vector stdlib namespaced capacity expression keeps return mismatch diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values) {
@@ -201,8 +201,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector stdlib namespaced capacity expression uses canonical helper definition") {
@@ -247,7 +247,7 @@ main() {
   CHECK(error.find("expected i32") != std::string::npos);
 }
 
-TEST_CASE("vector stdlib namespaced capacity expression keeps non-builtin arity mismatch diagnostics" * doctest::skip(true)) {
+TEST_CASE("vector stdlib namespaced capacity expression keeps non-builtin arity mismatch diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values, [bool] marker) {
@@ -266,8 +266,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector stdlib namespaced capacity expression uses canonical helper definition for non-builtin arity") {
