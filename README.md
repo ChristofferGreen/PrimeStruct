@@ -28,43 +28,69 @@ main() {
 }
 ```
 
-Small, explicit helper:
+Struct:
 
 ```prime
-[int]
-clampToZero([int] value) {
-  if (value < 0) {
-    return(0)
-  } else {
-    return(value)
+[struct]
+Counter {
+  [int] value{0}
+
+  [int]
+  nextValue() {
+    return(this.value + 1)
   }
 }
 ```
 
-Vector plus a readable loop:
+Error handling:
+
+```prime
+import /std/file/*
+
+[Result<int, FileError>]
+countReady([int] value) {
+  return(Result.ok(value + 1))
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[int effects(io_err) on_error<FileError, log_file_error>]
+main() {
+  ready{countReady(5)}
+  return(ready?)
+}
+```
+
+Named parameters:
+
+```prime
+[int]
+addPair([int] left, [int] right) {
+  return(left + right)
+}
+
+[int]
+main() {
+  return(addPair([left] 4, [right] 8))
+}
+```
+
+Collections:
 
 ```prime
 import /std/collections/*
 
-[effects(heap_alloc), int]
-sumValues() {
-  [vector<int> mut] values{4, 8, 15}
-  [int mut] total{0}
-  [int] count{values.count()}
-
-  for([int mut] index{0}; index < count; ++index) {
-    total = total + values[index]
-  }
-
-  return(total)
+lookupValue() {
+  pairs{map<int, int>{7=10, 9=4}}
+  return(pairs[7] + pairs[9])
 }
 ```
 
-Current note: the verified vector example shape today uses
-`import /std/collections/*` with concise `[vector<T>] values{...}` bindings for
-bare helper names and method sugar. Do not use exact
-`import /std/collections/vector` in top-level examples yet; the current release
-toolchain still rejects that path.
+Current note: use `import /std/collections/*` for top-level collection examples
+that rely on bare collection names, method sugar, or direct indexing.
 
 ## Quick Start
 
