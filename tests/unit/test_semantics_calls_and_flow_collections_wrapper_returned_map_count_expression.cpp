@@ -77,7 +77,7 @@ main() {
   CHECK(error.find("expected i32") != std::string::npos);
 }
 
-TEST_CASE("map stdlib namespaced count auto inference falls back to map alias helper" * doctest::skip(true)) {
+TEST_CASE("map stdlib namespaced count auto inference keeps canonical unknown target") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /map/count([map<i32, i32>] values, [bool] marker) {
@@ -92,8 +92,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("map stdlib namespaced count auto inference succeeds when canonical helper matches return type") {
@@ -120,7 +120,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map stdlib namespaced count statement falls back to map alias helper" * doctest::skip(true)) {
+TEST_CASE("map stdlib namespaced count statement keeps canonical unknown target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /map/count([map<i32, i32>] values, [bool] marker) {
@@ -135,8 +135,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("map stdlib namespaced count auto inference non-builtin arity falls back to canonical helper return") {
