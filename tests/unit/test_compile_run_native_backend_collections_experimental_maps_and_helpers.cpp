@@ -3107,7 +3107,7 @@ TEST_CASE("compiles and runs native wrapper map helpers on experimental map valu
   expectWrapperMapHelperExperimentalValueConformance("native");
 }
 
-TEST_CASE("compiles and runs native ownership-sensitive experimental map value methods" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native ownership-sensitive experimental map value methods") {
   expectExperimentalMapOwnershipMethodConformance("native");
 }
 
