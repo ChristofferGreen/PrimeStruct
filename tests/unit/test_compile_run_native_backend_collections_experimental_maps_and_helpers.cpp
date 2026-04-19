@@ -3442,7 +3442,7 @@ TEST_CASE("rejects native canonical namespaced vector mutators without imported 
   expectCanonicalVectorRemoveSwapImportRequirement("native");
 }
 
-TEST_CASE("compiles and runs native experimental vector helper runtime contracts" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native experimental vector helper runtime contracts") {
   expectExperimentalVectorRuntimeContracts("native");
 }
 
