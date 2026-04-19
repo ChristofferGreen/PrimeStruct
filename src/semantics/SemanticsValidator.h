@@ -98,35 +98,6 @@ public:
     BindingInfo binding;
   };
 
-  struct QueryCallTypeSnapshotEntry {
-    std::string scopePath;
-    std::string callName;
-    std::string resolvedPath;
-    int sourceLine = 0;
-    int sourceColumn = 0;
-    std::string typeText;
-  };
-
-  struct QueryBindingSnapshotEntry {
-    std::string scopePath;
-    std::string callName;
-    std::string resolvedPath;
-    int sourceLine = 0;
-    int sourceColumn = 0;
-    BindingInfo binding;
-  };
-
-  struct QueryResultTypeSnapshotEntry {
-    std::string scopePath;
-    std::string callName;
-    std::string resolvedPath;
-    int sourceLine = 0;
-    int sourceColumn = 0;
-    bool hasValue = false;
-    std::string valueType;
-    std::string errorType;
-  };
-
   struct TryValueSnapshotEntry {
     std::string scopePath;
     std::string operandResolvedPath;
@@ -160,15 +131,6 @@ public:
     int sourceLine = 0;
     int sourceColumn = 0;
     uint64_t semanticNodeId = 0;
-  };
-
-  struct QueryReceiverBindingSnapshotEntry {
-    std::string scopePath;
-    std::string callName;
-    std::string resolvedPath;
-    int sourceLine = 0;
-    int sourceColumn = 0;
-    BindingInfo receiverBinding;
   };
 
   struct OnErrorSnapshotEntry {
@@ -324,9 +286,6 @@ public:
   const ValidationCounters &validationCounters() const { return validationCounters_; }
   std::vector<ReturnResolutionSnapshotEntry> returnResolutionSnapshotForTesting() const;
   std::vector<LocalAutoBindingSnapshotEntry> localAutoBindingSnapshotForTesting() const;
-  std::vector<QueryCallTypeSnapshotEntry> queryCallTypeSnapshotForTesting();
-  std::vector<QueryBindingSnapshotEntry> queryBindingSnapshotForTesting();
-  std::vector<QueryResultTypeSnapshotEntry> queryResultTypeSnapshotForTesting();
   std::vector<TryValueSnapshotEntry> tryValueSnapshotForTesting();
   std::vector<CallBindingSnapshotEntry> callBindingSnapshotForTesting();
   std::vector<DirectCallTargetSnapshotEntry> directCallTargetSnapshotForSemanticProduct() const;
@@ -341,7 +300,6 @@ public:
   std::vector<QueryFactSnapshotEntry> queryFactSnapshotForSemanticProduct();
   std::vector<TryValueSnapshotEntry> tryFactSnapshotForSemanticProduct();
   std::vector<OnErrorSnapshotEntry> onErrorFactSnapshotForSemanticProduct();
-  std::vector<QueryReceiverBindingSnapshotEntry> queryReceiverBindingSnapshotForTesting();
   std::vector<OnErrorSnapshotEntry> onErrorSnapshotForTesting();
   std::vector<ValidationContextSnapshotEntry> validationContextSnapshotForTesting() const;
   void releaseTransientSnapshotCaches();
@@ -795,15 +753,7 @@ private:
   std::unordered_set<const Expr *> queryTypeInferenceExprStack_;
   std::unordered_map<std::string, std::string> importAliases_;
   bool queryFactSnapshotCacheValid_ = false;
-  bool queryReceiverBindingSnapshotCacheValid_ = false;
-  bool queryCallTypeSnapshotCacheValid_ = false;
-  bool queryBindingSnapshotCacheValid_ = false;
-  bool queryResultTypeSnapshotCacheValid_ = false;
   std::vector<QueryFactSnapshotEntry> queryFactSnapshotCache_;
-  std::vector<QueryReceiverBindingSnapshotEntry> queryReceiverBindingSnapshotCache_;
-  std::vector<QueryCallTypeSnapshotEntry> queryCallTypeSnapshotCache_;
-  std::vector<QueryBindingSnapshotEntry> queryBindingSnapshotCache_;
-  std::vector<QueryResultTypeSnapshotEntry> queryResultTypeSnapshotCache_;
   bool tryValueSnapshotCacheValid_ = false;
   bool callBindingSnapshotCacheValid_ = false;
   std::vector<TryValueSnapshotEntry> tryValueSnapshotCache_;

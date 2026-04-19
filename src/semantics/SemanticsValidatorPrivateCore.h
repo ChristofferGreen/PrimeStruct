@@ -7,11 +7,7 @@
                                const std::unordered_map<std::string, BindingInfo> &)> &visitor);
   void forEachInferredQuerySnapshot(
       const std::function<void(const Definition &, const Expr &, QuerySnapshotData &&)> &visitor);
-  void ensureQuerySnapshotFactCaches(bool includeQueryFacts,
-                                     bool includeQueryReceiverBindings,
-                                     bool includeQueryCallTypes,
-                                     bool includeQueryBindings,
-                                     bool includeQueryResultTypes);
+  void ensureQuerySnapshotFactCaches();
   void ensureCallAndTrySnapshotFactCaches(bool includeTryValues,
                                           bool includeCallBindings);
   void ensureCallableAndOnErrorSnapshotFactCaches() const;

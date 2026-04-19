@@ -6422,9 +6422,12 @@ bool semantics::computeTypeResolutionQueryCallSnapshotForTesting(
     const std::vector<std::string> &semanticTransforms) {
   out = {};
   return runTypeResolutionSnapshot(program, entryPath, error, semanticTransforms, [&](auto &validator) {
-    const auto entries = validator.queryCallTypeSnapshotForTesting();
+    const auto entries = validator.queryFactSnapshotForSemanticProduct();
     out.entries.reserve(entries.size());
     for (const auto &entry : entries) {
+      if (entry.typeText.empty()) {
+        continue;
+      }
       out.entries.push_back(TypeResolutionQueryCallSnapshotEntry{
           entry.scopePath,
           entry.callName,
@@ -6445,9 +6448,12 @@ bool semantics::computeTypeResolutionQueryBindingSnapshotForTesting(
     const std::vector<std::string> &semanticTransforms) {
   out.entries.clear();
   return runTypeResolutionSnapshot(program, entryPath, error, semanticTransforms, [&](auto &validator) {
-    const auto entries = validator.queryBindingSnapshotForTesting();
+    const auto entries = validator.queryFactSnapshotForSemanticProduct();
     out.entries.reserve(entries.size());
     for (const auto &entry : entries) {
+      if (entry.binding.typeName.empty()) {
+        continue;
+      }
       out.entries.push_back(TypeResolutionQueryBindingSnapshotEntry{
           entry.scopePath,
           entry.callName,
@@ -6468,18 +6474,21 @@ bool semantics::computeTypeResolutionQueryResultTypeSnapshotForTesting(
     const std::vector<std::string> &semanticTransforms) {
   out.entries.clear();
   return runTypeResolutionSnapshot(program, entryPath, error, semanticTransforms, [&](auto &validator) {
-    const auto entries = validator.queryResultTypeSnapshotForTesting();
+    const auto entries = validator.queryFactSnapshotForSemanticProduct();
     out.entries.reserve(entries.size());
     for (const auto &entry : entries) {
+      if (!entry.hasResultType) {
+        continue;
+      }
       out.entries.push_back(TypeResolutionQueryResultTypeSnapshotEntry{
           entry.scopePath,
           entry.callName,
           entry.resolvedPath,
           entry.sourceLine,
           entry.sourceColumn,
-          entry.hasValue,
-          entry.valueType,
-          entry.errorType,
+          entry.resultTypeHasValue,
+          entry.resultValueType,
+          entry.resultErrorType,
       });
     }
   });
@@ -6546,9 +6555,12 @@ bool semantics::computeTypeResolutionQueryReceiverBindingSnapshotForTesting(
     const std::vector<std::string> &semanticTransforms) {
   out = {};
   return runTypeResolutionSnapshot(program, entryPath, error, semanticTransforms, [&](auto &validator) {
-    const auto entries = validator.queryReceiverBindingSnapshotForTesting();
+    const auto entries = validator.queryFactSnapshotForSemanticProduct();
     out.entries.reserve(entries.size());
     for (const auto &entry : entries) {
+      if (entry.receiverBinding.typeName.empty()) {
+        continue;
+      }
       out.entries.push_back(TypeResolutionQueryReceiverBindingSnapshotEntry{
           entry.scopePath,
           entry.callName,

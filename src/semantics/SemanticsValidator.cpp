@@ -228,18 +228,10 @@ std::string SemanticsValidator::diagnosticCallTargetPath(const std::string &path
 
 void SemanticsValidator::releaseTransientSnapshotCaches() {
   queryFactSnapshotCacheValid_ = false;
-  queryReceiverBindingSnapshotCacheValid_ = false;
-  queryCallTypeSnapshotCacheValid_ = false;
-  queryBindingSnapshotCacheValid_ = false;
-  queryResultTypeSnapshotCacheValid_ = false;
   tryValueSnapshotCacheValid_ = false;
   callBindingSnapshotCacheValid_ = false;
 
   std::vector<QueryFactSnapshotEntry>().swap(queryFactSnapshotCache_);
-  std::vector<QueryReceiverBindingSnapshotEntry>().swap(queryReceiverBindingSnapshotCache_);
-  std::vector<QueryCallTypeSnapshotEntry>().swap(queryCallTypeSnapshotCache_);
-  std::vector<QueryBindingSnapshotEntry>().swap(queryBindingSnapshotCache_);
-  std::vector<QueryResultTypeSnapshotEntry>().swap(queryResultTypeSnapshotCache_);
   std::vector<TryValueSnapshotEntry>().swap(tryValueSnapshotCache_);
   std::vector<CallBindingSnapshotEntry>().swap(callBindingSnapshotCache_);
 
@@ -294,10 +286,6 @@ bool SemanticsValidator::run() {
               << ",\"graph_local_auto_legacy_try_buckets\":"
               << graphLocalAutoLegacyTryValueShadow_.bucket_count()
               << ",\"query_fact_snapshot_cache\":" << queryFactSnapshotCache_.size()
-              << ",\"query_receiver_snapshot_cache\":" << queryReceiverBindingSnapshotCache_.size()
-              << ",\"query_call_snapshot_cache\":" << queryCallTypeSnapshotCache_.size()
-              << ",\"query_binding_snapshot_cache\":" << queryBindingSnapshotCache_.size()
-              << ",\"query_result_snapshot_cache\":" << queryResultTypeSnapshotCache_.size()
               << ",\"try_value_snapshot_cache\":" << tryValueSnapshotCache_.size()
               << ",\"call_binding_snapshot_cache\":" << callBindingSnapshotCache_.size()
               << ",\"callable_summary_snapshot_cache\":" << callableSummaryDefinitionSnapshotCache_.size()

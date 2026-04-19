@@ -331,200 +331,50 @@ void SemanticsValidator::forEachInferredQuerySnapshot(
   });
 }
 
-void SemanticsValidator::ensureQuerySnapshotFactCaches(bool includeQueryFacts,
-                                                       bool includeQueryReceiverBindings,
-                                                       bool includeQueryCallTypes,
-                                                       bool includeQueryBindings,
-                                                       bool includeQueryResultTypes) {
-  const bool buildQueryFacts = includeQueryFacts && !queryFactSnapshotCacheValid_;
-  const bool buildQueryReceiverBindings =
-      includeQueryReceiverBindings && !queryReceiverBindingSnapshotCacheValid_;
-  const bool buildQueryCallTypes = includeQueryCallTypes && !queryCallTypeSnapshotCacheValid_;
-  const bool buildQueryBindings = includeQueryBindings && !queryBindingSnapshotCacheValid_;
-  const bool buildQueryResultTypes = includeQueryResultTypes && !queryResultTypeSnapshotCacheValid_;
-  if (!buildQueryFacts &&
-      !buildQueryReceiverBindings &&
-      !buildQueryCallTypes &&
-      !buildQueryBindings &&
-      !buildQueryResultTypes) {
+void SemanticsValidator::ensureQuerySnapshotFactCaches() {
+  if (queryFactSnapshotCacheValid_) {
     return;
   }
 
-  if (buildQueryFacts) {
-    queryFactSnapshotCache_.clear();
-  }
-  if (buildQueryReceiverBindings) {
-    queryReceiverBindingSnapshotCache_.clear();
-  }
-  if (buildQueryCallTypes) {
-    queryCallTypeSnapshotCache_.clear();
-  }
-  if (buildQueryBindings) {
-    queryBindingSnapshotCache_.clear();
-  }
-  if (buildQueryResultTypes) {
-    queryResultTypeSnapshotCache_.clear();
-  }
+  queryFactSnapshotCache_.clear();
 
   forEachInferredQuerySnapshot([&](const Definition &def, const Expr &expr, QuerySnapshotData &&queryData) {
-    if (buildQueryFacts) {
-      QueryFactSnapshotEntry factEntry{
-          def.fullPath,
-          expr.name,
-          queryData.resolvedPath,
-          expr.sourceLine,
-          expr.sourceColumn,
-          queryData.typeText,
-          queryData.binding,
-          queryData.receiverBinding,
-          queryData.resultInfo.isResult,
-          queryData.resultInfo.isResult && queryData.resultInfo.hasValue,
-          queryData.resultInfo.valueType,
-          queryData.resultInfo.errorType,
-          expr.semanticNodeId,
-      };
-      queryFactSnapshotCache_.push_back(std::move(factEntry));
-    }
-
-    if (buildQueryCallTypes && !queryData.typeText.empty()) {
-      queryCallTypeSnapshotCache_.push_back(QueryCallTypeSnapshotEntry{
-          def.fullPath,
-          expr.name,
-          queryData.resolvedPath,
-          expr.sourceLine,
-          expr.sourceColumn,
-          queryData.typeText,
-      });
-    }
-
-    if (buildQueryBindings && !queryData.binding.typeName.empty()) {
-      queryBindingSnapshotCache_.push_back(QueryBindingSnapshotEntry{
-          def.fullPath,
-          expr.name,
-          queryData.resolvedPath,
-          expr.sourceLine,
-          expr.sourceColumn,
-          queryData.binding,
-      });
-    }
-
-    if (buildQueryResultTypes && queryData.resultInfo.isResult) {
-      queryResultTypeSnapshotCache_.push_back(QueryResultTypeSnapshotEntry{
-          def.fullPath,
-          expr.name,
-          queryData.resolvedPath,
-          expr.sourceLine,
-          expr.sourceColumn,
-          queryData.resultInfo.hasValue,
-          queryData.resultInfo.valueType,
-          queryData.resultInfo.errorType,
-      });
-    }
-
-    if (buildQueryReceiverBindings && !queryData.receiverBinding.typeName.empty()) {
-      queryReceiverBindingSnapshotCache_.push_back(QueryReceiverBindingSnapshotEntry{
-          def.fullPath,
-          expr.name,
-          std::move(queryData.resolvedPath),
-          expr.sourceLine,
-          expr.sourceColumn,
-          std::move(queryData.receiverBinding),
-      });
-    }
+    QueryFactSnapshotEntry factEntry{
+        def.fullPath,
+        expr.name,
+        queryData.resolvedPath,
+        expr.sourceLine,
+        expr.sourceColumn,
+        queryData.typeText,
+        queryData.binding,
+        queryData.receiverBinding,
+        queryData.resultInfo.isResult,
+        queryData.resultInfo.isResult && queryData.resultInfo.hasValue,
+        queryData.resultInfo.valueType,
+        queryData.resultInfo.errorType,
+        expr.semanticNodeId,
+    };
+    queryFactSnapshotCache_.push_back(std::move(factEntry));
   });
 
-  if (buildQueryFacts) {
-    std::stable_sort(queryFactSnapshotCache_.begin(),
-                     queryFactSnapshotCache_.end(),
-                     [](const auto &left, const auto &right) {
-                       if (left.scopePath != right.scopePath) {
-                         return left.scopePath < right.scopePath;
-                       }
-                       if (left.sourceLine != right.sourceLine) {
-                         return left.sourceLine < right.sourceLine;
-                       }
-                       if (left.sourceColumn != right.sourceColumn) {
-                         return left.sourceColumn < right.sourceColumn;
-                       }
-                       if (left.callName != right.callName) {
-                         return left.callName < right.callName;
-                       }
-                       return left.resolvedPath < right.resolvedPath;
-                     });
-    queryFactSnapshotCacheValid_ = true;
-  }
-
-  if (buildQueryReceiverBindings) {
-    std::stable_sort(queryReceiverBindingSnapshotCache_.begin(),
-                     queryReceiverBindingSnapshotCache_.end(),
-                     [](const auto &left, const auto &right) {
-                       if (left.scopePath != right.scopePath) {
-                         return left.scopePath < right.scopePath;
-                       }
-                       if (left.sourceLine != right.sourceLine) {
-                         return left.sourceLine < right.sourceLine;
-                       }
-                       if (left.sourceColumn != right.sourceColumn) {
-                         return left.sourceColumn < right.sourceColumn;
-                       }
+  std::stable_sort(queryFactSnapshotCache_.begin(),
+                   queryFactSnapshotCache_.end(),
+                   [](const auto &left, const auto &right) {
+                     if (left.scopePath != right.scopePath) {
+                       return left.scopePath < right.scopePath;
+                     }
+                     if (left.sourceLine != right.sourceLine) {
+                       return left.sourceLine < right.sourceLine;
+                     }
+                     if (left.sourceColumn != right.sourceColumn) {
+                       return left.sourceColumn < right.sourceColumn;
+                     }
+                     if (left.callName != right.callName) {
                        return left.callName < right.callName;
-                     });
-    queryReceiverBindingSnapshotCacheValid_ = true;
-  }
-
-  if (buildQueryCallTypes) {
-    std::stable_sort(queryCallTypeSnapshotCache_.begin(),
-                     queryCallTypeSnapshotCache_.end(),
-                     [](const auto &left, const auto &right) {
-                       if (left.scopePath != right.scopePath) {
-                         return left.scopePath < right.scopePath;
-                       }
-                       if (left.sourceLine != right.sourceLine) {
-                         return left.sourceLine < right.sourceLine;
-                       }
-                       if (left.sourceColumn != right.sourceColumn) {
-                         return left.sourceColumn < right.sourceColumn;
-                       }
-                       return left.callName < right.callName;
-                     });
-    queryCallTypeSnapshotCacheValid_ = true;
-  }
-
-  if (buildQueryBindings) {
-    std::stable_sort(queryBindingSnapshotCache_.begin(),
-                     queryBindingSnapshotCache_.end(),
-                     [](const auto &left, const auto &right) {
-                       if (left.scopePath != right.scopePath) {
-                         return left.scopePath < right.scopePath;
-                       }
-                       if (left.sourceLine != right.sourceLine) {
-                         return left.sourceLine < right.sourceLine;
-                       }
-                       if (left.sourceColumn != right.sourceColumn) {
-                         return left.sourceColumn < right.sourceColumn;
-                       }
-                       return left.callName < right.callName;
-                     });
-    queryBindingSnapshotCacheValid_ = true;
-  }
-
-  if (buildQueryResultTypes) {
-    std::stable_sort(queryResultTypeSnapshotCache_.begin(),
-                     queryResultTypeSnapshotCache_.end(),
-                     [](const auto &left, const auto &right) {
-                       if (left.scopePath != right.scopePath) {
-                         return left.scopePath < right.scopePath;
-                       }
-                       if (left.sourceLine != right.sourceLine) {
-                         return left.sourceLine < right.sourceLine;
-                       }
-                       if (left.sourceColumn != right.sourceColumn) {
-                         return left.sourceColumn < right.sourceColumn;
-                       }
-                       return left.callName < right.callName;
-                     });
-    queryResultTypeSnapshotCacheValid_ = true;
-  }
+                     }
+                     return left.resolvedPath < right.resolvedPath;
+                   });
+  queryFactSnapshotCacheValid_ = true;
 }
 
 void SemanticsValidator::ensureCallAndTrySnapshotFactCaches(bool includeTryValues,

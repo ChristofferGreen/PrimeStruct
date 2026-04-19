@@ -435,27 +435,6 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
   return entries;
 }
 
-std::vector<SemanticsValidator::QueryCallTypeSnapshotEntry>
-SemanticsValidator::queryCallTypeSnapshotForTesting() {
-  ensureQuerySnapshotFactCaches(
-      false, false, true, false, false);
-  return queryCallTypeSnapshotCache_;
-}
-
-std::vector<SemanticsValidator::QueryBindingSnapshotEntry>
-SemanticsValidator::queryBindingSnapshotForTesting() {
-  ensureQuerySnapshotFactCaches(
-      false, false, false, true, false);
-  return queryBindingSnapshotCache_;
-}
-
-std::vector<SemanticsValidator::QueryResultTypeSnapshotEntry>
-SemanticsValidator::queryResultTypeSnapshotForTesting() {
-  ensureQuerySnapshotFactCaches(
-      false, false, false, false, true);
-  return queryResultTypeSnapshotCache_;
-}
-
 std::vector<SemanticsValidator::TryValueSnapshotEntry>
 SemanticsValidator::tryValueSnapshotForTesting() {
   ensureCallAndTrySnapshotFactCaches(
@@ -1148,8 +1127,7 @@ SemanticsValidator::localAutoFactSnapshotForSemanticProduct() const {
 
 std::vector<SemanticsValidator::QueryFactSnapshotEntry>
 SemanticsValidator::queryFactSnapshotForSemanticProduct() {
-  ensureQuerySnapshotFactCaches(
-      true, false, false, false, false);
+  ensureQuerySnapshotFactCaches();
   queryFactSnapshotCacheValid_ = false;
   return std::exchange(queryFactSnapshotCache_, {});
 }
@@ -1162,13 +1140,6 @@ SemanticsValidator::tryFactSnapshotForSemanticProduct() {
 std::vector<SemanticsValidator::OnErrorSnapshotEntry>
 SemanticsValidator::onErrorFactSnapshotForSemanticProduct() {
   return onErrorSnapshotForTesting();
-}
-
-std::vector<SemanticsValidator::QueryReceiverBindingSnapshotEntry>
-SemanticsValidator::queryReceiverBindingSnapshotForTesting() {
-  ensureQuerySnapshotFactCaches(
-      false, true, false, false, false);
-  return queryReceiverBindingSnapshotCache_;
 }
 
 std::vector<SemanticsValidator::OnErrorSnapshotEntry>

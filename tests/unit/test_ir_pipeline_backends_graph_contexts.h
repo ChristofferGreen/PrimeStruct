@@ -2152,90 +2152,72 @@ TEST_CASE("semantic product on_error facts use handlerPathId without handlerPath
         std::string::npos);
 }
 
-TEST_CASE("semantic snapshot shared traversal keeps query fact and receiver ordering keys") {
+TEST_CASE("semantic snapshot query projections reuse semantic-product fact caches") {
   const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path headerPath = cwd / "src" / "semantics" / "SemanticsValidator.h";
   const std::filesystem::path root =
       std::filesystem::exists(cwd / "src" / "semantics" / "SemanticsValidatorSnapshots.cpp")
           ? cwd
           : cwd.parent_path();
+  if (!std::filesystem::exists(headerPath)) {
+    headerPath = root / "src" / "semantics" / "SemanticsValidator.h";
+  }
+  REQUIRE(std::filesystem::exists(headerPath));
+  const std::string semanticsHeader = readTextFile(headerPath);
   const std::string semanticsSnapshots =
       readTextFile(root / "src" / "semantics" / "SemanticsValidatorSnapshots.cpp");
   const std::string semanticsSnapshotLocals =
       readTextFile(root / "src" / "semantics" / "SemanticsValidatorSnapshotLocals.cpp");
+  const std::string semanticsValidate =
+      readTextFile(root / "src" / "semantics" / "SemanticsValidate.cpp");
 
-  const std::size_t queryCallTypeStart =
-      semanticsSnapshots.find("SemanticsValidator::queryCallTypeSnapshotForTesting() {");
-  const std::size_t queryBindingStart =
-      semanticsSnapshots.find("SemanticsValidator::queryBindingSnapshotForTesting() {");
-  const std::size_t queryResultTypeStart =
-      semanticsSnapshots.find("SemanticsValidator::queryResultTypeSnapshotForTesting() {");
   const std::size_t queryFactStart =
       semanticsSnapshots.find("SemanticsValidator::queryFactSnapshotForSemanticProduct() {");
   const std::size_t tryFactStart =
       semanticsSnapshots.find("SemanticsValidator::tryFactSnapshotForSemanticProduct()");
-  const std::size_t queryReceiverStart =
-      semanticsSnapshots.find("SemanticsValidator::queryReceiverBindingSnapshotForTesting() {");
-  const std::size_t onErrorStart =
-      semanticsSnapshots.find("SemanticsValidator::onErrorSnapshotForTesting()");
   const std::size_t queryCacheHelperStart =
       semanticsSnapshotLocals.find("SemanticsValidator::ensureQuerySnapshotFactCaches() {");
   const std::size_t graphLocalKeyStart =
       semanticsSnapshotLocals.find("SemanticsValidator::GraphLocalAutoKey");
-  REQUIRE(queryCallTypeStart != std::string::npos);
-  REQUIRE(queryBindingStart != std::string::npos);
-  REQUIRE(queryResultTypeStart != std::string::npos);
   REQUIRE(queryFactStart != std::string::npos);
   REQUIRE(tryFactStart != std::string::npos);
-  REQUIRE(queryReceiverStart != std::string::npos);
-  REQUIRE(onErrorStart != std::string::npos);
   REQUIRE(queryCacheHelperStart != std::string::npos);
   REQUIRE(graphLocalKeyStart != std::string::npos);
-  REQUIRE(queryCallTypeStart < queryBindingStart);
-  REQUIRE(queryBindingStart < queryResultTypeStart);
-  REQUIRE(queryResultTypeStart < queryFactStart);
   REQUIRE(queryFactStart < tryFactStart);
-  REQUIRE(queryReceiverStart < onErrorStart);
   REQUIRE(queryCacheHelperStart < graphLocalKeyStart);
-
-  const std::string queryCallTypeBody = semanticsSnapshots.substr(queryCallTypeStart, queryBindingStart - queryCallTypeStart);
-  CHECK(queryCallTypeBody.find("ensureQuerySnapshotFactCaches();") != std::string::npos);
-  CHECK(queryCallTypeBody.find("return queryCallTypeSnapshotCache_;") != std::string::npos);
-
-  const std::string queryBindingBody = semanticsSnapshots.substr(queryBindingStart, queryResultTypeStart - queryBindingStart);
-  CHECK(queryBindingBody.find("ensureQuerySnapshotFactCaches();") != std::string::npos);
-  CHECK(queryBindingBody.find("return queryBindingSnapshotCache_;") != std::string::npos);
-
-  const std::string queryResultTypeBody = semanticsSnapshots.substr(queryResultTypeStart, queryFactStart - queryResultTypeStart);
-  CHECK(queryResultTypeBody.find("ensureQuerySnapshotFactCaches();") != std::string::npos);
-  CHECK(queryResultTypeBody.find("return queryResultTypeSnapshotCache_;") != std::string::npos);
 
   const std::string queryFactBody = semanticsSnapshots.substr(queryFactStart, tryFactStart - queryFactStart);
   CHECK(queryFactBody.find("ensureQuerySnapshotFactCaches();") != std::string::npos);
-  CHECK(queryFactBody.find("return queryFactSnapshotCache_;") != std::string::npos);
-
-  const std::string queryReceiverBody = semanticsSnapshots.substr(queryReceiverStart, onErrorStart - queryReceiverStart);
-  CHECK(queryReceiverBody.find("ensureQuerySnapshotFactCaches();") != std::string::npos);
-  CHECK(queryReceiverBody.find("return queryReceiverBindingSnapshotCache_;") != std::string::npos);
+  CHECK(queryFactBody.find("return std::exchange(queryFactSnapshotCache_, {});") != std::string::npos);
 
   const std::string queryCacheHelperBody =
       semanticsSnapshotLocals.substr(queryCacheHelperStart, graphLocalKeyStart - queryCacheHelperStart);
   CHECK(queryCacheHelperBody.find("forEachInferredQuerySnapshot(") != std::string::npos);
-  CHECK(queryCacheHelperBody.find("queryCallTypeSnapshotCache_.push_back(") != std::string::npos);
-  CHECK(queryCacheHelperBody.find("queryBindingSnapshotCache_.push_back(") != std::string::npos);
-  CHECK(queryCacheHelperBody.find("queryResultTypeSnapshotCache_.push_back(") != std::string::npos);
   CHECK(queryCacheHelperBody.find("queryFactSnapshotCache_.push_back(") != std::string::npos);
-  CHECK(queryCacheHelperBody.find("queryReceiverBindingSnapshotCache_.push_back(") != std::string::npos);
-  CHECK(queryCacheHelperBody.find("std::stable_sort(queryCallTypeSnapshotCache_.begin(),") != std::string::npos);
-  CHECK(queryCacheHelperBody.find("std::stable_sort(queryBindingSnapshotCache_.begin(),") != std::string::npos);
-  CHECK(queryCacheHelperBody.find("std::stable_sort(queryResultTypeSnapshotCache_.begin(),") != std::string::npos);
   CHECK(queryCacheHelperBody.find("std::stable_sort(queryFactSnapshotCache_.begin(),") != std::string::npos);
-  CHECK(queryCacheHelperBody.find("std::stable_sort(queryReceiverBindingSnapshotCache_.begin(),") !=
-        std::string::npos);
   CHECK(queryCacheHelperBody.find("if (left.scopePath != right.scopePath)") != std::string::npos);
   CHECK(queryCacheHelperBody.find("if (left.sourceLine != right.sourceLine)") != std::string::npos);
   CHECK(queryCacheHelperBody.find("if (left.sourceColumn != right.sourceColumn)") != std::string::npos);
   CHECK(queryCacheHelperBody.find("if (left.callName != right.callName)") != std::string::npos);
   CHECK(queryCacheHelperBody.find("return left.resolvedPath < right.resolvedPath;") != std::string::npos);
+
+  CHECK(semanticsHeader.find("queryCallTypeSnapshotForTesting") == std::string::npos);
+  CHECK(semanticsHeader.find("queryBindingSnapshotForTesting") == std::string::npos);
+  CHECK(semanticsHeader.find("queryResultTypeSnapshotForTesting") == std::string::npos);
+  CHECK(semanticsHeader.find("queryReceiverBindingSnapshotForTesting") == std::string::npos);
+  CHECK(semanticsHeader.find("struct QueryCallTypeSnapshotEntry {") == std::string::npos);
+  CHECK(semanticsHeader.find("struct QueryBindingSnapshotEntry {") == std::string::npos);
+  CHECK(semanticsHeader.find("struct QueryResultTypeSnapshotEntry {") == std::string::npos);
+  CHECK(semanticsHeader.find("struct QueryReceiverBindingSnapshotEntry {") == std::string::npos);
+  CHECK(semanticsValidate.find("validator.queryFactSnapshotForSemanticProduct()") != std::string::npos);
+  CHECK(semanticsValidate.find("validator.queryCallTypeSnapshotForTesting()") == std::string::npos);
+  CHECK(semanticsValidate.find("validator.queryBindingSnapshotForTesting()") == std::string::npos);
+  CHECK(semanticsValidate.find("validator.queryResultTypeSnapshotForTesting()") == std::string::npos);
+  CHECK(semanticsValidate.find("validator.queryReceiverBindingSnapshotForTesting()") == std::string::npos);
+  CHECK(semanticsValidate.find("if (entry.typeText.empty()) {") != std::string::npos);
+  CHECK(semanticsValidate.find("if (entry.binding.typeName.empty()) {") != std::string::npos);
+  CHECK(semanticsValidate.find("if (!entry.hasResultType) {") != std::string::npos);
+  CHECK(semanticsValidate.find("if (entry.receiverBinding.typeName.empty()) {") != std::string::npos);
 }
 
 TEST_CASE("semantic snapshot shared traversal keeps call and try ordering keys") {
