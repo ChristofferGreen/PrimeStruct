@@ -1475,9 +1475,7 @@ Particle() {
 main() {
   [soa_vector<Particle>] values{soa_vector<Particle>()}
   [vector<Particle>] unpackedA{to_aos(values)}
-  [vector<Particle>] unpackedB{/to_aos(values)}
-  [vector<Particle>] unpackedC{values.to_aos()}
-  [vector<Particle>] unpackedD{values./to_aos()}
+  [vector<Particle>] unpackedB{values.to_aos()}
   return(0i32)
 }
 )";
@@ -1496,7 +1494,6 @@ main() {
         std::string::npos);
   CHECK(ast.find("/to_aos(values)", mainPos) == std::string::npos);
   CHECK(ast.find("values.to_aos()", mainPos) == std::string::npos);
-  CHECK(ast.find("values./to_aos()", mainPos) == std::string::npos);
 }
 
 TEST_CASE("dump ast-semantic rewrites no-import builtin soa_vector to_aos forms to canonical helper path") {
@@ -1510,9 +1507,7 @@ Particle() {
 main() {
   [soa_vector<Particle>] values{soa_vector<Particle>()}
   [vector<Particle>] unpackedA{to_aos(values)}
-  [vector<Particle>] unpackedB{/to_aos(values)}
-  [vector<Particle>] unpackedC{values.to_aos()}
-  [vector<Particle>] unpackedD{values./to_aos()}
+  [vector<Particle>] unpackedB{values.to_aos()}
   return(0i32)
 }
 )";
@@ -1533,7 +1528,6 @@ main() {
   CHECK(ast.find("to_aos(values)", mainPos) == std::string::npos);
   CHECK(ast.find("/to_aos(values)", mainPos) == std::string::npos);
   CHECK(ast.find("values.to_aos()", mainPos) == std::string::npos);
-  CHECK(ast.find("values./to_aos()", mainPos) == std::string::npos);
 }
 
 TEST_CASE("dump ast-semantic rewrites vector-target helper-shadowed to_aos method forms to direct helper path") {
@@ -1916,7 +1910,8 @@ main() {
   [auto] itemA{to_aos(holder.cloneValues())}
   [auto] itemB{/to_aos(holder.cloneValues())}
   [auto] itemC{holder.cloneValues().to_aos()}
-  return(plus(plus(itemA, itemB), itemC))
+  [auto] itemD{holder.cloneValues()./to_aos()}
+  return(plus(plus(itemA, itemB), plus(itemC, itemD)))
 }
 )";
   const std::string srcPath =
@@ -1937,6 +1932,7 @@ main() {
   CHECK(ast.find("[auto] itemA{/to_aos(holder.cloneValues())}", mainPos) != std::string::npos);
   CHECK(ast.find("[auto] itemB{/to_aos(holder.cloneValues())}", mainPos) != std::string::npos);
   CHECK(ast.find("[auto] itemC{/to_aos(holder.cloneValues())}", mainPos) != std::string::npos);
+  CHECK(ast.find("[auto] itemD{/to_aos(holder.cloneValues())}", mainPos) != std::string::npos);
 }
 
 TEST_CASE("dump ast-semantic rewrites global helper-return builtin soa_vector reads to canonical helpers") {

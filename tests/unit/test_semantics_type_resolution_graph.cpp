@@ -1116,7 +1116,7 @@ main() {
   primec::semantics::TypeResolutionLocalBindingSnapshot snapshot;
   CHECK_FALSE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
       parseProgram(source), "/main", error, snapshot));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos") !=
+  CHECK(error.find("unknown method: /to_aos") !=
         std::string::npos);
 }
 

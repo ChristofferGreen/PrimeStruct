@@ -1761,29 +1761,6 @@ bool localImportPathCoversTarget(const std::string &importPath, const std::strin
   return false;
 }
 
-bool hasVisibleRootToAosHelper(const Program &program, std::string_view receiverTypeName) {
-  for (const Definition &def : program.definitions) {
-    if (def.fullPath != "/to_aos" || def.parameters.empty()) {
-      continue;
-    }
-    if (receiverTypeName == "soa_vector" &&
-        extractBuiltinSoaVectorBinding(def.parameters.front()).has_value()) {
-      return true;
-    }
-    if (receiverTypeName == "vector" &&
-        extractBuiltinVectorBinding(def.parameters.front()).has_value()) {
-      return true;
-    }
-  }
-  const auto &importPaths = program.sourceImports.empty() ? program.imports : program.sourceImports;
-  for (const auto &importPath : importPaths) {
-    if (localImportPathCoversTarget(importPath, "/to_aos")) {
-      return true;
-    }
-  }
-  return false;
-}
-
 bool hasVisibleRootSoaHelper(const Program &program, std::string_view helperName) {
   const std::string rootPath = "/" + std::string(helperName);
   const std::string samePath = "/soa_vector/" + std::string(helperName);
@@ -1842,6 +1819,20 @@ bool hasVisibleExperimentalSoaSamePathHelper(const Program &program,
   const auto &importPaths = program.sourceImports.empty() ? program.imports : program.sourceImports;
   for (const auto &importPath : importPaths) {
     if (localImportPathCoversTarget(importPath, samePath)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool hasVisibleRootExperimentalSoaHelper(const Program &program,
+                                         std::string_view helperName) {
+  const std::string rootPath = "/" + std::string(helperName);
+  for (const Definition &def : program.definitions) {
+    if (def.fullPath != rootPath || def.parameters.empty()) {
+      continue;
+    }
+    if (extractExperimentalSoaVectorBinding(def.parameters.front()).has_value()) {
       return true;
     }
   }
@@ -2385,6 +2376,20 @@ void rewriteBuiltinSoaToAosCallExpr(
   if (!hasBuiltinSoaReceiver && !hasBuiltinVectorReceiver) {
     return;
   }
+  const bool isExplicitRootToAosSurface =
+      !expr.name.empty() && expr.name.front() == '/';
+  if (isExplicitRootToAosSurface) {
+    if (expr.isMethodCall &&
+        ((hasBuiltinSoaReceiver && preserveVisibleRootSoaHelper) ||
+         (hasBuiltinVectorReceiver && preserveVisibleRootVectorHelper))) {
+      expr.isMethodCall = false;
+      expr.isFieldAccess = false;
+      expr.name = "/to_aos";
+      expr.namespacePrefix.clear();
+      expr.templateArgs.clear();
+    }
+    return;
+  }
   if (hasBuiltinVectorReceiver && preserveVisibleRootVectorHelper && expr.isMethodCall) {
     expr.isMethodCall = false;
     expr.isFieldAccess = false;
@@ -2426,9 +2431,9 @@ bool rewriteBuiltinSoaToAosCalls(Program &program, std::string &error) {
     }
   }
   const bool preserveVisibleRootSoaHelper =
-      hasVisibleRootToAosHelper(program, "soa_vector");
+      hasVisibleRootSoaHelperForReceiverType(program, "to_aos", "soa_vector");
   const bool preserveVisibleRootVectorHelper =
-      hasVisibleRootToAosHelper(program, "vector");
+      hasVisibleRootSoaHelperForReceiverType(program, "to_aos", "vector");
   for (Definition &def : program.definitions) {
     std::unordered_map<std::string, semantics::BindingInfo> bindings;
     for (const Expr &param : def.parameters) {
@@ -3605,6 +3610,21 @@ void rewriteExperimentalSoaToAosMethodExpr(
     return;
   }
 
+  const bool isExplicitRootToAosSurface =
+      !expr.name.empty() && expr.name.front() == '/';
+  if (isExplicitRootToAosSurface) {
+    if (!hasVisibleRootToAosHelper) {
+      return;
+    }
+    expr.isMethodCall = false;
+    expr.isFieldAccess = false;
+    expr.name = "/to_aos";
+    expr.namespacePrefix.clear();
+    if (canonicalReceiverExpr.has_value()) {
+      expr.args.front() = *canonicalReceiverExpr;
+    }
+    return;
+  }
   if (hasVisibleRootToAosHelper) {
     expr.isMethodCall = false;
     expr.isFieldAccess = false;
@@ -3639,7 +3659,8 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
   error.clear();
   std::unordered_map<std::string, semantics::BindingInfo> soaVectorReturnDefinitions;
   std::unordered_set<std::string> structPaths;
-  bool hasVisibleRootToAosHelper = false;
+  const bool hasVisibleRootToAosHelper =
+      hasVisibleRootExperimentalSoaHelper(program, "to_aos");
   bool hasVisibleCanonicalToAosHelper = false;
   auto canonicalizeSoaToAosDefinitionPath = [](std::string path) {
     const size_t specializationSuffix = path.find("__");
@@ -3666,10 +3687,6 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
     if (isStructLikeDefinition(def)) {
       structPaths.insert(def.fullPath);
     }
-    if (def.fullPath == "/to_aos" ||
-        def.fullPath.rfind("/to_aos__", 0) == 0) {
-      hasVisibleRootToAosHelper = true;
-    }
     if (isCanonicalSoaToAosDefinitionPath(def.fullPath)) {
       hasVisibleCanonicalToAosHelper = true;
     }
@@ -3677,17 +3694,13 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
   const auto &importPaths =
       program.sourceImports.empty() ? program.imports : program.sourceImports;
   for (const auto &importPath : importPaths) {
-    if (importPath == "to_aos" ||
-        localImportPathCoversTarget(importPath, "/to_aos")) {
-      hasVisibleRootToAosHelper = true;
-    }
     const std::string canonicalToAosImportTarget =
         "/std/collections/soa_vector/to_aos";
     if (isCanonicalSoaToAosDefinitionPath(canonicalToAosImportTarget) &&
         localImportPathCoversTarget(importPath, canonicalToAosImportTarget)) {
       hasVisibleCanonicalToAosHelper = true;
     }
-    if (hasVisibleRootToAosHelper && hasVisibleCanonicalToAosHelper) {
+    if (hasVisibleCanonicalToAosHelper) {
       break;
     }
   }

@@ -4411,7 +4411,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos") !=
+  CHECK(error.find("unknown method: /to_aos") !=
         std::string::npos);
 }
 
@@ -4470,7 +4470,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos") !=
+  CHECK(error.find("unknown method: /to_aos") !=
         std::string::npos);
 }
 
@@ -4613,7 +4613,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos_ref") !=
+  CHECK(error.find("unknown method: /to_aos_ref") !=
         std::string::npos);
 }
 
@@ -4632,7 +4632,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos_ref") !=
+  CHECK(error.find("unknown method: /to_aos_ref") !=
         std::string::npos);
 }
 

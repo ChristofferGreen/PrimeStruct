@@ -713,12 +713,6 @@ std::string canonicalSoaPendingHelperPath(std::string_view resolvedPath) {
   if (normalizedResolvedPath == "/soa_vector/count_ref") {
     return "/std/collections/soa_vector/count_ref";
   }
-  const std::string canonicalSoaToAosPath =
-      canonicalizeLegacySoaToAosHelperPath(normalizedResolvedPath);
-  if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, "to_aos") ||
-      isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, "to_aos_ref")) {
-    return canonicalSoaToAosPath;
-  }
   return std::string(resolvedPath);
 }
 
