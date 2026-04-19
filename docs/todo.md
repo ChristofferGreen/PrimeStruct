@@ -56,30 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- none
+- TODO-1145
 
 ### Immediate Next 10 (After Ready Now)
 
-- none
+- TODO-1145
 
 ### Priority Lanes (Current)
 
-- none
+- Native wrapper-returned canonical map reference method-sugar runtime skip debt: TODO-1145
 
 ### Execution Queue (Recommended)
 
-1. none
+1. TODO-1145
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| none | none |
+| Native wrapper-returned canonical map reference skipped-test debt | TODO-1145 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| none | none |
+| Native compile-run skipped-test debt | TODO-1145 |
 
 ### Task Blocks
+
+- [ ] TODO-1145: Audit native wrapper-returned canonical map reference method-sugar runtime skip debt
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Backend skip-debt cleanup
+  - scope: Re-enable or delete the skipped native compile-run coverage for wrapper-returned canonical map reference method sugar, and lock the current native contract for `borrowMap(location(values)).count()`, `.at(1i32)`, and `.at_unsafe(2i32)`.
+  - acceptance:
+    - `tests/unit/test_compile_run_native_backend_collections_canonical_count_shadows.cpp` no longer carries the skipped native wrapper-returned canonical map reference method-sugar runtime case in stale form.
+    - The native test locks the actual current compile-run contract for the wrapper-returned canonical map reference method-sugar surface, whether that remains a successful `11` exit path or another stable native-side outcome.
+  - stop_rule: Stop after the native wrapper-returned canonical map reference method-sugar runtime surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.

@@ -48,7 +48,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("native keeps non-imported wrapper-returned canonical map reference access primitive receiver diagnostics" * doctest::skip(true)) {
+TEST_CASE("native keeps non-imported wrapper-returned canonical map reference access primitive receiver diagnostics") {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
