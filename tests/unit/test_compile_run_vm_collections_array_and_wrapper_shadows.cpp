@@ -157,7 +157,7 @@ main() {
   CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("runs vm canonical map sugar before compatibility aliases" * doctest::skip(true)) {
+TEST_CASE("runs vm canonical map sugar before compatibility aliases") {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {
