@@ -15,23 +15,16 @@
 #include "IrLowererInlineStructArgHelpers.h"
 #include "IrLowererCountAccessHelpers.h"
 #include "IrLowererLowerEffects.h"
-#include "IrLowererLowerEntrySetup.h"
-#include "IrLowererLowerInferenceSetup.h"
 #include "IrLowererLowerInlineCallActiveContextStep.h"
 #include "IrLowererLowerInlineCallCleanupStep.h"
 #include "IrLowererLowerInlineCallContextSetupStep.h"
 #include "IrLowererLowerInlineCallGpuLocalsStep.h"
 #include "IrLowererLowerInlineCallReturnValueStep.h"
-#include "IrLowererLowerImportsStructsSetup.h"
 #include "IrLowererLowerInlineCallStatementStep.h"
-#include "IrLowererLowerLocalsSetup.h"
 #include "IrLowererLowerExprEmitSetup.h"
 #include "IrLowererLowerReturnCallsSetup.h"
-#include "IrLowererLowerStatementsCallsStep.h"
-#include "IrLowererLowerStatementsEntryExecutionStep.h"
-#include "IrLowererLowerStatementsEntryStatementStep.h"
-#include "IrLowererLowerStatementsFunctionTableStep.h"
-#include "IrLowererLowerStatementsSourceMapStep.h"
+#include "IrLowererLowerSetupStage.h"
+#include "IrLowererLowerStatementsCallsStage.h"
 #include "IrLowererOnErrorHelpers.h"
 #include "IrLowererOperatorArithmeticHelpers.h"
 #include "IrLowererOperatorArcHyperbolicHelpers.h"
@@ -72,15 +65,301 @@
 namespace primec {
 using namespace ir_lowerer;
 
-#include "IrLowererLowerSetupEntryEffects.h"
-#include "IrLowererLowerSetupImportsStructs.h"
-#include "IrLowererLowerSetupLocals.h"
-#include "IrLowererLowerSetupInference.h"
+bool IrLowerer::lower(const Program &program,
+                      const SemanticProgram *semanticProgram,
+                      const std::string &entryPath,
+                      const std::vector<std::string> &defaultEffects,
+                      const std::vector<std::string> &entryDefaultEffects,
+                      IrModule &out,
+                      std::string &error,
+                      DiagnosticSinkReport *diagnosticInfo) const {
+  out = IrModule{};
+  error.clear();
+  DiagnosticSink diagnosticSink(diagnosticInfo);
+  diagnosticSink.reset();
+  bool loweringSucceeded = false;
+  struct LoweringDiagnosticScope {
+    DiagnosticSink &diagnosticSink;
+    std::string &error;
+    bool &loweringSucceeded;
+
+    ~LoweringDiagnosticScope() {
+      if (!loweringSucceeded && !error.empty()) {
+        diagnosticSink.setSummary(error);
+      }
+    }
+  } loweringDiagnosticScope{diagnosticSink, error, loweringSucceeded};
+
+  if (semanticProgram == nullptr) {
+    error = "semantic product is required for IR lowering";
+    return false;
+  }
+
+  ir_lowerer::LowerSetupStageState setupStage;
+  if (!ir_lowerer::runLowerSetupStage(
+          {
+              .program = &program,
+              .semanticProgram = semanticProgram,
+              .entryPath = &entryPath,
+              .defaultEffects = &defaultEffects,
+              .entryDefaultEffects = &entryDefaultEffects,
+              .outModule = &out,
+          },
+          setupStage,
+          error)) {
+    return false;
+  }
+
+  const Definition *entryDef = setupStage.entryDef;
+  auto &defMap = setupStage.defMap;
+  auto &structNames = setupStage.structNames;
+  IrFunction &function = setupStage.function;
+  bool &sawReturn = setupStage.sawReturn;
+  LocalMap &locals = setupStage.locals;
+  int32_t &nextLocal = setupStage.nextLocal;
+  int32_t &onErrorTempCounter = setupStage.onErrorTempCounter;
+  auto &stringTable = setupStage.stringTable;
+  auto &loweredCallTargets = setupStage.loweredCallTargets;
+  auto &instructionSourceRangesByFunction = setupStage.instructionSourceRangesByFunction;
+  auto appendInstructionSourceRange = [&](const std::string &functionName,
+                                          const Expr &expr,
+                                          size_t beginIndex,
+                                          size_t endIndex) {
+    if (functionName.empty() || endIndex <= beginIndex) {
+      return;
+    }
+    InstructionSourceRange range;
+    range.beginIndex = beginIndex;
+    range.endIndex = endIndex;
+    if (expr.sourceLine > 0) {
+      range.line = static_cast<uint32_t>(expr.sourceLine);
+    }
+    if (expr.sourceColumn > 0) {
+      range.column = static_cast<uint32_t>(expr.sourceColumn);
+    }
+    instructionSourceRangesByFunction[functionName].push_back(range);
+  };
+  auto &fileScopeStack = setupStage.fileScopeStack;
+  auto &currentOnError = setupStage.currentOnError;
+  auto &currentReturnResult = setupStage.currentReturnResult;
+  auto &setupLocalsOrchestration = setupStage.setupLocalsOrchestration;
+
+  const auto &entryReturnConfig = setupLocalsOrchestration.entryReturnConfig;
+  bool returnsVoid = entryReturnConfig.returnsVoid;
+  ResultReturnInfo entryResultInfo = entryReturnConfig.resultInfo;
+  bool entryHasResultInfo = entryReturnConfig.hasResultInfo;
+
+  const auto &runtimeErrorAndStringLiteralSetup = setupLocalsOrchestration.runtimeErrorAndStringLiteralSetup;
+  const auto &stringLiteralHelpers = runtimeErrorAndStringLiteralSetup.stringLiteralHelpers;
+  auto internString = stringLiteralHelpers.internString;
+
+  const auto &runtimeErrorEmitters = runtimeErrorAndStringLiteralSetup.runtimeErrorEmitters;
+  auto emitArrayIndexOutOfBounds = runtimeErrorEmitters.emitArrayIndexOutOfBounds;
+  auto emitPointerIndexOutOfBounds = runtimeErrorEmitters.emitPointerIndexOutOfBounds;
+  auto emitStringIndexOutOfBounds = runtimeErrorEmitters.emitStringIndexOutOfBounds;
+  auto emitVectorIndexOutOfBounds = runtimeErrorEmitters.emitVectorIndexOutOfBounds;
+  auto emitVectorPopOnEmpty = runtimeErrorEmitters.emitVectorPopOnEmpty;
+  auto emitVectorCapacityExceeded = runtimeErrorEmitters.emitVectorCapacityExceeded;
+  auto emitVectorReserveNegative = runtimeErrorEmitters.emitVectorReserveNegative;
+  auto emitVectorReserveExceeded = runtimeErrorEmitters.emitVectorReserveExceeded;
+  auto emitLoopCountNegative = runtimeErrorEmitters.emitLoopCountNegative;
+  auto emitPowNegativeExponent = runtimeErrorEmitters.emitPowNegativeExponent;
+  auto emitFloatToIntNonFinite = runtimeErrorEmitters.emitFloatToIntNonFinite;
+
+  const auto &entryCountAccessSetup = setupLocalsOrchestration.entryCountAccessSetup;
+  const bool hasEntryArgs = entryCountAccessSetup.hasEntryArgs;
+  const std::string &entryArgsName = entryCountAccessSetup.entryArgsName;
+  const auto &countAccessClassifiers = entryCountAccessSetup.classifiers;
+  auto isEntryArgsName = countAccessClassifiers.isEntryArgsName;
+  auto isArrayCountCall = countAccessClassifiers.isArrayCountCall;
+  auto isVectorCapacityCall = countAccessClassifiers.isVectorCapacityCall;
+  auto resolveStringTableTarget = stringLiteralHelpers.resolveStringTableTarget;
+  auto isStringCountCall = countAccessClassifiers.isStringCountCall;
+
+  const auto &entryCallOnErrorSetup = setupLocalsOrchestration.entryCallOnErrorSetup;
+  const auto &callResolutionAdapters = entryCallOnErrorSetup.callResolutionAdapters;
+  auto resolveExprPath = callResolutionAdapters.resolveExprPath;
+  auto isTailCallCandidate = callResolutionAdapters.isTailCallCandidate;
+  if (entryCallOnErrorSetup.hasTailExecution) {
+    function.metadata.instrumentationFlags |= InstrumentationTailExecution;
+  }
+  OnErrorByDefinition onErrorByDef = entryCallOnErrorSetup.onErrorByDefinition;
+
+  const auto &setupMathResolvers = setupLocalsOrchestration.setupMathResolvers;
+  auto getMathConstantName = setupMathResolvers.getMathConstantName;
+
+  const auto &bindingTypeAdapters = setupLocalsOrchestration.bindingTypeAdapters;
+  auto isBindingMutable = bindingTypeAdapters.isBindingMutable;
+  auto setReferenceArrayInfo = bindingTypeAdapters.setReferenceArrayInfo;
+  auto bindingKind = bindingTypeAdapters.bindingKind;
+  auto hasExplicitBindingTypeTransform = bindingTypeAdapters.hasExplicitBindingTypeTransform;
+  if (!hasExplicitBindingTypeTransform) {
+    hasExplicitBindingTypeTransform = [](const Expr &expr) {
+      return ir_lowerer::hasExplicitBindingTypeTransform(expr);
+    };
+  }
+  auto isStringBinding = bindingTypeAdapters.isStringBinding;
+  auto isFileErrorBinding = bindingTypeAdapters.isFileErrorBinding;
+  auto bindingValueKind = bindingTypeAdapters.bindingValueKind;
+
+  const auto &setupTypeAndStructTypeAdapters = setupLocalsOrchestration.setupTypeAndStructTypeAdapters;
+  auto valueKindFromTypeName = setupTypeAndStructTypeAdapters.valueKindFromTypeName;
+  const auto &structTypeResolutionAdapters = setupTypeAndStructTypeAdapters.structTypeResolutionAdapters;
+  auto resolveStructTypeName = structTypeResolutionAdapters.resolveStructTypeName;
+
+  using StructSlotFieldInfo = ir_lowerer::StructSlotFieldInfo;
+  const auto &structArrayInfoAdapters = setupLocalsOrchestration.structArrayInfoAdapters;
+  auto applyStructArrayInfo = structArrayInfoAdapters.applyStructArrayInfo;
+
+  using StructSlotLayout = ir_lowerer::StructSlotLayoutInfo;
+  const auto &structSlotResolutionAdapters = setupLocalsOrchestration.structSlotResolutionAdapters;
+  auto resolveStructSlotLayout = structSlotResolutionAdapters.resolveStructSlotLayout;
+  auto resolveStructFieldSlot = structSlotResolutionAdapters.resolveStructFieldSlot;
+
+  const auto &uninitializedResolutionAdapters = setupLocalsOrchestration.uninitializedResolutionAdapters;
+  auto resolveUninitializedTypeInfo = uninitializedResolutionAdapters.resolveUninitializedTypeInfo;
+  auto resolveUninitializedStorage = uninitializedResolutionAdapters.resolveUninitializedStorage;
+  auto inferStructExprPath = uninitializedResolutionAdapters.inferStructExprPath;
+
+  auto applyStructValueInfo = setupLocalsOrchestration.applyStructValueInfo;
+
+  auto &getReturnInfo = setupStage.inferenceSetupBootstrap.getReturnInfo;
+  auto &inferExprKind = setupStage.inferenceSetupBootstrap.inferExprKind;
+  auto &inferArrayElementKind = setupStage.inferenceSetupBootstrap.inferArrayElementKind;
+  auto &resolveMethodCallDefinition = setupStage.inferenceSetupBootstrap.resolveMethodCallDefinition;
+
 #include "IrLowererLowerReturnAndCalls.h"
 #include "IrLowererLowerOperators.h"
 #include "IrLowererLowerStatementsExpr.h"
 #include "IrLowererLowerStatementsBindings.h"
 #include "IrLowererLowerStatementsLoops.h"
-#include "IrLowererLowerStatementsCalls.h"
+
+  if (!ir_lowerer::runLowerStatementsCallsStage(
+          {
+              .program = &program,
+              .entryDef = entryDef,
+              .semanticProgram = semanticProgram,
+              .defaultEffects = &defaultEffects,
+              .entryDefaultEffects = &entryDefaultEffects,
+              .defMap = &defMap,
+              .structNames = &structNames,
+              .onErrorByDef = &onErrorByDef,
+              .stringTable = &stringTable,
+              .loweredCallTargets = &loweredCallTargets,
+              .instructionSourceRangesByFunction = &instructionSourceRangesByFunction,
+              .currentOnError = &currentOnError,
+              .currentReturnResult = &currentReturnResult,
+              .sawReturn = &sawReturn,
+              .nextLocal = &nextLocal,
+              .onErrorTempCounter = &onErrorTempCounter,
+              .returnsVoid = returnsVoid,
+              .entryHasResultInfo = entryHasResultInfo,
+              .entryResultInfo = &entryResultInfo,
+              .function = &function,
+              .locals = &locals,
+              .outModule = &out,
+              .inferExprKind =
+                  [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
+              .emitExpr = [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+                return emitExpr(valueExpr, valueLocals);
+              },
+              .emitStatement = [&](const Expr &stmt, LocalMap &localsIn) { return emitStatement(stmt, localsIn); },
+              .allocTempLocal = [&]() { return allocTempLocal(); },
+              .appendInstructionSourceRange = appendInstructionSourceRange,
+              .pushFileScope = [&]() { pushFileScope(); },
+              .emitCurrentFileScopeCleanup = [&]() { emitFileScopeCleanup(fileScopeStack.back()); },
+              .popFileScope = [&]() { popFileScope(); },
+              .resolveExprPath = [&](const Expr &valueExpr) { return resolveExprPath(valueExpr); },
+              .resolveMethodCallDefinition =
+                  [&](const Expr &callExpr, const LocalMap &callLocals) {
+                    return resolveMethodCallDefinition(callExpr, callLocals);
+                  },
+              .resolveDefinitionCall = [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+              .getReturnInfo =
+                  [&](const std::string &definitionPath, ReturnInfo &returnInfo) {
+                    return getReturnInfo(definitionPath, returnInfo);
+                  },
+              .emitInlineDefinitionCall =
+                  [&](const Expr &callExpr, const Definition &def, const LocalMap &definitionLocals, bool expectValue) {
+                    return emitInlineDefinitionCall(callExpr, def, definitionLocals, expectValue);
+                  },
+              .isTailCallCandidate = [&](const Expr &expr) { return isTailCallCandidate(expr); },
+              .isStructDefinition = [&](const Definition &def) { return isStructDefinition(def); },
+              .isArrayCountCall = [&](const Expr &callExpr, const LocalMap &callLocals) {
+                return isArrayCountCall(callExpr, callLocals);
+              },
+              .isStringCountCall = [&](const Expr &callExpr, const LocalMap &callLocals) {
+                return isStringCountCall(callExpr, callLocals);
+              },
+              .isVectorCapacityCall = [&](const Expr &callExpr, const LocalMap &callLocals) {
+                return isVectorCapacityCall(callExpr, callLocals);
+              },
+              .buildDefinitionCallContext =
+                  [&](const Definition &def,
+                      int32_t &definitionNextLocal,
+                      LocalMap &definitionLocals,
+                      Expr &callExpr,
+                      std::string &callError) {
+                    return ir_lowerer::buildCallableDefinitionCallContext(
+                        def,
+                        structNames,
+                        definitionNextLocal,
+                        definitionLocals,
+                        callExpr,
+                        [&](const std::string &structPath, ir_lowerer::StructSlotLayoutInfo &layoutOut) {
+                          return resolveStructSlotLayout(structPath, layoutOut);
+                        },
+                        [&](const Expr &param,
+                            const LocalMap &localsForKindInference,
+                            LocalInfo &info,
+                            std::string &inferError) {
+                          return ir_lowerer::inferCallParameterLocalInfo(param,
+                                                                         localsForKindInference,
+                                                                         isBindingMutable,
+                                                                         hasExplicitBindingTypeTransform,
+                                                                         bindingKind,
+                                                                         bindingValueKind,
+                                                                         inferExprKind,
+                                                                         isFileErrorBinding,
+                                                                         setReferenceArrayInfo,
+                                                                         applyStructArrayInfo,
+                                                                         applyStructValueInfo,
+                                                                         isStringBinding,
+                                                                         info,
+                                                                         inferError,
+                                                                         [&](const Expr &nestedCallExpr,
+                                                                             const LocalMap &nestedCallLocals) {
+                                                                           return resolveMethodCallDefinition(
+                                                                               nestedCallExpr, nestedCallLocals);
+                                                                         },
+                                                                         [&](const Expr &nestedCallExpr) {
+                                                                           return resolveDefinitionCall(nestedCallExpr);
+                                                                         },
+                                                                         [&](const std::string &definitionPath,
+                                                                             ReturnInfo &returnInfo) {
+                                                                           return getReturnInfo(definitionPath, returnInfo);
+                                                                         },
+                                                                         &callResolutionAdapters.semanticProductTargets);
+                        },
+                        callError);
+                  },
+              .resetDefinitionLoweringState = [&]() {
+                onErrorTempCounter = 0;
+                sawReturn = false;
+                activeInlineContext = nullptr;
+                inlineStack.clear();
+                fileScopeStack.clear();
+                currentOnError.reset();
+                currentReturnResult.reset();
+              },
+          },
+          error)) {
+    return false;
+  }
+
+  error.clear();
+  loweringSucceeded = true;
+  return true;
+}
 
 } // namespace primec

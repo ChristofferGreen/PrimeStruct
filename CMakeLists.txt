@@ -298,6 +298,8 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererLowerInlineCallStatementStep.cpp
   src/ir_lowerer/IrLowererLowerLocalsSetup.cpp
   src/ir_lowerer/IrLowererLowerReturnCallsSetup.cpp
+  src/ir_lowerer/IrLowererLowerSetupStage.cpp
+  src/ir_lowerer/IrLowererLowerStatementsCallsStage.cpp
   src/ir_lowerer/IrLowererLowerStatementsCallsStep.cpp
   src/ir_lowerer/IrLowererLowerStatementsEntryExecutionStep.cpp
   src/ir_lowerer/IrLowererLowerStatementsEntryStatementStep.cpp

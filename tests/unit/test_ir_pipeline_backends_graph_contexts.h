@@ -505,6 +505,11 @@ TEST_CASE("public lowerer testing umbrella keeps alias owners ahead of users") {
   const auto operatorArithmeticPos = irLowererHelpersHeader.find("IrLowererOperatorArithmeticHelpers.h");
   const auto lowerExprEmitSetupPos = irLowererHelpersHeader.find("IrLowererLowerExprEmitSetup.h");
   const auto lowerInferencePos = irLowererHelpersHeader.find("IrLowererLowerInferenceSetup.h");
+  const auto lowerSetupStagePos = irLowererHelpersHeader.find("IrLowererLowerSetupStage.h");
+  const auto lowerStatementsSourceMapPos =
+      irLowererHelpersHeader.find("IrLowererLowerStatementsSourceMapStep.h");
+  const auto lowerStatementsCallsStagePos =
+      irLowererHelpersHeader.find("IrLowererLowerStatementsCallsStage.h");
 
   REQUIRE(setupTypePos != std::string::npos);
   REQUIRE(callDispatchPos != std::string::npos);
@@ -515,6 +520,9 @@ TEST_CASE("public lowerer testing umbrella keeps alias owners ahead of users") {
   REQUIRE(operatorArithmeticPos != std::string::npos);
   REQUIRE(lowerExprEmitSetupPos != std::string::npos);
   REQUIRE(lowerInferencePos != std::string::npos);
+  REQUIRE(lowerSetupStagePos != std::string::npos);
+  REQUIRE(lowerStatementsSourceMapPos != std::string::npos);
+  REQUIRE(lowerStatementsCallsStagePos != std::string::npos);
 
   CHECK(setupTypePos < callDispatchPos);
   CHECK(statementBindingPos < countAccessPos);
@@ -522,6 +530,8 @@ TEST_CASE("public lowerer testing umbrella keeps alias owners ahead of users") {
   CHECK(resultHelpersPos < operatorArithmeticPos);
   CHECK(stringCallPos < operatorArithmeticPos);
   CHECK(operatorArithmeticPos < lowerExprEmitSetupPos);
+  CHECK(lowerInferencePos < lowerSetupStagePos);
+  CHECK(lowerStatementsSourceMapPos < lowerStatementsCallsStagePos);
 }
 
 TEST_CASE("public call dispatch testing header stays in sync with alias-policy helpers") {
@@ -1365,6 +1375,16 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(lowerLocalsSetupHeader.find("struct Program;") != std::string::npos);
   CHECK(lowerLocalsSetupHeader.find("struct SemanticProgram;") != std::string::npos);
 
+  const auto lowerSetupStageHeader =
+      readFile("include/primec/testing/ir_lowerer_helpers/IrLowererLowerSetupStage.h");
+  CHECK(lowerSetupStageHeader.find("struct Definition;") != std::string::npos);
+  CHECK(lowerSetupStageHeader.find("struct IrFunction;") != std::string::npos);
+  CHECK(lowerSetupStageHeader.find("struct Program;") != std::string::npos);
+  CHECK(lowerSetupStageHeader.find("struct SemanticProgram;") != std::string::npos);
+  CHECK(lowerSetupStageHeader.find("struct LowerSetupStageInput;") != std::string::npos);
+  CHECK(lowerSetupStageHeader.find("struct LowerSetupStageState;") != std::string::npos);
+  CHECK(lowerSetupStageHeader.find("bool runLowerSetupStage(") != std::string::npos);
+
   const auto lowerStatementsCallsStepHeader =
       readFile("include/primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsCallsStep.h");
   CHECK(lowerStatementsCallsStepHeader.find("struct Definition;") != std::string::npos);
@@ -1381,6 +1401,17 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const auto lowerStatementsSourceMapStepHeader =
       readFile("include/primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsSourceMapStep.h");
   CHECK(lowerStatementsSourceMapStepHeader.find("struct Definition;") != std::string::npos);
+
+  const auto lowerStatementsCallsStageHeader =
+      readFile("include/primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsCallsStage.h");
+  CHECK(lowerStatementsCallsStageHeader.find("struct Definition;") != std::string::npos);
+  CHECK(lowerStatementsCallsStageHeader.find("struct IrFunction;") != std::string::npos);
+  CHECK(lowerStatementsCallsStageHeader.find("struct Program;") != std::string::npos);
+  CHECK(lowerStatementsCallsStageHeader.find("struct SemanticProgram;") != std::string::npos);
+  CHECK(lowerStatementsCallsStageHeader.find("struct LowerStatementsCallsStageInput;") !=
+        std::string::npos);
+  CHECK(lowerStatementsCallsStageHeader.find("bool runLowerStatementsCallsStage(") !=
+        std::string::npos);
 
   const auto resultHelpersHeader =
       readFile("include/primec/testing/ir_lowerer_helpers/IrLowererResultHelpers.h");

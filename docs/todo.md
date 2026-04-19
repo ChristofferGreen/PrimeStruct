@@ -56,7 +56,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4006
+- TODO-4016
 - TODO-4007
 - TODO-4003
 - TODO-4004
@@ -68,13 +68,14 @@ Task template:
 
 ### Priority Lanes (Current)
 
+- Lowerer architecture: TODO-4016
 - Semantic ownership cutover: TODO-4004, TODO-4008
 - Validator/publication simplification: TODO-4003, TODO-4005
-- Build and validation ergonomics: TODO-4006, TODO-4007
+- Build and validation ergonomics: TODO-4007
 
 ### Execution Queue (Recommended)
 
-1. TODO-4006
+1. TODO-4016
 2. TODO-4007
 3. TODO-4003
 4. TODO-4004
@@ -88,7 +89,7 @@ Task template:
 | Semantic ownership boundary and graph/local-auto authority | TODO-4004, TODO-4008 |
 | Validator entrypoint and benchmark-plumbing split | TODO-4003 |
 | Semantic-product publication by module and fact family | TODO-4005 |
-| IR lowerer compile-unit breakup | TODO-4006 |
+| IR lowerer compile-unit breakup | TODO-4016 |
 | Backend validation/build ergonomics | TODO-4007 |
 | Emitter/semantics map-helper parity | none |
 | VM debug-session argv ownership | none |
@@ -102,7 +103,7 @@ Task template:
 | --- | --- |
 | Semantic-product-authority conformance | TODO-4004, TODO-4008 |
 | Semantic-product publication parity and deterministic ordering | TODO-4005 |
-| Lowerer/source-composition contract coverage | TODO-4006 |
+| Lowerer/source-composition contract coverage | TODO-4016 |
 | Focused backend rerun ergonomics and suite partitioning | TODO-4007 |
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
@@ -111,6 +112,19 @@ Task template:
 | Release benchmark/example suite stability and doctest governance | none |
 
 ### Task Blocks
+
+- [ ] TODO-4016: Extract lowerer return/emit lane from mega translation unit
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Lowerer Architecture
+  - depends_on: none
+  - scope: Replace the remaining `IrLowererLowerReturnAndCalls.h` include ownership in `IrLowererLower.cpp` with an ordinary compiled orchestration unit for return-info, inline-call, and expression-emission setup while preserving the current step-helper split and inline-call bookkeeping behavior.
+  - acceptance:
+    - `IrLowererLower.cpp` no longer includes `IrLowererLowerReturnAndCalls.h` directly; the return/emit lane builds through a named `.cpp` orchestration unit.
+    - Existing return-info, inline-call, and expression-emission step helpers remain the detailed behavior owners, with source-lock coverage pinning the new orchestration seam instead of the old include body.
+    - Release validation and focused lowerer architecture coverage pass after the lane extraction.
+  - stop_rule: Stop once the return/emit lane is compiled as a normal `.cpp` orchestration unit and the old include-owner seam is gone; leave operator or binding/loop lane breakup as separate follow-up work.
+  - notes: Start with `src/ir_lowerer/IrLowererLowerReturnAndCalls.h`, `src/ir_lowerer/IrLowererLowerReturnInfo.h`, `src/ir_lowerer/IrLowererLowerInlineCalls.h`, and `src/ir_lowerer/IrLowererLowerEmitExpr.h`; keep the existing step-unit boundaries intact and avoid widening into operator or statement-lane rewrites.
 
 - [ ] TODO-4008: Retire first covered production semantic adapter slice
   - owner: ai
@@ -137,19 +151,6 @@ Task template:
     - Release validation and direct test-binary reruns still resolve `primec` and related helpers correctly.
   - stop_rule: Stop once ordinary focused backend reruns no longer depend on the current monolithic backend test binary for IR-lowering, registry/runtime adapter, or compile-run coverage.
   - notes: Start in `CMakeLists.txt` around `PrimeStruct_backend_tests` plus the architecture assertions under `tests/unit/test_ir_pipeline_backends_architecture.h`; if one pass cannot land the three-way split cleanly, split this leaf by target family rather than by random file groups.
-
-- [ ] TODO-4006: Extract first lowerer lanes from mega translation unit
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Lowerer Architecture
-  - depends_on: none
-  - scope: Break `src/ir_lowerer/IrLowererLower.cpp` include aggregation into normal compiled units for entry/setup plus the first additional lowering lane that fits cleanly in one implementation slice, starting with call lowering and then statement lowering only if it still fits.
-  - acceptance:
-    - Entry/setup and at least one additional named lowering lane build as ordinary `.cpp` compilation units rather than being re-included through `IrLowererLower.cpp`.
-    - Lowerer interface coverage is updated to assert behavior/contracts instead of depending on the current source aggregation layout.
-    - The full release gate passes after the decomposition.
-  - stop_rule: Stop once entry/setup and one additional named lowering lane no longer depend on the current mega-aggregation; if another lane still remains, leave it as a follow-up instead of widening this leaf.
-  - notes: Start from `src/ir_lowerer/IrLowererLower.cpp` and the source-lock tests that still read that file directly; take call lowering before statement lowering, and if both do not fit after entry/setup, write the remaining lane down as explicit follow-up work.
 
 - [ ] TODO-4005: Split semantic publication into scoped builders
   - owner: ai

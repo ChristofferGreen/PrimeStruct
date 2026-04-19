@@ -380,16 +380,11 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   const std::string lowererSource = readText(lowererPath);
 
   const std::vector<std::string> stageIncludes = {
-      "#include \"IrLowererLowerSetupEntryEffects.h\"",
-      "#include \"IrLowererLowerSetupImportsStructs.h\"",
-      "#include \"IrLowererLowerSetupLocals.h\"",
-      "#include \"IrLowererLowerSetupInference.h\"",
       "#include \"IrLowererLowerReturnAndCalls.h\"",
       "#include \"IrLowererLowerOperators.h\"",
       "#include \"IrLowererLowerStatementsExpr.h\"",
       "#include \"IrLowererLowerStatementsBindings.h\"",
       "#include \"IrLowererLowerStatementsLoops.h\"",
-      "#include \"IrLowererLowerStatementsCalls.h\"",
   };
 
   size_t cursor = 0;
@@ -402,56 +397,37 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
       cursor = pos;
     }
   }
-  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsCallsStep.h\"") != std::string::npos);
-  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsEntryExecutionStep.h\"") != std::string::npos);
-  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsEntryStatementStep.h\"") != std::string::npos);
-  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsFunctionTableStep.h\"") != std::string::npos);
-  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsSourceMapStep.h\"") != std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerSetupStage.h\"") != std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsCallsStage.h\"") != std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerSetupEntryEffects.h\"") == std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerSetupImportsStructs.h\"") == std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerSetupLocals.h\"") == std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerSetupInference.h\"") == std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsCalls.h\"") == std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsCallsStep.h\"") == std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsEntryExecutionStep.h\"") == std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsEntryStatementStep.h\"") == std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsFunctionTableStep.h\"") == std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsSourceMapStep.h\"") == std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallActiveContextStep.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallCleanupStep.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallContextSetupStep.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallGpuLocalsStep.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallReturnValueStep.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerInlineCallStatementStep.h\"") != std::string::npos);
+  CHECK(lowererSource.find("runLowerSetupStage(") != std::string::npos);
+  CHECK(lowererSource.find("runLowerStatementsCallsStage(") != std::string::npos);
 
-  const std::filesystem::path setupHeaderPath = repoRoot / "src" / "ir_lowerer" / "IrLowererLowerSetupEntryEffects.h";
+  const std::filesystem::path setupHeaderPath = repoRoot / "src" / "ir_lowerer" / "IrLowererLowerSetupStage.h";
   REQUIRE(std::filesystem::exists(setupHeaderPath));
   const std::string setupHeaderSource = readText(setupHeaderPath);
-  CHECK(setupHeaderSource.find("runLowerEntrySetup(") != std::string::npos);
-
-  const std::filesystem::path importsHeaderPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerSetupImportsStructs.h";
-  REQUIRE(std::filesystem::exists(importsHeaderPath));
-  const std::string importsHeaderSource = readText(importsHeaderPath);
-  CHECK(importsHeaderSource.find("runLowerImportsStructsSetup(") != std::string::npos);
-
-  const std::filesystem::path localsHeaderPath = repoRoot / "src" / "ir_lowerer" / "IrLowererLowerSetupLocals.h";
-  REQUIRE(std::filesystem::exists(localsHeaderPath));
-  const std::string localsHeaderSource = readText(localsHeaderPath);
-  CHECK(localsHeaderSource.find("runLowerLocalsSetup(") != std::string::npos);
-
-  const std::filesystem::path inferenceHeaderPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerSetupInference.h";
-  REQUIRE(std::filesystem::exists(inferenceHeaderPath));
-  const std::string inferenceHeaderSource = readText(inferenceHeaderPath);
-  CHECK(inferenceHeaderSource.find("runLowerInferenceSetup(") != std::string::npos);
-  CHECK(inferenceHeaderSource.find("runLowerInferenceSetupBootstrap(") == std::string::npos);
-  CHECK(inferenceHeaderSource.find("runLowerInferenceArrayKindSetup(") == std::string::npos);
-  CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindBaseSetup(") == std::string::npos);
-  CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallBaseSetup(") == std::string::npos);
-  CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallReturnSetup(") == std::string::npos);
-  CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallFallbackSetup(") == std::string::npos);
-  CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallOperatorFallbackSetup(") == std::string::npos);
-  CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallControlFlowFallbackSetup(") == std::string::npos);
-  CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindCallPointerFallbackSetup(") == std::string::npos);
-  CHECK(inferenceHeaderSource.find("runLowerInferenceExprKindDispatchSetup(") == std::string::npos);
-  CHECK(inferenceHeaderSource.find("runLowerInferenceReturnInfoSetup(") == std::string::npos);
-  CHECK(inferenceHeaderSource.find("runLowerInferenceGetReturnInfoSetup(") == std::string::npos);
-  CHECK(inferenceHeaderSource.find("runLowerInferenceGetReturnInfoCallbackSetup(") == std::string::npos);
-  CHECK(inferenceHeaderSource.find("runLowerInferenceGetReturnInfoStep(") == std::string::npos);
-  CHECK(inferenceHeaderSource.find("inferCallExprControlFlowFallbackKind(expr, localsIn, error, controlFlowKind)") ==
+  CHECK(setupHeaderSource.find("struct LowerSetupStageInput {") != std::string::npos);
+  CHECK(setupHeaderSource.find("struct LowerSetupStageState {") != std::string::npos);
+  CHECK(setupHeaderSource.find("SetupLocalsOrchestration setupLocalsOrchestration{};") !=
         std::string::npos);
-  CHECK(inferenceHeaderSource.find("returnInfoCache.find(path)") == std::string::npos);
+  CHECK(setupHeaderSource.find("LowerInferenceSetupBootstrapState inferenceSetupBootstrap{};") !=
+        std::string::npos);
+  CHECK(setupHeaderSource.find("bool runLowerSetupStage(") != std::string::npos);
 
   const std::filesystem::path returnInfoHeaderPath = repoRoot / "src" / "ir_lowerer" / "IrLowererLowerReturnInfo.h";
   REQUIRE(std::filesystem::exists(returnInfoHeaderPath));
@@ -468,29 +444,16 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(emitExprHeaderSource.find("runLowerExprEmitUploadReadbackPassthroughStep(") != std::string::npos);
 
   const std::filesystem::path statementsCallsHeaderPath =
-      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsCalls.h";
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsCallsStage.h";
   REQUIRE(std::filesystem::exists(statementsCallsHeaderPath));
   const std::string statementsCallsHeaderSource = readText(statementsCallsHeaderPath);
-  CHECK(statementsCallsHeaderSource.find("runLowerStatementsCallsStep(") != std::string::npos);
-  CHECK(statementsCallsHeaderSource.find("runLowerStatementsEntryStatementStep(") != std::string::npos);
-  CHECK(statementsCallsHeaderSource.find("runLowerStatementsEntryExecutionStep(") != std::string::npos);
-  CHECK(statementsCallsHeaderSource.find("runLowerStatementsFunctionTableStep(") != std::string::npos);
-  CHECK(statementsCallsHeaderSource.find("runLowerStatementsSourceMapStep(") != std::string::npos);
-  CHECK(statementsCallsHeaderSource.find("const size_t startInstructionIndex = function.instructions.size();") ==
+  CHECK(statementsCallsHeaderSource.find("struct LowerStatementsCallsStageInput {") !=
         std::string::npos);
-  CHECK(statementsCallsHeaderSource.find(
-            "appendInstructionSourceRange(function.name, stmt, startInstructionIndex, function.instructions.size());") ==
+  CHECK(statementsCallsHeaderSource.find("InstructionSourceRange") != std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("std::function<void()> resetDefinitionLoweringState;") !=
         std::string::npos);
-  CHECK(statementsCallsHeaderSource.find("tryEmitBufferStoreStatement(") == std::string::npos);
-  CHECK(statementsCallsHeaderSource.find("tryEmitDispatchStatement(") == std::string::npos);
-  CHECK(statementsCallsHeaderSource.find("tryEmitDirectCallStatement(") == std::string::npos);
-  CHECK(statementsCallsHeaderSource.find("emitAssignOrExprStatementWithPop(") == std::string::npos);
-  CHECK(statementsCallsHeaderSource.find("emitEntryCallableExecutionWithCleanup(") == std::string::npos);
-  CHECK(statementsCallsHeaderSource.find("finalizeEntryFunctionTableAndLowerCallables(") == std::string::npos);
-  CHECK(statementsCallsHeaderSource.find("instruction.debugId = static_cast<uint32_t>(nextInstructionDebugId)") ==
+  CHECK(statementsCallsHeaderSource.find("bool runLowerStatementsCallsStage(") !=
         std::string::npos);
-  CHECK(statementsCallsHeaderSource.find("out.instructionSourceMap.push_back(") == std::string::npos);
-  CHECK(statementsCallsHeaderSource.find("out.stringTable = std::move(stringTable);") == std::string::npos);
 
   const std::filesystem::path inlineCallsHeaderPath = repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInlineCalls.h";
   REQUIRE(std::filesystem::exists(inlineCallsHeaderPath));

@@ -3957,3 +3957,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Primary implementation seams are `src/semantics/SemanticsValidate.cpp`, `src/semantics/SemanticsValidator.h`, and `src/semantics/SemanticsValidatorSnapshots.cpp`; retire the `takeCollected*ForSemanticProduct()` sweep pattern for the covered families rather than widening into later builder-layout cleanup.
   - finished_at: 2026-04-19
   - evidence: Added `SemanticsValidator::SemanticPublicationSurface` plus `takeSemanticPublicationSurfaceForSemanticProduct(...)`, rewired `buildSemanticProgram(...)` to consume that one production handoff for routing, callable-summary, metadata, binding/return, local-auto, query, `try(...)`, and `on_error` publication, and updated the graph-context source-lock coverage to pin the unified publication seam without regressing the remaining test-only snapshot helpers.
+
+- [x] TODO-4006: Extract first lowerer lanes from mega translation unit
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Lowerer Architecture
+  - depends_on: none
+  - scope: Break `src/ir_lowerer/IrLowererLower.cpp` include aggregation into normal compiled units for entry/setup plus the first additional lowering lane that fits cleanly in one implementation slice, starting with call lowering and then statement lowering only if it still fits.
+  - acceptance:
+    - Entry/setup and at least one additional named lowering lane build as ordinary `.cpp` compilation units rather than being re-included through `IrLowererLower.cpp`.
+    - Lowerer interface coverage is updated to assert behavior/contracts instead of depending on the current source aggregation layout.
+    - The full release gate passes after the decomposition.
+  - stop_rule: Stop once entry/setup and one additional named lowering lane no longer depend on the current mega-aggregation; if another lane still remains, leave it as a follow-up instead of widening this leaf.
+  - notes: Start from `src/ir_lowerer/IrLowererLower.cpp` and the source-lock tests that still read that file directly; take call lowering before statement lowering, and if both do not fit after entry/setup, write the remaining lane down as explicit follow-up work.
+  - finished_at: 2026-04-19
+  - evidence: Added `IrLowererLowerSetupStage.{h,cpp}` so entry/setup now builds through one ordinary compiled orchestration unit, added `IrLowererLowerStatementsCallsStage.{h,cpp}` so the statements/calls lane no longer lives in an include-composed owner, rewired `IrLowererLower.cpp` to call those stage units instead of including the old setup and `StatementsCalls` bodies directly, updated the lowerer testing umbrella and source-lock coverage to pin the new stage seams, and wrote down `TODO-4016` for the remaining return/emit include lane.
