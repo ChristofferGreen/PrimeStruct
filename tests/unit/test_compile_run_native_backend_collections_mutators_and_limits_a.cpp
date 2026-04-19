@@ -320,7 +320,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native indexed vector assign" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native indexed vector assign") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
