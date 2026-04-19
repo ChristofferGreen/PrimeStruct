@@ -228,13 +228,28 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
   CHECK(cmake.find("set(PrimeStructMiscTestSuites") != std::string::npos);
   CHECK(cmake.find("COMMAND $<TARGET_FILE:PrimeStruct_misc_tests> \"--test-suite=${suite}\"") !=
         std::string::npos);
-  CHECK(cmake.find("add_executable(PrimeStruct_backend_tests") != std::string::npos);
-  CHECK(cmake.find("target_link_libraries(PrimeStruct_backend_tests PRIVATE primec_ir_lib primec_backend_registry_lib)") !=
+  CHECK(cmake.find("add_executable(PrimeStruct_backend_ir_tests") != std::string::npos);
+  CHECK(cmake.find("add_executable(PrimeStruct_backend_runtime_tests") != std::string::npos);
+  CHECK(cmake.find("add_executable(PrimeStruct_compile_run_tests") != std::string::npos);
+  CHECK(cmake.find("target_link_libraries(PrimeStruct_backend_ir_tests PRIVATE primec_ir_lib primec_backend_registry_lib)") !=
         std::string::npos);
-  CHECK(cmake.find("target_link_libraries(PrimeStruct_backend_tests PRIVATE primec_backend_lib)") ==
+  CHECK(cmake.find("target_link_libraries(PrimeStruct_backend_runtime_tests PRIVATE primec_ir_lib primec_backend_registry_lib)") !=
         std::string::npos);
+  CHECK(cmake.find("target_link_libraries(PrimeStruct_compile_run_tests PRIVATE primec_ir_lib primec_backend_registry_lib)") !=
+        std::string::npos);
+  CHECK(cmake.find("target_link_libraries(PrimeStruct_backend_ir_tests PRIVATE primec_backend_lib)") ==
+        std::string::npos);
+  CHECK(cmake.find("target_link_libraries(PrimeStruct_backend_runtime_tests PRIVATE primec_backend_lib)") ==
+        std::string::npos);
+  CHECK(cmake.find("target_link_libraries(PrimeStruct_compile_run_tests PRIVATE primec_backend_lib)") ==
+        std::string::npos);
+  CHECK(cmake.find("add_executable(PrimeStruct_backend_tests") == std::string::npos);
+  CHECK(cmake.find("set(PrimeStructBackendIrTestSuites") != std::string::npos);
+  CHECK(cmake.find("set(PrimeStructBackendRuntimeTestSuites") != std::string::npos);
   CHECK(cmake.find("set(PrimeStructBackendTestSuites") != std::string::npos);
-  CHECK(cmake.find("COMMAND $<TARGET_FILE:PrimeStruct_backend_tests> \"--test-suite=${suite}\"") !=
+  CHECK(cmake.find("primeStructSelectDoctestTarget(PrimeStructSuite_TARGET \"${suite}\")") !=
+        std::string::npos);
+  CHECK(cmake.find("primeStructSelectDoctestTarget(suiteTarget \"${suite}\")") !=
         std::string::npos);
   CHECK(cmake.find("add_executable(PrimeStruct_semantics_tests") != std::string::npos);
   CHECK(cmake.find("target_link_libraries(PrimeStruct_semantics_tests PRIVATE primec_ir_lib)") != std::string::npos);
@@ -258,10 +273,36 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
   CHECK(cmake.find("scripts/check_include_layers.py") != std::string::npos);
   CHECK(cmake.find("scripts/include_layer_allowlist.txt") != std::string::npos);
   CHECK(cmake.find("PrimeStruct_misc_suite_registration") != std::string::npos);
-  CHECK(cmake.find("PrimeStruct_backend_suite_registration") != std::string::npos);
+  CHECK(cmake.find("PrimeStruct_backend_ir_suite_registration") != std::string::npos);
+  CHECK(cmake.find("PrimeStruct_backend_runtime_suite_registration") != std::string::npos);
+  CHECK(cmake.find("PrimeStruct_compile_run_suite_registration") != std::string::npos);
+  CHECK(cmake.find("PrimeStruct_backend_suite_registration") == std::string::npos);
   CHECK(cmake.find("PrimeStruct_parser_suite_registration") != std::string::npos);
   CHECK(cmake.find("PrimeStruct_text_filter_suite_registration") != std::string::npos);
   CHECK(cmake.find("target_link_libraries(PrimeStruct_tests PRIVATE primec_lib)") == std::string::npos);
+}
+
+TEST_CASE("managed backend suite sharding keeps lowering and runtime suites on focused binaries") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path managedSuitesPath = cwd / "cmake" / "PrimeStructManagedUnitBackendSuites.cmake";
+  if (!std::filesystem::exists(managedSuitesPath)) {
+    managedSuitesPath = cwd.parent_path() / "cmake" / "PrimeStructManagedUnitBackendSuites.cmake";
+  }
+  REQUIRE(std::filesystem::exists(managedSuitesPath));
+
+  const std::string managedSuites = readTextFile(managedSuitesPath);
+  CHECK(managedSuites.find("TARGET PrimeStruct_backend_ir_tests") != std::string::npos);
+  CHECK(managedSuites.find("TARGET PrimeStruct_backend_runtime_tests") != std::string::npos);
+  CHECK(managedSuites.find("TARGET PrimeStruct_backend_tests") == std::string::npos);
+  CHECK(managedSuites.find(
+            "addPrimeStructManagedDoctestSuite(\"primestruct.ir.pipeline.validation\"\n"
+            "  TARGET PrimeStruct_backend_ir_tests") != std::string::npos);
+  CHECK(managedSuites.find(
+            "addPrimeStructManagedDoctestSuite(\"primestruct.ir.pipeline.to_glsl\"\n"
+            "  TARGET PrimeStruct_backend_runtime_tests") != std::string::npos);
+  CHECK(managedSuites.find(
+            "addPrimeStructManagedDoctestSuite(\"primestruct.vm.debug.session\"\n"
+            "  TARGET PrimeStruct_backend_runtime_tests") != std::string::npos);
 }
 
 TEST_CASE("include layer guardrail baseline tracks existing private test headers") {

@@ -3987,3 +3987,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Start with `src/ir_lowerer/IrLowererLowerReturnAndCalls.h`, `src/ir_lowerer/IrLowererLowerReturnInfo.h`, `src/ir_lowerer/IrLowererLowerInlineCalls.h`, and `src/ir_lowerer/IrLowererLowerEmitExpr.h`; keep the existing step-unit boundaries intact and avoid widening into operator or statement-lane rewrites.
   - finished_at: 2026-04-19
   - evidence: Added `IrLowererLowerReturnEmitStage.{h,cpp}` so the remaining return-info/inline-call/expression-emission lane now builds through one ordinary compiled orchestration unit, deleted the old `IrLowererLowerReturnAndCalls.h` wrapper, rewired `IrLowererLower.cpp` to consume the new stage state instead of the include-owner seam, extended the lowerer testing umbrella with `IrLowererLowerReturnEmitStage.h`, and refreshed source-lock coverage to pin the new stage source and helper-header contract.
+
+- [x] TODO-4007: Shard backend tests into focused binaries
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Build Ergonomics
+  - depends_on: none
+  - scope: Break `PrimeStruct_backend_tests` into narrower doctest binaries that separate IR-lowering contract coverage, backend-registry/runtime adapter coverage, and heavy compile-run suites.
+  - acceptance:
+    - CMake defines narrower backend-oriented test targets with the current backend coverage redistributed without losing suite labels or helper behavior.
+    - Focused reruns can exercise IR-lowering or registry/runtime validation without rebuilding the entire current backend test surface.
+    - Release validation and direct test-binary reruns still resolve `primec` and related helpers correctly.
+  - stop_rule: Stop once ordinary focused backend reruns no longer depend on the current monolithic backend test binary for IR-lowering, registry/runtime adapter, or compile-run coverage.
+  - notes: Start in `CMakeLists.txt` around `PrimeStruct_backend_tests` plus the architecture assertions under `tests/unit/test_ir_pipeline_backends_architecture.h`; if one pass cannot land the three-way split cleanly, split this leaf by target family rather than by random file groups.
+  - finished_at: 2026-04-19
+  - evidence: Replaced the monolithic `PrimeStruct_backend_tests` binary with `PrimeStruct_backend_ir_tests`, `PrimeStruct_backend_runtime_tests`, and `PrimeStruct_compile_run_tests`, added a suite-to-target router so managed and unmanaged backend/compile-run doctest registrations land on the focused binary without losing shard behavior, refreshed the managed backend suite file and architecture source-lock tests to pin the new target ownership, and updated `AGENTS.md` so direct reruns call out the new binary names.

@@ -526,8 +526,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_link_libraries(PrimeStruct_misc_tests PRIVATE primec_ir_lib)
   primestructEnableWarnings(PrimeStruct_misc_tests)
 
-  add_executable(PrimeStruct_backend_tests
-    tests/unit/test_main.cpp
+  set(PrimeStructBackendAllTestSources
     tests/unit/test_ir_pipeline.cpp
     tests/unit/test_ir_pipeline_serialization_calls.cpp
     tests/unit/test_ir_pipeline_serialization_control_flow.cpp
@@ -835,9 +834,53 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_compile_run_vm_outputs.cpp
     tests/unit/test_compile_run_vm_uninitialized.cpp
   )
-  target_include_directories(PrimeStruct_backend_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
-  target_link_libraries(PrimeStruct_backend_tests PRIVATE primec_ir_lib primec_backend_registry_lib)
-  primestructEnableWarnings(PrimeStruct_backend_tests)
+
+  set(PrimeStructBackendRuntimeTestSources
+    tests/unit/test_ir_pipeline_backends.cpp
+    tests/unit/test_ir_pipeline_backends_architecture.cpp
+    tests/unit/test_ir_pipeline_backends_cpp_vm.cpp
+    tests/unit/test_ir_pipeline_backends_graph_contexts.cpp
+    tests/unit/test_ir_pipeline_backends_graph_pilot.cpp
+    tests/unit/test_ir_pipeline_backends_graph_utilities.cpp
+    tests/unit/test_ir_pipeline_backends_glsl.cpp
+    tests/unit/test_ir_pipeline_backends_registry.cpp
+    tests/unit/test_ir_pipeline_to_cpp.cpp
+    tests/unit/test_ir_pipeline_to_glsl.cpp
+    tests/unit/test_ir_pipeline_to_glsl_runtime.cpp
+    tests/unit/test_vm_debug_session.cpp
+  )
+
+  set(PrimeStructCompileRunTestSources)
+  foreach(source IN LISTS PrimeStructBackendAllTestSources)
+    if (source MATCHES "^tests/unit/test_compile_run_.*\\.cpp$")
+      list(APPEND PrimeStructCompileRunTestSources "${source}")
+    endif()
+  endforeach()
+
+  set(PrimeStructBackendIrTestSources ${PrimeStructBackendAllTestSources})
+  list(REMOVE_ITEM PrimeStructBackendIrTestSources ${PrimeStructBackendRuntimeTestSources})
+  list(REMOVE_ITEM PrimeStructBackendIrTestSources ${PrimeStructCompileRunTestSources})
+
+  add_executable(PrimeStruct_backend_ir_tests
+    tests/unit/test_main.cpp
+    ${PrimeStructBackendIrTestSources}
+  )
+  add_executable(PrimeStruct_backend_runtime_tests
+    tests/unit/test_main.cpp
+    ${PrimeStructBackendRuntimeTestSources}
+  )
+  add_executable(PrimeStruct_compile_run_tests
+    tests/unit/test_main.cpp
+    ${PrimeStructCompileRunTestSources}
+  )
+  foreach(backendTestTarget IN ITEMS
+          PrimeStruct_backend_ir_tests
+          PrimeStruct_backend_runtime_tests
+          PrimeStruct_compile_run_tests)
+    target_include_directories(${backendTestTarget} PRIVATE third_party ${CMAKE_SOURCE_DIR})
+    target_link_libraries(${backendTestTarget} PRIVATE primec_ir_lib primec_backend_registry_lib)
+    primestructEnableWarnings(${backendTestTarget})
+  endforeach()
 
   add_executable(PrimeStruct_semantics_tests
     tests/unit/test_main.cpp
@@ -1009,21 +1052,29 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.diagnostics.codes
   )
 
-  set(PrimeStructBackendTestSuites
+  set(PrimeStructBackendIrTestSuites
     primestruct.ir.pipeline.serialization
     primestruct.ir.pipeline.pointers
     primestruct.ir.pipeline.conversions
     primestruct.ir.pipeline.entry_args
+    primestruct.ir.pipeline.type_resolution_parity
+    primestruct.ir.pipeline.gpu
+    primestruct.ir.pipeline.validation
+  )
+
+  set(PrimeStructBackendRuntimeTestSuites
     primestruct.ir.pipeline.backends.core
     primestruct.ir.pipeline.backends.registry
     primestruct.ir.pipeline.backends.glsl
     primestruct.ir.pipeline.backends.cpp_vm
-    primestruct.ir.pipeline.type_resolution_parity
     primestruct.ir.pipeline.to_cpp
     primestruct.ir.pipeline.to_glsl
-    primestruct.ir.pipeline.gpu
-    primestruct.ir.pipeline.validation
     primestruct.vm.debug.session
+  )
+
+  set(PrimeStructBackendTestSuites
+    ${PrimeStructBackendIrTestSuites}
+    ${PrimeStructBackendRuntimeTestSuites}
   )
 
   set(PrimeStructSemanticsTestSuites
@@ -1089,12 +1140,23 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.parser.templates
   )
 
+  function(primeStructSelectDoctestTarget outVar suite)
+    if (suite MATCHES "^primestruct\\.compile\\.run\\.")
+      set(selectedTarget PrimeStruct_compile_run_tests)
+    elseif(suite IN_LIST PrimeStructBackendRuntimeTestSuites)
+      set(selectedTarget PrimeStruct_backend_runtime_tests)
+    else()
+      set(selectedTarget PrimeStruct_backend_ir_tests)
+    endif()
+    set(${outVar} "${selectedTarget}" PARENT_SCOPE)
+  endfunction()
+
   function(addPrimeStructDoctestSuite suite)
     set(options)
     set(oneValueArgs TARGET TIMEOUT LABEL SHARD_NAME FIRST LAST SOURCE_FILE TEST_CASE TEST_CASE_EXCLUDE)
     cmake_parse_arguments(PrimeStructSuite "${options}" "${oneValueArgs}" "" ${ARGN})
     if (NOT PrimeStructSuite_TARGET)
-      set(PrimeStructSuite_TARGET PrimeStruct_backend_tests)
+      primeStructSelectDoctestTarget(PrimeStructSuite_TARGET "${suite}")
     endif()
     if (NOT PrimeStructSuite_TIMEOUT)
       set(PrimeStructSuite_TIMEOUT 300)
@@ -1241,7 +1303,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
     endif()
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
-    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_backend_tests> "--test-suite=${suite}")
+    primeStructSelectDoctestTarget(suiteTarget "${suite}")
+    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:${suiteTarget}> "--test-suite=${suite}")
     set_tests_properties("${testName}" PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   endforeach()
 
@@ -1818,10 +1881,21 @@ if(PRIMESTRUCT_BUILD_TESTS)
     ${PrimeStructMiscTestSuites}
   )
   addPrimeStructSuiteRegistration(
-    PrimeStruct_backend_suite_registration
-    PrimeStruct_backend_tests
-    expected_backend_doctest_suites.txt
-    ${PrimeStructBackendTestSuites}
+    PrimeStruct_backend_ir_suite_registration
+    PrimeStruct_backend_ir_tests
+    expected_backend_ir_doctest_suites.txt
+    ${PrimeStructBackendIrTestSuites}
+  )
+  addPrimeStructSuiteRegistration(
+    PrimeStruct_backend_runtime_suite_registration
+    PrimeStruct_backend_runtime_tests
+    expected_backend_runtime_doctest_suites.txt
+    ${PrimeStructBackendRuntimeTestSuites}
+  )
+  addPrimeStructSuiteRegistration(
+    PrimeStruct_compile_run_suite_registration
+    PrimeStruct_compile_run_tests
+    expected_compile_run_doctest_suites.txt
     ${PrimeStructCompileRunSuites}
   )
   addPrimeStructSuiteRegistration(

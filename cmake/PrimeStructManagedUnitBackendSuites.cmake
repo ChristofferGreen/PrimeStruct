@@ -9,7 +9,7 @@ list(APPEND PrimeStructManagedBackendSuites
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.serialization"
-  TARGET PrimeStruct_backend_tests
+  TARGET PrimeStruct_backend_ir_tests
   LABEL "parallel-safe"
   TIMEOUT 300
   TOTAL_CASES 112
@@ -17,7 +17,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.serialization"
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.pointers"
-  TARGET PrimeStruct_backend_tests
+  TARGET PrimeStruct_backend_ir_tests
   LABEL "parallel-safe"
   TIMEOUT 300
   TOTAL_CASES 32
@@ -25,7 +25,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.pointers"
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
-  TARGET PrimeStruct_backend_tests
+  TARGET PrimeStruct_backend_ir_tests
   LABEL "parallel-safe"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_core.h"
@@ -35,7 +35,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
-  TARGET PrimeStruct_backend_tests
+  TARGET PrimeStruct_backend_ir_tests
   LABEL "parallel-safe"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_numbers.cpp"
@@ -45,7 +45,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
-  TARGET PrimeStruct_backend_tests
+  TARGET PrimeStruct_backend_ir_tests
   LABEL "parallel-safe"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_variadic_basics.cpp"
@@ -55,7 +55,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
-  TARGET PrimeStruct_backend_tests
+  TARGET PrimeStruct_backend_ir_tests
   LABEL "parallel-safe"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_variadic_results.cpp"
@@ -65,7 +65,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
-  TARGET PrimeStruct_backend_tests
+  TARGET PrimeStruct_backend_ir_tests
   LABEL "parallel-safe"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_variadic_file_errors.cpp"
@@ -75,7 +75,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
-  TARGET PrimeStruct_backend_tests
+  TARGET PrimeStruct_backend_ir_tests
   LABEL "parallel-safe"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_variadic_file_handles.cpp"
@@ -85,7 +85,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
-  TARGET PrimeStruct_backend_tests
+  TARGET PrimeStruct_backend_ir_tests
   LABEL "parallel-safe"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_variadic_borrowed_vectors.cpp"
@@ -95,7 +95,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
-  TARGET PrimeStruct_backend_tests
+  TARGET PrimeStruct_backend_ir_tests
   LABEL "parallel-safe"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_variadic_collection_refs.cpp"
@@ -105,7 +105,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
-  TARGET PrimeStruct_backend_tests
+  TARGET PrimeStruct_backend_ir_tests
   LABEL "parallel-safe"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_variadic_pointer_refs.cpp"
@@ -115,7 +115,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
-  TARGET PrimeStruct_backend_tests
+  TARGET PrimeStruct_backend_ir_tests
   LABEL "parallel-safe"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_variadic_field_refs_and_maps.cpp"
@@ -125,7 +125,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
-  TARGET PrimeStruct_backend_tests
+  TARGET PrimeStruct_backend_ir_tests
   LABEL "parallel-safe"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_variadic_pointer_maps.cpp"
@@ -135,7 +135,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
-  TARGET PrimeStruct_backend_tests
+  TARGET PrimeStruct_backend_ir_tests
   LABEL "parallel-safe"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_variadic_pointer_vectors.cpp"
@@ -145,7 +145,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.to_cpp"
-  TARGET PrimeStruct_backend_tests
+  TARGET PrimeStruct_backend_runtime_tests
   LABEL "parallel-safe"
   TIMEOUT 300
   TOTAL_CASES 37
@@ -153,7 +153,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.to_cpp"
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.to_glsl"
-  TARGET PrimeStruct_backend_tests
+  TARGET PrimeStruct_backend_runtime_tests
   LABEL "parallel-safe"
   TIMEOUT 300
   TOTAL_CASES 58
@@ -161,7 +161,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.to_glsl"
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.validation"
-  TARGET PrimeStruct_backend_tests
+  TARGET PrimeStruct_backend_ir_tests
   LABEL "parallel-safe"
   TIMEOUT 300
   TOTAL_CASES 863
@@ -169,7 +169,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.validation"
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.vm.debug.session"
-  TARGET PrimeStruct_backend_tests
+  TARGET PrimeStruct_backend_runtime_tests
   LABEL "parallel-safe"
   TIMEOUT 300
   TOTAL_CASES 21

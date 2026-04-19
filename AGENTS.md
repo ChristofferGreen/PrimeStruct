@@ -62,7 +62,7 @@ build and layout solidify.
 - **Test-count helper:** `./scripts/test_count.sh` reports total defined `TEST_CASE` macros under `tests/` and, when test binaries exist, sums doctest `--count` output across `build-release/PrimeStruct_*_tests`.
 - **Top-lines helper:** `./scripts/top_lines_of_code.sh` reports the top files by line count across `src/`, `include/`, and `tests/` (default: top 10).
 - **CTest:** prefer running from `build-release/` via `ctest --output-on-failure`; use `build-debug/` when investigating failures in more detail.
-- **Direct test binary runs:** prefer executing the matching release-mode doctest binary from `build-release/` so compile-run suites can resolve `./primec` correctly. For example, use `PrimeStruct_backend_tests` for backend/compile-run coverage or the corresponding narrower release binary for parser, semantics, text-filter, or misc slices. Switch to the matching `build-debug/` binary only when deeper debugging is needed.
+- **Direct test binary runs:** prefer executing the matching release-mode doctest binary from `build-release/` so compile-run suites can resolve `./primec` correctly. Use `PrimeStruct_backend_ir_tests` for IR-lowering contract coverage, `PrimeStruct_backend_runtime_tests` for backend-registry/runtime adapter coverage, `PrimeStruct_compile_run_tests` for compile-run suites, or the corresponding narrower release binary for parser, semantics, text-filter, or misc slices. Switch to the matching `build-debug/` binary only when deeper debugging is needed.
 - **Failure triage rule:** if the full release gate fails, diagnose with the smallest relevant release-mode rerun (single `ctest` case or one release test binary slice), fix the issue, then return to the full `./scripts/compile.sh --release` gate instead of camping on long serial debug sweeps.
 
 ## Generated artifacts
@@ -132,7 +132,9 @@ build and layout solidify.
   target propagated onto their final link surface.
 - **Doctest target layout:** when a test source only exercises compile-pipeline/frontend/IR APIs,
   prefer a dedicated doctest binary linked to `primec_ir_lib` or `primec_frontend_lib` instead of
-  routing it through `PrimeStruct_backend_tests` or the `primec_lib` compatibility umbrella.
+  routing it through one of the broader backend binaries (`PrimeStruct_backend_ir_tests`,
+  `PrimeStruct_backend_runtime_tests`, `PrimeStruct_compile_run_tests`) or the `primec_lib`
+  compatibility umbrella.
 - **Include-layer guardrails:** `ctest` now runs `scripts/check_include_layers.py`. Public headers
   must not include `src/` or `tests/` files, production sources must not include `tests/`, and any
   remaining direct `tests -> src/` includes must be listed narrowly in

@@ -56,7 +56,6 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4007
 - TODO-4003
 - TODO-4004
 - TODO-4005
@@ -69,15 +68,13 @@ Task template:
 
 - Semantic ownership cutover: TODO-4004, TODO-4008
 - Validator/publication simplification: TODO-4003, TODO-4005
-- Build and validation ergonomics: TODO-4007
 
 ### Execution Queue (Recommended)
 
-1. TODO-4007
-2. TODO-4003
-3. TODO-4004
-4. TODO-4005
-5. TODO-4008
+1. TODO-4003
+2. TODO-4004
+3. TODO-4005
+4. TODO-4008
 
 ### PrimeStruct Coverage Snapshot
 
@@ -87,7 +84,7 @@ Task template:
 | Validator entrypoint and benchmark-plumbing split | TODO-4003 |
 | Semantic-product publication by module and fact family | TODO-4005 |
 | IR lowerer compile-unit breakup | none |
-| Backend validation/build ergonomics | TODO-4007 |
+| Backend validation/build ergonomics | none |
 | Emitter/semantics map-helper parity | none |
 | VM debug-session argv ownership | none |
 | Debug trace replay robustness | none |
@@ -101,7 +98,7 @@ Task template:
 | Semantic-product-authority conformance | TODO-4004, TODO-4008 |
 | Semantic-product publication parity and deterministic ordering | TODO-4005 |
 | Lowerer/source-composition contract coverage | none |
-| Focused backend rerun ergonomics and suite partitioning | TODO-4007 |
+| Focused backend rerun ergonomics and suite partitioning | none |
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
 | Debug trace replay malformed-input coverage | none |
@@ -122,19 +119,6 @@ Task template:
     - `docs/todo.md` is refreshed so any still-open adapter retirement work outside the retired slice remains as explicit follow-up instead of staying implicit.
   - stop_rule: Stop once one covered production adapter slice is retired end to end and any remaining slices are written down as separate follow-up work; do not use this leaf as an umbrella cleanup.
   - notes: Primary seams are `src/IrPreparation.cpp`, `src/primevm_main.cpp`, `src/main.cpp`, and the remaining adapter/fallback helpers under `src/ir_lowerer/`; choose one fact-family slice first and only keep neighboring retirements together when they share the same production entrypoints.
-
-- [ ] TODO-4007: Shard backend tests into focused binaries
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Build Ergonomics
-  - depends_on: none
-  - scope: Break `PrimeStruct_backend_tests` into narrower doctest binaries that separate IR-lowering contract coverage, backend-registry/runtime adapter coverage, and heavy compile-run suites.
-  - acceptance:
-    - CMake defines narrower backend-oriented test targets with the current backend coverage redistributed without losing suite labels or helper behavior.
-    - Focused reruns can exercise IR-lowering or registry/runtime validation without rebuilding the entire current backend test surface.
-    - Release validation and direct test-binary reruns still resolve `primec` and related helpers correctly.
-  - stop_rule: Stop once ordinary focused backend reruns no longer depend on the current monolithic backend test binary for IR-lowering, registry/runtime adapter, or compile-run coverage.
-  - notes: Start in `CMakeLists.txt` around `PrimeStruct_backend_tests` plus the architecture assertions under `tests/unit/test_ir_pipeline_backends_architecture.h`; if one pass cannot land the three-way split cleanly, split this leaf by target family rather than by random file groups.
 
 - [ ] TODO-4005: Split semantic publication into scoped builders
   - owner: ai
