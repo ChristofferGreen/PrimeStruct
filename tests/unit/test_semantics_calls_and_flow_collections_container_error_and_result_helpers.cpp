@@ -327,7 +327,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("explicit old-surface soa_vector count rejects without same-path helper" * doctest::skip(true)) {
+TEST_CASE("explicit old-surface soa_vector count rejects without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -340,11 +340,12 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/count") !=
+        std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector count slash-method rejects without same-path helper" * doctest::skip(true)) {
+TEST_CASE("explicit old-surface soa_vector count slash-method rejects without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -358,10 +359,11 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /std/collections/soa_vector/count") !=
+        std::string::npos);
 }
 
-TEST_CASE("explicit soa_vector count forms reject non-soa target" * doctest::skip(true)) {
+TEST_CASE("explicit soa_vector count forms reject non-soa target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -3405,7 +3407,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("explicit old-surface soa_vector get rejects without same-path helper" * doctest::skip(true)) {
+TEST_CASE("explicit old-surface soa_vector get rejects without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3419,11 +3421,12 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/get") !=
+        std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector get slash-method rejects without same-path helper" * doctest::skip(true)) {
+TEST_CASE("explicit old-surface soa_vector get slash-method rejects without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3442,7 +3445,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector get_ref rejects without same-path helper" * doctest::skip(true)) {
+TEST_CASE("explicit old-surface soa_vector get_ref rejects without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3456,11 +3459,12 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/get_ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector get_ref slash-method rejects without same-path helper" * doctest::skip(true)) {
+TEST_CASE("explicit old-surface soa_vector get_ref slash-method rejects without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3679,7 +3683,7 @@ main() {
   }
 }
 
-TEST_CASE("explicit old-surface soa_vector ref rejects without same-path helper" * doctest::skip(true)) {
+TEST_CASE("explicit old-surface soa_vector ref rejects without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3693,11 +3697,12 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector ref slash-method rejects without same-path helper" * doctest::skip(true)) {
+TEST_CASE("explicit old-surface soa_vector ref slash-method rejects without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3716,7 +3721,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector ref_ref rejects without same-path helper" * doctest::skip(true)) {
+TEST_CASE("explicit old-surface soa_vector ref_ref rejects without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3730,11 +3735,12 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/ref_ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector ref_ref slash-method rejects without same-path helper" * doctest::skip(true)) {
+TEST_CASE("explicit old-surface soa_vector ref_ref slash-method rejects without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3769,7 +3775,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("canonical ref helper validates through struct helper return receivers" * doctest::skip(true)) {
+TEST_CASE("canonical ref helper rejects through struct helper return receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -3796,7 +3802,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /std/collections/soa_vector/ref") !=
+        std::string::npos);
 }
 
 TEST_CASE("bare ref helper validates through experimental soa helper return receivers") {
