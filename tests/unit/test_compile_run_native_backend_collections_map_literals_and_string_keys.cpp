@@ -405,8 +405,10 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("rejects native map indexing with argv key" * doctest::skip(true)) {
+TEST_CASE("rejects native map indexing with argv key") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main([array<string>] args) {
   [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32)}
@@ -427,8 +429,10 @@ main([array<string>] args) {
   CHECK(err.find("^") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native string-keyed map binding lookup" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native string-keyed map binding lookup") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
@@ -445,8 +449,10 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("rejects native map lookup with argv string key" * doctest::skip(true)) {
+TEST_CASE("rejects native map lookup with argv string key") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main([array<string>] args) {
   [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32)}

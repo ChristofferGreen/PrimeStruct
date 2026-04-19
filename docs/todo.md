@@ -29,6 +29,7 @@
 15. Avoid standalone micro-cleanups (alias renames, trivial bool rewrites, local dedup) unless bundled into one value outcome above.
 16. If a leaf misses its value target after 2 attempts, archive it as low-value and replace it with a different hotspot.
 17. Keep the active queue short: no more than 8 live leaves at once.
+18. Treat disabled tests as debt: every retained `doctest::skip(true)` cluster must either map to an active TODO leaf with a clear re-enable-or-delete outcome, or be removed once proven stale.
 
 Status legend:
 - `[ ]` queued
@@ -55,17 +56,17 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-1. TODO-1062
-2. TODO-1070
-3. TODO-1071
-4. TODO-1072
+1. TODO-1073
+2. TODO-1074
+3. TODO-1062
+4. TODO-1070
 
 ### Immediate Next 10 (After Ready Now)
 
-1. TODO-1062
-2. TODO-1070
-3. TODO-1071
-4. TODO-1072
+1. TODO-1073
+2. TODO-1074
+3. TODO-1062
+4. TODO-1070
 5. TODO-1066
 6. TODO-1063
 7. TODO-1064
@@ -73,84 +74,85 @@ Task template:
 
 ### Priority Lanes (Current)
 
+- Disabled test audit: TODO-1073, TODO-1074
 - Pilot semantic boundary ownership: TODO-1062, TODO-1063, TODO-1064, TODO-1065
 - Parallel-ready validation state: TODO-1066
-- Exact vector import parity: TODO-1070
-- Omitted parameter-type helper parity: TODO-1071
-- Labeled struct-literal local binding parity: TODO-1072
+- Frontend/docs correctness parity: TODO-1070
 
 ### Execution Queue (Recommended)
 
 Wave A:
-1. TODO-1062
-2. TODO-1070
-3. TODO-1071
-4. TODO-1072
+1. TODO-1073
+2. TODO-1074
+3. TODO-1062
+4. TODO-1070
 
 Wave B:
 1. TODO-1063
 2. TODO-1066
-3. TODO-1064
 
 Wave C:
-1. TODO-1065
+1. TODO-1064
+2. TODO-1065
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
+| Disabled test audit | TODO-1073, TODO-1074 |
 | Pilot semantic ownership boundary | TODO-1062, TODO-1063, TODO-1064, TODO-1065 |
 | Parallel-ready validation architecture | TODO-1066 |
-| Exact vector import parity | TODO-1070 |
-| Omitted parameter-type helper parity | TODO-1071 |
-| Labeled struct-literal local binding parity | TODO-1072 |
+| Frontend/docs correctness parity | TODO-1070 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
+| VM canonical map helper disabled-test audit | TODO-1073 |
+| C++ emitter canonical map helper disabled-test audit | TODO-1074 |
 | Semantic-product publication parity | TODO-1062, TODO-1063, TODO-1064 |
 | Lowering conformance and fallback deletion | TODO-1065 |
 | Worker-count determinism and parity | TODO-1066 |
-| Exact-import vector compile-run parity | TODO-1070 |
-| Omitted parameter-type helper compile-run parity | TODO-1071 |
-| Labeled struct-literal local binding compile-run parity | TODO-1072 |
+| Frontend/docs compile-run parity | TODO-1070 |
 
 ### Task Blocks
 
-- [ ] TODO-1072: Restore labeled struct-literal local binding compile-run parity
+- [ ] TODO-1074: Audit emitter canonical map helper skip debt
   - owner: ai
   - created_at: 2026-04-19
-  - phase: Frontend/docs correctness
-  - scope: make the concise labeled struct-local binding shape `[Pair]pair{[left] 4, [right] 8}` compile and run again for user-facing examples, instead of failing during parse before the equivalent constructor-spelled form, and keep `docs/CodeQuality.md` aligned with the supported surface.
+  - phase: Test suite hygiene
+  - scope: resolve the 5 remaining `doctest::skip(true)` cases in `test_compile_run_emitters_canonical_map_helper_calls.cpp` by re-enabling supported canonical-map helper behavior, converting stale expectations into current rejection locks, or deleting cases that no longer protect a supported surface.
   - acceptance:
-    - a minimal local binding like `[Pair]pair{[left] 4, [right] 8}` parses and lowers to the same effective struct-construction behavior as the working `pair{Pair([left] 4, [right] 8)}` form
-    - a focused compile-run test proves a minimal `sumPair()` example using the labeled struct-literal local binding returns the expected result through at least the VM path with a minimal `main()`
-    - `docs/CodeQuality.md` and any related syntax guidance are updated in the same change so the concise labeled binding form is either shown as the preferred example or explicitly marked unsupported
-  - stop_rule: stop after labeled struct-literal local bindings work for the documented example surface with focused regression coverage; do not broaden into unrelated struct-construction sugar in the same change
-  - notes: current release-toolchain parse failure is `PSC1003 expected identifier` at the first labeled field inside `[Pair]pair{[left] 4, [right] 8}`
+    - the bare `map` canonical helper emitter cases for `count`, `at`, and `at_unsafe` are active again or explicitly deleted if the covered surface is no longer supported
+    - the explicit same-path alias/helper cases in that file either assert current emitter behavior without skip markers or are removed as stale coverage
+    - the file ends with no unexplained `doctest::skip(true)` map-helper cases
+  - stop_rule: stop after the 5 skipped canonical-map helper cases in `test_compile_run_emitters_canonical_map_helper_calls.cpp` are either active or deleted; do not broaden into unrelated emitter skip debt in the same change
+  - notes: keep the outcome bounded to the current map-helper surface in that file and prefer behavior-level locks over source-shape assumptions
 
-- [ ] TODO-1071: Restore omitted parameter-type helper compile-run parity
+- [ ] TODO-1073: Audit VM canonical map helper skip debt
   - owner: ai
   - created_at: 2026-04-19
-  - phase: Frontend/docs correctness
-  - scope: make the concise helper shape `runCountdown(start) { ... return(current) }` work again when docs/examples rely on omitted parameter types for helpers, or document and enforce the narrower supported surface if omitted parameter types are intentionally unsupported, with `docs/CodeQuality.md` kept in sync.
+  - phase: Test suite hygiene
+  - scope: resolve the remaining map-helper `doctest::skip(true)` cases in `test_compile_run_vm_collections_core_aliases.cpp` by re-enabling supported canonical helper behavior, converting stale expectations into current rejection locks, or deleting cases that no longer match the supported VM map-helper surface.
   - acceptance:
-    - the current documented or intended concise helper shape no longer fails solely because the helper parameter type is omitted
-    - a focused compile-run test proves a minimal `runCountdown(start)` example compiles and returns the expected result through at least the VM path with a minimal `main()`
-    - `docs/CodeQuality.md` and any related syntax guidance are updated in the same change if omitted parameter types remain unsupported or are narrower than the concise example implies today
-  - stop_rule: stop after the concise helper example either compiles with omitted parameter types on the intended surface or is explicitly documented as unsupported with matching diagnostics/tests; do not broaden into unrelated inference cleanup in the same change
+    - the skipped VM map-helper cases for explicit canonical helper calls, wrapper-return receiver access, bare-map `count`, bare-map `at`, and no-import canonical rejection are active again or explicitly deleted if stale
+    - any retained negative coverage in that file asserts the current canonical diagnostic surface instead of older compatibility assumptions
+    - the targeted map-helper subset ends with no unexplained `doctest::skip(true)` coverage
+  - stop_rule: stop after the map-helper subset of skipped cases in `test_compile_run_vm_collections_core_aliases.cpp` is resolved; leave wrapper-string and other non-map alias skip debt for separate follow-up if needed
+  - notes: this task targets the map-helper subset only, not the older wrapper-string compatibility skips at the top of the file
 
-- [ ] TODO-1070: Restore exact vector import compile-run parity
+- [ ] TODO-1070: Restore frontend/docs compile-run parity for current examples
   - owner: ai
   - created_at: 2026-04-19
   - phase: Frontend/docs correctness
-  - scope: make the current exact import vector example compile again so `import /std/collections/vector` works with the concise `[vector<T>]` binding + method-sugar loop shape currently implied by docs and examples, while keeping `docs/CodeQuality.md` aligned with the supported import surface.
+  - scope: synchronize the three current frontend/docs example gaps with the actual supported surface by making the exact vector import example, omitted-parameter helper example, and labeled struct-literal local binding example compile again where intended, or documenting the narrower supported surface in `docs/CodeQuality.md` when those concise forms remain unsupported.
   - acceptance:
-    - `import /std/collections/vector` resolves for the current vector surface instead of failing with `unknown import path`
-    - a focused compile-run test proves the exact-import `sumValues()` example returns `27` through at least the VM path with a minimal `main()`
-    - `docs/CodeQuality.md` and any related syntax guidance are updated in the same change if the supported exact-import surface differs from the wildcard-import surface
-  - stop_rule: stop after the exact-import example compiles and the intended supported surface is documented; do not broaden into unrelated vector helper cleanup in the same change
+    - the exact-import vector example either compiles with `import /std/collections/vector` on the intended surface or is explicitly documented and tested as unsupported
+    - the omitted-parameter helper example either compiles with the intended concise `runCountdown(start)` surface or is explicitly documented and tested as unsupported
+    - the labeled struct-literal local binding example either compiles with `[Pair] pair{[left] 4, [right] 8}` on the intended surface or is explicitly documented and tested as unsupported
+    - `docs/CodeQuality.md` and any related syntax guidance are updated in the same change so the published examples match the supported frontend surface
+  - stop_rule: stop after those three documented examples are synchronized with the current toolchain and focused coverage; do not broaden into unrelated syntax cleanup in the same change
+  - notes: current known failures are `unknown import path` for `import /std/collections/vector`, omitted helper parameter-type rejection in the concise countdown example, and `PSC1003 expected identifier` at the first labeled field inside `[Pair] pair{[left] 4, [right] 8}`
 
 - [ ] TODO-1066: Pilot worker-local validation context for one deterministic slice
   - owner: ai
