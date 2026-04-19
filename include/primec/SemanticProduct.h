@@ -377,6 +377,14 @@ std::vector<const SemanticProgramBridgePathChoice *>
 semanticProgramBridgePathChoiceView(const SemanticProgram &semanticProgram);
 std::vector<const SemanticProgramCallableSummary *>
 semanticProgramCallableSummaryView(const SemanticProgram &semanticProgram);
+const SemanticProgramTypeMetadata *semanticProgramLookupTypeMetadata(
+    const SemanticProgram &semanticProgram,
+    std::string_view fullPath);
+std::vector<const SemanticProgramTypeMetadata *>
+semanticProgramStructTypeMetadataView(const SemanticProgram &semanticProgram);
+std::vector<const SemanticProgramStructFieldMetadata *>
+semanticProgramStructFieldMetadataView(const SemanticProgram &semanticProgram,
+                                       std::string_view structPath);
 std::vector<const SemanticProgramBindingFact *>
 semanticProgramBindingFactView(const SemanticProgram &semanticProgram);
 std::vector<const SemanticProgramReturnFact *>

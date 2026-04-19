@@ -1,9 +1,4 @@
 
-
-
-
-struct SemanticProductTargetAdapter;
-
 struct LayoutFieldBinding {
   std::string typeName;
   std::string typeTemplateArg;
@@ -39,7 +34,7 @@ bool collectStructLayoutFieldBindings(
     const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
     const std::function<std::string(const Expr &)> &resolveStructLayoutExprPath,
     const std::unordered_map<std::string, const Definition *> &defMap,
-    const SemanticProductTargetAdapter *semanticProductTargets,
+    const SemanticProgram *semanticProgram,
     std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &fieldsByStructOut,
     std::string &errorOut);
 inline bool collectStructLayoutFieldBindings(
@@ -65,7 +60,7 @@ bool collectStructLayoutFieldBindingsFromProgramContext(
     const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases,
-    const SemanticProductTargetAdapter *semanticProductTargets,
+    const SemanticProgram *semanticProgram,
     std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &fieldsByStructOut,
     std::string &errorOut);
 inline bool collectStructLayoutFieldBindingsFromProgramContext(

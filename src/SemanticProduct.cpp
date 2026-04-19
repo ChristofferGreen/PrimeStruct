@@ -1,5 +1,6 @@
 #include "primec/SemanticProduct.h"
 
+#include <algorithm>
 #include <limits>
 #include <sstream>
 #include <string_view>
@@ -217,6 +218,57 @@ const SemanticProgramCallableSummary *semanticProgramLookupPublishedCallableSumm
     return nullptr;
   }
   return semanticProgramLookupPublishedCallableSummaryByPathId(semanticProgram, *fullPathId);
+}
+
+const SemanticProgramTypeMetadata *semanticProgramLookupTypeMetadata(
+    const SemanticProgram &semanticProgram,
+    std::string_view fullPath) {
+  if (fullPath.empty()) {
+    return nullptr;
+  }
+  for (const auto &entry : semanticProgram.typeMetadata) {
+    if (entry.fullPath == fullPath) {
+      return &entry;
+    }
+  }
+  return nullptr;
+}
+
+std::vector<const SemanticProgramTypeMetadata *>
+semanticProgramStructTypeMetadataView(const SemanticProgram &semanticProgram) {
+  std::vector<const SemanticProgramTypeMetadata *> view;
+  view.reserve(semanticProgram.typeMetadata.size());
+  for (const auto &entry : semanticProgram.typeMetadata) {
+    if (entry.category == "struct" || entry.category == "pod" || entry.category == "handle" ||
+        entry.category == "gpu_lane") {
+      view.push_back(&entry);
+    }
+  }
+  return view;
+}
+
+std::vector<const SemanticProgramStructFieldMetadata *>
+semanticProgramStructFieldMetadataView(const SemanticProgram &semanticProgram,
+                                       std::string_view structPath) {
+  std::vector<const SemanticProgramStructFieldMetadata *> view;
+  if (structPath.empty()) {
+    return view;
+  }
+  for (const auto &entry : semanticProgram.structFieldMetadata) {
+    if (entry.structPath == structPath) {
+      view.push_back(&entry);
+    }
+  }
+  std::stable_sort(view.begin(),
+                   view.end(),
+                   [](const SemanticProgramStructFieldMetadata *left,
+                      const SemanticProgramStructFieldMetadata *right) {
+                     if (left->fieldIndex != right->fieldIndex) {
+                       return left->fieldIndex < right->fieldIndex;
+                     }
+                     return left->fieldName < right->fieldName;
+                   });
+  return view;
 }
 
 std::string_view semanticProgramDirectCallTargetResolvedPath(

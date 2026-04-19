@@ -56,7 +56,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4008
+- TODO-4017
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -64,17 +64,17 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Semantic ownership cutover: TODO-4008
+- Semantic ownership cutover: TODO-4017
 
 ### Execution Queue (Recommended)
 
-1. TODO-4008
+1. TODO-4017
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4008 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4017 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | IR lowerer compile-unit breakup | none |
@@ -89,7 +89,7 @@ Task template:
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Semantic-product-authority conformance | TODO-4008 |
+| Semantic-product-authority conformance | TODO-4017 |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
 | Focused backend rerun ergonomics and suite partitioning | none |
@@ -101,15 +101,15 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4008: Retire first covered production semantic adapter slice
+- [ ] TODO-4017: Retire remaining production semantic target adapter slices
   - owner: ai
   - created_at: 2026-04-19
   - phase: Architecture Stabilization
-  - depends_on: TODO-4004, TODO-4005
-  - scope: Delete one production-path temporary semantic-product adapter slice and its AST-dependent lowerer re-derivations for a fact family already made authoritative by TODO-4004 and TODO-4005, then refresh the open architecture queue so any remaining adapter-retirement slices are called out explicitly instead of hiding behind this leaf.
+  - depends_on: TODO-4008
+  - scope: Remove the remaining production-path `SemanticProductTargetAdapter` mediation for published routing and fact-family lookups in the IR lowerer after the struct/type metadata slice is gone, threading `SemanticProgram` or a narrower direct semantic index into call resolution, binding/result, local-auto, query, `try(...)`, and `on_error` helpers instead of keeping one catch-all adapter object on the hot path.
   - acceptance:
-    - One concrete covered adapter/fact-family slice is deleted or explicitly limited to non-production-only fixtures.
-    - `primec`, `primevm`, and compile-pipeline production entrypoints consume the semantic product without hidden validator-owned side channels for that retired slice.
-    - `docs/todo.md` is refreshed so any still-open adapter retirement work outside the retired slice remains as explicit follow-up instead of staying implicit.
-  - stop_rule: Stop once one covered production adapter slice is retired end to end and any remaining slices are written down as separate follow-up work; do not use this leaf as an umbrella cleanup.
-  - notes: Primary seams are `src/IrPreparation.cpp`, `src/primevm_main.cpp`, `src/main.cpp`, and the remaining adapter/fallback helpers under `src/ir_lowerer/`; choose one fact-family slice first and only keep neighboring retirements together when they share the same production entrypoints.
+    - Production lowering no longer builds or threads a broad `SemanticProductTargetAdapter` through call-resolution and semantic-fact lookup helpers for the remaining covered families.
+    - Any retained semantic lookup adapter surface is either deleted or explicitly limited to test-only/non-production helpers with that boundary documented in source-lock coverage.
+    - `docs/todo.md` and the coverage snapshot keep the remaining semantic adapter retirement work explicit instead of collapsing it back into hidden lowerer fallback cleanup.
+  - stop_rule: Stop once the remaining production lowerer routing/fact lookup slices no longer depend on `SemanticProductTargetAdapter`; if some families need separate prep/index seams, split them into additional explicit leaves instead of widening this one further.
+  - notes: Start in `src/ir_lowerer/IrLowererCallResolution.cpp`, `src/ir_lowerer/IrLowererCallHelpers.{h,cpp}`, `src/ir_lowerer/IrLowererBindingTypeHelpers.cpp`, and the remaining lookup helpers under `src/ir_lowerer/`; keep CLI entrypoint plumbing out of scope unless adapter removal still depends on it.

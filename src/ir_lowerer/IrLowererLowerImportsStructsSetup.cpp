@@ -2,7 +2,6 @@
 
 #include <functional>
 
-#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererStructLayoutHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
 
@@ -22,10 +21,7 @@ bool runLowerImportsStructsSetup(
   importAliasesOut.clear();
   structFieldInfoByNameOut.clear();
 
-  const SemanticProductTargetAdapter semanticProductTargets =
-      buildSemanticProductTargetAdapter(semanticProgram);
-
-  buildDefinitionMapAndStructNames(program.definitions, defMapOut, structNamesOut, &semanticProductTargets);
+  buildDefinitionMapAndStructNames(program.definitions, defMapOut, structNamesOut, semanticProgram);
   importAliasesOut = buildImportAliasesFromProgram(program.imports, program.definitions, defMapOut);
 
   auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) -> std::string {
@@ -38,7 +34,7 @@ bool runLowerImportsStructsSetup(
           resolveStructTypePath,
           defMapOut,
           importAliasesOut,
-          &semanticProductTargets,
+          semanticProgram,
           structFieldInfoByNameOut,
           errorOut)) {
     return false;
@@ -55,7 +51,7 @@ bool runLowerImportsStructsSetup(
           resolveStructTypePath,
           defMapOut,
           computeStructLayout,
-          &semanticProductTargets,
+          semanticProgram,
           layout,
           layoutError);
     };
@@ -64,7 +60,7 @@ bool runLowerImportsStructsSetup(
   };
 
   if (!appendProgramStructLayouts(
-          program, defMapOut, &semanticProductTargets, computeStructLayout, outModule.structLayouts, errorOut)) {
+          program, defMapOut, semanticProgram, computeStructLayout, outModule.structLayouts, errorOut)) {
     return false;
   }
 

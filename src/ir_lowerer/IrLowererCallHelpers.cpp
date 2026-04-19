@@ -431,15 +431,21 @@ bool isStructDefinition(const Definition &def) {
   return true;
 }
 
-bool isStructDefinition(const Definition &def, const SemanticProductTargetAdapter *semanticProductTargets) {
-  if (semanticProductTargets != nullptr) {
-    if (const auto *typeMetadata = findSemanticProductTypeMetadata(*semanticProductTargets, def.fullPath);
+bool isStructDefinition(const Definition &def, const SemanticProgram *semanticProgram) {
+  if (semanticProgram != nullptr) {
+    if (const auto *typeMetadata = semanticProgramLookupTypeMetadata(*semanticProgram, def.fullPath);
         typeMetadata != nullptr) {
       return typeMetadata->category == "struct" || typeMetadata->category == "pod" ||
              typeMetadata->category == "handle" || typeMetadata->category == "gpu_lane";
     }
   }
   return isStructDefinition(def);
+}
+
+bool isStructDefinition(const Definition &def, const SemanticProductTargetAdapter *semanticProductTargets) {
+  return isStructDefinition(def,
+                            semanticProductTargets == nullptr ? nullptr
+                                                              : semanticProductTargets->semanticProgram);
 }
 
 bool isStructHelperDefinition(const Definition &def,

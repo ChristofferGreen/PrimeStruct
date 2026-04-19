@@ -3,7 +3,6 @@
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
-#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStructFieldBindingHelpers.h"
 
@@ -138,7 +137,7 @@ void buildDefinitionMapAndStructNames(
     const std::vector<Definition> &definitions,
     std::unordered_map<std::string, const Definition *> &defMapOut,
     std::unordered_set<std::string> &structNamesOut,
-    const SemanticProductTargetAdapter *semanticProductTargets) {
+    const SemanticProgram *semanticProgram) {
   defMapOut.clear();
   structNamesOut.clear();
   defMapOut.reserve(definitions.size());
@@ -146,11 +145,12 @@ void buildDefinitionMapAndStructNames(
     defMapOut.emplace(def.fullPath, &def);
   }
 
-  if (semanticProductTargets != nullptr && !semanticProductTargets->typeMetadataByPath.empty()) {
-    structNamesOut.reserve(semanticProductTargets->typeMetadataByPath.size());
-    for (const auto &[fullPath, typeMetadata] : semanticProductTargets->typeMetadataByPath) {
+  if (semanticProgram != nullptr) {
+    const auto structTypeMetadata = semanticProgramStructTypeMetadataView(*semanticProgram);
+    structNamesOut.reserve(structTypeMetadata.size());
+    for (const SemanticProgramTypeMetadata *typeMetadata : structTypeMetadata) {
       if (typeMetadata != nullptr && isStructLikeSemanticProductCategory(typeMetadata->category)) {
-        structNamesOut.insert(std::string(fullPath));
+        structNamesOut.insert(typeMetadata->fullPath);
       }
     }
     return;
@@ -158,7 +158,7 @@ void buildDefinitionMapAndStructNames(
 
   structNamesOut.reserve(definitions.size());
   for (const auto &def : definitions) {
-    if (isStructDefinition(def, semanticProductTargets)) {
+    if (isStructDefinition(def, semanticProgram)) {
       structNamesOut.insert(def.fullPath);
     }
   }

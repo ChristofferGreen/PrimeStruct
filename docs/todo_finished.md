@@ -4047,3 +4047,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: This starts after TODO-4002 lands and should focus on `src/semantics/SemanticsValidate.cpp`; keep routing/callable-summary publication and graph-backed inference publication as the first candidate split if the builder breakup does not fit one commit.
   - finished_at: 2026-04-19
   - evidence: Added `src/semantics/SemanticPublicationBuilders.{h,cpp}` so semantic-product shell setup, routing publication, metadata publication, scoped fact-family publication, and module finalization now build through named helpers instead of one `buildSemanticProgram(...)` sweep, rewired `SemanticsValidate.cpp` to hand the unified publication surface into that builder module, updated `CMakeLists.txt` to compile the new unit, and refreshed graph-context source-lock coverage so the builder module owns module indexing, routing lookup publication, and fact-family staging.
+
+- [x] TODO-4008: Retire first covered production semantic adapter slice
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Architecture Stabilization
+  - depends_on: TODO-4004, TODO-4005
+  - scope: Delete one production-path temporary semantic-product adapter slice and its AST-dependent lowerer re-derivations for a fact family already made authoritative by TODO-4004 and TODO-4005, then refresh the open architecture queue so any remaining adapter-retirement slices are called out explicitly instead of hiding behind this leaf.
+  - acceptance:
+    - One concrete covered adapter/fact-family slice is deleted or explicitly limited to non-production-only fixtures.
+    - `primec`, `primevm`, and compile-pipeline production entrypoints consume the semantic product without hidden validator-owned side channels for that retired slice.
+    - `docs/todo.md` is refreshed so any still-open adapter retirement work outside the retired slice remains as explicit follow-up instead of staying implicit.
+  - stop_rule: Stop once one covered production adapter slice is retired end to end and any remaining slices are written down as separate follow-up work; do not use this leaf as an umbrella cleanup.
+  - notes: Primary seams are `src/IrPreparation.cpp`, `src/primevm_main.cpp`, `src/main.cpp`, and the remaining adapter/fallback helpers under `src/ir_lowerer/`; choose one fact-family slice first and only keep neighboring retirements together when they share the same production entrypoints.
+  - finished_at: 2026-04-19
+  - evidence: Added direct struct/type metadata helpers in `include/primec/SemanticProduct.h` and `src/SemanticProduct.cpp`, deleted the struct metadata caches and lookup helpers from `src/ir_lowerer/IrLowererSemanticProductTargetAdapters.{h,cpp}`, rewired the production struct/type/layout lowering path to consume `const SemanticProgram *` directly in the lowerer helper units, refreshed `tests/unit/test_ir_pipeline_backends_graph_contexts.h` to lock the new direct semantic-product path and the absence of the retired adapter cache surface, and replaced the open queue item with explicit follow-up `TODO-4017` for the remaining production adapter slices.

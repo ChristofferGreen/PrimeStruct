@@ -8,9 +8,11 @@
 
 #include "primec/Ast.h"
 
-namespace primec::ir_lowerer {
+namespace primec {
+struct SemanticProgram;
+}
 
-struct SemanticProductTargetAdapter;
+namespace primec::ir_lowerer {
 
 struct LayoutFieldBinding {
   std::string typeName;
@@ -47,7 +49,7 @@ bool collectStructLayoutFieldBindings(
     const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
     const std::function<std::string(const Expr &)> &resolveStructLayoutExprPath,
     const std::unordered_map<std::string, const Definition *> &defMap,
-    const SemanticProductTargetAdapter *semanticProductTargets,
+    const SemanticProgram *semanticProgram,
     std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &fieldsByStructOut,
     std::string &errorOut);
 bool collectStructLayoutFieldBindingsFromProgramContext(
@@ -56,7 +58,7 @@ bool collectStructLayoutFieldBindingsFromProgramContext(
     const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases,
-    const SemanticProductTargetAdapter *semanticProductTargets,
+    const SemanticProgram *semanticProgram,
     std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &fieldsByStructOut,
     std::string &errorOut);
 bool resolveStructLayoutFieldBinding(

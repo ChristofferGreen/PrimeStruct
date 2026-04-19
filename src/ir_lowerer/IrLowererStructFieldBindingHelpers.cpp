@@ -5,7 +5,6 @@
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
-#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererStructLayoutHelpers.h"
 #include "IrLowererStructReturnPathHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
@@ -198,18 +197,18 @@ bool collectStructLayoutFieldBindings(
     const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
     const std::function<std::string(const Expr &)> &resolveStructLayoutExprPath,
     const std::unordered_map<std::string, const Definition *> &defMap,
-    const SemanticProductTargetAdapter *semanticProductTargets,
+    const SemanticProgram *semanticProgram,
     std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &fieldsByStructOut,
     std::string &errorOut) {
   fieldsByStructOut.clear();
   for (const auto &def : program.definitions) {
-    if (!isStructDefinition(def, semanticProductTargets)) {
+    if (!isStructDefinition(def, semanticProgram)) {
       continue;
     }
-    const std::vector<const SemanticProgramStructFieldMetadata *> *semanticFields = nullptr;
-    if (semanticProductTargets != nullptr) {
-      semanticFields = findSemanticProductStructFieldMetadata(*semanticProductTargets, def.fullPath);
-    }
+    const bool useSemanticProductFields = semanticProgram != nullptr;
+    const auto semanticFields =
+        useSemanticProductFields ? semanticProgramStructFieldMetadataView(*semanticProgram, def.fullPath)
+                                 : std::vector<const SemanticProgramStructFieldMetadata *>{};
     std::vector<LayoutFieldBinding> fields;
     std::unordered_map<std::string, LayoutFieldBinding> knownFields;
     size_t semanticIndex = 0;
@@ -219,12 +218,12 @@ bool collectStructLayoutFieldBindings(
         continue;
       }
       LayoutFieldBinding binding;
-      if (semanticFields != nullptr && !semanticFields->empty() && !isStaticFieldBinding(stmt)) {
-        if (semanticIndex >= semanticFields->size()) {
+      if (useSemanticProductFields && !isStaticFieldBinding(stmt)) {
+        if (semanticIndex >= semanticFields.size()) {
           errorOut = "internal error: mismatched struct field info for " + def.fullPath;
           return false;
         }
-        binding = layoutFieldBindingFromSemanticProduct(*(*semanticFields)[semanticIndex]);
+        binding = layoutFieldBindingFromSemanticProduct(*semanticFields[semanticIndex]);
         ++semanticIndex;
       } else {
         if (!resolveLayoutFieldBinding(def,
@@ -242,7 +241,7 @@ bool collectStructLayoutFieldBindings(
       knownFields[stmt.name] = binding;
       fields.push_back(std::move(binding));
     }
-    if (semanticFields != nullptr && !semanticFields->empty() && semanticIndex != semanticFields->size()) {
+    if (useSemanticProductFields && semanticIndex != semanticFields.size()) {
       errorOut = "internal error: mismatched struct field info for " + def.fullPath;
       return false;
     }
@@ -257,7 +256,7 @@ bool collectStructLayoutFieldBindingsFromProgramContext(
     const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases,
-    const SemanticProductTargetAdapter *semanticProductTargets,
+    const SemanticProgram *semanticProgram,
     std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &fieldsByStructOut,
     std::string &errorOut) {
   const auto resolveStructLayoutExprPath = [&](const Expr &expr) -> std::string {
@@ -268,7 +267,7 @@ bool collectStructLayoutFieldBindingsFromProgramContext(
                                           resolveStructTypePath,
                                           resolveStructLayoutExprPath,
                                           defMap,
-                                          semanticProductTargets,
+                                          semanticProgram,
                                           fieldsByStructOut,
                                           errorOut);
 }

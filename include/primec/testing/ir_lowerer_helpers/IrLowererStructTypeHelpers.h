@@ -3,7 +3,6 @@
 
 
 struct LayoutFieldBinding;
-struct SemanticProductTargetAdapter;
 
 using ResolveStructTypeNameFn = std::function<bool(const std::string &, const std::string &, std::string &)>;
 using ValueKindFromTypeNameFn = std::function<LocalInfo::ValueKind(const std::string &)>;
@@ -111,7 +110,7 @@ void buildDefinitionMapAndStructNames(
     const std::vector<Definition> &definitions,
     std::unordered_map<std::string, const Definition *> &defMapOut,
     std::unordered_set<std::string> &structNamesOut,
-    const SemanticProductTargetAdapter *semanticProductTargets = nullptr);
+    const SemanticProgram *semanticProgram = nullptr);
 void appendStructLayoutFieldsFromFieldBindings(
     const std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &structFieldInfoByName,
     const std::unordered_map<std::string, const Definition *> &defMap,

@@ -3,7 +3,6 @@
 
 
 struct LayoutFieldBinding;
-struct SemanticProductTargetAdapter;
 
 struct BindingTypeLayout {
   uint32_t sizeBytes = 0;
@@ -57,7 +56,7 @@ bool computeStructLayoutFromFieldInfo(
     const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
-    const SemanticProductTargetAdapter *semanticProductTargets,
+    const SemanticProgram *semanticProgram,
     IrStructLayout &layoutOut,
     std::string &errorOut);
 inline bool computeStructLayoutFromFieldInfo(
@@ -74,7 +73,7 @@ inline bool computeStructLayoutFromFieldInfo(
 bool appendProgramStructLayouts(
     const Program &program,
     const std::unordered_map<std::string, const Definition *> &defMap,
-    const SemanticProductTargetAdapter *semanticProductTargets,
+    const SemanticProgram *semanticProgram,
     const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
     std::vector<IrStructLayout> &layoutsOut,
     std::string &errorOut);

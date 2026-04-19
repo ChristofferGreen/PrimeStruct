@@ -31,10 +31,6 @@ struct SemanticProductTargetAdapter {
   const SemanticProgram *semanticProgram = nullptr;
   const SemanticProgramPublishedRoutingLookups *publishedRoutingLookups = nullptr;
   SemanticProductIndex semanticIndex;
-  std::unordered_map<std::string_view, const SemanticProgramTypeMetadata *> typeMetadataByPath;
-  std::vector<const SemanticProgramTypeMetadata *> orderedStructTypeMetadata;
-  std::unordered_map<std::string_view, std::vector<const SemanticProgramStructFieldMetadata *>>
-      structFieldMetadataByStructPath;
 };
 
 SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticProgram *semanticProgram);
@@ -47,11 +43,6 @@ const SemanticProgramCallableSummary *findSemanticProductCallableSummary(
     const std::string &fullPath);
 const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(const SemanticProductTargetAdapter &adapter,
                                                                 const Definition &definition);
-const SemanticProgramTypeMetadata *findSemanticProductTypeMetadata(const SemanticProductTargetAdapter &adapter,
-                                                                  const std::string &fullPath);
-const std::vector<const SemanticProgramStructFieldMetadata *> *findSemanticProductStructFieldMetadata(
-    const SemanticProductTargetAdapter &adapter,
-    const std::string &structPath);
 const SemanticProgramReturnFact *findSemanticProductReturnFact(const SemanticProductTargetAdapter &adapter,
                                                               const Definition &definition);
 const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(const SemanticProductTargetAdapter &adapter,

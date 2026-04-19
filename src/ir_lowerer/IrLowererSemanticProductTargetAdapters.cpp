@@ -1,6 +1,5 @@
 #include "IrLowererSemanticProductTargetAdapters.h"
 
-#include <algorithm>
 #include <optional>
 
 namespace primec::ir_lowerer {
@@ -234,37 +233,6 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
   adapter.publishedRoutingLookups = &semanticProgram->publishedRoutingLookups;
   adapter.semanticIndex = SemanticProductIndexBuilder{semanticProgram}.build();
 
-  adapter.typeMetadataByPath.reserve(semanticProgram->typeMetadata.size());
-  adapter.orderedStructTypeMetadata.reserve(semanticProgram->typeMetadata.size());
-  for (const auto &entry : semanticProgram->typeMetadata) {
-    if (!entry.fullPath.empty()) {
-      adapter.typeMetadataByPath[entry.fullPath] = &entry;
-      if (entry.category == "struct" || entry.category == "pod" || entry.category == "handle" ||
-          entry.category == "gpu_lane") {
-        adapter.orderedStructTypeMetadata.push_back(&entry);
-      }
-    }
-  }
-
-  adapter.structFieldMetadataByStructPath.reserve(semanticProgram->structFieldMetadata.size());
-  for (const auto &entry : semanticProgram->structFieldMetadata) {
-    if (!entry.structPath.empty()) {
-      adapter.structFieldMetadataByStructPath[entry.structPath].push_back(&entry);
-    }
-  }
-  for (auto &[structPath, entries] : adapter.structFieldMetadataByStructPath) {
-    (void)structPath;
-    std::stable_sort(entries.begin(),
-                     entries.end(),
-                     [](const SemanticProgramStructFieldMetadata *left,
-                        const SemanticProgramStructFieldMetadata *right) {
-                       if (left->fieldIndex != right->fieldIndex) {
-                         return left->fieldIndex < right->fieldIndex;
-                       }
-                       return left->fieldName < right->fieldName;
-                     });
-  }
-
   return adapter;
 }
 
@@ -351,30 +319,6 @@ const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(const SemanticP
   if (const auto it = adapter.semanticIndex.onErrorFactsByDefinitionPathId.find(*definitionPathId);
       it != adapter.semanticIndex.onErrorFactsByDefinitionPathId.end()) {
     return it->second;
-  }
-  return nullptr;
-}
-
-const SemanticProgramTypeMetadata *findSemanticProductTypeMetadata(const SemanticProductTargetAdapter &adapter,
-                                                                  const std::string &fullPath) {
-  if (fullPath.empty()) {
-    return nullptr;
-  }
-  if (const auto it = adapter.typeMetadataByPath.find(fullPath); it != adapter.typeMetadataByPath.end()) {
-    return it->second;
-  }
-  return nullptr;
-}
-
-const std::vector<const SemanticProgramStructFieldMetadata *> *findSemanticProductStructFieldMetadata(
-    const SemanticProductTargetAdapter &adapter,
-    const std::string &structPath) {
-  if (structPath.empty()) {
-    return nullptr;
-  }
-  if (const auto it = adapter.structFieldMetadataByStructPath.find(structPath);
-      it != adapter.structFieldMetadataByStructPath.end()) {
-    return &it->second;
   }
   return nullptr;
 }

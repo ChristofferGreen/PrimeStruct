@@ -7,7 +7,6 @@
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
-#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererStructTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
@@ -323,7 +322,7 @@ bool computeStructLayoutFromFieldInfo(
     const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
-    const SemanticProductTargetAdapter *semanticProductTargets,
+    const SemanticProgram *semanticProgram,
     IrStructLayout &layoutOut,
     std::string &errorOut) {
   auto fieldInfoIt = structFieldInfoByName.find(def.fullPath);
@@ -350,7 +349,7 @@ bool computeStructLayoutFromFieldInfo(
                                     fieldError);
   };
   const SemanticProgramTypeMetadata *typeMetadata =
-      semanticProductTargets == nullptr ? nullptr : findSemanticProductTypeMetadata(*semanticProductTargets, def.fullPath);
+      semanticProgram == nullptr ? nullptr : semanticProgramLookupTypeMetadata(*semanticProgram, def.fullPath);
   return computeStructLayoutUncached(
       def, fieldInfoIt->second, resolveFieldTypeLayout, typeMetadata, layoutOut, errorOut);
 }
@@ -358,12 +357,13 @@ bool computeStructLayoutFromFieldInfo(
 bool appendProgramStructLayouts(
     const Program &program,
     const std::unordered_map<std::string, const Definition *> &defMap,
-    const SemanticProductTargetAdapter *semanticProductTargets,
+    const SemanticProgram *semanticProgram,
     const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
     std::vector<IrStructLayout> &layoutsOut,
     std::string &errorOut) {
-  if (semanticProductTargets != nullptr && !semanticProductTargets->orderedStructTypeMetadata.empty()) {
-    for (const SemanticProgramTypeMetadata *typeMetadata : semanticProductTargets->orderedStructTypeMetadata) {
+  if (semanticProgram != nullptr) {
+    for (const SemanticProgramTypeMetadata *typeMetadata :
+         semanticProgramStructTypeMetadataView(*semanticProgram)) {
       if (typeMetadata == nullptr || typeMetadata->fullPath.empty()) {
         continue;
       }
@@ -385,7 +385,7 @@ bool appendProgramStructLayouts(
   }
 
   for (const auto &def : program.definitions) {
-    if (!isStructDefinition(def, semanticProductTargets)) {
+    if (!isStructDefinition(def, semanticProgram)) {
       continue;
     }
     IrStructLayout layout;
