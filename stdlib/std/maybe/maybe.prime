@@ -45,7 +45,7 @@ namespace std {
 
     [public mut return<T>]
     take() {
-      [T] out{take(this.value)}
+      out{take(this.value)}
       this.empty = true
       return(out)
     }
@@ -53,8 +53,8 @@ namespace std {
 
   [public return<Maybe<T>>]
   some<T>([T] value) {
-    [Maybe<T> mut] out{Maybe<T>()}
-    [Reference<Maybe<T>> mut] ref{location(out)}
+    [mut] out{Maybe<T>()}
+    [mut] ref{location(out)}
     init(ref.value, value)
     ref.empty = false
     return(out)

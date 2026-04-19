@@ -546,6 +546,86 @@ TEST_CASE("maybe stdlib control flow stays source locked to surface if syntax") 
         std::string::npos);
 }
 
+TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
+  std::filesystem::path codeExamplesPath = std::filesystem::path("..") / "docs" / "CodeExamples.md";
+  std::filesystem::path maybeStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "maybe" / "maybe.prime";
+  std::filesystem::path vectorStdlibPath =
+      std::filesystem::path("..") / "stdlib" / "std" / "collections" / "vector.prime";
+  std::filesystem::path mapStdlibPath =
+      std::filesystem::path("..") / "stdlib" / "std" / "collections" / "map.prime";
+  std::filesystem::path soaConversionsPath =
+      std::filesystem::path("..") / "stdlib" / "std" / "collections" / "soa_vector_conversions.prime";
+  if (!std::filesystem::exists(codeExamplesPath)) {
+    codeExamplesPath = std::filesystem::current_path() / "docs" / "CodeExamples.md";
+  }
+  if (!std::filesystem::exists(maybeStdlibPath)) {
+    maybeStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "maybe" / "maybe.prime";
+  }
+  if (!std::filesystem::exists(vectorStdlibPath)) {
+    vectorStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "collections" / "vector.prime";
+  }
+  if (!std::filesystem::exists(mapStdlibPath)) {
+    mapStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "collections" / "map.prime";
+  }
+  if (!std::filesystem::exists(soaConversionsPath)) {
+    soaConversionsPath =
+        std::filesystem::current_path() / "stdlib" / "std" / "collections" / "soa_vector_conversions.prime";
+  }
+  REQUIRE(std::filesystem::exists(codeExamplesPath));
+  REQUIRE(std::filesystem::exists(maybeStdlibPath));
+  REQUIRE(std::filesystem::exists(vectorStdlibPath));
+  REQUIRE(std::filesystem::exists(mapStdlibPath));
+  REQUIRE(std::filesystem::exists(soaConversionsPath));
+
+  const std::string codeExamples = readFile(codeExamplesPath.string());
+  const std::string maybeStdlib = readFile(maybeStdlibPath.string());
+  const std::string vectorStdlib = readFile(vectorStdlibPath.string());
+  const std::string mapStdlib = readFile(mapStdlibPath.string());
+  const std::string soaConversions = readFile(soaConversionsPath.string());
+
+  CHECK(codeExamples.find("[mut] current{start}") != std::string::npos);
+  CHECK(codeExamples.find("limit{5}") != std::string::npos);
+
+  CHECK(maybeStdlib.find("out{take(this.value)}") != std::string::npos);
+  CHECK(maybeStdlib.find("[mut] out{Maybe<T>()}") != std::string::npos);
+  CHECK(maybeStdlib.find("[mut] ref{location(out)}") != std::string::npos);
+  CHECK(maybeStdlib.find("[T] out{take(this.value)}") == std::string::npos);
+  CHECK(maybeStdlib.find("[Maybe<T> mut] out{Maybe<T>()}") == std::string::npos);
+  CHECK(maybeStdlib.find("[Reference<Maybe<T>> mut] ref{location(out)}") == std::string::npos);
+
+  CHECK(vectorStdlib.find("[mut] out{/std/collections/experimental_vector/vector<T>()}") !=
+        std::string::npos);
+  CHECK(vectorStdlib.find("valueCount{count(values)}") != std::string::npos);
+  CHECK(vectorStdlib.find("[mut] index{0i32}") != std::string::npos);
+  CHECK(vectorStdlib.find("[Vector<T> mut] out{/std/collections/experimental_vector/vector<T>()}") ==
+        std::string::npos);
+  CHECK(vectorStdlib.find("[i32] valueCount{count(values)}") == std::string::npos);
+  CHECK(vectorStdlib.find("[i32 mut] index{0i32}") == std::string::npos);
+
+  CHECK(mapStdlib.find("[mut] out{/std/collections/experimental_map/mapNew<K, V>()}") !=
+        std::string::npos);
+  CHECK(mapStdlib.find("entryCount{count(entries)}") != std::string::npos);
+  CHECK(mapStdlib.find("[mut] index{0i32}") != std::string::npos);
+  CHECK(mapStdlib.find("current{entries[index]}") != std::string::npos);
+  CHECK(mapStdlib.find("[map<K, V> mut] out{/std/collections/experimental_map/mapNew<K, V>()}") ==
+        std::string::npos);
+  CHECK(mapStdlib.find("[i32] entryCount{count(entries)}") == std::string::npos);
+  CHECK(mapStdlib.find("[Entry<K, V>] current{entries[index]}") == std::string::npos);
+
+  CHECK(soaConversions.find("valueCount{/std/collections/soa_vector/count<T>(values)}") !=
+        std::string::npos);
+  CHECK(soaConversions.find("valueCount{/std/collections/soa_vector/count_ref<T>(values)}") !=
+        std::string::npos);
+  CHECK(soaConversions.find("[mut] out{vector<T>()}") != std::string::npos);
+  CHECK(soaConversions.find("[mut] index{0i32}") != std::string::npos);
+  CHECK(soaConversions.find("[i32] valueCount{/std/collections/soa_vector/count<T>(values)}") ==
+        std::string::npos);
+  CHECK(soaConversions.find("[i32] valueCount{/std/collections/soa_vector/count_ref<T>(values)}") ==
+        std::string::npos);
+  CHECK(soaConversions.find("[vector<T> mut] out{vector<T>()}") == std::string::npos);
+  CHECK(soaConversions.find("[i32 mut] index{0i32}") == std::string::npos);
+}
+
 TEST_CASE("gfx stdlib wrapper arithmetic stays source locked to surface operators") {
   std::filesystem::path gfxStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "gfx" / "gfx.prime";
   std::filesystem::path gfxExperimentalPath =

@@ -4298,3 +4298,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: This completes the split PNG helper-spelling cleanup that started when oversized `TODO-4077` was broken into `TODO-4078` through `TODO-4081`.
   - finished_at: 2026-04-19
   - evidence: Rewrote the remaining `pngDecodeScanlines` Adam7 scatter loop and `namespace png` read orchestration in `stdlib/std/image/image.prime` from helper-form `assign(...)` and `plus(...)` spellings to direct assignment and `+` expressions, including indexed pixel writes, interlace coordinate math, IHDR/PLTE/IDAT state transitions, and final width/height publication; expanded `tests/unit/test_compile_run_examples_docs_locks.cpp` so `pngReadBody` now source-locks representative operator-form spellings and the absence of `assign(`, `plus(`, and `minus(`; and updated `docs/todo.md` to remove `TODO-4081` from the live queue so the stdlib surface-style lane now advances to `TODO-4029`.
+
+- [x] TODO-4082: Adopt concise inferred local bindings in small stdlib wrappers where initializers already show the type
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Surface Style Alignment
+  - depends_on: TODO-4026
+  - scope: Split oversized `TODO-4029` and convert the obvious repeated-type local bindings in `/std/maybe` plus the small public collection wrapper modules to concise inferred bindings where the initializer already establishes the type clearly, without mixing in the heavier `gfx`, `ui`, or `image` modules.
+  - acceptance:
+    - `/std/maybe` and the small public collection wrapper modules avoid redundant local type repetition when the initializer already establishes the type clearly.
+    - The resulting bindings match the supported inferred-local style documented in `docs/CodeExamples.md`.
+    - Heavier `gfx`, `ui`, and `image` inferred-binding cleanup remains split into explicit follow-up leaves instead of being folded into the same change.
+  - stop_rule: Stop once the small wrapper modules use concise inferred bindings by default; leave the heavier style-aligned modules separate.
+  - notes: Split from oversized `TODO-4029`, whose remaining inferred-binding cleanup now continues as `TODO-4083`, `TODO-4084`, and `TODO-4085`.
+  - finished_at: 2026-04-19
+  - evidence: Rewrote the obvious repeated-type local bindings in `stdlib/std/maybe/maybe.prime`, `stdlib/std/collections/vector.prime`, `stdlib/std/collections/map.prime`, and `stdlib/std/collections/soa_vector_conversions.prime` to concise inferred forms such as `[mut] out{...}`, `valueCount{...}`, and `current{...}`; expanded `tests/unit/test_compile_run_examples_docs_locks.cpp` with a focused inferred-binding source lock that pins those wrapper forms and guards against reintroducing the old repeated-type locals; and updated `docs/todo.md` to retire oversized `TODO-4029` in favor of the new `TODO-4083`, `TODO-4084`, and `TODO-4085` follow-up leaves.

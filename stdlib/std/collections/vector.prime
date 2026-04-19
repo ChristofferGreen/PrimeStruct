@@ -2,9 +2,9 @@ import /std/collections/experimental_vector/*
 
 [public effects(heap_alloc), return<Vector<T>>]
 /std/collections/vector/vector<T>([args<T>] values) {
-  [Vector<T> mut] out{/std/collections/experimental_vector/vector<T>()}
-  [i32] valueCount{count(values)}
-  [i32 mut] index{0i32}
+  [mut] out{/std/collections/experimental_vector/vector<T>()}
+  valueCount{count(values)}
+  [mut] index{0i32}
   while(less_than(index, valueCount), do() {
     /std/collections/experimental_vector/vectorPush<T>(out, values[index])
     increment(index)
