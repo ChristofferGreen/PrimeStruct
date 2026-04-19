@@ -256,12 +256,12 @@
       };
       Expr semanticLocalAutoBindingExpr;
       const Expr *bindingTypeExpr = &stmt;
-      if (callResolutionAdapters.semanticProductTargets.hasSemanticProduct &&
+      if (callResolutionAdapters.semanticProgram != nullptr &&
           stmt.semanticNodeId != 0 &&
           isLocalAutoBindingCandidate(stmt)) {
         const SemanticProgramLocalAutoFact *localAutoFact =
             findSemanticProductLocalAutoFactBySemanticId(
-                callResolutionAdapters.semanticProductTargets,
+                callResolutionAdapters.semanticProductTargets.semanticIndex,
                 stmt);
         const std::string bindingTypeText =
             localAutoFact != nullptr ? trimTemplateTypeText(localAutoFact->bindingTypeText)
@@ -301,7 +301,8 @@
           bindingValueKind,
           inferExprKind,
           [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
-          &callResolutionAdapters.semanticProductTargets);
+          callResolutionAdapters.semanticProgram,
+          &callResolutionAdapters.semanticProductTargets.semanticIndex);
       LocalInfo::Kind kind = bindingTypeInfo.kind;
       LocalInfo::ValueKind valueKind = bindingTypeInfo.valueKind;
       LocalInfo::ValueKind mapKeyKind = bindingTypeInfo.mapKeyKind;
@@ -492,7 +493,8 @@
                                                                        ReturnInfo &returnInfo) {
                                                                      return getReturnInfo(definitionPath, returnInfo);
                                                                    },
-                                                                   &callResolutionAdapters.semanticProductTargets);
+                                                                   callResolutionAdapters.semanticProgram,
+                                                                   &callResolutionAdapters.semanticProductTargets.semanticIndex);
                   },
                   [&](int32_t destBase, int32_t srcPtrLocal, int32_t slotCount) {
                     return emitStructCopySlots(destBase, srcPtrLocal, slotCount);

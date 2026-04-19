@@ -206,7 +206,9 @@ bool emitConversionsAndCallsControlExprTail(
                                            bindingKind,
                                            bindingValueKind,
                                            inferExprKind,
-                                           resolveDefinitionCall);
+                                           resolveDefinitionCall,
+                                           nullptr,
+                                           nullptr);
     };
     auto branchTypeInfoCompatible = [&](const StatementBindingTypeInfo &left,
                                         const StatementBindingTypeInfo &right) {

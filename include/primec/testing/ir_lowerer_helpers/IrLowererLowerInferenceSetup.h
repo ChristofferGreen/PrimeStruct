@@ -3,7 +3,12 @@
 
 
 
+namespace primec {
+struct SemanticProgram;
+}
+
 struct ReturnInfo;
+struct SemanticProductIndex;
 struct SemanticProductTargetAdapter;
 
 struct UninitializedStorageAccessInfo;
@@ -30,14 +35,16 @@ struct LowerInferenceSetupBootstrapState {
   std::function<const Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition;
   std::function<const Definition *(const Expr &)> resolveDefinitionCall;
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferPointerTargetKind;
-  const SemanticProductTargetAdapter *semanticProductTargets = nullptr;
+  const SemanticProgram *semanticProgram = nullptr;
+  const SemanticProductIndex *semanticIndex = nullptr;
 };
 
 struct LowerInferenceSetupBootstrapInput {
   const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
   const std::unordered_map<std::string, std::string> *importAliases = nullptr;
   const std::unordered_set<std::string> *structNames = nullptr;
-  const SemanticProductTargetAdapter *semanticProductTargets = nullptr;
+  const SemanticProgram *semanticProgram = nullptr;
+  const SemanticProductIndex *semanticIndex = nullptr;
 
   IsArrayCountCallFn isArrayCountCall = {};
   IsVectorCapacityCallFn isVectorCapacityCall = {};
@@ -89,7 +96,8 @@ struct LowerInferenceExprKindCallOperatorFallbackSetupInput {
 };
 struct LowerInferenceExprKindCallControlFlowFallbackSetupInput {
   const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
-  const SemanticProductTargetAdapter *semanticProductTargets = nullptr;
+  const SemanticProgram *semanticProgram = nullptr;
+  const SemanticProductIndex *semanticIndex = nullptr;
   ResolveSetupInferenceExprPathFn resolveExprPath = {};
   LowerSetupInferenceMatchToIfFn lowerMatchToIf = {};
   SetupInferenceCombineNumericKindsFn combineNumericKinds = {};
@@ -130,14 +138,16 @@ struct LowerInferenceGetReturnInfoStepInput {
   std::unordered_map<std::string, ReturnInfo> *returnInfoCache = nullptr;
   std::unordered_set<std::string> *returnInferenceStack = nullptr;
   const LowerInferenceReturnInfoSetupInput *returnInfoSetupInput = nullptr;
-  const SemanticProductTargetAdapter *semanticProductTargets = nullptr;
+  const SemanticProgram *semanticProgram = nullptr;
+  const SemanticProductIndex *semanticIndex = nullptr;
 };
 struct LowerInferenceGetReturnInfoCallbackSetupInput {
   const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
   std::unordered_map<std::string, ReturnInfo> *returnInfoCache = nullptr;
   std::unordered_set<std::string> *returnInferenceStack = nullptr;
   const LowerInferenceReturnInfoSetupInput *returnInfoSetupInput = nullptr;
-  const SemanticProductTargetAdapter *semanticProductTargets = nullptr;
+  const SemanticProgram *semanticProgram = nullptr;
+  const SemanticProductIndex *semanticIndex = nullptr;
   std::string *error = nullptr;
 };
 struct LowerInferenceGetReturnInfoSetupInput {
@@ -145,7 +155,8 @@ struct LowerInferenceGetReturnInfoSetupInput {
   const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
   std::unordered_map<std::string, ReturnInfo> *returnInfoCache = nullptr;
   std::unordered_set<std::string> *returnInferenceStack = nullptr;
-  const SemanticProductTargetAdapter *semanticProductTargets = nullptr;
+  const SemanticProgram *semanticProgram = nullptr;
+  const SemanticProductIndex *semanticIndex = nullptr;
   ResolveStructTypeNameForReturnFn resolveStructTypeName = {};
   ResolveStructArrayInfoForReturnFn resolveStructArrayInfoFromPath = {};
   IsBindingMutableForInferenceFn isBindingMutable = {};
@@ -168,7 +179,8 @@ struct LowerInferenceSetupInput {
   const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
   const std::unordered_map<std::string, std::string> *importAliases = nullptr;
   const std::unordered_set<std::string> *structNames = nullptr;
-  const SemanticProductTargetAdapter *semanticProductTargets = nullptr;
+  const SemanticProgram *semanticProgram = nullptr;
+  const SemanticProductIndex *semanticIndex = nullptr;
 
   IsArrayCountCallFn isArrayCountCall = {};
   IsStringCountCallFn isStringCountCall = {};

@@ -56,8 +56,9 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
   const auto *defMap = input.defMap;
   const auto resolveExprPath = input.resolveExprPath;
   std::string *const inferenceError = input.error;
-  const auto *semanticProductTargets = stateInOut.semanticProductTargets;
-  stateInOut.inferExprKind = [defMap, resolveExprPath, inferenceError, semanticProductTargets, &stateInOut](
+  const auto *semanticProgram = stateInOut.semanticProgram;
+  const auto *semanticIndex = stateInOut.semanticIndex;
+  stateInOut.inferExprKind = [defMap, resolveExprPath, inferenceError, semanticProgram, semanticIndex, &stateInOut](
                                  const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
     if (!expr.isMethodCall && expr.kind == Expr::Kind::Call && !expr.args.empty()) {
       std::string canonicalMapHelperName;
@@ -86,10 +87,9 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
     auto resolveTryValueKind = [&](const Expr &tryExpr, LocalInfo::ValueKind &kindOut) -> bool {
       kindOut = LocalInfo::ValueKind::Unknown;
       std::string semanticTryFactError;
-      if (semanticProductTargets != nullptr && semanticProductTargets->hasSemanticProduct &&
-          tryExpr.semanticNodeId != 0) {
+      if (semanticProgram != nullptr && semanticIndex != nullptr && tryExpr.semanticNodeId != 0) {
         const auto *tryFact =
-            findSemanticProductTryFactBySemanticId(semanticProductTargets->semanticIndex, tryExpr);
+            findSemanticProductTryFactBySemanticId(*semanticIndex, tryExpr);
         if (tryFact != nullptr) {
           kindOut = valueKindFromTypeName(tryFact->valueType);
           if (kindOut == LocalInfo::ValueKind::Unknown && !tryFact->valueType.empty()) {

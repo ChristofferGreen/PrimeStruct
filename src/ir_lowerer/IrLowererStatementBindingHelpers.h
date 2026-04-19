@@ -16,6 +16,7 @@
 namespace primec::ir_lowerer {
 
 struct StructSlotLayoutInfo;
+struct SemanticProductIndex;
 struct SemanticProductTargetAdapter;
 struct UninitializedStorageAccessInfo;
 struct PrintBuiltin;
@@ -99,7 +100,17 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
                                                        const BindingValueKindFn &bindingValueKind,
                                                        const InferBindingExprKindFn &inferExprKind,
                                                        const ResolveDefinitionCallForStatementFn &resolveDefinitionCall = {},
-                                                       const SemanticProductTargetAdapter *semanticProductTargets = nullptr);
+                                                       const SemanticProgram *semanticProgram = nullptr,
+                                                       const SemanticProductIndex *semanticIndex = nullptr);
+StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
+                                                       const Expr &init,
+                                                       const LocalMap &localsIn,
+                                                       const HasExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransform,
+                                                       const BindingKindFn &bindingKind,
+                                                       const BindingValueKindFn &bindingValueKind,
+                                                       const InferBindingExprKindFn &inferExprKind,
+                                                       const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
+                                                       const SemanticProductTargetAdapter *semanticProductTargets);
 bool isPointerMemoryIntrinsicCall(const Expr &expr);
 bool inferPointerMemoryIntrinsicTargetsUninitializedStorage(const Expr &expr, const LocalMap &localsIn);
 
@@ -127,7 +138,27 @@ bool inferCallParameterLocalInfo(const Expr &param,
                                      &resolveMethodCallDefinition = {},
                                  const std::function<const Definition *(const Expr &)> &resolveDefinitionCall = {},
                                  const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo = {},
-                                 const SemanticProductTargetAdapter *semanticProductTargets = nullptr);
+                                 const SemanticProgram *semanticProgram = nullptr,
+                                 const SemanticProductIndex *semanticIndex = nullptr);
+bool inferCallParameterLocalInfo(const Expr &param,
+                                 const LocalMap &localsForKindInference,
+                                 const IsBindingMutableFn &isBindingMutable,
+                                 const HasExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransform,
+                                 const BindingKindFn &bindingKind,
+                                 const BindingValueKindFn &bindingValueKind,
+                                 const InferBindingExprKindFn &inferExprKind,
+                                 const IsFileErrorBindingFn &isFileErrorBinding,
+                                 const SetReferenceArrayInfoForBindingFn &setReferenceArrayInfo,
+                                 const ApplyStructBindingInfoFn &applyStructArrayInfo,
+                                 const ApplyStructBindingInfoFn &applyStructValueInfo,
+                                 const IsStringBindingFn &isStringBinding,
+                                 LocalInfo &infoOut,
+                                 std::string &error,
+                                 const std::function<const Definition *(const Expr &, const LocalMap &)>
+                                     &resolveMethodCallDefinition,
+                                 const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
+                                 const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
+                                 const SemanticProductTargetAdapter *semanticProductTargets);
 bool emitStringStatementBindingInitializer(const Expr &stmt,
                                            const Expr &init,
                                            LocalMap &localsIn,

@@ -465,7 +465,8 @@ LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
     const ApplySetupInferenceStructInfoFn &applyStructValueInfo,
     const InferSetupInferenceStructExprPathFn &inferStructExprPath,
     const ResolveSetupInferenceDefinitionCallFn &resolveDefinitionCall,
-    const SemanticProductTargetAdapter *semanticProductTargets) {
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
   LocalMap bodyLocals = localsBase;
   bool sawValue = false;
   LocalInfo::ValueKind lastKind = LocalInfo::ValueKind::Unknown;
@@ -486,7 +487,8 @@ LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
                                         bindingValueKind,
                                         inferExprKind,
                                         resolveDefinitionCall,
-                                        semanticProductTargets);
+                                        semanticProgram,
+                                        semanticIndex);
       info.kind = typeInfo.kind;
       info.valueKind = typeInfo.valueKind;
       info.mapKeyKind = typeInfo.mapKeyKind;
@@ -519,6 +521,35 @@ LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
     lastKind = inferExprKind(bodyExpr, bodyLocals);
   }
   return sawValue ? lastKind : LocalInfo::ValueKind::Unknown;
+}
+
+LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
+    const std::vector<Expr> &bodyExpressions,
+    const LocalMap &localsBase,
+    const InferSetupInferenceValueKindFn &inferExprKind,
+    const IsSetupInferenceBindingMutableFn &isBindingMutable,
+    const SetupInferenceBindingKindFn &bindingKind,
+    const HasSetupInferenceExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransform,
+    const SetupInferenceBindingValueKindFn &bindingValueKind,
+    const ApplySetupInferenceStructInfoFn &applyStructArrayInfo,
+    const ApplySetupInferenceStructInfoFn &applyStructValueInfo,
+    const InferSetupInferenceStructExprPathFn &inferStructExprPath,
+    const ResolveSetupInferenceDefinitionCallFn &resolveDefinitionCall,
+    const SemanticProductTargetAdapter *semanticProductTargets) {
+  return inferBodyValueKindWithLocalsScaffolding(
+      bodyExpressions,
+      localsBase,
+      inferExprKind,
+      isBindingMutable,
+      bindingKind,
+      hasExplicitBindingTypeTransform,
+      bindingValueKind,
+      applyStructArrayInfo,
+      applyStructValueInfo,
+      inferStructExprPath,
+      resolveDefinitionCall,
+      semanticProductTargets == nullptr ? nullptr : semanticProductTargets->semanticProgram,
+      semanticProductTargets == nullptr ? nullptr : &semanticProductTargets->semanticIndex);
 }
 
 } // namespace primec::ir_lowerer

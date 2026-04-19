@@ -47,14 +47,16 @@ bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &in
   const auto *defMap = input.defMap;
   const auto *importAliases = input.importAliases;
   const auto *structNames = input.structNames;
-  const auto *semanticProductTargets = input.semanticProductTargets;
+  const auto *semanticProgram = input.semanticProgram;
+  const auto *semanticIndex = input.semanticIndex;
   const auto isArrayCountCall = input.isArrayCountCall;
   const auto isVectorCapacityCall = input.isVectorCapacityCall;
   const auto isEntryArgsName = input.isEntryArgsName;
   const auto resolveExprPath = input.resolveExprPath;
   const auto getBuiltinOperatorName = input.getBuiltinOperatorName;
 
-  stateOut.semanticProductTargets = semanticProductTargets;
+  stateOut.semanticProgram = semanticProgram;
+  stateOut.semanticIndex = semanticIndex;
 
   stateOut.resolveMethodCallDefinition = [defMap,
                                           importAliases,
@@ -63,7 +65,7 @@ bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &in
                                           isVectorCapacityCall,
                                           isEntryArgsName,
                                           resolveExprPath,
-                                          semanticProductTargets,
+                                          semanticProgram,
                                           &stateOut,
                                           &errorOut](const Expr &callExpr,
                                                      const LocalMap &localsIn) -> const Definition * {
@@ -76,8 +78,7 @@ bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &in
                                                *structNames,
                                                stateOut.inferExprKind,
                                                resolveExprPath,
-                                               semanticProductTargets == nullptr ? nullptr
-                                                                                : semanticProductTargets->semanticProgram,
+                                               semanticProgram,
                                                stateOut.getReturnInfo,
                                                *defMap,
                                                errorOut);
@@ -107,7 +108,8 @@ bool runLowerInferenceSetup(const LowerInferenceSetupInput &input,
               .defMap = input.defMap,
               .importAliases = input.importAliases,
               .structNames = input.structNames,
-              .semanticProductTargets = input.semanticProductTargets,
+              .semanticProgram = input.semanticProgram,
+              .semanticIndex = input.semanticIndex,
               .isArrayCountCall = input.isArrayCountCall,
               .isVectorCapacityCall = input.isVectorCapacityCall,
               .isEntryArgsName = input.isEntryArgsName,
@@ -179,7 +181,8 @@ bool runLowerInferenceSetup(const LowerInferenceSetupInput &input,
   if (!runLowerInferenceExprKindCallControlFlowFallbackSetup(
           {
               .defMap = input.defMap,
-              .semanticProductTargets = input.semanticProductTargets,
+              .semanticProgram = input.semanticProgram,
+              .semanticIndex = input.semanticIndex,
               .resolveExprPath = input.resolveExprPath,
               .lowerMatchToIf = input.lowerMatchToIf,
               .combineNumericKinds = input.combineNumericKinds,
@@ -231,7 +234,8 @@ bool runLowerInferenceSetup(const LowerInferenceSetupInput &input,
           .defMap = input.defMap,
           .returnInfoCache = &returnInfoCache,
           .returnInferenceStack = &returnInferenceStack,
-          .semanticProductTargets = input.semanticProductTargets,
+          .semanticProgram = input.semanticProgram,
+          .semanticIndex = input.semanticIndex,
           .resolveStructTypeName = input.resolveStructTypeName,
           .resolveStructArrayInfoFromPath = input.resolveStructArrayInfoFromPath,
           .isBindingMutable = input.isBindingMutable,

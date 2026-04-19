@@ -136,7 +136,8 @@
                                                                              ReturnInfo &returnInfo) {
                                                                            return getReturnInfo(definitionPath, returnInfo);
                                                                          },
-                                                                         &callResolutionAdapters.semanticProductTargets);
+                                                                         callResolutionAdapters.semanticProgram,
+                                                                         &callResolutionAdapters.semanticProductTargets.semanticIndex);
                         },
                         callError);
                   },

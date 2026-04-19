@@ -1926,6 +1926,58 @@ TEST_CASE("ir lowerer semantic-product index resolves binding facts by semantic 
   CHECK(bindingFact->bindingTypeText == "i32");
 }
 
+TEST_CASE("ir lowerer statement binding helper consumes semantic-product index directly") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "selected",
+      .bindingTypeText = "map<i32, string>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 21,
+      .sourceColumn = 5,
+      .semanticNodeId = 7501,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/selected"),
+  });
+
+  primec::Expr bindingExpr;
+  bindingExpr.kind = primec::Expr::Kind::Name;
+  bindingExpr.isBinding = true;
+  bindingExpr.name = "selected";
+  bindingExpr.semanticNodeId = 7501;
+
+  primec::Expr initExpr;
+  initExpr.kind = primec::Expr::Kind::Name;
+  initExpr.name = "selected";
+
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  const primec::ir_lowerer::StatementBindingTypeInfo info =
+      primec::ir_lowerer::inferStatementBindingTypeInfo(
+          bindingExpr,
+          initExpr,
+          {},
+          [](const primec::Expr &) { return false; },
+          [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+          [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          {},
+          &semanticProgram,
+          &semanticIndex);
+
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Map);
+  CHECK(info.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::String);
+}
+
 TEST_CASE("ir lowerer semantic-product adapter indexes query facts by resolved path and call name") {
   primec::Expr queryExpr;
   queryExpr.kind = primec::Expr::Kind::Call;

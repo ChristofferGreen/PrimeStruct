@@ -468,7 +468,9 @@ TEST_CASE("public lowerer testing headers stay in sync with semantic-product hel
   CHECK(flowHelpers.find("emitBuiltinCanonicalMapInsertOverwriteOrPending(") == std::string::npos);
   CHECK(inlineParam.find("using ResolveInlineParameterDefinitionCallFn") != std::string::npos);
   CHECK(inlineParam.find("const std::string &calleePath,") != std::string::npos);
-  CHECK(lowerInference.find("const SemanticProductTargetAdapter *semanticProductTargets = nullptr;") !=
+  CHECK(lowerInference.find("const SemanticProgram *semanticProgram = nullptr;") !=
+        std::string::npos);
+  CHECK(lowerInference.find("const SemanticProductIndex *semanticIndex = nullptr;") !=
         std::string::npos);
   CHECK(lowerLocals.find("const SemanticProgram *semanticProgram,") != std::string::npos);
   CHECK(lowerLocals.find("auto hasExplicitBindingTypeTransform = bindingTypeAdapters.hasExplicitBindingTypeTransform;") !=
@@ -999,7 +1001,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irMethodResolution.find("resolvedPath;\n    return nullptr;") !=
         std::string::npos);
-  CHECK(irInferenceSetup.find(".semanticProductTargets = &callResolutionAdapters.semanticProductTargets,") !=
+  CHECK(irInferenceSetup.find(".semanticProgram = callResolutionAdapters.semanticProgram,") !=
+        std::string::npos);
+  CHECK(irInferenceSetup.find(".semanticIndex = &callResolutionAdapters.semanticProductTargets.semanticIndex,") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("struct SemanticProductTargetAdapter") != std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("bool hasSemanticProduct = false;") != std::string::npos);
@@ -1308,7 +1312,11 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(statementBindingHelpersHeader.find("const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,") !=
         std::string::npos);
-  CHECK(statementBindingHelpersHeader.find("const SemanticProductTargetAdapter *semanticProductTargets = nullptr);") !=
+  CHECK(statementBindingHelpersHeader.find("const SemanticProgram *semanticProgram = nullptr,") !=
+        std::string::npos);
+  CHECK(statementBindingHelpersHeader.find("const SemanticProductIndex *semanticIndex = nullptr);") !=
+        std::string::npos);
+  CHECK(statementBindingHelpersHeader.find("const SemanticProductTargetAdapter *semanticProductTargets);") !=
         std::string::npos);
   CHECK(statementBindingHelpersHeader.find("bool isPointerMemoryIntrinsicCall(const Expr &expr);") !=
         std::string::npos);
@@ -1497,6 +1505,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const auto resultHelpersHeader =
       readFile("include/primec/testing/ir_lowerer_helpers/IrLowererResultHelpers.h");
   const auto resultHelpersSource = readFile("src/ir_lowerer/IrLowererResultHelpers.cpp");
+  const auto resultInternalHeader = readFile("src/ir_lowerer/IrLowererResultInternal.h");
+  const auto resultMetadataHelpersSource = readFile("src/ir_lowerer/IrLowererResultMetadataHelpers.cpp");
   const auto lowerInferenceDispatchSource = readFile("src/ir_lowerer/IrLowererLowerInferenceDispatchSetup.cpp");
   const auto lowerEmitExprTryHelpers = readFile("src/ir_lowerer/IrLowererLowerEmitExprTryHelpers.h");
   CHECK(resultHelpersHeader.find("struct Definition;") != std::string::npos);
@@ -1519,7 +1529,19 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(resultHelpersSource.find("incomplete semantic-product query fact: ") != std::string::npos);
   CHECK(resultHelpersSource.find("incomplete semantic-product try fact: try") != std::string::npos);
-  CHECK(lowerInferenceDispatchSource.find("findSemanticProductTryFactBySemanticId(semanticProductTargets->semanticIndex, tryExpr)") !=
+  CHECK(resultInternalHeader.find("const SemanticProductTargetAdapter *semanticProductTargets") ==
+        std::string::npos);
+  CHECK(resultInternalHeader.find("const SemanticProgram *semanticProgram = nullptr,") !=
+        std::string::npos);
+  CHECK(resultInternalHeader.find("const SemanticProductIndex *semanticIndex = nullptr,") !=
+        std::string::npos);
+  CHECK(resultMetadataHelpersSource.find("const SemanticProductTargetAdapter *semanticProductTargets") ==
+        std::string::npos);
+  CHECK(resultMetadataHelpersSource.find("findSemanticProductBindingFact(*semanticIndex, valueExpr)") !=
+        std::string::npos);
+  CHECK(resultMetadataHelpersSource.find("findSemanticProductQueryFactBySemanticId(*semanticIndex, valueExpr)") !=
+        std::string::npos);
+  CHECK(lowerInferenceDispatchSource.find("findSemanticProductTryFactBySemanticId(*semanticIndex, tryExpr)") !=
         std::string::npos);
   CHECK(lowerInferenceDispatchSource.find("missing semantic-product try fact: try") !=
         std::string::npos);
@@ -1540,7 +1562,12 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(statementBindingHelpersHeader.find("struct Definition;") != std::string::npos);
   CHECK(statementBindingHelpersHeader.find("struct ResultReturnInfo;") != std::string::npos);
   CHECK(statementBindingHelpersHeader.find("struct ReturnInfo;") != std::string::npos);
+  CHECK(statementBindingHelpersHeader.find("struct SemanticProductIndex;") != std::string::npos);
   CHECK(statementBindingHelpersHeader.find("struct SemanticProductTargetAdapter;") !=
+        std::string::npos);
+  CHECK(statementBindingHelpersHeader.find("const SemanticProgram *semanticProgram = nullptr,") !=
+        std::string::npos);
+  CHECK(statementBindingHelpersHeader.find("const SemanticProductIndex *semanticIndex = nullptr);") !=
         std::string::npos);
 
   const auto structFieldBindingHelpersHeader =
@@ -2253,9 +2280,9 @@ TEST_CASE("lower inference return info uses direct semantic return facts") {
         std::string::npos);
   CHECK(irLowererReturnInfoHelpers.find("findSemanticProductReturnFact(&semanticProgram, semanticIndex, definition)") !=
         std::string::npos);
-  CHECK(irLowererReturnInfoHelpers.find("*input.semanticProductTargets->semanticProgram,") !=
+  CHECK(irLowererReturnInfoHelpers.find("*input.semanticProgram,") !=
         std::string::npos);
-  CHECK(irLowererReturnInfoHelpers.find("input.semanticProductTargets->semanticIndex,") !=
+  CHECK(irLowererReturnInfoHelpers.find("*input.semanticIndex,") !=
         std::string::npos);
 }
 

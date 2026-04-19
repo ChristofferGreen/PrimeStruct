@@ -166,9 +166,9 @@
         }
       }
       if (info.kind == LocalInfo::Kind::Value && info.structTypeName.empty() &&
-          callResolutionAdapters.semanticProductTargets.hasSemanticProduct && stmt.semanticNodeId != 0) {
+          callResolutionAdapters.semanticProgram != nullptr && stmt.semanticNodeId != 0) {
         if (const SemanticProgramBindingFact *bindingFact =
-                findSemanticProductBindingFact(callResolutionAdapters.semanticProductTargets, stmt);
+                findSemanticProductBindingFact(callResolutionAdapters.semanticProductTargets.semanticIndex, stmt);
             bindingFact != nullptr && !bindingFact->bindingTypeText.empty()) {
           std::string semanticTypeText = trimTemplateTypeText(bindingFact->bindingTypeText);
           if (!semanticTypeText.empty() &&

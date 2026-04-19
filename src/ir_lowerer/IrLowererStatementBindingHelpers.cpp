@@ -292,13 +292,12 @@ bool populateBindingTypeInfoFromTypeText(
 bool populateBindingTypeInfoFromSemanticBindingFact(
     const Expr &expr,
     const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
-    const SemanticProductTargetAdapter *semanticProductTargets,
+    const SemanticProductIndex *semanticIndex,
     StatementBindingTypeInfo &infoOut) {
-  if (semanticProductTargets == nullptr || !semanticProductTargets->hasSemanticProduct ||
-      expr.semanticNodeId == 0) {
+  if (semanticIndex == nullptr || expr.semanticNodeId == 0) {
     return false;
   }
-  const auto *bindingFact = findSemanticProductBindingFact(*semanticProductTargets, expr);
+  const auto *bindingFact = findSemanticProductBindingFact(*semanticIndex, expr);
   return bindingFact != nullptr && !bindingFact->bindingTypeText.empty() &&
          populateBindingTypeInfoFromTypeText(
              bindingFact->bindingTypeText, resolveDefinitionCall, infoOut);
@@ -308,7 +307,8 @@ bool inferExprBindingTypeInfo(const Expr &expr,
                               const LocalMap &localsIn,
                               const InferBindingExprKindFn &inferExprKind,
                               const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
-                              const SemanticProductTargetAdapter *semanticProductTargets,
+                              const SemanticProgram *semanticProgram,
+                              const SemanticProductIndex *semanticIndex,
                               StatementBindingTypeInfo &infoOut) {
   infoOut = {};
   if (expr.kind == Expr::Kind::Name) {
@@ -347,7 +347,7 @@ bool inferExprBindingTypeInfo(const Expr &expr,
     return true;
   }
   if (populateBindingTypeInfoFromSemanticBindingFact(
-          expr, resolveDefinitionCall, semanticProductTargets, infoOut)) {
+          expr, resolveDefinitionCall, semanticIndex, infoOut)) {
     return true;
   }
   if (isIfCall(expr) && expr.args.size() == 3) {
@@ -359,9 +359,9 @@ bool inferExprBindingTypeInfo(const Expr &expr,
     StatementBindingTypeInfo thenInfo;
     StatementBindingTypeInfo elseInfo;
     if (!inferExprBindingTypeInfo(
-            *thenValue, localsIn, inferExprKind, resolveDefinitionCall, semanticProductTargets, thenInfo) ||
+            *thenValue, localsIn, inferExprKind, resolveDefinitionCall, semanticProgram, semanticIndex, thenInfo) ||
         !inferExprBindingTypeInfo(
-            *elseValue, localsIn, inferExprKind, resolveDefinitionCall, semanticProductTargets, elseInfo)) {
+            *elseValue, localsIn, inferExprKind, resolveDefinitionCall, semanticProgram, semanticIndex, elseInfo)) {
       return false;
     }
     if (thenInfo.kind != elseInfo.kind) {
@@ -436,8 +436,8 @@ bool inferExprBindingTypeInfo(const Expr &expr,
                                       noopLookupReturnInfo,
                                       inferExprKind,
                                       resultInfo,
-                                      semanticProductTargets == nullptr ? nullptr : semanticProductTargets->semanticProgram,
-                                      semanticProductTargets == nullptr ? nullptr : &semanticProductTargets->semanticIndex) &&
+                                      semanticProgram,
+                                      semanticIndex) &&
       resultInfo.isResult) {
     infoOut.kind = LocalInfo::Kind::Value;
     infoOut.valueKind =
@@ -480,7 +480,8 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
                                                        const BindingValueKindFn &bindingValueKind,
                                                        const InferBindingExprKindFn &inferExprKind,
                                                        const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
-                                                       const SemanticProductTargetAdapter *semanticProductTargets) {
+                                                       const SemanticProgram *semanticProgram,
+                                                       const SemanticProductIndex *semanticIndex) {
   const ResolveDefinitionCallForStatementFn safeResolveDefinitionCall =
       resolveDefinitionCall ? resolveDefinitionCall
                             : ResolveDefinitionCallForStatementFn([](const Expr &) { return nullptr; });
@@ -502,7 +503,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
   if (!hasExplicitType) {
     StatementBindingTypeInfo semanticInfo;
     if (populateBindingTypeInfoFromSemanticBindingFact(
-            stmt, safeResolveDefinitionCall, semanticProductTargets, semanticInfo)) {
+            stmt, safeResolveDefinitionCall, semanticIndex, semanticInfo)) {
       return semanticInfo;
     }
   }
@@ -535,7 +536,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
   if (!hasExplicitType) {
     StatementBindingTypeInfo inferredExprInfo;
     if (inferExprBindingTypeInfo(
-            init, localsIn, inferExprKind, safeResolveDefinitionCall, semanticProductTargets, inferredExprInfo)) {
+            init, localsIn, inferExprKind, safeResolveDefinitionCall, semanticProgram, semanticIndex, inferredExprInfo)) {
       if (info.kind == LocalInfo::Kind::Value) {
         info.kind = inferredExprInfo.kind;
       }
@@ -656,6 +657,28 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
   return info;
 }
 
+StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
+                                                       const Expr &init,
+                                                       const LocalMap &localsIn,
+                                                       const HasExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransform,
+                                                       const BindingKindFn &bindingKind,
+                                                       const BindingValueKindFn &bindingValueKind,
+                                                       const InferBindingExprKindFn &inferExprKind,
+                                                       const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
+                                                       const SemanticProductTargetAdapter *semanticProductTargets) {
+  return inferStatementBindingTypeInfo(
+      stmt,
+      init,
+      localsIn,
+      hasExplicitBindingTypeTransform,
+      bindingKind,
+      bindingValueKind,
+      inferExprKind,
+      resolveDefinitionCall,
+      semanticProductTargets == nullptr ? nullptr : semanticProductTargets->semanticProgram,
+      semanticProductTargets == nullptr ? nullptr : &semanticProductTargets->semanticIndex);
+}
+
 bool inferCallParameterLocalInfo(const Expr &param,
                                  const LocalMap &localsForKindInference,
                                  const IsBindingMutableFn &isBindingMutable,
@@ -674,7 +697,8 @@ bool inferCallParameterLocalInfo(const Expr &param,
                                      &resolveMethodCallDefinition,
                                  const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
                                  const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
-                                 const SemanticProductTargetAdapter *semanticProductTargets) {
+                                 const SemanticProgram *semanticProgram,
+                                 const SemanticProductIndex *semanticIndex) {
   infoOut.isMutable = isBindingMutable(param);
   infoOut.isSoaVector = hasSoaVectorTypeTransform(param);
   infoOut.isArgsPack = isArgsPackBinding(param);
@@ -702,8 +726,8 @@ bool inferCallParameterLocalInfo(const Expr &param,
             resolveDefinitionCall,
             getReturnInfo,
             inferredResultInfo,
-            semanticProductTargets == nullptr ? nullptr : semanticProductTargets->semanticProgram,
-            semanticProductTargets == nullptr ? nullptr : &semanticProductTargets->semanticIndex) &&
+            semanticProgram,
+            semanticIndex) &&
         inferredResultInfo.isResult) {
       infoOut.isResult = true;
       infoOut.resultHasValue = inferredResultInfo.hasValue;
@@ -977,6 +1001,47 @@ bool inferCallParameterLocalInfo(const Expr &param,
   infoOut.stringIndex = -1;
   infoOut.argvChecked = true;
   return true;
+}
+
+bool inferCallParameterLocalInfo(const Expr &param,
+                                 const LocalMap &localsForKindInference,
+                                 const IsBindingMutableFn &isBindingMutable,
+                                 const HasExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransform,
+                                 const BindingKindFn &bindingKind,
+                                 const BindingValueKindFn &bindingValueKind,
+                                 const InferBindingExprKindFn &inferExprKind,
+                                 const IsFileErrorBindingFn &isFileErrorBinding,
+                                 const SetReferenceArrayInfoForBindingFn &setReferenceArrayInfo,
+                                 const ApplyStructBindingInfoFn &applyStructArrayInfo,
+                                 const ApplyStructBindingInfoFn &applyStructValueInfo,
+                                 const IsStringBindingFn &isStringBinding,
+                                 LocalInfo &infoOut,
+                                 std::string &error,
+                                 const std::function<const Definition *(const Expr &, const LocalMap &)>
+                                     &resolveMethodCallDefinition,
+                                 const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
+                                 const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
+                                 const SemanticProductTargetAdapter *semanticProductTargets) {
+  return inferCallParameterLocalInfo(
+      param,
+      localsForKindInference,
+      isBindingMutable,
+      hasExplicitBindingTypeTransform,
+      bindingKind,
+      bindingValueKind,
+      inferExprKind,
+      isFileErrorBinding,
+      setReferenceArrayInfo,
+      applyStructArrayInfo,
+      applyStructValueInfo,
+      isStringBinding,
+      infoOut,
+      error,
+      resolveMethodCallDefinition,
+      resolveDefinitionCall,
+      getReturnInfo,
+      semanticProductTargets == nullptr ? nullptr : semanticProductTargets->semanticProgram,
+      semanticProductTargets == nullptr ? nullptr : &semanticProductTargets->semanticIndex);
 }
 
 bool selectUninitializedStorageZeroInstruction(LocalInfo::Kind kind,

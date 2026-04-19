@@ -249,8 +249,8 @@ bool precomputeSemanticProductReturnInfoCache(const LowerInferenceGetReturnInfoS
     errorOut = "native backend missing inference get-return-info setup dependency: returnInfoCache";
     return false;
   }
-  if (input.semanticProductTargets == nullptr || !input.semanticProductTargets->hasSemanticProduct) {
-    errorOut = "native backend missing inference get-return-info setup dependency: semanticProductTargets";
+  if (input.semanticProgram == nullptr || input.semanticIndex == nullptr) {
+    errorOut = "native backend missing inference get-return-info setup dependency: semanticProgram";
     return false;
   }
 
@@ -258,13 +258,13 @@ bool precomputeSemanticProductReturnInfoCache(const LowerInferenceGetReturnInfoS
   returnInfoCache.clear();
 
   const auto callableSummaries =
-      semanticProgramCallableSummaryView(*input.semanticProductTargets->semanticProgram);
+      semanticProgramCallableSummaryView(*input.semanticProgram);
   for (const auto *entry : callableSummaries) {
     if (entry == nullptr) {
       continue;
     }
     const std::string_view callablePath =
-        semanticProgramCallableSummaryFullPath(*input.semanticProductTargets->semanticProgram, *entry);
+        semanticProgramCallableSummaryFullPath(*input.semanticProgram, *entry);
     if (entry->fullPathId == InvalidSymbolId || callablePath.empty()) {
       errorOut = "missing semantic-product callable summary path id";
       return false;
@@ -273,18 +273,18 @@ bool precomputeSemanticProductReturnInfoCache(const LowerInferenceGetReturnInfoS
 
   std::vector<const Definition *> definitions;
   const auto &publishedCallableSummaryIndices =
-      input.semanticProductTargets->semanticProgram->publishedRoutingLookups.callableSummaryIndicesByPathId;
+      input.semanticProgram->publishedRoutingLookups.callableSummaryIndicesByPathId;
   definitions.reserve(!publishedCallableSummaryIndices.empty() ? publishedCallableSummaryIndices.size()
                                                                : callableSummaries.size());
 
   if (!publishedCallableSummaryIndices.empty()) {
     for (const auto &[pathId, callableSummaryIndex] : publishedCallableSummaryIndices) {
-      if (callableSummaryIndex >= input.semanticProductTargets->semanticProgram->callableSummaries.size()) {
+      if (callableSummaryIndex >= input.semanticProgram->callableSummaries.size()) {
         errorOut = "missing semantic-product callable summary path id";
         return false;
       }
       const std::string_view pathView = semanticProgramResolveCallTargetString(
-          *input.semanticProductTargets->semanticProgram, pathId);
+          *input.semanticProgram, pathId);
       if (pathView.empty()) {
         errorOut = "missing semantic-product callable summary path id";
         return false;
@@ -303,7 +303,7 @@ bool precomputeSemanticProductReturnInfoCache(const LowerInferenceGetReturnInfoS
         return false;
       }
       const std::string_view pathView = semanticProgramResolveCallTargetString(
-          *input.semanticProductTargets->semanticProgram, entry->fullPathId);
+          *input.semanticProgram, entry->fullPathId);
       if (pathView.empty()) {
         errorOut = "missing semantic-product callable summary path id";
         return false;
@@ -322,8 +322,8 @@ bool precomputeSemanticProductReturnInfoCache(const LowerInferenceGetReturnInfoS
     ReturnInfo info;
     if (!buildSemanticProductReturnInfo(
             returnInfoSetupInput,
-            *input.semanticProductTargets->semanticProgram,
-            input.semanticProductTargets->semanticIndex,
+            *input.semanticProgram,
+            *input.semanticIndex,
             *definition,
             info,
             errorOut)) {
@@ -693,12 +693,12 @@ bool runLowerInferenceGetReturnInfoStep(const LowerInferenceGetReturnInfoStepInp
     errorOut = "native backend cannot resolve definition: " + path;
     return false;
   }
-  if (input.semanticProductTargets != nullptr && input.semanticProductTargets->hasSemanticProduct) {
+  if (input.semanticProgram != nullptr && input.semanticIndex != nullptr) {
     ReturnInfo info;
     if (!buildSemanticProductReturnInfo(
             *input.returnInfoSetupInput,
-            *input.semanticProductTargets->semanticProgram,
-            input.semanticProductTargets->semanticIndex,
+            *input.semanticProgram,
+            *input.semanticIndex,
             *defIt->second,
             info,
             errorOut)) {
@@ -755,7 +755,8 @@ bool runLowerInferenceGetReturnInfoCallbackSetup(const LowerInferenceGetReturnIn
       .returnInfoCache = input.returnInfoCache,
       .returnInferenceStack = input.returnInferenceStack,
       .returnInfoSetupInput = input.returnInfoSetupInput,
-      .semanticProductTargets = input.semanticProductTargets,
+      .semanticProgram = input.semanticProgram,
+      .semanticIndex = input.semanticIndex,
   };
   std::string *const inferenceError = input.error;
   getReturnInfoOut = [stepInput, inferenceError](const std::string &path, ReturnInfo &outInfo) -> bool {
@@ -793,7 +794,8 @@ bool runLowerInferenceGetReturnInfoSetup(const LowerInferenceGetReturnInfoSetupI
   const auto *defMap = input.defMap;
   auto *returnInfoCache = input.returnInfoCache;
   auto *returnInferenceStack = input.returnInferenceStack;
-  const auto *semanticProductTargets = input.semanticProductTargets;
+  const auto *semanticProgram = input.semanticProgram;
+  const auto *semanticIndex = input.semanticIndex;
   std::string *const inferenceError = input.error;
   returnInferenceStack->clear();
 
@@ -814,7 +816,7 @@ bool runLowerInferenceGetReturnInfoSetup(const LowerInferenceGetReturnInfoSetupI
       .inferArrayElementKind = input.inferArrayElementKind,
       .lowerMatchToIf = input.lowerMatchToIf,
   };
-  getReturnInfoOut = [defMap, returnInfoCache, returnInferenceStack, semanticProductTargets, returnInfoSetupInput, inferenceError](
+  getReturnInfoOut = [defMap, returnInfoCache, returnInferenceStack, semanticProgram, semanticIndex, returnInfoSetupInput, inferenceError](
                          const std::string &path, ReturnInfo &outInfo) -> bool {
     auto cached = returnInfoCache->find(path);
     if (cached != returnInfoCache->end()) {
@@ -827,7 +829,8 @@ bool runLowerInferenceGetReturnInfoSetup(const LowerInferenceGetReturnInfoSetupI
             .returnInfoCache = returnInfoCache,
             .returnInferenceStack = returnInferenceStack,
             .returnInfoSetupInput = &returnInfoSetupInput,
-            .semanticProductTargets = semanticProductTargets,
+            .semanticProgram = semanticProgram,
+            .semanticIndex = semanticIndex,
         },
         path,
         outInfo,
@@ -838,7 +841,8 @@ bool runLowerInferenceGetReturnInfoSetup(const LowerInferenceGetReturnInfoSetupI
       .defMap = defMap,
       .returnInfoCache = returnInfoCache,
       .returnInferenceStack = returnInferenceStack,
-      .semanticProductTargets = semanticProductTargets,
+      .semanticProgram = semanticProgram,
+      .semanticIndex = semanticIndex,
       .resolveStructTypeName = input.resolveStructTypeName,
       .resolveStructArrayInfoFromPath = input.resolveStructArrayInfoFromPath,
       .isBindingMutable = input.isBindingMutable,
@@ -857,7 +861,7 @@ bool runLowerInferenceGetReturnInfoSetup(const LowerInferenceGetReturnInfoSetupI
       .error = inferenceError,
   };
   const bool useSemanticProductReturnInfo =
-      semanticProductTargets != nullptr && semanticProductTargets->hasSemanticProduct;
+      semanticProgram != nullptr && semanticIndex != nullptr;
   if (!(useSemanticProductReturnInfo
             ? precomputeSemanticProductReturnInfoCache(precomputeInput, returnInfoSetupInput, errorOut)
             : precomputeGraphReturnInfoCache(precomputeInput, returnInfoSetupInput, errorOut))) {

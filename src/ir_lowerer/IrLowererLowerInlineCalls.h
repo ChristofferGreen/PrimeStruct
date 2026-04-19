@@ -87,7 +87,8 @@
                                                                    ReturnInfo &returnInfo) {
                                                                  return getReturnInfo(definitionPath, returnInfo);
                                                                },
-                                                               &callResolutionAdapters.semanticProductTargets);
+                                                               callResolutionAdapters.semanticProgram,
+                                                               &callResolutionAdapters.semanticProductTargets.semanticIndex);
               },
               [&](int32_t destBaseLocal, int32_t srcPtrLocal, int32_t slotCount) {
                 return emitStructCopySlots(destBaseLocal, srcPtrLocal, slotCount);
@@ -138,7 +139,8 @@
                                                                  ReturnInfo &returnInfo) {
                                                                return getReturnInfo(definitionPath, returnInfo);
                                                              },
-                                                             &callResolutionAdapters.semanticProductTargets);
+                                                             callResolutionAdapters.semanticProgram,
+                                                             &callResolutionAdapters.semanticProductTargets.semanticIndex);
             },
             [&](const Expr &param) { return isStringBinding(param); },
             [&](const Expr &argExpr,

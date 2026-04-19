@@ -521,7 +521,8 @@ bool runLowerInferenceExprKindCallControlFlowFallbackSetup(
   const auto applyStructArrayInfo = input.applyStructArrayInfo;
   const auto applyStructValueInfo = input.applyStructValueInfo;
   const auto inferStructExprPath = input.inferStructExprPath;
-  const auto *semanticProductTargets = input.semanticProductTargets;
+  const auto *semanticProgram = input.semanticProgram;
+  const auto *semanticIndex = input.semanticIndex;
 
   stateInOut.inferCallExprControlFlowFallbackKind = [defMap,
                                                      resolveExprPath,
@@ -534,7 +535,8 @@ bool runLowerInferenceExprKindCallControlFlowFallbackSetup(
                                                      applyStructArrayInfo,
                                                      applyStructValueInfo,
                                                      inferStructExprPath,
-                                                     semanticProductTargets,
+                                                     semanticProgram,
+                                                     semanticIndex,
                                                      &stateInOut](const Expr &expr,
                                                                   const LocalMap &localsIn,
                                                                   std::string &errorInOut,
@@ -583,7 +585,8 @@ bool runLowerInferenceExprKindCallControlFlowFallbackSetup(
                            ? stateInOut.resolveDefinitionCall(candidateExpr)
                            : nullptr;
               },
-              semanticProductTargets);
+              semanticProgram,
+              semanticIndex);
         },
         [&](const std::string &path) { return defMap->find(path) != defMap->end(); },
         errorInOut,

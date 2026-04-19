@@ -6,8 +6,13 @@
 #include "IrLowererSharedTypes.h"
 #include "primec/Ast.h"
 
+namespace primec {
+struct SemanticProgram;
+}
+
 namespace primec::ir_lowerer {
 
+struct SemanticProductIndex;
 struct SemanticProductTargetAdapter;
 
 using GetSetupInferenceBuiltinOperatorNameFn = std::function<bool(const Expr &, std::string &)>;
@@ -119,7 +124,21 @@ LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
     const ApplySetupInferenceStructInfoFn &applyStructValueInfo,
     const InferSetupInferenceStructExprPathFn &inferStructExprPath,
     const ResolveSetupInferenceDefinitionCallFn &resolveDefinitionCall = {},
-    const SemanticProductTargetAdapter *semanticProductTargets = nullptr);
+    const SemanticProgram *semanticProgram = nullptr,
+    const SemanticProductIndex *semanticIndex = nullptr);
+LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
+    const std::vector<Expr> &bodyExpressions,
+    const LocalMap &localsBase,
+    const InferSetupInferenceValueKindFn &inferExprKind,
+    const IsSetupInferenceBindingMutableFn &isBindingMutable,
+    const SetupInferenceBindingKindFn &bindingKind,
+    const HasSetupInferenceExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransform,
+    const SetupInferenceBindingValueKindFn &bindingValueKind,
+    const ApplySetupInferenceStructInfoFn &applyStructArrayInfo,
+    const ApplySetupInferenceStructInfoFn &applyStructValueInfo,
+    const InferSetupInferenceStructExprPathFn &inferStructExprPath,
+    const ResolveSetupInferenceDefinitionCallFn &resolveDefinitionCall,
+    const SemanticProductTargetAdapter *semanticProductTargets);
 MathBuiltinReturnKindResolution inferMathBuiltinReturnKind(
     const Expr &expr,
     const LocalMap &localsIn,

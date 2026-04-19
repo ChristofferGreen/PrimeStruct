@@ -525,7 +525,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     out.hasValue = (expr.args.size() > 1);
     if (out.hasValue && expr.args.size() == 2) {
       applyDirectResultValueMetadata(
-          expr.args[1], localsIn, resolveDefinitionCall, inferExprKind, nullptr, semanticProgram, semanticIndex, out);
+          expr.args[1], localsIn, resolveDefinitionCall, inferExprKind, semanticProgram, semanticIndex, out);
     }
     return true;
   }
@@ -568,7 +568,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     out.isResult = true;
     out.hasValue = true;
     applyDirectResultValueMetadata(
-        *mappedValueExpr, lambdaLocals, resolveDefinitionCall, inferExprKind, nullptr, semanticProgram, semanticIndex, out);
+        *mappedValueExpr, lambdaLocals, resolveDefinitionCall, inferExprKind, semanticProgram, semanticIndex, out);
     if (out.valueCollectionKind == LocalInfo::Kind::Value &&
         out.valueMapKeyKind == LocalInfo::ValueKind::Unknown &&
         out.valueStructType.empty() &&
@@ -704,7 +704,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     out.isResult = true;
     out.hasValue = true;
     applyDirectResultValueMetadata(
-        *mappedValueExpr, lambdaLocals, resolveDefinitionCall, inferExprKind, nullptr, semanticProgram, semanticIndex, out);
+        *mappedValueExpr, lambdaLocals, resolveDefinitionCall, inferExprKind, semanticProgram, semanticIndex, out);
     if (out.valueCollectionKind == LocalInfo::Kind::Value &&
         out.valueMapKeyKind == LocalInfo::ValueKind::Unknown &&
         out.valueStructType.empty() &&
