@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1115
+- TODO-1116
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1115
+- TODO-1116
 
 ### Priority Lanes (Current)
 
-- Native experimental map field assignment skip debt: TODO-1115
+- Native borrowed experimental map _ref helper skip debt: TODO-1116
 
 ### Execution Queue (Recommended)
 
-1. TODO-1115
+1. TODO-1116
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Native experimental map field assignment skipped-test debt | TODO-1115 |
+| Native borrowed experimental map _ref helper skipped-test debt | TODO-1116 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Native compile-run skipped-test debt | TODO-1115 |
+| Native compile-run skipped-test debt | TODO-1116 |
 
 ### Task Blocks
 
-- [ ] TODO-1115: Audit native experimental map field assignment skip debt
+- [ ] TODO-1116: Audit native borrowed experimental map _ref helper skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped native experimental-map field-assignment coverage, and lock the current native backend contract with non-skipped assertions.
+  - scope: Re-enable or delete the skipped native canonical namespaced map `_ref` helper coverage on borrowed experimental-map values, and lock the current native backend contract with non-skipped assertions.
   - acceptance:
-    - `tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp` no longer carries the skipped native experimental-map field-assignment case in stale form.
-    - The native test locks the actual current contract for experimental-map field assignments, whether that is a successful runtime path or a stable diagnostic.
-  - stop_rule: Stop after the native experimental-map-field-assignment surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp` no longer carries the skipped native canonical namespaced map `_ref` helper case on borrowed experimental-map values in stale form.
+    - The native test locks the actual current contract for canonical namespaced map `_ref` helpers on borrowed experimental-map values, whether that is a successful runtime path or a stable diagnostic.
+  - stop_rule: Stop after the native borrowed experimental-map `_ref` helper surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.

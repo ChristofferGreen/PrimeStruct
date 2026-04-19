@@ -3227,7 +3227,7 @@ TEST_CASE("compiles and runs native helper-wrapped experimental map method recei
   expectWrappedExperimentalMapMethodReceiverConformance("native");
 }
 
-TEST_CASE("compiles and runs native experimental map field assignments" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native experimental map field assignments") {
   expectExperimentalMapFieldAssignConformance("native");
 }
 
