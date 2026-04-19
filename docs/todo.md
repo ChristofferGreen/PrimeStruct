@@ -56,30 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- none
+- TODO-1166
 
 ### Immediate Next 10 (After Ready Now)
 
-- none
+- TODO-1166
 
 ### Priority Lanes (Current)
 
-- none
+- VM user vector reserve call-expression shadow skip debt: TODO-1166
 
 ### Execution Queue (Recommended)
 
-1. none
+1. TODO-1166
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| VM canonical vector access skipped-test debt | none |
+| VM vector call-expression shadow skipped-test debt | TODO-1166 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| VM compile-run skipped-test debt | none |
+| VM compile-run skipped-test debt | TODO-1166 |
 
 ### Task Blocks
+
+- [ ] TODO-1166: Audit VM user vector reserve call-expression shadow skip debt
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Backend skip-debt cleanup
+  - scope: Re-enable or delete the skipped VM user-vector `reserve(values, capacity)` call-expression shadow coverage, and lock the current VM contract when `/vector/reserve` competes with builtin reserve lowering in expression position.
+  - acceptance:
+    - `tests/unit/test_compile_run_vm_collections_vector_limits_a.cpp` no longer carries the skipped VM user-vector `reserve(values, capacity)` call-expression shadow case in stale form.
+    - The VM test locks the actual current contract for the expression-shadow surface, whether that remains the current direct return-value runtime path or another stable VM-side outcome.
+  - stop_rule: Stop after the VM user-vector `reserve(values, capacity)` expression-shadow surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
