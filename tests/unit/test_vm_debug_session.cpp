@@ -144,6 +144,20 @@ std::vector<std::string_view> stringViewsOf(const std::vector<std::string> &args
   return views;
 }
 
+uint64_t f32Bits(float value) {
+  uint32_t bits = 0;
+  static_assert(sizeof(bits) == sizeof(value));
+  std::memcpy(&bits, &value, sizeof(bits));
+  return bits;
+}
+
+uint64_t f64Bits(double value) {
+  uint64_t bits = 0;
+  static_assert(sizeof(bits) == sizeof(value));
+  std::memcpy(&bits, &value, sizeof(bits));
+  return bits;
+}
+
 void overwriteStringInPlace(std::string &target, std::string_view replacement) {
   REQUIRE(target.size() == replacement.size());
   for (size_t i = 0; i < replacement.size(); ++i) {
@@ -165,6 +179,32 @@ primec::IrModule makeArgvPrintModule() {
   module.functions.push_back(std::move(mainFn));
   module.entryIndex = 0;
   return module;
+}
+
+struct VmNumericRunOutcome {
+  bool ok = false;
+  uint64_t result = 0;
+  std::string error;
+  primec::VmDebugStopReason stopReason = primec::VmDebugStopReason::Step;
+};
+
+VmNumericRunOutcome runVmModule(const primec::IrModule &module) {
+  VmNumericRunOutcome outcome;
+  primec::Vm vm;
+  outcome.ok = vm.execute(module, outcome.result, outcome.error);
+  return outcome;
+}
+
+VmNumericRunOutcome runVmDebugSession(const primec::IrModule &module) {
+  VmNumericRunOutcome outcome;
+  primec::VmDebugSession session;
+  if (!session.start(module, outcome.error)) {
+    return outcome;
+  }
+  outcome.error.clear();
+  outcome.ok = session.continueExecution(outcome.stopReason, outcome.error);
+  outcome.result = session.snapshot().result;
+  return outcome;
 }
 } // namespace
 
@@ -697,6 +737,101 @@ TEST_CASE("vm debug session owns argv text after startup") {
   CHECK(session.snapshot().result == 7);
   CHECK(captured.stdoutText == "alpha\n");
   CHECK(captured.stderrText == "bravo\n");
+}
+
+TEST_CASE("vm and debug session share numeric opcode behavior") {
+  struct NumericParityCase {
+    std::string name;
+    primec::IrModule module;
+    bool expectedOk = true;
+    uint64_t expectedResult = 0;
+    std::string expectedError;
+    primec::VmDebugStopReason expectedStopReason = primec::VmDebugStopReason::Exit;
+  };
+
+  std::vector<NumericParityCase> cases;
+
+  {
+    NumericParityCase c;
+    c.name = "integer arithmetic";
+    c.expectedResult = 15;
+
+    primec::IrFunction fn;
+    fn.name = "/main";
+    fn.instructions.push_back({primec::IrOpcode::PushI32, 9});
+    fn.instructions.push_back({primec::IrOpcode::PushI32, 4});
+    fn.instructions.push_back({primec::IrOpcode::SubI32, 0});
+    fn.instructions.push_back({primec::IrOpcode::PushI64, 3});
+    fn.instructions.push_back({primec::IrOpcode::MulI64, 0});
+    fn.instructions.push_back({primec::IrOpcode::ReturnI64, 0});
+    c.module.functions.push_back(std::move(fn));
+    c.module.entryIndex = 0;
+    cases.push_back(std::move(c));
+  }
+
+  {
+    NumericParityCase c;
+    c.name = "comparison";
+    c.expectedResult = 1;
+
+    primec::IrFunction fn;
+    fn.name = "/main";
+    fn.instructions.push_back({primec::IrOpcode::PushF64, f64Bits(4.5)});
+    fn.instructions.push_back({primec::IrOpcode::PushF64, f64Bits(2.0)});
+    fn.instructions.push_back({primec::IrOpcode::CmpGtF64, 0});
+    fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+    c.module.functions.push_back(std::move(fn));
+    c.module.entryIndex = 0;
+    cases.push_back(std::move(c));
+  }
+
+  {
+    NumericParityCase c;
+    c.name = "conversion";
+    c.expectedResult = static_cast<uint64_t>(42);
+
+    primec::IrFunction fn;
+    fn.name = "/main";
+    fn.instructions.push_back({primec::IrOpcode::PushF32, f32Bits(42.75f)});
+    fn.instructions.push_back({primec::IrOpcode::ConvertF32ToI64, 0});
+    fn.instructions.push_back({primec::IrOpcode::ReturnI64, 0});
+    c.module.functions.push_back(std::move(fn));
+    c.module.entryIndex = 0;
+    cases.push_back(std::move(c));
+  }
+
+  {
+    NumericParityCase c;
+    c.name = "fault";
+    c.expectedOk = false;
+    c.expectedError = "division by zero in IR";
+    c.expectedStopReason = primec::VmDebugStopReason::Fault;
+
+    primec::IrFunction fn;
+    fn.name = "/main";
+    fn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+    fn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+    fn.instructions.push_back({primec::IrOpcode::DivI32, 0});
+    fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+    c.module.functions.push_back(std::move(fn));
+    c.module.entryIndex = 0;
+    cases.push_back(std::move(c));
+  }
+
+  for (const auto &c : cases) {
+    INFO(c.name);
+
+    const VmNumericRunOutcome vmOutcome = runVmModule(c.module);
+    const VmNumericRunOutcome debugOutcome = runVmDebugSession(c.module);
+
+    CHECK(vmOutcome.ok == c.expectedOk);
+    CHECK(debugOutcome.ok == c.expectedOk);
+    CHECK(debugOutcome.stopReason == c.expectedStopReason);
+    CHECK(vmOutcome.error == c.expectedError);
+    CHECK(debugOutcome.error == c.expectedError);
+    CHECK(vmOutcome.result == c.expectedResult);
+    CHECK(debugOutcome.result == c.expectedResult);
+  }
 }
 
 #include "test_vm_debug_session_protocol.h"

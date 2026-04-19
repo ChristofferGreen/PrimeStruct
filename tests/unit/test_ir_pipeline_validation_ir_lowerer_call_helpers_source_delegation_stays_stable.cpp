@@ -665,6 +665,51 @@ TEST_CASE("vm heap helpers source delegation stays stable") {
         std::string::npos);
 }
 
+TEST_CASE("vm numeric opcode helpers source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                            : std::filesystem::path("..");
+
+  const std::filesystem::path vmExecutionNumericPath = repoRoot / "src" / "VmExecutionNumeric.cpp";
+  const std::filesystem::path vmDebugNumericPath = repoRoot / "src" / "VmDebugSessionInstructionNumeric.cpp";
+  const std::filesystem::path vmNumericSharedPath = repoRoot / "src" / "VmNumericOpcodeShared.cpp";
+  const std::filesystem::path vmNumericSharedHeaderPath = repoRoot / "src" / "VmNumericOpcodeShared.h";
+  REQUIRE(std::filesystem::exists(vmExecutionNumericPath));
+  REQUIRE(std::filesystem::exists(vmDebugNumericPath));
+  REQUIRE(std::filesystem::exists(vmNumericSharedPath));
+  REQUIRE(std::filesystem::exists(vmNumericSharedHeaderPath));
+
+  const std::string vmExecutionNumericSource = readText(vmExecutionNumericPath);
+  const std::string vmDebugNumericSource = readText(vmDebugNumericPath);
+  const std::string vmNumericSharedSource = readText(vmNumericSharedPath);
+  const std::string vmNumericSharedHeaderSource = readText(vmNumericSharedHeaderPath);
+
+  CHECK(vmExecutionNumericSource.find("#include \"VmNumericOpcodeShared.h\"") != std::string::npos);
+  CHECK(vmDebugNumericSource.find("#include \"VmNumericOpcodeShared.h\"") != std::string::npos);
+  CHECK(vmExecutionNumericSource.find("handleSharedVmNumericOpcode(inst, stack, error)") != std::string::npos);
+  CHECK(vmDebugNumericSource.find("handleSharedVmNumericOpcode(inst, stack, error)") != std::string::npos);
+  CHECK(vmExecutionNumericSource.find("case IrOpcode::AddI32:") == std::string::npos);
+  CHECK(vmDebugNumericSource.find("case IrOpcode::AddI32:") == std::string::npos);
+  CHECK(vmExecutionNumericSource.find("case IrOpcode::ConvertF64ToF32:") == std::string::npos);
+  CHECK(vmDebugNumericSource.find("case IrOpcode::ConvertF64ToF32:") == std::string::npos);
+
+  CHECK(vmNumericSharedHeaderSource.find("enum class VmNumericOpcodeResult") != std::string::npos);
+  CHECK(vmNumericSharedHeaderSource.find("handleSharedVmNumericOpcode(") != std::string::npos);
+
+  CHECK(vmNumericSharedSource.find("case IrOpcode::AddI32:") != std::string::npos);
+  CHECK(vmNumericSharedSource.find("case IrOpcode::CmpEqF64:") != std::string::npos);
+  CHECK(vmNumericSharedSource.find("case IrOpcode::ConvertF64ToF32:") != std::string::npos);
+  CHECK(vmNumericSharedSource.find("division by zero in IR") != std::string::npos);
+}
+
 TEST_CASE("ir lowerer effects unit rejects duplicate entry capabilities transform") {
   primec::Definition entryDef;
   entryDef.fullPath = "/main";

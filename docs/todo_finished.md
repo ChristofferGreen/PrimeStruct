@@ -3927,3 +3927,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Start in `src/primevm_main.cpp` and reuse the parser in `src/VmDebugDapProtocol.cpp`; if the parser reuse fits cleanly but broader replay cleanup does not, keep this leaf scoped to checkpoint parsing only.
   - finished_at: 2026-04-19
   - evidence: Replaced the replay-only `extractJson*` string matchers in `src/primevm_main.cpp` with `VmDebugDapProtocol` JSON parsing helpers plus stable JSON re-serialization for accepted checkpoint objects, added deterministic line-numbered malformed-checkpoint errors, expanded replay smoke coverage for whitespace/escape and malformed traces, and added a source-lock test that pins shared parser reuse and the removal of the old bespoke helpers.
+
+- [x] TODO-4009: Unify VM/debug numeric opcode behavior
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: VM Runtime Hardening
+  - depends_on: none
+  - scope: Delete the duplicated arithmetic/comparison/conversion opcode interpreter split between the normal VM executor and `VmDebugSession` so debug and non-debug VM execution share one numeric behavior path for results and faults.
+  - acceptance:
+    - Numeric opcode execution flows through one shared implementation used by both `VmExecution` and `VmDebugSession`, and the duplicate debug-only numeric opcode interpreter is removed.
+    - Focused VM and debug-session coverage proves representative arithmetic, comparison, conversion, and fault cases produce the same observable behavior through normal and debug execution.
+    - Debug-specific hook sequencing and state management remain outside the shared numeric semantics layer.
+  - stop_rule: Stop once numeric opcode behavior is defined in one shared implementation for both execution paths and the duplicate numeric interpreter is gone; non-numeric opcode dedup belongs to a separate follow-up.
+  - notes: Start in `src/VmExecutionNumeric.cpp`, `src/VmDebugSessionInstructionNumeric.cpp`, and the numeric dispatch call sites in `src/VmExecution.cpp` and `src/VmDebugSessionInstruction.cpp`.
+  - finished_at: 2026-04-19
+  - evidence: Added `src/VmNumericOpcodeShared.cpp` plus `src/VmNumericOpcodeShared.h` so arithmetic/comparison/conversion opcode semantics now live in one shared evaluator, rewired both execution-side numeric wrappers to delegate into that helper, added VM-versus-debug parity coverage for arithmetic/comparison/conversion/fault cases, and added a source-lock test that pins the shared-helper delegation contract.

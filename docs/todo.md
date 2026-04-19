@@ -56,7 +56,6 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4009
 - TODO-4002
 
 ### Immediate Next 10 (After Ready Now)
@@ -70,21 +69,19 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- VM/runtime hardening: TODO-4009
 - Semantic ownership cutover: TODO-4002, TODO-4004, TODO-4008
 - Validator/publication simplification: TODO-4003, TODO-4005
 - Build and validation ergonomics: TODO-4006, TODO-4007
 
 ### Execution Queue (Recommended)
 
-1. TODO-4009
+1. TODO-4002
 2. TODO-4006
 3. TODO-4007
 4. TODO-4003
-5. TODO-4002
-6. TODO-4004
-7. TODO-4005
-8. TODO-4008
+5. TODO-4004
+6. TODO-4005
+7. TODO-4008
 
 ### PrimeStruct Coverage Snapshot
 
@@ -98,7 +95,7 @@ Task template:
 | Emitter/semantics map-helper parity | none |
 | VM debug-session argv ownership | none |
 | Debug trace replay robustness | none |
-| VM/runtime debug numeric opcode parity | TODO-4009 |
+| VM/runtime debug numeric opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | none |
 
 ### Validation Coverage Snapshot
@@ -112,23 +109,10 @@ Task template:
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
 | Debug trace replay malformed-input coverage | none |
-| Shared VM/debug numeric opcode behavior | TODO-4009 |
+| Shared VM/debug numeric opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
 
 ### Task Blocks
-
-- [ ] TODO-4009: Unify VM/debug numeric opcode behavior
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: VM Runtime Hardening
-  - depends_on: none
-  - scope: Delete the duplicated arithmetic/comparison/conversion opcode interpreter split between the normal VM executor and `VmDebugSession` so debug and non-debug VM execution share one numeric behavior path for results and faults.
-  - acceptance:
-    - Numeric opcode execution flows through one shared implementation used by both `VmExecution` and `VmDebugSession`, and the duplicate debug-only numeric opcode interpreter is removed.
-    - Focused VM and debug-session coverage proves representative arithmetic, comparison, conversion, and fault cases produce the same observable behavior through normal and debug execution.
-    - Debug-specific hook sequencing and state management remain outside the shared numeric semantics layer.
-  - stop_rule: Stop once numeric opcode behavior is defined in one shared implementation for both execution paths and the duplicate numeric interpreter is gone; non-numeric opcode dedup belongs to a separate follow-up.
-  - notes: Start in `src/VmExecutionNumeric.cpp`, `src/VmDebugSessionInstructionNumeric.cpp`, and the numeric dispatch call sites in `src/VmExecution.cpp` and `src/VmDebugSessionInstruction.cpp`.
 
 - [ ] TODO-4008: Retire first covered production semantic adapter slice
   - owner: ai
