@@ -339,7 +339,7 @@ TEST_CASE("ir lowerer flow helpers init for-condition bindings") {
   CHECK(instructions.empty());
 }
 
-TEST_CASE("ir lowerer flow helpers emit vector statement helper paths" * doctest::skip(true)) {
+TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
   using EmitResult = primec::ir_lowerer::VectorStatementHelperEmitResult;
   using Kind = primec::ir_lowerer::LocalInfo::Kind;
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
@@ -516,6 +516,7 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths" * doctest
   CHECK(error.empty());
   CHECK(capacityExceededCalls == 2);
 
+  std::vector<primec::IrInstruction> legacyAliasInstructions;
   CHECK(runHelper(
             makeCall("/vector/push", {makeTarget(), makeI32Literal(7)}),
             capacityExceededCalls,
@@ -523,10 +524,11 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths" * doctest
             indexOutOfBoundsCalls,
             reserveNegativeCalls,
             reserveExceededCalls,
-            nullptr,
-            error) == EmitResult::Emitted);
+            &legacyAliasInstructions,
+            error) == EmitResult::NotMatched);
   CHECK(error.empty());
-  CHECK(capacityExceededCalls == 4);
+  CHECK(legacyAliasInstructions.empty());
+  CHECK(capacityExceededCalls == 2);
 
   CHECK(runHelper(
             makeCall("/std/collections/vector/push", {makeTarget(), makeI32Literal(7)}),
@@ -538,7 +540,7 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths" * doctest
             nullptr,
             error) == EmitResult::Emitted);
   CHECK(error.empty());
-  CHECK(capacityExceededCalls == 6);
+  CHECK(capacityExceededCalls == 4);
 
   CHECK(runHelper(
             makeCall("pop", {makeTarget()}),
