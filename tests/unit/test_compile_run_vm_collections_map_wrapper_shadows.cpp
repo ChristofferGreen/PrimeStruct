@@ -36,7 +36,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
-TEST_CASE("vm keeps direct wrapper-returned canonical map access string receiver typing" * doctest::skip(true)) {
+TEST_CASE("vm keeps direct wrapper-returned canonical map access string receiver typing") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
