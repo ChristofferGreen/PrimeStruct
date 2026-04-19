@@ -260,6 +260,22 @@ std::string findSemanticProductDirectCallTarget(const SemanticProductTargetAdapt
   return findSemanticProductDirectCallTarget(adapter.semanticProgram, expr);
 }
 
+std::optional<StdlibSurfaceId> findSemanticProductDirectCallStdlibSurfaceId(
+    const SemanticProgram *semanticProgram,
+    const Expr &expr) {
+  if (semanticProgram == nullptr || expr.semanticNodeId == 0) {
+    return std::nullopt;
+  }
+  return semanticProgramLookupPublishedDirectCallTargetStdlibSurfaceId(
+      *semanticProgram, expr.semanticNodeId);
+}
+
+std::optional<StdlibSurfaceId> findSemanticProductDirectCallStdlibSurfaceId(
+    const SemanticProductTargetAdapter &adapter,
+    const Expr &expr) {
+  return findSemanticProductDirectCallStdlibSurfaceId(adapter.semanticProgram, expr);
+}
+
 std::string findSemanticProductMethodCallTarget(const SemanticProgram *semanticProgram, const Expr &expr) {
   if (expr.semanticNodeId == 0 || semanticProgram == nullptr) {
     return {};
@@ -284,6 +300,22 @@ std::string findSemanticProductMethodCallTarget(const SemanticProductTargetAdapt
   return findSemanticProductMethodCallTarget(adapter.semanticProgram, expr);
 }
 
+std::optional<StdlibSurfaceId> findSemanticProductMethodCallStdlibSurfaceId(
+    const SemanticProgram *semanticProgram,
+    const Expr &expr) {
+  if (semanticProgram == nullptr || expr.semanticNodeId == 0) {
+    return std::nullopt;
+  }
+  return semanticProgramLookupPublishedMethodCallTargetStdlibSurfaceId(
+      *semanticProgram, expr.semanticNodeId);
+}
+
+std::optional<StdlibSurfaceId> findSemanticProductMethodCallStdlibSurfaceId(
+    const SemanticProductTargetAdapter &adapter,
+    const Expr &expr) {
+  return findSemanticProductMethodCallStdlibSurfaceId(adapter.semanticProgram, expr);
+}
+
 std::string findSemanticProductBridgePathChoice(const SemanticProgram *semanticProgram, const Expr &expr) {
   if (semanticProgram == nullptr || expr.semanticNodeId == 0) {
     return {};
@@ -302,6 +334,22 @@ std::string findSemanticProductBridgePathChoice(const SemanticProgram *semanticP
 
 std::string findSemanticProductBridgePathChoice(const SemanticProductTargetAdapter &adapter, const Expr &expr) {
   return findSemanticProductBridgePathChoice(adapter.semanticProgram, expr);
+}
+
+std::optional<StdlibSurfaceId> findSemanticProductBridgePathChoiceStdlibSurfaceId(
+    const SemanticProgram *semanticProgram,
+    const Expr &expr) {
+  if (semanticProgram == nullptr || expr.semanticNodeId == 0) {
+    return std::nullopt;
+  }
+  return semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
+      *semanticProgram, expr.semanticNodeId);
+}
+
+std::optional<StdlibSurfaceId> findSemanticProductBridgePathChoiceStdlibSurfaceId(
+    const SemanticProductTargetAdapter &adapter,
+    const Expr &expr) {
+  return findSemanticProductBridgePathChoiceStdlibSurfaceId(adapter.semanticProgram, expr);
 }
 
 const SemanticProgramCallableSummary *findSemanticProductCallableSummary(const SemanticProgram *semanticProgram,

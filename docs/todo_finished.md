@@ -4426,3 +4426,17 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - stop_rule: Stop once file/error-surface method resolution is bridge-driven; split any unrelated API cleanup or runtime behavior work into separate leaves.
   - finished_at: 2026-04-20
   - evidence: Replaced the scattered file, `FileError`, `ContainerError`, and `GfxError` helper target tables in the semantics helper layer with shared-registry-backed bridge queries in `src/semantics/SemanticsValidatorInferMethodResolutionHelpers.cpp`, including a new `preferredFileHelperTarget(...)` bridge seam and shared `StdlibSurfaceRegistry` metadata for builtin file helper spellings; removed the duplicate local lambdas from `src/semantics/SemanticsValidatorBuildCallResolution.cpp`, `src/semantics/SemanticsValidatorResultHelpers.cpp`, and `src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp`; added exact-import parity regressions in `tests/unit/test_semantics_result_helpers_file.cpp`, `tests/unit/test_semantics_result_helpers_gfx.cpp`, and `tests/unit/test_semantics_result_helpers_errors.cpp` plus focused source-lock coverage in `tests/unit/test_ir_pipeline_validation_semantics_validator_infer_source_delegation_stays_stable.cpp` and `tests/unit/test_ir_pipeline_backends_architecture.h`; and updated `docs/todo.md` to remove `TODO-4038` so the stdlib bridge consolidation queue now advances to `TODO-4039`.
+
+- [x] TODO-4039: Publish resolved stdlib surface IDs into semantic output for lowering consumers
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Bridge Consolidation
+  - depends_on: none
+  - scope: Extend semantic resolution so bridge-resolved stdlib imports, helpers, and methods publish stable stdlib surface IDs that downstream lowering code can consume without reconstructing path knowledge.
+  - acceptance:
+    - Semantic output carries stable stdlib surface identifiers for the bridge-backed surfaces needed by lowering.
+    - Those IDs are produced from shared bridge resolution rather than parallel lowerer-specific classification logic.
+    - Source-lock or parity coverage documents the intended semantic publication boundary for stdlib surface IDs.
+  - stop_rule: Stop once the semantic product exposes the stdlib IDs needed for lowering; split any broader semantic-product reshaping beyond that boundary into separate tasks.
+  - finished_at: 2026-04-20
+  - evidence: Added resolved-path classification to `src/StdlibSurfaceRegistry.cpp` plus the missing experimental `map*Ref` lowering spellings so bridge-backed surfaces can be identified from shared registry metadata; published optional `StdlibSurfaceId` fields and expr-indexed surface-ID lookups through `include/primec/SemanticProduct.h`, `src/SemanticProduct.cpp`, and `src/semantics/SemanticPublicationBuilders.cpp`; exposed future-lowerer lookup helpers in `src/ir_lowerer/IrLowererSemanticProductTargetAdapters.cpp`; added parity and source-lock coverage in `tests/unit/test_semantics_type_resolution_graph_snapshots.cpp`, `tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp`, `tests/unit/test_ir_pipeline_backends_graph_contexts.h`, and `tests/unit/test_ir_pipeline_backends_architecture.h`; and updated `docs/todo.md` to retire `TODO-4039`, promote `TODO-4040`, and clear the satisfied dependency on semantic stdlib-surface publication.

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <string_view>
 
 namespace primec {
 namespace {
@@ -176,11 +177,17 @@ constexpr auto CollectionsMapLoweringSpellings = std::to_array<std::string_view>
     "/std/collections/map/insert",
     "/std/collections/map/insert_ref",
     "/std/collections/mapCount",
+    "/std/collections/experimental_map/mapCountRef",
     "/std/collections/mapContains",
+    "/std/collections/experimental_map/mapContainsRef",
     "/std/collections/mapTryAt",
+    "/std/collections/experimental_map/mapTryAtRef",
     "/std/collections/mapAt",
+    "/std/collections/experimental_map/mapAtRef",
     "/std/collections/mapAtUnsafe",
+    "/std/collections/experimental_map/mapAtUnsafeRef",
     "/std/collections/mapInsert",
+    "/std/collections/experimental_map/mapInsertRef",
 });
 
 constexpr auto CollectionsMapConstructorMembers = std::to_array<std::string_view>({
@@ -445,6 +452,30 @@ bool matchesAny(std::span<const std::string_view> spellings, std::string_view sp
   return std::find(spellings.begin(), spellings.end(), spelling) != spellings.end();
 }
 
+std::string_view stripResolvedPathSpecializationSuffix(std::string_view path) {
+  const std::size_t lastSlash = path.rfind('/');
+  const std::size_t marker = path.rfind("__t");
+  if (marker == std::string_view::npos || lastSlash == std::string_view::npos || marker <= lastSlash) {
+    return path;
+  }
+  return path.substr(0, marker);
+}
+
+bool matchesResolvedRootedMemberPath(std::string_view path,
+                                     std::string_view rootPath,
+                                     std::span<const std::string_view> memberNames) {
+  if (rootPath.empty() || path.size() <= rootPath.size() || !path.starts_with(rootPath) ||
+      path[rootPath.size()] != '/') {
+    return false;
+  }
+  const std::string_view memberName =
+      stripResolvedPathSpecializationSuffix(path.substr(rootPath.size() + 1));
+  if (memberName.empty() || memberName.find('/') != std::string_view::npos) {
+    return false;
+  }
+  return matchesAny(memberNames, memberName);
+}
+
 } // namespace
 
 std::span<const StdlibSurfaceMetadata> stdlibSurfaceRegistry() {
@@ -483,6 +514,35 @@ const StdlibSurfaceMetadata *findStdlibSurfaceMetadataBySpelling(std::string_vie
   const auto it = std::find_if(
       Registry.begin(), Registry.end(), [spelling](const StdlibSurfaceMetadata &metadata) {
         return stdlibSurfaceMatchesSpelling(metadata, spelling);
+      });
+  return it == Registry.end() ? nullptr : &*it;
+}
+
+const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByResolvedPath(std::string_view path) {
+  if (const auto *metadata = findStdlibSurfaceMetadataBySpelling(path); metadata != nullptr) {
+    return metadata;
+  }
+  const std::string_view normalizedPath = stripResolvedPathSpecializationSuffix(path);
+  if (normalizedPath != path) {
+    if (const auto *metadata = findStdlibSurfaceMetadataBySpelling(normalizedPath);
+        metadata != nullptr) {
+      return metadata;
+    }
+  }
+  const auto it = std::find_if(
+      Registry.begin(), Registry.end(), [normalizedPath](const StdlibSurfaceMetadata &metadata) {
+        if (metadata.shape == StdlibSurfaceShape::ConstructorFamily) {
+          return false;
+        }
+        if (matchesResolvedRootedMemberPath(normalizedPath, metadata.canonicalPath, metadata.memberNames)) {
+          return true;
+        }
+        return std::any_of(metadata.importAliasSpellings.begin(),
+                           metadata.importAliasSpellings.end(),
+                           [&](std::string_view aliasSpelling) {
+                             return matchesResolvedRootedMemberPath(
+                                 normalizedPath, aliasSpelling, metadata.memberNames);
+                           });
       });
   return it == Registry.end() ? nullptr : &*it;
 }

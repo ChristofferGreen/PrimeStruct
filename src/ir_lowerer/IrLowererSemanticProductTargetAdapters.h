@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -39,12 +40,30 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
 std::string findSemanticProductDirectCallTarget(const SemanticProgram *semanticProgram, const Expr &expr);
 std::string findSemanticProductMethodCallTarget(const SemanticProgram *semanticProgram, const Expr &expr);
 std::string findSemanticProductBridgePathChoice(const SemanticProgram *semanticProgram, const Expr &expr);
+std::optional<StdlibSurfaceId> findSemanticProductDirectCallStdlibSurfaceId(
+    const SemanticProgram *semanticProgram,
+    const Expr &expr);
+std::optional<StdlibSurfaceId> findSemanticProductMethodCallStdlibSurfaceId(
+    const SemanticProgram *semanticProgram,
+    const Expr &expr);
+std::optional<StdlibSurfaceId> findSemanticProductBridgePathChoiceStdlibSurfaceId(
+    const SemanticProgram *semanticProgram,
+    const Expr &expr);
 const SemanticProgramCallableSummary *findSemanticProductCallableSummary(
     const SemanticProgram *semanticProgram,
     const std::string &fullPath);
 std::string findSemanticProductDirectCallTarget(const SemanticProductTargetAdapter &adapter, const Expr &expr);
 std::string findSemanticProductMethodCallTarget(const SemanticProductTargetAdapter &adapter, const Expr &expr);
 std::string findSemanticProductBridgePathChoice(const SemanticProductTargetAdapter &adapter, const Expr &expr);
+std::optional<StdlibSurfaceId> findSemanticProductDirectCallStdlibSurfaceId(
+    const SemanticProductTargetAdapter &adapter,
+    const Expr &expr);
+std::optional<StdlibSurfaceId> findSemanticProductMethodCallStdlibSurfaceId(
+    const SemanticProductTargetAdapter &adapter,
+    const Expr &expr);
+std::optional<StdlibSurfaceId> findSemanticProductBridgePathChoiceStdlibSurfaceId(
+    const SemanticProductTargetAdapter &adapter,
+    const Expr &expr);
 const SemanticProgramCallableSummary *findSemanticProductCallableSummary(
     const SemanticProductTargetAdapter &adapter,
     const std::string &fullPath);

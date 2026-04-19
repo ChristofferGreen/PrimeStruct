@@ -79,6 +79,7 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(header.find("std::span<const std::string_view> compatibilitySpellings;") != std::string::npos);
   CHECK(header.find("std::span<const std::string_view> loweringSpellings;") != std::string::npos);
   CHECK(header.find("findStdlibSurfaceMetadataBySpelling") != std::string::npos);
+  CHECK(header.find("findStdlibSurfaceMetadataByResolvedPath") != std::string::npos);
 
   CHECK(source.find("StdlibSurfaceId::FileHelpers") != std::string::npos);
   CHECK(source.find("\"file.file_helpers\"") != std::string::npos);
@@ -110,6 +111,14 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find("\"count_ref\"") != std::string::npos);
   CHECK(source.find("\"insert_ref\"") != std::string::npos);
   CHECK(source.find("\"/std/collections/mapInsert\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/experimental_map/mapCountRef\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/experimental_map/mapContainsRef\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/experimental_map/mapTryAtRef\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/experimental_map/mapAtRef\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/experimental_map/mapAtUnsafeRef\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/experimental_map/mapInsertRef\"") != std::string::npos);
+  CHECK(source.find("stripResolvedPathSpecializationSuffix(") != std::string::npos);
+  CHECK(source.find("matchesResolvedRootedMemberPath(") != std::string::npos);
 
   CHECK(source.find("StdlibSurfaceId::CollectionsMapConstructors") != std::string::npos);
   CHECK(source.find("\"collections.map_constructors\"") != std::string::npos);

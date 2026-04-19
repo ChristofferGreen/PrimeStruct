@@ -55,6 +55,13 @@ std::string formatSemanticStringList(const std::vector<std::string> &values) {
   return out.str();
 }
 
+std::string formatSemanticStdlibSurfaceId(StdlibSurfaceId id) {
+  if (const auto *metadata = findStdlibSurfaceMetadata(id); metadata != nullptr) {
+    return std::string(metadata->bridgeKey);
+  }
+  return std::to_string(static_cast<int>(id));
+}
+
 void appendSemanticHeaderLine(std::ostringstream &out, std::string_view label, const std::string &value) {
   out << "  " << label << ": " << value << "\n";
 }
@@ -181,6 +188,79 @@ std::optional<SymbolId> semanticProgramLookupPublishedBridgePathChoiceId(const S
     }
     if (!semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId).empty()) {
       return entry.chosenPathId;
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<StdlibSurfaceId> semanticProgramDirectCallTargetStdlibSurfaceId(
+    const SemanticProgramDirectCallTarget &entry) {
+  return entry.stdlibSurfaceId;
+}
+
+std::optional<StdlibSurfaceId> semanticProgramMethodCallTargetStdlibSurfaceId(
+    const SemanticProgramMethodCallTarget &entry) {
+  return entry.stdlibSurfaceId;
+}
+
+std::optional<StdlibSurfaceId> semanticProgramBridgePathChoiceStdlibSurfaceId(
+    const SemanticProgramBridgePathChoice &entry) {
+  return entry.stdlibSurfaceId;
+}
+
+std::optional<StdlibSurfaceId> semanticProgramLookupPublishedDirectCallTargetStdlibSurfaceId(
+    const SemanticProgram &semanticProgram,
+    uint64_t semanticNodeId) {
+  if (semanticNodeId == 0) {
+    return std::nullopt;
+  }
+  if (const auto it =
+          semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.find(semanticNodeId);
+      it != semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.end()) {
+    return it->second;
+  }
+  for (const auto &entry : semanticProgram.directCallTargets) {
+    if (entry.semanticNodeId == semanticNodeId && entry.stdlibSurfaceId.has_value()) {
+      return entry.stdlibSurfaceId;
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<StdlibSurfaceId> semanticProgramLookupPublishedMethodCallTargetStdlibSurfaceId(
+    const SemanticProgram &semanticProgram,
+    uint64_t semanticNodeId) {
+  if (semanticNodeId == 0) {
+    return std::nullopt;
+  }
+  if (const auto it =
+          semanticProgram.publishedRoutingLookups.methodCallStdlibSurfaceIdsByExpr.find(semanticNodeId);
+      it != semanticProgram.publishedRoutingLookups.methodCallStdlibSurfaceIdsByExpr.end()) {
+    return it->second;
+  }
+  for (const auto &entry : semanticProgram.methodCallTargets) {
+    if (entry.semanticNodeId == semanticNodeId && entry.stdlibSurfaceId.has_value()) {
+      return entry.stdlibSurfaceId;
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<StdlibSurfaceId> semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
+    const SemanticProgram &semanticProgram,
+    uint64_t semanticNodeId) {
+  if (semanticNodeId == 0) {
+    return std::nullopt;
+  }
+  if (const auto it =
+          semanticProgram.publishedRoutingLookups.bridgePathChoiceStdlibSurfaceIdsByExpr.find(
+              semanticNodeId);
+      it != semanticProgram.publishedRoutingLookups.bridgePathChoiceStdlibSurfaceIdsByExpr.end()) {
+    return it->second;
+  }
+  for (const auto &entry : semanticProgram.bridgePathChoices) {
+    if (entry.semanticNodeId == semanticNodeId && entry.stdlibSurfaceId.has_value()) {
+      return entry.stdlibSurfaceId;
     }
   }
   return std::nullopt;
@@ -688,6 +768,11 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   quoteSemanticString(callName.empty() ? entry.callName : callName) +
                                   " resolved_path=" +
                                   quoteSemanticString(resolvedPath) +
+                                  (entry.stdlibSurfaceId.has_value()
+                                       ? " stdlib_surface_id=" +
+                                             quoteSemanticString(
+                                                 formatSemanticStdlibSurfaceId(*entry.stdlibSurfaceId))
+                                       : "") +
                                   " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
@@ -716,6 +801,11 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                                           : receiverTypeText) +
                                   " resolved_path=" +
                                   quoteSemanticString(resolvedPath) +
+                                  (entry.stdlibSurfaceId.has_value()
+                                       ? " stdlib_surface_id=" +
+                                             quoteSemanticString(
+                                                 formatSemanticStdlibSurfaceId(*entry.stdlibSurfaceId))
+                                       : "") +
                                   " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
@@ -744,6 +834,11 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   quoteSemanticString(helperName) +
                                   " chosen_path=" +
                                   quoteSemanticString(chosenPath) +
+                                  (entry.stdlibSurfaceId.has_value()
+                                       ? " stdlib_surface_id=" +
+                                             quoteSemanticString(
+                                                 formatSemanticStdlibSurfaceId(*entry.stdlibSurfaceId))
+                                       : "") +
                                   " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));

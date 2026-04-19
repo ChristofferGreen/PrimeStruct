@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "primec/StdlibSurfaceRegistry.h"
 #include "primec/SymbolInterner.h"
 
 namespace primec {
@@ -71,6 +72,7 @@ struct SemanticProgramDirectCallTarget {
   SymbolId scopePathId = InvalidSymbolId;
   SymbolId callNameId = InvalidSymbolId;
   SymbolId resolvedPathId = InvalidSymbolId;
+  std::optional<StdlibSurfaceId> stdlibSurfaceId;
 };
 
 struct SemanticProgramMethodCallTarget {
@@ -85,6 +87,7 @@ struct SemanticProgramMethodCallTarget {
   SymbolId methodNameId = InvalidSymbolId;
   SymbolId receiverTypeTextId = InvalidSymbolId;
   SymbolId resolvedPathId = InvalidSymbolId;
+  std::optional<StdlibSurfaceId> stdlibSurfaceId;
 };
 
 struct SemanticProgramBridgePathChoice {
@@ -98,6 +101,7 @@ struct SemanticProgramBridgePathChoice {
   SymbolId collectionFamilyId = InvalidSymbolId;
   SymbolId helperNameId = InvalidSymbolId;
   SymbolId chosenPathId = InvalidSymbolId;
+  std::optional<StdlibSurfaceId> stdlibSurfaceId;
 };
 
 struct SemanticProgramCallableSummary {
@@ -340,6 +344,9 @@ struct SemanticProgramPublishedRoutingLookups {
   std::unordered_map<uint64_t, SymbolId> directCallTargetIdsByExpr;
   std::unordered_map<uint64_t, SymbolId> methodCallTargetIdsByExpr;
   std::unordered_map<uint64_t, SymbolId> bridgePathChoiceIdsByExpr;
+  std::unordered_map<uint64_t, StdlibSurfaceId> directCallStdlibSurfaceIdsByExpr;
+  std::unordered_map<uint64_t, StdlibSurfaceId> methodCallStdlibSurfaceIdsByExpr;
+  std::unordered_map<uint64_t, StdlibSurfaceId> bridgePathChoiceStdlibSurfaceIdsByExpr;
   std::unordered_map<SymbolId, std::size_t> callableSummaryIndicesByPathId;
 };
 
@@ -409,6 +416,21 @@ std::optional<SymbolId> semanticProgramLookupPublishedMethodCallTargetId(const S
                                                                          uint64_t semanticNodeId);
 std::optional<SymbolId> semanticProgramLookupPublishedBridgePathChoiceId(const SemanticProgram &semanticProgram,
                                                                          uint64_t semanticNodeId);
+std::optional<StdlibSurfaceId> semanticProgramDirectCallTargetStdlibSurfaceId(
+    const SemanticProgramDirectCallTarget &entry);
+std::optional<StdlibSurfaceId> semanticProgramMethodCallTargetStdlibSurfaceId(
+    const SemanticProgramMethodCallTarget &entry);
+std::optional<StdlibSurfaceId> semanticProgramBridgePathChoiceStdlibSurfaceId(
+    const SemanticProgramBridgePathChoice &entry);
+std::optional<StdlibSurfaceId> semanticProgramLookupPublishedDirectCallTargetStdlibSurfaceId(
+    const SemanticProgram &semanticProgram,
+    uint64_t semanticNodeId);
+std::optional<StdlibSurfaceId> semanticProgramLookupPublishedMethodCallTargetStdlibSurfaceId(
+    const SemanticProgram &semanticProgram,
+    uint64_t semanticNodeId);
+std::optional<StdlibSurfaceId> semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
+    const SemanticProgram &semanticProgram,
+    uint64_t semanticNodeId);
 const SemanticProgramCallableSummary *semanticProgramLookupPublishedCallableSummaryByPathId(
     const SemanticProgram &semanticProgram,
     SymbolId fullPathId);

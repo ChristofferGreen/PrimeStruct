@@ -1,6 +1,9 @@
 #include "SemanticPublicationBuilders.h"
 
+#include "primec/StdlibSurfaceRegistry.h"
+
 #include <algorithm>
+#include <optional>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
@@ -112,6 +115,14 @@ std::string fallbackBindingResolvedPathForSemanticProduct(std::string_view scope
   return normalizedScope;
 }
 
+std::optional<StdlibSurfaceId> classifyPublishedStdlibSurfaceId(std::string_view resolvedPath) {
+  if (const auto *metadata = findStdlibSurfaceMetadataByResolvedPath(resolvedPath);
+      metadata != nullptr) {
+    return metadata->id;
+  }
+  return std::nullopt;
+}
+
 void releaseInternedField(std::string &text, SymbolId id) {
   if (id != InvalidSymbolId) {
     text.clear();
@@ -207,6 +218,8 @@ void publishDirectCallTargetFacts(
   }
   state.semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.reserve(
       directCallTargets.size());
+  state.semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.reserve(
+      directCallTargets.size());
   state.semanticProgram.directCallTargets.reserve(directCallTargets.size());
   for (const auto &snapshotEntry : directCallTargets) {
     SemanticProgramDirectCallTarget entry;
@@ -220,6 +233,7 @@ void publishDirectCallTargetFacts(
     entry.callNameId = semanticProgramInternCallTargetString(state.semanticProgram, entry.callName);
     entry.resolvedPathId =
         semanticProgramInternCallTargetString(state.semanticProgram, snapshotEntry.resolvedPath);
+    entry.stdlibSurfaceId = classifyPublishedStdlibSurfaceId(snapshotEntry.resolvedPath);
     state.semanticProgram.directCallTargets.push_back(std::move(entry));
     const std::size_t entryIndex = state.semanticProgram.directCallTargets.size() - 1;
     state.ensureModuleResolvedArtifacts(snapshotEntry.scopePath)
@@ -229,6 +243,12 @@ void publishDirectCallTargetFacts(
       state.semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
           snapshotEntry.semanticNodeId,
           state.semanticProgram.directCallTargets.back().resolvedPathId);
+    }
+    if (snapshotEntry.semanticNodeId != 0 &&
+        state.semanticProgram.directCallTargets.back().stdlibSurfaceId.has_value()) {
+      state.semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.insert_or_assign(
+          snapshotEntry.semanticNodeId,
+          *state.semanticProgram.directCallTargets.back().stdlibSurfaceId);
     }
   }
 }
@@ -240,6 +260,8 @@ void publishMethodCallTargetFacts(
     return;
   }
   state.semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.reserve(
+      methodCallTargets.size());
+  state.semanticProgram.publishedRoutingLookups.methodCallStdlibSurfaceIdsByExpr.reserve(
       methodCallTargets.size());
   state.semanticProgram.methodCallTargets.reserve(methodCallTargets.size());
   for (const auto &snapshotEntry : methodCallTargets) {
@@ -257,6 +279,7 @@ void publishMethodCallTargetFacts(
         semanticProgramInternCallTargetString(state.semanticProgram, entry.receiverTypeText);
     entry.resolvedPathId =
         semanticProgramInternCallTargetString(state.semanticProgram, snapshotEntry.resolvedPath);
+    entry.stdlibSurfaceId = classifyPublishedStdlibSurfaceId(snapshotEntry.resolvedPath);
     state.semanticProgram.methodCallTargets.push_back(std::move(entry));
     const std::size_t entryIndex = state.semanticProgram.methodCallTargets.size() - 1;
     state.ensureModuleResolvedArtifacts(snapshotEntry.scopePath)
@@ -266,6 +289,12 @@ void publishMethodCallTargetFacts(
       state.semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.insert_or_assign(
           snapshotEntry.semanticNodeId,
           state.semanticProgram.methodCallTargets.back().resolvedPathId);
+    }
+    if (snapshotEntry.semanticNodeId != 0 &&
+        state.semanticProgram.methodCallTargets.back().stdlibSurfaceId.has_value()) {
+      state.semanticProgram.publishedRoutingLookups.methodCallStdlibSurfaceIdsByExpr.insert_or_assign(
+          snapshotEntry.semanticNodeId,
+          *state.semanticProgram.methodCallTargets.back().stdlibSurfaceId);
     }
   }
 }
@@ -277,6 +306,8 @@ void publishBridgePathChoiceFacts(
     return;
   }
   state.semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.reserve(
+      bridgePathChoices.size());
+  state.semanticProgram.publishedRoutingLookups.bridgePathChoiceStdlibSurfaceIdsByExpr.reserve(
       bridgePathChoices.size());
   state.semanticProgram.bridgePathChoices.reserve(bridgePathChoices.size());
   for (const auto &snapshotEntry : bridgePathChoices) {
@@ -294,6 +325,7 @@ void publishBridgePathChoiceFacts(
         semanticProgramInternCallTargetString(state.semanticProgram, snapshotEntry.helperName);
     entry.chosenPathId =
         semanticProgramInternCallTargetString(state.semanticProgram, snapshotEntry.chosenPath);
+    entry.stdlibSurfaceId = classifyPublishedStdlibSurfaceId(snapshotEntry.chosenPath);
     state.semanticProgram.bridgePathChoices.push_back(std::move(entry));
     const std::size_t entryIndex = state.semanticProgram.bridgePathChoices.size() - 1;
     state.ensureModuleResolvedArtifacts(snapshotEntry.scopePath)
@@ -304,6 +336,12 @@ void publishBridgePathChoiceFacts(
       state.semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.insert_or_assign(
           snapshotEntry.semanticNodeId,
           state.semanticProgram.bridgePathChoices.back().chosenPathId);
+    }
+    if (snapshotEntry.semanticNodeId != 0 &&
+        state.semanticProgram.bridgePathChoices.back().stdlibSurfaceId.has_value()) {
+      state.semanticProgram.publishedRoutingLookups.bridgePathChoiceStdlibSurfaceIdsByExpr
+          .insert_or_assign(snapshotEntry.semanticNodeId,
+                            *state.semanticProgram.bridgePathChoices.back().stdlibSurfaceId);
     }
   }
 }

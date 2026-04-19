@@ -510,11 +510,27 @@ main() {
   CHECK(semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.count(directExpr->semanticNodeId) == 1);
   CHECK(semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.count(methodExpr->semanticNodeId) == 1);
   CHECK(semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.count(bridgeExpr.semanticNodeId) == 1);
+  CHECK(semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.count(
+            directExpr->semanticNodeId) == 0);
+  CHECK(semanticProgram.publishedRoutingLookups.methodCallStdlibSurfaceIdsByExpr.count(
+            methodExpr->semanticNodeId) == 1);
+  CHECK(semanticProgram.publishedRoutingLookups.bridgePathChoiceStdlibSurfaceIdsByExpr.count(
+            bridgeExpr.semanticNodeId) == 1);
   CHECK(primec::ir_lowerer::findSemanticProductDirectCallTarget(adapter, *directExpr) == "/id_i32");
   CHECK(primec::ir_lowerer::findSemanticProductMethodCallTarget(adapter, *methodExpr) ==
         "/std/collections/vector/count");
   CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoice(adapter, bridgeExpr) ==
         "/std/collections/vector/count");
+  CHECK_FALSE(primec::ir_lowerer::findSemanticProductDirectCallStdlibSurfaceId(adapter, *directExpr)
+                  .has_value());
+  const auto methodSurfaceId =
+      primec::ir_lowerer::findSemanticProductMethodCallStdlibSurfaceId(adapter, *methodExpr);
+  REQUIRE(methodSurfaceId.has_value());
+  CHECK(*methodSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelpers);
+  const auto bridgeSurfaceId =
+      primec::ir_lowerer::findSemanticProductBridgePathChoiceStdlibSurfaceId(adapter, bridgeExpr);
+  REQUIRE(bridgeSurfaceId.has_value());
+  CHECK(*bridgeSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelpers);
 
   const auto *summary = primec::ir_lowerer::findSemanticProductCallableSummary(adapter, "/main");
   REQUIRE(summary != nullptr);
@@ -1128,6 +1144,84 @@ TEST_CASE("ir lowerer semantic-product adapter reuses method-call path ids") {
   secondExpr.semanticNodeId = 45;
   CHECK(primec::ir_lowerer::findSemanticProductMethodCallTarget(adapter, secondExpr) ==
         "/std/collections/map/contains");
+}
+
+TEST_CASE("ir lowerer semantic-product adapter exposes published stdlib surface ids") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "status",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 52,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/std/file/FileError/status"),
+      .stdlibSurfaceId = primec::StdlibSurfaceId::FileErrorHelpers,
+  });
+  semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
+      .scopePath = "/main",
+      .methodName = "status",
+      .receiverTypeText = "FileError",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 53,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .methodNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "status"),
+      .receiverTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/FileError/status"),
+      .stdlibSurfaceId = primec::StdlibSurfaceId::FileErrorHelpers,
+  });
+  semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
+      .scopePath = "/main",
+      .collectionFamily = "map",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 54,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .collectionFamilyId = primec::semanticProgramInternCallTargetString(semanticProgram, "map"),
+      .helperNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "contains_ref"),
+      .chosenPathId = primec::semanticProgramInternCallTargetString(
+          semanticProgram, "/std/collections/experimental_map/mapContainsRef"),
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsMapHelpers,
+  });
+  semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.insert_or_assign(
+      52, primec::StdlibSurfaceId::FileErrorHelpers);
+  semanticProgram.publishedRoutingLookups.methodCallStdlibSurfaceIdsByExpr.insert_or_assign(
+      53, primec::StdlibSurfaceId::FileErrorHelpers);
+  semanticProgram.publishedRoutingLookups.bridgePathChoiceStdlibSurfaceIdsByExpr.insert_or_assign(
+      54, primec::StdlibSurfaceId::CollectionsMapHelpers);
+
+  const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  REQUIRE(adapter.publishedRoutingLookups != nullptr);
+  CHECK(adapter.publishedRoutingLookups->directCallStdlibSurfaceIdsByExpr.count(52) == 1);
+  CHECK(adapter.publishedRoutingLookups->methodCallStdlibSurfaceIdsByExpr.count(53) == 1);
+  CHECK(adapter.publishedRoutingLookups->bridgePathChoiceStdlibSurfaceIdsByExpr.count(54) == 1);
+
+  primec::Expr directExpr;
+  directExpr.kind = primec::Expr::Kind::Call;
+  directExpr.semanticNodeId = 52;
+  const auto directSurfaceId =
+      primec::ir_lowerer::findSemanticProductDirectCallStdlibSurfaceId(adapter, directExpr);
+  REQUIRE(directSurfaceId.has_value());
+  CHECK(*directSurfaceId == primec::StdlibSurfaceId::FileErrorHelpers);
+
+  primec::Expr methodExpr;
+  methodExpr.kind = primec::Expr::Kind::Call;
+  methodExpr.isMethodCall = true;
+  methodExpr.semanticNodeId = 53;
+  const auto methodSurfaceId =
+      primec::ir_lowerer::findSemanticProductMethodCallStdlibSurfaceId(adapter, methodExpr);
+  REQUIRE(methodSurfaceId.has_value());
+  CHECK(*methodSurfaceId == primec::StdlibSurfaceId::FileErrorHelpers);
+
+  primec::Expr bridgeExpr;
+  bridgeExpr.kind = primec::Expr::Kind::Call;
+  bridgeExpr.semanticNodeId = 54;
+  const auto bridgeSurfaceId =
+      primec::ir_lowerer::findSemanticProductBridgePathChoiceStdlibSurfaceId(adapter, bridgeExpr);
+  REQUIRE(bridgeSurfaceId.has_value());
+  CHECK(*bridgeSurfaceId == primec::StdlibSurfaceId::CollectionsMapHelpers);
 }
 
 TEST_CASE("ir lowerer semantic-product adapter ignores method-call targets missing resolved path ids") {

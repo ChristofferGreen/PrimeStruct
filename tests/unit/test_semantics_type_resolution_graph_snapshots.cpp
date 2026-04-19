@@ -721,6 +721,78 @@ TEST_CASE("semantic product publishes resolved method-call targets") {
   CHECK(primec::semanticProgramDirectCallTargetView(semanticProgram).size() >= 0u);
 }
 
+TEST_CASE("semantic product publishes stdlib surface ids for direct, method, and bridge routing") {
+  const std::string source = R"(
+import /std/file/*
+import /std/collections/*
+
+[return<i32>]
+main() {
+  [FileError] err{FileError.eof()}
+  [vector<i32>] values{vector<i32>(1i32)}
+  [auto] directStatus{FileError.status(err)}
+  [auto] methodStatus{err.status()}
+  [i32] viaBridge{count(values)}
+  return(viaBridge)
+}
+)";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *directEntry = findSemanticEntry(
+      primec::semanticProgramDirectCallTargetView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.callName == "status" &&
+               primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, entry).find("status") !=
+                   std::string_view::npos;
+      });
+  REQUIRE(directEntry != nullptr);
+  REQUIRE(directEntry->stdlibSurfaceId.has_value());
+  CHECK(*directEntry->stdlibSurfaceId == primec::StdlibSurfaceId::FileErrorHelpers);
+  const auto directSurfaceId = primec::semanticProgramLookupPublishedDirectCallTargetStdlibSurfaceId(
+      semanticProgram, directEntry->semanticNodeId);
+  REQUIRE(directSurfaceId.has_value());
+  CHECK(*directSurfaceId == primec::StdlibSurfaceId::FileErrorHelpers);
+
+  const auto *methodEntry = findSemanticEntry(
+      primec::semanticProgramMethodCallTargetView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramMethodCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.methodName == "status" &&
+               primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, entry).find("status") !=
+                   std::string_view::npos;
+      });
+  REQUIRE(methodEntry != nullptr);
+  REQUIRE(methodEntry->stdlibSurfaceId.has_value());
+  CHECK(*methodEntry->stdlibSurfaceId == primec::StdlibSurfaceId::FileErrorHelpers);
+  const auto methodSurfaceId = primec::semanticProgramLookupPublishedMethodCallTargetStdlibSurfaceId(
+      semanticProgram, methodEntry->semanticNodeId);
+  REQUIRE(methodSurfaceId.has_value());
+  CHECK(*methodSurfaceId == primec::StdlibSurfaceId::FileErrorHelpers);
+
+  const auto *bridgeEntry = findSemanticEntry(
+      primec::semanticProgramBridgePathChoiceView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
+        return entry.scopePath == "/main" &&
+               primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, entry) == "count" &&
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId) ==
+                   "/std/collections/vector/count";
+      });
+  REQUIRE(bridgeEntry != nullptr);
+  REQUIRE(bridgeEntry->stdlibSurfaceId.has_value());
+  CHECK(*bridgeEntry->stdlibSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelpers);
+  const auto bridgeSurfaceId =
+      primec::semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
+          semanticProgram, bridgeEntry->semanticNodeId);
+  REQUIRE(bridgeSurfaceId.has_value());
+  CHECK(*bridgeSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelpers);
+}
+
 TEST_CASE("semantic product method-call targets stay separated by receiver type") {
   const std::string source =
       "[struct]\n"
@@ -2408,6 +2480,7 @@ TEST_CASE("semantic product formatter resolves module direct-call indices determ
       .semanticNodeId = 300,
       .provenanceHandle = 900,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/last"),
+      .stdlibSurfaceId = primec::StdlibSurfaceId::FileErrorHelpers,
   });
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
       .scopePath = "/a",
@@ -2417,6 +2490,7 @@ TEST_CASE("semantic product formatter resolves module direct-call indices determ
       .semanticNodeId = 200,
       .provenanceHandle = 800,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/first"),
+      .stdlibSurfaceId = primec::StdlibSurfaceId::FileHelpers,
   });
 
   primec::SemanticProgramModuleResolvedArtifacts moduleA;
@@ -2438,9 +2512,9 @@ TEST_CASE("semantic product formatter resolves module direct-call indices determ
 
   const std::string dump = primec::formatSemanticProgram(semanticProgram);
   const std::string firstEntry =
-      "direct_call_targets[0]: scope_path=\"/a\" call_name=\"first\" resolved_path=\"/first\"";
+      "direct_call_targets[0]: scope_path=\"/a\" call_name=\"first\" resolved_path=\"/first\" stdlib_surface_id=\"file.file_helpers\"";
   const std::string secondEntry =
-      "direct_call_targets[1]: scope_path=\"/z\" call_name=\"last\" resolved_path=\"/last\"";
+      "direct_call_targets[1]: scope_path=\"/z\" call_name=\"last\" resolved_path=\"/last\" stdlib_surface_id=\"file.file_error\"";
   const std::size_t firstPos = dump.find(firstEntry);
   const std::size_t secondPos = dump.find(secondEntry);
   CHECK(firstPos != std::string::npos);
@@ -2466,6 +2540,7 @@ TEST_CASE("semantic product formatter resolves module method-call indices determ
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram,
                                                         "/std/math/matrix/scale"),
+      .stdlibSurfaceId = primec::StdlibSurfaceId::GfxBufferHelpers,
   });
   semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
       .scopePath = "/a",
@@ -2482,6 +2557,7 @@ TEST_CASE("semantic product formatter resolves module method-call indices determ
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram,
                                                         "/std/math/vector/length"),
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
   });
 
   primec::SemanticProgramModuleResolvedArtifacts moduleA;
@@ -2503,9 +2579,9 @@ TEST_CASE("semantic product formatter resolves module method-call indices determ
 
   const std::string dump = primec::formatSemanticProgram(semanticProgram);
   const std::string firstEntry =
-      "method_call_targets[0]: scope_path=\"/a\" method_name=\"length\" receiver_type_text=\"vector<f32>\" resolved_path=\"/std/math/vector/length\"";
+      "method_call_targets[0]: scope_path=\"/a\" method_name=\"length\" receiver_type_text=\"vector<f32>\" resolved_path=\"/std/math/vector/length\" stdlib_surface_id=\"collections.vector_helpers\"";
   const std::string secondEntry =
-      "method_call_targets[1]: scope_path=\"/z\" method_name=\"scale\" receiver_type_text=\"matrix<f32>\" resolved_path=\"/std/math/matrix/scale\"";
+      "method_call_targets[1]: scope_path=\"/z\" method_name=\"scale\" receiver_type_text=\"matrix<f32>\" resolved_path=\"/std/math/matrix/scale\" stdlib_surface_id=\"gfx.buffer_helpers\"";
   const std::size_t firstPos = dump.find(firstEntry);
   const std::size_t secondPos = dump.find(secondEntry);
   CHECK(firstPos != std::string::npos);
@@ -2528,6 +2604,7 @@ TEST_CASE("semantic product formatter resolves module bridge-path-choice indices
       .helperNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "scale"),
       .chosenPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/std/math/matrix/scale"),
+      .stdlibSurfaceId = primec::StdlibSurfaceId::GfxBufferHelpers,
   });
   semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
       .scopePath = "/a",
@@ -2541,6 +2618,7 @@ TEST_CASE("semantic product formatter resolves module bridge-path-choice indices
       .helperNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "length"),
       .chosenPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/std/math/vector/length"),
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
   });
 
   primec::SemanticProgramModuleResolvedArtifacts moduleA;
@@ -2562,9 +2640,9 @@ TEST_CASE("semantic product formatter resolves module bridge-path-choice indices
 
   const std::string dump = primec::formatSemanticProgram(semanticProgram);
   const std::string firstEntry =
-      "bridge_path_choices[0]: scope_path=\"/a\" collection_family=\"vector\" helper_name=\"length\" chosen_path=\"/std/math/vector/length\"";
+      "bridge_path_choices[0]: scope_path=\"/a\" collection_family=\"vector\" helper_name=\"length\" chosen_path=\"/std/math/vector/length\" stdlib_surface_id=\"collections.vector_helpers\"";
   const std::string secondEntry =
-      "bridge_path_choices[1]: scope_path=\"/z\" collection_family=\"matrix\" helper_name=\"scale\" chosen_path=\"/std/math/matrix/scale\"";
+      "bridge_path_choices[1]: scope_path=\"/z\" collection_family=\"matrix\" helper_name=\"scale\" chosen_path=\"/std/math/matrix/scale\" stdlib_surface_id=\"gfx.buffer_helpers\"";
   const std::size_t firstPos = dump.find(firstEntry);
   const std::size_t secondPos = dump.find(secondEntry);
   CHECK(firstPos != std::string::npos);
@@ -3993,6 +4071,7 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram,
                                                         "/std/collections/vector/count"),
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
   });
   semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
       .scopePath = "/main",
@@ -4008,6 +4087,7 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       .chosenPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram,
                                                         "/std/collections/vector/count"),
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
   });
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
       .isExecution = true,
@@ -4194,8 +4274,8 @@ TEST_CASE("semantic product formatter exact golden is stable") {
   definitions[0]: full_path="/id" name="id" namespace_prefix="/" provenance_handle=101 source="2:3"
   executions[0]: full_path="/main" name="main" namespace_prefix="/" provenance_handle=102 source="7:1"
   direct_call_targets[0]: scope_path="/main" call_name="id" resolved_path="/id" provenance_handle=103 source="9:10"
-  method_call_targets[0]: scope_path="/main" method_name="count" receiver_type_text="vector<i32>" resolved_path="/std/collections/vector/count" provenance_handle=104 source="9:13"
-  bridge_path_choices[0]: scope_path="/main" collection_family="vector" helper_name="count" chosen_path="/std/collections/vector/count" provenance_handle=105 source="9:13"
+  method_call_targets[0]: scope_path="/main" method_name="count" receiver_type_text="vector<i32>" resolved_path="/std/collections/vector/count" stdlib_surface_id="collections.vector_helpers" provenance_handle=104 source="9:13"
+  bridge_path_choices[0]: scope_path="/main" collection_family="vector" helper_name="count" chosen_path="/std/collections/vector/count" stdlib_surface_id="collections.vector_helpers" provenance_handle=105 source="9:13"
   callable_summaries[0]: full_path="/main" is_execution=true return_kind="return" is_compute=false is_unsafe=false active_effects=["io_out"] active_capabilities=["gpu"] has_result_type=true result_type_has_value=true result_value_type="i32" result_error_type="MyError" has_on_error=true on_error_handler_path="/unexpectedError" on_error_error_type="MyError" on_error_bound_arg_count=1 provenance_handle=106
   type_metadata[0]: full_path="/Particle" category="struct" is_public=true has_no_padding=false has_platform_independent_padding=true has_explicit_alignment=true explicit_alignment_bytes=16 field_count=2 enum_value_count=0 provenance_handle=107 source="11:5"
   struct_field_metadata[0]: struct_path="/Particle" field_name="left" field_index=0 binding_type_text="i32" provenance_handle=108 source="12:7"

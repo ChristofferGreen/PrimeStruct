@@ -857,6 +857,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticProduct.find("struct SemanticProgramDirectCallTarget") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramMethodCallTarget") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramBridgePathChoice") != std::string::npos);
+  CHECK(semanticProduct.find("std::optional<StdlibSurfaceId> stdlibSurfaceId;") !=
+        std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramCallableSummary") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramTypeMetadata") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramStructFieldMetadata") != std::string::npos);
@@ -895,6 +897,12 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticProduct.find("std::vector<SemanticProgramMethodCallTarget> methodCallTargets;") !=
         std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramBridgePathChoice> bridgePathChoices;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::unordered_map<uint64_t, StdlibSurfaceId> directCallStdlibSurfaceIdsByExpr;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::unordered_map<uint64_t, StdlibSurfaceId> methodCallStdlibSurfaceIdsByExpr;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::unordered_map<uint64_t, StdlibSurfaceId> bridgePathChoiceStdlibSurfaceIdsByExpr;") !=
         std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramCallableSummary> callableSummaries;") !=
         std::string::npos);
@@ -1057,6 +1065,12 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramPublishedRoutingLookups *publishedRoutingLookups = nullptr;") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("std::optional<StdlibSurfaceId> findSemanticProductDirectCallStdlibSurfaceId(") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("std::optional<StdlibSurfaceId> findSemanticProductMethodCallStdlibSurfaceId(") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("std::optional<StdlibSurfaceId> findSemanticProductBridgePathChoiceStdlibSurfaceId(") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("SemanticProductIndex semanticIndex;") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<uint64_t, SymbolId> directCallTargetIdsByExpr;") ==
@@ -1119,6 +1133,12 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterSource.find("semanticProgramLookupPublishedMethodCallTargetId(*adapter.semanticProgram,") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramLookupPublishedBridgePathChoiceId(*adapter.semanticProgram,") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("semanticProgramLookupPublishedDirectCallTargetStdlibSurfaceId(") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("semanticProgramLookupPublishedMethodCallTargetStdlibSurfaceId(") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramLookupPublishedCallableSummary(*adapter.semanticProgram, fullPath)") !=
         std::string::npos);
@@ -1925,6 +1945,12 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.insert_or_assign(") !=
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.insert_or_assign(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.insert_or_assign(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.methodCallStdlibSurfaceIdsByExpr.insert_or_assign(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.bridgePathChoiceStdlibSurfaceIdsByExpr") !=
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId.insert_or_assign(") !=
         std::string::npos);
