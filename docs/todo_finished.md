@@ -4223,3 +4223,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Split from oversized `TODO-4073`, whose remaining PNG/DEFLATE helper-spelling cleanup continues as `TODO-4075` before the inferred-binding follow-ups starting at `TODO-4029`.
   - finished_at: 2026-04-19
   - evidence: Rewrote the PPM-facing helpers and `namespace ppm` read/write path in `stdlib/std/image/image.prime` from helper-form `assign(...)`, `plus(...)`, and `minus(...)` spellings to direct assignment and `+`/`-` expressions, left the larger `namespace png` helper-form arithmetic and assignment sites untouched for the follow-up slice, expanded `tests/unit/test_compile_run_examples_docs_locks.cpp` to assert the `ppmBody` operator-form spellings while pinning representative `pngBody` helper-form spellings, and updated `docs/todo.md` so oversized `TODO-4073` is retired in favor of the remaining `TODO-4075` PNG follow-up.
+
+- [x] TODO-4076: Align `/std/image/png` chunk and write arithmetic and assignment to surface operators
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Surface Style Alignment
+  - depends_on: TODO-4026, TODO-4074
+  - scope: Split the oversized `/std/image/png` helper-spelling cleanup and rewrite only the early chunk/read-primitive, CRC, sizing, stored-block, and write-path helpers away from `assign(...)`, `plus(...)`, and `minus(...)` where readable `=`, `+`, and `-` surface forms are already supported, without mixing in the larger decode, inflate, scanline, or read-path machinery.
+  - acceptance:
+    - The early PNG chunk/read-primitive, CRC, sizing, stored-block, and write-path helpers stop using helper-form arithmetic and assignment by default when direct surface operators are already supported.
+    - The heavier decode, inflate, scanline, and read-path half of `/std/image/png` stays isolated as follow-up work instead of being folded into the same mechanical rewrite.
+    - Focused source-lock coverage pins representative operator-form sites in the early PNG helper lane and keeps representative decode/read helper-form sites explicit until the follow-up lands.
+  - stop_rule: Stop once the early PNG chunk/write helper lane uses readable surface arithmetic and assignment by default; leave the remaining decode/read helper-spelling cleanup in a separate follow-up leaf.
+  - notes: Split from oversized `TODO-4075`, whose remaining PNG decode/read helper-spelling cleanup continues as `TODO-4077` before the inferred-binding follow-ups starting at `TODO-4029`.
+  - finished_at: 2026-04-19
+  - evidence: Rewrote the early `pngReadU32Be` through `pngWriteIendChunk` helper lane in `stdlib/std/image/image.prime` from helper-form `assign(...)`, `plus(...)`, and `minus(...)` spellings to direct assignment and `+`/`-` expressions, left the later decode, inflate, scanline, Adam7, and `namespace png` read-path helpers untouched for the follow-up slice, expanded `tests/unit/test_compile_run_examples_docs_locks.cpp` to assert the early `pngPreludeBody` operator-form spellings while pinning representative `pngDecodeBody` helper-form spellings, and updated `docs/todo.md` so oversized `TODO-4075` is retired in favor of the remaining `TODO-4077` decode/read follow-up.
