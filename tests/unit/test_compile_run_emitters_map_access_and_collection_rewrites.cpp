@@ -525,7 +525,7 @@ TEST_CASE("C++ emitter helper resolves bare vector count methods when helper met
 
   CHECK(primec::emitter::resolveMethodCallPath(
       call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved == "/vector/count");
+  CHECK(resolved == "/std/collections/vector/count");
 }
 
 TEST_CASE("C++ emitter helper rejects bare vector capacity methods without helper metadata") {
@@ -588,7 +588,46 @@ TEST_CASE("C++ emitter helper resolves bare vector capacity methods when helper 
 
   CHECK(primec::emitter::resolveMethodCallPath(
       call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-  CHECK(resolved == "/vector/capacity");
+  CHECK(resolved == "/std/collections/vector/capacity");
+}
+
+TEST_CASE("C++ emitter helper keeps explicit stdlib vector count and capacity methods canonical") {
+  auto expectCanonicalMethodPath = [](const char *methodPath) {
+    primec::Expr call;
+    call.kind = primec::Expr::Kind::Call;
+    call.isMethodCall = true;
+    call.name = methodPath;
+
+    primec::Expr receiver;
+    receiver.kind = primec::Expr::Kind::Name;
+    receiver.name = "values";
+    call.args.push_back(receiver);
+    call.argNames.push_back(std::nullopt);
+
+    std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+    primec::emitter::BindingInfo receiverInfo;
+    receiverInfo.typeName = "vector";
+    localTypes.emplace("values", receiverInfo);
+
+    primec::Definition canonicalDef;
+    canonicalDef.fullPath = methodPath;
+
+    std::unordered_map<std::string, const primec::Definition *> defMap = {
+        {canonicalDef.fullPath, &canonicalDef},
+    };
+    std::unordered_map<std::string, std::string> importAliases;
+    std::unordered_map<std::string, std::string> structTypeMap;
+    std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+    std::unordered_map<std::string, std::string> returnStructs;
+    std::string resolved;
+
+    CHECK(primec::emitter::resolveMethodCallPath(
+        call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+    CHECK(resolved == methodPath);
+  };
+
+  expectCanonicalMethodPath("/std/collections/vector/count");
+  expectCanonicalMethodPath("/std/collections/vector/capacity");
 }
 
 TEST_CASE("C++ emitter helper prefers stdlib File flush helper when present") {

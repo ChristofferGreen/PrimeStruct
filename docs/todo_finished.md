@@ -5,6 +5,9 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Cleanup (April 19, 2026)**
+- ✓ TODO-0990: Canonicalize emitter bare vector count/capacity method paths. Completed: `EmitterBuiltinMethodResolutionHelpers.cpp` now resolves bare vector `.count()`/`.capacity()` calls to `/std/collections/vector/{count,capacity}` when canonical helper metadata exists instead of reintroducing rooted `/vector/*` paths, and `test_compile_run_emitters_map_access_and_collection_rewrites.cpp` now pins both the canonical bare-method result and the explicit stdlib helper-path behavior.
+
 **Todo Cleanup (April 13, 2026)**
 - ✓ TODO-0983: Share method-target usage setup. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now routes the shared method-target usage bundle through `markMethodTargetUsage`, and focused expr source-lock coverage now keeps that helper present while the deleted inline receiver-index setup stays absent at the named helper and main count/capacity route sites.
 - ✓ TODO-0982: Share std-namespaced count diagnostic. Completed: `SemanticsValidatorExprCollectionCountCapacity.cpp` now routes the std-namespaced vector `count` compatibility diagnostic through `failStdNamespacedVectorCountDiagnosticIfPresent`, and focused expr source-lock coverage now keeps that helper present while the deleted inline diagnostic block stays absent.

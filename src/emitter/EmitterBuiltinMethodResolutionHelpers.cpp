@@ -424,6 +424,8 @@ bool resolveMethodCallPath(const Expr &call,
       if (!hasDefinitionOrMetadata(metadataView, canonicalPath)) {
         return false;
       }
+      resolvedOut = canonicalPath;
+      return true;
     }
   }
   if (resolvedType == "/map" || resolvedType == "map") {
