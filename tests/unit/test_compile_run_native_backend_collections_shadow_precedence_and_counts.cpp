@@ -696,7 +696,7 @@ main() {
   CHECK(runCommand(exePath) == 95);
 }
 
-TEST_CASE("native runs canonical map reference string access" * doctest::skip(true)) {
+TEST_CASE("native runs canonical map reference string access") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {

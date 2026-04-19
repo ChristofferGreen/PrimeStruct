@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1136
+- TODO-1137
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1136
+- TODO-1137
 
 ### Priority Lanes (Current)
 
-- Native canonical map reference string access skip debt: TODO-1136
+- Native builtin count on canonical map reference string access skip debt: TODO-1137
 
 ### Execution Queue (Recommended)
 
-1. TODO-1136
+1. TODO-1137
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Native canonical map reference string skipped-test debt | TODO-1136 |
+| Native canonical map reference builtin-count skipped-test debt | TODO-1137 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Native compile-run skipped-test debt | TODO-1136 |
+| Native compile-run skipped-test debt | TODO-1137 |
 
 ### Task Blocks
 
-- [ ] TODO-1136: Audit native canonical map reference string access skip debt
+- [ ] TODO-1137: Audit native builtin count on canonical map reference string access skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped native canonical map reference string access coverage, and lock the current native backend contract for `ref[1i32].count()` on canonical map references.
+  - scope: Re-enable or delete the skipped native bare builtin `count(...)` coverage on canonical map reference string access, and lock the current native backend contract for `count(/std/collections/map/at(ref, 1i32))`.
   - acceptance:
-    - `tests/unit/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp` no longer carries the skipped native canonical map reference string access case in stale form.
-    - The native test locks the actual current `ref[1i32].count()` contract on canonical map references, whether that stays as the current runtime result or a stable diagnostic.
-  - stop_rule: Stop after the native canonical map reference string access surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp` no longer carries the skipped native builtin-count-on-canonical-map-reference string access case in stale form.
+    - The native test locks the actual current `count(/std/collections/map/at(ref, 1i32))` contract on canonical map references, whether that stays as the current runtime result or a stable diagnostic.
+  - stop_rule: Stop after the native builtin-count-on-canonical-map-reference string access surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
