@@ -556,7 +556,7 @@ main() {
   CHECK(!std::filesystem::exists(outPath));
 }
 
-TEST_CASE("rejects oversized vm image write dimensions before overflow" * doctest::skip(true)) {
+TEST_CASE("rejects oversized vm image write dimensions before overflow") {
   const std::filesystem::path ppmOutPath =
       testScratchPath("") / "primec_vm_image_write_overflow.ppm";
   const std::filesystem::path pngOutPath =
